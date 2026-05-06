@@ -6,6 +6,8 @@ use Bayti\Api\Http\Controllers\Auth\ConfirmController;
 use Bayti\Api\Http\Controllers\Auth\LoginController;
 use Bayti\Api\Http\Controllers\Auth\MeController;
 use Bayti\Api\Http\Controllers\Auth\RegisterController;
+use Bayti\Api\Http\Controllers\Auth\ResetConfirmController;
+use Bayti\Api\Http\Controllers\Auth\ResetController;
 use Bayti\Api\Http\Controllers\Auth\SendOtpController;
 use Bayti\Api\Http\Controllers\Auth\ValidateEmailController;
 use Bayti\Api\Http\Controllers\Auth\ValidatePhoneController;
@@ -50,10 +52,10 @@ return function (App $app): void {
         $group->post('/send-otp', SendOtpController::class);
         $group->post('/confirm', ConfirmController::class);
 
-        // M1.4.4 — Password reset:
-        //   POST /reset               (anonymous)
-        //   POST /reset/confirm       (anonymous)
-        //
+        // M1.4.4 — password reset flows (anonymous)
+        $group->post('/reset', ResetController::class);
+        $group->post('/reset/confirm', ResetConfirmController::class);
+
         // M1.4.5 — Token lifecycle:
         //   POST /refresh             (anonymous, refresh token in body)
         //   POST /logout              (auth required)
