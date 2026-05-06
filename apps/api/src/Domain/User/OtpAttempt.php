@@ -206,17 +206,29 @@ class OtpAttempt
     {
         $this->verifyAttempts++;
 
-        if (!$this->isUsable() && !$this->isExhausted()) {
-            // Don't compare if expired/consumed — treat as fail.
-            // (We let the increment happen so rate-limit still
-            // counts these attempts.)
+        // If the OTP is in any non-usable state (expired / consumed /
+        // exhausted), reject immediately — even with the right code.
+        // The increment above still happens so rate-limiting upstream
+        // counts the attempt regardless. Note: the increment moves us
+        // to "exhausted" once verifyAttempts reaches max, which means
+        // the very last allowed attempt sees the freshly-exhausted state
+        // here only if max was already reached BEFORE this call.
+        if ($this->isExpired() || $this->isConsumed()) {
+            return false;
+        }
+
+        // For exhaustion, check the count BEFORE the increment we just
+        // did. If we'd already maxed out before this call, reject.
+        // (The increment counts this attempt for audit but doesn't
+        // grant verification.)
+        if ($this->verifyAttempts > $this->maxVerifyAttempts) {
             return false;
         }
 
         $candidateHash = hash('sha256', $code . $this->salt);
         $matches = hash_equals($this->codeHash, $candidateHash);
 
-        if ($matches && !$this->isExpired() && !$this->isConsumed()) {
+        if ($matches) {
             $this->consumedAt = new DateTimeImmutable();
             return true;
         }
