@@ -2,15 +2,20 @@
 
 declare(strict_types=1);
 
+use Bayti\Api\Domain\User\OtpService;
 use Bayti\Api\Http\Controllers\HealthController;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Middleware\OptionalAuthMiddleware;
 use Bayti\Api\Infrastructure\Auth\JwtService;
 use Bayti\Api\Infrastructure\Auth\JwtSettings;
+use Bayti\Api\Infrastructure\Otp\InMemoryOtpProvider;
+use Bayti\Api\Infrastructure\Otp\MessageCentralOtpProvider;
+use Bayti\Api\Infrastructure\Otp\OtpProvider;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\Configuration;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\EntityManagerInterface;
+use GuzzleHttp\Client as GuzzleClient;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Slim\Psr7\Factory\ResponseFactory;
@@ -112,6 +117,60 @@ return [
     OptionalAuthMiddleware::class => \DI\autowire(),
 
     // -------------------------------------------------------------------
+    // OTP — provider selection + service
+    // -------------------------------------------------------------------
+
+    /**
+     * OTP provider selection.
+     *
+     * APP_ENV=prod  → MessageCentralOtpProvider (real CPaaS)
+     * APP_ENV=*     → InMemoryOtpProvider (no network; tests + dev)
+     *
+     * Override via SMS_PROVIDER=messagecentral if a developer wants
+     * to test against the real CPaaS from their machine. NOT a way
+     * to use in-memory in prod — production refuses if creds are
+     * missing.
+     */
+    OtpProvider::class => static function (): OtpProvider {
+        $env = $_ENV['APP_ENV'] ?? 'dev';
+        $override = $_ENV['SMS_PROVIDER'] ?? null;
+
+        $useMessageCentral = $env === 'prod' || $override === 'messagecentral';
+
+        if (!$useMessageCentral) {
+            return new InMemoryOtpProvider();
+        }
+
+        $customerId = $_ENV['MESSAGECENTRAL_CUSTOMER_ID'] ?? '';
+        $apiKey = $_ENV['MESSAGECENTRAL_KEY'] ?? '';
+        $email = $_ENV['MESSAGECENTRAL_EMAIL'] ?? '';
+
+        if ($customerId === '' || $apiKey === '' || $email === '') {
+            throw new \RuntimeException(
+                'MessageCentralOtpProvider requires env vars: MESSAGECENTRAL_CUSTOMER_ID, ' .
+                'MESSAGECENTRAL_KEY, MESSAGECENTRAL_EMAIL. ' .
+                'Set them, or unset SMS_PROVIDER to use the in-memory adapter for local testing.'
+            );
+        }
+
+        $http = new GuzzleClient([
+            'base_uri' => $_ENV['MESSAGECENTRAL_BASE_URL'] ?? 'https://cpaas.messagecentral.com',
+            'timeout' => 10,
+            'connect_timeout' => 5,
+        ]);
+
+        return new MessageCentralOtpProvider(
+            http: $http,
+            customerId: $customerId,
+            apiKey: $apiKey,
+            email: $email,
+            country: $_ENV['MESSAGECENTRAL_COUNTRY'] ?? '971',
+        );
+    },
+
+    OtpService::class => \DI\autowire(),
+
+    // -------------------------------------------------------------------
     // Controllers — autowired, but listed for discoverability.
     // -------------------------------------------------------------------
 
@@ -120,5 +179,6 @@ return [
     // Doctrine repositories are accessed via EntityManager::getRepository();
     // no DI registrations needed.
 ];
+
 
 

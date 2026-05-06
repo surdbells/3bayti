@@ -206,24 +206,24 @@ final class Version20260507000001 extends AbstractMigration
 
         // -----------------------------------------------------------
         // user_otp_attempts
+        //
+        // We don't store the actual 6-digit code or per-attempt
+        // verify counters here — MessageCentral CPaaS handles code
+        // generation and verification on their side. We store only
+        // the verificationId they return + audit context.
         // -----------------------------------------------------------
         $this->addSql(<<<'SQL'
             CREATE TABLE user_otp_attempts (
                 id BIGSERIAL PRIMARY KEY,
                 user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
 
+                verification_id VARCHAR(100) NOT NULL UNIQUE,
                 phone VARCHAR(25) NOT NULL,
                 purpose VARCHAR(30) NOT NULL,
-
-                code_hash VARCHAR(64) NOT NULL,
-                salt VARCHAR(32) NOT NULL,
 
                 created_at TIMESTAMPTZ NOT NULL,
                 expires_at TIMESTAMPTZ NOT NULL,
                 consumed_at TIMESTAMPTZ,
-
-                verify_attempts SMALLINT NOT NULL DEFAULT 0,
-                max_verify_attempts SMALLINT NOT NULL DEFAULT 5,
 
                 requested_ip VARCHAR(45)
             )
@@ -232,6 +232,9 @@ final class Version20260507000001 extends AbstractMigration
         $this->addSql('CREATE INDEX idx_otp_attempts_phone ON user_otp_attempts (phone)');
         $this->addSql('CREATE INDEX idx_otp_attempts_user ON user_otp_attempts (user_id)');
         $this->addSql('CREATE INDEX idx_otp_attempts_expiry ON user_otp_attempts (expires_at)');
+
+        // Note: verification_id has an implicit unique index from the
+        // UNIQUE constraint above; findByVerificationId uses that.
 
         // For rate-limit queries (recent sends per phone).
         $this->addSql(<<<'SQL'

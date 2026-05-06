@@ -188,71 +188,74 @@ final class UserEntityTest extends TestCase
     {
         $this->expectException(\InvalidArgumentException::class);
         new OtpAttempt(
+            verificationId: 'mc-xyz-123',
             phone: '+971501234567',
             purpose: 'totally_made_up',
-            codeHash: hash('sha256', '123456' . 'salt'),
-            salt: 'salt',
             expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
         );
     }
 
     #[Test]
-    public function otpVerifyAcceptsCorrectCodeOnce(): void
+    public function otpAcceptsKnownPurposes(): void
     {
-        $code = '654321';
-        $salt = bin2hex(random_bytes(16));
-        $otp = new OtpAttempt(
-            phone: '+971501234567',
-            purpose: OtpAttempt::PURPOSE_REGISTRATION,
-            codeHash: hash('sha256', $code . $salt),
-            salt: $salt,
-            expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
-        );
-
-        self::assertTrue($otp->verify($code));
-        self::assertTrue($otp->isConsumed());
-
-        // Re-verify with the same code — the row is consumed, so reject.
-        self::assertFalse($otp->verify($code));
-    }
-
-    #[Test]
-    public function otpVerifyRejectsWrongCode(): void
-    {
-        $otp = $this->makeOtp('999999');
-        self::assertFalse($otp->verify('111111'));
-        self::assertFalse($otp->isConsumed());
-        self::assertSame(1, $otp->getVerifyAttempts());
-    }
-
-    #[Test]
-    public function otpExhaustsAfter5FailedAttempts(): void
-    {
-        $otp = $this->makeOtp('correct');
-
-        for ($i = 0; $i < 5; $i++) {
-            $otp->verify('wrong');
+        foreach (OtpAttempt::ALL_PURPOSES as $purpose) {
+            $otp = new OtpAttempt(
+                verificationId: 'mc-' . bin2hex(random_bytes(8)),
+                phone: '+971501234567',
+                purpose: $purpose,
+                expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+            );
+            self::assertSame($purpose, $otp->getPurpose());
         }
+    }
 
-        self::assertTrue($otp->isExhausted());
-        // Even the right code now fails — row is exhausted.
-        self::assertFalse($otp->verify('correct'));
+    #[Test]
+    public function otpStartsUsableWhenFresh(): void
+    {
+        $otp = $this->makeOtp();
+        self::assertTrue($otp->isUsable());
+        self::assertFalse($otp->isExpired());
+        self::assertFalse($otp->isConsumed());
+    }
+
+    #[Test]
+    public function otpMarkConsumedIsIdempotent(): void
+    {
+        $otp = $this->makeOtp();
+        $otp->markConsumed();
+        $firstConsumed = $otp->getConsumedAt();
+        self::assertNotNull($firstConsumed);
+        self::assertTrue($otp->isConsumed());
+        self::assertFalse($otp->isUsable());
+
+        // Re-consuming should not change the timestamp.
+        $otp->markConsumed();
+        self::assertSame($firstConsumed, $otp->getConsumedAt());
     }
 
     #[Test]
     public function otpExpiresAfterTtl(): void
     {
         $otp = new OtpAttempt(
+            verificationId: 'mc-expired',
             phone: '+971500000000',
             purpose: OtpAttempt::PURPOSE_PASSWORD_RESET,
-            codeHash: hash('sha256', '123456' . 's'),
-            salt: 's',
             expiresAt: (new DateTimeImmutable())->modify('-1 second'),
         );
 
         self::assertTrue($otp->isExpired());
         self::assertFalse($otp->isUsable());
-        self::assertFalse($otp->verify('123456'));
+    }
+
+    #[Test]
+    public function otpBindUserSetsAssociation(): void
+    {
+        $otp = $this->makeOtp();
+        self::assertNull($otp->getUser());
+
+        $user = $this->makeUser();
+        $otp->bindUser($user);
+        self::assertSame($user, $otp->getUser());
     }
 
     // -------------------------------------------------------------------
@@ -324,14 +327,12 @@ final class UserEntityTest extends TestCase
         return new User($email, '+971501234567', 'fake-bcrypt-hash', 'AE');
     }
 
-    private function makeOtp(string $code, string $purpose = OtpAttempt::PURPOSE_REGISTRATION): OtpAttempt
+    private function makeOtp(string $purpose = OtpAttempt::PURPOSE_REGISTRATION): OtpAttempt
     {
-        $salt = bin2hex(random_bytes(16));
         return new OtpAttempt(
+            verificationId: 'mc-' . bin2hex(random_bytes(8)),
             phone: '+971501234567',
             purpose: $purpose,
-            codeHash: hash('sha256', $code . $salt),
-            salt: $salt,
             expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
         );
     }

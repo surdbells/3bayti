@@ -15,12 +15,24 @@ use Doctrine\ORM\EntityRepository;
 class OtpAttemptRepository extends EntityRepository
 {
     /**
-     * Find the most recent usable (not consumed, not exhausted, not
-     * expired) OTP for a phone+purpose pair. Verify endpoints use
-     * this to locate which OTP the presented code should match.
-     *
-     * Multiple OTPs can exist for the same phone/purpose if the user
-     * spammed send-otp. We always check against the newest.
+     * Find the OTP row by its MessageCentral verificationId.
+     * /v3/auth/confirm uses this to look up the row before
+     * delegating verification to MessageCentral.
+     */
+    public function findByVerificationId(string $verificationId): ?OtpAttempt
+    {
+        return $this->createQueryBuilder('o')
+            ->where('o.verificationId = :vid')
+            ->setParameter('vid', $verificationId)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
+     * Find the most recent usable (not consumed, not expired) OTP
+     * for a phone+purpose pair. Used to detect "user already has a
+     * pending OTP" cases — we can either return the existing row or
+     * issue a new one depending on policy.
      */
     public function findLatestUsable(string $phone, string $purpose): ?OtpAttempt
     {
@@ -30,7 +42,6 @@ class OtpAttemptRepository extends EntityRepository
             ->andWhere('o.purpose = :purpose')
             ->andWhere('o.consumedAt IS NULL')
             ->andWhere('o.expiresAt > :now')
-            ->andWhere('o.verifyAttempts < o.maxVerifyAttempts')
             ->setParameter('phone', $phone)
             ->setParameter('purpose', $purpose)
             ->setParameter('now', $now)

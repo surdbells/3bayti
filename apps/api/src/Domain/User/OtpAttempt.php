@@ -8,46 +8,42 @@ use DateTimeImmutable;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
- * One-time password attempt record — issued when /v3/auth/send-otp
- * sends a code, consumed by /v3/auth/confirm or /v3/auth/reset/confirm.
+ * One-time password attempt — local record of an OTP we asked
+ * MessageCentral CPaaS to send.
  *
- * Why this exists
- * ---------------
- * An OTP is a 6-digit code we send via SMS to confirm the user has
- * possession of the phone number they registered with (or are
- * resetting). The OTP itself is short-lived (5-minute TTL per spec)
- * but the record persists so we can:
+ * Architecture (Option B per Decision A.6 / M1.3 design)
+ * -------------------------------------------------------
+ * MessageCentral CPaaS handles code generation, SMS delivery, AND
+ * code verification server-side. We never see the actual 6-digit
+ * code — they generate it, send it to the user's phone, and we
+ * validate by sending (verificationId + user-supplied code) back to
+ * them. This entity is the LOCAL audit/coordination record:
  *
- *   - Rate-limit send-otp requests (max 3 per phone per hour, max 5
- *     verify attempts per OTP) to prevent abuse and SMS-bill blowups
- *   - Log who-tried-what for security audits
- *   - Detect suspicious patterns (same phone receiving OTPs for
- *     different emails — possible account-takeover attempt)
+ *   1. /v3/auth/send-otp
+ *        we ask MessageCentral to send → they return verificationId
+ *        we INSERT a row with that verificationId
+ *        we return verificationId to the client
  *
- * Why store it instead of using Redis-only
- * ----------------------------------------
- * Rate-limit counters live in Redis (M1.5) for performance. But the
- * audit trail and the OTP-record itself live in Postgres because:
- *   - Postgres is durable; Redis can lose state on restart and we
- *     don't want OTPs to survive a Redis flush either, but the
- *     audit row should
- *   - Pattern queries ("how many OTPs were sent to this phone in
- *     the last 24 hours from different IPs") are easier in SQL
+ *   2. /v3/auth/confirm  (with verificationId + code)
+ *        we look up the row by verificationId
+ *        we ask MessageCentral to validate (verificationId + code)
+ *        on success: row.consumed_at = now()
+ *        on failure: row stays usable (MessageCentral tracks attempts
+ *                    on their side — typically caps at 5 retries)
  *
- * Storage of the OTP itself
- * -------------------------
- * We store SHA-256(otp || salt) — never the plain digits. If the
- * DB is leaked, attackers can't brute-force a 6-digit code in any
- * meaningful timeframe per row because we limit verify attempts
- * (5 per OTP, then the row is exhausted). Salt is a per-row
- * random nonce.
+ * Why we still need a row at all
+ * ------------------------------
+ * Even though MessageCentral does verification, we keep a row for:
+ *   - Rate limiting (max 3 sends per phone per hour) — counted in SQL
+ *   - Audit trail (who requested OTPs, when, from what IP)
+ *   - Linking to a user when known (registration OTPs are sent
+ *     BEFORE the User row exists, so user_id is null at first)
+ *   - Detecting suspicious patterns (same phone, multiple emails)
  *
- * Reuse of code
- * -------------
- * One OTP, one purpose. After verify success the row is marked
- * consumed and never reused. After verify failure 5x, the row is
- * marked exhausted and never reused. Either way, the user must
- * request a fresh OTP for the next attempt.
+ * What we DON'T store
+ * -------------------
+ * The actual 6-digit code, ever. MessageCentral has it; we don't
+ * need it; storing it would be a needless leak risk.
  */
 #[ORM\Entity(repositoryClass: OtpAttemptRepository::class)]
 #[ORM\Table(name: 'user_otp_attempts')]
@@ -79,6 +75,16 @@ class OtpAttempt
     private ?int $id = null;
 
     /**
+     * MessageCentral's verificationId — opaque token that ties our
+     * subsequent /validateOtp call to the SMS we asked them to
+     * send. Returned by their /verification/v3/send response.
+     *
+     * Unique because each send produces a fresh id.
+     */
+    #[ORM\Column(name: 'verification_id', type: 'string', length: 100, unique: true)]
+    private string $verificationId;
+
+    /**
      * The phone number the OTP was sent to. May or may not have a
      * matching User row at issuance time — registration OTPs are
      * sent BEFORE user creation, so user_id is null in that case.
@@ -100,63 +106,34 @@ class OtpAttempt
     #[ORM\Column(type: 'string', length: 30)]
     private string $purpose;
 
-    /**
-     * SHA-256(otp || salt). The actual 6-digit code is never stored.
-     */
-    #[ORM\Column(name: 'code_hash', type: 'string', length: 64)]
-    private string $codeHash;
-
-    /**
-     * Per-row random salt mixed into the code hash. 32 hex chars.
-     * Generated at construction; never changes.
-     */
-    #[ORM\Column(type: 'string', length: 32)]
-    private string $salt;
-
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
     /**
-     * When this OTP becomes invalid (created_at + 5 minutes by
-     * default). After expiry, verify always fails.
+     * When this OTP becomes invalid. We mirror MessageCentral's TTL
+     * (typically 5 minutes) so our rate-limit + lookup queries
+     * align with their server-side state.
      */
     #[ORM\Column(name: 'expires_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $expiresAt;
 
     /**
      * When the OTP was successfully verified, or null if not yet
-     * verified. After successful verify, this row is "consumed" —
-     * subsequent verify attempts (even with the right code) fail.
+     * verified. Set when MessageCentral's /validateOtp returns
+     * success. Once consumed, the row should not be matched by
+     * findLatestUsable.
      */
     #[ORM\Column(name: 'consumed_at', type: 'datetimetz_immutable', nullable: true)]
     private ?DateTimeImmutable $consumedAt = null;
-
-    /**
-     * Verify-attempt counter. Incremented on every /v3/auth/confirm
-     * call regardless of success. When this reaches 5, the row is
-     * marked exhausted and no further verify attempts are accepted
-     * (forces user to request a new OTP).
-     */
-    #[ORM\Column(name: 'verify_attempts', type: 'smallint', options: ['default' => 0])]
-    private int $verifyAttempts = 0;
-
-    /**
-     * Cap on verify_attempts. 5 by default. Keep as a column
-     * (not a constant) so admin can tune it per-OTP for support
-     * cases without code changes.
-     */
-    #[ORM\Column(name: 'max_verify_attempts', type: 'smallint', options: ['default' => 5])]
-    private int $maxVerifyAttempts = 5;
 
     // Audit
     #[ORM\Column(name: 'requested_ip', type: 'string', length: 45, nullable: true)]
     private ?string $requestedIp = null;
 
     public function __construct(
+        string $verificationId,
         string $phone,
         string $purpose,
-        string $codeHash,
-        string $salt,
         DateTimeImmutable $expiresAt,
         ?User $user = null,
         ?string $requestedIp = null,
@@ -164,75 +141,45 @@ class OtpAttempt
         if (!in_array($purpose, self::ALL_PURPOSES, true)) {
             throw new \InvalidArgumentException("Unknown OTP purpose: {$purpose}");
         }
+        $this->verificationId = $verificationId;
         $this->phone = $phone;
         $this->purpose = $purpose;
-        $this->codeHash = $codeHash;
-        $this->salt = $salt;
         $this->expiresAt = $expiresAt;
         $this->user = $user;
         $this->requestedIp = $requestedIp;
         $this->createdAt = new DateTimeImmutable();
     }
 
-    public function getId(): ?int                      { return $this->id; }
-    public function getPhone(): string                 { return $this->phone; }
-    public function getUser(): ?User                   { return $this->user; }
-    public function getPurpose(): string               { return $this->purpose; }
-    public function getCodeHash(): string              { return $this->codeHash; }
-    public function getSalt(): string                  { return $this->salt; }
-    public function getCreatedAt(): DateTimeImmutable  { return $this->createdAt; }
-    public function getExpiresAt(): DateTimeImmutable  { return $this->expiresAt; }
-    public function getConsumedAt(): ?DateTimeImmutable{ return $this->consumedAt; }
-    public function getVerifyAttempts(): int           { return $this->verifyAttempts; }
-    public function getMaxVerifyAttempts(): int        { return $this->maxVerifyAttempts; }
-    public function getRequestedIp(): ?string          { return $this->requestedIp; }
+    public function getId(): ?int                       { return $this->id; }
+    public function getVerificationId(): string         { return $this->verificationId; }
+    public function getPhone(): string                  { return $this->phone; }
+    public function getUser(): ?User                    { return $this->user; }
+    public function getPurpose(): string                { return $this->purpose; }
+    public function getCreatedAt(): DateTimeImmutable   { return $this->createdAt; }
+    public function getExpiresAt(): DateTimeImmutable   { return $this->expiresAt; }
+    public function getConsumedAt(): ?DateTimeImmutable { return $this->consumedAt; }
+    public function getRequestedIp(): ?string           { return $this->requestedIp; }
 
     public function isExpired(): bool { return $this->expiresAt <= new DateTimeImmutable(); }
     public function isConsumed(): bool { return $this->consumedAt !== null; }
-    public function isExhausted(): bool { return $this->verifyAttempts >= $this->maxVerifyAttempts; }
 
-    /** True when the OTP can still be verified against. */
+    /** True when the OTP can still be verified against (not expired, not consumed). */
     public function isUsable(): bool
     {
-        return !$this->isExpired() && !$this->isConsumed() && !$this->isExhausted();
+        return !$this->isExpired() && !$this->isConsumed();
     }
 
     /**
-     * Check whether the provided code matches this OTP. Constant-time
-     * comparison. Increments verify_attempts as a side effect; caller
-     * must persist the entity to record the attempt.
+     * Mark this OTP consumed — called by OtpService after MessageCentral
+     * confirms the user-supplied code matches. Idempotent: re-consuming
+     * an already-consumed row is a no-op (preserves original timestamp).
      */
-    public function verify(string $code): bool
+    public function markConsumed(): void
     {
-        $this->verifyAttempts++;
-
-        // If the OTP is in any non-usable state (expired / consumed /
-        // exhausted), reject immediately — even with the right code.
-        // The increment above still happens so rate-limiting upstream
-        // counts the attempt regardless. Note: the increment moves us
-        // to "exhausted" once verifyAttempts reaches max, which means
-        // the very last allowed attempt sees the freshly-exhausted state
-        // here only if max was already reached BEFORE this call.
-        if ($this->isExpired() || $this->isConsumed()) {
-            return false;
+        if ($this->consumedAt !== null) {
+            return;
         }
-
-        // For exhaustion, check the count BEFORE the increment we just
-        // did. If we'd already maxed out before this call, reject.
-        // (The increment counts this attempt for audit but doesn't
-        // grant verification.)
-        if ($this->verifyAttempts > $this->maxVerifyAttempts) {
-            return false;
-        }
-
-        $candidateHash = hash('sha256', $code . $this->salt);
-        $matches = hash_equals($this->codeHash, $candidateHash);
-
-        if ($matches) {
-            $this->consumedAt = new DateTimeImmutable();
-            return true;
-        }
-        return false;
+        $this->consumedAt = new DateTimeImmutable();
     }
 
     /**
