@@ -1,0 +1,83 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * 3bayti API — Doctrine CLI entry point.
+ *
+ * Provides:
+ *   - doctrine:* commands (schema, query, etc.) — bin/console doctrine:list
+ *   - migrations:* commands — bin/console migrations:diff, migrations:migrate, etc.
+ *
+ * Uses the same Bootstrap factory as the HTTP entry point, so CLI
+ * and web share configuration. Reads .env via Bootstrap.
+ *
+ * Usage examples:
+ *   php bin/console migrations:status
+ *   php bin/console migrations:diff
+ *   php bin/console migrations:migrate
+ *   php bin/console doctrine:schema:validate
+ */
+
+use Bayti\Api\Bootstrap;
+use Doctrine\DBAL\Tools\Console\ConsoleRunner as DbalConsoleRunner;
+use Doctrine\DBAL\Tools\Console\Command\RunSqlCommand;
+use Doctrine\Migrations\Configuration\Migration\PhpFile;
+use Doctrine\Migrations\Configuration\Connection\ExistingConnection;
+use Doctrine\Migrations\DependencyFactory;
+use Doctrine\Migrations\Tools\Console\Command;
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Tools\Console\ConsoleRunner;
+use Doctrine\ORM\Tools\Console\EntityManagerProvider\SingleManagerProvider;
+use Symfony\Component\Console\Application;
+
+require __DIR__ . '/../vendor/autoload.php';
+
+// Build the Slim app to get a fully-wired DI container, then pull
+// the EntityManager out of it. The .env loading and config wiring
+// happen here in one go.
+$app = Bootstrap::createApp();
+$container = $app->getContainer();
+if ($container === null) {
+    fwrite(STDERR, "DI container missing — Bootstrap.php should always provide one.\n");
+    exit(1);
+}
+
+/** @var EntityManagerInterface $em */
+$em = $container->get(EntityManagerInterface::class);
+
+// Build a Symfony Console application and register Doctrine commands.
+$cli = new Application('3bayti API CLI', '0.1.0');
+
+// Doctrine ORM commands (schema validate, info, etc.)
+ConsoleRunner::addCommands($cli, new SingleManagerProvider($em));
+
+// Doctrine DBAL commands (run-sql)
+$cli->add(new RunSqlCommand(new \Doctrine\DBAL\Tools\Console\ConnectionProvider\SingleConnectionProvider($em->getConnection())));
+
+// Doctrine Migrations commands. Configured via the file at the
+// project root. We do not use migrations.php auto-discovery; we
+// declare paths explicitly.
+$migrationsConfig = new PhpFile(__DIR__ . '/../migrations.php');
+$migrationsFactory = DependencyFactory::fromConnection(
+    $migrationsConfig,
+    new ExistingConnection($em->getConnection()),
+);
+
+$cli->addCommands([
+    new Command\DumpSchemaCommand($migrationsFactory),
+    new Command\ExecuteCommand($migrationsFactory),
+    new Command\GenerateCommand($migrationsFactory),
+    new Command\LatestCommand($migrationsFactory),
+    new Command\ListCommand($migrationsFactory),
+    new Command\MigrateCommand($migrationsFactory),
+    new Command\DiffCommand($migrationsFactory),
+    new Command\StatusCommand($migrationsFactory),
+    new Command\VersionCommand($migrationsFactory),
+    new Command\UpToDateCommand($migrationsFactory),
+    new Command\SyncMetadataCommand($migrationsFactory),
+    new Command\RollupCommand($migrationsFactory),
+]);
+
+$cli->run();
