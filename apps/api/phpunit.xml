@@ -20,5 +20,12 @@
     </source>
     <php>
         <env name="APP_ENV" value="test" force="true"/>
+        <!--
+            Test signing secret — must be at least 32 bytes per
+            JwtSettings::__construct's invariant. Static value is
+            fine for tests; production reads JWT_SECRET from
+            DigitalOcean App Platform's secret store.
+        -->
+        <env name="JWT_SECRET" value="test-secret-key-at-least-32-bytes-long-for-hs256-jwt-signing" force="true"/>
     </php>
 </phpunit>
