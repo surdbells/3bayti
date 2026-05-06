@@ -1,0 +1,107 @@
+/* Category detail page — `/category/:slug`.
+
+   The product-grid layout matches what /_dev/components shows for
+   ProductCard: auto-fill columns at 220px min, 24px gap. Cards size
+   themselves to fill their slot. */
+
+.category-detail-page {
+  padding-block: 32px 96px;
+}
+
+/* ----- Breadcrumb ---------------------------------------------------- */
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.01em;
+  flex-wrap: wrap;
+}
+
+.breadcrumb-link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.breadcrumb-link:hover,
+.breadcrumb-link:focus-visible {
+  color: var(--color-brand-700);
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.breadcrumb-sep {
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
+.breadcrumb-current {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+/* ----- Header -------------------------------------------------------- */
+
+.category-header {
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-brand-500);
+}
+
+/* ----- Product grid -------------------------------------------------- */
+
+.product-grid-section {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.product-grid {
+  display: grid;
+  gap: 32px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+@media (min-width: 768px) {
+  .product-grid {
+    gap: 48px 32px;
+  }
+}
+
+.pagination-hint {
+  margin: 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  padding: 24px;
+  background: var(--color-bg-muted);
+  border-radius: 8px;
+}
+
+/* ----- 404 state link ------------------------------------------------ */
+
+.back-link {
+  font-size: 14px;
+  color: var(--color-brand-700);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

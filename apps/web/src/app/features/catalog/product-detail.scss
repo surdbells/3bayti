@@ -1,0 +1,619 @@
+/* PDP page — `/product/:slug`.
+
+   Two-column layout on desktop (gallery left, info right).
+   Single column stacked on mobile (gallery first, info below). */
+
+.pdp-page {
+  padding-block: 32px 96px;
+}
+
+/* ----- Breadcrumb (visual) ------------------------------------------- */
+
+.pdp-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+  letter-spacing: 0.01em;
+  flex-wrap: wrap;
+  margin-bottom: 32px;
+}
+
+.crumb-link {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.crumb-link:hover,
+.crumb-link:focus-visible {
+  color: var(--color-brand-700);
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.crumb-sep {
+  color: var(--color-text-tertiary);
+  font-size: 14px;
+}
+
+.crumb-current {
+  color: var(--color-text-primary);
+  font-weight: 500;
+  /* Truncate ridiculously long product names */
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ----- Two-column grid ------------------------------------------------ */
+
+.pdp-grid {
+  display: grid;
+  gap: 48px;
+  grid-template-columns: 1fr;
+}
+
+@media (min-width: 900px) {
+  .pdp-grid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 64px;
+  }
+}
+
+/* ----- Gallery ------------------------------------------------------- */
+
+.pdp-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pdp-main-image {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pdp-main-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pdp-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-100) 0%,
+    var(--color-brand-200) 100%
+  );
+  color: var(--color-brand-700);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 96px;
+  font-weight: 600;
+}
+
+/* Status pills on PDP main image */
+.pdp-pills {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: white;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.pill-new {
+  background: var(--color-brand-700);
+  color: var(--color-text-inverse);
+}
+
+.pill-bestseller {
+  background: var(--color-brand-500);
+  color: white;
+}
+
+.pill-sale {
+  background: #b91c1c;
+  color: white;
+}
+
+/* ----- Thumbnails ----------------------------------------------------- */
+
+.pdp-thumbnails {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.pdp-thumb {
+  appearance: none;
+  background: var(--color-bg-muted);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 0;
+  overflow: hidden;
+  cursor: pointer;
+  aspect-ratio: 3 / 4;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.pdp-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pdp-thumb:hover {
+  transform: translateY(-1px);
+}
+
+.pdp-thumb:focus-visible {
+  outline: 2px solid var(--color-brand-700);
+  outline-offset: 2px;
+}
+
+.pdp-thumb.is-active {
+  border-color: var(--color-brand-700);
+}
+
+/* ----- Info column --------------------------------------------------- */
+
+.pdp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 8px;
+}
+
+.pdp-vendor {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+}
+
+.pdp-vendor a {
+  color: var(--color-brand-700);
+  text-decoration: none;
+}
+
+.pdp-vendor a:hover,
+.pdp-vendor a:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pdp-sku {
+  margin: -8px 0 0;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----- Price --------------------------------------------------------- */
+
+.pdp-price {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-current {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-brand-700);
+}
+
+.price-original {
+  font-size: 18px;
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+}
+
+/* ----- Stock --------------------------------------------------------- */
+
+.pdp-stock {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.pdp-stock--out {
+  color: var(--color-text-tertiary);
+}
+
+.stock-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.stock-dot--in {
+  background: #16a34a;     /* green */
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.stock-dot--out {
+  background: #b91c1c;     /* red */
+  box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.15);
+}
+
+/* ----- Options (sizes, colors) --------------------------------------- */
+
+.pdp-options {
+  margin: 0;
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdp-options legend {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0;
+  padding: 0;
+}
+
+.pdp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pdp-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  text-transform: capitalize;
+}
+
+.pdp-chip--color {
+  text-transform: capitalize;
+  letter-spacing: 0.01em;
+}
+
+.pdp-chip--out {
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* ----- Description --------------------------------------------------- */
+
+.pdp-description {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pdp-description p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+/* ----- Detail list (fabric, materials, care) ------------------------- */
+
+.pdp-details {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pdp-detail-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 8px 16px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.pdp-detail-list dt {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-detail-list dd {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+/* ----- 404 / not-found state ----------------------------------------- */
+
+.pdp-not-found {
+  padding: 48px 0;
+  max-width: 560px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-brand-500);
+}
+
+.back-link {
+  font-size: 14px;
+  color: var(--color-brand-700);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.back-link:hover,
+.back-link:focus-visible {
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ----- Aggregate rating (under H1) ----------------------------------- */
+
+/* Star primitive used by both the aggregate-rating block and per-review
+   ratings in the Reviews section. The visual is two stacked SVG paths:
+   a muted "track" star outline behind, a brand-colored "fill" star on
+   top whose visible portion is controlled by the --fill CSS variable
+   (0–1). This lets us render fractional ratings (e.g. 4.6) cleanly
+   without needing half-star icons.
+
+   Sized via `font-size` on the parent so the stars scale with text;
+   the `.star--sm` modifier produces the smaller size used in review
+   cards. */
+
+.star {
+  --fill: 0;
+  position: relative;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+
+.star__track,
+.star__fill {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.star__track {
+  fill: var(--color-border-subtle);
+}
+
+.star__fill {
+  fill: var(--color-brand-500);
+  /* Reveal only the leftmost (--fill * 100)% of the star. */
+  clip-path: inset(0 calc((1 - var(--fill)) * 100%) 0 0);
+}
+
+.pdp-rating {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.pdp-rating__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 18px;
+  /* Inherit color so star fill via currentColor would also work; but
+     we explicitly use brand-500 in .star__fill, so this is mostly for
+     consistency. */
+  line-height: 0;
+}
+
+.pdp-rating__text {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.pdp-rating__value {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-rating__sep {
+  color: var(--color-text-tertiary);
+}
+
+.pdp-rating__count {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+
+.pdp-rating__count:hover,
+.pdp-rating__count:focus-visible {
+  color: var(--color-brand-700);
+  outline: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ----- Reviews section ----------------------------------------------- */
+
+.pdp-reviews {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-margin-top: 80px; /* Sticky header offset for #reviews anchor */
+}
+
+.pdp-reviews__summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.pdp-reviews__avg {
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-reviews__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.pdp-review {
+  padding: 16px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pdp-review__head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pdp-review__stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  line-height: 0;
+}
+
+.star--sm {
+  font-size: inherit;
+}
+
+.pdp-review__verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-brand-700);
+  /* Subtle brand-tinted pill — keeps the badge from competing with
+     the star rating but signals trust at a glance. */
+  background: var(--color-brand-50);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.pdp-review__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.pdp-review__body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+}
+
+.pdp-review__foot {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}
+
+.pdp-review__author {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+/* ----- Related products grid ('You may also like') ------------------- */
+
+/* Lives below the 2-column pdp-grid. Reuses the same auto-fill
+   minmax pattern as /category/:slug so the visual rhythm matches.
+   Larger top margin separates it from the info column above. */
+
+.pdp-related {
+  margin-top: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pdp-related__grid {
+  display: grid;
+  gap: 32px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+@media (min-width: 768px) {
+  .pdp-related__grid {
+    gap: 48px 32px;
+  }
+}

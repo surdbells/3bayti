@@ -1,0 +1,557 @@
+openapi: 3.1.0
+
+info:
+  title: 3bayti API v2 — public read-only endpoints
+  version: '2.0.0'
+  summary: Indexable GET endpoints for the public web storefront.
+  description: |
+    These endpoints power the SEO-optimized 3bayti website. They are
+    **public, unauthenticated, and idempotent GETs** — search-engine
+    crawlable.
+
+    ## Why a separate v2
+
+    The mobile app uses ~70 POST endpoints under `/customer/`. Those POSTs
+    are fine for an authenticated app but bad for SEO: search engines
+    don't crawl POST bodies. Rather than retrofit every existing endpoint,
+    `v2` is a fresh namespace for the small subset of read-only catalog
+    surface that needs to be indexed.
+
+    The web storefront uses **v2** for catalog/SEO content and the existing
+    `/customer/` POSTs for authenticated user actions (cart, checkout,
+    orders, account, etc.).
+
+    ## Auth posture
+
+    All endpoints in this document are **public**. No token required.
+    Returns the same data to crawlers and humans, with optional per-user
+    personalization layered client-side after page load (e.g., wishlist
+    icons enabled on PDPs once the user is signed in).
+
+    ## Caching
+
+    Endpoints should set `Cache-Control: public, s-maxage=300,
+    stale-while-revalidate=86400` so Cloudflare CDN can cache aggressively
+    while the origin updates infrequently. Product detail responses
+    should include `Last-Modified` and respond to `If-Modified-Since`.
+
+    ## Pagination
+
+    List endpoints use cursor-based pagination via `limit` + `offset`
+    query params. Default `limit=20`, max `limit=60`. Responses include a
+    `meta.total` count + `meta.has_more` boolean.
+
+    ## Localization
+
+    `Accept-Language: en` (default) or `Accept-Language: ar` controls the
+    language of `name`, `description`, and other free-text fields.
+    Endpoints respect the standard HTTP header — no need for
+    locale-prefixed paths.
+
+  contact:
+    name: 3bayti API
+    url: https://api.3bayti.ae/
+
+servers:
+  - url: https://api.3bayti.ae/v2
+    description: Production
+  - url: https://staging-api.3bayti.ae/v2
+    description: Staging (TBD — set up alongside the web staging deploy)
+
+tags:
+  - name: catalog
+    description: Categories, products, search — indexable browse surface.
+  - name: storefront
+    description: Vendor stores (independent designers' shops).
+
+# ============================================================================
+# Paths
+# ============================================================================
+
+paths:
+
+  # ----- Categories ---------------------------------------------------------
+
+  /categories:
+    get:
+      tags: [catalog]
+      summary: List all visible product categories
+      description: |
+        Returns the flat list of top-level categories. The mobile app's
+        existing `/customer/category` POST returns essentially the same
+        data; this is the public, GET-friendly mirror.
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+      responses:
+        '200':
+          description: Categories list
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              example: 'public, s-maxage=300, stale-while-revalidate=86400'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Category' }
+                  meta:
+                    type: object
+                    properties:
+                      total: { type: integer, example: 8 }
+
+  /categories/{slug}:
+    get:
+      tags: [catalog]
+      summary: Get a single category by slug
+      description: |
+        For the category landing page (e.g., `/category/abayas`).
+        Includes a paginated first-page of products as a convenience —
+        clients can also call `/products?category=:slug` for fuller
+        control.
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+          example: abayas
+      responses:
+        '200':
+          description: Category detail with first page of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Category'
+                      - type: object
+                        properties:
+                          products:
+                            type: array
+                            items: { $ref: '#/components/schemas/ProductSummary' }
+                  meta:
+                    type: object
+                    properties:
+                      total_products: { type: integer, example: 142 }
+                      page_size: { type: integer, example: 20 }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----- Products -----------------------------------------------------------
+
+  /products:
+    get:
+      tags: [catalog]
+      summary: List products (paginated, filterable)
+      description: |
+        Server-side filterable + paginated. Used by category pages,
+        search results, vendor store pages, and any "products in X" page.
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - in: query
+          name: category
+          description: Filter by category slug
+          schema: { type: string }
+          example: abayas
+        - in: query
+          name: vendor
+          description: Filter by vendor slug
+          schema: { type: string }
+          example: graceloom
+        - in: query
+          name: q
+          description: Free-text search query
+          schema: { type: string }
+        - in: query
+          name: sort
+          description: |
+            Sort order. Default: `relevance` for `q` queries, `newest`
+            otherwise.
+          schema:
+            type: string
+            enum: [relevance, newest, price_asc, price_desc, popular]
+        - in: query
+          name: min_price
+          schema: { type: number, format: float, minimum: 0 }
+        - in: query
+          name: max_price
+          schema: { type: number, format: float, minimum: 0 }
+        - in: query
+          name: in_stock
+          description: If true, exclude out-of-stock items.
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Products list (page)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ProductSummary' }
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /products/{slug}:
+    get:
+      tags: [catalog]
+      summary: Get a single product by slug
+      description: |
+        Powers the product detail page (PDP). Includes everything needed
+        for the PDP to render server-side: full description, all images,
+        size options, vendor info, related products, average rating, and
+        a paginated first page of reviews.
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+          example: graceloom-gl-01
+      responses:
+        '200':
+          description: Product detail
+          headers:
+            Last-Modified:
+              schema: { type: string, format: http-date }
+              description: |
+                Last modification time. Clients should send `If-Modified-Since`
+                on subsequent requests to enable 304 short-circuit.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ProductDetail' }
+        '304':
+          description: Not modified (response to `If-Modified-Since`)
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----- Vendors / Storefronts ---------------------------------------------
+
+  /vendors:
+    get:
+      tags: [storefront]
+      summary: List vendor stores (designers' shops)
+      description: |
+        For the "/designers" or "/stores" landing page on the web. Each
+        vendor is an independent designer/maker on the platform.
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+      responses:
+        '200':
+          description: Vendors list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/VendorSummary' }
+                  meta:
+                    $ref: '#/components/schemas/PaginationMeta'
+
+  /vendors/{slug}:
+    get:
+      tags: [storefront]
+      summary: Get a single vendor's storefront
+      description: |
+        Vendor storefront page — bio, banner, products, reviews summary.
+      parameters:
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - in: path
+          name: slug
+          required: true
+          schema: { type: string }
+          example: graceloom
+      responses:
+        '200':
+          description: Vendor detail with first page of their products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/VendorDetail' }
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ----- Sitemap helper -----------------------------------------------------
+
+  /sitemap-data:
+    get:
+      tags: [catalog]
+      summary: Compact list of all indexable URLs (for sitemap.xml generation)
+      description: |
+        Returns a flat list of every public URL the website should expose
+        in its `sitemap.xml`. The web build uses this at build time to
+        generate the sitemap statically.
+
+        Performance: this returns *only* slugs + `last_modified` — not
+        full content — so even at scale the response stays small. Should
+        be cached aggressively (1h+) and called once per build.
+      responses:
+        '200':
+          description: Flat sitemap data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  categories:
+                    type: array
+                    items: { $ref: '#/components/schemas/SitemapEntry' }
+                  products:
+                    type: array
+                    items: { $ref: '#/components/schemas/SitemapEntry' }
+                  vendors:
+                    type: array
+                    items: { $ref: '#/components/schemas/SitemapEntry' }
+
+# ============================================================================
+# Components — Schemas, Parameters, Responses
+# ============================================================================
+
+components:
+
+  parameters:
+
+    AcceptLanguage:
+      in: header
+      name: Accept-Language
+      schema:
+        type: string
+        enum: [en, ar]
+        default: en
+      description: Preferred language for translatable text fields.
+
+    Limit:
+      in: query
+      name: limit
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 60
+        default: 20
+      description: Max results per page.
+
+    Offset:
+      in: query
+      name: offset
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
+      description: Number of results to skip (for pagination).
+
+  responses:
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+
+    # ----- Common ----------------------------------------------------------
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          properties:
+            code:    { type: string, example: not_found }
+            message: { type: string, example: 'Product not found' }
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:    { type: integer, example: 142 }
+        limit:    { type: integer, example: 20 }
+        offset:   { type: integer, example: 0 }
+        has_more: { type: boolean, example: true }
+
+    SitemapEntry:
+      type: object
+      required: [slug, last_modified]
+      properties:
+        slug:          { type: string, example: graceloom-gl-01 }
+        last_modified: { type: string, format: date-time }
+
+    Money:
+      type: object
+      required: [amount, currency]
+      properties:
+        amount:   { type: number, format: float, example: 350.00 }
+        currency: { type: string, example: AED }
+
+    Image:
+      type: object
+      required: [url]
+      properties:
+        url: { type: string, format: uri }
+        alt: { type: string, example: 'Blue ornate kaftan with embroidered neckline' }
+        width: { type: integer, nullable: true }
+        height: { type: integer, nullable: true }
+
+    # ----- Categories ------------------------------------------------------
+
+    Category:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id:           { type: integer, example: 1 }
+        slug:         { type: string, example: abayas }
+        name:         { type: string, example: Abayas }
+        description:  { type: string, example: 'Elegant abayas crafted by independent UAE designers.' }
+        image:        { $ref: '#/components/schemas/Image' }
+        product_count: { type: integer, example: 142 }
+
+    # ----- Products --------------------------------------------------------
+
+    ProductSummary:
+      type: object
+      description: |
+        Compact representation used in lists (category pages, search
+        results). Does NOT include description, all images, or reviews.
+      required: [id, slug, name, price, primary_image, in_stock]
+      properties:
+        id:            { type: integer, example: 1234 }
+        slug:          { type: string, example: graceloom-gl-01 }
+        name:          { type: string, example: 'GI-01 Embroidered Kaftan' }
+        sku:           { type: string, example: GI-01 }
+        price:         { $ref: '#/components/schemas/Money' }
+        sale_price:    { $ref: '#/components/schemas/Money', nullable: true }
+        primary_image: { $ref: '#/components/schemas/Image' }
+        category_slug: { type: string, example: kaftans }
+        vendor:
+          type: object
+          properties:
+            slug: { type: string, example: graceloom }
+            name: { type: string, example: Graceloom }
+        rating:        { type: number, format: float, example: 4.7, nullable: true }
+        review_count:  { type: integer, example: 23 }
+        in_stock:      { type: boolean, example: true }
+        is_new:        { type: boolean, example: true, description: New arrival flag }
+        is_bestseller: { type: boolean, example: false }
+
+    ProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/ProductSummary'
+        - type: object
+          required: [description, images]
+          properties:
+            description:
+              type: string
+              description: Long-form HTML or markdown.
+              example: 'Hand-embroidered with metallic thread...'
+            images:
+              type: array
+              items: { $ref: '#/components/schemas/Image' }
+              minItems: 1
+            sizes:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:    { type: string, example: M }
+                  in_stock: { type: boolean }
+            colors:
+              type: array
+              items:
+                type: object
+                properties:
+                  label:     { type: string, example: 'Royal Blue' }
+                  hex_code:  { type: string, example: '#1e3a8a' }
+                  in_stock:  { type: boolean }
+            fabric:
+              type: string
+              example: Nada
+            care_instructions:
+              type: string
+              example: 'Dry clean only.'
+            materials:
+              type: array
+              items: { type: string }
+              example: ['100% silk', 'Metallic embroidery thread']
+            related_products:
+              type: array
+              items: { $ref: '#/components/schemas/ProductSummary' }
+              maxItems: 8
+            recent_reviews:
+              type: array
+              maxItems: 5
+              items: { $ref: '#/components/schemas/ReviewSummary' }
+            structured_data:
+              type: object
+              description: |
+                Optional pre-built JSON-LD blob the server can return,
+                ready for the web app to embed in <script
+                type="application/ld+json">. If omitted, the web app
+                builds it from the other fields. Recommend implementing
+                in v2.1 — for v2.0 the web app builds it.
+              nullable: true
+
+    # ----- Reviews ---------------------------------------------------------
+
+    ReviewSummary:
+      type: object
+      required: [id, rating, body, author, created_at]
+      properties:
+        id:         { type: integer }
+        rating:     { type: integer, minimum: 1, maximum: 5 }
+        title:      { type: string, nullable: true }
+        body:       { type: string }
+        author:     { type: string, example: 'Layla A.' }
+        created_at: { type: string, format: date-time }
+        verified:   { type: boolean, description: 'Verified buyer' }
+
+    # ----- Vendors ---------------------------------------------------------
+
+    VendorSummary:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id:    { type: integer }
+        slug:  { type: string, example: graceloom }
+        name:  { type: string, example: Graceloom }
+        tagline:    { type: string, example: 'Bridal couture from Sharjah' }
+        logo:       { $ref: '#/components/schemas/Image' }
+        location:   { type: string, example: 'Sharjah, UAE' }
+        rating:     { type: number, format: float, nullable: true }
+        review_count: { type: integer }
+        product_count: { type: integer }
+
+    VendorDetail:
+      allOf:
+        - $ref: '#/components/schemas/VendorSummary'
+        - type: object
+          properties:
+            bio:    { type: string, description: 'Long-form vendor description' }
+            banner: { $ref: '#/components/schemas/Image' }
+            social:
+              type: object
+              properties:
+                instagram: { type: string, format: uri, nullable: true }
+                tiktok:    { type: string, format: uri, nullable: true }
+                website:   { type: string, format: uri, nullable: true }
+            products:
+              type: array
+              items: { $ref: '#/components/schemas/ProductSummary' }
+              description: First page of vendor's products

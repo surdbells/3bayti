@@ -1,0 +1,12 @@
+# Cloudflare Pages — URL redirects
+# https://developers.cloudflare.com/pages/configuration/redirects/
+#
+# Format: /from /to [status]
+# Status defaults to 301 (permanent). Use 302 for temporary, 200 for
+# rewrites (proxy).
+#
+# Phase 1: empty. Real redirects appear in Phase 2+ as URLs evolve.
+# Examples we'll likely add:
+#   - /designers /designers/  301      (trailing slash normalization)
+#   - /old-product-slug /new-product-slug 301
+#   - /home / 301                       (defensive against legacy links)

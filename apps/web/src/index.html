@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>3bayti — Premium Abayas, Kaftans & Modest Wear</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <!-- SEO defaults — page-level overrides via Angular's Meta service in
+       each component's constructor. These are the fallbacks for routes
+       that don't set their own. -->
+  <meta name="description" content="Discover handcrafted abayas, kaftans, and modest wear from independent designers across the UAE. Curated styles, made-to-measure fits, delivered to your door.">
+  <meta name="theme-color" content="#5a3a2c">
+  <!-- Canonical link is set per-route by SeoService.setCanonical() at
+       prerender time. No static fallback here — every prerendered page
+       gets the right canonical baked in. -->
+
+  <!-- Open Graph + Twitter defaults -->
+  <meta property="og:site_name" content="3bayti">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_AE">
+  <meta name="twitter:site" content="@3bayti">
+
+  <!-- Favicon + manifest (Phase 1 placeholders; Phase 2 polish) -->
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+  <!-- Editorial typography. Preconnect speeds up the font fetch — we use
+       Inter for body + Playfair Display for headings, matching the
+       mobile app's editorial-luxury aesthetic. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&family=Inter:wght@400;500;600;700&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>

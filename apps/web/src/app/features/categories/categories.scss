@@ -1,0 +1,104 @@
+/* /category page styles. Brand-aligned: editorial, generous whitespace,
+   subtle hover states. The category card is the single repeating unit
+   that Phase 2's category-detail page will likely reuse — keep
+   selectors specific enough to extract later. */
+
+.categories-page {
+  padding-block: 64px 96px;
+}
+
+.categories-header {
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-brand-500);
+}
+
+/* Responsive grid — 1 col mobile, 2 col tablet, 3 col desktop, 4 col XL.
+   Using auto-fill ensures empty space is consumed when categories are sparse. */
+.category-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.category-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.4, 1),
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.category-card:hover,
+.category-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--color-brand-700);
+  box-shadow:
+    0 4px 16px rgba(35, 28, 22, 0.04),
+    0 1px 4px rgba(35, 28, 22, 0.04);
+  outline: none;
+}
+
+/* Letter avatar — placeholder while backend doesn't supply real
+   category images. Brand-colored circle with a serif initial. */
+.category-thumb {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--color-brand-100) 0%,
+    var(--color-brand-200) 100%
+  );
+  color: var(--color-brand-700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.category-thumb span {
+  /* Slight optical adjustment — Playfair caps look low without it. */
+  transform: translateY(-1px);
+}
+
+.category-meta {
+  flex: 1 1 auto;
+  min-width: 0; /* Allow text truncation if names get long. */
+}
+
+.category-name {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--color-brand-700);
+  line-height: 1.25;
+}
+
+.category-count {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--color-text-tertiary);
+}

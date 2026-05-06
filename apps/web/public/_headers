@@ -1,0 +1,46 @@
+# Cloudflare Pages — per-route HTTP headers
+# https://developers.cloudflare.com/pages/configuration/headers/
+#
+# Cloudflare reads this file from the build output root at deploy time
+# and applies these headers to matching responses. The /* path is glob-
+# matched so /, /category/abayas, /product/foo all match `/*`.
+
+# ----- Site-wide security + caching defaults -----
+/*
+  # Security headers — modest set for Phase 1, can tighten later
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: SAMEORIGIN
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: geolocation=(), microphone=(), camera=()
+  # Note on Strict-Transport-Security: CF Pages already serves HTTPS-only,
+  # but we set HSTS explicitly so subdomains and longer max-age policies
+  # propagate. 1 year is the recommended starting value.
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# ----- Hashed assets (long cache) -----
+# Files like main-XXXXXXXX.js, styles-YYYYYYYY.css have content hashes in
+# their filenames — they're effectively immutable, so cache for 1 year.
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+/*.woff2
+  Cache-Control: public, max-age=31536000, immutable
+
+# ----- Sitemap + robots (medium cache, must be fresh-ish) -----
+/sitemap.xml
+  Cache-Control: public, max-age=3600
+  Content-Type: application/xml; charset=utf-8
+/robots.txt
+  Cache-Control: public, max-age=86400
+  Content-Type: text/plain; charset=utf-8
+
+# ----- HTML pages (short cache, frequent updates) -----
+# index.html and the prerendered subroute index.html files. We want fresh
+# content for visitors but want the CDN to serve hot pages efficiently.
+# 5 minutes fresh + stale-while-revalidate = effectively free for the
+# browser, never more than 5 minutes stale.
+/
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
+/*/
+  Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400

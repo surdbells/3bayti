@@ -1,0 +1,165 @@
+<main class="home-page">
+
+  <!-- ===========================================================
+       HERO BAND
+       Phase 1 W3 round-3: hero is now carousel-only. The static
+       eyebrow/H1/lede block was removed in ed3896f (May 2026); the
+       .hero band kept for its layout role (vertical padding, full-
+       bleed wrapper around the carousel). The carousel itself
+       declares role="region" + aria-label="Featured products" inside
+       HeroCarouselComponent, so this <section> doesn't need an
+       independent landmark — but keeping aria-label here gives
+       screen readers a meaningful name for the band wrapper if a
+       future change re-introduces text content above the carousel.
+       =========================================================== -->
+  <section class="hero" aria-label="Featured products">
+    <!-- Product carousel — sits inside the hero band so the carousel
+         + future text content read as one composition. Slides come
+         from /v2/products?sort=featured (the same data feeding the
+         "This week's edit" strip below). -->
+    <div class="hero__carousel-wrapper">
+      <ui-hero-carousel
+        [products]="featured() ?? []"
+        [loading]="featured() === null"
+      />
+    </div>
+  </section>
+
+  <!-- ===========================================================
+       CATEGORIES ROW
+       Phase 1 W3 round-2: horizontal-scrolling row of square
+       thumbnails with bundled illustration icons. Replaces the
+       previous letter-avatar grid. Categories without an icon
+       (currently just Pyjamas) are filtered out at the data layer
+       — see HomeComponent.fetchCategories$().
+       =========================================================== -->
+  <section class="home-section home-section--categories" aria-labelledby="categories-title">
+    <header class="home-section__header">
+      <p class="home-section__eyebrow">Browse</p>
+      <h2 id="categories-title" class="home-section__title">Shop by category</h2>
+    </header>
+
+    @if (categories(); as cats) {
+      @if (cats.length > 0) {
+        <div class="categories-row" role="list">
+          @for (cat of cats; track cat.id) {
+            <a
+              [href]="categoryUrl(cat.slug)"
+              class="category-tile"
+              role="listitem"
+              [attr.aria-label]="cat.name + ' — ' + cat.product_count + ' products'"
+            >
+              <div class="category-tile__thumb" aria-hidden="true">
+                @if (iconFor(cat.slug); as iconUrl) {
+                  <img
+                    [src]="iconUrl"
+                    [alt]="''"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                } @else {
+                  <!-- Icon-less fallback (shouldn't reach here because
+                       fetchCategories$ filters out icon-less categories,
+                       but defensive in case the filter is ever relaxed). -->
+                  <span>{{ initial(cat.name) }}</span>
+                }
+              </div>
+              <div class="category-tile__meta">
+                <h3 class="category-tile__name">{{ cat.name }}</h3>
+                <p class="category-tile__count">
+                  {{ cat.product_count }} {{ cat.product_count === 1 ? 'product' : 'products' }}
+                </p>
+              </div>
+            </a>
+          }
+        </div>
+      }
+    } @else {
+      <!-- Skeleton state — 7 placeholder tiles matching the new shape. -->
+      <div class="categories-row">
+        @for (i of [0, 1, 2, 3, 4, 5, 6]; track i) {
+          <div class="category-tile category-tile--skeleton">
+            <ui-skeleton-shimmer aspectRatio="1 / 1" />
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+  <!-- ===========================================================
+       FEATURED PRODUCTS STRIP
+       /v2/products?sort=featured&limit=12
+       =========================================================== -->
+  <ui-product-strip
+    [heading]="featuredHeading"
+    eyebrow="Editor's pick"
+    viewAllUrl="/best-sellers"
+    [products]="featured() ?? []"
+    [loading]="featured() === null"
+  />
+
+  <!-- ===========================================================
+       BEST SELLERS STRIP
+       /v2/products?sort=popular&limit=12
+       =========================================================== -->
+  <ui-product-strip
+    heading="Best sellers"
+    eyebrow="Loved by our community"
+    viewAllUrl="/best-sellers"
+    [products]="bestSellers() ?? []"
+    [loading]="bestSellers() === null"
+  />
+
+  <!-- ===========================================================
+       NEW ARRIVALS STRIP
+       /v2/products?sort=newest&limit=12
+       =========================================================== -->
+  <ui-product-strip
+    heading="New arrivals"
+    eyebrow="Fresh from our designers"
+    viewAllUrl="/new-arrivals"
+    [products]="newArrivals() ?? []"
+    [loading]="newArrivals() === null"
+  />
+
+  <!-- ===========================================================
+       DESIGNER SPOTLIGHT
+       /v2/featured-vendors?limit=4 — vendor cards with embedded
+       product thumbnails. Uses DesignerCard primitive.
+       =========================================================== -->
+  <section class="home-section home-section--designers" aria-labelledby="designers-title">
+    <header class="home-section__header">
+      <p class="home-section__eyebrow">Meet the makers</p>
+      <h2 id="designers-title" class="home-section__title">Designers we love</h2>
+      <a href="/designer" class="home-section__view-all">
+        View all
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </a>
+    </header>
+
+    @if (vendors(); as vs) {
+      @if (vs.length > 0) {
+        <div class="designers-grid">
+          @for (vendor of vs; track vendor.slug) {
+            <ui-designer-card [vendor]="vendor" />
+          }
+        </div>
+      }
+    } @else {
+      <!-- Skeleton state — 4 placeholders matching the real card's layout. -->
+      <div class="designers-grid">
+        @for (i of [0, 1, 2, 3]; track i) {
+          <div class="designer-skeleton">
+            <ui-skeleton-shimmer height="20px" width="60%" [rounded]="false" />
+            <ui-skeleton-shimmer height="14px" width="100%" [rounded]="false" />
+            <ui-skeleton-shimmer height="14px" width="80%" [rounded]="false" />
+            <ui-skeleton-shimmer aspectRatio="1 / 1" />
+          </div>
+        }
+      </div>
+    }
+  </section>
+
+</main>

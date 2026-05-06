@@ -1,0 +1,331 @@
+/* ProductCard — Gilded Boutique design language (roadmap §4.4)
+ * ===========================================================
+ * Cream surface that floats above canvas via Pronounced shadow.
+ * Image inset inside the card with rounded corners and 14px padding.
+ * Typography hierarchy: italic Cormorant vendor → Playfair product
+ * → Inter price/rating. Brand-gold ornament dot punctuates divider.
+ * Hover: card lifts 6px, image scales 1.04, shadow deepens.
+ *
+ * Not extracted into design tokens because this is the FIRST place
+ * we use these specific values (cream surface, pronounced shadow).
+ * Once SiteFooter and DesignerCard reuse the same surface, we'll
+ * lift these up into styles.scss as proper tokens. For now: keep
+ * them local until reuse is proven.
+ *
+ * Locked spec values:
+ *   --product-card-surface:        #fdfaf3
+ *   --product-card-radius:         20px
+ *   --product-card-padding:        14px 14px 20px
+ *   --product-card-image-radius:   14px
+ *   --product-card-aspect:         3 / 4
+ */
+
+.product-card {
+  display: block;
+  background: #fdfaf3;
+  border-radius: 20px;
+  padding: 14px 14px 20px;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  position: relative;
+  /* Soft & subtle shadow at rest — cards float above the canvas with
+   * a whisper of elevation. Tinted brown (rgba(90,58,44, ...)) rather
+   * than neutral grey so it harmonises with the cream surface. See
+   * --shadow-card-resting in src/styles.scss for the source values
+   * and the rationale (Phase 1 W3 round 3 — replaces "Pronounced"
+   * shadow language). */
+  box-shadow: var(--shadow-card-resting);
+  transition:
+    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.product-card:hover,
+.product-card:focus-visible {
+  /* Lift reduced from -6px to -3px to match the softer shadow language.
+   * A taller lift with a soft shadow looks like the card is detached
+   * from its shadow; a smaller lift keeps the relationship believable. */
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+  outline: none;
+}
+
+.product-card:focus-visible {
+  /* Keyboard focus: same lift as hover, plus a brand-gold ring. The
+   * ring is added on top of the hover shadow rather than replacing it
+   * so focus state still feels consistent with hover. */
+  box-shadow:
+    var(--shadow-card-hover),
+    0 0 0 2px var(--color-brand-500);
+}
+
+/* ----- Image area --------------------------------------------------- */
+
+.product-card__image-wrap {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  background: var(--color-bg-muted);
+  overflow: hidden;
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+
+.product-card__image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Subtle slow zoom on hover. Disabled when out-of-stock. */
+.product-card:hover .product-card__image-wrap img,
+.product-card:focus-visible .product-card__image-wrap img {
+  transform: scale(1.04);
+}
+
+.product-card.is-out-of-stock {
+  cursor: not-allowed;
+}
+
+.product-card.is-out-of-stock:hover {
+  /* Defeat the lift and image scale for unavailable products. The
+   * cursor still says they can't act on it. */
+  transform: none;
+  box-shadow: var(--shadow-card-resting);
+}
+
+.product-card.is-out-of-stock:hover .product-card__image-wrap img {
+  transform: none;
+}
+
+.product-card.is-out-of-stock .product-card__image-wrap img {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+}
+
+.product-card__fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--color-brand-100);
+  color: var(--color-brand-700);
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.product-card__fallback span {
+  /* Centred glyph; nudge up slightly to counter Playfair's tall ascender. */
+  margin-top: -4px;
+}
+
+/* ----- Badge (top-left) --------------------------------------------- */
+
+.product-card__badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(253, 250, 243, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 5px 11px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-brand-600);
+  font-weight: 500;
+  border-radius: 999px;
+  border: 0.5px solid var(--color-brand-200);
+  z-index: 2;
+}
+
+.product-card__badge--sale {
+  background: var(--color-brand-700);
+  color: var(--color-text-inverse);
+  border-color: var(--color-brand-700);
+}
+
+/* ----- Like button (top-right) -------------------------------------- */
+
+.product-card__like {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 36px;
+  height: 36px;
+  background: rgba(253, 250, 243, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 0.5px solid var(--color-brand-200);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 2;
+  transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.product-card__like:hover {
+  background: var(--color-brand-50);
+  transform: scale(1.06);
+}
+
+.product-card__like:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.product-card__like svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--color-brand-700);
+  fill: none;
+  stroke-width: 1.5;
+}
+
+/* ----- Out of stock overlay ----------------------------------------- */
+
+.product-card__stock-overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 1;
+}
+
+.product-card__stock-overlay span {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-brand-700);
+  background: rgba(253, 250, 243, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 0.5px solid var(--color-brand-200);
+  letter-spacing: 0.02em;
+}
+
+/* ----- Meta block (vendor / name / divider / price+rating) ----------- */
+
+.product-card__meta {
+  padding: 0 4px;
+}
+
+.product-card__vendor {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--color-brand-500);
+  margin: 0 0 6px;
+  letter-spacing: 0.01em;
+  /* Truncate to one line. Long vendor names rare but happen. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-card__name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 1.3;
+  color: var(--color-brand-700);
+  margin: 0 0 12px;
+  /* Two-line clamp with stable height — prevents jagged grids when
+   * some products have short names and others long. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.6em;
+}
+
+/* Gold ornament divider — three pieces for the dot-flanked-by-lines look. */
+.product-card__divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.product-card__divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border-subtle);
+}
+
+.product-card__divider-mark {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-brand-300);
+}
+
+/* ----- Price + rating row ------------------------------------------- */
+
+.product-card__price-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.product-card__price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--color-brand-700);
+  letter-spacing: 0.02em;
+}
+
+/* Sale state: current price uses brand-600 (slightly darker gold) to
+ * emphasise. Restraint over flashy red — premium aesthetic. */
+.product-card__price-current--sale {
+  color: var(--color-brand-600);
+}
+
+.product-card__price-original {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+  text-decoration: line-through;
+}
+
+.product-card__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+.product-card__rating svg {
+  width: 11px;
+  height: 11px;
+  fill: var(--color-brand-500);
+}
+
+.product-card__rating-count {
+  color: var(--color-text-tertiary);
+}
+
+/* ----- Out-of-stock visual cascade ---------------------------------- */
+
+.product-card.is-out-of-stock .product-card__name,
+.product-card.is-out-of-stock .product-card__vendor {
+  color: var(--color-text-tertiary);
+}

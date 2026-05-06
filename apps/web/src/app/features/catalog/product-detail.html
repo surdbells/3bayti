@@ -1,0 +1,333 @@
+<main class="pdp-page">
+  <ui-container size="default">
+
+    @if (loading()) {
+      <ui-text tone="secondary">Loading…</ui-text>
+    } @else if (notFound()) {
+      <header class="pdp-not-found">
+        <ui-stack gap="md">
+          <p class="eyebrow">Product not found</p>
+          <ui-heading level="h1" size="xl">This piece is no longer available</ui-heading>
+          <ui-text size="lg" tone="secondary">
+            The product you're looking for may have been removed or sold out.
+            Browse our other collections below.
+          </ui-text>
+          <p>
+            <a href="/category" class="back-link">← Back to categories</a>
+          </p>
+        </ui-stack>
+      </header>
+    } @else if (product(); as p) {
+
+      <!-- Breadcrumb (visual). The same trail is also emitted as
+           BreadcrumbList JSON-LD via SeoService — they MUST stay in
+           lockstep (Google's rich-results guidelines reject
+           structured data that doesn't match visible content). The
+           shared `categoryLabel()` helper enforces that. -->
+      <nav class="pdp-breadcrumb" aria-label="Breadcrumb">
+        <a href="/" class="crumb-link">Home</a>
+        <span class="crumb-sep" aria-hidden="true">›</span>
+        <a href="/category" class="crumb-link">Categories</a>
+        @if (categoryUrl(); as catUrl) {
+          <span class="crumb-sep" aria-hidden="true">›</span>
+          <a [href]="catUrl" class="crumb-link">{{ categoryLabel() }}</a>
+        }
+        <span class="crumb-sep" aria-hidden="true">›</span>
+        <span class="crumb-current" aria-current="page">{{ p.name }}</span>
+      </nav>
+
+      <div class="pdp-grid">
+
+        <!-- ======================================================== -->
+        <!-- LEFT COLUMN: Image gallery                                -->
+        <!-- ======================================================== -->
+        <section class="pdp-gallery" aria-label="Product images">
+          <div class="pdp-main-image">
+            @if (activeImage(); as img) {
+              <img
+                [src]="img.url"
+                [alt]="activeImageAlt()"
+                [width]="img.width || 900"
+                [height]="img.height || 1200"
+                loading="eager"
+                fetchpriority="high"
+                decoding="async"
+              />
+            } @else {
+              <div class="pdp-fallback" aria-hidden="true">
+                <span>{{ initial() }}</span>
+              </div>
+            }
+
+            <!-- Status pills (top-left of main image) -->
+            @if (p.is_new || p.is_bestseller || isOnSale()) {
+              <div class="pdp-pills">
+                @if (p.is_new) { <span class="pill pill-new">New</span> }
+                @if (p.is_bestseller) { <span class="pill pill-bestseller">Bestseller</span> }
+                @if (isOnSale()) { <span class="pill pill-sale">Sale</span> }
+              </div>
+            }
+          </div>
+
+          <!-- Thumbnails. Only render if there's more than one image. -->
+          @if (p.images && p.images.length > 1) {
+            <div class="pdp-thumbnails" role="list" aria-label="Additional product images">
+              @for (img of p.images; track img.url; let i = $index) {
+                <button
+                  type="button"
+                  role="listitem"
+                  class="pdp-thumb"
+                  [class.is-active]="i === activeImageIndex()"
+                  [attr.aria-label]="'Show image ' + (i + 1) + ' of ' + p.images.length"
+                  [attr.aria-pressed]="i === activeImageIndex()"
+                  (click)="selectImage(i)"
+                  (keydown)="onThumbnailKeydown($event, i)"
+                >
+                  <img
+                    [src]="img.url"
+                    [alt]="img.alt || (p.name + ' image ' + (i + 1))"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </button>
+              }
+            </div>
+          }
+        </section>
+
+        <!-- ======================================================== -->
+        <!-- RIGHT COLUMN: Product info                                -->
+        <!-- ======================================================== -->
+        <section class="pdp-info" aria-label="Product details">
+
+          @if (p.vendor && p.vendor.name) {
+            <p class="pdp-vendor">
+              @if (vendorUrl(); as vUrl) {
+                <a [href]="vUrl">{{ p.vendor.name }}</a>
+              } @else {
+                {{ p.vendor.name }}
+              }
+            </p>
+          }
+
+          <ui-heading level="h1" size="xl">{{ p.name }}</ui-heading>
+
+          @if (p.sku) {
+            <p class="pdp-sku">SKU: {{ p.sku }}</p>
+          }
+
+          <!-- Aggregate rating. Only renders when there's a real
+               rating + at least one review. Mirrors what's emitted
+               in the schema.org JSON-LD AggregateRating block (W2.2b
+               Phase 2) — Google requires the visible rating to match
+               the structured-data rating. -->
+          @if (aggregateRating(); as agg) {
+            <div class="pdp-rating" [attr.aria-label]="'Average rating ' + agg.value + ' out of 5, ' + reviewCountLabel(agg.count)">
+              <span class="pdp-rating__stars" aria-hidden="true">
+                @for (pos of starPositions; track pos) {
+                  <span class="star" [style.--fill]="starFillFor(pos)">
+                    <!-- Two stacked SVG stars: a muted track and a
+                         brand-colored fill clipped by the --fill
+                         CSS variable. Inline SVG is intentional so
+                         the page stays icon-library-free. -->
+                    <svg class="star__track" viewBox="0 0 20 20" aria-hidden="true">
+                      <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" />
+                    </svg>
+                    <svg class="star__fill" viewBox="0 0 20 20" aria-hidden="true">
+                      <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" />
+                    </svg>
+                  </span>
+                }
+              </span>
+              <span class="pdp-rating__text">
+                <span class="pdp-rating__value">{{ agg.value }}</span>
+                <span class="pdp-rating__sep" aria-hidden="true">·</span>
+                <a href="#reviews" class="pdp-rating__count">{{ reviewCountLabel(agg.count) }}</a>
+              </span>
+            </div>
+          }
+
+          <!-- Price -->
+          <div class="pdp-price">
+            @if (isOnSale() && p.sale_price) {
+              <span class="price-current">{{ formatMoney(p.sale_price) }}</span>
+              <span class="price-original">{{ formatMoney(p.price) }}</span>
+            } @else {
+              <span class="price-current">{{ formatMoney(p.price) }}</span>
+            }
+          </div>
+
+          <!-- Stock state -->
+          <p class="pdp-stock" [class.pdp-stock--out]="!p.in_stock">
+            @if (p.in_stock) {
+              <span class="stock-dot stock-dot--in" aria-hidden="true"></span>
+              In stock
+            } @else {
+              <span class="stock-dot stock-dot--out" aria-hidden="true"></span>
+              Out of stock
+            }
+          </p>
+
+          <!-- Sizes -->
+          @if (p.sizes && p.sizes.length > 0) {
+            <fieldset class="pdp-options">
+              <legend>Size</legend>
+              <div class="pdp-chips">
+                @for (s of p.sizes; track s.label) {
+                  <span
+                    class="pdp-chip"
+                    [class.pdp-chip--out]="!s.in_stock"
+                    [attr.aria-label]="s.label + (s.in_stock ? '' : ' (out of stock)')"
+                  >
+                    {{ s.label }}
+                  </span>
+                }
+              </div>
+            </fieldset>
+          }
+
+          <!-- Colors -->
+          @if (p.colors && p.colors.length > 0) {
+            <fieldset class="pdp-options">
+              <legend>Color</legend>
+              <div class="pdp-chips">
+                @for (c of p.colors; track c.label) {
+                  <span
+                    class="pdp-chip pdp-chip--color"
+                    [class.pdp-chip--out]="!c.in_stock"
+                    [attr.aria-label]="c.label + (c.in_stock ? '' : ' (out of stock)')"
+                  >
+                    {{ c.label }}
+                  </span>
+                }
+              </div>
+            </fieldset>
+          }
+
+          <!-- Description -->
+          @if (descriptionParagraphs().length > 0) {
+            <div class="pdp-description">
+              <ui-heading level="h2" size="sm">Description</ui-heading>
+              @for (para of descriptionParagraphs(); track $index) {
+                <p>{{ para }}</p>
+              }
+            </div>
+          }
+
+          <!-- Reviews. Only rendered if the API returned recent_reviews.
+               Uses an `id="reviews"` anchor so the rating count link
+               above can scroll to it. -->
+          @if (p.recent_reviews && p.recent_reviews.length > 0) {
+            <div class="pdp-reviews" id="reviews">
+              <ui-heading level="h2" size="sm">Reviews</ui-heading>
+
+              <!-- Aggregate summary repeated here so the section is
+                   self-contained (helps when the user navigates
+                   directly via the #reviews anchor). -->
+              @if (aggregateRating(); as agg) {
+                <p class="pdp-reviews__summary">
+                  <span class="pdp-reviews__avg">{{ agg.value }} out of 5</span>
+                  <span aria-hidden="true">·</span>
+                  <span>{{ reviewCountLabel(agg.count) }}</span>
+                </p>
+              }
+
+              <ul class="pdp-reviews__list">
+                @for (review of p.recent_reviews; track review.id) {
+                  <li class="pdp-review">
+                    <header class="pdp-review__head">
+                      <span
+                        class="pdp-review__stars"
+                        [attr.aria-label]="review.rating + ' out of 5 stars'"
+                      >
+                        @for (pos of starPositions; track pos) {
+                          <span
+                            class="star star--sm"
+                            [style.--fill]="pos <= review.rating ? 1 : 0"
+                          >
+                            <svg class="star__track" viewBox="0 0 20 20" aria-hidden="true">
+                              <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" />
+                            </svg>
+                            <svg class="star__fill" viewBox="0 0 20 20" aria-hidden="true">
+                              <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8z" />
+                            </svg>
+                          </span>
+                        }
+                      </span>
+
+                      @if (review.verified) {
+                        <span class="pdp-review__verified" title="Verified buyer">
+                          <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">
+                            <path d="M16.7 5.7L8.5 13.9 4.3 9.7l1.4-1.4 2.8 2.8 6.8-6.8z" fill="currentColor" />
+                          </svg>
+                          Verified buyer
+                        </span>
+                      }
+                    </header>
+
+                    @if (review.title) {
+                      <p class="pdp-review__title">{{ review.title }}</p>
+                    }
+                    <p class="pdp-review__body">{{ review.body }}</p>
+
+                    <footer class="pdp-review__foot">
+                      <span class="pdp-review__author">{{ review.author }}</span>
+                      @if (formatReviewDate(review.created_at); as dateLabel) {
+                        <span aria-hidden="true">·</span>
+                        <span class="pdp-review__date">{{ dateLabel }}</span>
+                      }
+                    </footer>
+                  </li>
+                }
+              </ul>
+            </div>
+          }
+
+          <!-- Materials, fabric, care — only render if backend supplied data -->
+          @if (p.fabric || p.materials?.length || p.care_instructions) {
+            <div class="pdp-details">
+              <ui-heading level="h2" size="sm">Details</ui-heading>
+              <dl class="pdp-detail-list">
+                @if (p.fabric) {
+                  <dt>Fabric</dt>
+                  <dd>{{ p.fabric }}</dd>
+                }
+                @if (p.materials && p.materials.length > 0) {
+                  <dt>Materials</dt>
+                  <dd>{{ p.materials.join(', ') }}</dd>
+                }
+                @if (p.care_instructions) {
+                  <dt>Care</dt>
+                  <dd>{{ p.care_instructions }}</dd>
+                }
+              </dl>
+            </div>
+          }
+        </section>
+
+      </div>
+
+      <!-- Related products. Renders a "You may also like" grid below
+           the main two-column PDP layout. Spans full width inside the
+           same ui-container, so cards align with the gallery+info above.
+
+           Data already lives in product().related_products from the
+           single /v2/products/:slug fetch — no extra API call. The
+           backend returns up to 8 items per request (verified). When
+           it returns fewer or none, the section is silently omitted.
+
+           Uses the same ProductCardComponent and grid styling as
+           /category/:slug — visual consistency across surfaces. -->
+      @if (p.related_products && p.related_products.length > 0) {
+        <section class="pdp-related" aria-label="Related products">
+          <ui-heading level="h2" size="md">You may also like</ui-heading>
+          <div class="pdp-related__grid">
+            @for (related of p.related_products; track related.id) {
+              <ui-product-card [product]="related" />
+            }
+          </div>
+        </section>
+      }
+    }
+  </ui-container>
+</main>

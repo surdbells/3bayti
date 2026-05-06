@@ -1,0 +1,107 @@
+{
+  // Cloudflare Wrangler configuration for the 3bayti web Worker.
+  //
+  // Migration context: this project previously deployed to Cloudflare
+  // Pages with all routes prerendered. With the catalogue at 5,000+
+  // products, prerendering everything is impractical (build time would
+  // exceed CF Pages' window), so we've migrated to Workers + Static
+  // Assets to get runtime SSR for the long tail while keeping the
+  // top-200 most recent products prerendered.
+  //
+  // Request flow:
+  //   1. CF edge checks assets.directory for a static match → serves
+  //      it directly if found. This is ~100% of traffic for prerendered
+  //      pages (home, /category, top-200 PDPs, hashed JS/CSS).
+  //   2. If no asset matches → invokes this Worker (src/worker.ts) →
+  //      AngularAppEngine.handle() runs SSR.
+  //
+  // See https://developers.cloudflare.com/workers/static-assets/ for
+  // the routing model details.
+
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "3bayti-web",
+
+  // The compiled Worker entry. Angular's build (with `outputMode:
+  // "server"` and `ssr.entry: "src/worker.ts"` configured per-target
+  // in angular.json) emits this to dist/3bayti-web/server/server.mjs.
+  "main": "./dist/3bayti-web/server/server.mjs",
+
+  // Today's date. Pinning this date locks in the Workers runtime
+  // behavior; bumping it in future intentionally opts into newer
+  // semantics. Reference: https://developers.cloudflare.com/workers/configuration/compatibility-dates/
+  "compatibility_date": "2026-04-23",
+
+  // nodejs_compat enables Cloudflare's Node.js polyfills (Buffer,
+  // process, etc.). Required because Angular's SSR pipeline and some
+  // transitive deps reference Node globals even when our own code
+  // doesn't. Without this flag the Worker fails to start with
+  // "process is not defined" or similar.
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Static assets binding. CF serves files in this directory directly
+  // (and faster than going through the Worker) when their paths match
+  // the request. Crucially, this binding takes precedence over the
+  // Worker by default — exactly what we want.
+  "assets": {
+    "directory": "./dist/3bayti-web/browser/",
+    "binding": "ASSETS",
+
+    // Drop trailing slashes from HTML URLs.
+    //
+    // The site's own canonical URLs (rel=canonical, sitemap.xml,
+    // OG urls, JSON-LD @id) all use NO trailing slash:
+    //   - https://staging.3bayti.ae/category/abayas-1
+    //   - https://staging.3bayti.ae/product/la26-2637
+    //
+    // Workers Static Assets defaults to "auto-trailing-slash", which
+    // serves directory index.html files (e.g. product/la26-2637/index.html)
+    // at the SLASHED path and 307-redirects the unslashed path to the
+    // slashed one. That would mean the canonical URLs the site emits
+    // would each cost a 307 redirect on first visit — a small SEO hit
+    // and a bad UX.
+    //
+    // "drop-trailing-slash" reverses this: Workers serves
+    // product/la26-2637/index.html when the request is for
+    // /product/la26-2637 (no trailing slash), and redirects the
+    // slashed form to the canonical unslashed form. Matches the
+    // sitemap, matches the internal link structure, no 307s on first
+    // visit.
+    //
+    // Reference: https://developers.cloudflare.com/workers/static-assets/routing/advanced/html-handling/
+    "html_handling": "drop-trailing-slash",
+
+    // Don't add not_found_handling. The default (no special handling)
+    // means: if a request doesn't match a static asset, it falls
+    // through to the Worker — which is what we want for runtime SSR.
+    // Setting "single-page-application" would short-circuit by serving
+    // index.html for any non-asset path, which would re-introduce the
+    // exact bug we're fixing (long-tail PDPs serving the SPA shell).
+    //
+    // Setting "404-page" would return a 404 page instead of falling
+    // through, also wrong for our use case.
+
+    // run_worker_first is left at the default (false). Static assets
+    // are served before the Worker is invoked. This is the cheapest
+    // and fastest mode — every prerendered page costs zero Worker
+    // invocations.
+  },
+
+  // Workers Logs — gives us request/response logs and uncaught
+  // exceptions in the CF dashboard. Free up to 200k events/day on the
+  // free plan; effectively free for a site of this scale.
+  "observability": {
+    "enabled": true
+  },
+
+  // Enable the *.workers.dev preview subdomain for staging/testing.
+  // Once a custom domain is wired up (Phase 4), production traffic
+  // hits the custom domain directly; workers_dev stays useful for
+  // debugging.
+  "workers_dev": true,
+
+  // Preview URLs for non-production branches. This is the Workers
+  // equivalent of Pages' per-branch preview deploys. Combined with
+  // "non-production branch builds" in the Workers Build settings,
+  // every PR gets its own preview URL.
+  "preview_urls": true
+}

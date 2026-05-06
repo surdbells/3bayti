@@ -1,0 +1,120 @@
+/* ============================================================================
+   3bayti web — Global styles
+   -----------------------------------------------------------------------------
+   Tailwind 4 is loaded via PostCSS. The @use directive below brings in
+   Tailwind's preflight + utility classes. Per-component styles live in
+   each component's .scss file.
+   ============================================================================ */
+
+@use "tailwindcss";
+
+/* Custom properties (semantic tokens) — light theme. Mirrors the mobile
+   app's brand palette so users moving between mobile and web feel a
+   consistent identity. */
+:root {
+  /* Brand */
+  --color-brand-50:  #f9f4ea;
+  --color-brand-100: #efe2cf;
+  --color-brand-200: #e4d0b1;
+  --color-brand-300: #d6b988;
+  --color-brand-400: #c69d63;
+  --color-brand-500: #b18f1f;  /* primary gold */
+  --color-brand-600: #8c6f0f;
+  --color-brand-700: #5a3a2c;  /* deep espresso for headings */
+
+  /* Neutrals */
+  --color-bg-canvas:  #faf8f5;
+  --color-bg-surface: #ffffff;
+  --color-bg-muted:   #f4f0ea;
+
+  --color-text-primary:   #2e241c;
+  --color-text-secondary: #5a4a3c;
+  --color-text-tertiary:  #8a7868;
+  --color-text-inverse:   #ffffff;
+
+  --color-border-subtle:  rgba(46, 36, 28, 0.08);
+  --color-border-default: rgba(46, 36, 28, 0.16);
+
+  /* Page layout tokens — used to align every section's content edge to
+     the same container bounds. Before these existed, sections used a mix
+     of max-widths and paddings, causing strips to bleed to viewport
+     edges while categories/designers stopped at 1280px (the "uneven
+     content width" issue from Phase 1 W3 review). One source of truth
+     for the page gutter.
+
+     Used by:
+       - .home-section (hero/categories/designers)
+       - ProductStrip (the track is now bounded too)
+       - SiteFooter
+     Internal layouts can still use their own narrower max-width
+     (e.g. hero text column at 720px) but their outer wrapper aligns
+     to these tokens. */
+  --page-max-width: 1280px;
+  --page-padding-x: 24px;
+
+  /* Shadow tokens — "Soft & subtle" surface elevation language.
+     Promoted from inline values to tokens so a future shadow change
+     ripples through every surface in one place. Five surfaces use
+     these: ProductCard, DesignerCard, category tiles, designer
+     skeleton, hero carousel center card. Floating buttons (strip
+     arrows, carousel arrows, dot indicators) use the floating token.
+
+     Replaced the previous "Pronounced shadow" language (Phase 1 W1)
+     with these softer values per W3 round-3 direction. The previous
+     language used 3 layers up to 0.16 opacity at 48px blur — readable
+     but visually heavy, almost competing with the product imagery.
+     The new tokens use 2 layers, max 0.06 opacity at 12px blur — cards
+     still float but feel grounded. Closer to ASOS / COS / H&M
+     editorial than Pinterest. */
+  --shadow-card-resting:
+    0 1px 2px rgba(90, 58, 44, 0.04),
+    0 4px 12px -2px rgba(90, 58, 44, 0.06);
+
+  --shadow-card-hover:
+    0 2px 4px rgba(90, 58, 44, 0.06),
+    0 8px 20px -4px rgba(90, 58, 44, 0.10);
+
+  /* Carousel center card sits proud of the page without overpowering
+     the image. Slightly stronger than card-hover but still soft. */
+  --shadow-carousel-center:
+    0 4px 8px rgba(90, 58, 44, 0.06),
+    0 16px 32px -8px rgba(90, 58, 44, 0.12);
+
+  /* Floating UI elements (arrow buttons, dot indicators) sit on top
+     of cards or images and need a subtle separating shadow regardless
+     of background. */
+  --shadow-floating:
+    0 1px 2px rgba(90, 58, 44, 0.04),
+    0 6px 14px -4px rgba(90, 58, 44, 0.08);
+}
+
+@media (min-width: 1024px) {
+  :root {
+    /* On desktop the gutter widens for visual breathing room. The
+       768-1024 tablet range stays at 24px for design simplicity —
+       jumping to 32px there created an awkward middle state. */
+    --page-padding-x: 48px;
+  }
+}
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+               'Segoe UI', Roboto, sans-serif;
+  color: var(--color-text-primary);
+  background: var(--color-bg-canvas);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display type — for marketing headlines. Maps to Playfair Display per
+   the mobile app's editorial-luxury aesthetic. Loaded via Google Fonts
+   link in src/index.html. */
+h1, h2, h3, .font-display {
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  letter-spacing: -0.01em;
+}

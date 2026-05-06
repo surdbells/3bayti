@@ -1,0 +1,55 @@
+<main class="categories-page">
+  <ui-container size="default">
+    <ui-stack gap="2xl">
+
+      <header class="categories-header">
+        <ui-stack gap="md">
+          <p class="eyebrow">Browse</p>
+          <ui-heading level="h1" size="xl">Shop by Category</ui-heading>
+          <ui-text size="lg" tone="secondary">
+            Curated abayas, kaftans, accessories and modest-wear collections from
+            independent UAE designers.
+          </ui-text>
+        </ui-stack>
+      </header>
+
+      @if (loading()) {
+        <!-- Loading state — only briefly visible during client-only fetches.
+             Prerendered HTML never shows this because data is baked in
+             via TransferState. -->
+        <ui-text tone="secondary">Loading categories…</ui-text>
+      } @else if (sortedCategories(); as cats) {
+        @if (cats.length === 0) {
+          <ui-text tone="secondary">
+            No categories available right now. Please check back soon.
+          </ui-text>
+        } @else {
+          <div class="category-grid" role="list">
+            @for (cat of cats; track cat.id) {
+              <a
+                [href]="categoryUrl(cat.slug)"
+                class="category-card"
+                role="listitem"
+                [attr.aria-label]="cat.name + ' — ' + cat.product_count + ' products'"
+              >
+                <!-- Letter avatar — fallback for missing/broken category images.
+                     When the backend returns real category cover images, this
+                     can become an <img> with the letter as fallback alt-state. -->
+                <div class="category-thumb" aria-hidden="true">
+                  <span>{{ initial(cat.name) }}</span>
+                </div>
+                <div class="category-meta">
+                  <h2 class="category-name">{{ cat.name }}</h2>
+                  <p class="category-count">
+                    {{ cat.product_count }} {{ cat.product_count === 1 ? 'product' : 'products' }}
+                  </p>
+                </div>
+              </a>
+            }
+          </div>
+        }
+      }
+
+    </ui-stack>
+  </ui-container>
+</main>

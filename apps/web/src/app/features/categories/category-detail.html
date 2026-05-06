@@ -1,0 +1,82 @@
+<main class="category-detail-page">
+  <ui-container size="default">
+    <ui-stack gap="2xl">
+
+      <!-- Breadcrumb (visible) — mirrors the JSON-LD structure for users -->
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a [href]="'/'" class="breadcrumb-link">Home</a>
+        <span class="breadcrumb-sep" aria-hidden="true">›</span>
+        <a [href]="categoriesIndexUrl()" class="breadcrumb-link">Categories</a>
+        @if (category(); as cat) {
+          <span class="breadcrumb-sep" aria-hidden="true">›</span>
+          <span class="breadcrumb-current" aria-current="page">{{ cat.name }}</span>
+        }
+      </nav>
+
+      @if (loading()) {
+        <!-- Loading state — only seen during client-side route transitions
+             (prerendered HTML never shows this; data is in TransferState). -->
+        <ui-text tone="secondary">Loading…</ui-text>
+      } @else if (notFound()) {
+        <header class="category-header">
+          <ui-stack gap="md">
+            <p class="eyebrow">Category not found</p>
+            <ui-heading level="h1" size="xl">No such category</ui-heading>
+            <ui-text size="lg" tone="secondary">
+              The category you're looking for doesn't exist. Browse all
+              categories below.
+            </ui-text>
+            <p>
+              <a [href]="categoriesIndexUrl()" class="back-link">
+                ← All categories
+              </a>
+            </p>
+          </ui-stack>
+        </header>
+      } @else if (category(); as cat) {
+
+        <!-- Header: eyebrow + name + product count -->
+        <header class="category-header">
+          <ui-stack gap="md">
+            <p class="eyebrow">Category</p>
+            <ui-heading level="h1" size="xl">{{ cat.name }}</ui-heading>
+            @if (meta(); as m) {
+              <ui-text size="lg" tone="secondary">
+                {{ m.total_products }} {{ m.total_products === 1 ? 'piece' : 'pieces' }}
+                from independent UAE designers
+              </ui-text>
+            }
+          </ui-stack>
+        </header>
+
+        <!-- Products grid -->
+        @if (products().length === 0) {
+          <ui-text tone="secondary">
+            No products in this category yet. Check back soon.
+          </ui-text>
+        } @else {
+          <section class="product-grid-section" aria-label="Products in this category">
+            <div class="product-grid">
+              @for (p of products(); track p.id) {
+                <ui-product-card [product]="p" />
+              }
+            </div>
+
+            <!-- Pagination placeholder. W2.1b will add real pagination
+                 with /category/:slug?page=N. For now, if there's more
+                 than 20 products, surface a hint to scroll. -->
+            @if (meta(); as m) {
+              @if (m.total_products > products().length) {
+                <p class="pagination-hint">
+                  Showing {{ products().length }} of {{ m.total_products }}.
+                  More coming soon.
+                </p>
+              }
+            }
+          </section>
+        }
+      }
+
+    </ui-stack>
+  </ui-container>
+</main>

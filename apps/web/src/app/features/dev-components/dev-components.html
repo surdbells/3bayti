@@ -1,0 +1,182 @@
+<main class="dev-page">
+  <ui-container size="default">
+    <ui-stack gap="2xl">
+
+      <header class="dev-header">
+        <ui-heading level="h1" size="display">Component preview</ui-heading>
+        <ui-text size="lg" tone="secondary">
+          Visual showcase of the shared UI primitives. Add a new component here
+          when you ship one — keeps the design language consistent and lets you
+          eyeball every state at once.
+        </ui-text>
+      </header>
+
+      <!-- ============================================================ -->
+      <!-- Headings                                                       -->
+      <!-- ============================================================ -->
+      <section>
+        <ui-heading level="h2" size="md">Headings</ui-heading>
+        <p class="dev-note">Decoupled semantic level (h1..h6) from visual size.</p>
+        <div class="dev-card">
+          <ui-stack gap="md">
+            @for (s of headingSizes; track s) {
+              <div class="dev-row">
+                <code class="dev-tag">size="{{ s }}"</code>
+                <ui-heading level="h3" [size]="s">The brown fox jumped</ui-heading>
+              </div>
+            }
+          </ui-stack>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- Text                                                          -->
+      <!-- ============================================================ -->
+      <section>
+        <ui-heading level="h2" size="md">Text</ui-heading>
+        <p class="dev-note">Body copy with size + tone variants.</p>
+        <div class="dev-card">
+          <ui-stack gap="lg">
+            <div>
+              <p class="dev-label">Sizes</p>
+              <ui-stack gap="sm">
+                @for (s of textSizes; track s) {
+                  <div class="dev-row">
+                    <code class="dev-tag">size="{{ s }}"</code>
+                    <ui-text [size]="s">
+                      Discover handcrafted abayas and kaftans from independent UAE designers.
+                    </ui-text>
+                  </div>
+                }
+              </ui-stack>
+            </div>
+            <div>
+              <p class="dev-label">Tones</p>
+              <ui-stack gap="sm">
+                @for (t of textTones; track t) {
+                  <div class="dev-row">
+                    <code class="dev-tag">tone="{{ t }}"</code>
+                    <ui-text [tone]="t">
+                      The quick brown fox jumped over the lazy dog.
+                    </ui-text>
+                  </div>
+                }
+              </ui-stack>
+            </div>
+          </ui-stack>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- Buttons                                                       -->
+      <!-- ============================================================ -->
+      <section>
+        <ui-heading level="h2" size="md">Buttons</ui-heading>
+        <p class="dev-note">3 variants × 3 sizes. Renders as button, anchor, or routerLink based on props.</p>
+        <div class="dev-card">
+          <ui-stack gap="lg">
+            @for (size of buttonSizes; track size) {
+              <div>
+                <p class="dev-label">size="{{ size }}"</p>
+                <ui-stack direction="horizontal" gap="md" [wrap]="true">
+                  @for (variant of buttonVariants; track variant) {
+                    <ui-button [variant]="variant" [size]="size">
+                      {{ variant }}
+                    </ui-button>
+                  }
+                  <ui-button [variant]="'primary'" [size]="size" [disabled]="true">
+                    disabled
+                  </ui-button>
+                </ui-stack>
+              </div>
+            }
+            <div>
+              <p class="dev-label">As link (href)</p>
+              <ui-stack direction="horizontal" gap="md">
+                <ui-button href="/about">External-style anchor</ui-button>
+                <ui-button variant="secondary" routerLink="/">router link</ui-button>
+              </ui-stack>
+            </div>
+          </ui-stack>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- Container                                                     -->
+      <!-- ============================================================ -->
+      <section>
+        <ui-heading level="h2" size="md">Container</ui-heading>
+        <p class="dev-note">Width-constrained content wrapper. Sizes shown in dashed boxes.</p>
+        <ui-stack gap="md">
+          @for (s of containerSizes; track s) {
+            <div class="dev-container-demo">
+              <code class="dev-tag dev-tag--inset">size="{{ s }}"</code>
+              <ui-container [size]="s">
+                <div class="dev-container-fill">
+                  Container content area
+                </div>
+              </ui-container>
+            </div>
+          }
+        </ui-stack>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- Stack                                                         -->
+      <!-- ============================================================ -->
+      <section>
+        <ui-heading level="h2" size="md">Stack</ui-heading>
+        <p class="dev-note">Flex container with consistent spacing scale (4 / 8 / 16 / 24 / 40 / 64 px).</p>
+        <div class="dev-card">
+          <ui-stack gap="lg">
+            <div>
+              <p class="dev-label">Gap presets (vertical)</p>
+              <ui-stack direction="horizontal" gap="md" [wrap]="true">
+                @for (g of stackGaps; track g) {
+                  <div class="dev-stack-demo">
+                    <p class="dev-label">gap="{{ g }}"</p>
+                    <ui-stack [gap]="g">
+                      <div class="dev-pill">A</div>
+                      <div class="dev-pill">B</div>
+                      <div class="dev-pill">C</div>
+                    </ui-stack>
+                  </div>
+                }
+              </ui-stack>
+            </div>
+            <div>
+              <p class="dev-label">Horizontal direction with align/justify</p>
+              <ui-stack direction="horizontal" gap="md" align="center" justify="between"
+                        class="dev-stack-h-demo">
+                <div class="dev-pill">Start</div>
+                <div class="dev-pill">Middle</div>
+                <div class="dev-pill">End</div>
+              </ui-stack>
+            </div>
+          </ui-stack>
+        </div>
+      </section>
+
+      <!-- ============================================================ -->
+      <!-- Product Cards (catalog feature) — W2.1 prep                  -->
+      <!-- ============================================================ -->
+      <section>
+        <ui-heading level="h2" size="md">Product Cards</ui-heading>
+        <p class="dev-note">
+          Reusable card for product grids on /category/:slug, PDP related-products,
+          /designer/:slug, and search. Renders all branches: image present + missing,
+          on sale + regular price, in stock + out of stock, with rating + without,
+          and the defensive "no slug" fallback (renders as div, not anchor).
+        </p>
+        <div class="dev-card dev-card--product-grid">
+          <div class="dev-product-grid">
+            @for (p of mockProducts; track p.id) {
+              <ui-product-card [product]="p" />
+            }
+          </div>
+        </div>
+      </section>
+
+    </ui-stack>
+  </ui-container>
+</main>

@@ -1,0 +1,494 @@
+/* HeroCarouselComponent — coverflow product carousel
+ * ====================================================
+ * 5 portrait product cards rendered simultaneously, positioned via
+ * absolute positioning + CSS transforms into 5 slots:
+ *   slot -2 (far left)  : small, dim
+ *   slot -1 (left)      : medium
+ *   slot  0 (center)    : large, highlighted, full overlay
+ *   slot +1 (right)     : medium
+ *   slot +2 (far right) : small, dim
+ *
+ * Aspect ratio 2:3 — portrait, full product visibility, addresses
+ * the W3 round-2 feedback that horizontal cinematic slides cropped
+ * the products.
+ *
+ * Animation: CSS transitions on transform+opacity+box-shadow when
+ * the data-slot attribute changes. No JS animation.
+ */
+
+.hero-carousel {
+  position: relative;
+  width: 100%;
+  /* The carousel area is sized so the center card (largest) fits with
+     room to breathe. Heights tuned to keep the band proportional to
+     the typical desktop viewport — tall enough to feel cinematic, not
+     so tall it dominates. */
+  height: 520px;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .hero-carousel {
+    height: 560px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel {
+    height: 600px;
+  }
+}
+
+/* Skeleton state. */
+.hero-carousel__skeleton {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.hero-carousel__skeleton ui-skeleton-shimmer {
+  width: 280px;
+  height: 420px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__skeleton ui-skeleton-shimmer {
+    width: 360px;
+    height: 540px;
+  }
+}
+
+/* ----- Stage (positioning context for all slides) ------------------ */
+
+.hero-carousel__stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* ----- Individual slide -------------------------------------------- */
+
+/*
+ * Each slide is absolutely positioned in the center of the stage.
+ * The transform property moves it to its slot position. CSS variables
+ * for translateX values per slot make the math readable.
+ *
+ * Sizing: the base card is the "center" size; slots -1/+1 scale to 70%,
+ * slots -2/+2 scale to 45%. Width is set to 280px (mobile) / 360px
+ * (desktop); height follows from aspect-ratio: 2/3.
+ */
+.hero-carousel__slide {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 280px;
+  aspect-ratio: 2 / 3;
+  transform-origin: center center;
+  /* Default position (no slot match): off-screen far. Each slot class
+     overrides this with specific values. */
+  transform: translate(-50%, -50%) scale(0);
+  opacity: 0;
+  transition:
+    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  border-radius: 16px;
+  overflow: hidden;
+  pointer-events: none;
+  /* z-index follows slot — center is on top, neighbors next, far slots
+     bottom. Set per-slot below. */
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__slide {
+    width: 360px;
+  }
+}
+
+/* Slot 0 — center, biggest, highlighted, on top.
+ * Uses --shadow-carousel-center which is slightly stronger than the
+ * regular card-hover shadow (this is the page hero, after all) but
+ * still soft & subtle compared to the previous "Pronounced" treatment.
+ */
+.hero-carousel__slide.is-center {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+  z-index: 3;
+  pointer-events: auto;
+  box-shadow: var(--shadow-carousel-center);
+}
+
+/* Slots -1 and +1 — medium, flanking the center.
+ * Use the regular card-hover shadow so they read as "secondary" cards
+ * next to the carousel-center primary. */
+.hero-carousel__slide.is-near {
+  z-index: 2;
+  opacity: 0.7;
+  pointer-events: auto;
+  box-shadow: var(--shadow-card-hover);
+}
+
+.hero-carousel__slide.is-near[data-slot="-1"] {
+  /* Slot -1: shift left, scale down. */
+  transform: translate(calc(-50% - 220px), -50%) scale(0.72);
+}
+
+.hero-carousel__slide.is-near[data-slot="1"] {
+  /* Slot +1: shift right, scale down. */
+  transform: translate(calc(-50% + 220px), -50%) scale(0.72);
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__slide.is-near[data-slot="-1"] {
+    transform: translate(calc(-50% - 280px), -50%) scale(0.72);
+  }
+  .hero-carousel__slide.is-near[data-slot="1"] {
+    transform: translate(calc(-50% + 280px), -50%) scale(0.72);
+  }
+}
+
+/* Slots -2 and +2 — far edges, small, dimmed.
+ * Use the resting card shadow — these are the most distant cards in
+ * the coverflow stack. */
+.hero-carousel__slide.is-far {
+  z-index: 1;
+  opacity: 0.35;
+  pointer-events: auto;
+  box-shadow: var(--shadow-card-resting);
+}
+
+.hero-carousel__slide.is-far[data-slot="-2"] {
+  transform: translate(calc(-50% - 380px), -50%) scale(0.5);
+}
+
+.hero-carousel__slide.is-far[data-slot="2"] {
+  transform: translate(calc(-50% + 380px), -50%) scale(0.5);
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__slide.is-far[data-slot="-2"] {
+    transform: translate(calc(-50% - 480px), -50%) scale(0.5);
+  }
+  .hero-carousel__slide.is-far[data-slot="2"] {
+    transform: translate(calc(-50% + 480px), -50%) scale(0.5);
+  }
+}
+
+/* ----- Slide link / button (the slide's clickable surface) --------- */
+
+.hero-carousel__slide-link,
+.hero-carousel__slide-button {
+  display: block;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  text-decoration: none;
+  color: inherit;
+  background: var(--color-bg-muted);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.hero-carousel__slide-link:focus-visible,
+.hero-carousel__slide-button:focus-visible {
+  outline: 3px solid var(--color-brand-500);
+  outline-offset: -3px;
+}
+
+/* Subtle gradient overlay on the center card for overlay-panel
+   readability. Applied only to the center via .is-center scoping. */
+.hero-carousel__slide.is-center .hero-carousel__slide-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    transparent 55%,
+    rgba(46, 36, 28, 0.18) 80%,
+    rgba(46, 36, 28, 0.32) 100%
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hero-carousel__image {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  z-index: 0;
+}
+
+.hero-carousel__image-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--color-brand-100);
+  color: var(--color-brand-700);
+}
+
+.hero-carousel__image-fallback span {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 80px;
+  line-height: 1;
+}
+
+/* ----- Overlay panel (only on center card) ------------------------- */
+
+.hero-carousel__overlay {
+  position: absolute;
+  z-index: 2;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: rgba(253, 250, 243, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 0.5px solid var(--color-brand-200);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+  align-items: center;
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__overlay {
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    padding: 18px 22px 22px;
+  }
+}
+
+.hero-carousel__vendor {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 14px;
+  color: var(--color-brand-500);
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__vendor {
+    font-size: 15px;
+  }
+}
+
+.hero-carousel__product-name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--color-brand-700);
+  margin: 0;
+  /* Truncate to 2 lines for very long names. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__product-name {
+    font-size: 22px;
+  }
+}
+
+.hero-carousel__divider {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+  width: 48px;
+}
+
+.hero-carousel__divider-line {
+  flex: 1;
+  height: 1px;
+  background: var(--color-brand-300);
+  opacity: 0.6;
+}
+
+.hero-carousel__divider-mark {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-brand-400);
+}
+
+.hero-carousel__price {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-brand-700);
+  margin: 0 0 4px;
+  letter-spacing: 0.01em;
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__price {
+    font-size: 16px;
+  }
+}
+
+.hero-carousel__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-brand-700);
+  margin-top: 2px;
+  transition: gap 0.3s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__cta {
+    font-size: 12px;
+  }
+}
+
+.hero-carousel__slide-link:hover .hero-carousel__cta {
+  gap: 10px;
+  color: var(--color-brand-500);
+}
+
+.hero-carousel__cta svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* ----- Manual nav arrows ------------------------------------------- */
+
+.hero-carousel__arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border: 0.5px solid var(--color-brand-200);
+  background: rgba(253, 250, 243, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 50%;
+  display: none;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  z-index: 4;
+  color: var(--color-brand-700);
+  /* Same floating shadow language as strip arrows. */
+  box-shadow: var(--shadow-floating);
+  transition:
+    background 0.2s ease,
+    transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.3s ease;
+  opacity: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .hero-carousel__arrow {
+    display: grid;
+  }
+
+  .hero-carousel:hover .hero-carousel__arrow,
+  .hero-carousel__arrow:focus-visible {
+    opacity: 1;
+  }
+}
+
+.hero-carousel__arrow:hover {
+  background: var(--color-brand-50);
+  transform: translateY(-50%) scale(1.06);
+}
+
+.hero-carousel__arrow:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.hero-carousel__arrow svg {
+  width: 18px;
+  height: 18px;
+}
+
+.hero-carousel__arrow--left {
+  left: 16px;
+}
+
+.hero-carousel__arrow--right {
+  right: 16px;
+}
+
+@media (min-width: 1024px) {
+  .hero-carousel__arrow--left {
+    left: 32px;
+  }
+  .hero-carousel__arrow--right {
+    right: 32px;
+  }
+}
+
+/* ----- Dot indicators ---------------------------------------------- */
+
+.hero-carousel__dots {
+  position: absolute;
+  z-index: 4;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(253, 250, 243, 0.6);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.hero-carousel__dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-brand-300);
+  cursor: pointer;
+  transition:
+    background 0.3s ease,
+    width 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hero-carousel__dot:hover {
+  background: var(--color-brand-500);
+}
+
+.hero-carousel__dot:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 3px;
+}
+
+.hero-carousel__dot.is-active {
+  background: var(--color-brand-700);
+  width: 24px;
+  border-radius: 4px;
+}
