@@ -121,7 +121,7 @@ final class ConfirmControllerTest extends HttpTestCase
     #[Test]
     public function returns401ForWrongCode(): void
     {
-        $user = $this->makeUser();
+        $user = $this->makeUser(phoneVerified: false);
         $verificationId = $this->otpProvider->send($user->getPhone());
 
         $attempt = new OtpAttempt(
@@ -149,7 +149,7 @@ final class ConfirmControllerTest extends HttpTestCase
             ErrorCodes::OTP_VERIFICATION_FAILED,
             $this->jsonBody($response)['error']['code'],
         );
-        // User should NOT be marked phone-verified.
+        // User should NOT be marked phone-verified by the failed attempt.
         self::assertFalse($user->isPhoneVerified());
     }
 
