@@ -218,6 +218,11 @@ return [
     \Bayti\Api\Http\Controllers\Auth\LoginController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\MeController::class => \DI\autowire(),
 
+    // M1.4.3 — OTP issuance
+    \Bayti\Api\Http\Controllers\Auth\RegisterController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\SendOtpController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\ConfirmController::class => \DI\autowire(),
+
     // Doctrine repositories are accessed via EntityManager::getRepository();
     // no DI registrations needed.
 ];

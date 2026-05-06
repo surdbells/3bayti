@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use Bayti\Api\Http\Controllers\Auth\ConfirmController;
 use Bayti\Api\Http\Controllers\Auth\LoginController;
 use Bayti\Api\Http\Controllers\Auth\MeController;
+use Bayti\Api\Http\Controllers\Auth\RegisterController;
+use Bayti\Api\Http\Controllers\Auth\SendOtpController;
 use Bayti\Api\Http\Controllers\Auth\ValidateEmailController;
 use Bayti\Api\Http\Controllers\Auth\ValidatePhoneController;
 use Bayti\Api\Http\Controllers\HealthController;
@@ -42,11 +45,11 @@ return function (App $app): void {
         $group->get('/me', MeController::class)
             ->add(AuthMiddleware::class);
 
-        // M1.4.3 — OTP issuance:
-        //   POST /register            (anonymous)
-        //   POST /send-otp            (anonymous)
-        //   POST /confirm             (anonymous)
-        //
+        // M1.4.3 — OTP issuance flows (anonymous)
+        $group->post('/register', RegisterController::class);
+        $group->post('/send-otp', SendOtpController::class);
+        $group->post('/confirm', ConfirmController::class);
+
         // M1.4.4 — Password reset:
         //   POST /reset               (anonymous)
         //   POST /reset/confirm       (anonymous)

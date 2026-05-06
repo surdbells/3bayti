@@ -11,6 +11,7 @@ use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Auth\Dto\LoginInput;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
+use Bayti\Api\Http\RequestContext;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\UserSerializer;
 use Bayti\Api\Http\Validator\RequestValidator;
@@ -70,6 +71,7 @@ use Psr\Http\Message\ServerRequestInterface;
 final class LoginController
 {
     use Responder;
+    use RequestContext;
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
@@ -155,31 +157,5 @@ final class LoginController
             'refresh_token_expires_at' => $pair->refreshTokenExpiresAt->format(\DateTimeInterface::ATOM),
             'user' => $this->userSerializer->publicProfile($user),
         ]);
-    }
-
-    /**
-     * Extract the client's IP address. Prefers the leftmost entry of
-     * X-Forwarded-For (set by trusted reverse proxies — DigitalOcean
-     * App Platform, Cloudflare); falls back to the connection's
-     * remote address.
-     *
-     * Trust note: only the proxies we control should set XFF; if an
-     * untrusted client sets it, they can spoof their IP. Production
-     * deployment will be behind DO App Platform + Cloudflare which
-     * both manage XFF correctly.
-     */
-    private function extractIp(ServerRequestInterface $request): ?string
-    {
-        $xff = $request->getHeaderLine('X-Forwarded-For');
-        if ($xff !== '') {
-            // Comma-separated list — take the first (original client).
-            $first = trim(explode(',', $xff)[0]);
-            if ($first !== '') {
-                return $first;
-            }
-        }
-
-        $serverParams = $request->getServerParams();
-        return $serverParams['REMOTE_ADDR'] ?? null;
     }
 }
