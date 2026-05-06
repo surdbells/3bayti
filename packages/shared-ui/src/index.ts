@@ -19,3 +19,4 @@
  */
 
 export {};
+// CI trigger marker — touched 2026-05-06 to provoke initial workflow run.
