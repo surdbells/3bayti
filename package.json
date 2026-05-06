@@ -1,0 +1,29 @@
+{
+  "name": "3bayti",
+  "version": "0.0.0",
+  "private": true,
+  "description": "3bayti platform monorepo — web, mobile, portal, api",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "type-check": "turbo run type-check",
+    "codegen": "turbo run codegen",
+    "dev": "turbo run dev",
+    "dev:web": "pnpm --filter @3bayti/web dev",
+    "dev:api": "cd apps/api && php -S localhost:8080 -t public/",
+    "clean": "turbo run clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "2.3.3",
+    "typescript": "5.9.2",
+    "@types/node": "22.10.2"
+  }
+}

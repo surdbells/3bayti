@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+**/node_modules/
+.pnpm-store/
+vendor/
+**/vendor/
+
+# Build artifacts
+dist/
+**/dist/
+build/
+**/build/
+.angular/
+**/.angular/
+.turbo/
+**/.turbo/
+.wrangler/
+**/.wrangler/
+
+# Coverage / test
+coverage/
+**/coverage/
+.nyc_output/
+**/.phpunit.cache/
+**/phpunit-report/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Editors
+.idea/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.iml
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# OS-specific Cloudflare wrangler local state
+.dev.vars
+wrangler.toml.bak

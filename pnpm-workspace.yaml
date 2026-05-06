@@ -1,0 +1,7 @@
+# pnpm workspaces — declares which directories are treated as packages.
+# Each entry is a glob; pnpm finds package.json files matching them.
+# Reference: https://pnpm.io/pnpm-workspace_yaml
+
+packages:
+  - "apps/*"
+  - "packages/*"

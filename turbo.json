@@ -1,0 +1,76 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "ui": "tui",
+  "globalDependencies": [
+    ".env",
+    "tsconfig.json",
+    "turbo.json"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [
+        "dist/**",
+        ".angular/**",
+        "build/**",
+        "!.angular/cache/**"
+      ],
+      "inputs": [
+        "src/**",
+        "tsconfig.json",
+        "tsconfig.*.json",
+        "package.json",
+        "angular.json",
+        "wrangler.jsonc"
+      ]
+    },
+    "lint": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "inputs": [
+        "src/**",
+        ".eslintrc.*",
+        "eslint.config.*",
+        "package.json"
+      ]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"],
+      "inputs": [
+        "src/**",
+        "tests/**",
+        "**/*.spec.ts",
+        "**/*.test.ts",
+        "package.json"
+      ]
+    },
+    "test:e2e": {
+      "dependsOn": ["build"],
+      "outputs": ["playwright-report/**", "test-results/**"],
+      "cache": false
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "codegen": {
+      "outputs": ["src/generated.ts"],
+      "inputs": ["openapi.yaml", "codegen.ts"]
+    },
+    "type-check": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "inputs": [
+        "src/**",
+        "tsconfig.json",
+        "tsconfig.*.json",
+        "package.json"
+      ]
+    },
+    "deploy": {
+      "dependsOn": ["build", "test"],
+      "cache": false
+    }
+  }
+}

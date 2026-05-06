@@ -1,0 +1,26 @@
+# EditorConfig: https://editorconfig.org
+root = true
+
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Markdown — preserve trailing whitespace (line breaks in MD use 2 trailing spaces)
+[*.md]
+trim_trailing_whitespace = false
+
+# PHP uses 4-space indents
+[*.php]
+indent_size = 4
+
+# Makefiles require tabs
+[Makefile]
+indent_style = tab
+
+# YAML is 2-space and tab-sensitive
+[*.{yml,yaml}]
+indent_size = 2
