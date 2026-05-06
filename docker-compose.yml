@@ -1,0 +1,52 @@
+# Local development services for 3bayti API.
+#
+# Runs Postgres 16 + Redis 7 as containers so you don't need to install
+# them locally. The API connects to these on standard ports — see
+# apps/api/.env.example for the matching DB_HOST=localhost defaults.
+#
+# Usage:
+#   docker compose up -d        # start in background
+#   docker compose down         # stop and remove
+#   docker compose down -v      # stop + delete data volumes (full reset)
+#   docker compose logs -f      # tail logs
+#
+# Data persists across restarts in the named volumes (3bayti_pgdata,
+# 3bayti_redisdata). To wipe everything and start fresh, use `down -v`.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: 3bayti-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: 3bayti
+      POSTGRES_USER: 3bayti
+      POSTGRES_PASSWORD: dev_password_change_in_prod
+    ports:
+      - "5432:5432"
+    volumes:
+      - 3bayti_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U 3bayti -d 3bayti"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: 3bayti-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - 3bayti_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  3bayti_pgdata:
+  3bayti_redisdata:

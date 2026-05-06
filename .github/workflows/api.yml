@@ -1,0 +1,80 @@
+name: API — build & test
+
+# Build, lint, and test apps/api (Slim 4 + Doctrine 3 PHP backend).
+#
+# As of M0.3 there is one endpoint (/v3/health) and one test
+# (HealthTest). This workflow exists to keep CI green from day one
+# and to catch regressions as the API grows in M1+.
+#
+# No deploy stage yet — that lands in M1 when DigitalOcean App
+# Platform is set up and we have a real environment to deploy to.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/api.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/api.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo, pdo_pgsql, openssl, curl, fileinfo, json, gd
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache Composer packages
+        # The cache key is keyed on composer.lock so cache invalidates
+        # when dependencies change. Keeps repeat CI runs fast.
+        uses: actions/cache@v4
+        with:
+          path: apps/api/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('apps/api/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install dependencies
+        working-directory: apps/api
+        # --no-interaction prevents prompts; --prefer-dist skips slow
+        # git clones; --no-progress keeps logs clean.
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Validate composer.json
+        working-directory: apps/api
+        run: composer validate --strict
+
+      - name: Lint (PSR-12)
+        working-directory: apps/api
+        # PHPCS exits non-zero on style violations. Soft-fail for now
+        # (warning-level) until the codebase has more code to enforce
+        # against; flip to hard-fail when M1 lands meaningful files.
+        run: composer lint || echo "::warning::PSR-12 violations found (non-blocking until M1)"
+
+      - name: Static analysis (PHPStan)
+        working-directory: apps/api
+        # Same: warn-only at level 6 until codebase warrants strict.
+        run: composer stan || echo "::warning::PHPStan issues found (non-blocking until M1)"
+
+      - name: Run tests
+        working-directory: apps/api
+        # PHPUnit MUST pass. The HealthTest is the smoke that confirms
+        # the app boots — if it ever fails, nothing else can work.
+        run: composer test

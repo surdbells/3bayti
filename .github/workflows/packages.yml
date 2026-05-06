@@ -1,0 +1,59 @@
+name: Packages — type-check
+
+# Type-check shared packages on every push/PR that touches them.
+# Cheap, fast, catches type drift between packages early.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/packages.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/packages.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  type-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check all packages
+        # Run all packages' type-check task in parallel. Turborepo
+        # handles dependency ordering (api-client depends on
+        # api-contracts; tsc must run on api-contracts first).
+        run: pnpm turbo run type-check --filter='./packages/*'
+
+      - name: Lint all packages
+        # M0.4 lint scripts are placeholder echoes; this just confirms
+        # the script exists. Real linting plugs in in M1+.
+        run: pnpm turbo run lint --filter='./packages/*'

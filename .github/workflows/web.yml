@@ -1,47 +1,55 @@
-name: CI
+name: Web — build & deploy
 
-# Build and deploy the 3bayti web Worker.
+# Build and deploy the apps/web Worker.
 #
-# This pipeline runs in two stages:
+# Adapted from the standalone surdbells/3bayti-web CI for the monorepo:
+#   - working-directory: apps/web (instead of repo root)
+#   - pnpm + frozen-lockfile (instead of npm ci)
+#   - paths filter so changes outside apps/web or its dependent
+#     packages don't trigger unnecessary rebuilds
+#   - trigger branch: main (the monorepo default; was master in the
+#     standalone repo)
 #
-#   1. `build` — Always runs (every push, every PR). Builds the production
-#      bundle, runs all the SSR-output verification spot-checks, and
-#      uploads the built dist/ as an artifact for the deploy job to
-#      consume. Independent of Cloudflare uptime.
+# The verification logic (SSR markers, sitemap, Worker bundle) is
+# preserved unchanged — those checks survived multiple rounds of
+# real production debugging and we don't want to regress them.
 #
-#   2. `deploy` — Runs only on push to master. Downloads the build
-#      artifact from stage 1, deploys to Cloudflare Workers via
-#      cloudflare/wrangler-action@v3, then smoke-tests the deployed
-#      Worker by hitting both a prerendered route (served by the
-#      ASSETS binding) and a long-tail product slug (served via
-#      runtime SSR). The smoke test is the only check that can prove
-#      the assets+SSR routing works end-to-end on the live edge —
-#      everything else can lie.
-#
-# Why two jobs and not one:
-#   - PRs build but don't deploy. A single job with conditional steps
-#     would either need a `if: github.event_name == 'push'` on every
-#     deploy step (fragile and noisy), or pay to install wrangler on
-#     PRs that never use it.
-#   - Splitting also means the `deploy` job's logs are separate, which
-#     makes "did the deploy succeed" a one-glance question for anyone
-#     looking at the Actions tab.
-#
-# Required GitHub secrets (configure under Settings → Secrets and
-# variables → Actions):
+# Required GitHub secrets:
 #   CLOUDFLARE_API_TOKEN   — fine-scoped token with "Edit Cloudflare
-#                            Workers" template permissions on this
-#                            account.
-#   CLOUDFLARE_ACCOUNT_ID  — found in the Cloudflare dash sidebar.
+#                            Workers" template permissions
+#   CLOUDFLARE_ACCOUNT_ID  — found in the Cloudflare dash sidebar
 
 on:
   push:
-    branches: [master]
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/design-tokens/**'
+      - 'packages/api-client/**'
+      - 'packages/api-contracts/**'
+      - 'packages/shared-ui/**'
+      - 'packages/tsconfig-3bayti/**'
+      - 'packages/eslint-config-3bayti/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/web.yml'
   pull_request:
-    branches: [master]
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - 'packages/design-tokens/**'
+      - 'packages/api-client/**'
+      - 'packages/api-contracts/**'
+      - 'packages/shared-ui/**'
+      - 'packages/tsconfig-3bayti/**'
+      - 'packages/eslint-config-3bayti/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - '.github/workflows/web.yml'
 
 # Cancel in-progress runs when a newer commit is pushed to the same PR.
-# Saves CI minutes; only the latest commit's build matters.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -49,23 +57,34 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
+          cache: 'pnpm'
 
-      - name: Install dependencies
-        # `npm ci` is stricter than `npm install` — fails if package-lock
-        # is out of sync, never modifies the lockfile. The right call for CI.
-        run: npm ci
+      - name: Install workspace dependencies
+        # --frozen-lockfile fails if pnpm-lock.yaml is out of sync.
+        # Equivalent to npm ci for pnpm. Right call for CI.
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check workspace
+        # Cheap parallel pass — catches TS errors across all packages
+        # before we spend time on the full Angular build. Turborepo
+        # caches it; on CI we don't have a cache, but it's still fast.
+        run: pnpm --filter @3bayti/web type-check
 
       - name: Build production bundle
-        run: npm run build
+        run: pnpm --filter @3bayti/web build
 
       - name: Verify SSR output
         # Sanity check: confirms the prerendered pages actually have
@@ -75,18 +94,15 @@ jobs:
         #
         # Marker rationale (Phase 1 W3 round-3): we used to assert on
         # the literal hero copy ("Premium abayas..."), but that text
-        # was removed in ed3896f when the home transitioned to a
-        # carousel-only hero. Editorial copy is the worst kind of CI
-        # marker — it changes whenever a non-engineering decision says
-        # so. We now check for stable BEM markers that come from
-        # component templates, not editorial copy:
+        # was removed when the home transitioned to a carousel-only
+        # hero. We now check stable BEM markers from component
+        # templates, not editorial copy:
         #
         #   - site-footer__brand-name: every page has the footer; this
-        #     proves the global app shell rendered, not just <app-root>.
+        #     proves the global app shell rendered.
         #   - hero-carousel__slide: confirms the home page's primary
         #     content (the carousel) actually rendered with slide data.
-        #     If /v2/products?sort=featured was unreachable at build
-        #     time, this would catch it.
+        working-directory: apps/web
         run: |
           INDEX=dist/3bayti-web/browser/index.html
           if [ ! -f "$INDEX" ]; then
@@ -115,12 +131,6 @@ jobs:
           fi
           echo "✓ Categories page prerendered ($(wc -c < $CAT) bytes)"
 
-          # Verify category-detail prerender for the abayas slug.
-          # If the API was up at build time, all 8 category-detail routes
-          # are prerendered (one per slug from /v2/categories). We only
-          # spot-check abayas because (a) it has the most products, so a
-          # zero-product issue would also hit it, and (b) it's a stable
-          # slug that's never going away.
           DET=dist/3bayti-web/browser/category/abayas-1/index.html
           if [ ! -f "$DET" ]; then
             echo "ERROR: $DET not found — /category/:slug prerender failed"
@@ -142,11 +152,6 @@ jobs:
           fi
           echo "✓ Category-detail prerendered ($(wc -c < $DET) bytes, $NPRODUCTS products)"
 
-          # Verify PDP prerender for la26-2637 (a stable, known product slug
-          # from Laduna Abaya). The build prerenders the 200 most-recent
-          # products; LA26 is recent enough to be in that window. If LA26
-          # ever falls out of the recent-200 window (i.e. hundreds of newer
-          # products are added), pick another stable slug to spot-check.
           PDP=dist/3bayti-web/browser/product/la26-2637/index.html
           if [ ! -f "$PDP" ]; then
             echo "ERROR: $PDP not found — /product/:slug prerender failed"
@@ -165,6 +170,7 @@ jobs:
           echo "✓ PDP prerendered ($(wc -c < $PDP) bytes, $PDP_IMAGES image elements)"
 
       - name: Verify sitemap + robots generated
+        working-directory: apps/web
         run: |
           if [ ! -f dist/3bayti-web/browser/sitemap.xml ]; then
             echo "ERROR: sitemap.xml missing — postbuild hook may have failed"
@@ -177,13 +183,8 @@ jobs:
           fi
           echo "✓ robots.txt present"
 
-      - name: Verify Worker bundle is present and exports a fetch handler
-        # The Cloudflare Worker entry must end up at
-        # dist/3bayti-web/server/server.mjs with a default export
-        # exposing a fetch() function. If the angular.json ssr.entry
-        # ever drifts back to the Node-only src/server.ts, the deploy
-        # would silently produce a Worker that won't run on the
-        # Workers runtime. This catches that.
+      - name: Verify Worker bundle
+        working-directory: apps/web
         run: |
           WORKER=dist/3bayti-web/server/server.mjs
           if [ ! -f "$WORKER" ]; then
@@ -197,39 +198,27 @@ jobs:
           echo "✓ Worker bundle present ($(wc -c < $WORKER) bytes)"
 
       - name: Tar build output
-        # Tar the build before uploading. This eliminates any ambiguity
-        # about how upload-artifact computes the artifact's root path
-        # (it uses the "least common ancestor" of the input files,
-        # which can drop the `dist/` prefix when uploading a directory
-        # directly). The deploy job extracts the tar at workspace root,
-        # so wrangler.jsonc's `dist/3bayti-web/server/server.mjs` path
-        # resolves correctly.
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        working-directory: apps/web
         run: tar -czf build-output.tar.gz dist/
 
       - name: Upload build artifact
-        # `if-no-files-found: error` means the workflow fails fast if
-        # the build silently produced nothing.
-        if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
-          name: build-output
-          path: build-output.tar.gz
+          name: web-build-output
+          path: apps/web/build-output.tar.gz
           retention-days: 1
           if-no-files-found: error
 
   deploy:
-    # Only deploy on push-to-master. PRs build (above) but never deploy.
-    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # `deployments: write` lets the action create GitHub Deployment
-    # entries (the colored boxes on commits / PRs). Optional but nice.
     permissions:
       contents: read
       deployments: write
-    # Capture the deployment URL as an output for the smoke-test step.
     outputs:
       deployment_url: ${{ steps.deploy.outputs.deployment-url }}
     steps:
@@ -238,12 +227,11 @@ jobs:
       - name: Download build artifact
         uses: actions/download-artifact@v4
         with:
-          name: build-output
+          name: web-build-output
+          path: apps/web
 
       - name: Extract build output
-        # download-artifact drops build-output.tar.gz at the workspace
-        # root. Extract in place so dist/ lands where wrangler.jsonc
-        # expects it. Verify the Worker bundle survived the round trip.
+        working-directory: apps/web
         run: |
           tar -xzf build-output.tar.gz
           rm build-output.tar.gz
@@ -260,13 +248,9 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          # Pin to the same wrangler major we install in package.json
-          # so local and CI behavior match.
           wranglerVersion: '4'
-          # `wrangler deploy` reads wrangler.jsonc from the working
-          # directory; main + assets.directory are configured there.
+          workingDirectory: apps/web
           command: deploy
-          # Surface the deployment in GitHub's UI.
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Print deployment URL
@@ -279,55 +263,15 @@ jobs:
           fi
 
       - name: Smoke-test the deployment
-        # The point of this step: prove that BOTH static-asset routing
-        # AND runtime SSR work on the live edge. Without this, a
-        # successful `wrangler deploy` only proves the upload worked —
-        # it tells us nothing about whether the Worker actually serves
-        # requests correctly.
-        #
-        # We test three URLs against TWO targets:
-        #
-        #   Targets:
-        #     A. The fresh workers.dev URL from `wrangler deploy`.
-        #        Catches Worker-side problems (bundle, runtime, SSR
-        #        engine, allowedHosts) before any custom-domain / DNS
-        #        layer is in the picture.
-        #     B. The production custom domain (staging.3bayti.ae).
-        #        Catches custom-domain-routing problems: Pages-vs-
-        #        Workers misrouting, SSL issues, the Cloudflare zone
-        #        sending traffic somewhere unexpected. This is what
-        #        real users hit, so this is the test that matters
-        #        most for "is the migration still working in
-        #        production."
-        #
-        #   Tests (run against each target):
-        #     1. /              → must be served by ASSETS (prerendered home).
-        #                         Expectation: 200, contains the global footer
-        #                         marker (site-footer__brand-name) AND at least
-        #                         one carousel slide marker (proves the home
-        #                         page's primary content rendered, not just an
-        #                         empty <app-root>).
-        #     2. /product/la26-2637 → top-200 prerendered PDP, ASSETS.
-        #                         Expectation: 200, contains "Laduna".
-        #     3. /product/{long-tail-slug} → NOT prerendered, runtime SSR.
-        #                         Expectation: 200, <title> contains a real
-        #                         vendor name (not the fallback "Product · 3bayti").
-        #
-        # If #3 returns the fallback title, that's the SSR-broken bug
-        # we built this whole migration to fix — fail the workflow loudly.
+        # Tests three URLs against TWO targets: workers.dev (immediate)
+        # and staging.3bayti.ae (production custom domain).
         env:
           DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
-          # Production custom domain. Hardcoded because (a) it doesn't
-          # change per-deploy and (b) putting it in a secret would
-          # imply it's sensitive, which it isn't (the URL appears in
-          # the public sitemap.xml and rel=canonical tags).
           PROD_URL: 'https://staging.3bayti.ae'
+        working-directory: apps/web
         run: |
           set -e
 
-          # smoke_test BASE_URL LABEL
-          # Runs all three smoke tests against the given URL.
-          # Returns 0 on pass, exits the script on failure.
           smoke_test() {
             local BASE="${1%/}"
             local LABEL="$2"
@@ -347,14 +291,10 @@ jobs:
               echo "ERROR [$LABEL]: / returned $HOME_STATUS"
               exit 1
             fi
-            # Stable BEM marker — the global footer renders on every
-            # page, so its absence means the app shell didn't render.
             if ! echo "$HOME_BODY" | grep -q "site-footer__brand-name"; then
               echo "ERROR [$LABEL]: home page missing footer marker — global app shell may not have rendered"
               exit 1
             fi
-            # Carousel slide markers — proves the home page's primary
-            # content rendered with real product data, not skeleton.
             HOME_SLIDES=$(echo "$HOME_BODY" | grep -oE 'hero-carousel__slide\b' | wc -l)
             if [ "$HOME_SLIDES" -lt 1 ]; then
               echo "ERROR [$LABEL]: home page rendered 0 carousel slides — /v2/products may have been unreachable"
@@ -379,9 +319,6 @@ jobs:
 
             echo ""
             echo "[$LABEL] Test 3: Long-tail PDP (RUNTIME SSR via Worker)"
-            # Pick a slug from the sitemap that is NOT in the prerendered
-            # top-200. We compute this once before the loop and reuse;
-            # but to keep the function self-contained, do it here.
             ls dist/3bayti-web/browser/product/ | sort > /tmp/prerendered.txt
             grep -oE '<loc>[^<]+/product/[^<]+</loc>' \
                 dist/3bayti-web/browser/sitemap.xml \
@@ -391,13 +328,11 @@ jobs:
             LONG_TAIL=$(comm -23 /tmp/all-slugs.txt /tmp/prerendered.txt | head -1)
 
             if [ -z "$LONG_TAIL" ]; then
-              echo "WARNING [$LABEL]: no long-tail slug found (catalogue ≤ 200 products?). Skipping runtime-SSR smoke test."
+              echo "WARNING [$LABEL]: no long-tail slug found. Skipping runtime-SSR smoke test."
               return 0
             fi
 
             echo "Selected long-tail slug: $LONG_TAIL"
-            # Generous timeout — cold Worker invocations can take a few
-            # seconds, especially with an upstream API call.
             local TAIL_BODY TAIL_STATUS TAIL_TITLE
             TAIL_BODY=$(curl -fsS --max-time 60 "$BASE/product/$LONG_TAIL")
             TAIL_STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$BASE/product/$LONG_TAIL")
@@ -406,19 +341,13 @@ jobs:
               exit 1
             fi
 
-            # The fallback title is the static one set in app.routes.ts
-            # ("Product · 3bayti"). If we see it, the long-tail PDP did
-            # NOT actually go through SSR — the Worker is serving an
-            # empty shell, which is the exact bug this migration fixes.
             TAIL_TITLE=$(echo "$TAIL_BODY" | grep -oE '<title>[^<]+</title>' | head -1)
             echo "Title: $TAIL_TITLE"
             if echo "$TAIL_TITLE" | grep -qE '<title>Product · 3bayti</title>'; then
               echo "ERROR [$LABEL]: long-tail PDP returned the fallback title — runtime SSR is broken!"
-              echo "       The Worker is serving the empty shell instead of fetching product data."
               exit 1
             fi
 
-            # Sanity check: title should mention "by " (e.g. "001 by Orchid Line | 3bayti")
             if ! echo "$TAIL_TITLE" | grep -q ' by '; then
               echo "ERROR [$LABEL]: long-tail PDP title doesn't look like a real product title:"
               echo "       $TAIL_TITLE"
@@ -428,22 +357,11 @@ jobs:
             echo "✓ [$LABEL] long-tail PDP: 200 OK, runtime SSR served real product data"
           }
 
-          # ---- Target A: workers.dev URL (fresh from this deploy) ----
-          # This is the immediate-feedback test. If this fails, the
-          # Worker itself is broken — no point checking the production
-          # domain since it routes to the same Worker.
           if [ -z "$DEPLOYMENT_URL" ]; then
             echo "ERROR: no deployment URL available; cannot smoke-test"
             exit 1
           fi
           smoke_test "$DEPLOYMENT_URL" "workers.dev"
-
-          # ---- Target B: production custom domain ----
-          # If this fails but workers.dev passed, the issue is in the
-          # custom-domain routing layer (DNS, SSL, zone config), not
-          # the Worker code. That's a Cloudflare-dashboard problem,
-          # not a code-deploy problem — but still a production
-          # outage, so fail the workflow loudly.
           smoke_test "$PROD_URL" "production"
 
           echo ""

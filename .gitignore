@@ -24,6 +24,10 @@ coverage/
 **/.phpunit.cache/
 **/phpunit-report/
 
+# TS incremental build cache
+*.tsbuildinfo
+**/*.tsbuildinfo
+
 # Environment & secrets
 .env
 .env.local

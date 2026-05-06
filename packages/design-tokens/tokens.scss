@@ -1,0 +1,59 @@
+// =============================================================================
+// @3bayti/design-tokens — SCSS variables (consumed by apps/mobile)
+// -----------------------------------------------------------------------------
+// Mirrors tokens.css. Mobile uses Ionic's SCSS theming, which prefers
+// SCSS variables over CSS custom properties for theme overrides at
+// build time.
+// =============================================================================
+
+// Brand
+$color-brand-50:  #f9f4ea;
+$color-brand-100: #efe2cf;
+$color-brand-200: #e4d0b1;
+$color-brand-300: #d6b988;
+$color-brand-400: #c69d63;
+$color-brand-500: #b18f1f;
+$color-brand-600: #8c6f0f;
+$color-brand-700: #5a3a2c;
+
+// Neutrals
+$color-bg-canvas:  #faf8f5;
+$color-bg-surface: #ffffff;
+$color-bg-muted:   #f4f0ea;
+
+$color-text-primary:   #2e241c;
+$color-text-secondary: #5a4a3c;
+$color-text-tertiary:  #8a7868;
+$color-text-inverse:   #ffffff;
+
+$color-border-subtle:  rgba(46, 36, 28, 0.08);
+$color-border-default: rgba(46, 36, 28, 0.16);
+
+// Page layout
+$page-max-width: 1280px;
+$page-padding-x: 24px;
+$page-padding-x-desktop: 48px;
+$desktop-breakpoint: 1024px;
+
+// Shadows
+$shadow-card-resting:
+  0 1px 2px rgba(90, 58, 44, 0.04),
+  0 4px 12px -2px rgba(90, 58, 44, 0.06);
+
+$shadow-card-hover:
+  0 2px 4px rgba(90, 58, 44, 0.06),
+  0 8px 20px -4px rgba(90, 58, 44, 0.10);
+
+$shadow-carousel-center:
+  0 4px 8px rgba(90, 58, 44, 0.06),
+  0 16px 32px -8px rgba(90, 58, 44, 0.12);
+
+$shadow-floating:
+  0 1px 2px rgba(90, 58, 44, 0.04),
+  0 6px 14px -4px rgba(90, 58, 44, 0.08);
+
+// Typography
+$font-body: 'Inter', system-ui, -apple-system, BlinkMacSystemFont,
+            'Segoe UI', Roboto, sans-serif;
+$font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+$font-script: 'Cormorant Garamond', Georgia, serif;
