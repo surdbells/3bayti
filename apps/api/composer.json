@@ -16,7 +16,7 @@
         "doctrine/cache": "^2.2",
         "symfony/cache": "^7.2",
 
-        "firebase/php-jwt": "^6.11",
+        "firebase/php-jwt": "^7.0",
         "symfony/validator": "^7.2",
 
         "predis/predis": "^2.3",
