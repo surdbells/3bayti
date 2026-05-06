@@ -1,0 +1,20 @@
+# Composer
+/vendor/
+
+# Environment
+/.env
+/.env.local
+/.env.*.local
+
+# Cache & generated
+/var/
+/.phpunit.cache/
+/.phpunit.result.cache
+/phpstan.cache
+
+# IDE
+/.idea/
+/.vscode/
+
+# OS
+.DS_Store
