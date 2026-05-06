@@ -227,6 +227,11 @@ return [
     \Bayti\Api\Http\Controllers\Auth\ResetController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\ResetConfirmController::class => \DI\autowire(),
 
+    // M1.4.5 — token lifecycle
+    \Bayti\Api\Http\Controllers\Auth\RefreshController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\LogoutController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\LogoutAllController::class => \DI\autowire(),
+
     // Doctrine repositories are accessed via EntityManager::getRepository();
     // no DI registrations needed.
 ];

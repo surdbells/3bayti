@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 use Bayti\Api\Http\Controllers\Auth\ConfirmController;
 use Bayti\Api\Http\Controllers\Auth\LoginController;
+use Bayti\Api\Http\Controllers\Auth\LogoutAllController;
+use Bayti\Api\Http\Controllers\Auth\LogoutController;
 use Bayti\Api\Http\Controllers\Auth\MeController;
+use Bayti\Api\Http\Controllers\Auth\RefreshController;
 use Bayti\Api\Http\Controllers\Auth\RegisterController;
 use Bayti\Api\Http\Controllers\Auth\ResetConfirmController;
 use Bayti\Api\Http\Controllers\Auth\ResetController;
@@ -56,10 +59,12 @@ return function (App $app): void {
         $group->post('/reset', ResetController::class);
         $group->post('/reset/confirm', ResetConfirmController::class);
 
-        // M1.4.5 — Token lifecycle:
-        //   POST /refresh             (anonymous, refresh token in body)
-        //   POST /logout              (auth required)
-        //   POST /logout-all          (auth required)
+        // M1.4.5 — token lifecycle
+        $group->post('/refresh', RefreshController::class); // anonymous (refresh token in body)
+        $group->post('/logout', LogoutController::class)
+            ->add(AuthMiddleware::class);
+        $group->post('/logout-all', LogoutAllController::class)
+            ->add(AuthMiddleware::class);
     });
 
     // Future route groups land below as M2+ phases ship:
