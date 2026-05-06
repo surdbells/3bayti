@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 use Bayti\Api\Domain\User\OtpService;
 use Bayti\Api\Http\Controllers\HealthController;
+use Bayti\Api\Http\Errors\ApiErrorMiddleware;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Middleware\OptionalAuthMiddleware;
+use Bayti\Api\Http\Validator\RequestValidator;
 use Bayti\Api\Infrastructure\Auth\JwtService;
 use Bayti\Api\Infrastructure\Auth\JwtSettings;
 use Bayti\Api\Infrastructure\Otp\InMemoryOtpProvider;
@@ -19,6 +21,8 @@ use GuzzleHttp\Client as GuzzleClient;
 use Psr\Container\ContainerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Slim\Psr7\Factory\ResponseFactory;
+use Symfony\Component\Validator\Validation;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * PHP-DI container definitions.
@@ -169,6 +173,37 @@ return [
     },
 
     OtpService::class => \DI\autowire(),
+
+    // -------------------------------------------------------------------
+    // HTTP layer — request validator + error middleware
+    // -------------------------------------------------------------------
+
+    /**
+     * symfony/validator instance — set up to read constraints from
+     * PHP attributes on DTOs. PHP-DI then injects this into
+     * RequestValidator wherever needed.
+     */
+    ValidatorInterface::class => static function (): ValidatorInterface {
+        return Validation::createValidatorBuilder()
+            ->enableAttributeMapping()
+            ->getValidator();
+    },
+
+    RequestValidator::class => \DI\autowire(),
+
+    /**
+     * Outermost JSON error middleware. Catches HttpException + any
+     * uncaught Throwable; renders the {error: {...}} envelope.
+     * Debug mode is on for non-prod environments — gives developers
+     * stack frames in 500 responses without leaking them in prod.
+     */
+    ApiErrorMiddleware::class => static function (ContainerInterface $c): ApiErrorMiddleware {
+        $env = $_ENV['APP_ENV'] ?? 'dev';
+        return new ApiErrorMiddleware(
+            responseFactory: $c->get(ResponseFactoryInterface::class),
+            debugMode: $env !== 'prod',
+        );
+    },
 
     // -------------------------------------------------------------------
     // Controllers — autowired, but listed for discoverability.

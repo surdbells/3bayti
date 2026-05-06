@@ -56,14 +56,17 @@ final class Bootstrap
         // 4. Wire middleware, in execution order:
         //    - Body-parsing first (so handlers see decoded JSON)
         //    - Routing next (resolves which handler will run)
-        //    - Error-handling last (outermost — catches everything)
+        //    - Our JSON error middleware OUTERMOST — catches everything
+        //      including routing 404s and middleware errors, renders
+        //      the standard {error:{code,message,details}} envelope.
+        //
+        // Slim's add() is LIFO at execution time, so the last add()
+        // is the OUTERMOST middleware. We don't use Slim's built-in
+        // ErrorMiddleware because it renders HTML by default and
+        // doesn't speak our error envelope.
         $app->addBodyParsingMiddleware();
         $app->addRoutingMiddleware();
-        $app->addErrorMiddleware(
-            displayErrorDetails: ($_ENV['APP_ENV'] ?? 'dev') !== 'prod',
-            logErrors: true,
-            logErrorDetails: true
-        );
+        $app->add($container->get(\Bayti\Api\Http\Errors\ApiErrorMiddleware::class));
 
         // 5. Register routes. Kept in a dedicated file so this factory
         //    stays readable as the route count grows.
