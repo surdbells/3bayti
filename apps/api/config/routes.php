@@ -2,7 +2,12 @@
 
 declare(strict_types=1);
 
+use Bayti\Api\Http\Controllers\Auth\LoginController;
+use Bayti\Api\Http\Controllers\Auth\MeController;
+use Bayti\Api\Http\Controllers\Auth\ValidateEmailController;
+use Bayti\Api\Http\Controllers\Auth\ValidatePhoneController;
 use Bayti\Api\Http\Controllers\HealthController;
+use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
 
@@ -30,12 +35,13 @@ return function (App $app): void {
     // routes here; this group makes the structure visible from one place.
     // -------------------------------------------------------------------
     $app->group('/v3/auth', function (RouteCollectorProxy $group): void {
-        // M1.4.2 — read-only / no-OTP endpoints land here:
-        //   POST /validate-email      (anonymous)
-        //   POST /validate-phone      (anonymous)
-        //   POST /login               (anonymous)
-        //   GET  /me                  (auth required)
-        //
+        // M1.4.2 — read-only / no-OTP endpoints (anonymous unless noted)
+        $group->post('/validate-email', ValidateEmailController::class);
+        $group->post('/validate-phone', ValidatePhoneController::class);
+        $group->post('/login', LoginController::class);
+        $group->get('/me', MeController::class)
+            ->add(AuthMiddleware::class);
+
         // M1.4.3 — OTP issuance:
         //   POST /register            (anonymous)
         //   POST /send-otp            (anonymous)

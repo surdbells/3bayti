@@ -211,6 +211,13 @@ return [
 
     HealthController::class => \DI\autowire(),
 
+    // M1.4.2 — auth controllers (read-only / no-OTP)
+    \Bayti\Api\Http\Serializers\UserSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\ValidateEmailController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\ValidatePhoneController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\LoginController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\MeController::class => \DI\autowire(),
+
     // Doctrine repositories are accessed via EntityManager::getRepository();
     // no DI registrations needed.
 ];
