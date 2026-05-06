@@ -1,5 +1,5 @@
 {
-  "name": "3bayti-web",
+  "name": "@3bayti/web",
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
@@ -11,7 +11,10 @@
     "test": "ng test",
     "serve:ssr:3bayti-web": "node dist/3bayti-web/server/server.mjs",
     "preview:worker": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "dev": "ng serve",
+    "type-check": "tsc --noEmit -p tsconfig.app.json",
+    "lint": "echo \"lint not configured yet (M0.4)\""
   },
   "private": true,
   "packageManager": "npm@11.6.2",
