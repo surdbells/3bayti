@@ -2,12 +2,13 @@ name: API — build & test
 
 # Build, lint, and test apps/api (Slim 4 + Doctrine 3 PHP backend).
 #
-# As of M0.3 there is one endpoint (/v3/health) and one test
-# (HealthTest). This workflow exists to keep CI green from day one
-# and to catch regressions as the API grows in M1+.
-#
-# No deploy stage yet — that lands in M1 when DigitalOcean App
-# Platform is set up and we have a real environment to deploy to.
+# Two jobs:
+#   - test    runs on every push + PR — never skipped
+#   - deploy  runs only on push to main, ONLY when the
+#             DIGITALOCEAN_ACCESS_TOKEN secret is set in repo settings.
+#             This means deploy is opt-in: the workflow file ships with
+#             the action but no actual deploys happen until the secret
+#             is created. See docs/deploy/m1.5-runbook.md for setup.
 
 on:
   push:
@@ -78,3 +79,80 @@ jobs:
         # PHPUnit MUST pass. The HealthTest is the smoke that confirms
         # the app boots — if it ever fails, nothing else can work.
         run: composer test
+
+  # ---------------------------------------------------------------------------
+  # Deploy job — opt-in via secret
+  # ---------------------------------------------------------------------------
+  #
+  # Triggers on every push to main IF the test job passed AND the
+  # DIGITALOCEAN_ACCESS_TOKEN secret is configured in repo settings.
+  #
+  # If the secret is NOT set, this job skips silently (the `if` clause
+  # falsy-evaluates the unset secret). This is the gating mechanism:
+  # ship the workflow file freely; deploys don't actually happen until
+  # someone explicitly creates the secret.
+  #
+  # First-time setup (per docs/deploy/m1.5-runbook.md):
+  #   1. Create the App Platform application via doctl (one-time, manual)
+  #   2. Get the App ID
+  #   3. In repo Settings → Secrets and variables → Actions:
+  #      - Add `DIGITALOCEAN_ACCESS_TOKEN` (Personal Access Token from DO)
+  #      - Add `DIGITALOCEAN_APP_ID` (the app id from step 2)
+  #      - Add `API_SMOKE_URL` (https://api-v3.3bayti.ae once DNS is live;
+  #        the App Platform default URL until then)
+  # ---------------------------------------------------------------------------
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # Only deploy from main, AND only when the secret is set.
+    # GitHub treats unset secrets as empty strings, so the != '' check
+    # short-circuits the whole job to "skipped" when not configured.
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      vars.ENABLE_AUTO_DEPLOY == 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install doctl
+        # DigitalOcean's official action; keeps the CLI version pinned
+        # so we don't pick up surprise behavior changes.
+        uses: digitalocean/action-doctl@v2
+        with:
+          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Validate app spec
+        # Sanity check before triggering a deploy. Catches typos in
+        # app.yaml without burning a real deploy attempt.
+        run: doctl apps spec validate apps/api/.do/app.yaml
+
+      - name: Trigger deployment
+        # `update --spec` applies any spec changes AND triggers a new
+        # deploy from the latest commit. If the spec is unchanged but
+        # we just want a redeploy, `create-deployment` works too —
+        # but `update` is simpler and idempotent.
+        run: |
+          doctl apps update "${{ secrets.DIGITALOCEAN_APP_ID }}" \
+            --spec apps/api/.do/app.yaml \
+            --wait
+
+      - name: Smoke test the deployment
+        # Once the deploy completes (--wait blocks until the new
+        # version is Active), verify it actually works. If the smoke
+        # test fails, the deploy is reported as failed and an alert
+        # fires — but the bad version is still live until manual
+        # rollback. Future hardening: roll back automatically on
+        # smoke-test failure.
+        run: |
+          chmod +x apps/api/scripts/smoke.sh
+          apps/api/scripts/smoke.sh "${{ secrets.API_SMOKE_URL }}"
+
+      - name: Notify on failure
+        if: failure()
+        run: |
+          echo "::error::Deploy or smoke test failed. Check job logs and"
+          echo "::error::App Platform dashboard. See docs/deploy/m1.5-runbook.md"
+          echo "::error::section 'Rollback procedure' for recovery steps."
