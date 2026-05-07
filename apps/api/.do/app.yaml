@@ -1,0 +1,321 @@
+# =============================================================================
+# 3bayti API — DigitalOcean App Platform spec
+# =============================================================================
+#
+# This is the manifest DigitalOcean reads to build, deploy, and manage
+# the API service. Equivalent to what you'd configure via the dashboard,
+# but kept as code so changes are reviewable and the deployment is
+# reproducible.
+#
+# Apply (one-time, first deploy):
+#
+#     doctl apps create --spec apps/api/.do/app.yaml
+#
+# Update (after spec changes):
+#
+#     doctl apps update <app-id> --spec apps/api/.do/app.yaml
+#
+# Or via the dashboard: Apps → 3bayti-api → Settings → App Spec → Edit.
+#
+# Reference:
+#   https://docs.digitalocean.com/products/app-platform/reference/app-spec/
+#
+# Region note
+# -----------
+# `region: fra` is Frankfurt — closest DO region to UAE with low
+# latency to Cloudflare's Dubai edge. `lon` (London) is a fallback;
+# `nyc1` is too far. We don't deploy to multiple regions in M1.5;
+# multi-region is post-launch optimization.
+#
+# Cost note
+# ---------
+# Initial spec uses smallest tiers — basic-xxs for the API ($5/mo) and
+# db-s-1vcpu-1gb for Postgres ($15/mo) and one Upstash free-tier Redis.
+# Total ~$25/mo for staging. Production scaling happens via
+# `instance_size_slug` + `instance_count` adjustments in M5.
+# =============================================================================
+
+name: 3bayti-api
+region: fra
+
+# -----------------------------------------------------------------------------
+# Services — the running components
+# -----------------------------------------------------------------------------
+#
+# We have ONE service (the API itself). Background workers, scheduled
+# jobs, and static file servers would each be additional entries here.
+
+services:
+  - name: api
+    # Match the source repo + path. App Platform supports building
+    # multiple services from the same monorepo by setting source_dir.
+    github:
+      repo: surdbells/3bayti
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    dockerfile_path: apps/api/Dockerfile
+
+    # The Docker container's CMD is ENTRYPOINT-handled (supervisord);
+    # leave run_command empty so App Platform doesn't override it.
+    run_command: ""
+
+    # HTTP port the container listens on. Must match what nginx is
+    # configured for (entrypoint.sh substitutes ${PORT} from this env).
+    http_port: 8080
+
+    # Instance sizing — start small. Scales up via `instance_size_slug`.
+    #   basic-xxs: 0.5 vCPU, 0.5 GB RAM, $5/mo  (good for staging)
+    #   basic-xs:  1 vCPU,   1 GB RAM,  $12/mo  (good for prod start)
+    #   basic-s:   1 vCPU,   2 GB RAM,  $24/mo  (prod with growth)
+    instance_size_slug: basic-xxs
+    instance_count: 1
+
+    # Health checks — App Platform pings these to decide whether
+    # to route traffic and whether to mark the instance unhealthy.
+    health_check:
+      # /v3/health is liveness only (no DB dependency). If DB is down,
+      # we don't want App Platform restarting containers (which would
+      # just create more containers also unable to reach DB).
+      http_path: /v3/health
+      initial_delay_seconds: 5
+      period_seconds: 10
+      timeout_seconds: 3
+      success_threshold: 1
+      failure_threshold: 3
+
+    # -------------------------------------------------------------------
+    # HTTP routes
+    # -------------------------------------------------------------------
+    routes:
+      - path: /
+        # No path-stripping; the API uses /v3/* paths directly.
+        preserve_path_prefix: true
+
+    # -------------------------------------------------------------------
+    # Environment variables
+    # -------------------------------------------------------------------
+    #
+    # Two scopes:
+    #   - RUN_TIME: available to the running service
+    #   - RUN_AND_BUILD_TIME: also available during composer install
+    #
+    # Two types:
+    #   - GENERAL: plain text, visible in dashboard
+    #   - SECRET:  encrypted by App Platform's KMS, never visible
+    #              after first save (you can only overwrite, not read)
+    #
+    # Convention: anything that's clearly a credential gets SECRET;
+    # anything that's runtime config (TTLs, URLs, etc) gets GENERAL.
+    envs:
+      - key: APP_ENV
+        scope: RUN_AND_BUILD_TIME
+        value: prod
+
+      - key: APP_VERSION
+        scope: RUN_TIME
+        # Set during deploy; falls back to 'unknown' if not provided.
+        value: ${_self.SOURCE_COMMIT_SHA:-unknown}
+
+      - key: APP_URL
+        scope: RUN_TIME
+        value: https://api-v3.3bayti.ae
+
+      - key: APP_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        # Set via dashboard or `doctl apps update --spec` AFTER first deploy.
+        # Generate with: php -r "echo bin2hex(random_bytes(32));"
+        value: PASTE_AT_DEPLOY_TIME
+
+      # ---- Database (auto-injected when Postgres component attached) ----
+      #
+      # When you attach the postgres component below to this service,
+      # App Platform injects DATABASE_URL automatically. We split it
+      # into the discrete vars our config/doctrine.php reads.
+      #
+      # IMPORTANT: the values below use App Platform's binding syntax
+      # ${db.X} where 'db' is the component name. They're resolved at
+      # deploy time.
+      - key: DB_HOST
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.HOSTNAME}
+      - key: DB_PORT
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.PORT}
+      - key: DB_DATABASE
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.DATABASE}
+      - key: DB_USERNAME
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.USERNAME}
+      - key: DB_PASSWORD
+        scope: RUN_TIME
+        type: SECRET
+        value: ${db.PASSWORD}
+      - key: DB_SSLMODE
+        scope: RUN_AND_BUILD_TIME
+        # DO Managed Postgres requires SSL.
+        value: require
+
+      # ---- Redis (Upstash — set values manually after creating the instance) ----
+      - key: REDIS_HOST
+        scope: RUN_TIME
+        value: PASTE_UPSTASH_REDIS_HOST
+      - key: REDIS_PORT
+        scope: RUN_TIME
+        value: "6379"
+      - key: REDIS_PASSWORD
+        scope: RUN_TIME
+        type: SECRET
+        value: PASTE_UPSTASH_REDIS_PASSWORD
+      - key: REDIS_DB
+        scope: RUN_TIME
+        value: "0"
+
+      # ---- JWT ----
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        # Generate with: php -r "echo bin2hex(random_bytes(64));"
+        value: PASTE_AT_DEPLOY_TIME
+      - key: JWT_ACCESS_TOKEN_TTL
+        scope: RUN_TIME
+        value: "900"
+      - key: JWT_REFRESH_TOKEN_TTL
+        scope: RUN_TIME
+        value: "604800"
+      - key: JWT_ISSUER
+        scope: RUN_TIME
+        value: 3bayti-api
+
+      # ---- MessageCentral CPaaS ----
+      - key: MESSAGECENTRAL_CUSTOMER_ID
+        scope: RUN_TIME
+        type: SECRET
+        value: PASTE_AT_DEPLOY_TIME
+      - key: MESSAGECENTRAL_KEY
+        scope: RUN_TIME
+        type: SECRET
+        value: PASTE_AT_DEPLOY_TIME
+      - key: MESSAGECENTRAL_EMAIL
+        scope: RUN_TIME
+        type: SECRET
+        value: PASTE_AT_DEPLOY_TIME
+      - key: MESSAGECENTRAL_COUNTRY
+        scope: RUN_TIME
+        value: "971"
+
+      # ---- CORS ----
+      - key: CORS_ALLOWED_ORIGINS
+        scope: RUN_TIME
+        value: https://staging.3bayti.ae,https://3bayti.ae,https://vendor.3bayti.ae
+
+      # ---- Observability ----
+      - key: LOG_LEVEL
+        scope: RUN_TIME
+        value: info
+
+      # ---- Container runtime ----
+      - key: WAIT_FOR_DB
+        scope: RUN_TIME
+        # In App Platform, DB is always up before our container starts;
+        # skip the wait loop to speed cold-start.
+        value: "0"
+
+# -----------------------------------------------------------------------------
+# Predeploy job — runs once per release, BEFORE traffic switches
+# -----------------------------------------------------------------------------
+#
+# This runs `bin/migrate.php` to apply database migrations. If it
+# exits non-zero, the deploy aborts and the previous version keeps
+# serving (no half-applied schema, no downtime).
+#
+# Same Dockerfile as the service — App Platform reuses the built image.
+jobs:
+  - name: migrate
+    kind: PRE_DEPLOY
+    github:
+      repo: surdbells/3bayti
+      branch: main
+    source_dir: /
+    dockerfile_path: apps/api/Dockerfile
+    run_command: php apps/api/bin/migrate.php
+    instance_size_slug: basic-xxs
+    instance_count: 1
+
+    envs:
+      # Migration job needs DB connection only — same secrets as the
+      # main service. We DUPLICATE these because App Platform jobs
+      # don't inherit envs from sibling services.
+      - key: APP_ENV
+        scope: RUN_AND_BUILD_TIME
+        value: prod
+      - key: DB_HOST
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.HOSTNAME}
+      - key: DB_PORT
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.PORT}
+      - key: DB_DATABASE
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.DATABASE}
+      - key: DB_USERNAME
+        scope: RUN_AND_BUILD_TIME
+        value: ${db.USERNAME}
+      - key: DB_PASSWORD
+        scope: RUN_TIME
+        type: SECRET
+        value: ${db.PASSWORD}
+      - key: DB_SSLMODE
+        scope: RUN_AND_BUILD_TIME
+        value: require
+      # JWT_SECRET is a constructor invariant for JwtSettings, which
+      # the DI container builds at boot. Migration job goes through
+      # Bootstrap::createApp(), so it needs this even though no JWTs
+      # are issued during migrate. Reuse the same secret.
+      - key: JWT_SECRET
+        scope: RUN_TIME
+        type: SECRET
+        value: PASTE_AT_DEPLOY_TIME
+
+# -----------------------------------------------------------------------------
+# Managed databases
+# -----------------------------------------------------------------------------
+#
+# 'db' name is referenced above in env vars (${db.HOSTNAME} etc).
+# `production: false` here = this is a "dev database" tier intended
+# for staging. Switch to `production: true` for prod (more memory,
+# automated backups, point-in-time recovery, slow-query logging).
+
+databases:
+  - name: db
+    engine: PG
+    version: "16"
+    size: db-s-1vcpu-1gb
+    num_nodes: 1
+    production: false
+
+# -----------------------------------------------------------------------------
+# Domains — the public endpoint
+# -----------------------------------------------------------------------------
+#
+# After first deploy, App Platform gives you a default URL like
+# 3bayti-api-abc12.ondigitalocean.app. This block points
+# api-v3.3bayti.ae to that.
+#
+# DNS prerequisite (owner action):
+#   In your DNS provider (Cloudflare / route53 / etc), add a CNAME
+#   record:
+#     api-v3.3bayti.ae → 3bayti-api-abc12.ondigitalocean.app
+#   (App Platform shows the exact target after first deploy).
+#
+# If using Cloudflare, set the proxy mode to "DNS only" (gray cloud)
+# during DNS validation, then can switch to "Proxied" (orange cloud)
+# after App Platform issues the cert.
+
+domains:
+  - domain: api-v3.3bayti.ae
+    type: PRIMARY
+    # App Platform auto-issues + auto-renews a Let's Encrypt cert.
+    certificate: LETS_ENCRYPT
