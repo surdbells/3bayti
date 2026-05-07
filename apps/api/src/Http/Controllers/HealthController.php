@@ -114,6 +114,12 @@ final class HealthController
                 $checks['database'] = 'error: ' . $this->safeMessage($e);
                 $allOk = false;
             }
+        } else {
+            // No connection bound → can't check, treat as degraded.
+            // Still report a 'database' key so callers always see
+            // a consistent response shape.
+            $checks['database'] = 'error: connection not configured';
+            $allOk = false;
         }
 
         $payload = $this->basePayload();

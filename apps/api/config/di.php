@@ -209,7 +209,31 @@ return [
     // Controllers — autowired, but listed for discoverability.
     // -------------------------------------------------------------------
 
-    HealthController::class => \DI\autowire(),
+    HealthController::class => static function (ContainerInterface $c): HealthController {
+        // Explicit factory rather than autowire(). Two reasons:
+        //
+        // 1. PHP-DI's autowiring for ?Type = null parameters is
+        //    ambiguous — sometimes it injects the type, sometimes
+        //    the default. Explicit construction removes the doubt.
+        //
+        // 2. Connection construction itself could fail in test or
+        //    misconfigured environments (no DB driver available,
+        //    DSN parse error, etc.). We catch that and pass null —
+        //    liveness endpoint still works without DB; readiness
+        //    will report 'no connection injected' degraded state.
+        $connection = null;
+        try {
+            $connection = $c->get(Connection::class);
+        } catch (\Throwable) {
+            // No DB available — liveness still works; readiness
+            // will return degraded with empty checks.
+        }
+
+        return new HealthController(
+            $c->get(\Psr\Http\Message\ResponseFactoryInterface::class),
+            $connection,
+        );
+    },
 
     // M1.4.2 — auth controllers (read-only / no-OTP)
     \Bayti\Api\Http\Serializers\UserSerializer::class => \DI\autowire(),
