@@ -4,38 +4,155 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers;
 
+use Bayti\Api\Http\Responder;
+use Doctrine\DBAL\Connection;
+use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * Health-check endpoint.
+ * Health-check endpoints — TWO of them, deliberately split.
  *
- * Used by:
- *   - Load balancers / hosting platform health probes
- *   - Local dev to confirm the API is up
- *   - CI smoke tests after deploy
+ * Why two endpoints (liveness vs readiness)
+ * -----------------------------------------
  *
- * Deliberately does NOT touch the database or any external service —
- * a health check that depends on Postgres being up is a "Postgres check",
- * not a "is the API itself responsive" check. We add deeper checks
- * (/v3/health/db, /v3/health/redis) later when we have those services.
+ * `/v3/health` (liveness):
+ *   "Is this PHP process running and able to serve HTTP?"
+ *   Always returns 200 with no external dependencies. Used by
+ *   container orchestrators (App Platform's container health check)
+ *   to decide whether to KILL AND RESTART the container.
+ *
+ *   Critically, this endpoint does NOT touch the database. A DB
+ *   outage shouldn't trigger container restarts — restarting would
+ *   just produce more containers that all fail their checks against
+ *   the same broken DB. Better to stay up and let users see a 503
+ *   with a helpful error.
+ *
+ * `/v3/health/ready` (readiness):
+ *   "Can this instance serve real requests right now?"
+ *   Pings the database. Returns 503 if DB is unreachable. Used by:
+ *     - Deploy gates: don't route traffic to a new deploy until
+ *       /ready returns 200
+ *     - Human monitoring dashboards: "is everything working?"
+ *     - CI smoke tests: post-deploy verification
+ *
+ * Response shape
+ * --------------
+ *   200 OK
+ *   {
+ *     "status": "ok",
+ *     "service": "3bayti-api",
+ *     "version": "dev|<git-sha>",
+ *     "timestamp": "2026-05-06T22:35:00+00:00",
+ *     "checks": {              // /ready only
+ *       "database": "ok"
+ *     }
+ *   }
+ *
+ *   503 Service Unavailable (only from /ready when DB is down)
+ *   {
+ *     "status": "degraded",
+ *     "service": "3bayti-api",
+ *     "version": "dev",
+ *     "timestamp": "...",
+ *     "checks": {
+ *       "database": "error: connection refused"
+ *     }
+ *   }
  */
 final class HealthController
 {
-    public function __invoke(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    use Responder;
+
+    /**
+     * @param ?Connection $connection Optional — only injected for the
+     *                                /ready route. Liveness can run
+     *                                without a working container —
+     *                                actually it MUST run without one,
+     *                                or we couldn't health-check a
+     *                                broken DB instance.
+     */
+    public function __construct(
+        protected readonly ResponseFactoryInterface $responseFactory,
+        private readonly ?Connection $connection = null,
+    ) {
+    }
+
+    protected function getResponseFactory(): ResponseFactoryInterface
     {
-        $payload = [
+        return $this->responseFactory;
+    }
+
+    /**
+     * GET /v3/health — liveness. No external dependencies.
+     */
+    public function liveness(ServerRequestInterface $request): ResponseInterface
+    {
+        $payload = $this->basePayload();
+        return $this->ok($payload)
+            ->withHeader('Cache-Control', 'no-store');
+    }
+
+    /**
+     * GET /v3/health/ready — readiness. Includes DB ping.
+     */
+    public function readiness(ServerRequestInterface $request): ResponseInterface
+    {
+        $checks = [];
+        $allOk = true;
+
+        // Database ping. Doctrine's Connection::executeQuery against
+        // 'SELECT 1' is the standard portable health-ping. We catch
+        // every exception type because we don't know what the driver
+        // might throw (DBAL Exception, PDO Exception, even nested
+        // ConnectionException). Any failure → degraded.
+        if ($this->connection !== null) {
+            try {
+                $this->connection->executeQuery('SELECT 1');
+                $checks['database'] = 'ok';
+            } catch (\Throwable $e) {
+                $checks['database'] = 'error: ' . $this->safeMessage($e);
+                $allOk = false;
+            }
+        }
+
+        $payload = $this->basePayload();
+        $payload['status'] = $allOk ? 'ok' : 'degraded';
+        $payload['checks'] = $checks;
+
+        $response = $this->getResponseFactory()->createResponse($allOk ? 200 : 503);
+        $json = json_encode($payload, JSON_UNESCAPED_SLASHES);
+        $response->getBody()->write($json !== false ? $json : '{}');
+        return $response
+            ->withHeader('Content-Type', 'application/json')
+            ->withHeader('Cache-Control', 'no-store');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function basePayload(): array
+    {
+        return [
             'status' => 'ok',
             'service' => '3bayti-api',
             'version' => $_ENV['APP_VERSION'] ?? 'dev',
             'timestamp' => gmdate('c'),
         ];
+    }
 
-        $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_SLASHES));
-
-        return $response
-            ->withHeader('Content-Type', 'application/json')
-            ->withHeader('Cache-Control', 'no-store')
-            ->withStatus(200);
+    /**
+     * Sanitise an exception message for inclusion in a public health
+     * response. Strips file paths, line numbers, anything that could
+     * leak internal structure to a probe.
+     */
+    private function safeMessage(\Throwable $e): string
+    {
+        $msg = $e->getMessage();
+        // Remove any path-like strings (anything starting with / and
+        // having more than one /).
+        $msg = preg_replace('/(\/[^\s:]+){2,}/', '<path>', $msg) ?? $msg;
+        // Truncate.
+        return substr($msg, 0, 200);
     }
 }

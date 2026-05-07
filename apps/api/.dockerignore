@@ -1,0 +1,58 @@
+# Keep the production image lean — exclude development + test artifacts.
+#
+# This file controls what gets sent to the Docker daemon during build.
+# Anything matched here is invisible to the build, even to COPY commands.
+
+# -- Tests + dev tooling --
+tests/
+phpunit.xml
+phpunit.xml.dist
+.phpunit.cache/
+.phpunit.result.cache
+phpstan.neon
+phpstan.neon.dist
+.php-cs-fixer.cache
+.php-cs-fixer.dist.php
+
+# -- Existing vendor/ — re-installed in the build, don't ship the dev one
+vendor/
+
+# -- Local env files (production ones come from App Platform secrets)
+.env
+.env.local
+.env.test
+.env.dev
+# .env.example IS shipped — it's documentation, not config
+
+# -- Editor + OS artifacts
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# -- Git internals (should never be in a build context but defense in depth)
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# -- Docker self-references (we don't need the Dockerfile inside the image)
+Dockerfile
+.dockerignore
+docker/
+
+# -- Build/cache artifacts
+var/cache/
+var/log/
+var/tmp/
+
+# -- Documentation that doesn't need to ship
+README.md
+CHANGELOG.md
+docs/
+
+# -- Composer cache + artifacts that aren't needed at runtime
+.composer/
+composer.phar

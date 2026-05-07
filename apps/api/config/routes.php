@@ -33,8 +33,14 @@ use Slim\Routing\RouteCollectorProxy;
  */
 
 return function (App $app): void {
-    // Health check — outside any auth, no DB dependency.
-    $app->get('/v3/health', HealthController::class);
+    // Health checks — split deliberately:
+    //
+    //   GET /v3/health        — liveness (no DB; container orchestration)
+    //   GET /v3/health/ready  — readiness (DB ping; deploy gates + monitoring)
+    //
+    // See HealthController docblock for the rationale.
+    $app->get('/v3/health', [HealthController::class, 'liveness']);
+    $app->get('/v3/health/ready', [HealthController::class, 'readiness']);
 
     // -------------------------------------------------------------------
     // /v3/auth/* — registration, login, password reset, session management
