@@ -5,10 +5,10 @@ name: API — build & test
 # Two jobs:
 #   - test    runs on every push + PR — never skipped
 #   - deploy  runs only on push to main, ONLY when the
-#             DIGITALOCEAN_ACCESS_TOKEN secret is set in repo settings.
-#             This means deploy is opt-in: the workflow file ships with
-#             the action but no actual deploys happen until the secret
-#             is created. See docs/deploy/m1.5-runbook.md for setup.
+#             ENABLE_AUTO_DEPLOY repo VARIABLE is 'true' (note:
+#             variable, not secret — secrets can't be referenced in
+#             if: conditionals). See docs/deploy/m1.5-runbook-aapanel.md
+#             for setup.
 
 on:
   push:
@@ -21,7 +21,21 @@ on:
     paths:
       - 'apps/api/**'
       - '.github/workflows/api.yml'
+  # M1.6.3.C — manual trigger from GitHub UI / API.
+  # Useful for redeploys without committing (e.g., to pick up an
+  # env file change made directly on the server).
+  workflow_dispatch:
 
+# Workflow-level concurrency.
+#
+# We deliberately set cancel-in-progress=true at the workflow level:
+# if a new push lands while tests are running, kill the old test run
+# and start fresh on the new commit. There's no value in finishing
+# tests for code we're not going to deploy anyway.
+#
+# The deploy job has its own concurrency group below that DOESN'T
+# cancel in-progress runs — killing a deploy mid-migration is much
+# worse than queueing the new one.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -122,6 +136,28 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # M1.6.3.B — deploy-specific concurrency.
+    #
+    # The workflow-level concurrency (top of file) cancels in-progress
+    # test runs when a new push lands. We DO NOT want that for deploys:
+    # killing a deploy mid-migration could leave the DB in a half-
+    # applied state.
+    #
+    # This group queues new deploys instead of cancelling running ones.
+    # If two pushes hit close together, the second deploy waits for the
+    # first to finish (succeed or fail) before starting.
+    #
+    # Note: the workflow-level concurrency above will still cancel the
+    # test job for the FIRST push when the SECOND push lands. So in
+    # practice, the second push:
+    #   1. Cancels the first push's test job
+    #   2. Runs its own test job
+    #   3. Queues behind any first-push deploy that already started
+    # which is the right behaviour — we don't waste time finishing
+    # tests we won't ship, but we do let in-flight deploys finish.
+    concurrency:
+      group: deploy-prod
+      cancel-in-progress: false
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
