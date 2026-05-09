@@ -10,6 +10,9 @@ use Bayti\Api\Http\Middleware\OptionalAuthMiddleware;
 use Bayti\Api\Http\Validator\RequestValidator;
 use Bayti\Api\Infrastructure\Auth\JwtService;
 use Bayti\Api\Infrastructure\Auth\JwtSettings;
+use Bayti\Api\Infrastructure\Cache\InMemoryKeyValueStore;
+use Bayti\Api\Infrastructure\Cache\KeyValueStore;
+use Bayti\Api\Infrastructure\Cache\RedisKeyValueStore;
 use Bayti\Api\Infrastructure\Otp\InMemoryOtpProvider;
 use Bayti\Api\Infrastructure\Otp\MessageCentralOtpProvider;
 use Bayti\Api\Infrastructure\Otp\OtpProvider;
@@ -195,6 +198,65 @@ return [
     },
 
     OtpService::class => \DI\autowire(),
+
+    // -------------------------------------------------------------------
+    // Cache / shared state — Redis in production, in-memory in tests
+    // -------------------------------------------------------------------
+
+    /**
+     * KeyValueStore — used for OTP rate-limit counters (M1.6.1.A) and
+     * future per-IP rate limiting (M2+) and other cross-worker state.
+     *
+     * Production: REDIS_DSN in .env points to localhost Redis. Format:
+     *   REDIS_DSN=redis://127.0.0.1:6379
+     *   REDIS_DSN=redis://:password@127.0.0.1:6379
+     *   REDIS_DSN=redis://:password@127.0.0.1:6379/0  (database 0)
+     *
+     * Tests: REDIS_DSN unset → InMemoryKeyValueStore. Each test gets
+     * a fresh store via test bootstrapping or container rebinding.
+     *
+     * Local dev: either run Redis locally and set REDIS_DSN, or leave
+     * it unset and accept InMemory limitations (no cross-process
+     * sharing — fine for solo dev).
+     */
+    KeyValueStore::class => static function (ContainerInterface $c): KeyValueStore {
+        $dsn = $_ENV['REDIS_DSN'] ?? '';
+
+        if ($dsn === '') {
+            // No Redis configured — fall back to in-memory.
+            // Production should ALWAYS have REDIS_DSN set; if it
+            // doesn't, the symptom (rate limits don't survive worker
+            // restarts) will be obvious quickly. Adding a hard fail
+            // here in production is M1.6 followup — for now, we lean
+            // toward "still functional, just less robust" over "won't
+            // boot at all if env is missing one var."
+            return new InMemoryKeyValueStore();
+        }
+
+        // Parse the DSN. We use parse_url because it handles
+        // user:password@host:port natively.
+        $parts = parse_url($dsn);
+        if ($parts === false || !isset($parts['host'])) {
+            throw new \RuntimeException(
+                "Invalid REDIS_DSN: {$dsn}. Expected format: redis://[:password@]host[:port][/database]",
+            );
+        }
+
+        $host = $parts['host'];
+        $port = (int) ($parts['port'] ?? 6379);
+        // parse_url puts the password under 'pass' (not 'password').
+        // No password is the no-key-set case (Redis with no AUTH).
+        $password = $parts['pass'] ?? null;
+        // Path is "/<dbnumber>". parse_url always keeps the leading "/".
+        $database = isset($parts['path']) ? (int) ltrim($parts['path'], '/') : 0;
+
+        return new RedisKeyValueStore(
+            host: $host,
+            port: $port,
+            password: $password,
+            database: $database,
+        );
+    },
 
     // -------------------------------------------------------------------
     // HTTP layer — request validator + error middleware

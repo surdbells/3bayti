@@ -40,7 +40,8 @@
         "ext-openssl": "*",
         "ext-curl": "*",
         "ext-fileinfo": "*",
-        "ext-json": "*"
+        "ext-json": "*",
+        "ext-redis": "*"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.5",
