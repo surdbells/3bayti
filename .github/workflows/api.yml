@@ -1,4 +1,4 @@
-# Auto-deploy validated via M1.5-deploy-test commit
+# Auto-deploy verification — see commits M1.5-deploy-test*
 name: API — build & test
 
 # Build, lint, and test apps/api (Slim 4 + Doctrine 3 PHP backend).
