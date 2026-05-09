@@ -16,8 +16,11 @@ use Bayti\Api\Http\Controllers\Auth\ValidateEmailController;
 use Bayti\Api\Http\Controllers\Auth\ValidatePhoneController;
 use Bayti\Api\Http\Controllers\HealthController;
 use Bayti\Api\Http\Controllers\Address\CreateAddressController;
+use Bayti\Api\Http\Controllers\Address\DeleteAddressController;
 use Bayti\Api\Http\Controllers\Address\GetAddressController;
 use Bayti\Api\Http\Controllers\Address\ListAddressesController;
+use Bayti\Api\Http\Controllers\Address\SetDefaultAddressController;
+use Bayti\Api\Http\Controllers\Address\UpdateAddressController;
 use Bayti\Api\Http\Controllers\Profile\GetProfileController;
 use Bayti\Api\Http\Controllers\Profile\UpdateProfileController;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
@@ -98,7 +101,12 @@ return function (App $app): void {
         $group->post('/addresses', CreateAddressController::class);
         $group->get('/addresses/{id}', GetAddressController::class);
 
-        // Future: M1.7.2 phase B (PUT/DELETE/PATCH default), M1.7.3 measurements
+        // M1.7.2 phase B — address modify + default-flag management
+        $group->put('/addresses/{id}', UpdateAddressController::class);
+        $group->delete('/addresses/{id}', DeleteAddressController::class);
+        $group->patch('/addresses/{id}/default', SetDefaultAddressController::class);
+
+        // Future: M1.7.3 measurements
     })->add(AuthMiddleware::class);
 
     // Future route groups land below as M2+ phases ship:
