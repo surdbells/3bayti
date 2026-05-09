@@ -421,9 +421,12 @@ class User
         // Normalise to midnight in case caller passed a time component.
         // DATE columns drop the time anyway but we want consistent
         // PHP-side equality (two birthdays read back as identical).
-        $this->dob = $dob !== null
-            ? DateTimeImmutable::createFromFormat('Y-m-d', $dob->format('Y-m-d'))
-            : null;
+        //
+        // setTime(0, 0, 0) is the unambiguous way to do this.
+        // (Earlier we tried createFromFormat('Y-m-d', ...) which applies
+        // the CURRENT time when no time format token is given — bit us
+        // in CI.)
+        $this->dob = $dob?->setTime(0, 0, 0);
     }
 
     /**
