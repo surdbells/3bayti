@@ -42,6 +42,8 @@ final class GetMeasurementsControllerTest extends HttpTestCase
         $body = $this->jsonBody($response);
         self::assertNotNull($body['measurements']);
         self::assertNull($body['measurements']['category_id']);
+        // JSON_PRESERVE_ZERO_FRACTION in Responder ensures 60.0 is
+        // sent as `60.0` not `60`, so json_decode reads back as float.
         self::assertSame(60.0, $body['measurements']['values']['arm']);
     }
 

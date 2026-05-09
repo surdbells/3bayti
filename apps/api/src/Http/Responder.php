@@ -77,7 +77,10 @@ trait Responder
         if ($body === []) {
             $json = '{}';
         } else {
-            $encoded = json_encode($body, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            $encoded = json_encode(
+                $body,
+                JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION,
+            );
             $json = $encoded !== false ? $encoded : '{}';
         }
 
