@@ -49,6 +49,15 @@ final class UserSerializer
             'country_code' => $user->getCountryCode(),
             'first_name' => $user->getFirstName(),
             'last_name' => $user->getLastName(),
+
+            // Profile fields (M1.7.0+)
+            'gender' => $user->getGender(),
+            // DOB is a calendar date — format as ISO 8601 date (YYYY-MM-DD).
+            // Not the full ATOM datetime which includes time + timezone.
+            'dob' => $user->getDob()?->format('Y-m-d'),
+            'locale' => $user->getLocale(),
+            'timezone' => $user->getTimezone(),
+
             'is_phone_verified' => $user->isPhoneVerified(),
             'is_email_verified' => $user->isEmailVerified(),
             'roles' => $this->extractActiveRoles($user),

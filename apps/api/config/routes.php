@@ -15,6 +15,8 @@ use Bayti\Api\Http\Controllers\Auth\SendOtpController;
 use Bayti\Api\Http\Controllers\Auth\ValidateEmailController;
 use Bayti\Api\Http\Controllers\Auth\ValidatePhoneController;
 use Bayti\Api\Http\Controllers\HealthController;
+use Bayti\Api\Http\Controllers\Profile\GetProfileController;
+use Bayti\Api\Http\Controllers\Profile\UpdateProfileController;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Slim\App;
 use Slim\Routing\RouteCollectorProxy;
@@ -72,6 +74,24 @@ return function (App $app): void {
         $group->post('/logout-all', LogoutAllController::class)
             ->add(AuthMiddleware::class);
     });
+
+    // -------------------------------------------------------------------
+    // /v3/me/* — current-user-scoped account management
+    //
+    // Wired up in M1.7. All routes JWT-protected via AuthMiddleware.
+    // The path '/me' is read as "the authenticated user" — sibling to
+    // /v3/auth/me but covers larger surface (profile, addresses,
+    // measurements, etc).
+    // -------------------------------------------------------------------
+    $app->group('/v3/me', function (RouteCollectorProxy $group): void {
+        // M1.7.1 — profile (read + partial update)
+        $group->get('/profile', GetProfileController::class);
+        // PATCH semantics — JSON Merge Patch (RFC 7396).
+        // Empty body is a 200 no-op.
+        $group->patch('/profile', UpdateProfileController::class);
+
+        // Future: M1.7.2 addresses, M1.7.3 measurements
+    })->add(AuthMiddleware::class);
 
     // Future route groups land below as M2+ phases ship:
     //   /v3/account/*    (M1.7 — profile, addresses, measurements)
