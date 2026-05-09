@@ -119,6 +119,22 @@ jobs:
   # If ENABLE_AUTO_DEPLOY is not set, this job skips silently.
   # ---------------------------------------------------------------------------
 
+  # TEMPORARY debug job — prints vars context to verify ENABLE_AUTO_DEPLOY
+  # is being read. Remove this after we confirm auto-deploy is working.
+  debug-vars:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Show vars context
+        run: |
+          echo "github.event_name: ${{ github.event_name }}"
+          echo "github.ref:        ${{ github.ref }}"
+          echo "vars.ENABLE_AUTO_DEPLOY: '${{ vars.ENABLE_AUTO_DEPLOY }}'"
+          echo "(empty quotes = variable not set or not in scope)"
+          echo "---"
+          echo "all vars:"
+          echo '${{ toJSON(vars) }}'
+
   deploy:
     needs: test
     runs-on: ubuntu-latest
