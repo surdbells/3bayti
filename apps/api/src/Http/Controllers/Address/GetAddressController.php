@@ -54,8 +54,11 @@ final class GetAddressController
         return $this->responseFactory;
     }
 
-    public function __invoke(ServerRequestInterface $request, array $args): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        ResponseInterface $response,
+        array $args,
+    ): ResponseInterface {
         $user = $request->getAttribute(AuthMiddleware::ATTR_USER);
         if (!$user instanceof User) {
             throw HttpException::unauthorized(
