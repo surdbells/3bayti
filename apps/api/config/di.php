@@ -37,10 +37,30 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * around the codebase.
  */
 
-$rootPath = dirname(__DIR__);
-$doctrineConfig = require $rootPath . '/config/doctrine.php';
-
+/**
+ * Doctrine config and root path are exposed as DI entries so that
+ * factory closures can read them via the container instead of
+ * capturing them with `use (...)`.
+ *
+ * Why this matters
+ * ----------------
+ * PHP-DI's compiled-container mode (enabled when APP_ENV=prod) generates
+ * a static PHP class containing serialised factories. Closures with
+ * `use ($foo)` cannot be serialised — they hold runtime variable state
+ * that compiler can't represent in source code. Reading from the
+ * container instead works identically in dev and prod and works under
+ * compilation. See PHP-DI docs:
+ * https://php-di.org/doc/php-definitions.html#closures
+ */
 return [
+    'app.rootPath' => static fn(): string => dirname(__DIR__),
+
+    /**
+     * Loaded once per container build (PHP-DI caches by entry id).
+     * Subsequent get('doctrineConfig') returns the same array.
+     */
+    'doctrineConfig' => static fn(): array => require dirname(__DIR__) . '/config/doctrine.php',
+
     // -------------------------------------------------------------------
     // Doctrine ORM
     // -------------------------------------------------------------------
@@ -50,15 +70,17 @@ return [
      * shared by both the EntityManager and any scripts that need
      * raw config access (CLI tools).
      */
-    Configuration::class => static function () use ($doctrineConfig, $rootPath): Configuration {
+    Configuration::class => static function (ContainerInterface $c): Configuration {
+        $doctrineConfig = $c->get('doctrineConfig');
         $env = $_ENV['APP_ENV'] ?? 'dev';
-        return ($doctrineConfig['config_factory'])($env, $rootPath);
+        return ($doctrineConfig['config_factory'])($env, $c->get('app.rootPath'));
     },
 
     /**
      * Build the DBAL Connection from env-driven params.
      */
-    Connection::class => static function () use ($doctrineConfig): Connection {
+    Connection::class => static function (ContainerInterface $c): Connection {
+        $doctrineConfig = $c->get('doctrineConfig');
         return ($doctrineConfig['connection_factory'])($doctrineConfig['connection']);
     },
 

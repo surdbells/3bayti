@@ -68,12 +68,14 @@ $out = static function (string $msg): void {
 };
 
 $out('starting migration runner');
-$out('APP_ENV=' . ($_ENV['APP_ENV'] ?? 'unset'));
 
 // Build the same DI container the HTTP app uses, then pull out the
 // EntityManager. This guarantees we're using IDENTICAL config to
 // the running service — no chance of "tests pass with config A but
 // migrations run against config B".
+//
+// Bootstrap::createApp() also loads .env, so APP_ENV is only readable
+// from $_ENV AFTER this call.
 try {
     $app = Bootstrap::createApp();
     $container = $app->getContainer();
@@ -89,6 +91,9 @@ try {
     $out('  ' . $e->getFile() . ':' . $e->getLine());
     exit(1);
 }
+
+// Now that .env is loaded, we can read APP_ENV.
+$out('APP_ENV=' . ($_ENV['APP_ENV'] ?? 'unset'));
 
 // Smoke-test the connection BEFORE attempting migrations. If the
 // DB is unreachable, we'd rather fail with a clear message than
