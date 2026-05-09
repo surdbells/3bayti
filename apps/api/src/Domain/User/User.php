@@ -101,6 +101,65 @@ class User
     #[ORM\Column(name: 'country_code', type: 'string', length: 2)]
     private string $countryCode = 'AE';
 
+    // -------------------------------------------------------------------
+    // Profile fields (M1.7.0+) — additive, mostly nullable
+    // -------------------------------------------------------------------
+
+    /**
+     * User's self-reported gender. NULL means "never asked";
+     * 'prefer_not_to_say' means "asked and declined."
+     *
+     * Stored as VARCHAR with a CHECK constraint at the DB level
+     * (see migration Version20260509000001). The Gender enum class
+     * provides the typed PHP API, but Doctrine maps it back to string.
+     *
+     * Why string column not enumType
+     * ------------------------------
+     * Doctrine 3 supports `enumType: Gender::class` for native PHP
+     * enums. We deliberately don't use it here because:
+     *   1. The Gender enum lives in our domain layer; coupling
+     *      Doctrine config to it makes the entity harder to test
+     *      with raw strings.
+     *   2. Gender::fromStringOrNull() handles NULL and unknown values
+     *      gracefully; Doctrine's enumType would throw on either.
+     */
+    #[ORM\Column(type: 'string', length: 20, nullable: true)]
+    private ?string $gender = null;
+
+    /**
+     * Birth date. DATE type — no time component, no timezone.
+     * Used for birthday promotions (M3) and age-gated products.
+     */
+    #[ORM\Column(type: 'date_immutable', nullable: true)]
+    private ?DateTimeImmutable $dob = null;
+
+    /**
+     * BCP 47 locale identifier — 'en', 'ar', 'ar-AE', etc. Used to:
+     *   - Localise transactional emails (M3)
+     *   - Pick SMS templates (M1.3 already supports per-locale)
+     *   - Inform UI direction hints (LTR vs RTL)
+     *
+     * Default 'en' for users created before M1.7.0 (backfilled by
+     * the migration's DEFAULT clause) and any future user who doesn't
+     * specify one at registration.
+     */
+    #[ORM\Column(type: 'string', length: 10, options: ['default' => 'en'])]
+    private string $locale = 'en';
+
+    /**
+     * IANA timezone identifier — 'Asia/Dubai', 'Europe/London', etc.
+     * Used to display order timestamps in the user's local time and
+     * for "ordered N hours ago" relative formatting.
+     *
+     * Default 'Asia/Dubai' to match our primary launch market.
+     */
+    #[ORM\Column(type: 'string', length: 50, options: ['default' => 'Asia/Dubai'])]
+    private string $timezone = 'Asia/Dubai';
+
+    // -------------------------------------------------------------------
+    // Auth fields
+    // -------------------------------------------------------------------
+
     /**
      * Bcrypt hash from PHP's password_hash() with PASSWORD_DEFAULT.
      * Never plaintext. Length 255 to accommodate future rehash to
@@ -295,6 +354,10 @@ class User
     public function getCountryCode(): string       { return $this->countryCode; }
     public function getFirstName(): ?string        { return $this->firstName; }
     public function getLastName(): ?string         { return $this->lastName; }
+    public function getGender(): ?string           { return $this->gender; }
+    public function getDob(): ?DateTimeImmutable   { return $this->dob; }
+    public function getLocale(): string            { return $this->locale; }
+    public function getTimezone(): string          { return $this->timezone; }
     public function getStoreLegalName(): ?string   { return $this->storeLegalName; }
     public function getTradeLicenseNumber(): ?string { return $this->tradeLicenseNumber; }
     public function getPasswordHash(): string      { return $this->passwordHash; }
@@ -335,6 +398,52 @@ class User
     {
         $this->firstName = $firstName !== null ? trim($firstName) : null;
         $this->lastName  = $lastName  !== null ? trim($lastName)  : null;
+    }
+
+    /**
+     * Set gender. Accepts a Gender enum or null. Callers that have
+     * a raw string from user input should validate via
+     * Gender::fromStringOrNull() first; this setter trusts its input.
+     *
+     * Why ?Gender, not ?string
+     * ------------------------
+     * Stops typos from reaching the DB. The CHECK constraint catches
+     * them too, but better to fail at the validator/controller boundary
+     * than at flush() time (where the error is just a Postgres exception).
+     */
+    public function setGender(?Gender $gender): void
+    {
+        $this->gender = $gender?->value;
+    }
+
+    public function setDob(?DateTimeImmutable $dob): void
+    {
+        // Normalise to midnight in case caller passed a time component.
+        // DATE columns drop the time anyway but we want consistent
+        // PHP-side equality (two birthdays read back as identical).
+        $this->dob = $dob !== null
+            ? DateTimeImmutable::createFromFormat('Y-m-d', $dob->format('Y-m-d'))
+            : null;
+    }
+
+    /**
+     * Set the user's preferred locale (BCP 47 like 'en' or 'ar-AE').
+     * Validation of allowed values is at the controller layer; this
+     * setter trusts its input but trims whitespace.
+     */
+    public function setLocale(string $locale): void
+    {
+        $this->locale = trim($locale);
+    }
+
+    /**
+     * Set the user's preferred timezone (IANA identifier like
+     * 'Asia/Dubai'). Validation against known timezones happens at
+     * the controller layer.
+     */
+    public function setTimezone(string $timezone): void
+    {
+        $this->timezone = trim($timezone);
     }
 
     public function setPasswordHash(string $hash): void

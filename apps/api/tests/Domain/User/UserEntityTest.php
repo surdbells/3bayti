@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Tests\Domain\User;
 
 use Bayti\Api\Domain\User\Address;
+use Bayti\Api\Domain\User\Gender;
 use Bayti\Api\Domain\User\Measurement;
 use Bayti\Api\Domain\User\OtpAttempt;
 use Bayti\Api\Domain\User\RefreshToken;
@@ -26,6 +27,7 @@ use PHPUnit\Framework\TestCase;
  */
 #[CoversClass(User::class)]
 #[CoversClass(Address::class)]
+#[CoversClass(Gender::class)]
 #[CoversClass(Measurement::class)]
 #[CoversClass(RefreshToken::class)]
 #[CoversClass(OtpAttempt::class)]
@@ -106,6 +108,111 @@ final class UserEntityTest extends TestCase
 
         $this->expectException(\LogicException::class);
         $user->bindLegacyId(43);
+    }
+
+    // -------------------------------------------------------------------
+    // Profile fields (M1.7.0)
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function userDefaultsLocaleToEnglish(): void
+    {
+        $user = $this->makeUser();
+        self::assertSame('en', $user->getLocale());
+    }
+
+    #[Test]
+    public function userDefaultsTimezoneToDubai(): void
+    {
+        $user = $this->makeUser();
+        self::assertSame('Asia/Dubai', $user->getTimezone());
+    }
+
+    #[Test]
+    public function userDefaultsGenderAndDobToNull(): void
+    {
+        $user = $this->makeUser();
+        self::assertNull($user->getGender());
+        self::assertNull($user->getDob());
+    }
+
+    #[Test]
+    public function setGenderStoresEnumStringValue(): void
+    {
+        $user = $this->makeUser();
+        $user->setGender(Gender::Male);
+        self::assertSame('male', $user->getGender());
+
+        $user->setGender(Gender::PreferNotToSay);
+        self::assertSame('prefer_not_to_say', $user->getGender());
+    }
+
+    #[Test]
+    public function setGenderToNullClearsValue(): void
+    {
+        $user = $this->makeUser();
+        $user->setGender(Gender::Female);
+        $user->setGender(null);
+        self::assertNull($user->getGender());
+    }
+
+    #[Test]
+    public function setDobNormalisesToMidnight(): void
+    {
+        $user = $this->makeUser();
+        // Intentionally pass a time component to ensure it gets normalised.
+        $user->setDob(new DateTimeImmutable('1990-03-14 15:30:00'));
+
+        $dob = $user->getDob();
+        self::assertNotNull($dob);
+        self::assertSame('1990-03-14', $dob->format('Y-m-d'));
+        // Time component should be midnight.
+        self::assertSame('00:00:00', $dob->format('H:i:s'));
+    }
+
+    #[Test]
+    public function setLocaleTrimsWhitespace(): void
+    {
+        $user = $this->makeUser();
+        $user->setLocale('  ar-AE  ');
+        self::assertSame('ar-AE', $user->getLocale());
+    }
+
+    #[Test]
+    public function setTimezoneTrimsWhitespace(): void
+    {
+        $user = $this->makeUser();
+        $user->setTimezone('  Europe/London  ');
+        self::assertSame('Europe/London', $user->getTimezone());
+    }
+
+    // -------------------------------------------------------------------
+    // Gender enum
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function genderValuesIncludesAllFour(): void
+    {
+        self::assertSame(
+            ['male', 'female', 'other', 'prefer_not_to_say'],
+            Gender::values(),
+        );
+    }
+
+    #[Test]
+    public function genderFromStringOrNullReturnsNullForEmptyOrInvalid(): void
+    {
+        self::assertNull(Gender::fromStringOrNull(null));
+        self::assertNull(Gender::fromStringOrNull(''));
+        self::assertNull(Gender::fromStringOrNull('invalid'));
+    }
+
+    #[Test]
+    public function genderFromStringOrNullReturnsEnumForValidString(): void
+    {
+        self::assertSame(Gender::Male, Gender::fromStringOrNull('male'));
+        self::assertSame(Gender::Female, Gender::fromStringOrNull('female'));
+        self::assertSame(Gender::PreferNotToSay, Gender::fromStringOrNull('prefer_not_to_say'));
     }
 
     // -------------------------------------------------------------------
