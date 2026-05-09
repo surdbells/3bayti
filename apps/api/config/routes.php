@@ -21,6 +21,10 @@ use Bayti\Api\Http\Controllers\Address\GetAddressController;
 use Bayti\Api\Http\Controllers\Address\ListAddressesController;
 use Bayti\Api\Http\Controllers\Address\SetDefaultAddressController;
 use Bayti\Api\Http\Controllers\Address\UpdateAddressController;
+use Bayti\Api\Http\Controllers\Measurement\DeleteMeasurementsController;
+use Bayti\Api\Http\Controllers\Measurement\GetMeasurementsController;
+use Bayti\Api\Http\Controllers\Measurement\ListMeasurementsController;
+use Bayti\Api\Http\Controllers\Measurement\UpsertMeasurementsController;
 use Bayti\Api\Http\Controllers\Profile\GetProfileController;
 use Bayti\Api\Http\Controllers\Profile\UpdateProfileController;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
@@ -106,7 +110,17 @@ return function (App $app): void {
         $group->delete('/addresses/{id}', DeleteAddressController::class);
         $group->patch('/addresses/{id}/default', SetDefaultAddressController::class);
 
-        // Future: M1.7.3 measurements
+        // M1.7.3 — body measurements (default + per-category sets)
+        // Path-segment design: /default for the catch-all, /category/{id}
+        // for category-specific. Same controllers handle both — the
+        // route definition determines whether {id} is in $args.
+        $group->get('/measurements', ListMeasurementsController::class);
+        $group->get('/measurements/default', GetMeasurementsController::class);
+        $group->get('/measurements/category/{id}', GetMeasurementsController::class);
+        $group->put('/measurements/default', UpsertMeasurementsController::class);
+        $group->put('/measurements/category/{id}', UpsertMeasurementsController::class);
+        $group->delete('/measurements/default', DeleteMeasurementsController::class);
+        $group->delete('/measurements/category/{id}', DeleteMeasurementsController::class);
     })->add(AuthMiddleware::class);
 
     // Future route groups land below as M2+ phases ship:

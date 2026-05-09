@@ -121,4 +121,25 @@ class Measurement
         if ($values !== null) { $this->values = $values; }
         if ($notes  !== null) { $this->notes = trim($notes); }
     }
+
+    /**
+     * Replace the full measurement values map. Passing an empty
+     * array clears all measurements (different from update() which
+     * treats null/missing as "no change").
+     *
+     * @param array<string, float> $values
+     */
+    public function setValues(array $values): void
+    {
+        $this->values = $values;
+    }
+
+    /**
+     * Set or clear notes. Pass null to clear, string to set.
+     * Distinguished from update($notes=null) which means "no change."
+     */
+    public function setNotes(?string $notes): void
+    {
+        $this->notes = $notes !== null ? trim($notes) : null;
+    }
 }
