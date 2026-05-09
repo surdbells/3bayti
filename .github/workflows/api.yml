@@ -81,34 +81,47 @@ jobs:
         run: composer test
 
   # ---------------------------------------------------------------------------
-  # Deploy job — opt-in via secret
+  # Deploy job — SSH to aaPanel/Apache server
   # ---------------------------------------------------------------------------
   #
-  # Triggers on every push to main IF the test job passed AND the
-  # DIGITALOCEAN_ACCESS_TOKEN secret is configured in repo settings.
+  # Triggers on every push to main if the test job passed AND the
+  # ENABLE_AUTO_DEPLOY repo variable is set to 'true'.
   #
-  # If the secret is NOT set, this job skips silently (the `if` clause
-  # falsy-evaluates the unset secret). This is the gating mechanism:
-  # ship the workflow file freely; deploys don't actually happen until
-  # someone explicitly creates the secret.
+  # Mechanism: SSH to the deploy host using a dedicated SSH key, run
+  # /usr/local/bin/3bayti-deploy.sh which pulls the latest main, runs
+  # composer install + bin/migrate.php, and updates APP_VERSION in .env.
   #
-  # First-time setup (per docs/deploy/m1.5-runbook.md):
-  #   1. Create the App Platform application via doctl (one-time, manual)
-  #   2. Get the App ID
-  #   3. In repo Settings → Secrets and variables → Actions:
-  #      - Add `DIGITALOCEAN_ACCESS_TOKEN` (Personal Access Token from DO)
-  #      - Add `DIGITALOCEAN_APP_ID` (the app id from step 2)
-  #      - Add `API_SMOKE_URL` (https://api-v3.3bayti.ae once DNS is live;
-  #        the App Platform default URL until then)
+  # The SSH key on the box is restricted via authorized_keys
+  # `command=/usr/local/bin/3bayti-deploy.sh` so even if the SSH
+  # private key leaks, attackers can only trigger a deploy — they can't
+  # get an interactive shell or run other commands.
+  #
+  # First-time setup (per docs/deploy/m1.5-runbook-aapanel.md):
+  #   1. Generate a deploy keypair on the server:
+  #        ssh-keygen -t ed25519 -f /root/.ssh/3bayti_gha_deploy -N ""
+  #   2. Add the public key to /root/.ssh/authorized_keys with command
+  #      restriction:
+  #        command="/usr/local/bin/3bayti-deploy.sh",no-port-forwarding,...
+  #          ssh-ed25519 AAAA... github-actions-deploy@3bayti
+  #   3. Create /usr/local/bin/3bayti-deploy.sh (see runbook).
+  #   4. In repo Settings → Secrets and variables → Actions:
+  #      - Add `DEPLOY_HOST`   = server IP (e.g. 142.93.172.195)
+  #      - Add `DEPLOY_USER`   = root
+  #      - Add `DEPLOY_SSH_KEY` = the private key from step 1
+  #        (paste the FULL contents of /root/.ssh/3bayti_gha_deploy
+  #        including BEGIN/END lines)
+  #   5. In repo Settings → Secrets and variables → Actions → Variables:
+  #      - Add `ENABLE_AUTO_DEPLOY` = `true`
+  #   6. Optionally also add `API_SMOKE_URL` = https://api-v3.3bayti.ae
+  #      so the smoke test runs after deploy. If unset, smoke is skipped.
+  #
+  # If ENABLE_AUTO_DEPLOY is not set, this job skips silently.
   # ---------------------------------------------------------------------------
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # Only deploy from main, AND only when the secret is set.
-    # GitHub treats unset secrets as empty strings, so the != '' check
-    # short-circuits the whole job to "skipped" when not configured.
+    timeout-minutes: 10
     if: |
       github.event_name == 'push' &&
       github.ref == 'refs/heads/main' &&
@@ -116,43 +129,64 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install doctl
-        # DigitalOcean's official action; keeps the CLI version pinned
-        # so we don't pick up surprise behavior changes.
-        uses: digitalocean/action-doctl@v2
         with:
-          token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+          # Shallow clone is enough — we just need to know the commit SHA
+          # for logging purposes.
+          fetch-depth: 1
 
-      - name: Validate app spec
-        # Sanity check before triggering a deploy. Catches typos in
-        # app.yaml without burning a real deploy attempt.
-        run: doctl apps spec validate apps/api/.do/app.yaml
+      - name: Setup SSH agent with deploy key
+        # webfactory/ssh-agent loads the private key into a real ssh-agent
+        # for the duration of the job. The key is only in memory; never
+        # written to disk on the runner.
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
 
-      - name: Trigger deployment
-        # `update --spec` applies any spec changes AND triggers a new
-        # deploy from the latest commit. If the spec is unchanged but
-        # we just want a redeploy, `create-deployment` works too —
-        # but `update` is simpler and idempotent.
+      - name: Trust the deploy host
+        # Pre-add the host's public SSH key to known_hosts so we don't
+        # get a "host authenticity can't be established" prompt mid-run.
+        # Using ssh-keyscan over our known DEPLOY_HOST is the standard
+        # GitHub Actions pattern. The key isn't pinned here — we trust
+        # it on first contact, which is acceptable for outbound SSH from
+        # an ephemeral runner. To pin: replace this step with a hard-coded
+        # known_hosts entry from `ssh-keyscan` output saved as a secret.
         run: |
-          doctl apps update "${{ secrets.DIGITALOCEAN_APP_ID }}" \
-            --spec apps/api/.do/app.yaml \
-            --wait
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Trigger deploy
+        # SSH to the box and run the deploy command. Because the SSH key
+        # has a `command=` restriction in authorized_keys, the actual
+        # command we send here is IGNORED — the server runs
+        # /usr/local/bin/3bayti-deploy.sh regardless of what we ask for.
+        # We send 'true' as a no-op in case the restriction is ever
+        # relaxed; that prevents accidentally running interactive commands.
+        run: |
+          ssh \
+            -o StrictHostKeyChecking=yes \
+            -o BatchMode=yes \
+            -o ConnectTimeout=15 \
+            "${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}" \
+            true
 
       - name: Smoke test the deployment
-        # Once the deploy completes (--wait blocks until the new
-        # version is Active), verify it actually works. If the smoke
-        # test fails, the deploy is reported as failed and an alert
-        # fires — but the bad version is still live until manual
-        # rollback. Future hardening: roll back automatically on
-        # smoke-test failure.
+        # If API_SMOKE_URL is set, run smoke.sh against it. This catches
+        # cases where the deploy ran but the app is broken (e.g.,
+        # migration succeeded but a config change broke routing).
+        # If API_SMOKE_URL is NOT set, skip — deploy is reported success
+        # based purely on the SSH command's exit code.
+        if: ${{ secrets.API_SMOKE_URL != '' }}
         run: |
           chmod +x apps/api/scripts/smoke.sh
           apps/api/scripts/smoke.sh "${{ secrets.API_SMOKE_URL }}"
 
       - name: Notify on failure
         if: failure()
+        # No PagerDuty/Slack integration yet; failure shows as a red X
+        # in the GitHub Actions UI. Future M1.6 hardening: send a
+        # Slack/email notification on failure.
         run: |
-          echo "::error::Deploy or smoke test failed. Check job logs and"
-          echo "::error::App Platform dashboard. See docs/deploy/m1.5-runbook.md"
-          echo "::error::section 'Rollback procedure' for recovery steps."
+          echo "::error::Deploy or smoke test failed."
+          echo "::error::SSH to the box and check /var/log/3bayti-deploy.log"
+          echo "::error::Recovery: see docs/deploy/m1.5-runbook-aapanel.md"
