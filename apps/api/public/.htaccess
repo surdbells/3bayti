@@ -1,0 +1,45 @@
+# =============================================================================
+# 3bayti API — Apache rewrite rules
+# =============================================================================
+#
+# Routes all non-file, non-directory requests through index.php so Slim's
+# router can handle them. Files that DO exist (e.g., favicon.ico) are
+# served directly without invoking PHP.
+#
+# Required because Apache's default behavior is to serve static files
+# literally — without these rules, GET /v3/health would 404 (no
+# public/v3/health file on disk; Slim never gets to handle it).
+#
+# Used in production aaPanel/Apache deploys. Not used by:
+#   - PHP's built-in dev server (`php -S`) — it has its own routing
+#   - Docker nginx-fpm setup — nginx handles rewrites in nginx.conf
+# =============================================================================
+
+RewriteEngine On
+
+# Pass requests for real files through directly. This is what allows
+# /favicon.ico (or any future static asset placed here) to work without
+# going through Slim. The check is "if the URI maps to an existing file,
+# serve it as-is; don't rewrite."
+RewriteCond %{REQUEST_FILENAME} !-f
+
+# Same for directories — if a real directory exists at the URI, serve
+# its index file. (We don't currently rely on this for any feature, but
+# it matches the conventional Slim .htaccess template and keeps Apache's
+# default DirectoryIndex behavior intact.)
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Everything else goes to index.php. The QSA flag preserves any query
+# string ($_GET parameters); the L flag stops further rewrite processing.
+# Slim then reads the original URI from REQUEST_URI and dispatches.
+RewriteRule ^ index.php [QSA,L]
+
+
+# -----------------------------------------------------------------------------
+# Security hardening — defenses on top of vhost-level DENY FILES rules.
+# -----------------------------------------------------------------------------
+
+# No automatic directory listings. If somehow a request reaches a
+# directory without an index file, return 403 instead of listing
+# contents.
+Options -Indexes

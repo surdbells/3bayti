@@ -157,4 +157,56 @@ if ($exitCode !== 0) {
 }
 
 $out('migrations applied successfully');
+
+// Generate Doctrine proxy classes. In production (APP_ENV=prod), our
+// config sets setAutoGenerateProxyClasses(false) — Doctrine refuses
+// to write proxies on-demand at request time (perf optimization).
+// That means proxies must exist BEFORE the first request loads an
+// entity with a lazy-loaded relation. We do that here, after migration,
+// because:
+//
+//   - It's the same shell-out point in deploy where schema changes are
+//     applied; doing it together keeps deploy simple.
+//   - --dry-run users still get this (cheap, idempotent), so they see
+//     proxy generation succeed too.
+//   - Doctrine's getProxyFactory()->generateProxyClasses() takes
+//     ~30ms for our entity count; not a deploy-time cost worth
+//     optimizing away.
+//
+// Without this step, the first request that touches a proxied entity
+// 500s with "require(/var/cache/doctrine/proxies/__CG__...): No such
+// file or directory."
+try {
+    $config = $em->getConfiguration();
+    $proxyDir = $config->getProxyDir();
+
+    // Make sure the directory exists. mkdir is idempotent with -p
+    // semantics in PHP via the recursive flag.
+    if (!is_dir($proxyDir)) {
+        if (!mkdir($proxyDir, 0o755, true) && !is_dir($proxyDir)) {
+            throw new \RuntimeException("Cannot create proxy directory: $proxyDir");
+        }
+        $out("created proxy directory: $proxyDir");
+    }
+
+    $metadatas = $em->getMetadataFactory()->getAllMetadata();
+    if (count($metadatas) === 0) {
+        $out('no entity metadata found — nothing to generate (this is unusual)');
+    } else {
+        $em->getProxyFactory()->generateProxyClasses($metadatas, $proxyDir);
+        $out(sprintf(
+            'generated %d proxy classes in %s',
+            count($metadatas),
+            $proxyDir,
+        ));
+    }
+} catch (\Throwable $e) {
+    // Don't fail the whole deploy on this — migrations succeeded,
+    // and a missing proxy will surface as a 500 we can debug. But
+    // log loudly so it's visible in deploy output.
+    $out('WARNING: proxy generation failed: ' . $e->getMessage());
+    $out('  ' . $e->getFile() . ':' . $e->getLine());
+    $out('  Manual fix: run vendor/bin/doctrine orm:generate-proxies');
+}
+
 exit(0);
