@@ -176,10 +176,17 @@ jobs:
         # migration succeeded but a config change broke routing).
         # If API_SMOKE_URL is NOT set, skip — deploy is reported success
         # based purely on the SSH command's exit code.
-        if: ${{ secrets.API_SMOKE_URL != '' }}
+        #
+        # NOTE: GitHub Actions doesn't allow `secrets.*` references in
+        # `if:` conditionals. We route the secret through env first,
+        # then check env. An unset secret resolves to '' in env, so
+        # `if: env.API_SMOKE_URL != ''` correctly skips the step.
+        env:
+          API_SMOKE_URL: ${{ secrets.API_SMOKE_URL }}
+        if: env.API_SMOKE_URL != ''
         run: |
           chmod +x apps/api/scripts/smoke.sh
-          apps/api/scripts/smoke.sh "${{ secrets.API_SMOKE_URL }}"
+          apps/api/scripts/smoke.sh "$API_SMOKE_URL"
 
       - name: Notify on failure
         if: failure()
