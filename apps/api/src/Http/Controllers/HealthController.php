@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers;
 
 use Bayti\Api\Http\Responder;
+use Bayti\Api\Infrastructure\Cache\KeyValueStore;
 use Doctrine\DBAL\Connection;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -71,10 +72,15 @@ final class HealthController
      *                                actually it MUST run without one,
      *                                or we couldn't health-check a
      *                                broken DB instance.
+     * @param ?KeyValueStore $cache   Optional Redis-backed cache. If
+     *                                provided, /ready pings it. If
+     *                                null (e.g. tests), Redis check
+     *                                is skipped from the response.
      */
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly ?Connection $connection = null,
+        private readonly ?KeyValueStore $cache = null,
     ) {
     }
 
@@ -120,6 +126,28 @@ final class HealthController
             // a consistent response shape.
             $checks['database'] = 'error: connection not configured';
             $allOk = false;
+        }
+
+        // Redis (KeyValueStore) ping. Only included if a cache is
+        // bound — tests that don't wire one don't see the key in
+        // the response. ping() is the explicit "does not throw"
+        // method on KeyValueStore — returns false on any failure.
+        //
+        // Failed Redis ping marks the WHOLE readiness as degraded
+        // (allOk=false → 503). Trade-off: this is correct behaviour
+        // for "should we route traffic here?" but it does mean a
+        // Redis outage takes the API out of rotation. Worth flagging
+        // — if Redis is down and the API is fail-open at the OTP
+        // layer (per M1.6.1.A design), should /ready also be more
+        // tolerant? Probably yes, but defaulting to strict is the
+        // safer choice; revisit if Redis flakiness becomes an issue.
+        if ($this->cache !== null) {
+            if ($this->cache->ping()) {
+                $checks['redis'] = 'ok';
+            } else {
+                $checks['redis'] = 'error: ping failed';
+                $allOk = false;
+            }
         }
 
         $payload = $this->basePayload();

@@ -313,9 +313,20 @@ return [
             // will return degraded with empty checks.
         }
 
+        // KeyValueStore (Redis or InMemory). Same defensive resolution —
+        // if the cache binding fails (DSN parse error, etc.), we
+        // proceed without a cache check rather than blow up health.
+        $cache = null;
+        try {
+            $cache = $c->get(\Bayti\Api\Infrastructure\Cache\KeyValueStore::class);
+        } catch (\Throwable) {
+            // No cache binding — readiness simply omits the redis check.
+        }
+
         return new HealthController(
             $c->get(\Psr\Http\Message\ResponseFactoryInterface::class),
             $connection,
+            $cache,
         );
     },
 
