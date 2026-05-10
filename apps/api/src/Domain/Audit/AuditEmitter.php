@@ -247,12 +247,26 @@ final class AuditEmitter
             $repo = $this->em->getRepository(AuditLog::class);
             $repo->save($log);
         } catch (Throwable $e) {
-            // Audit failures must not break the user's request.
-            // Log + Sentry will fire (via ApiErrorMiddleware) so ops
-            // can fix.
+            // Audit failures must not break the user's request. The
+            // catch block must NEVER throw — that would propagate up
+            // as a 500, defeating the whole point of "audit is a
+            // secondary concern."
+            //
+            // The bug here was: subjectId() throws on null-id entities.
+            // The original code called subjectId() inside both the
+            // try AND the catch (for logging). When subjectId() threw
+            // in the try, control jumped to catch, which called it
+            // AGAIN — the second throw escaped the catch as an
+            // unhandled exception.
+            //
+            // Fix: resolve subject_id defensively for logging, never
+            // re-throwing. Same for subject_type.
+            $safeSubjectType = self::subjectTypeSafe($subject);
+            $safeSubjectId = self::subjectIdSafe($subject);
+
             $this->logger->error('Audit log write failed', [
-                'subject_type' => self::subjectType($subject),
-                'subject_id' => self::subjectId($subject),
+                'subject_type' => $safeSubjectType,
+                'subject_id' => $safeSubjectId,
                 'action' => $action,
                 'error' => $e->getMessage(),
                 'exception' => $e::class,
@@ -264,6 +278,33 @@ final class AuditEmitter
             } catch (Throwable) {
                 // Sentry is also down — give up silently.
             }
+        }
+    }
+
+    /**
+     * Get the subject's class basename WITHOUT throwing.
+     * Used in the catch path of record() where we must not throw.
+     */
+    private static function subjectTypeSafe(object $subject): string
+    {
+        try {
+            return self::subjectType($subject);
+        } catch (Throwable) {
+            return 'unknown';
+        }
+    }
+
+    /**
+     * Get the subject's id WITHOUT throwing. Returns 0 as the
+     * "couldn't determine" marker. Used in the catch path of
+     * record() where we must not throw.
+     */
+    private static function subjectIdSafe(object $subject): int
+    {
+        try {
+            return self::subjectId($subject);
+        } catch (Throwable) {
+            return 0;
         }
     }
 
