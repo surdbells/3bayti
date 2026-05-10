@@ -123,13 +123,57 @@ return function (App $app): void {
         $group->delete('/measurements/category/{id}', DeleteMeasurementsController::class);
     })->add(AuthMiddleware::class);
 
+    // ===================================================================
+    // M2.1 — Catalog: public read endpoints (no auth required)
+    // ===================================================================
+
+    // Categories — public tree + per-slug detail
+    $app->get('/v3/categories', \Bayti\Api\Http\Controllers\Catalog\ListCategoriesController::class);
+    $app->get('/v3/categories/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetCategoryController::class);
+
+    // Brands — public list + per-slug detail
+    $app->get('/v3/brands', \Bayti\Api\Http\Controllers\Catalog\ListBrandsController::class);
+    $app->get('/v3/brands/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetBrandController::class);
+
+    // Vendors — public list + per-slug detail
+    $app->get('/v3/vendors', \Bayti\Api\Http\Controllers\Catalog\ListVendorsController::class);
+    $app->get('/v3/vendors/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class);
+
+    // ===================================================================
+    // M2.1 — Catalog: admin endpoints (admin auth required)
+    // ===================================================================
+    //
+    // Middleware order: outermost-first is OPPOSITE of add() order.
+    // We want AuthMiddleware to run FIRST (set the user attribute),
+    // then AdminAuthMiddleware to run SECOND (check the user is admin).
+    // So: add(AdminAuth) THEN add(Auth) — Auth is added last, runs first.
+
+    $app->group('/v3/admin', function (RouteCollectorProxy $group): void {
+        // Brand admin
+        $group->get('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\ListBrandsAdminController::class);
+        $group->post('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\CreateBrandController::class);
+        $group->put('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\UpdateBrandController::class);
+        $group->delete('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\DeleteBrandController::class);
+
+        // Vendor admin
+        $group->get('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class);
+        $group->post('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\CreateVendorController::class);
+        $group->put('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class);
+        $group->delete('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class);
+
+        // Category admin
+        $group->get('/categories', \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class);
+        $group->post('/categories', \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class);
+        $group->put('/categories/{id}', \Bayti\Api\Http\Controllers\Admin\Category\UpdateCategoryController::class);
+        $group->delete('/categories/{id}', \Bayti\Api\Http\Controllers\Admin\Category\DeleteCategoryController::class);
+    })
+        ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
+        ->add(AuthMiddleware::class);
+
     // Future route groups land below as M2+ phases ship:
-    //   /v3/account/*    (M1.7 — profile, addresses, measurements)
-    //   /v3/products/*   (M2)
-    //   /v3/categories/* (M2)
-    //   /v3/cart/*       (M3)
-    //   /v3/checkout/*   (M3)
-    //   /v3/orders/*     (M3)
-    //   /v3/vendor/*     (M4)
-    //   /v3/admin/*      (M4)
+    //   /v3/products/*       (M2.2+)
+    //   /v3/cart/*           (M3)
+    //   /v3/checkout/*       (M3)
+    //   /v3/orders/*         (M3)
+    //   /v3/vendor/*         (M4)
 };

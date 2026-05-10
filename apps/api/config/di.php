@@ -145,6 +145,45 @@ return [
     AuthMiddleware::class => \DI\autowire(),
     OptionalAuthMiddleware::class => \DI\autowire(),
 
+    // M2.1 — AdminAuthMiddleware. Takes ResponseFactory + Logger;
+    // both autowire-resolvable.
+    \Bayti\Api\Http\Middleware\AdminAuthMiddleware::class => \DI\autowire(),
+
+    // M2.1 — RequestIdMiddleware (added earlier in M1.6.2.B but
+    // listed here for discoverability).
+    \Bayti\Api\Http\Middleware\RequestIdMiddleware::class => \DI\autowire(),
+
+    // M2.1 — Catalog serializers (autowire-friendly, no constructor deps)
+    \Bayti\Api\Http\Serializers\BrandSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\VendorSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\CategorySerializer::class => \DI\autowire(),
+
+    // M2.1 — Catalog admin controllers (Brand)
+    \Bayti\Api\Http\Controllers\Admin\Brand\ListBrandsAdminController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Brand\CreateBrandController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Brand\UpdateBrandController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Brand\DeleteBrandController::class => \DI\autowire(),
+
+    // M2.1 — Catalog admin controllers (Vendor)
+    \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\CreateVendorController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class => \DI\autowire(),
+
+    // M2.1 — Catalog admin controllers (Category)
+    \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Category\UpdateCategoryController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Category\DeleteCategoryController::class => \DI\autowire(),
+
+    // M2.1 — Catalog public read controllers
+    \Bayti\Api\Http\Controllers\Catalog\ListBrandsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\GetBrandController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\ListVendorsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\ListCategoriesController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\GetCategoryController::class => \DI\autowire(),
+
     // -------------------------------------------------------------------
     // OTP — provider selection + service
     // -------------------------------------------------------------------

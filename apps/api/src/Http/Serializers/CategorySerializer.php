@@ -1,0 +1,94 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Bayti\Api\Http\Serializers;
+
+use Bayti\Api\Domain\Catalog\Category;
+use DateTimeInterface;
+
+/**
+ * Serialize Category entities.
+ *
+ * Three shapes:
+ *   - publicShape:  storefront leaf representation (no nested children)
+ *   - publicShapeWithChildren: recursive tree (depth-bounded by caller)
+ *   - adminShape:   includes is_active + timestamps + parent_id
+ */
+final class CategorySerializer
+{
+    /**
+     * @return array<string, mixed>
+     */
+    public function publicShape(Category $c): array
+    {
+        return [
+            'id' => $c->getId(),
+            'slug' => $c->getSlug(),
+            'name' => $c->getName(),
+            'description' => $c->getDescription(),
+            'display_order' => $c->getDisplayOrder(),
+            'image_url' => $c->getImageUrl(),
+            'path' => $c->getPath(),
+            'parent_id' => $c->getParent()?->getId(),
+        ];
+    }
+
+    /**
+     * Tree shape — same as publicShape but with `children` key
+     * containing the child array.
+     *
+     * @param Category $c
+     * @param list<Category> $children Already-fetched direct children
+     * @param callable(Category): list<Category> $fetchChildren Recursive fetcher
+     * @return array<string, mixed>
+     */
+    public function publicShapeWithChildren(
+        Category $c,
+        array $children,
+        callable $fetchChildren,
+    ): array {
+        $serialized = $this->publicShape($c);
+        $childShapes = [];
+        foreach ($children as $child) {
+            $grandChildren = $fetchChildren($child);
+            $childShapes[] = $this->publicShapeWithChildren($child, $grandChildren, $fetchChildren);
+        }
+        $serialized['children'] = $childShapes;
+        return $serialized;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function adminShape(Category $c): array
+    {
+        return array_merge($this->publicShape($c), [
+            'is_active' => $c->isActive(),
+            'created_at' => $c->getCreatedAt()->format(DateTimeInterface::ATOM),
+            'updated_at' => $c->getUpdatedAt()->format(DateTimeInterface::ATOM),
+        ]);
+    }
+
+    /**
+     * @param iterable<Category> $categories
+     * @return list<array<string, mixed>>
+     */
+    public function publicShapeMany(iterable $categories): array
+    {
+        $out = [];
+        foreach ($categories as $c) { $out[] = $this->publicShape($c); }
+        return $out;
+    }
+
+    /**
+     * @param iterable<Category> $categories
+     * @return list<array<string, mixed>>
+     */
+    public function adminShapeMany(iterable $categories): array
+    {
+        $out = [];
+        foreach ($categories as $c) { $out[] = $this->adminShape($c); }
+        return $out;
+    }
+}
