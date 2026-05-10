@@ -637,9 +637,8 @@ M2.1.
    free tier for small data. Self-hosted is one less external
    dependency. Decide before M2.5.
 
-3. **AdminAuthMiddleware scope**: should it be a separate middleware
-   class or a parameterised AuthMiddleware? Impacts code organisation
-   slightly. Decide in M2.1.
+3. ~~AdminAuthMiddleware scope~~ ✅ **RESOLVED 2026-05-10**: separate
+   class. See M2.1 section above.
 
 4. **Image upload size cap**: 5MB? 10MB? UI compression vs
    server-side? Decide in M2.4.
@@ -647,10 +646,8 @@ M2.1.
 5. **Vendor-supplied SKU vs generated**: hybrid (vendor supplies if
    they have one, otherwise we generate)? Decide in M2.3.
 
-6. **Initial seed data**: do we ship a fixtures script that creates
-   sample categories/brands/products for testing? Useful for
-   integration testing but adds maintenance. Probably yes; decide
-   format in M2.1.
+6. ~~Initial seed data~~ ✅ **RESOLVED 2026-05-10**: ship
+   `bin/seed-catalog.php`. See M2.1 section above.
 
 ---
 
