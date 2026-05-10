@@ -200,6 +200,37 @@ return [
     OtpService::class => \DI\autowire(),
 
     // -------------------------------------------------------------------
+    // Logger — Monolog instance bound to PSR-3 LoggerInterface
+    // -------------------------------------------------------------------
+
+    /**
+     * Application logger (M1.6.2.B). Per-day rotating JSON file under
+     * apps/api/var/logs/. PSR-3 interface so any service taking
+     * Psr\Log\LoggerInterface auto-wires this.
+     *
+     * Already-extant consumers that benefit:
+     *   - OtpService (logs Redis fail-open warnings)
+     *   - ApiErrorMiddleware (logs unhandled exceptions)
+     *
+     * Production level: WARNING (less noise). Dev: DEBUG (for visibility).
+     * Override via LOG_LEVEL env if needed.
+     */
+    \Psr\Log\LoggerInterface::class => static function (ContainerInterface $c): \Psr\Log\LoggerInterface {
+        $env = $_ENV['APP_ENV'] ?? 'dev';
+        $levelOverride = $_ENV['LOG_LEVEL'] ?? null;
+
+        // Compute the log directory relative to this DI config file.
+        // di.php lives at apps/api/config/, var/ is sibling.
+        $logDir = dirname(__DIR__) . '/var/logs';
+
+        return \Bayti\Api\Infrastructure\Logging\LoggerFactory::create(
+            logDir: $logDir,
+            env: $env,
+            levelOverride: $levelOverride,
+        );
+    },
+
+    // -------------------------------------------------------------------
     // Cache / shared state — Redis in production, in-memory in tests
     // -------------------------------------------------------------------
 
@@ -283,8 +314,23 @@ return [
      */
     ApiErrorMiddleware::class => static function (ContainerInterface $c): ApiErrorMiddleware {
         $env = $_ENV['APP_ENV'] ?? 'dev';
+
+        // Resolve logger defensively — if the logger binding fails for
+        // any reason (filesystem issues writing to var/logs), still
+        // construct the error middleware with a NullLogger so the
+        // app can boot. We always want error handling available even
+        // if logging itself is broken.
+        $logger = new \Psr\Log\NullLogger();
+        try {
+            $logger = $c->get(\Psr\Log\LoggerInterface::class);
+        } catch (\Throwable) {
+            // Fall back to NullLogger; nothing is logged but the app
+            // continues to render proper error responses.
+        }
+
         return new ApiErrorMiddleware(
             responseFactory: $c->get(ResponseFactoryInterface::class),
+            logger: $logger,
             debugMode: $env !== 'prod',
         );
     },

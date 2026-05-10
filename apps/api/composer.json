@@ -43,7 +43,8 @@
         "ext-json": "*",
         "ext-redis": "*",
 
-        "sentry/sentry": "^4.0"
+        "sentry/sentry": "^4.0",
+        "monolog/monolog": "^3.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^11.5",
