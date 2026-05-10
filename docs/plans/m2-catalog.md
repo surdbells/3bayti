@@ -520,8 +520,19 @@ they affect comes up.
 ### M2.1
 - Category path eager-update vs lazy-update: leaning eager (rare
   operation; simpler queries downstream)
-- Category delete: leaning "reject if has products" (safest; admin
-  must move products first)
+- ✅ **Category delete: SOFT-DELETE** (set `is_active=false`).
+  Decided 2026-05-10. Products stay reachable; admin can hide a
+  whole category without breaking order history. Hard-delete via
+  admin only when category is empty AND has been inactive >30 days
+  (M3+ cleanup script).
+- ✅ **AdminAuthMiddleware: separate class.** Decided 2026-05-10.
+  Runs after `AuthMiddleware`, reads `User` from request attribute,
+  checks `isAdmin()`. Future sub-admin permissions extend this
+  middleware without touching auth.
+- ✅ **Initial seed data: SHIP `bin/seed-catalog.php`.** Decided
+  2026-05-10. Idempotent — re-runs are no-ops (find-or-create on
+  every entity). Creates ~3 vendors, ~5 categories, ~10 brands,
+  ~30 products to give frontend + QA real data to test against.
 
 ### M2.2
 - Slug collision handling: leaning "append `-2`, `-3` etc."
