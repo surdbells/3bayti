@@ -382,7 +382,7 @@ final class AuditEmitter
             'last_name' => $u->getLastName(),
             'email' => $u->getEmail(),
             'phone' => $u->getPhone(),
-            'gender' => $u->getGender()?->value,
+            'gender' => $u->getGender(),
             'dob' => $u->getDob()?->format('Y-m-d'),
             'locale' => $u->getLocale(),
             'timezone' => $u->getTimezone(),
