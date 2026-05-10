@@ -96,13 +96,22 @@ final class RequestIdMiddlewareTest extends TestCase
     public function rejectsNonUuidClientId(): void
     {
         // Things that should NOT be honored: too short, wrong chars,
-        // injection attempts, etc.
+        // path-injection attempts, etc.
+        //
+        // Note: actual newline / control-character injection is
+        // rejected by Slim's PSR-7 implementation BEFORE our middleware
+        // runs (Slim throws InvalidArgumentException from withHeader()
+        // per RFC 7230 — header values can't contain LF). So we don't
+        // need to test that here; the framework handles it. We test
+        // the cases that DO reach our middleware: well-formed but
+        // non-UUID strings.
         $badIds = [
             'hello',
             '12345',
             '../../../etc/passwd',
-            "newline\ninjection",
             'ZZZZZZZZ-ZZZZ-ZZZZ-ZZZZ-ZZZZZZZZZZZZ',  // not hex
+            'too-short',
+            '550e8400-e29b-41d4-a716',  // truncated UUID
         ];
 
         foreach ($badIds as $bad) {
