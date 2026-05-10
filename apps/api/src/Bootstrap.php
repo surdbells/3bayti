@@ -35,7 +35,23 @@ final class Bootstrap
             Dotenv::createImmutable($rootPath)->load();
         }
 
-        // 2. Build the DI container.
+        // 2. Initialize Sentry as early as possible (right after .env so
+        //    we have SENTRY_DSN). Per Sentry docs, this should happen
+        //    before any code that might throw — DI container build,
+        //    routes, etc. — so even bootstrap-time crashes are reported.
+        //
+        //    If SENTRY_DSN is unset, init() is skipped — the SDK silently
+        //    becomes a no-op, captureException() does nothing. That's
+        //    deliberate for tests + local dev where we don't want to
+        //    pollute Sentry with noise.
+        //
+        //    We use the BARE \Sentry\init() global, not a wrapper class,
+        //    because Sentry's SDK was designed around global state. The
+        //    HubInterface that captureException reaches is a singleton.
+        //    Wrapping it would just add indirection without isolation.
+        self::initSentry();
+
+        // 3. Build the DI container.
         $containerBuilder = new ContainerBuilder();
         $containerBuilder->useAutowiring(true);
         $containerBuilder->useAttributes(false);
@@ -49,11 +65,11 @@ final class Bootstrap
 
         $container = $containerBuilder->build();
 
-        // 3. Tell Slim's AppFactory which container to use, then create app.
+        // 4. Tell Slim's AppFactory which container to use, then create app.
         AppFactory::setContainer($container);
         $app = AppFactory::create();
 
-        // 4. Wire middleware, in execution order:
+        // 5. Wire middleware, in execution order:
         //    - Body-parsing first (so handlers see decoded JSON)
         //    - Routing next (resolves which handler will run)
         //    - Our JSON error middleware OUTERMOST — catches everything
@@ -68,10 +84,56 @@ final class Bootstrap
         $app->addRoutingMiddleware();
         $app->add($container->get(\Bayti\Api\Http\Errors\ApiErrorMiddleware::class));
 
-        // 5. Register routes. Kept in a dedicated file so this factory
+        // 6. Register routes. Kept in a dedicated file so this factory
         //    stays readable as the route count grows.
         (require $rootPath . '/config/routes.php')($app);
 
         return $app;
+    }
+
+    /**
+     * Initialise Sentry SDK if SENTRY_DSN is set.
+     *
+     * Called BEFORE the DI container is built so that container-build
+     * exceptions (e.g., bad DI config) get reported.
+     *
+     * Configuration choices
+     * ---------------------
+     *   - release: APP_VERSION (already set by deploy script). Sentry
+     *     uses this to associate errors with deploys, calculate
+     *     "first seen in release X" metrics, etc.
+     *   - environment: APP_ENV ('prod' / 'dev' / 'test'). Lets us
+     *     filter dashboard noise by environment.
+     *   - send_default_pii: false. We explicitly DON'T want Sentry's
+     *     default behaviour of capturing IP/user from request — we
+     *     manage that explicitly via setUser() in AuthMiddleware
+     *     with our own privacy policy (id + role flags only, no PII).
+     *   - traces_sample_rate: 0. Performance monitoring (APM) off
+     *     for now — extra cost, not needed at our scale.
+     *
+     * Tests & local dev: leave SENTRY_DSN unset → init() is skipped,
+     * captureException() becomes no-op.
+     */
+    private static function initSentry(): void
+    {
+        $dsn = $_ENV['SENTRY_DSN'] ?? '';
+        if ($dsn === '') {
+            // No DSN — Sentry stays a no-op. Common for tests / local dev.
+            return;
+        }
+
+        \Sentry\init([
+            'dsn' => $dsn,
+            'release' => $_ENV['APP_VERSION'] ?? 'unknown',
+            'environment' => $_ENV['APP_ENV'] ?? 'dev',
+            // Privacy: no auto-PII capture. We attach user context
+            // explicitly via AuthMiddleware (id + role flags only).
+            'send_default_pii' => false,
+            // No APM — defer to M5+ if/when we need traces.
+            'traces_sample_rate' => 0.0,
+            // Server name useful in self-hosted infra — matches
+            // hostname to event for "which box" forensics.
+            'server_name' => gethostname() ?: 'unknown',
+        ]);
     }
 }

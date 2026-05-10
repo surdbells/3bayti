@@ -55,8 +55,21 @@ final class ApiErrorMiddleware implements MiddlewareInterface
         try {
             return $handler->handle($request);
         } catch (HttpException $e) {
+            // Sentry policy (M1.6.2.A, Q2 = A):
+            //   - 4xx HttpException = expected client errors (bad input,
+            //     wrong password, etc.) → DON'T send to Sentry
+            //   - 5xx HttpException = our problem → send
+            // Most HttpExceptions are 4xx, so this filters out the
+            // bulk of normal noise.
+            if ($e->status >= 500) {
+                $this->captureToSentry($e);
+            }
             return $this->renderHttpException($e);
         } catch (\Throwable $e) {
+            // Always send unhandled exceptions to Sentry. These are by
+            // definition unexpected and worth investigating.
+            $this->captureToSentry($e);
+
             // Log everything we have. The client sees a generic 500.
             $this->logger->error('Unhandled exception in request handler', [
                 'exception' => get_class($e),
@@ -68,6 +81,35 @@ final class ApiErrorMiddleware implements MiddlewareInterface
                 'uri' => (string) $request->getUri(),
             ]);
             return $this->renderInternalError($e);
+        }
+    }
+
+    /**
+     * Send an exception to Sentry. No-op if Sentry isn't initialized
+     * (SENTRY_DSN unset in env).
+     *
+     * Wrapped in try/catch because we never want Sentry to break a
+     * request — if Sentry's HTTP transport fails, we silently move on
+     * rather than throw a new exception from inside the error handler.
+     * The original error is still rendered to the client.
+     */
+    private function captureToSentry(\Throwable $e): void
+    {
+        try {
+            // \Sentry\captureException is a no-op when init() wasn't
+            // called (no DSN). We don't pre-check; the SDK handles it.
+            \Sentry\captureException($e);
+        } catch (\Throwable $sentryError) {
+            // Sentry itself broke. Log the failure but don't propagate.
+            // If even our logger throws here we have bigger problems.
+            try {
+                $this->logger->warning('Sentry capture failed', [
+                    'sentry_error' => $sentryError->getMessage(),
+                    'original_error' => $e->getMessage(),
+                ]);
+            } catch (\Throwable) {
+                // Truly unrecoverable — give up silently.
+            }
         }
     }
 

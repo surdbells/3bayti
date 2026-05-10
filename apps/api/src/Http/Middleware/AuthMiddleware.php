@@ -85,6 +85,25 @@ final class AuthMiddleware implements MiddlewareInterface
             return $this->unauthorized('AUTH_INVALID_TOKEN');
         }
 
+        // M1.6.2.A — set Sentry user context (id + role flags only).
+        // Privacy decision (Q1=B): no email/phone in Sentry events.
+        // Role flags are useful for filtering ("show errors hitting
+        // vendor users") without exposing PII.
+        //
+        // configureScope() only does work if Sentry is initialized
+        // (DSN was set). Otherwise it's a no-op.
+        \Sentry\configureScope(function (\Sentry\State\Scope $scope) use ($user): void {
+            $scope->setUser([
+                'id' => (string) $user->getId(),
+            ]);
+            $scope->setTags([
+                'role.customer' => $user->isCustomer() ? 'true' : 'false',
+                'role.vendor' => $user->isVendor() ? 'true' : 'false',
+                'role.admin' => $user->isAdmin() ? 'true' : 'false',
+                'role.sub_admin' => $user->isSubAdmin() ? 'true' : 'false',
+            ]);
+        });
+
         // Decorate the request with user + claims and continue.
         $request = $request
             ->withAttribute(self::ATTR_USER, $user)
