@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Address;
 
+use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\User\Address;
 use Bayti\Api\Domain\User\AddressRepository;
 use Bayti\Api\Domain\User\User;
@@ -43,6 +44,7 @@ final class UpdateAddressController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly AddressSerializer $serializer,
+        private readonly AuditEmitter $audit,
     ) {
     }
 
@@ -79,6 +81,9 @@ final class UpdateAddressController
         // requires all four required fields.
         $input = $this->validator->parse($request, UpdateAddressInput::class);
 
+        // M1.6.1.C — capture pre-mutation state for audit diff.
+        $beforeSnapshot = $this->audit->snapshot($address);
+
         // Address::update() accepts nullable strings for partial
         // updates — if a field is null, the existing value stays.
         // For PUT semantics we ALWAYS pass values for required
@@ -105,6 +110,16 @@ final class UpdateAddressController
         );
 
         $this->em->flush();
+
+        // Emit update audit. AuditEmitter computes the diff (only
+        // changed fields land in the row).
+        $this->audit->recordUpdate(
+            request: $request,
+            actor: $user,
+            subject: $address,
+            beforeSnapshot: $beforeSnapshot,
+            afterSnapshot: $this->audit->snapshot($address),
+        );
 
         return $this->ok([
             'address' => $this->serializer->publicShape($address),

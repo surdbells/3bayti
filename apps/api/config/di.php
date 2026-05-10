@@ -200,6 +200,17 @@ return [
     OtpService::class => \DI\autowire(),
 
     // -------------------------------------------------------------------
+    // M1.6.1.C — audit log
+    // -------------------------------------------------------------------
+
+    /**
+     * AuditEmitter is autowired — pulls EntityManagerInterface +
+     * Psr\Log\LoggerInterface from DI. Controllers inject it
+     * explicitly to record mutating actions.
+     */
+    \Bayti\Api\Domain\Audit\AuditEmitter::class => \DI\autowire(),
+
+    // -------------------------------------------------------------------
     // Logger — Monolog instance bound to PSR-3 LoggerInterface
     // -------------------------------------------------------------------
 

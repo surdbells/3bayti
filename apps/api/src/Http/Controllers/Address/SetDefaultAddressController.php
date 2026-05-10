@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Address;
 
+use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\User\Address;
 use Bayti\Api\Domain\User\AddressRepository;
 use Bayti\Api\Domain\User\User;
@@ -56,6 +57,7 @@ final class SetDefaultAddressController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly AddressSerializer $serializer,
+        private readonly AuditEmitter $audit,
     ) {
     }
 
@@ -93,6 +95,11 @@ final class SetDefaultAddressController
 
         $input = $this->validator->parse($request, SetDefaultInput::class);
 
+        // Track which flags actually changed (for audit). We compare
+        // the post-mutation state against the pre-mutation state.
+        $beforeShipping = $address->isDefaultShipping();
+        $beforeBilling = $address->isDefaultBilling();
+
         // Apply each flag if its field was provided. Setting true
         // goes through the repo (transactional unset-others-set-this).
         // Setting false just clears on this address — no other side
@@ -109,6 +116,32 @@ final class SetDefaultAddressController
         } elseif ($input->billing === false) {
             $address->setDefaultBilling(false);
             $this->em->flush();
+        }
+
+        // Emit a 'default' audit event with the actual flag changes.
+        // Only fields that actually changed end up in the changes map
+        // — if user PATCH'd shipping=true on an already-default
+        // address, no change happened, no audit row.
+        $changes = [];
+        if ($beforeShipping !== $address->isDefaultShipping()) {
+            $changes['is_default_shipping'] = [
+                'before' => $beforeShipping,
+                'after' => $address->isDefaultShipping(),
+            ];
+        }
+        if ($beforeBilling !== $address->isDefaultBilling()) {
+            $changes['is_default_billing'] = [
+                'before' => $beforeBilling,
+                'after' => $address->isDefaultBilling(),
+            ];
+        }
+        if (!empty($changes)) {
+            $this->audit->recordDefault(
+                request: $request,
+                actor: $user,
+                subject: $address,
+                changes: $changes,
+            );
         }
 
         return $this->ok([

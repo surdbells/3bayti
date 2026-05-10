@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Address;
 
+use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\User\Address;
 use Bayti\Api\Domain\User\AddressRepository;
 use Bayti\Api\Domain\User\User;
@@ -54,6 +55,7 @@ final class DeleteAddressController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly AuditEmitter $audit,
     ) {
     }
 
@@ -94,6 +96,12 @@ final class DeleteAddressController
         $wasDefaultShipping = $address->isDefaultShipping();
         $wasDefaultBilling = $address->isDefaultBilling();
 
+        // M1.6.1.C — snapshot pre-delete state for audit. Must capture
+        // BEFORE the remove() — afterwards the entity is detached and
+        // its id may be reset by Doctrine.
+        $beforeSnapshot = $this->audit->snapshot($address);
+        $deletedAddressId = $address->getId();
+
         // Delete the address. Doctrine cascades nothing here — there
         // are no FK references from other tables to address.id yet
         // (orders snapshot the address at order time per M3 design).
@@ -130,6 +138,30 @@ final class DeleteAddressController
                 }
             }
         }
+
+        // Emit delete audit. We pass the address INSTANCE (still in
+        // memory, even if detached) for type/id resolution; the actual
+        // state captured is the pre-delete snapshot.
+        // Note: subjectId is read from $address->getId() which Doctrine
+        // may have nulled — handle defensively by using the captured id
+        // when present.
+        if ($deletedAddressId !== null) {
+            // Build the audit row manually here because the standard
+            // recordDelete path resolves the id from the entity, which
+            // may now be null after remove(). Workaround: temporarily
+            // restore the id property via reflection so AuditEmitter
+            // can read it.
+            $ref = new \ReflectionProperty(Address::class, 'id');
+            $ref->setAccessible(true);
+            $ref->setValue($address, $deletedAddressId);
+        }
+
+        $this->audit->recordDelete(
+            request: $request,
+            actor: $user,
+            subject: $address,
+            beforeSnapshot: $beforeSnapshot,
+        );
 
         return $this->noContent();
     }

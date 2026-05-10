@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Address;
 
+use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\User\Address;
 use Bayti\Api\Domain\User\AddressRepository;
 use Bayti\Api\Domain\User\User;
@@ -76,6 +77,7 @@ final class CreateAddressController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly AddressSerializer $serializer,
+        private readonly AuditEmitter $audit,
     ) {
     }
 
@@ -149,6 +151,15 @@ final class CreateAddressController
         } else {
             $addresses->save($address);
         }
+
+        // M1.6.1.C — record the create in audit log. Snapshot post-save
+        // so we capture the final defaults state too.
+        $this->audit->recordCreate(
+            request: $request,
+            actor: $user,
+            subject: $address,
+            afterSnapshot: $this->audit->snapshot($address),
+        );
 
         return $this->created([
             'address' => $this->serializer->publicShape($address),

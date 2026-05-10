@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Measurement;
 
+use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\User\Measurement;
 use Bayti\Api\Domain\User\MeasurementRepository;
 use Bayti\Api\Domain\User\User;
@@ -42,6 +43,7 @@ final class DeleteMeasurementsController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly AuditEmitter $audit,
     ) {
     }
 
@@ -79,7 +81,27 @@ final class DeleteMeasurementsController
         $existing = $repo->findForUserAndCategory($user, $categoryId);
 
         if ($existing !== null) {
+            // M1.6.1.C — capture pre-delete state. Same caveat as
+            // DeleteAddressController: id may be reset by Doctrine
+            // after remove(), so we capture it explicitly and
+            // restore via reflection if needed.
+            $beforeSnapshot = $this->audit->snapshot($existing);
+            $deletedId = $existing->getId();
+
             $repo->remove($existing);
+
+            if ($deletedId !== null) {
+                $ref = new \ReflectionProperty(Measurement::class, 'id');
+                $ref->setAccessible(true);
+                $ref->setValue($existing, $deletedId);
+            }
+
+            $this->audit->recordDelete(
+                request: $request,
+                actor: $user,
+                subject: $existing,
+                beforeSnapshot: $beforeSnapshot,
+            );
         }
 
         return $this->noContent();

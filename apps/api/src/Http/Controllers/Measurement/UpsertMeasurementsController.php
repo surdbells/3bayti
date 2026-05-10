@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Measurement;
 
+use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\User\Measurement;
 use Bayti\Api\Domain\User\MeasurementRepository;
 use Bayti\Api\Domain\User\User;
@@ -64,6 +65,7 @@ final class UpsertMeasurementsController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly MeasurementSerializer $serializer,
+        private readonly AuditEmitter $audit,
     ) {
     }
 
@@ -103,6 +105,9 @@ final class UpsertMeasurementsController
         $existing = $repo->findForUserAndCategory($user, $categoryId);
 
         if ($existing !== null) {
+            // M1.6.1.C — capture pre-mutation state for the diff.
+            $beforeSnapshot = $this->audit->snapshot($existing);
+
             // Update path — full replace of values + notes (PUT
             // semantics, not partial). Use setValues/setNotes
             // directly rather than update() because update() treats
@@ -112,6 +117,14 @@ final class UpsertMeasurementsController
             $existing->setNotes($input->notes);
             $this->em->flush();
             $measurement = $existing;
+
+            $this->audit->recordUpdate(
+                request: $request,
+                actor: $user,
+                subject: $measurement,
+                beforeSnapshot: $beforeSnapshot,
+                afterSnapshot: $this->audit->snapshot($measurement),
+            );
         } else {
             // Create path — new row.
             $measurement = new Measurement(
@@ -121,6 +134,13 @@ final class UpsertMeasurementsController
                 notes: $input->notes,
             );
             $repo->save($measurement);
+
+            $this->audit->recordCreate(
+                request: $request,
+                actor: $user,
+                subject: $measurement,
+                afterSnapshot: $this->audit->snapshot($measurement),
+            );
         }
 
         return $this->ok([

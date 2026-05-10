@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Profile;
 
+use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\User\Gender;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Controllers\Profile\Dto\UpdateProfileInput;
@@ -56,15 +57,17 @@ use Psr\Http\Message\ServerRequestInterface;
  *   - 422 with field-level errors if any provided field fails validation
  *   - 400 if the body isn't a JSON object (RequestValidator handles this)
  *
- * Why no audit log
- * ----------------
- * Symfony Audit / Doctrine listeners would let us record who changed
- * what and when. We don't have that infrastructure yet (M5+). For
- * now, profile changes are not audited. If a user's profile shows
- * something unexpected, they can fix it; if a malicious actor changes
- * their profile via leaked credentials, the security incident is
- * "their account was compromised" — which is detected via session
- * activity, not audit logs.
+ * Audit log
+ * ---------
+ * Per M1.6.1.C, profile updates emit a structured audit_log row with:
+ *   - actor user_id (the user updating their own profile)
+ *   - subject_type='User', subject_id={user_id}
+ *   - action='updated'
+ *   - changes={before:{changed_fields},after:{changed_fields}}
+ *   - ip_address, user_agent, request_id
+ *
+ * Sensitive fields (none on User profile yet) would be redacted.
+ * No audit row is written if nothing actually changed.
  *
  * Why no notification
  * -------------------
@@ -81,6 +84,7 @@ final class UpdateProfileController
         private readonly RequestValidator $validator,
         private readonly UserSerializer $userSerializer,
         private readonly EntityManagerInterface $em,
+        private readonly AuditEmitter $audit,
     ) {
     }
 
@@ -108,6 +112,11 @@ final class UpdateProfileController
             ]);
         }
 
+        // M1.6.1.C — capture pre-mutation state for audit diff. Must
+        // happen BEFORE applyChanges or we'd compare a mutated entity
+        // against itself.
+        $beforeSnapshot = $this->audit->snapshot($user);
+
         // Apply changes to the entity. Each field is gated on
         // null-check so we only touch fields the user actually sent.
         // The User entity setters do their own normalization (trim,
@@ -116,6 +125,18 @@ final class UpdateProfileController
 
         // One flush per request — Doctrine batches the UPDATE.
         $this->em->flush();
+
+        // Emit audit AFTER flush so we know the change actually
+        // landed. AuditEmitter will compute the diff (only changed
+        // fields end up in the row).
+        $afterSnapshot = $this->audit->snapshot($user);
+        $this->audit->recordUpdate(
+            request: $request,
+            actor: $user,
+            subject: $user,
+            beforeSnapshot: $beforeSnapshot,
+            afterSnapshot: $afterSnapshot,
+        );
 
         return $this->ok([
             'user' => $this->userSerializer->publicProfile($user),
