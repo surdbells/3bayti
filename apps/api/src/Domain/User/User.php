@@ -90,8 +90,19 @@ class User
      * OTP delivery during registration confirmation and password reset.
      * Unique across the platform — no two accounts share a phone.
      */
-    #[ORM\Column(type: 'string', length: 25, unique: true)]
-    private string $phone;
+    /**
+     * Phone — nullable + non-unique to preserve legacy data fidelity.
+     *
+     * v3 originally enforced phone NOT NULL UNIQUE. Migration relaxed
+     * both constraints (see Version20260512000003) because:
+     *  - 4 legacy users have NULL phone (admin/test accounts)
+     *  - 69 legacy users share phones with another user (family accounts)
+     *
+     * Future tightening is application-layer-only: new signups must
+     * supply a phone, migrated rows may stay legacy-shaped.
+     */
+    #[ORM\Column(type: 'string', length: 25, nullable: true)]
+    private ?string $phone = null;
 
     /**
      * ISO 3166-1 alpha-2 country code (e.g. 'AE', 'SA'). Stored
@@ -323,10 +334,10 @@ class User
     // Constructor
     // -------------------------------------------------------------------
 
-    public function __construct(string $email, string $phone, string $passwordHash, string $countryCode = 'AE')
+    public function __construct(string $email, ?string $phone, string $passwordHash, string $countryCode = 'AE')
     {
         $this->email = strtolower(trim($email));
-        $this->phone = $phone;
+        $this->phone = $phone !== null && $phone !== '' ? $phone : null;
         $this->passwordHash = $passwordHash;
         $this->countryCode = strtoupper($countryCode);
 
@@ -350,7 +361,7 @@ class User
     public function getId(): ?int                  { return $this->id; }
     public function getLegacyUserId(): ?int        { return $this->legacyUserId; }
     public function getEmail(): string             { return $this->email; }
-    public function getPhone(): string             { return $this->phone; }
+    public function getPhone(): ?string            { return $this->phone; }
     public function getCountryCode(): string       { return $this->countryCode; }
     public function getFirstName(): ?string        { return $this->firstName; }
     public function getLastName(): ?string         { return $this->lastName; }

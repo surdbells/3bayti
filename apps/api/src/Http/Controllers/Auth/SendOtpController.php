@@ -94,6 +94,15 @@ final class SendOtpController
             ]);
         }
 
+        // Legacy-migrated users may have NULL phone (4 such records as
+        // of Day 4 migration). They can't receive OTP — same no-op shape
+        // as non-existent users so we don't disclose phone availability.
+        if ($user->getPhone() === null) {
+            return $this->ok([
+                'verification_id' => 'fake-' . bin2hex(random_bytes(12)),
+            ]);
+        }
+
         try {
             $verificationId = $this->otp->send(
                 phone: $user->getPhone(),

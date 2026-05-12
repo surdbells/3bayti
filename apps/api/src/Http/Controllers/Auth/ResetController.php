@@ -86,7 +86,7 @@ final class ResetController
         //   - User is deactivated (is_active=false)
         //   - User hasn't completed registration (is_phone_verified=false)
         // Any of these → return a consistent-looking fake vid.
-        if ($user === null || !$user->isActive() || !$user->isPhoneVerified()) {
+        if ($user === null || !$user->isActive() || !$user->isPhoneVerified() || $user->getPhone() === null) {
             return $this->ok([
                 'verification_id' => 'fake-' . bin2hex(random_bytes(12)),
             ]);

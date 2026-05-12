@@ -44,6 +44,12 @@ class Product
     public const STOCK_IN = 'in_stock';
     public const STOCK_OUT = 'out_of_stock';
     public const STOCK_LIMITED = 'limited';
+    /**
+     * Backorder status — accepting orders despite zero on-hand stock,
+     * but warning customers of delayed fulfillment. Preserved from
+     * legacy where 11 products use this value.
+     */
+    public const STOCK_BACKORDER = 'on_backorder';
 
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
@@ -326,7 +332,7 @@ class Product
 
     public function setStockStatus(string $status): void
     {
-        $valid = [self::STOCK_IN, self::STOCK_OUT, self::STOCK_LIMITED];
+        $valid = [self::STOCK_IN, self::STOCK_OUT, self::STOCK_LIMITED, self::STOCK_BACKORDER];
         if (!in_array($status, $valid, true)) {
             throw new \InvalidArgumentException("Invalid stock_status '{$status}'");
         }
