@@ -32,6 +32,24 @@ Per decisions on Day 4:
 
 ## Pre-execution checklist
 
+### 0. About the PHP CLI warnings
+
+When you run any `php` command on the server, you'll see a wall of PHP Warning lines about being unable to load curl/gd/gettext/exif/mysqli `.so` files. These are **harmless noise** — the extensions ARE loaded (`php -m | grep mysqli` confirms), they just get loaded by aaPanel's preload mechanism BEFORE php.ini tries to load them again. The migration scripts work correctly despite the noise.
+
+If the warnings are bothering you, prefix any command with `2>/dev/null`:
+
+```bash
+php bin/migrate-from-legacy/migrate-all.php --wipe-seed 2>/dev/null | tee /tmp/migrate.log
+```
+
+Or pipe stderr to a separate file:
+
+```bash
+php bin/migrate-from-legacy/migrate-all.php --wipe-seed 2>/tmp/migrate.warnings | tee /tmp/migrate.log
+```
+
+I recommend the second form for the first run — if something actually goes wrong, the real error will be in the warnings file too.
+
 ### 1. Add `LEGACY_MYSQL_*` env vars to `.env`
 
 On the server at `apps/api/.env`, append:
@@ -68,7 +86,7 @@ Expected: rows for Version20260512000001, Version20260512000002, Version20260512
 ### 3. Verify legacy DB reachability from server
 
 ```bash
-cd /www/wwwroot/api-v3.3bayti.ae/apps/api
+cd /www/wwwroot/3bayti/apps/api
 php -r '
 require "vendor/autoload.php";
 $_ENV["LEGACY_MYSQL_HOST"] = "142.93.172.195";
@@ -89,7 +107,7 @@ Expected: ~9328 users, ~2165 products.
 The first time, you want to wipe the fictional seed data first. Use the `--wipe-seed` flag:
 
 ```bash
-cd /www/wwwroot/api-v3.3bayti.ae/apps/api
+cd /www/wwwroot/3bayti/apps/api
 php bin/migrate-from-legacy/migrate-all.php --wipe-seed 2>&1 | tee /tmp/migrate-$(date +%Y%m%d-%H%M%S).log
 ```
 
@@ -100,7 +118,7 @@ Expected runtime: ~5 minutes.
 For ongoing syncs as new legacy data appears, do NOT pass `--wipe-seed`:
 
 ```bash
-cd /www/wwwroot/api-v3.3bayti.ae/apps/api
+cd /www/wwwroot/3bayti/apps/api
 php bin/migrate-from-legacy/migrate-all.php 2>&1 | tee /tmp/migrate-$(date +%Y%m%d-%H%M%S).log
 ```
 
