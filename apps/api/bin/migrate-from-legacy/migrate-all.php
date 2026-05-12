@@ -5,100 +5,144 @@ declare(strict_types=1);
 /**
  * Orchestrator — runs the full migration in correct dependency order.
  *
- * Usage:
- *   php bin/migrate-from-legacy/migrate-all.php              # default: skip seed rollback
- *   php bin/migrate-from-legacy/migrate-all.php --wipe-seed  # also wipe fictional seed first
+ * All migration logic lives in Bayti\Api\Migration\MigrationSteps.
+ * This script is a thin wrapper: bootstrap, instantiate, run steps,
+ * print summary.
  *
- * Re-runnable safely. Each migration script uses UPSERT semantics:
- *   - First run: INSERT all rows
- *   - Subsequent runs: pick up new rows + apply edits to existing rows
- *   - Stable fields preserved on re-sync: product slugs, vendor slugs,
- *     user emails (per Sodiq's decision; see day-4-migration.md §Re-sync semantics)
+ * Single-process design (no passthru/exec)
+ * ----------------------------------------
+ * aaPanel disables passthru, exec, shell_exec, system, popen on the
+ * production CLI. We can't fork sub-scripts. Instead, all steps run
+ * sequentially in this PHP process, sharing the DI container,
+ * EntityManager, LegacyDb, and MigrationLog instances.
  *
- * Flags:
- *   --wipe-seed   Run rollback-fictional-seed.php first. Use on the
- *                 INITIAL migration only. Subsequent re-syncs should
- *                 NOT use this flag — it would delete real migrated
- *                 data (rollback script targets all rows in vendors,
- *                 categories, brands, not just the seed).
- *                 NOTE: Currently the rollback wipes brands+categories+vendors
- *                 INCLUDING migrated ones. We rely on the runbook
- *                 explicitly stating this flag is "first run only".
+ * Each step still wraps its writes in its own DB transaction, so a
+ * failure in step N doesn't affect the writes from steps 1..N-1.
  *
- *   --dry-run     Not yet implemented.
+ * Usage
+ * -----
+ *   php migrate-all.php              # default — INSERT new + UPDATE drift
+ *   php migrate-all.php --wipe-seed  # also wipe fictional M2.1.B seed first
  *
- * Order matters
- * =============
- *
- *   1. (optional) Rollback fictional seed (categories, vendors, brands)
- *   2. Migrate categories  (no dependencies)
- *   3. Migrate users       (no dependencies; produces legacy_user_id map)
- *   4. Migrate vendors     (depends on users via owner_user_id FK)
- *   5. Migrate products    (depends on vendors AND categories)
- *   6. Migrate reviews     (depends on vendors AND users)
+ * Use --wipe-seed ONLY on the very first migration. After that, real
+ * migrated data lives in those tables and wiping it would be destructive.
  */
 
+require_once __DIR__ . '/../../vendor/autoload.php';
+
+use Bayti\Api\Bootstrap;
+use Bayti\Api\Migration\LegacyDb;
+use Bayti\Api\Migration\MigrationLog;
+use Bayti\Api\Migration\MigrationSteps;
+use Bayti\Api\Migration\Slugger;
+use Doctrine\ORM\EntityManagerInterface;
+
 $wipeSeed = in_array('--wipe-seed', $argv, true);
-// --skip-seed retained for backward compatibility — now the default
-$skipSeedFlag = in_array('--skip-seed', $argv, true);
-$dryRun = in_array('--dry-run', $argv, true);
-
-if ($dryRun) {
-    fwrite(STDERR, "--dry-run is not yet implemented. Each script wraps writes in a transaction; cancel between scripts to bail out.\n");
-    exit(1);
-}
-
-$binDir = __DIR__;
-$apiRoot = dirname($binDir, 2);
 
 echo "============================================================\n";
 echo " 3bayti legacy data migration\n";
 echo "============================================================\n\n";
 
 $start = microtime(true);
-$step = 0;
 
-if ($wipeSeed) {
-    runStep(++$step, 'rollback fictional seed', $apiRoot . '/bin/rollback-fictional-seed.php', ['--yes']);
-} else {
-    echo "[step " . (++$step) . "] SKIPPED rollback-fictional-seed (pass --wipe-seed to run; only use on INITIAL migration)\n\n";
-}
-
-runStep(++$step, 'migrate-categories',  $binDir . '/migrate-categories.php');
-runStep(++$step, 'migrate-users',       $binDir . '/migrate-users.php');
-runStep(++$step, 'migrate-vendors',     $binDir . '/migrate-vendors.php');
-runStep(++$step, 'migrate-products',    $binDir . '/migrate-products.php');
-runStep(++$step, 'migrate-reviews',     $binDir . '/migrate-reviews.php');
-
-$elapsed = microtime(true) - $start;
-printf("\n============================================================\n");
-printf(" All steps complete in %.1fs\n", $elapsed);
-printf("============================================================\n");
-
-function runStep(int $step, string $name, string $script, array $extra = []): void
-{
-    $cmd = sprintf(
-        'php %s %s',
-        escapeshellarg($script),
-        implode(' ', array_map('escapeshellarg', $extra))
-    );
-
-    echo "============================================================\n";
-    echo "[step {$step}] {$name}\n";
-    echo "  cmd: {$cmd}\n";
-    echo "============================================================\n";
-
-    $stepStart = microtime(true);
-    passthru($cmd, $exitCode);
-    $stepElapsed = microtime(true) - $stepStart;
-
-    if ($exitCode !== 0) {
-        fwrite(STDERR, "\n[step {$step}] FAILED with exit code {$exitCode}\n");
-        fwrite(STDERR, "Stopping orchestrator. Fix the issue, then re-run with --skip-seed\n");
-        fwrite(STDERR, "to skip the rollback step (the migrated rows will be detected as\n");
-        fwrite(STDERR, "already-present and skipped).\n");
-        exit($exitCode);
+try {
+    $app = Bootstrap::createApp();
+    $container = $app->getContainer();
+    if ($container === null) {
+        fwrite(STDERR, "DI container not available\n");
+        exit(1);
     }
 
-    printf("[step %d] DONE in %.1fs\n\n", $step, $stepElapsed);
+    /** @var EntityManagerInterface $em */
+    $em = $container->get(EntityManagerInterface::class);
+    $conn = $em->getConnection();
+
+    $legacy = new LegacyDb();
+    $log = new MigrationLog($conn);
+    $slugger = new Slugger();
+    $steps = new MigrationSteps($conn, $legacy, $log, $slugger);
+
+    echo "Run ID: " . $log->getRunId() . "\n";
+    echo "Mode:   " . ($wipeSeed ? "WIPE-SEED + MIGRATE" : "MIGRATE (UPSERT)") . "\n\n";
+
+    $stepNum = 0;
+    $results = [];
+
+    if ($wipeSeed) {
+        $stepNum++;
+        echo "----- step {$stepNum}: wipe fictional seed -----\n";
+        $results['wipe'] = $steps->wipeFictionalSeed();
+    } else {
+        echo "----- skip: wipe-fictional-seed (pass --wipe-seed to run) -----\n\n";
+    }
+
+    $stepNum++;
+    echo "----- step {$stepNum}: categories -----\n";
+    $results['categories'] = $steps->migrateCategories();
+
+    $stepNum++;
+    echo "----- step {$stepNum}: users -----\n";
+    $results['users'] = $steps->migrateUsers();
+
+    $stepNum++;
+    echo "----- step {$stepNum}: vendors -----\n";
+    $results['vendors'] = $steps->migrateVendors();
+
+    $stepNum++;
+    echo "----- step {$stepNum}: products -----\n";
+    $results['products'] = $steps->migrateProducts();
+
+    $stepNum++;
+    echo "----- step {$stepNum}: reviews -----\n";
+    $results['reviews'] = $steps->migrateReviews();
+
+    $elapsed = microtime(true) - $start;
+
+    // ---------- final summary ----------
+
+    echo "============================================================\n";
+    printf(" Migration complete in %.1fs\n", $elapsed);
+    echo "============================================================\n\n";
+
+    if (isset($results['wipe'])) {
+        printf("  Seed wiped:  brands=%d  categories=%d  vendors=%d\n\n",
+            $results['wipe']['brands'],
+            $results['wipe']['categories'],
+            $results['wipe']['vendors']
+        );
+    }
+
+    printf("  %-12s  %-9s  %-9s  %-9s\n", 'Phase', 'Processed', 'Skipped', 'Errors');
+    printf("  %-12s  %-9s  %-9s  %-9s\n",
+        '------------', '---------', '---------', '---------');
+    foreach (['categories', 'users', 'vendors', 'products', 'reviews'] as $phase) {
+        $r = $results[$phase];
+        printf("  %-12s  %9d  %9d  %9d\n", $phase, $r['migrated'], $r['skipped'], $r['errors']);
+    }
+    echo "\n";
+
+    if (isset($results['users']['conflicts'])) {
+        printf("  Email conflicts logged: %d\n", $results['users']['conflicts']);
+        echo "    Inspect: psql -d bayti_v3 -c \"SELECT * FROM migration_email_conflicts WHERE resolution_status='pending' LIMIT 20\"\n\n";
+    }
+
+    // Quick sanity check on v3 data
+    echo "  Verification:\n";
+    $cats = (int) $conn->fetchOne("SELECT COUNT(*) FROM categories");
+    $usr  = (int) $conn->fetchOne("SELECT COUNT(*) FROM users WHERE legacy_user_id IS NOT NULL");
+    $vnd  = (int) $conn->fetchOne("SELECT COUNT(*) FROM vendors WHERE legacy_vendor_id IS NOT NULL");
+    $prd  = (int) $conn->fetchOne("SELECT COUNT(*) FROM products WHERE legacy_product_id IS NOT NULL AND status='active'");
+    $rev  = (int) $conn->fetchOne("SELECT COUNT(*) FROM product_reviews WHERE legacy_review_id IS NOT NULL");
+    echo "    categories:        {$cats}\n";
+    echo "    users (legacy):    {$usr}\n";
+    echo "    vendors (legacy):  {$vnd}\n";
+    echo "    products active:   {$prd}\n";
+    echo "    reviews:           {$rev}\n";
+
+    exit(0);
+} catch (\Throwable $e) {
+    fwrite(STDERR, "\n!!! FATAL: " . $e->getMessage() . "\n");
+    fwrite(STDERR, "    File: " . $e->getFile() . ":" . $e->getLine() . "\n");
+    fwrite(STDERR, $e->getTraceAsString() . "\n");
+    exit(1);
 }
