@@ -1,0 +1,101 @@
+<main class="ax-main" style="padding: var(--ax-space-5);">
+  <div style="max-width: 64rem; margin: 0 auto;">
+
+    <!-- Loading -->
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading order"></span>
+    </div>
+
+    <!-- Content -->
+    <ng-container *ngIf="!ui_controls.is_loading">
+      <!-- Order header card -->
+      <article class="ax-card ax-p-0" style="overflow: hidden;">
+        <!-- Header -->
+        <div class="ax-p-5 ax-flex ax-items-center ax-justify-between ax-flex-wrap ax-gap-3" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+          <div>
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Order</div>
+            <h2 class="ax-h4 ax-m-0 ax-mt-1">#{{ single_order.order_id || '—' }}</h2>
+          </div>
+          <span [ngClass]="statusBadgeClass(single_order.status)">{{ single_order.status || 'unknown' }}</span>
+        </div>
+
+        <!-- Meta -->
+        <div class="ax-p-5" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
+            <div>
+              <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Transaction ID</div>
+              <div class="ax-font-medium ax-text-primary ax-mt-1">{{ single_order.transaction_id || '—' }}</div>
+            </div>
+            <div>
+              <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Merchant reference</div>
+              <div class="ax-font-medium ax-text-primary ax-mt-1">{{ single_order.merchantReference || '—' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delivery -->
+        <div class="ax-p-5">
+          <h3 class="ax-h6 ax-m-0 ax-mb-3">Delivery</h3>
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-5">
+            <div>
+              <div class="ax-font-medium ax-text-primary">{{ single_order.delivery_name || '—' }}</div>
+              <div class="ax-text-sm ax-text-secondary ax-mt-1">
+                <span *ngIf="single_order.delivery_city">{{ single_order.delivery_city }}</span>
+                <span *ngIf="single_order.delivery_area"> · {{ single_order.delivery_area }}</span>
+              </div>
+              <div class="ax-text-sm ax-text-secondary ax-mt-1">
+                {{ single_order.delivery_street_address || '—' }}
+              </div>
+              <div class="ax-text-2xs ax-text-tertiary ax-mt-1" *ngIf="single_order.villa_number">
+                Villa: {{ single_order.villa_number }}
+              </div>
+            </div>
+            <div>
+              <div *ngIf="single_order.delivery_phone" class="ax-text-sm ax-text-secondary ax-flex ax-items-center ax-gap-2">
+                <span class="material-symbols-outlined" style="font-size: 1rem;" aria-hidden="true">phone</span>
+                {{ single_order.delivery_phone }}
+              </div>
+              <div *ngIf="single_order.delivery_email" class="ax-text-sm ax-text-secondary ax-flex ax-items-center ax-gap-2 ax-mt-2">
+                <span class="material-symbols-outlined" style="font-size: 1rem;" aria-hidden="true">email</span>
+                {{ single_order.delivery_email }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- Items -->
+      <section class="ax-card ax-p-0 ax-mt-4">
+        <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+          <h3 class="ax-h6 ax-m-0">Order items</h3>
+        </div>
+        <div class="ax-table-wrapper">
+          <table class="ax-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Store</th>
+                <th style="text-align: center;">Qty</th>
+                <th style="text-align: right;">Price</th>
+                <th style="text-align: right;">Total</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (a_item of items; track $index) {
+                <tr>
+                  <td><span class="ax-font-medium ax-text-primary">{{ a_item.product_name }}</span></td>
+                  <td><span class="ax-text-sm ax-text-secondary">{{ a_item.store }}</span></td>
+                  <td style="text-align: center;"><span class="ax-numeric">{{ a_item.quantity }}</span></td>
+                  <td style="text-align: right;"><span class="ax-numeric">{{ a_item.price }}</span></td>
+                  <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ a_item.total_price }}</span></td>
+                  <td><span [ngClass]="itemStatusClass(a_item.status)">{{ a_item.status }}</span></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</main>

@@ -1,0 +1,117 @@
+// store-reviews.page — M2 token migration (M35 / Tier 4)
+// Reviewer + star rating list. Loops the rating 1..5 instead of
+// duplicating @if blocks. animate.css dropped. Dead :host theme
+// vars + Taiga tui-icon descendant rules removed.
+
+.reviews-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 0;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+// =========================================================
+// Review card
+// =========================================================
+
+.review-card {
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-lg, 16px);
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  box-shadow: 0 4px 12px rgba(46, 36, 28, 0.04);
+  padding: 14px 16px;
+}
+
+.review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.reviewer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.reviewer-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reviewer-name {
+  font-family: var(--ax-font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ax-color-text-primary);
+  letter-spacing: 0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.review-comment {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ax-color-text-secondary);
+}
+
+// =========================================================
+// Star rating
+// (loop renders 5 stars, filled ones get the gold token)
+// =========================================================
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.rating__star {
+  color: var(--ax-color-text-tertiary);
+}
+
+.rating__star--filled {
+  color: #d6a800; // gold accent (matches vendor-reviews / store-dashboard)
+}
+
+// =========================================================
+// Empty state
+// =========================================================
+
+/* M38/M48: layout covered by global .empty-state. This page uses Tier 4
+   sizing with asymmetric padding. */
+.empty-state {
+  --empty-state-padding: 64px 24px 48px;
+  --empty-state-icon-size: 72px;
+  --empty-state-icon-margin-bottom: 8px;
+
+  h2 {
+    font-weight: 700;
+  }
+}
+
+// =========================================================
+// Loader
+// =========================================================
+
+.loader-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+}

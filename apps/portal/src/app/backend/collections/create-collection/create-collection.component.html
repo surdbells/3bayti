@@ -1,0 +1,54 @@
+<app-admin-shell>
+  <div class="ax-container">
+      <!-- Page header -->
+      <header class="ax-page-header">
+        <div class="ax-page-header-content">
+          <button
+            type="button"
+            (click)="goBack()"
+            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+            style="align-self: flex-start;">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            Back to collections
+          </button>
+          <span class="ax-page-header-eyebrow">Catalog</span>
+          <h1 class="ax-page-title">Create collection</h1>
+          <p class="ax-page-subtitle">Group products for campaigns, seasonal curations, or landing pages.</p>
+        </div>
+      </header>
+
+      <!-- Form -->
+      <section class="ax-page-section" style="max-width: 32rem;">
+        <div class="ax-card ax-p-5">
+          <div class="ax-form-field ax-mb-4">
+            <label class="ax-label ax-label-required" for="collection_name">Collection name</label>
+            <input
+              id="collection_name"
+              name="collection"
+              type="text"
+              class="ax-input"
+              [(ngModel)]="create.collection"
+              placeholder="e.g. Ramadan 2026, Bestsellers, New Arrivals" />
+            <span class="ax-hint">Vendors will see this when tagging products.</span>
+          </div>
+
+          <div class="ax-flex ax-gap-2 ax-justify-end">
+            <button
+              type="button"
+              class="ax-btn ax-btn-outline"
+              (click)="goBack()">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="ax-btn ax-btn-primary"
+              (click)="createCollection()"
+              [disabled]="ui_controls.is_loading">
+              <span *ngIf="ui_controls.is_loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <span *ngIf="!ui_controls.is_loading" class="material-symbols-outlined" aria-hidden="true">save</span>
+              Create collection
+            </button>
+          </div>
+        </div>
+      </section>  </div>
+</app-admin-shell>

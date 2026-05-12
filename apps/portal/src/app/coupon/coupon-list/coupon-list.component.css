@@ -1,0 +1,43 @@
+/* ═══════════════════════════════════════════════════════════════
+   COUPON LIST — Component Styles
+   ═══════════════════════════════════════════════════════════════ */
+
+.coupon-code {
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.5px;
+  color: #333;
+}
+
+/* ── Status badges ────────────────────────────────────────────── */
+.badge-status-active    { background-color: #d1fae5; color: #065f46; }
+.badge-status-inactive  { background-color: #f3f4f6; color: #6b7280; }
+.badge-status-expired   { background-color: #fee2e2; color: #991b1b; }
+
+/* ── Discount type badges ─────────────────────────────────────── */
+.badge-type-percentage  { background-color: #dbeafe; color: #1e40af; }
+.badge-type-fixed       { background-color: #fef3c7; color: #92400e; }
+.badge-type-shipping    { background-color: #e0e7ff; color: #3730a3; }
+
+/* ── First order badge ────────────────────────────────────────── */
+.badge-first-order {
+  background-color: #fce7f3;
+  color: #9d174d;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+/* ── Usage progress bar ───────────────────────────────────────── */
+.progress {
+  border-radius: 2px;
+  background-color: #f0f0f0;
+}
+
+/* ── Pagination ───────────────────────────────────────────────── */
+.pagination .page-item.active .page-link {
+  background-color: var(--abayti-secondary, #6b4226);
+  border-color: var(--abayti-secondary, #6b4226);
+  color: #fff;
+}
+.pagination .page-link { color: #333; }
+.pagination .page-link:hover { background-color: #f3f4f6; }

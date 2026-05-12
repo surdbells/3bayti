@@ -1,0 +1,216 @@
+/* ============================================================================
+   Chat vendors page — M2 redesign (M24 Tier 3)
+   ============================================================================ */
+
+ion-content.page-content {
+  --background: var(--ax-color-bg-canvas);
+}
+/* ----- Vendor list ------------------------------------ */
+
+.vendor-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 12px;
+}
+
+.vendor-card {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: var(--ax-color-bg-surface);
+  border: none;
+  border-radius: var(--ax-radius-lg);
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06),
+              0 4px 12px rgba(46, 36, 28, 0.04);
+  cursor: pointer;
+  text-align: start;
+  width: 100%;
+  transition: transform 120ms ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  > ax-icon {
+    color: var(--ax-color-text-tertiary);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+}
+
+.vendor-logo {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  border-radius: var(--ax-radius-md);
+  overflow: hidden;
+  background: var(--ax-color-bg-brand-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+  }
+}
+
+.logo-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ax-icon {
+    color: var(--ax-color-text-brand);
+    font-size: 20px;
+  }
+}
+
+.vendor-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.vendor-name {
+  margin: 0 0 2px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.vendor-meta {
+  margin: 0;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--ax-color-text-secondary);
+}
+
+.unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--ax-color-bg-brand);
+  color: var(--ax-palette-neutral-0);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ----- Empty state ------------------------------------ */
+
+/* M38/M50: layout, icon-wrap, h3, p covered by global .empty-state.
+   This page keeps a .shop-btn custom child + small margin override. */
+.empty-state {
+  --empty-state-padding: 80px 20px;
+
+  .empty-icon-wrap ax-icon {
+    font-size: 36px;
+  }
+
+  h3 {
+    margin: 0 0 8px;
+  }
+
+  p {
+    margin: 0 0 20px;
+  }
+
+  .shop-btn {
+    padding: 12px 24px;
+    background: var(--ax-color-bg-brand);
+    color: var(--ax-palette-neutral-0);
+    border: none;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active {
+      background: rgba(90, 58, 44, 0.85);
+    }
+  }
+}
+
+/* ----- Skeleton state -------------------------------- */
+
+.vendor-card.skeleton {
+  pointer-events: none;
+}
+
+.skeleton-box {
+  position: relative;
+  background: var(--ax-color-bg-brand-subtle);
+  overflow: hidden;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+.skeleton-text {
+  position: relative;
+  height: 12px;
+  border-radius: 4px;
+  background: var(--ax-color-bg-brand-subtle);
+  overflow: hidden;
+  margin-bottom: 6px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.4) 50%,
+      transparent 100%
+    );
+    animation: shimmer 1.5s infinite;
+  }
+
+  &.title-sk    { width: 70%; height: 13px; }
+  &.subtitle-sk { width: 50%; height: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-box::after,
+  .skeleton-text::after {
+    animation: none;
+  }
+}

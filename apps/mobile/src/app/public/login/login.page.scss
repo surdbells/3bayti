@@ -1,0 +1,139 @@
+.h-100 { height: 100%; }
+
+ion-content.app-bg {
+  /* M2 beige canvas */
+  --background: var(--ax-color-bg-canvas);
+}
+
+@media (prefers-color-scheme: dark) {
+  ion-content.app-bg {
+    --background: var(--ax-color-bg-canvas);
+  }
+}
+
+@media (orientation: landscape) {
+  ion-content.app-bg {
+    --background: var(--ax-color-bg-canvas);
+  }
+}
+
+/* ----- Auth container — centered column with breathing room ----- */
+.auth-container {
+  /* Replaces the old <ion-grid> + <ion-row> + <ion-col> framing.
+     A single full-width column centered on the page. */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+}
+
+/* ----- Header stack (logo + title + subtitle) ----- */
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-logo {
+  max-width: 160px;
+  height: auto;
+  margin-bottom: 0.5rem;
+}
+
+/* Title — Poltawski display, sentence case */
+.title {
+  font-family: var(--ax-font-display);
+  font-weight: 400;
+  font-size: 30px;
+  letter-spacing: -0.005em;
+  margin: 0;
+  color: var(--ax-color-text-primary);
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-family: inherit;
+  font-weight: 400;
+  margin: 0;
+  color: var(--ax-color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ----- Forgot password link — right-aligned, subtle ----- */
+.forgot-password-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 4px 0 12px;
+}
+
+.forgot-password-link {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--ax-color-text-brand);   /* M2 brown */
+  cursor: pointer;
+  text-decoration: none;
+  padding: 4px 0;
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+/* ----- Loader row — centered ----- */
+.loader-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+/* ----- "or" divider — line · text · line ----- */
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 1rem 0;
+  color: var(--ax-color-text-tertiary);
+  font-family: inherit;
+  font-size: 12px;
+  font-style: italic;
+
+  &::before,
+  &::after {
+    content: "";
+    flex: 1;
+    height: 0.5px;
+    background: var(--ax-color-border-default);
+  }
+
+  span {
+    flex-shrink: 0;
+  }
+}
+
+/* ----- Sign-up link line ("Don't have an account? Sign up") ----- */
+.signup-link {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ax-color-text-secondary);
+  text-align: center;
+  margin: 1.5rem 0 0;
+  line-height: 1.5;
+}
+
+.signup-link-action {
+  color: var(--ax-color-text-brand);
+  font-weight: 500;
+  cursor: pointer;
+  margin-inline-start: 4px;
+
+  &:active {
+    opacity: 0.7;
+  }
+}

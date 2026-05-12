@@ -1,0 +1,113 @@
+<div style="max-width: 64rem; margin: 0 auto;">
+  <!-- Progress card -->
+  <section class="ax-card ax-p-5 ax-mb-4">
+    <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-4 ax-items-center">
+      <!-- Avatar + contact -->
+      <div class="ax-flex ax-gap-3 ax-items-center">
+        <img
+          [src]="profile?.avatar || 'assets/img/avatar-placeholder.png'"
+          alt="Avatar"
+          style="width: 4rem; height: 4rem; border-radius: 50%; object-fit: cover; object-position: center; border: 1px solid var(--ax-color-border-subtle);" />
+        <div style="min-width: 0;">
+          <h4 class="ax-h6 ax-m-0 ax-truncate">{{ profile?.first_name }} {{ profile?.last_name }}</h4>
+          <div class="ax-text-2xs ax-text-tertiary ax-truncate">{{ profile?.email }}</div>
+          <a
+            *ngIf="profile?.phone"
+            class="ax-btn ax-btn-outline ax-btn-sm ax-mt-2"
+            [href]="'https://wa.me/' + profile.phone + '?text=Hello%20I%20need%20support'"
+            target="_blank"
+            rel="noopener">
+            <span class="material-symbols-outlined" aria-hidden="true">chat</span>
+            WhatsApp
+          </a>
+        </div>
+      </div>
+
+      <!-- Progress -->
+      <div style="grid-column: span 2;">
+        <div class="ax-flex ax-items-center ax-justify-between ax-mb-2">
+          <div>
+            <h5 class="ax-h6 ax-m-0">Account setup</h5>
+            <div class="ax-text-2xs ax-text-tertiary">Completion</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="ax-h5 ax-m-0 ax-numeric ax-font-semibold">{{ percent }}%</div>
+            <div class="ax-text-2xs ax-text-tertiary">{{ filledCount }} of {{ total }} fields</div>
+          </div>
+        </div>
+
+        <div
+          class="ax-progress"
+          role="progressbar"
+          aria-valuemin="0"
+          aria-valuemax="100"
+          [attr.aria-valuenow]="percent"
+          aria-label="Account setup progress">
+          <div
+            class="ax-progress-bar"
+            [ngClass]="progressTone()"
+            [style.width.%]="percent"></div>
+        </div>
+
+        <div class="ax-text-2xs ax-text-tertiary ax-mt-2">
+          Tip: fill in highlighted fields to increase setup completion.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Field grid -->
+  <section class="ax-card ax-p-5">
+    <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-lg-grid-cols-3 ax-gap-3">
+      <div
+        *ngFor="let f of fields"
+        class="ax-field-card"
+        [class.ax-field-empty]="!f.filled">
+        <div class="ax-flex ax-items-start ax-justify-between ax-gap-2">
+          <div style="min-width: 0; flex: 1;">
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">{{ f.label }}</div>
+            <div class="ax-text-sm ax-text-primary ax-mt-1 ax-truncate" [attr.title]="displayValue(f)">
+              <ng-container *ngIf="f.filled && (f.key.includes('avatar') || f.key.includes('id_') || f.key.includes('license_doc'))">
+                <img
+                  *ngIf="f.value"
+                  [src]="f.value"
+                  [alt]="f.label"
+                  style="width: 32px; height: 32px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-sm); border: 1px solid var(--ax-color-border-subtle);" />
+              </ng-container>
+              <ng-container *ngIf="!f.key.includes('avatar') && !f.key.includes('id_') && !f.key.includes('license_doc')">
+                {{ displayValue(f) }}
+              </ng-container>
+            </div>
+          </div>
+
+          <span
+            class="material-symbols-outlined"
+            [style.color]="f.filled ? 'var(--ax-color-text-success)' : 'var(--ax-color-text-tertiary)'"
+            style="font-size: 1.125rem; flex-shrink: 0;"
+            [attr.aria-label]="f.filled ? 'Completed' : 'Missing'">
+            {{ f.filled ? 'check_circle' : 'radio_button_unchecked' }}
+          </span>
+        </div>
+
+        <div class="ax-mt-2">
+          <span
+            *ngIf="!f.filled"
+            class="ax-text-2xs"
+            style="color: var(--ax-color-text-danger);">
+            Missing — please provide this info.
+          </span>
+          <span
+            *ngIf="f.filled"
+            class="ax-text-2xs"
+            style="color: var(--ax-color-text-success);">
+            Completed
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ax-text-2xs ax-text-tertiary ax-mt-4" style="padding-top: var(--ax-space-3); border-top: 1px solid var(--ax-color-border-subtle);">
+      Last login: {{ profile?.last_login || '—' }}
+    </div>
+  </section>
+</div>

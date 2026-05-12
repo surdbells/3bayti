@@ -1,0 +1,115 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back to account
+        </button>
+        <span class="ax-page-header-eyebrow">Settings</span>
+        <h1 class="ax-page-title">Tax information</h1>
+        <p class="ax-page-subtitle">UAE tax details for VAT-compliant invoices and payouts.</p>
+      </div>
+    </header>
+
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span>
+    </div>
+
+    <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+      <div class="ax-card ax-p-5" style="max-width: 48rem;">
+        <h2 class="ax-h5 ax-m-0 ax-mb-1">Tax status</h2>
+        <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-4">
+          Select 'Registered' only if you have a valid UAE Tax Registration Number.
+        </p>
+
+        <div class="ax-form-field ax-mb-4">
+          <div class="ax-flex ax-gap-4 ax-flex-wrap">
+            <label class="ax-radio">
+              <input type="radio" name="vat_status" value="registered" [(ngModel)]="store_single.vat_status" />
+              <span class="ax-radio-dot"></span>
+              <span class="ax-radio-label">Registered</span>
+            </label>
+            <label class="ax-radio">
+              <input type="radio" name="vat_status" value="not_registered" [(ngModel)]="store_single.vat_status" />
+              <span class="ax-radio-dot"></span>
+              <span class="ax-radio-label">Not registered</span>
+            </label>
+            <label class="ax-radio">
+              <input type="radio" name="vat_status" value="exempt" [(ngModel)]="store_single.vat_status" />
+              <span class="ax-radio-dot"></span>
+              <span class="ax-radio-label">Exempt</span>
+            </label>
+          </div>
+        </div>
+
+        <ng-container *ngIf="store_single.vat_status === 'registered'">
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
+            <div class="ax-form-field">
+              <label class="ax-label" for="store_legal_name">Registered business name</label>
+              <input id="store_legal_name" type="text" class="ax-input" name="store_legal_name" [(ngModel)]="store_single.store_legal_name" />
+              <span class="ax-hint">As it appears on your trade license.</span>
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label" for="trade_license_number">Trade license number</label>
+              <input id="trade_license_number" type="text" class="ax-input" name="trade_license_number" [(ngModel)]="store_single.trade_license_number" />
+            </div>
+          </div>
+
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label">Licensing authority</label>
+            <div class="ax-flex ax-gap-4 ax-flex-wrap">
+              <label class="ax-radio">
+                <input type="radio" name="licensing_authority" value="dubai_ded" [(ngModel)]="store_single.licensing_authority" />
+                <span class="ax-radio-dot"></span>
+                <span class="ax-radio-label">Dubai DED</span>
+              </label>
+              <label class="ax-radio">
+                <input type="radio" name="licensing_authority" value="free_zone" [(ngModel)]="store_single.licensing_authority" />
+                <span class="ax-radio-dot"></span>
+                <span class="ax-radio-label">Free zone</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label" for="tax_registration_number">Tax Registration Number (TRN) — 15 digits</label>
+            <input id="tax_registration_number" type="text" class="ax-input ax-numeric" [maxlength]="15" name="tax_registration_number" [(ngModel)]="store_single.tax_registration_number" />
+          </div>
+
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-3 ax-mb-3">
+            <div class="ax-form-field">
+              <label class="ax-label" for="vat_registration_effective_date">VAT reg. effective date</label>
+              <input id="vat_registration_effective_date" type="date" class="ax-input" name="vat_registration_effective_date" [(ngModel)]="store_single.vat_registration_effective_date" />
+            </div>
+            <div class="ax-form-field" style="grid-column: span 2;">
+              <label class="ax-label" for="registered_tax_address">Registered tax address (UAE)</label>
+              <input id="registered_tax_address" type="text" class="ax-input" name="registered_tax_address" [(ngModel)]="store_single.registered_tax_address" />
+            </div>
+          </div>
+
+          <div class="ax-form-field ax-mb-4">
+            <label class="ax-label" for="tax_contact_email">Tax contact email</label>
+            <input id="tax_contact_email" type="email" class="ax-input" name="tax_contact_email" [(ngModel)]="store_single.tax_contact_email" />
+          </div>
+        </ng-container>
+
+        <div class="ax-flex ax-justify-end">
+          <button
+            type="button"
+            class="ax-btn ax-btn-primary"
+            (click)="save_change()"
+            [disabled]="ui_controls.is_saving">
+            <span *ngIf="ui_controls.is_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+            <span *ngIf="!ui_controls.is_saving" class="material-symbols-outlined" aria-hidden="true">save</span>
+            Save changes
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</app-vendor-shell>

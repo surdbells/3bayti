@@ -1,0 +1,79 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_my_orders' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg ion-padding">
+  @if (ui_controls.is_loading){
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  @if (!ui_controls.is_loading && orders.length === 0){
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="shopping-cart" />
+      </div>
+      <h2>{{ 'heading_no_orders' | translate }}</h2>
+    </div>
+  } @else {
+    @for (order of orders; track order.id; let i = $index) {
+      <ion-card class="order-card">
+        <!-- Order Header -->
+        <div class="order-header">
+          <div class="order-info">
+            <h4 class="order-id">{{ order.id }}</h4>
+            <span class="order-date">{{ order.date | date:'MMM d, y' }}</span>
+          </div>
+          <span class="status-pill" [ngClass]="'status-pill--' + order.status">{{ order.status | uppercase }}</span>
+        </div>
+
+        <!-- Collapsible items section -->
+        @if (order.showItems) {
+          <div class="items-list horizontal-scroll">
+            @for (item of order.items; track item) {
+              <div (click)="open_vendor(item.store, item.product_name)" class="product-card">
+                <div class="product-image-wrapper">
+                  <img loading="lazy" [src]="item.product_image" alt="{{ item.product_name }}" class="product-image" />
+                  <span class="item-status-pill" [ngClass]="'item-status-pill--' + item.status">{{ item.status | uppercase }}</span>
+                </div>
+                <h5 class="product-name">{{ item.product_name }}</h5>
+                <p class="qty">{{ 'label_qty' | translate }}: {{ item.quantity }}</p>
+                <p class="price">Ð{{ item.price }}</p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Footer with toggle -->
+        <div class="order-footer">
+          <div class="total">
+            <span class="total-label">{{ 'label_total' | translate }}</span>
+            <strong class="total-amount">Ð{{ order.total }}</strong>
+          </div>
+          <div class="actions">
+            <ion-button size="small" fill="outline" class="toggle-btn" (click)="toggleItems(i)">
+              {{ order.showItems ? ('button_hide_items' | translate) : ('button_view_items' | translate) }}
+              <ax-icon [name]="order.showItems ? 'chevron-up' : 'chevron-down'" slot="end"></ax-icon>
+            </ion-button>
+          </div>
+        </div>
+      </ion-card>
+    }
+  }
+
+  @if(!ui_controls.is_empty){
+    <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)">
+      <ion-infinite-scroll-content [loadingText]="'please_wait' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+  }
+</ion-content>
+
+<app-tab-bar></app-tab-bar>

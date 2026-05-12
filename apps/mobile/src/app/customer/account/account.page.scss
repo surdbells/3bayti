@@ -1,0 +1,554 @@
+:host {
+  /* M6c — local CSS var overrides retargeted to M2 tokens.
+     The previous values were warm-but-off-brand peach/cream; the new
+     values defer to M2's semantic tokens so this page picks up the
+     locked palette. --accent kept as a brown-pink for any legacy
+     references that haven't been touched yet. */
+  --bg:     var(--ax-color-bg-canvas);
+  --card:   var(--ax-palette-neutral-0);
+  --text:   var(--ax-color-text-primary);
+  --muted:  var(--ax-color-text-secondary);
+  --accent: var(--ax-color-text-brand);
+}
+
+/* ============================================================
+   M6c — Header redesign: beige + brown + Poltawski editorial
+   ============================================================ */
+
+/* Header outer block — beige background, defers Ionic toolbar bg
+   override below. */
+.m6-header {
+  background: var(--ax-color-bg-toolbar);  /* #efe2cf */
+  border-bottom: 0.5px solid var(--ax-color-border-subtle);
+}
+
+/* Toolbar — reuses .toolbar class. Override its bg to inherit
+   the header's beige (so the toolbar visually merges into the
+   header). The previous styling forced white with a faint border. */
+.toolbar {
+  --background: transparent;
+  --border-width: 0;
+  --color: var(--ax-color-text-primary);
+
+  .hello {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+
+    .hey {
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--ax-color-text-primary);
+      padding-left: 10px;
+
+      span {
+        font-weight: 500;
+        color: var(--ax-color-text-primary);
+      }
+    }
+    .loc {
+      font-size: 8px;
+      padding-bottom: 5px;
+      color: var(--ax-color-text-secondary);
+      padding-left: 10px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}
+
+/* Avatar — replaces former <tui-avatar>. Round 40px image with
+   warm-brown fallback when no avatar is set. */
+.m6-avatar {
+  width: 40px;
+  height: 40px;
+  margin-right: 4px;
+  cursor: pointer;
+  background: var(--ax-palette-brown-200);  /* #d5b49e */
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .m6-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ax-color-text-brand);  /* #614536 */
+    font-weight: 500;
+    font-size: 14px;
+    background: var(--ax-palette-brown-200);
+  }
+}
+
+/* Search bar — non-input pseudo-input that opens the real search
+   page on click. The actual <tui-textfield> was never an editable
+   input here either; clicking it called user_search() which
+   navigated away. So this is now a styled clickable pill, not a
+   form control. */
+.m6-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--ax-color-bg-surface);  /* #ffffff */
+  border: 0.5px solid var(--ax-color-border-default);  /* #d1c8bb */
+  border-radius: var(--ax-radius-lg);  /* 12px */
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+  margin: 4px 0 12px;
+
+  &:active {
+    border-color: var(--ax-color-text-brand);
+  }
+
+  .m6-search-icon {
+    font-size: 16px;
+    color: var(--ax-color-text-secondary);  /* #7d7669 */
+  }
+
+  .m6-search-placeholder {
+    font-size: 13px;
+    color: var(--ax-color-text-secondary);
+    line-height: 1;
+  }
+}
+
+/* Category chips — white pill buttons with subtle border, brown
+   text. Replaces the previous .chip styling for the new HTML;
+   icons kept (the spec was amended during M6c implementation —
+   with 7 categories, icon recognition aids scanning). */
+.categories {
+  /* The .h-scroll utility already handles horizontal scroll */
+  padding: 8px 0 4px;
+
+  .m6-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    background: var(--ax-color-bg-surface);  /* #ffffff */
+    border: 0.5px solid var(--ax-color-border-default);  /* #d1c8bb */
+    border-radius: 999px;
+    padding: 6px 14px 6px 10px;
+    color: var(--ax-color-text-primary);
+    cursor: pointer;
+    font-family: inherit;
+    transition: border-color 0.15s ease, background 0.15s ease;
+
+    &:active {
+      border-color: var(--ax-color-text-brand);
+      background: var(--ax-palette-beige-100);
+    }
+
+    .m6-chip-ico {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 20px;
+      height: 20px;
+
+      ion-icon {
+        font-size: 18px;
+        color: var(--ax-color-text-brand);  /* #614536 */
+      }
+    }
+
+    .m6-chip-text {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--ax-color-text-primary);
+      line-height: 1;
+    }
+  }
+}
+
+/* Search wrap container — beige bg flows under it from header */
+.search-wrap {
+  background: transparent;
+
+  ion-grid {
+    --ion-grid-padding: 0;
+    padding: 0 12px;
+  }
+
+  ion-row {
+    --ion-grid-padding: 0;
+  }
+
+  ion-col {
+    --ion-grid-padding: 0;
+    padding: 0;
+  }
+}
+
+/* End M6c styles */
+/* ============================================================ */
+
+/* ============================================================
+   M6d styles moved to src/global.scss in M7-4-2 so they apply
+   app-wide (account.page horizontal carousels + listing pages
+   2-col grids). Two adjustments made during the move:
+     - width: 158px restricted to .h-scroll context only
+     - .m6d-name line-clamp 2 -> 1 for single-line ellipsis
+   ============================================================ */
+
+
+/* ============================================================
+   M6e — Vendor featured card (hero-led)
+   ============================================================ */
+
+.m6e-featured-card {
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-lg);  /* 12px */
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06),
+              0 4px 12px rgba(46, 36, 28, 0.04);
+  margin: 16px 0 20px;
+}
+
+/* Hero area: first product image, full width, 16:10 aspect, with
+   bottom gradient overlay carrying the store name + rating. */
+.m6e-featured-hero {
+  position: relative;
+  aspect-ratio: 16 / 5;
+  background: var(--ax-palette-brown-200);  /* warm placeholder */
+  cursor: pointer;
+  overflow: hidden;
+
+  .m6e-featured-hero-skeleton {
+    position: absolute;
+    inset: 0;
+    background: var(--ax-palette-brown-200);
+    z-index: 2;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+
+    &.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+
+    &.loaded {
+      opacity: 1;
+    }
+  }
+}
+
+/* Gradient overlay sits above the image and below the text;
+   uses ::before so the text is positioned on top without nesting. */
+.m6e-featured-hero-overlay {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  z-index: 3;
+  color: var(--ax-palette-neutral-0);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  /* The gradient itself — a separate pseudo-element on the parent
+     hero that fades from transparent to dark. Done as ::after on
+     hero, not on this overlay, so the overlay text isn't affected. */
+}
+
+.m6e-featured-hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 50%, rgba(28, 25, 22, 0.55) 100%);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.m6e-featured-store-name {
+  font-family: var(--ax-font-display);  /* Poltawski Nowy */
+  font-weight: 400;
+  font-size: 18px;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  color: var(--ax-palette-neutral-0);
+  margin: 0;
+}
+
+.m6e-featured-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  cursor: pointer;
+  width: fit-content;
+
+  .m6e-rating-star {
+    font-size: 12px;
+    color: var(--ax-palette-gold-400);  /* #c9a227 */
+  }
+}
+
+/* Body: label + thumb row of remaining products */
+.m6e-featured-body {
+  padding: 12px 14px 14px;
+}
+
+.m6e-featured-label {
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ax-color-text-secondary);  /* #5a554a / #7d7669 */
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin: 0 0 10px;
+}
+
+/* Thumb row: up to N children laid out as equal columns. With
+   the data shape (variable products count), this adapts without
+   forcing exactly 3 squares. If only 2 remaining products exist,
+   they take half each; if 4 exist, each takes 25%, etc. */
+.m6e-featured-thumbs {
+  display: flex;
+  gap: 8px;
+}
+
+.m6e-featured-thumb {
+  flex: 1;
+  aspect-ratio: 1;
+  position: relative;
+  background: var(--ax-color-bg-placeholder);  /* warm placeholder */
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  min-width: 0;
+
+  .m6e-featured-thumb-skeleton {
+    position: absolute;
+    inset: 0;
+    background: var(--ax-color-bg-placeholder);
+    z-index: 2;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+
+    &.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+
+    &.loaded {
+      opacity: 1;
+    }
+  }
+
+  .m6e-featured-thumb-price {
+    position: absolute;
+    left: 4px;
+    bottom: 4px;
+    padding: 2px 5px;
+    background: rgba(28, 25, 22, 0.7);
+    border-radius: 3px;
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 400;
+    color: var(--ax-palette-neutral-0);
+    z-index: 3;
+    line-height: 1;
+  }
+}
+
+/* End M6e styles */
+/* ============================================================ */
+
+/* ============================================================
+   M6f tab bar styles moved to src/global.scss in M7-1 so they
+   apply app-wide. Wishlist modal styles below remain page-scoped
+   since the modal only exists on account.page.
+   ============================================================ */
+
+
+/* ----- Wishlist sheet (rendered via <ax-bottom-sheet>) ----- */
+
+.m6f-wishlist-sheet__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px 14px;
+}
+
+.m6f-wishlist-sheet__title {
+  margin: 0;
+  font-family: var(--ax-font-display);
+  font-weight: 400;
+  font-size: 17px;
+  letter-spacing: -0.005em;
+  color: var(--ax-color-text-primary);
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.m6f-wishlist-sheet__close-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 4px;
+  color: var(--ax-color-text-brand);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    text-decoration: underline;
+  }
+}
+
+.m6f-wishlist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.m6f-wishlist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  min-height: 56px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: var(--ax-radius-md);
+  transition: background 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--ax-palette-beige-100);
+    outline: none;
+  }
+
+  &:active {
+    background: var(--ax-color-bg-toolbar);
+  }
+
+  & + .m6f-wishlist-item {
+    border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  }
+}
+
+.m6f-wishlist-label {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--ax-color-text-primary);
+}
+
+/* The "add" affordance for each wishlist label — small brown
+   plus icon in a muted-beige circle. Less aggressive than a
+   full-brown circle would be in a list of repeating items. */
+.m6f-wishlist-add {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--ax-palette-beige-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  ax-icon {
+    font-size: 16px;
+    color: var(--ax-color-text-brand);
+  }
+}
+
+.m6f-wishlist-loading {
+  display: flex;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+/* End M6f-1 styles */
+/* ============================================================ */
+
+
+/* ============================================================
+   Preserved utilities used by the current redesigned HTML
+   ============================================================ */
+
+/* Image-loading skeleton — used by .m6d-img-skeleton,
+   .m6e-featured-hero-skeleton, .m6e-featured-thumb-skeleton via
+   the .skeleton-shimmer child element. */
+/* M44: shimmer pattern in global.scss; this page overrides the opacity. */
+.skeleton-shimmer {
+  --skeleton-shimmer-color: rgba(255, 255, 255, 0.30);
+}
+
+/* Page content background — used by <ion-content class="home-bg">
+   in account.page.html. Defers to the M2 canvas token. */
+ion-content.home-bg {
+  --background: var(--ax-color-bg-canvas);
+}
+
+@media (prefers-color-scheme: dark) {
+  ion-content.home-bg {
+    --background: var(--ax-color-bg-canvas);
+  }
+}
+
+@media (orientation: landscape) {
+  ion-content.home-bg {
+    --background: var(--ax-color-bg-canvas);
+  }
+}
+
+
+
+/* Horizontal scroll utility */
+.h-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 10px;
+  /* hide scrollbar (mobile) */
+  &::-webkit-scrollbar { display: none; }
+}
+ion-modal ion-content {
+  --background: var(--profile-bg);
+}

@@ -1,0 +1,20 @@
+<div class="ax-notification-host" aria-live="polite" aria-atomic="false">
+  <ng-container *ngFor="let position of positions">
+    <div
+      *ngIf="itemsAt(position).length > 0"
+      class="ax-notification-host__stack"
+      [class.ax-notification-host__stack--top-center]="position === 'top-center'"
+      [class.ax-notification-host__stack--top-left]="position === 'top-left'"
+      [class.ax-notification-host__stack--top-right]="position === 'top-right'"
+      [class.ax-notification-host__stack--bottom-center]="position === 'bottom-center'"
+      [class.ax-notification-host__stack--bottom-left]="position === 'bottom-left'"
+      [class.ax-notification-host__stack--bottom-right]="position === 'bottom-right'"
+    >
+      <ax-notification
+        *ngFor="let item of itemsAt(position); trackBy: trackById"
+        [item]="item"
+        (tap)="onTap(item.id)"
+      ></ax-notification>
+    </div>
+  </ng-container>
+</div>

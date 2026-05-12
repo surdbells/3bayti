@@ -1,0 +1,168 @@
+/* =========================================================================
+   ax-notification — single card
+   ========================================================================= */
+
+@keyframes ax-notification-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(0.85);
+  }
+}
+
+:host {
+  display: block;
+  pointer-events: auto;
+}
+
+.ax-notification {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-lg);
+  box-shadow:
+    0 6px 20px rgba(46, 36, 28, 0.10),
+    0 2px 4px rgba(46, 36, 28, 0.06);
+
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+
+  /* Animation — translate + fade. Promoted via class state. */
+  opacity: 0;
+  transform: translateY(-12px);
+  transition:
+    opacity 200ms ease-out,
+    transform 200ms ease-out;
+
+  &:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--ax-color-border-brand),
+      0 6px 20px rgba(46, 36, 28, 0.10),
+      0 2px 4px rgba(46, 36, 28, 0.06);
+  }
+
+  /* Title-present layout: dot aligns with title cap height instead of center */
+  &--has-title {
+    align-items: flex-start;
+
+    .ax-notification__dot {
+      margin-top: 6px;
+    }
+  }
+
+  /* ----- Animation states ----- */
+  &--entering {
+    /* Initial state. Stays until the host promotes to .visible on next tick. */
+  }
+
+  &--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  &--leaving {
+    opacity: 0;
+    transform: translateY(-12px);
+    transition:
+      opacity 180ms ease-in,
+      transform 180ms ease-in;
+  }
+}
+
+.ax-notification__dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ax-color-text-tertiary); /* fallback before status class kicks in */
+  transition: background-color 200ms ease;
+}
+
+.ax-notification__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ax-notification__title {
+  font-family: var(--ax-font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: var(--ax-ls-tight);
+  color: var(--ax-color-text-primary);
+  line-height: 1.25;
+  margin-bottom: 2px;
+}
+
+.ax-notification__message {
+  font-family: var(--ax-font-body);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--ax-color-text-primary);
+}
+
+/* When a title is present, message is supportive copy — slightly muted. */
+.ax-notification--has-title .ax-notification__message {
+  font-size: 12px;
+  color: var(--ax-color-text-secondary);
+}
+
+/* ----- Status colors ----- */
+.ax-notification--success .ax-notification__dot {
+  background: var(--ax-palette-success-500);
+}
+
+.ax-notification--info .ax-notification__dot {
+  background: var(--ax-palette-info-500);
+}
+
+.ax-notification--warning .ax-notification__dot {
+  background: var(--ax-palette-warning-400);
+}
+
+.ax-notification--error .ax-notification__dot {
+  /* Locked spec exception: error dot is 12px (vs 8px for other statuses)
+     for visibility on critical state. */
+  background: var(--ax-palette-danger-500);
+  width: 12px;
+  height: 12px;
+}
+
+.ax-notification--loading .ax-notification__dot {
+  background: var(--ax-color-bg-brand); /* brown-500 */
+  animation: ax-notification-pulse 1.4s ease-in-out infinite;
+}
+
+/* ----- Reduced-motion preference ----- */
+@media (prefers-reduced-motion: reduce) {
+  .ax-notification {
+    transform: none !important;
+    transition: opacity 100ms linear !important;
+
+    &--entering {
+      opacity: 0;
+    }
+
+    &--visible {
+      opacity: 1;
+    }
+
+    &--leaving {
+      opacity: 0;
+    }
+  }
+
+  .ax-notification--loading .ax-notification__dot {
+    /* Keep status discoverable, but stop the motion. */
+    animation: none;
+    opacity: 0.7;
+  }
+}

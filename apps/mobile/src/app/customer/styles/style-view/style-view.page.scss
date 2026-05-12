@@ -1,0 +1,373 @@
+/* ============================================================================
+   Style View page — M2 redesign (M22 Tier 3)
+   ============================================================================ */
+
+ion-content.page-bg {
+  --background: var(--ax-color-bg-canvas);
+}
+
+/* ----- Skeleton shimmer ---------------------------------------- */
+/* ----- Summary card ------------------------------------------- */
+
+.summary-card {
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-lg);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06),
+              0 4px 12px rgba(46, 36, 28, 0.04);
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+
+  h2 {
+    margin: 0;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ax-color-text-secondary);
+  }
+}
+
+.item-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  background: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+
+  .item-name {
+    flex: 1;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ax-color-text-primary);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .item-price {
+    flex-shrink: 0;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ax-color-text-secondary);
+  }
+}
+
+.summary-divider {
+  height: 1px;
+  background: var(--ax-color-border-subtle, rgba(46, 36, 28, 0.08));
+  margin: 14px 0;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+
+  .total-label {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ax-color-text-primary);
+  }
+
+  .total-price {
+    font-family: var(--ax-font-display);
+    font-weight: 400;
+    font-size: 18px;
+    color: var(--ax-color-text-brand);
+  }
+}
+
+/* ----- Section header --------------------------------------- */
+
+.section-header {
+  margin-bottom: 12px;
+  margin-top: 8px;
+}
+
+.section-title {
+  margin: 0;
+  font-family: var(--ax-font-display);
+  font-weight: 400;
+  font-size: 16px;
+  color: var(--ax-color-text-primary);
+  line-height: 1.3;
+}
+
+/* ----- Product card ----------------------------------------- */
+
+.product-card {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-lg);
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06),
+              0 4px 12px rgba(46, 36, 28, 0.04);
+}
+
+.image-wrapper {
+  position: relative;
+  width: 100px;
+  height: 120px;
+  flex-shrink: 0;
+  border-radius: var(--ax-radius-md);
+  overflow: hidden;
+  background: var(--ax-color-bg-brand-subtle);
+}
+
+.img-skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    135deg,
+    var(--ax-palette-brown-100) 0%,
+    var(--ax-palette-brown-200, #d6c0a8) 100%
+  );
+
+  &.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.product-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  opacity: 0;
+  transition: opacity 200ms ease;
+
+  &.loaded {
+    opacity: 1;
+  }
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.product-title {
+  margin: 0;
+  font-family: var(--ax-font-display);
+  font-weight: 400;
+  font-size: 14px;
+  color: var(--ax-color-text-primary);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-price {
+  margin: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ax-color-text-brand);
+}
+
+.actions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.action-btn {
+  --border-radius: 999px;
+  --box-shadow: none;
+  --padding-start: 10px;
+  --padding-end: 10px;
+  flex: 1;
+  height: 32px;
+  margin: 0;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+
+  ax-icon {
+    font-size: 13px;
+    margin-inline-end: 2px;
+  }
+}
+
+.cart-btn {
+  --background: var(--ax-color-bg-brand);
+  --background-hover: var(--ax-color-bg-brand);
+  --background-activated: rgba(90, 58, 44, 0.85);
+  --color: var(--ax-palette-neutral-0);
+}
+
+.closet-btn {
+  --background: transparent;
+  --background-hover: rgba(90, 58, 44, 0.06);
+  --background-activated: rgba(90, 58, 44, 0.10);
+  --color: var(--ax-color-text-brand);
+  --border-color: var(--ax-color-text-brand);
+  --border-width: 1px;
+  --border-style: solid;
+}
+
+/* ----- Loading state -------------------------------------- */
+
+.loading-state {
+  padding: 20px 0;
+}
+
+.skeleton-text {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--ax-color-bg-brand-subtle);
+
+  &.section-skeleton {
+    height: 16px;
+    width: 60%;
+    margin-bottom: 12px;
+  }
+
+  &.title-skeleton {
+    height: 14px;
+    width: 80%;
+    margin-bottom: 6px;
+  }
+
+  &.price-skeleton {
+    height: 12px;
+    width: 40%;
+    margin-bottom: 8px;
+  }
+}
+
+.skeleton-buttons {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.skeleton-btn {
+  position: relative;
+  flex: 1;
+  height: 32px;
+  border-radius: 999px;
+  background: var(--ax-color-bg-brand-subtle);
+  overflow: hidden;
+}
+
+/* ============================================================================
+   Wishlist modal
+   ============================================================================ */
+
+/* ----- Wishlist sheet (rendered via <ax-bottom-sheet>) ----- */
+
+.wishlist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wishlist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-md);
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease, box-shadow 120ms ease, background 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(46, 36, 28, 0.10);
+    background: rgba(90, 58, 44, 0.02);
+    outline: none;
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(46, 36, 28, 0.08);
+    background: rgba(90, 58, 44, 0.04);
+  }
+
+  .folder-icon {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: var(--ax-radius-md);
+    background: var(--ax-color-bg-brand-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ax-icon {
+      font-size: 20px;
+      color: var(--ax-color-text-brand);
+    }
+  }
+
+  &__label {
+    flex: 1;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ax-color-text-primary);
+  }
+
+  .chevron {
+    flex-shrink: 0;
+    font-size: 18px;
+    color: var(--ax-color-text-tertiary);
+  }
+}
+
+.modal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+}

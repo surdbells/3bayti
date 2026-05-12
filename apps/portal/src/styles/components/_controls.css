@@ -1,0 +1,330 @@
+/* =========================================================================
+   Abayti Design System — Controls
+   Styled native checkbox, radio, switch, range. Works with [formControl],
+   [ngModel], and plain DOM.
+   Usage:
+     <label class="ax-check">
+       <input type="checkbox" />
+       <span class="ax-check-box"></span>
+       <span class="ax-check-label">Label text</span>
+     </label>
+   ========================================================================= */
+
+
+/* ============== CHECKBOX & RADIO (shared base) ============== */
+
+.ax-check,
+.ax-radio {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ax-space-2);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-primary);
+  line-height: 1.4;
+}
+
+.ax-check input[type='checkbox'],
+.ax-radio input[type='radio'] {
+  /* Visually hide the native control but keep it operable */
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.ax-check-box,
+.ax-radio-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.125rem;
+  height: 1.125rem;
+  background-color: var(--ax-color-bg-surface);
+  border: 1.5px solid var(--ax-color-border-strong);
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out),
+              border-color var(--ax-duration-fast) var(--ax-ease-out),
+              box-shadow var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+.ax-check-box  { border-radius: var(--ax-radius-xs); }
+.ax-radio-dot  { border-radius: 50%; }
+
+.ax-check-label,
+.ax-radio-label {
+  flex: 1;
+}
+
+/* Hover state — only when not disabled */
+.ax-check:hover input:not(:disabled) ~ .ax-check-box,
+.ax-radio:hover input:not(:disabled) ~ .ax-radio-dot {
+  border-color: var(--ax-color-border-brand);
+}
+
+/* Focus-visible on the native control propagates ring to the box */
+.ax-check input:focus-visible ~ .ax-check-box,
+.ax-radio input:focus-visible ~ .ax-radio-dot {
+  border-color: var(--ax-color-border-focus);
+  box-shadow: var(--ax-shadow-focus);
+}
+
+/* Checked — checkbox */
+.ax-check input:checked ~ .ax-check-box {
+  background-color: var(--ax-color-bg-brand);
+  border-color: var(--ax-color-bg-brand);
+}
+.ax-check input:checked ~ .ax-check-box::after {
+  content: '';
+  display: block;
+  width: 0.4rem;
+  height: 0.65rem;
+  border: solid var(--ax-color-text-on-brand);
+  border-width: 0 2px 2px 0;
+  transform: translateY(-1px) rotate(45deg);
+}
+
+/* Indeterminate — checkbox */
+.ax-check input:indeterminate ~ .ax-check-box {
+  background-color: var(--ax-color-bg-brand);
+  border-color: var(--ax-color-bg-brand);
+}
+.ax-check input:indeterminate ~ .ax-check-box::after {
+  content: '';
+  display: block;
+  width: 0.65rem;
+  height: 2px;
+  background-color: var(--ax-color-text-on-brand);
+  border-radius: 1px;
+}
+
+/* Checked — radio */
+.ax-radio input:checked ~ .ax-radio-dot {
+  border-color: var(--ax-color-bg-brand);
+}
+.ax-radio input:checked ~ .ax-radio-dot::after {
+  content: '';
+  display: block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background-color: var(--ax-color-bg-brand);
+}
+
+/* Disabled */
+.ax-check input:disabled ~ .ax-check-box,
+.ax-radio input:disabled ~ .ax-radio-dot {
+  background-color: var(--ax-color-bg-sunken);
+  border-color: var(--ax-color-border-default);
+  opacity: 0.6;
+}
+.ax-check input:disabled ~ .ax-check-label,
+.ax-radio input:disabled ~ .ax-radio-label {
+  color: var(--ax-color-text-disabled);
+  cursor: not-allowed;
+}
+.ax-check:has(input:disabled),
+.ax-radio:has(input:disabled) {
+  cursor: not-allowed;
+}
+
+/* Size variants */
+.ax-check-sm .ax-check-box,
+.ax-radio-sm .ax-radio-dot {
+  width: 0.9375rem;
+  height: 0.9375rem;
+}
+.ax-check-sm .ax-check-box::after {
+  width: 0.3rem;
+  height: 0.55rem;
+}
+.ax-check-sm,
+.ax-radio-sm {
+  font-size: var(--ax-fs-xs);
+}
+
+.ax-check-lg .ax-check-box,
+.ax-radio-lg .ax-radio-dot {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+.ax-check-lg,
+.ax-radio-lg {
+  font-size: var(--ax-fs-md);
+}
+
+
+/* ============== SWITCH (toggle) ============== */
+
+.ax-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ax-space-3);
+  cursor: pointer;
+  user-select: none;
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-primary);
+  line-height: 1.4;
+}
+
+.ax-switch input[type='checkbox'] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.ax-switch-track {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 1.25rem;
+  background-color: var(--ax-color-border-strong);
+  border-radius: var(--ax-radius-pill);
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out),
+              box-shadow var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+.ax-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 1rem;
+  height: 1rem;
+  background-color: var(--ax-color-bg-surface);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(46, 36, 28, 0.25);
+  transition: transform var(--ax-duration-base) var(--ax-ease-out);
+}
+
+.ax-switch:hover input:not(:disabled) ~ .ax-switch-track {
+  background-color: var(--ax-palette-neutral-500);
+}
+
+.ax-switch input:focus-visible ~ .ax-switch-track {
+  box-shadow: var(--ax-shadow-focus);
+}
+
+.ax-switch input:checked ~ .ax-switch-track {
+  background-color: var(--ax-color-bg-brand);
+}
+.ax-switch input:checked ~ .ax-switch-track::after {
+  transform: translateX(1rem);
+}
+
+.ax-switch input:disabled ~ .ax-switch-track {
+  opacity: 0.55;
+}
+.ax-switch:has(input:disabled) {
+  cursor: not-allowed;
+}
+.ax-switch input:disabled ~ .ax-switch-label {
+  color: var(--ax-color-text-disabled);
+}
+
+.ax-switch-label {
+  flex: 1;
+}
+
+/* Switch sizes */
+.ax-switch-sm .ax-switch-track { width: 1.875rem; height: 1.0625rem; }
+.ax-switch-sm .ax-switch-track::after { width: 0.8125rem; height: 0.8125rem; }
+.ax-switch-sm input:checked ~ .ax-switch-track::after { transform: translateX(0.8125rem); }
+
+.ax-switch-lg .ax-switch-track { width: 2.75rem; height: 1.5rem; }
+.ax-switch-lg .ax-switch-track::after { width: 1.25rem; height: 1.25rem; }
+.ax-switch-lg input:checked ~ .ax-switch-track::after { transform: translateX(1.25rem); }
+
+
+/* ============== RANGE SLIDER ============== */
+
+.ax-range {
+  /* Reset */
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 1.5rem;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+}
+
+.ax-range:focus {
+  outline: none;
+}
+
+/* Webkit track */
+.ax-range::-webkit-slider-runnable-track {
+  height: 4px;
+  background: var(--ax-color-bg-sunken);
+  border-radius: var(--ax-radius-pill);
+  border: 0.5px solid var(--ax-color-border-subtle);
+}
+
+/* Webkit thumb */
+.ax-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: var(--ax-color-bg-brand);
+  border: 2px solid var(--ax-color-bg-surface);
+  border-radius: 50%;
+  margin-top: -8px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.2);
+  transition: transform var(--ax-duration-fast) var(--ax-ease-out),
+              box-shadow var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+.ax-range:hover::-webkit-slider-thumb {
+  transform: scale(1.1);
+}
+
+.ax-range:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px var(--ax-color-ring);
+}
+
+/* Firefox track */
+.ax-range::-moz-range-track {
+  height: 4px;
+  background: var(--ax-color-bg-sunken);
+  border-radius: var(--ax-radius-pill);
+  border: 0.5px solid var(--ax-color-border-subtle);
+}
+
+.ax-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--ax-color-bg-brand);
+  border: 2px solid var(--ax-color-bg-surface);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.2);
+  transition: transform var(--ax-duration-fast) var(--ax-ease-out),
+              box-shadow var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+.ax-range:hover::-moz-range-thumb {
+  transform: scale(1.1);
+}
+
+.ax-range:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 4px var(--ax-color-ring);
+}
+
+.ax-range:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.ax-range:disabled::-webkit-slider-thumb {
+  background: var(--ax-color-border-strong);
+}
+.ax-range:disabled::-moz-range-thumb {
+  background: var(--ax-color-border-strong);
+}

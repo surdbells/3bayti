@@ -1,0 +1,122 @@
+/* ============================================================================
+   Reviews page — M2 redesign
+   ============================================================================ */
+
+ion-content.page-bg {
+  --background: var(--ax-color-bg-canvas);
+}
+
+/* ----- Sheet --------------------------------------------------------- */
+
+.reviews-sheet {
+  max-width: 540px;
+  margin-inline: auto;
+  padding-top: 16px;
+  padding-bottom: 24px;
+}
+
+.reviews-list {
+  display: grid;
+  gap: 12px;
+}
+
+/* ----- Review card --------------------------------------------------- */
+
+.review-card {
+  margin: 0;
+  border-radius: var(--ax-radius-lg);
+  background: var(--ax-color-bg-surface);
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06),
+              0 4px 12px rgba(46, 36, 28, 0.04);
+  border: none;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+
+  &:active {
+    transform: scale(0.99);
+  }
+
+  ion-card-content {
+    padding: 14px 16px;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  &__icon {
+    color: var(--ax-color-text-brand);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  &__store {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ax-color-text-primary);
+    line-height: 1.2;
+  }
+
+  &__body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__comment {
+    margin: 0;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ax-color-text-secondary);
+
+    /* Truncate long comments to 3 lines */
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__stars {
+    display: flex;
+    gap: 2px;
+  }
+
+  &__star {
+    color: rgba(46, 36, 28, 0.15);   /* unfilled = soft brown gray */
+    font-size: 14px;
+
+    &--filled {
+      color: #d6a800;                /* gold star — same accent literal
+                                        used elsewhere in the app */
+    }
+  }
+}
+
+/* ----- Empty state -------------------------------------------------- */
+
+/* M38/M47: layout, h2, p covered by global .empty-state. This page uses
+   a bare ax-icon (no .empty-icon-wrap bubble) — keep the bare ax-icon styling. */
+.empty-state {
+  --empty-state-padding: 60px 24px;
+
+  ax-icon {
+    font-size: 48px;
+    color: var(--ax-color-text-tertiary);
+    opacity: 0.5;
+  }
+}
+
+/* ----- Loader row --------------------------------------------------- */
+
+.loader-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+}

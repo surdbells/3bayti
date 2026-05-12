@@ -1,0 +1,165 @@
+<app-admin-shell>
+  <div class="ax-container">
+      <!-- Page header -->
+      <header class="ax-page-header">
+        <div class="ax-page-header-content">
+          <button
+            type="button"
+            (click)="goBack()"
+            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+            style="align-self: flex-start;">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            Back to dashboard
+          </button>
+          <span class="ax-page-header-eyebrow">Marketplace</span>
+          <h1 class="ax-page-title">Stores</h1>
+          <p *ngIf="stores && stores.length > 0" class="ax-page-subtitle">
+            {{ stores.length }} vendor store{{ stores.length !== 1 ? 's' : '' }} on the platform.
+          </p>
+        </div>
+
+        <div class="ax-flex ax-gap-2 ax-items-center">
+          <button
+            type="button"
+            class="ax-btn ax-btn-outline ax-btn-sm"
+            (click)="get_store()"
+            [disabled]="ui_controls.is_loading">
+            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <!-- Loading -->
+      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+        <span class="ax-spinner ax-spinner-lg" aria-label="Loading stores"></span>
+      </div>
+
+      <!-- Table -->
+      <section
+        *ngIf="!ui_controls.is_loading && !ui_controls.no_data"
+        class="ax-card ax-p-0">
+        <div class="ax-table-wrapper">
+          <table class="ax-table ax-table-hover">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Location</th>
+                <th>Last login</th>
+                <th>Selling</th>
+                <th>Approval</th>
+                <th style="text-align: right; width: 7rem;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a_store of stores; let i = index">
+                <td>
+                  <span class="ax-font-medium ax-text-primary">{{ a_store.store_name }}</span>
+                </td>
+                <td>
+                  <span class="ax-text-sm ax-text-secondary">{{ a_store.store_email }}</span>
+                </td>
+                <td>
+                  <span class="ax-text-sm ax-text-secondary">{{ a_store.store_phone }}</span>
+                </td>
+                <td>
+                  <span class="ax-text-sm ax-text-secondary">{{ a_store.store_address }}</span>
+                </td>
+                <td>
+                  <span class="ax-text-2xs ax-text-tertiary">{{ a_store.last_login }}</span>
+                </td>
+                <td>
+                  <span *ngIf="a_store.status" class="ax-badge ax-badge-success">Selling</span>
+                  <span *ngIf="!a_store.status" class="ax-badge ax-badge-neutral">Not selling</span>
+                </td>
+                <td>
+                  <span *ngIf="a_store.approved" class="ax-badge ax-badge-success">Approved</span>
+                  <span *ngIf="!a_store.approved" class="ax-badge ax-badge-warning">Pending</span>
+                </td>
+                <td style="text-align: right;">
+                  <button
+                    type="button"
+                    class="ax-btn ax-btn-outline ax-btn-sm"
+                    [axDropdown]="actionMenu">
+                    Actions
+                    <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                  </button>
+                  <ng-template #actionMenu>
+                    <button
+                      type="button"
+                      axDropdownItem
+                      (click)="manage_store(a_store.id, a_store.store_name)">
+                      <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                      Manage
+                    </button>
+                    <button
+                      type="button"
+                      axDropdownItem
+                      (click)="store_orders(a_store.id, a_store.store_name)">
+                      <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+                      Orders
+                    </button>
+                    <button
+                      type="button"
+                      axDropdownItem
+                      (click)="store_products(a_store.id, a_store.store_name)">
+                      <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+                      Products
+                    </button>
+                    <button
+                      type="button"
+                      axDropdownItem
+                      (click)="store_sales(a_store.id, a_store.store_name)">
+                      <span class="material-symbols-outlined" aria-hidden="true">trending_up</span>
+                      Sales
+                    </button>
+                    <div class="ax-dropdown-divider"></div>
+                    <button
+                      *ngIf="!a_store.approved"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_activate(a_store.id, a_store.store_name)">
+                      <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                      Activate
+                    </button>
+                    <button
+                      *ngIf="a_store.approved"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_deactivate(a_store.id, a_store.store_name)">
+                      <span class="material-symbols-outlined" aria-hidden="true">cancel</span>
+                      Deactivate
+                    </button>
+                    <button
+                      *ngIf="!a_store.approved"
+                      type="button"
+                      axDropdownItem
+                      class="ax-dropdown-item-danger"
+                      (click)="start_delete(a_store.id, a_store.store_name)">
+                      <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                      Delete
+                    </button>
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Empty state -->
+      <section *ngIf="!ui_controls.is_loading && ui_controls.no_data" class="ax-page-section">
+        <div class="ax-card ax-p-8 ax-text-center">
+          <span
+            class="material-symbols-outlined"
+            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
+            aria-hidden="true">storefront</span>
+          <h3 class="ax-h4 ax-m-0 ax-mt-3">No stores yet</h3>
+          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+            Vendor stores will appear here as merchants register and set up their shops.
+          </p>
+        </div>
+      </section>  </div>
+</app-admin-shell>

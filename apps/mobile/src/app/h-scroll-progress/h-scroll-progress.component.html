@@ -1,0 +1,10 @@
+<div class="scroll-wrap" [class.scrollable]="isScrollable">
+  <div #scrollEl class="h-scroll" tabindex="0">
+    <ng-content></ng-content>
+  </div>
+  @if(isScrollable){
+    <div class="scroll-progress-wrap" aria-hidden="true">
+      <div class="scroll-progress" [style.width.%]="progress"></div>
+    </div>
+  }
+</div>

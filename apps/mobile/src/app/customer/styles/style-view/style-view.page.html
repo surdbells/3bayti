@@ -1,0 +1,155 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="triggerBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ style.style_name }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-bg ion-padding" [fullscreen]="true">
+  <!-- Style Name -->
+  @if(style){
+    <!-- Summary Card -->
+    <div class="summary-card">
+      <div class="summary-header">
+        <h2>{{ 'heading_style_summary' | translate }}</h2>
+        <span class="item-badge">{{ style.products.length }} {{ 'label_items' | translate }}</span>
+      </div>
+
+      <div class="summary-items">
+        @for(item of style.products; track item.product_id){
+          <div class="item-row">
+            <span class="item-name">{{ item.product_name }}</span>
+            <span class="item-price">Ð{{ item.price | number:'1.2-2' }}</span>
+          </div>
+        }
+      </div>
+
+      <div class="summary-divider"></div>
+
+      <div class="total-row">
+        <span class="total-label">{{ 'label_total_style_price' | translate }}</span>
+        <span class="total-price">Ð{{ getTotal() | number:'1.2-2' }}</span>
+      </div>
+    </div>
+  }
+  <!-- Section Title -->
+  @if(style){
+    <div class="section-header">
+      <h2 class="section-title">{{ 'heading_products_in_style' | translate }}</h2>
+    </div>
+  }
+
+  <!-- Product Cards -->
+  @if(style){
+    @for(item of style.products; track item.product_id){
+      <article class="product-card">
+        <!-- Image with Skeleton -->
+        <div class="image-wrapper">
+          <div class="img-skeleton" [class.hidden]="imageLoaded[item.product_id]">
+            <div class="skeleton-shimmer"></div>
+          </div>
+          <img
+            loading="lazy"
+            decoding="async"
+            [src]="item.image"
+            [alt]="item.product_name"
+            class="product-image"
+            [class.loaded]="imageLoaded[item.product_id]"
+            (load)="onImageLoad(item.product_id)"
+            (error)="onImageError(item.product_id)">
+        </div>
+
+        <!-- Product Info -->
+        <div class="card-content">
+          <h3 class="product-title">{{ item.product_name }}</h3>
+          <p class="product-price">Ð{{ item.price | number:'1.2-2' }}</p>
+
+          <div class="actions">
+            <ion-button
+              type="button"
+              (click)="open_product(item.product_id, item.product_name)"
+              fill="solid"
+              class="action-btn cart-btn">
+              <ax-icon name="shopping-cart" slot="start"></ax-icon>
+              {{ 'button_add_to_cart' | translate }}
+            </ion-button>
+            <ion-button
+              type="button"
+              (click)="startAddToCloset(item.product_id, item.product_name, item.image)"
+              fill="solid"
+              class="action-btn closet-btn">
+              <ax-icon name="heart" slot="start"></ax-icon>
+              {{ 'button_save_to_closet' | translate }}
+            </ion-button>
+          </div>
+        </div>
+      </article>
+    }
+  }
+
+  <!-- Loading State -->
+  @if(!style){
+    <div class="loading-state">
+      <div class="section-header">
+        <div class="skeleton-text section-skeleton">
+          <div class="skeleton-shimmer"></div>
+        </div>
+      </div>
+      @for(skeleton of [1,2,3]; track skeleton){
+        <article class="product-card skeleton-card">
+          <div class="image-wrapper">
+            <div class="img-skeleton">
+              <div class="skeleton-shimmer"></div>
+            </div>
+          </div>
+          <div class="card-content">
+            <div class="skeleton-text title-skeleton">
+              <div class="skeleton-shimmer"></div>
+            </div>
+            <div class="skeleton-text price-skeleton">
+              <div class="skeleton-shimmer"></div>
+            </div>
+            <div class="skeleton-buttons">
+              <div class="skeleton-btn"><div class="skeleton-shimmer"></div></div>
+              <div class="skeleton-btn"><div class="skeleton-shimmer"></div></div>
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
+
+  <!-- Wishlist sheet -->
+  <ax-bottom-sheet
+    [isOpen]="isWishOpen"
+    (didDismiss)="OnDidDismiss(); isWishOpen = false"
+    [snapPoints]="[0.5, 0.9]"
+    [initialSnap]="0"
+    [title]="('save' | translate) + ' ' + addCloset.product_name + ' ' + ('to' | translate)">
+
+    @if(!ui_controls.is_loading_category){
+      <ul class="wishlist-list">
+        @for(category of categories; track category.id){
+          <li class="wishlist-item" (click)="addToCloset(category.id)" role="button" tabindex="0">
+            <div class="folder-icon">
+              <ax-icon name="folder-plus"></ax-icon>
+            </div>
+            <span class="wishlist-item__label">{{category.name}}</span>
+            <ax-icon name="chevron-right" class="chevron"></ax-icon>
+          </li>
+        }
+      </ul>
+    }
+    @if(ui_controls.is_loading_category){
+      <div class="modal-loading">
+        <ax-loader></ax-loader>
+      </div>
+    }
+  </ax-bottom-sheet>
+</ion-content>
+
+<app-tab-bar active="sketch"></app-tab-bar>

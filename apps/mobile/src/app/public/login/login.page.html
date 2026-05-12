@@ -1,0 +1,66 @@
+<ion-content [fullscreen]="true" class="app-bg ion-padding">
+  <div class="auth-container">
+    <div class="stack app-fade-in">
+      <img class="auth-logo" src="assets/images/logo.png" alt="">
+      <h1 class="title ion-text-center">{{ 'welcome_back' | translate }}</h1>
+      <p class="subtitle ion-text-center">{{ 'sub_title' | translate }}</p>
+    </div>
+
+    <ax-text-field
+      class="ion-margin-bottom"
+      [label]="'email_Address' | translate"
+      type="email"
+      [required]="true"
+      autocomplete="email"
+      [(ngModel)]="login.email"
+      name="email">
+    </ax-text-field>
+
+    <ax-text-field
+      class="ion-margin-bottom"
+      [label]="'password' | translate"
+      type="password"
+      [required]="true"
+      autocomplete="current-password"
+      [(ngModel)]="login.password"
+      name="password">
+    </ax-text-field>
+
+    @if (!ui_controls.login_loading) {
+      <div class="forgot-password-row">
+        <ion-text class="forgot-password-link" (click)="forgot_password()">
+          {{ 'forgot_password' | translate }}
+        </ion-text>
+      </div>
+    }
+
+    @if (!ui_controls.login_loading) {
+      <ion-button (click)="signIn()" expand="block" class="ion-margin-vertical">
+        {{ 'sign_in' | translate }}
+      </ion-button>
+    }
+
+    @if (ui_controls.login_loading) {
+      <div class="loader-row">
+        <ax-loader></ax-loader>
+      </div>
+    }
+
+    @if (!ui_controls.login_loading) {
+      <div class="login-divider">
+        <span>{{ 'or' | translate }}</span>
+      </div>
+
+      <ion-button (click)="goHome()" expand="block" fill="outline" class="ion-margin-vertical">
+        {{ 'continue_as_guest' | translate }}
+      </ion-button>
+
+      <p class="signup-link">
+        {{ 'dont_have_an_account' | translate }}
+        <ion-text class="signup-link-action" (click)="user_register()">
+          {{ 'sign_up' | translate }}
+        </ion-text>
+      </p>
+    }
+  </div>
+</ion-content>

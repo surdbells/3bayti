@@ -1,0 +1,60 @@
+<div class="ax-place-autocomplete"
+     [class.ax-place-autocomplete--error]="!!error"
+     [class.ax-place-autocomplete--disabled]="disabled"
+     [class.ax-place-autocomplete--open]="open">
+  <label class="ax-place-autocomplete__label" [for]="fieldId">
+    {{ label }}<span *ngIf="required" class="ax-place-autocomplete__required" aria-hidden="true">*</span>
+  </label>
+
+  <div class="ax-place-autocomplete__control">
+    <input
+      #inputEl
+      [id]="fieldId"
+      class="ax-place-autocomplete__input"
+      type="text"
+      [placeholder]="placeholder"
+      [required]="required"
+      [disabled]="disabled"
+      [attr.autocomplete]="autocomplete || null"
+      [attr.name]="name || null"
+      [attr.aria-invalid]="!!error"
+      [attr.aria-describedby]="(error || hint) ? fieldId + '-msg' : null"
+      [attr.aria-expanded]="open"
+      [attr.aria-controls]="fieldId + '-list'"
+      role="combobox"
+      aria-autocomplete="list"
+      [value]="value"
+      (input)="onInput($event)"
+      (focus)="onFocus()"
+      (blur)="onBlur()" />
+
+    <span *ngIf="loading" class="ax-place-autocomplete__spinner" aria-hidden="true"></span>
+  </div>
+
+  <!-- Suggestions dropdown. Hidden when no results, when input not focused,
+       or when API isn't available. -->
+  <ul *ngIf="open && suggestions.length > 0"
+      class="ax-place-autocomplete__list"
+      [id]="fieldId + '-list'"
+      role="listbox">
+    <li *ngFor="let s of suggestions; let i = index"
+        class="ax-place-autocomplete__item"
+        role="option"
+        [attr.aria-label]="s.fullText"
+        (mousedown)="$event.preventDefault()"
+        (click)="onSelectSuggestion(s)">
+      <ax-icon name="map-pin" size="sm" class="ax-place-autocomplete__item-icon"></ax-icon>
+      <span class="ax-place-autocomplete__item-text">
+        <span class="ax-place-autocomplete__item-main">{{ s.mainText }}</span>
+        <span *ngIf="s.secondaryText" class="ax-place-autocomplete__item-secondary">{{ s.secondaryText }}</span>
+      </span>
+    </li>
+  </ul>
+
+  <p *ngIf="error || hint"
+     class="ax-place-autocomplete__message"
+     [class.ax-place-autocomplete__message--error]="!!error"
+     [id]="fieldId + '-msg'">
+    {{ error || hint }}
+  </p>
+</div>

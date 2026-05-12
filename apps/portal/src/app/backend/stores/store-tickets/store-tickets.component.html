@@ -1,0 +1,31 @@
+<app-admin-shell>
+  <div class="ax-container">
+      <header class="ax-page-header">
+        <div class="ax-page-header-content">
+          <button
+            type="button"
+            (click)="goBack()"
+            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+            style="align-self: flex-start;">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            Back to stores
+          </button>
+          <span class="ax-page-header-eyebrow">{{ store_name }}</span>
+          <h1 class="ax-page-title">Store tickets</h1>
+          <p class="ax-page-subtitle">Support tickets opened with this vendor.</p>
+        </div>
+      </header>
+
+      <section class="ax-page-section">
+        <div class="ax-card ax-p-8 ax-text-center">
+          <span
+            class="material-symbols-outlined"
+            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
+            aria-hidden="true">support_agent</span>
+          <h3 class="ax-h4 ax-m-0 ax-mt-3">No tickets yet</h3>
+          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+            Support tickets involving this store will appear here.
+          </p>
+        </div>
+      </section>  </div>
+</app-admin-shell>

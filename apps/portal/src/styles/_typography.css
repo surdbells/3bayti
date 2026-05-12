@@ -1,0 +1,116 @@
+/* =========================================================================
+   Abayti Design System — Typography
+   Fraunces for editorial/display headings, Inter for body.
+   ========================================================================= */
+
+h1, h2, h3, h4, h5, h6,
+.ax-h1, .ax-h2, .ax-h3, .ax-h4, .ax-h5, .ax-h6 {
+  font-family: var(--ax-font-display);
+  font-weight: var(--ax-fw-semibold);
+  color: var(--ax-color-text-primary);
+  line-height: var(--ax-lh-tight);
+  letter-spacing: var(--ax-ls-tight);
+  margin: 0;
+}
+
+h1, .ax-h1 { font-size: var(--ax-fs-4xl); letter-spacing: -0.03em; }
+h2, .ax-h2 { font-size: var(--ax-fs-3xl); letter-spacing: -0.025em; }
+h3, .ax-h3 { font-size: var(--ax-fs-2xl); }
+h4, .ax-h4 { font-size: var(--ax-fs-xl); }
+h5, .ax-h5 { font-size: var(--ax-fs-lg); font-weight: var(--ax-fw-semibold); }
+h6, .ax-h6 { font-size: var(--ax-fs-md); font-weight: var(--ax-fw-semibold); }
+
+/* Display sizes — for hero, auth, marketing contexts */
+.ax-display-xl { font-family: var(--ax-font-display); font-size: var(--ax-fs-6xl); font-weight: var(--ax-fw-semibold); line-height: 1.05; letter-spacing: -0.035em; }
+.ax-display-lg { font-family: var(--ax-font-display); font-size: var(--ax-fs-5xl); font-weight: var(--ax-fw-semibold); line-height: 1.08; letter-spacing: -0.03em; }
+.ax-display-md { font-family: var(--ax-font-display); font-size: var(--ax-fs-4xl); font-weight: var(--ax-fw-semibold); line-height: 1.1; letter-spacing: -0.03em; }
+
+/* Body text */
+p {
+  font-family: var(--ax-font-body);
+  line-height: var(--ax-lh-normal);
+  color: var(--ax-color-text-primary);
+}
+
+.ax-lead {
+  font-size: var(--ax-fs-lg);
+  line-height: var(--ax-lh-relaxed);
+  color: var(--ax-color-text-secondary);
+  font-weight: var(--ax-fw-regular);
+}
+
+.ax-muted {
+  color: var(--ax-color-text-tertiary);
+}
+
+/* Eyebrow / overline — for premium section labels */
+.ax-eyebrow {
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-2xs);
+  font-weight: var(--ax-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--ax-ls-wider);
+  color: var(--ax-color-text-brand);
+}
+
+/* Numeric display — for KPI stats, dashboards */
+.ax-numeric {
+  font-family: var(--ax-font-display);
+  font-weight: var(--ax-fw-semibold);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.ax-numeric-xl { font-size: var(--ax-fs-4xl); }
+.ax-numeric-lg { font-size: var(--ax-fs-3xl); }
+.ax-numeric-md { font-size: var(--ax-fs-2xl); }
+
+/* Code */
+code:not([class*="ax-"]) {
+  background-color: var(--ax-color-bg-sunken);
+  color: var(--ax-color-text-brand);
+  padding: 0.15em 0.4em;
+  border-radius: var(--ax-radius-xs);
+  font-size: 0.9em;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Blockquote */
+blockquote {
+  border-left: 3px solid var(--ax-color-border-brand);
+  padding-left: var(--ax-space-4);
+  margin: var(--ax-space-4) 0;
+  color: var(--ax-color-text-secondary);
+  font-style: italic;
+}
+
+/* Mark/highlight */
+mark {
+  background-color: var(--ax-color-bg-gold-subtle);
+  color: var(--ax-color-text-primary);
+  padding: 0 0.2em;
+  border-radius: var(--ax-radius-xs);
+}
+
+/* Lists */
+ul, ol {
+  padding-left: 1.5rem;
+}
+
+ul:not([class*="ax-"]):not([class*="nav"]),
+ol:not([class*="ax-"]):not([class*="nav"]) {
+  color: var(--ax-color-text-primary);
+  line-height: var(--ax-lh-relaxed);
+}
+
+/* Labels (form) */
+label {
+  display: inline-block;
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-medium);
+  color: var(--ax-color-text-primary);
+  letter-spacing: var(--ax-ls-snug);
+}

@@ -1,0 +1,189 @@
+<ion-content [fullscreen]="true" [scrollY]="false" [scrollX]="false" [forceOverscroll]="false">
+
+  <!-- Main Vertical Swiper -->
+  <swiper-container
+    #swiper
+    class="vertical-slides"
+    direction="vertical"
+    slides-per-view="1"
+    speed="300"
+    allow-touch-move="true"
+    threshold="10"
+    (swiperslidechange)="onVerticalSlideChange($event)">
+
+    @for(product of products; track product.product_id; let idx = $index){
+      <swiper-slide class="product-slide">
+        <div #swipeArea class="hero">
+
+          <!-- Image Container -->
+          <div class="image-container">
+            <!-- Loading skeleton -->
+            <div class="image-skeleton" [class.hidden]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]">
+              <div class="skeleton-shimmer"></div>
+            </div>
+
+            <!-- Product Image -->
+            <img
+              [src]="getCurrentImage(product)"
+              alt="{{product.product_name}}"
+              class="model"
+              [class.loaded]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]"
+              (load)="onImageLoad(product.product_id, getActiveImageIndex(product.product_id))"
+              (error)="onImageError(product.product_id, getActiveImageIndex(product.product_id))">
+          </div>
+
+          <!-- Image pagination dots - tap to change image -->
+          @if(getProductImages(product).length > 1){
+            <div class="image-pagination">
+              @for(img of getProductImages(product); track $index; let i = $index){
+                <span
+                  class="image-dot"
+                  [class.active]="getActiveImageIndex(product.product_id) === i"
+                  (click)="setActiveImage(product.product_id, i, $event)">
+                </span>
+              }
+            </div>
+
+            <!-- Left/Right image navigation -->
+            <!--            <div class="image-nav">
+              <button
+                #prevBtn
+                type="button"
+                class="image-nav-btn prev"
+                (click)="prevImage(product.product_id, $event)"
+                [disabled]="getActiveImageIndex(product.product_id) === 0">
+                ‹
+              </button>
+              <button
+                #nextBtn
+                type="button"
+                class="image-nav-btn next"
+                (click)="nextImage(product.product_id, $event)"
+                [disabled]="getActiveImageIndex(product.product_id) >= getProductImages(product).length - 1">
+                ›
+              </button>
+            </div>-->
+          }
+
+          <!-- Floating action buttons -->
+          <div class="floating-buttons">
+            <ion-button type="button" (click)="triggerBack()" aria-label="Back" fill="clear" class="action-btn">
+              <ax-icon name="arrow-left" />
+            </ion-button>
+            <ion-button type="button" (click)="startAddToCloset(product.product_id, product.product_name, product.image_1)" fill="clear" class="action-btn">
+              <ax-icon name="heart" />
+            </ion-button>
+            <ion-button type="button" (click)="openHome()" fill="clear" class="action-btn">
+              <ax-icon name="house" />
+            </ion-button>
+          </div>
+
+          <!-- Navigation buttons (Up/Down) -->
+          <div class="nav-buttons">
+            <ion-button
+              type="button"
+              (click)="goToPrevious($event)"
+              [disabled]="currentProductIndex === 0"
+              fill="clear"
+              class="nav-btn">
+              <ax-icon name="chevron-up" />
+            </ion-button>
+            <span class="nav-counter">{{currentProductIndex + 1}}/{{products.length}}</span>
+            <ion-button
+              type="button"
+              (click)="goToNext($event)"
+              [disabled]="currentProductIndex >= products.length - 1"
+              fill="clear"
+              class="nav-btn">
+              <ax-icon name="chevron-down" />
+            </ion-button>
+          </div>
+
+          <!-- Product info overlay -->
+          <div class="overlay-box">
+            <h2 (click)="open_product(product.product_id)" class="title">
+              {{product.product_name}}
+              <span class="price-tag">
+                Ð{{product.price}}
+              </span>
+            </h2>
+            <div class="description" [innerHTML]="product.description"></div>
+            <div class="store-row">
+              <span class="store-name" (click)="open_vendor(product.store_id, product.store_name)">
+                {{ product.store_name }}
+              </span>
+              <ion-button
+                type="button"
+                class="store-cta-btn"
+                (click)="open_vendor(product.store_id, product.store_name)"
+                size="small">
+                {{ 'button_go_to_store' | translate }}
+              </ion-button>
+            </div>
+          </div>
+        </div>
+      </swiper-slide>
+    }
+  </swiper-container>
+
+  <!-- Vertical scroll indicator -->
+  <div class="vertical-pagination">
+    @for(dot of verticalDots; track dot; let i = $index){
+      <span class="dot" [class.active]="i === currentProductDot"></span>
+    }
+  </div>
+
+  <!-- Loading state -->
+  @if(ui_controls.is_loading && products.length === 0){
+    <div class="loading-overlay">
+      <div class="full-skeleton">
+        <div class="skeleton-shimmer"></div>
+      </div>
+      <div class="loading-text">
+        <ax-loader></ax-loader>
+      </div>
+    </div>
+  }
+
+  <!-- Empty state -->
+  @if(ui_controls.is_empty && !ui_controls.is_loading){
+    <div class="empty-state">
+      <ax-icon name="package" />
+      <p>{{ 'text_no_products_available' | translate }}</p>
+      <ion-button type="button" (click)="explore_products()">{{ 'button_refresh' | translate }}</ion-button>
+    </div>
+  }
+
+  <!-- Wishlist sheet -->
+  <ax-bottom-sheet
+    [isOpen]="isWishOpen"
+    (didDismiss)="OnDidDismiss(); isWishOpen = false"
+    [snapPoints]="[0.5, 0.9]"
+    [initialSnap]="0">
+
+    <div ax-sheet-header class="wishlist-modal__title-row">
+      <h2 class="wishlist-modal__title">
+        {{ 'save' | translate }} {{ addCloset.product_name }} {{ 'to' | translate }}
+      </h2>
+      <button type="button" class="wishlist-modal__close-btn" (click)="isWishOpen = false">
+        {{ 'close' | translate }}
+      </button>
+    </div>
+
+    @if (!ui_controls.is_loading_category){
+      <ul class="custom-list">
+        @for(category of categories; track category.id){
+          <li class="custom-list__item" (click)="addToCloset(category.id)" role="button" tabindex="0">
+            <ax-icon name="plus" class="custom-list__icon" />
+            <span class="custom-list__label">{{category.name}}</span>
+          </li>
+        }
+      </ul>
+    }
+    @if (ui_controls.is_loading_category) {
+      <div class="loader-row">
+        <ax-loader></ax-loader>
+      </div>
+    }
+  </ax-bottom-sheet>
+</ion-content>

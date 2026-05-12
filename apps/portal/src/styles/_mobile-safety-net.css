@@ -1,0 +1,119 @@
+/* =========================================================================
+   Abayti Design System — Mobile Safety Net
+   --------------------------------------------------------------------------
+   Catches common overflow / cramped-layout patterns across the codebase at
+   ≤ 768px so individual pages don't all need per-file mobile overrides.
+
+   Loaded LAST in styles.css so these rules win over earlier component CSS.
+   ========================================================================= */
+
+@media (max-width: 768px) {
+
+  /* ───────────────────────────────────────────────────────────
+     1. Multi-column grids collapse aggressively on phones.
+     Pages that need a different breakpoint can override per-element
+     with the existing .ax-sm-grid-cols-N / .ax-md-grid-cols-N utilities,
+     which apply at min-width: 576/768px and override these defaults.
+     ─────────────────────────────────────────────────────────── */
+  .ax-grid-cols-3,
+  .ax-grid-cols-4,
+  .ax-grid-cols-5,
+  .ax-grid-cols-6 {
+    grid-template-columns: 1fr;
+  }
+  .ax-grid-cols-12 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  /* Span utilities should be ignored when the grid is collapsed to 1 col */
+  .ax-grid-cols-3 > .ax-col-span-2,
+  .ax-grid-cols-4 > .ax-col-span-2,
+  .ax-grid-cols-4 > .ax-col-span-3,
+  .ax-grid-cols-5 > [class*="ax-col-span-"],
+  .ax-grid-cols-6 > [class*="ax-col-span-"] {
+    grid-column: 1 / -1;
+  }
+
+  /* ───────────────────────────────────────────────────────────
+     2. Flex rows that should wrap when cramped.
+     Default ax-flex doesn't wrap. Allow wrapping for typical
+     page-level flex containers that hold buttons / fields.
+     ─────────────────────────────────────────────────────────── */
+  .ax-flex.ax-gap-2,
+  .ax-flex.ax-gap-3,
+  .ax-flex.ax-gap-4 {
+    flex-wrap: wrap;
+  }
+
+  /* ───────────────────────────────────────────────────────────
+     3. Make container respect the viewport — defensive cap.
+     Some pages set inline width/max-width that exceeds 360px (the
+     smallest common phone). Cap any child at 100% of the container.
+     This trumps inline styles like style="width: 18rem".
+     ─────────────────────────────────────────────────────────── */
+  .ax-main .ax-card,
+  .ax-main .ax-page-header,
+  .ax-main section,
+  .ax-main > .ax-container > * {
+    max-width: 100%;
+  }
+
+  /* ───────────────────────────────────────────────────────────
+     4. Touch targets — buttons should be at least 40px tall on
+     mobile so they're tappable. Many sm buttons are 28px which is
+     unusable on touch. .ax-btn-icon (icon-only) gets a slightly
+     larger floor.
+     ─────────────────────────────────────────────────────────── */
+  .ax-btn-sm {
+    min-height: 40px;
+  }
+  .ax-btn-icon {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  /* ───────────────────────────────────────────────────────────
+     5. Page-level containers shouldn't have heavy horizontal
+     padding on phones — content gets squeezed.
+     ─────────────────────────────────────────────────────────── */
+  .ax-container,
+  .ax-container-narrow,
+  .ax-container-fluid {
+    padding-left: var(--ax-space-3);
+    padding-right: var(--ax-space-3);
+  }
+
+  /* ───────────────────────────────────────────────────────────
+     6. Inline form rows: when a form field has prefix + suffix +
+     wide input, the row often overflows. Allow the suffix/prefix
+     groups to wrap.
+     ─────────────────────────────────────────────────────────── */
+  .ax-input-group {
+    flex-wrap: wrap;
+  }
+  .ax-input-group > .ax-input {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  /* ───────────────────────────────────────────────────────────
+     7. Page-header eyebrow + title sometimes use very large display
+     fonts; cap the title size on tiny screens to avoid line breaks
+     mid-word.
+     ─────────────────────────────────────────────────────────── */
+  .ax-page-title {
+    font-size: var(--ax-fs-2xl);
+  }
+}
+
+/* ───────────────────────────────────────────────────────────
+   Phones only (≤ 480px) — even more defensive.
+   ─────────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .ax-grid-cols-12 {
+    grid-template-columns: 1fr;
+  }
+  .ax-page-header {
+    gap: var(--ax-space-3);
+    margin-bottom: var(--ax-space-5);
+  }
+}

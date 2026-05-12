@@ -1,0 +1,45 @@
+/* invoice box */
+.invoice-box {
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* header */
+.invoice-head { background: transparent; }
+.invoice-title { font-size: 26px; letter-spacing: -0.4px; }
+
+/* product thumbnail */
+.product-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+/* status badge */
+.status-badge {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+  border-radius: 999px;
+}
+
+/* totals table */
+.totals-table td { vertical-align: middle; }
+
+/* invoice controls */
+.invoice-controls .btn { min-width: 120px; }
+
+/* responsive tweaks */
+@media (max-width: 767px) {
+  .invoice-head { flex-direction: column; gap: 8px; }
+  .invoice-controls { justify-content: center; }
+  .invoice-title { font-size: 20px; }
+}
+
+/* print friendly */
+@media print {
+  body { background: #fff !important; }
+  .invoice-controls { display: none !important; }
+  .invoice-box { box-shadow: none !important; border-radius: 0 !important; }
+}

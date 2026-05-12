@@ -1,0 +1,18 @@
+<ion-content [fullscreen]="true" class="page-bg">
+  <div class="status-screen">
+    <img loading="lazy"
+         class="status-illustration"
+         src="assets/images/failed.gif"
+         alt="" />
+
+    <h1>{{ 'title_payment_failed' | translate }}</h1>
+    <p>{{ 'text_payment_failed_subtitle' | translate }}</p>
+
+    <div class="status-actions">
+      <ion-button shape="round" expand="block" [routerLink]="['/cart']">
+        <ax-icon name="rotate-ccw" slot="start"></ax-icon>
+        <span>{{ 'button_try_again' | translate }}</span>
+      </ion-button>
+    </div>
+  </div>
+</ion-content>

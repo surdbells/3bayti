@@ -1,0 +1,115 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/settings']" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'measurements' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  <div class="sheet">
+    <ion-card>
+      @if (!ui_controls.is_loading) {
+        <ion-card-header>
+          <ion-card-title class="ion-text-center">
+            {{ 'title_update_measurement' | translate }}
+          </ion-card-title>
+          <ion-card-subtitle class="ion-text-center">
+            {{ 'subtitle_update_measurement' | translate }}
+          </ion-card-subtitle>
+        </ion-card-header>
+      }
+      <ion-card-content>
+        @if (!ui_controls.is_loading) {
+          <ion-row class="ion-padding-bottom">
+            <ion-col class="ion-no-padding">
+              <ax-text-field
+                [label]="'label_bust' | translate"
+                type="text"
+                inputmode="decimal"
+                [hint]="'text_inches' | translate"
+                [(ngModel)]="update.bust"
+                name="bust">
+              </ax-text-field>
+            </ion-col>
+            <ion-col class="ion-no-padding ion-padding-start">
+              <ax-text-field
+                [label]="'label_shoulder' | translate"
+                type="text"
+                inputmode="decimal"
+                [hint]="'text_inches' | translate"
+                [(ngModel)]="update.shoulder"
+                name="shoulder">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+        }
+        @if (!ui_controls.is_loading) {
+          <ion-row class="ion-padding-bottom">
+            <ion-col class="ion-no-padding">
+              <ax-text-field
+                [label]="'label_hip' | translate"
+                type="text"
+                inputmode="decimal"
+                [hint]="'text_inches' | translate"
+                [(ngModel)]="update.hip"
+                name="hip">
+              </ax-text-field>
+            </ion-col>
+            <ion-col class="ion-no-padding ion-padding-start">
+              <ax-text-field
+                [label]="'label_length' | translate"
+                type="text"
+                inputmode="decimal"
+                [hint]="'text_inches' | translate"
+                [(ngModel)]="update.length"
+                name="length">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+        }
+        @if (!ui_controls.is_loading) {
+          <ion-row class="ion-padding-bottom">
+            <ion-col class="ion-no-padding">
+              <ax-text-field
+                [label]="'label_armhole' | translate"
+                type="text"
+                inputmode="decimal"
+                [hint]="'text_inches' | translate"
+                [(ngModel)]="update.armhole"
+                name="armhole">
+              </ax-text-field>
+            </ion-col>
+            <ion-col class="ion-no-padding ion-padding-start">
+              <ax-text-field
+                [label]="'label_arm' | translate"
+                type="text"
+                inputmode="decimal"
+                [hint]="'text_inches' | translate"
+                [(ngModel)]="update.arm"
+                name="arm">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+        }
+        <ion-row>
+          <ion-col class="ion-text-center">
+            @if (!ui_controls.is_loading) {
+              <ion-button (click)="update_measurement()" expand="block" class="ion-margin-vertical" type="button">
+                {{ 'button_update' | translate }}
+              </ion-button>
+            }
+            @if (ui_controls.is_loading) {
+              <div class="loader-row">
+                <ax-loader></ax-loader>
+              </div>
+            }
+          </ion-col>
+        </ion-row>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>

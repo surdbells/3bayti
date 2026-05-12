@@ -1,0 +1,129 @@
+/* =========================================================================
+   Abayti Design System — Card
+   .ax-card  base container with header/body/footer subparts.
+   Modifiers: --elevated --flat --bordered --interactive --brand
+   ========================================================================= */
+
+.ax-card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--ax-color-bg-surface);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+  overflow: hidden;
+  transition: box-shadow var(--ax-duration-base) var(--ax-ease-out),
+              transform var(--ax-duration-base) var(--ax-ease-out),
+              border-color var(--ax-duration-base) var(--ax-ease-out);
+}
+
+.ax-card-header,
+.ax-card-footer {
+  padding: var(--ax-space-5) var(--ax-space-6);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ax-space-4);
+}
+
+.ax-card-header {
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+}
+
+.ax-card-footer {
+  border-top: 1px solid var(--ax-color-border-subtle);
+  background-color: var(--ax-color-bg-canvas);
+}
+
+.ax-card-title {
+  font-family: var(--ax-font-display);
+  font-size: var(--ax-fs-lg);
+  font-weight: var(--ax-fw-semibold);
+  letter-spacing: var(--ax-ls-snug);
+  color: var(--ax-color-text-primary);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.ax-card-subtitle {
+  font-size: var(--ax-fs-xs);
+  color: var(--ax-color-text-secondary);
+  margin-top: var(--ax-space-1);
+  line-height: 1.4;
+}
+
+.ax-card-body {
+  padding: var(--ax-space-6);
+  flex: 1 1 auto;
+}
+
+.ax-card-body-flush {
+  padding: 0;
+}
+
+/* ---------- Modifiers ---------- */
+
+.ax-card-elevated {
+  box-shadow: var(--ax-shadow-sm);
+  border-color: transparent;
+}
+
+.ax-card-flat {
+  border: 0;
+  box-shadow: none;
+}
+
+.ax-card-bordered {
+  border: 1px solid var(--ax-color-border-default);
+}
+
+/* Interactive — for clickable cards (role=button, routerLink) */
+.ax-card-interactive {
+  cursor: pointer;
+}
+.ax-card-interactive:hover {
+  border-color: var(--ax-color-border-strong);
+  box-shadow: var(--ax-shadow-md);
+  transform: translateY(-2px);
+}
+.ax-card-interactive:active {
+  transform: translateY(0);
+  box-shadow: var(--ax-shadow-sm);
+}
+
+/* Brand — beige tinted card, for onboarding / highlights */
+.ax-card-brand {
+  background-color: var(--ax-color-bg-brand-subtle);
+  border-color: var(--ax-palette-beige-200);
+}
+
+/* Emphasized card — brown hero for KPIs */
+.ax-card-hero {
+  background-color: var(--ax-color-bg-brand);
+  color: var(--ax-color-text-on-brand);
+  border-color: var(--ax-color-bg-brand);
+}
+.ax-card-hero .ax-card-title,
+.ax-card-hero .ax-card-subtitle {
+  color: var(--ax-color-text-on-brand);
+}
+.ax-card-hero .ax-card-subtitle {
+  color: var(--ax-palette-beige-100);
+  opacity: 0.88;
+}
+
+
+/* ---------- Media (inside cards) ---------- */
+.ax-card-media {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+
+
+/* ---------- Divider (for split cards) ---------- */
+.ax-card-divider {
+  height: 1px;
+  background-color: var(--ax-color-border-subtle);
+  margin: 0;
+}

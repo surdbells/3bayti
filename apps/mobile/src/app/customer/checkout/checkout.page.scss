@@ -1,0 +1,127 @@
+/* ============================================================================
+   Checkout — M2 redesign
+   ============================================================================ */
+
+/* ----- Info notices (replaces <button tuiNotification> banners) ---------- */
+
+.info-notice {
+  display: block;
+  padding: 12px 14px;
+  margin: 8px 0;
+  background: var(--ax-color-bg-brand-subtle);
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.08));
+  border-radius: var(--ax-radius-md);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ax-color-text-secondary);
+}
+
+/* ----- Field label (matches ax-text-field's __label, used on city/area
+        picker buttons for visual alignment with adjacent inputs) ---------- */
+
+.checkout-field-label {
+  display: block;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: var(--ax-color-text-secondary);
+  margin-bottom: 6px;
+}
+
+/* ----- Order summary card --------------------------------------------- */
+
+.cart-card {
+  --ion-background-color: var(--ax-color-bg-surface, #ffffff);
+  border-radius: var(--ax-radius-lg);
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06),
+              0 4px 12px rgba(46, 36, 28, 0.04);
+  overflow: hidden;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.cart-card__title {
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary);
+  margin: 0 0 8px;
+  padding: 0 4px;
+}
+
+.contact-list {
+  background: transparent;
+}
+
+/* ----- Order summary divider (replaces inline-SVG line) --------------- */
+
+.summary-divider {
+  border: none;
+  height: 1px;
+  background: var(--ax-color-border-subtle, rgba(46, 36, 28, 0.12));
+  margin: 4px 0;
+  width: 100%;
+}
+
+/* ----- Checkout CTA (the big "Proceed to Checkout" button) ----------- */
+
+.checkout-cta {
+  --border-radius: var(--ax-radius-pill, 999px);
+  font-weight: 500;
+}
+
+/* ----- Loader row (matches auth + addresses pattern) ----------------- */
+
+.loader-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+/* City / area picker sheet list rows (rendered via <ax-bottom-sheet>) */
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 4px;
+  min-height: 48px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: var(--ax-radius-md);
+  transition: background 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(90, 58, 44, 0.04);
+    outline: none;
+  }
+
+  &:active {
+    background: rgba(90, 58, 44, 0.08);
+  }
+
+  & + .picker-list__item {
+    border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  }
+}
+
+.picker-list__name {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+}

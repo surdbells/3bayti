@@ -1,0 +1,484 @@
+<ion-content [fullscreen]="true" class="app-bg ion-padding">
+  <ion-grid class="h-100">
+    <ion-row class="h-100 ion-justify-content-center">
+      <ion-col class="ion-padding" size="12">
+        <div class="stack app-fade-in">
+          <img class="auth-logo" src="assets/images/logo.png" alt="">
+          <h1 class="title ion-text-center">{{ 'create_Account' | translate }}</h1>
+          <p class="subtitle ion-text-center">{{ 'sub_title_register' | translate }}</p>
+        </div>
+        @if(!ui_controls.loading && !ui_controls.otpValidated && !ui_controls.otpSent){
+          <ion-row>
+            <ion-col>
+              <ax-text-field
+                [label]="'phone_number' | translate"
+                type="tel"
+                inputmode="numeric"
+                [maxlength]="10"
+                [required]="true"
+                [placeholder]="'enter_phone' | translate"
+                autocomplete="tel-national"
+                [(ngModel)]="register.phone"
+                name="phone">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>
+              <ion-button (click)="send_otp()" expand="block" class="ion-margin-vertical" type="button">
+                {{ 'request_otp' | translate }}
+              </ion-button>
+            </ion-col>
+          </ion-row>
+        }
+        @if(!ui_controls.loading && !ui_controls.otpValidated && ui_controls.otpSent){
+          <ion-row class="ion-padding-bottom">
+            <ion-col class="ion-no-padding">
+              <ax-text-field
+                [label]="'otp' | translate"
+                type="text"
+                inputmode="numeric"
+                [required]="true"
+                autocomplete="one-time-code"
+                [(ngModel)]="validateOtp.code"
+                name="input_otp">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+          <ion-button (click)="validate_otp()" expand="block" class="ion-margin-vertical" type="button">
+            {{ 'validate' | translate }}
+          </ion-button>
+          <ion-row class="ion-padding-top">
+            <ion-col>
+              <ion-text> {{ 'error_dnd' | translate }} </ion-text>
+              <ion-text> {{'error_dnd_more' | translate}} </ion-text>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-padding-top">
+            <ion-col>
+              <ion-button (click)="ui_controls.otpSent = false" expand="block" size="small" class="ion-margin-vertical" type="button">
+                {{ 'change_phone_number' | translate }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              @if(this.showResendToken){
+                <ion-button (click)="send_otp()" expand="block" size="small" class="ion-margin-vertical" type="button">
+                  {{ 'resend_otp' | translate }}
+                </ion-button>
+              }
+            </ion-col>
+          </ion-row>
+        }
+        @if(!ui_controls.loading && ui_controls.otpValidated && ui_controls.otpSent){
+          <ion-row class="ion-padding-bottom">
+            <ion-col class="ion-no-padding">
+              <ax-text-field
+                [label]="'first_name' | translate"
+                type="text"
+                [required]="true"
+                [placeholder]="'e_first_name' | translate"
+                autocomplete="given-name"
+                [(ngModel)]="register.first_name"
+                name="first_name">
+              </ax-text-field>
+            </ion-col>
+            <ion-col class="ion-no-padding ion-padding-start">
+              <ax-text-field
+                [label]="'last_name' | translate"
+                type="text"
+                [required]="true"
+                [placeholder]="'e_last_name' | translate"
+                autocomplete="family-name"
+                [(ngModel)]="register.last_name"
+                name="last_name">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-padding-bottom">
+            <ion-col class="ion-no-padding">
+              <ax-text-field
+                [label]="'email_Address' | translate"
+                type="email"
+                [required]="true"
+                [placeholder]="'e_email_Address' | translate"
+                autocomplete="email"
+                [(ngModel)]="register.email"
+                name="email">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col class="ion-no-padding">
+              <ax-text-field
+                class="ion-margin-bottom"
+                [label]="'password' | translate"
+                type="password"
+                [required]="true"
+                autocomplete="new-password"
+                [(ngModel)]="register.password"
+                name="password">
+              </ax-text-field>
+            </ion-col>
+            <ion-col class="ion-no-padding ion-padding-start">
+              <ax-text-field
+                class="ion-margin-bottom"
+                [label]="'confirm_password' | translate"
+                type="password"
+                [required]="true"
+                autocomplete="new-password"
+                [(ngModel)]="register.confirm_password"
+                name="confirm_password">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+          <div (click)="isTermsOpen = true" class="ion-margin-bottom">
+            <ion-checkbox label-placement="end" [checked]="register.accepted_terms" (ionChange)="register.accepted_terms = !register.accepted_terms">
+              <span>{{ 'accept_terms' | translate }}</span>
+            </ion-checkbox>
+          </div>
+          @if (ui_controls.otpValidated) {
+            <ion-button (click)="user_register()" expand="block" class="ion-margin-vertical">
+              {{ 'create_Account' | translate }}
+            </ion-button>
+          }
+        }
+        @if(!ui_controls.loading){
+          <div class="flex ion-text-center">
+            <div class="flex ion-margin-top items-start">
+              <div class="flex abayti_secondary_color items-center h-5">
+                {{ 'already_have_an_account' | translate }}
+                <ion-text (click)="sign_in()" style="font-weight: bolder;" type="button" class="abayti_secondary_color">
+                  {{ 'sign_in' | translate }}
+                </ion-text>
+              </div>
+            </div>
+          </div>
+        }
+        @if (ui_controls.loading) {
+          <div class="loader-row">
+            <ax-loader></ax-loader>
+          </div>
+        }
+      </ion-col>
+    </ion-row>
+  </ion-grid>
+  <!-- Terms sheet -->
+  <ax-bottom-sheet
+    [isOpen]="isTermsOpen"
+    (didDismiss)="isTermsOpen = false"
+    [snapPoints]="[0.8, 1]"
+    [initialSnap]="0"
+    [backdropDismiss]="false"
+    [title]="'terms_c' | translate">
+
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>{{ 'contract_terms' | translate }}</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-segment value="arabic">
+          <ion-segment-button (click)="ui_controls.termsArabic = true; ui_controls.termsEnglish = false" value="arabic">
+            <ion-label>{{ 'arabic' | translate }}</ion-label>
+          </ion-segment-button>
+          <ion-segment-button (click)="ui_controls.termsArabic = false; ui_controls.termsEnglish = true" value="english">
+            <ion-label>English</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+            <div style="font-size: 14px; line-height: 1.8;">
+              @if(ui_controls.termsArabic){
+                <!-- Arabic Version -->
+                <div dir="rtl" style="text-align: right;">
+                  <h2 style="text-align: center; font-weight: bold;">عقد الاشتراك لمنصة عبايتي (3bayti)</h2>
+                  البريد الالكتروني<p>info&#64;3bayti.ae<br>الهاتف: 0507967776</p>
+
+                  <h3>الفهرس:</h3>
+                  <p>
+                    1. التعريفات<br>
+                    2. نطاق عمل المنصة<br>
+                    3. حماية البيانات وسرية المعلومات<br>
+                    4. التزامات البائع<br>
+                    5. التزامات المشتري<br>
+                    6. التزامات المنصة<br>
+                    7. اخلاء المسؤولية<br>
+                    8. الشروط والمواد المحظورة<br>
+                    9. الاسترجاع والاستبدال<br>
+                    10. تسوية النزاعات<br>
+                    11. مدة العقد والإنهاء
+                  </p>
+
+                  <h3>أولاً: التعريفات</h3>
+                  <p>
+                    • المنصة (3bayti): تطبيق وموقع إلكتروني يربط بين البائعين (أصحاب المتاجر والعلامات التجارية) والمشترين (المستهلكين).<br>
+                    • البائع (التاجر): كل شخص طبيعي أو اعتباري لديه رخص يمارس بيع منتجاته عبر المنصة.<br>
+                    • المشتري (المستهلك): كل شخص يقوم بشراء منتجات من خلال المنصة باستخدام وسائل الدفع المعتمدة.<br>
+                    • الإدارة: إدارة منصة (عبايتي).
+                  </p>
+
+                  <h3>ثانياً: نطاق عمل المنصة</h3>
+                  <p>
+                    1. المنصة تعمل كوسيط إلكتروني بين البائع والمشتري ولا تملك المنتجات المعروضة.<br>
+                    2. تتيح المنصة للبائعين إنشاء متاجر خاصة بهم ورفع منتجاتهم مع كامل الصلاحيات لإدارة الأسعار والمخزون.<br>
+                    3. تلتزم المنصة بتقديم خدمات الدفع الإلكتروني الآمن، والشحن بالتعاون مع شركات لوجستية معتمدة، وخدمة عملاء.
+                  </p>
+
+                  <h3>ثالثًا: حماية البيانات وسرية المعلومات</h3>
+                  <p>
+                    وفقًا لأحكام التشريعات النافذة في دولة الإمارات، ولا سيما المرسوم بقانون اتحادي رقم (46) لسنة 2021، يلتزم جميع الأطراف بالآتي:<br>
+                    1. المحافظة على سرية جميع البيانات والمعلومات الإلكترونية المتبادلة بموجب هذا العقد وعدم إفشائها لأي طرف ثالث إلا بموافقة خطية مسبقة من الطرف صاحب الحق أو وفقًا لما تقتضيه القوانين.<br>
+                    2. استخدام البيانات والمعلومات الإلكترونية فقط للأغراض المتعلقة بتنفيذ هذا العقد.<br>
+                    3. إخطار الطرف الآخر فورًا عند حدوث أي خرق أمني يمس البيانات أو المعلومات الإلكترونية.<br>
+                    4. يبقى التزام الأطراف بحماية البيانات قائمًا طوال فترة العقد وبعد انتهائه لأي سبب.
+                  </p>
+
+                  <h3>رابعًا: التزامات البائع</h3>
+                  <p>
+                    1. يلتزم البائع بوضع جميع معلوماته الصحيحة (الموقع، اسم المتجر، معلوماته البنكية، معلوماته الشخصية).<br>
+                    2. يلتزم بوضع أوصاف دقيقة للمنتجات (المقاسات – الخامة – اللون - الأسعار – المواصفات).<br>
+                    3. يحظر بيع المنتجات المقلدة أو المخالفة للآداب العامة أو القوانين المحلية.<br>
+                    4. يتحمل المسؤولية الكاملة عن جودة المنتج ومطابقته للوصف والصور.<br>
+                    5. يلتزم بسياسة الاسترجاع والاستبدال وفق قانون حماية المستهلك الإماراتي.<br>
+                    6. نسبة العمولة المستحقة للمنصة 15% من قيمة كل عملية بيع.<br>
+                    7. تتم التحويلات المالية للبائع خلال 1-5 أيام عمل بعد خصم العمولة.<br>
+                    8. يلتزم البائع بعرض 10 منتجات كحد أدنى.<br>
+                    9. يجب أن يحتوي كل منتج على 5 صور واضحة وعالية الجودة.<br>
+                    10. يحق للمنصة تعليق الحساب في حال المخالفة.<br>
+                    11. يجب الرد على طلبات المستهلك خلال يوم واحد.<br>
+                    12. قبول الاسترجاع والاستبدال دون رسوم إضافية.<br>
+                    13. تحمل تكاليف الإرجاع حسب سياسة المنصة.<br>
+                    14. في حال المخالفة تفرض رسوم 20% من قيمة السلعة.
+                  </p>
+
+                  <h3>خامسًا: التزامات المشتري</h3>
+                  <p>
+                    1. إدخال بيانات صحيحة (العنوان – الهاتف – معلومات الدفع).<br>
+                    2. احترام البائع والمنصة.<br>
+                    3. الالتزام بقوانين المنصة.<br>
+                    4. الحق في الاسترجاع أو الاستبدال وفق سياسة المنصة.<br>
+                    5. التأكد من تفاصيل الطلب قبل الشراء.<br>
+                    6. تحمل تكاليف الإرجاع حسب السياسة.<br>
+                    7. استخدام وسائل الدفع الرسمية فقط.<br>
+                    8. حظر إساءة استخدام سياسة الإرجاع.
+                  </p>
+
+                  <h3>سادسًا: التزامات المنصة</h3>
+                  <p>
+                    1. تعمل كوسيط إلكتروني فقط.<br>
+                    2. تحويل مبالغ المبيعات بعد خصم العمولة خلال 1–5 أيام عمل.<br>
+                    3. يحق لها تعليق أو إغلاق أي حساب مخالف.<br>
+                    4. توفير بيئة آمنة للتسوق متوافقة مع PCI DSS.<br>
+                    5. حماية بيانات العملاء وفق القانون الاتحادي رقم (45) لسنة 2021.<br>
+                    6. اتخاذ التدابير الفنية لحماية البيانات.<br>
+                    7. متابعة النزاعات عبر نظام الشكاوى.<br>
+                    8. مراقبة أداء البائعين للحفاظ على الجودة.
+                  </p>
+
+                  <h3>سابعًا: إخلاء المسؤولية</h3>
+                  <p>
+                    1. المنصة غير مسؤولة عن جودة المنتجات (مسؤولية البائع).<br>
+                    2. غير مسؤولة عن التعاملات خارج نظامها.<br>
+                    3. تتدخل فقط كوسيط في النزاعات المسجلة.<br>
+                    4. لا تمتلك المنتجات المعروضة.<br>
+                    5. لا تتحمل تعويضات تتجاوز العمولة.<br>
+                    6. غير مسؤولة عن روابط أو محتويات خارجية.<br>
+                    7. غير مسؤولة عن خسائر ناتجة عن ظروف خارجة عن الإرادة أو قوة قاهرة.<br>
+                    8. غير مسؤولة عن العيوب أو الأضرار غير المباشرة.
+                  </p>
+
+                  <h3>ثامنًا: الشروط والمواد المحظورة</h3>
+                  <p>
+                    • عدم إفشاء أسرار المنصة أو الإضرار بها.<br>
+                    • السلع المقلدة أو المزيفة.<br>
+                    • المنتجات المخالفة للقيم والعادات المحلية.<br>
+                    • المنتجات المحظورة بالقانون الإماراتي.<br>
+                    • أي منتج مرفوض من إدارة المنصة.<br>
+                    • في حال مخالفة البائع يحق للمنصة إنهاء العقد خلال 5 أيام.<br>
+                    • في حال مخالفة المشتري يحق للمنصة إغلاق الحساب لمدة سنة.
+                  </p>
+
+                  <h3>تاسعًا: الاسترجاع والاستبدال</h3>
+                  <p>
+                    1. الاسترجاع خلال 3 أيام عمل من الاستلام.<br>
+                    2. لا استرجاع للمنتجات المصممة حسب الطلب إلا في حال وجود عيب تصنيع.<br>
+                    3. قرار المنصة نهائي وملزم.<br>
+                    4. يجب أن يكون المنتج بحالته الأصلية.<br>
+                    5. المشتري يتحمل الرسوم إذا كان الخطأ منه.<br>
+                    6. البائع يتحمل الرسوم إذا كان الخطأ منه.<br>
+                    7. المنصة غير مسؤولة مباشرة عن العملية، فقط تنظمها.
+                  </p>
+
+                  <h3>عشرًا: تسوية النزاعات</h3>
+                  <p>
+                    1. تخضع الاتفاقية للقوانين المعمول بها في المنصة.<br>
+                    2. محاولة التسوية وديًا خلال 7 أيام.<br>
+                    3. في حال الفشل، يحق للمنصة إصدار قرار نهائي.<br>
+                    4. الاختصاص النهائي للمحاكم في دبي.
+                  </p>
+
+                  <h3>حاديًا عشر: مدة العقد والإنهاء</h3>
+                  <p>
+                    1. الاستخدام يعتبر عقدًا إلكترونيًا.<br>
+                    2. يحق للمنصة إنهاء العقد فورًا في حال المخالفة.<br>
+                    3. الإنهاء لا يلغي الحقوق المالية السابقة.<br>
+                    4. يحق للمنصة تعديل الشروط مع إشعار الأطراف.<br>
+                    5. لا مسؤولية في حال القوة القاهرة.<br>
+                    6. مدة العقد سنة تُجدد تلقائيًا ما لم يتم الإشعار قبل 30 يومًا.<br>
+                    7. يحق للمنصة تعليق أو إلغاء الحساب في حال المخالفة.<br>
+                    8. تعديل الرسوم والسياسات متاح مع إخطار الأطراف.
+                  </p>
+
+                  <p style="text-align: center; font-weight: bold; margin-top: 16px;">
+                    بالتسجيل أو الوصول أو استخدام منصة 3bayti، أنت توافق على هذه الشروط والأحكام.
+                  </p>
+                </div>
+              }
+              @if(ui_controls.termsEnglish){
+                <!-- English Version -->
+                <div dir="ltr" style="text-align: left; margin-top: 36px;">
+                  <h2 style="text-align: center; font-weight: bold;">(3bayti) Contract Terms and Conditions</h2>
+                  <p>Email: info&#64;3bayti.ae<br>Phone: 0507967776</p>
+
+                  <h3>Index:</h3>
+                  <p>
+                    1. Definitions<br>
+                    2. Scope of the Platform<br>
+                    3. Data Protection and Information Confidentiality<br>
+                    4. Seller Obligations<br>
+                    5. Buyer Obligations<br>
+                    6. Platform Obligations<br>
+                    7. Disclaimer<br>
+                    8. Prohibited Items and Rules<br>
+                    9. Return & Exchange<br>
+                    10. Dispute Resolution<br>
+                    11. Duration and Termination of Agreement
+                  </p>
+
+                  <h3>First: Definitions</h3>
+                  <p>
+                    • The Platform (3bayti): A mobile application and website that connects sellers (store owners and brands) with buyers (consumers).<br>
+                    • Seller (Vendor): Any natural or legal person with approval to use the platform to sell products through the platform.<br>
+                    • Buyer (Consumer): Any person purchasing products through the platform using approved payment methods.<br>
+                    • Management: The management team of the 3bayti platform.
+                  </p>
+
+                  <h3>Second: Scope of the Platform</h3>
+                  <p>
+                    1. The platform operates as an electronic intermediary between sellers and buyers and does not own the products displayed.<br>
+                    2. The platform allows sellers to create their own stores, upload products, and manage pricing and inventory independently.<br>
+                    3. The platform is committed to providing secure electronic payment services, shipping in cooperation with approved logistics companies, and customer service.
+                  </p>
+
+                  <h3>Third: Data Protection and Information Confidentiality</h3>
+                  <p>
+                    In accordance with applicable UAE legislation, particularly Federal Decree-Law No. (46) of 2021, all parties are obligated to the following:<br>
+                    1. Maintain the confidentiality of all electronic data and information exchanged under this contract and not disclose it to any third party except with prior written consent from the party with the right or as required by law.<br>
+                    2. Use the electronic data and information only for purposes related to the implementation of this contract and not exploit it for any other unauthorized purpose.<br>
+                    3. Immediately notify the other party of any breach or security incident affecting the electronic data or information related to this contract, while adhering to the procedures stipulated in the laws and regulations.<br>
+                    4. The parties' commitment to protecting electronic data and information remains in effect throughout the term of the contract and after its termination for any reason.
+                  </p>
+
+                  <h3>Fourth: Seller Obligations</h3>
+                  <p>
+                    1. The seller must provide all accurate information (location, store name, banking information, personal details).<br>
+                    2. The seller must provide accurate product descriptions (sizes, material, colour, prices, product specifications, delivery time).<br>
+                    3. It is prohibited to sell counterfeit products or products that violate public morals or local laws.<br>
+                    4. The seller bears full responsibility for the product’s quality and its compliance with descriptions, photos, and actual specifications.<br>
+                    5. The seller must comply with return and exchange policies in line with UAE Consumer Protection Law.<br>
+                    6. The commission due to the platform is 15% of the value of each sale.<br>
+                    7. Financial transfers to the seller will be made within 1–5 business days after deducting fees and commission.<br>
+                    8. The seller is required to display at least 10 products in their online store on the platform.<br>
+                    9. Each product must include no fewer than 5 clear, high-quality photos, either on a model, mannequin, or clothing hanger to ensure visibility of details for consumers.<br>
+                    10. The platform management has the right to suspend or deactivate a seller account if they fail to meet sales laws, minimum product requirements, or image standards without any legal or financial liability on the platform.<br>
+                    11. The seller must confirm and respond to a buyer’s request within 1 business day.<br>
+                    12. The seller must accept product returns or exchanges without charging the buyer extra fees, provided the product is in its original unused condition.<br>
+                    13. Return and exchange costs may be charged depending on the platform’s policy.<br>
+                    14. If the seller is found to have violated platform terms, a penalty of 20% of the product’s value may be imposed by the platform.
+                  </p>
+
+                  <h3>Fifth: Buyer Obligations</h3>
+                  <p>
+                    1. The buyer must provide accurate data during purchase (address, phone, payment details).<br>
+                    2. Respect towards sellers and the platform is required.<br>
+                    3. The buyer must adhere to platform rules.<br>
+                    4. The buyer is entitled to return or exchange a product in accordance with the platform’s policy.<br>
+                    5. The buyer must confirm order details before completing the purchase.<br>
+                    6. Return and exchange costs may be charged depending on the platform’s policy.<br>
+                    7. The buyer must use only the official payment methods provided by the platform.<br>
+                    8. Abuse of the return policy is prohibited.
+                  </p>
+
+                  <h3>Sixth: Platform Obligations</h3>
+                  <p>
+                    1. The platform acts only as an electronic intermediary between sellers and buyers.<br>
+                    2. The platform transfers sales amounts to the seller after deducting the agreed commission (15%) within 1–5 business days.<br>
+                    3. The platform reserves the right to suspend or close any seller or buyer account if laws or terms are violated.<br>
+                    4. The platform provides a secure online shopping environment compliant with PCI DSS standards.<br>
+                    5. Customer data will be protected in accordance with the UAE Federal Data Protection Law number (45) of 2021.<br>
+                    6. Take the necessary technical and organizational measures to protect data from any unauthorized access, loss, modification, or destruction, in accordance with the best security practices and approved standards.<br>
+                    7. Dispute resolution will be handled through the platform’s official complaints system.<br>
+                    8. The platform monitors seller performance to maintain quality and trust.
+                  </p>
+
+                  <h3>Seventh: Disclaimer</h3>
+                  <p>
+                    1. The platform is not responsible for product quality or compliance with descriptions; this responsibility lies with the seller.<br>
+                    2. The platform is not responsible for any financial transactions or agreements made outside its official system.<br>
+                    3. The platform intervenes only as an intermediary in officially registered disputes.<br>
+                    4. The platform does not own, manufacture, or sell any of the products displayed; its role is limited to connecting sellers with buyers.<br>
+                    5. The platform is not liable for any financial compensation exceeding the commission collected for the disputed order.<br>
+                    6. The platform is not responsible for any external links or content added by sellers within their stores or products.<br>
+                    7. The platform is not responsible for damages or losses caused by circumstances beyond control.<br>
+                    8. The platform is not responsible for any damages or losses arising as a result of force majeure.<br>
+                    9. The platform is not responsible for defects in products, non-compliance with specifications, indirect losses, or consequential damages.
+                  </p>
+
+                  <h3>Eighth: Prohibited Items and Rules</h3>
+                  <p>
+                    • All parties (sellers and buyers) must not disclose platform trade secrets, breach obligations, or cause direct or indirect harm to the platform. The platform has the right to pursue violators legally before the competent authorities.<br>
+                    • Counterfeit or fake goods.<br>
+                    • Products that violate local values and traditions.<br>
+                    • Any products prohibited under UAE laws.<br>
+                    • Any products explicitly rejected by platform management.<br>
+                    • If the seller is proven to have breached one of his obligations, the platform has the right to terminate the contract within (5) working days as it deems appropriate.<br>
+                    • If the buyer is proven to have breached one of his obligations, the platform has the right to close the buyer's account and ban them from using the platform for one year.
+                  </p>
+
+                  <h3>Ninth: Return & Exchange</h3>
+                  <p>
+                    1. A customer may return or exchange a product within 3 working days of receiving it.<br>
+                    2. Custom-made products are not eligible for return or exchange unless there is a manufacturing defect or order error by the seller or buyer.<br>
+                    3. The platform reserves the right to review any return or exchange request, and its decision will be final and binding on both parties (seller/buyer).<br>
+                    4. For returns or exchanges, the product must be in its original condition, unused, and unwashed with all attachments.<br>
+                    5. The buyer bears the cost of return/exchange if the error is on their part.<br>
+                    6. The seller bears the cost of return/exchange if the error is on their part.<br>
+                    7. The platform is not responsible for handling returns or exchanges; responsibility lies with the seller, but the platform facilitates the process and communication.
+                  </p>
+
+                  <h3>Tenth: Dispute Resolution</h3>
+                  <p>
+                    1. This agreement and resulting obligations or disputes are subject to the laws and regulations in force on the platform.<br>
+                    2. Both parties (seller and buyer) must first attempt to resolve any dispute amicably within 7 days from the date a party raises the dispute.<br>
+                    3. If an amicable settlement cannot be reached, the platform reserves full authority to assess the dispute and issue a final binding decision without any additional liability on the platform.<br>
+                    4. If no solution is reached by platform management, the final jurisdiction rests with the competent authorities or courts in the Emirate of Dubai.
+                  </p>
+
+                  <h3>Eleventh: Duration and Termination of Agreement</h3>
+                  <p>
+                    1. Use of the platform is subject to acceptance of these terms and conditions, which constitute an electronic contract between parties.<br>
+                    2. The platform reserves the right to immediately terminate the contract if the seller or buyer violates any platform terms, conditions, or applicable laws in Dubai, including Consumer Protection Law or e-commerce regulations.<br>
+                    3. Termination of the contract does not cancel financial rights or obligations prior to termination, such as due commissions, pending orders, or existing complaints.<br>
+                    4. The platform reserves the right to modify terms, conditions, or policies from time to time in line with Dubai laws and business needs. Sellers and buyers will be notified of any changes before implementation via email or in-app notification. Continued use of the platform after modifications constitutes explicit acceptance.<br>
+                    5. Neither the platform nor the seller bears liability if contractual obligations cannot be fulfilled due to force majeure circumstances.<br>
+                    6. The contract duration is one year, automatically renewable unless non-renewal notice is given at least 30 days in advance.<br>
+                    7. The platform reserves the right to cancel or suspend any account in case of violations or misuse.<br>
+                    8. The platform reserves the right to adjust fees or policies at any time with prior notification to the concerned parties (seller, buyer).
+                  </p>
+                  <p style="text-align: center; font-weight: bold; margin-top: 16px;">
+                    By signing up, accessing, or using the 3bayti platform, you agree to these Terms & Conditions
+                  </p>
+                </div>
+              }
+            </div>
+          </ion-card-content>
+        </ion-card>
+  </ax-bottom-sheet>
+</ion-content>

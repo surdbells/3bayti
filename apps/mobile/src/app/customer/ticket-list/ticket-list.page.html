@@ -1,0 +1,61 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/orders']" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_support_tickets' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [routerLink]="['/createticket']" class="m7-header-action" aria-label="Create ticket">
+        <ax-icon name="plus"/>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+<ion-content fullscreen class="page-bg ion-padding-horizontal">
+
+  @for(t of tickets; track $index){
+    <div class="ticket-row" (click)="openTicket(t.id, t.subject)" role="button" tabindex="0">
+      <div class="ticket-icon">
+        <ax-icon name="tickets" [size]="20"></ax-icon>
+      </div>
+      <div class="ticket-body">
+        <div class="ticket-head">
+          <h3 class="ticket-subject">{{ t.subject }}</h3>
+          @if (t.priority) {
+            <span class="priority-pill" [ngClass]="'priority-pill--' + t.priority.toLowerCase()">{{ t.priority }}</span>
+          }
+        </div>
+        @if (t.summary) {
+          <p class="ticket-summary">{{ t.summary }}</p>
+        }
+        <p class="ticket-meta">
+          <span class="meta-status">{{ 'status' | translate }}: {{ t.status }}</span>
+          <span class="meta-divider"></span>
+          <span class="meta-date">{{ t.created | date:'short' }}</span>
+        </p>
+      </div>
+    </div>
+  }
+
+  @if(ui_controls.is_empty){
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="tickets" [size]="32"></ax-icon>
+      </div>
+      <h2>{{ 'heading_support_ticket_empty' | translate }}</h2>
+      <p>{{ 'text_no_tickets_yet' | translate }}</p>
+      <ion-button shape="round" class="empty-cta" [routerLink]="['/createticket']">
+        <ax-icon name="plus" slot="start"></ax-icon>
+        <span>{{ 'button_create_ticket' | translate }}</span>
+      </ion-button>
+    </div>
+  }
+
+  <div class="loader-row">
+    @if (ui_controls.is_loading){
+      <ax-loader></ax-loader>
+    }
+  </div>
+</ion-content>

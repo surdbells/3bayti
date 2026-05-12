@@ -1,0 +1,107 @@
+/* Ensure the container has height */
+:host,
+ion-content,
+swiper-container,
+.slides {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+.safe-area {
+  padding: 35px 25px 28px;
+}
+
+swiper-slide,
+.slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+ion-content.start-bg {
+  /* Ionic supports setting background via a CSS var */
+  --background: var(--ax-color-bg-canvas);
+}
+
+/* Hero section */
+.hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  flex: 1;
+
+  .model {
+    width: 70%;
+    max-width: 420px;
+    height: 520px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.15));
+  }
+}
+
+/* Text area */
+.cta {
+  text-align: center;
+  padding: 0 8px 16px;
+
+  .title {
+    font-weight: 900;
+    color: #000;
+    letter-spacing: 0.4px;
+    line-height: 1.2;
+    font-size: 17px;
+    margin: 0 0 10px;
+  }
+
+  .subtitle {
+    margin: 0 auto;
+    max-width: 92%;
+    color: rgba(0, 0, 0, 0.72);
+    font-size: 14.5px;
+    line-height: 1.45;
+  }
+}
+
+/* Footer card */
+.footer {
+  border-radius: 24px;
+  padding: 16px 18px 18px;
+  background: linear-gradient(180deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.02) 100%);
+  box-shadow: 0 12px 36px rgba(0,0,0,0.08);
+}
+
+/* Pager dots */
+.pager {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 12px;
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 999px;
+    background: rgba(0,0,0,0.2);
+    transition: all 180ms ease;
+
+    &.active {
+      width: 26px;
+      background: linear-gradient(90deg, #872308 0%, #B02C06 100%);
+    }
+  }
+}
+
+/* Call-to-action button */
+.cta-btn {
+  --border-radius: 18px;
+  --padding-start: 26px;
+  --padding-end: 18px;
+  --background: linear-gradient(90deg, #872308 0%, #B02C06 100%);
+  --background-activated: linear-gradient(90deg, #872308 0%, #B02C06 100%);
+  width: 100%;
+  height: 56px;
+  font-size: 18px;
+  color: #ffffff;
+  letter-spacing: 0.2px;
+}

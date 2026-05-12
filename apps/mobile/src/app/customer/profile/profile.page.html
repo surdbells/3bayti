@@ -1,0 +1,123 @@
+<ion-content fullscreen="true" class="page-bg">
+  <ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/settings']" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_user_profile' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+  <div class="sheet ion-padding-horizontal">
+    <ion-card>
+      @if (!ui_controls.is_loading || !ui_controls.is_updating) {
+        <ion-card-header>
+          <ion-card-title class="ion-text-center">
+            {{ 'title_user_profile' | translate }}
+          </ion-card-title>
+          <ion-card-subtitle class="ion-text-center">
+            {{ 'subtitle_update_profile' | translate }}
+          </ion-card-subtitle>
+        </ion-card-header>
+      }
+      <ion-card-content>
+        @if (!ui_controls.is_loading || !ui_controls.is_updating) {
+          <ion-row class="ion-padding-bottom">
+            <ion-col class="ion-no-padding">
+              <ax-text-field
+                [label]="'label_first_name' | translate"
+                type="text"
+                placeholder="Enter your first name"
+                autocomplete="given-name"
+                [(ngModel)]="update.first_name"
+                name="first_name">
+              </ax-text-field>
+            </ion-col>
+            <ion-col class="ion-no-padding ion-padding-start">
+              <ax-text-field
+                [label]="'label_last_name' | translate"
+                type="text"
+                placeholder="Enter your last name"
+                autocomplete="family-name"
+                [(ngModel)]="update.last_name"
+                name="last_name">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+        }
+        @if (!ui_controls.is_loading || !ui_controls.is_updating) {
+          <ion-row>
+            <ion-col size="4" class="ion-no-padding">
+              <label class="profile-field-label">{{ 'label_dial_code' | translate }}</label>
+              <ion-button expand="block" class="ion-margin-vertical" type="button" (click)="isCountryCodeOpen = true">
+                <span class="cc-flag">{{ selectedDial?.flag }}</span>
+                <span class="cc-code">{{ update.countryCode }}</span>
+                <ax-icon name="chevron-down" slot="end" [style.color]="'var(--ion-color-secondary)'"/>
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ax-text-field
+                [label]="'label_phone_number' | translate"
+                type="tel"
+                inputmode="numeric"
+                [maxlength]="15"
+                [placeholder]="'placeholder_phone_number' | translate"
+                autocomplete="tel-national"
+                [(ngModel)]="update.phone"
+                name="phone">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+        }
+        <ion-row>
+          <ion-col>
+            @if (!ui_controls.is_loading) {
+              <ion-button (click)="update_profile()" expand="block" class="ion-margin-vertical" type="button">  {{ 'button_update' | translate }}
+              </ion-button>
+            }
+            @if (ui_controls.is_loading || ui_controls.is_updating) {
+              <ax-loader></ax-loader>
+            }
+          </ion-col>
+        </ion-row>
+      </ion-card-content>
+    </ion-card>
+  </div>
+  <!-- Searchable country code sheet -->
+  <ax-bottom-sheet
+    [isOpen]="isCountryCodeOpen"
+    (didDismiss)="isCountryCodeOpen = false"
+    [snapPoints]="[0.8, 0.95]"
+    [initialSnap]="0">
+
+    <div ax-sheet-header class="cc-sheet__header">
+      <div class="cc-sheet__title-row">
+        <h2 class="cc-sheet__title">{{ 'title_select_country_code' | translate }}</h2>
+        <button type="button" class="cc-sheet__close" (click)="isCountryCodeOpen = false">
+          {{ 'close' | translate }}
+        </button>
+      </div>
+      <ion-searchbar
+        [(ngModel)]="codeSearch"
+        debounce="100"
+        placeholder="{{ 'placeholder_search_country_or_code' | translate }}">
+      </ion-searchbar>
+    </div>
+
+    <ul class="cc-list">
+      @for (c of filteredDialCodes(); track c) {
+        <li class="cc-list__item" (click)="selectCode(c); isCountryCodeOpen = false" role="button" tabindex="0">
+          <span class="cc-list__flag">{{ c.flag }}</span>
+          <span class="cc-list__name">{{ c.name }}</span>
+          <span class="cc-list__code">{{ c.code }}</span>
+        </li>
+      }
+    </ul>
+
+    @if (filteredDialCodes().length === 0) {
+      <div class="cc-list__empty">{{ 'label_no_results' | translate }}</div>
+    }
+  </ax-bottom-sheet>
+</ion-content>
+

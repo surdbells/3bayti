@@ -1,0 +1,95 @@
+<div class="ax-auth-shell">
+  <div class="ax-auth-shell-inner">
+
+    <!-- Image panel (hidden below lg) -->
+    <a routerLink="/" class="ax-auth-image" [attr.aria-label]="'back_to_website' | translate">
+      <img src="assets/img/regbg.png" alt="Abayti vendors preview" />
+    </a>
+
+    <!-- Form panel -->
+    <div>
+      <a routerLink="/" class="ax-auth-back">
+        <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        {{ 'back_to_website' | translate }}
+      </a>
+
+      <div class="ax-auth-panel">
+        <div class="ax-auth-header">
+          <img class="ax-auth-logo" src="assets/img/abayti.png" alt="Abayti" />
+          <app-language-switcher></app-language-switcher>
+        </div>
+
+        <div class="ax-auth-body">
+          <div>
+            <h1 class="ax-auth-title">{{ 'sign_in' | translate }}</h1>
+            <p class="ax-auth-subtitle">{{ 'sign_in_message' | translate }}</p>
+          </div>
+
+          <form (ngSubmit)="user_login()" method="post" class="ax-flex ax-flex-col ax-gap-3">
+            <div class="ax-form-field">
+              <label for="email" class="ax-label ax-label-required">{{ 'email' | translate }}</label>
+              <div class="ax-input-group">
+                <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">mail</span>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  class="ax-input"
+                  [(ngModel)]="login.email"
+                  [placeholder]="'email' | translate"
+                  autocomplete="email"
+                  required />
+              </div>
+            </div>
+
+            <div class="ax-form-field">
+              <label for="password" class="ax-label ax-label-required">{{ 'password' | translate }}</label>
+              <div class="ax-input-group">
+                <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">lock</span>
+                <input
+                  [type]="fieldTextType ? 'text' : 'password'"
+                  id="password"
+                  name="password"
+                  class="ax-input"
+                  [(ngModel)]="login.password"
+                  [placeholder]="'password' | translate"
+                  autocomplete="current-password"
+                  required />
+                <button
+                  type="button"
+                  class="ax-input-group-suffix ax-input-group-action"
+                  (click)="toggleFieldTextType()"
+                  [attr.aria-label]="fieldTextType ? 'Hide password' : 'Show password'"
+                  tabindex="-1">
+                  <span class="material-symbols-outlined" aria-hidden="true">
+                    {{ fieldTextType ? 'visibility_off' : 'visibility' }}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              class="ax-btn ax-btn-primary ax-btn-lg ax-mt-2"
+              [disabled]="loading">
+              <span *ngIf="loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <span>{{ 'sign_in' | translate }}</span>
+            </button>
+          </form>
+
+          <p class="ax-auth-meta">
+            {{ 'not_registered_message' | translate }}
+            <a routerLink="/register">{{ 'register' | translate }}</a>
+          </p>
+        </div>
+
+        <div class="ax-auth-footer">
+          <p>
+            {{ 'forgot_password_message' | translate }}
+            <a routerLink="/reset">{{ 'reset_password' | translate }}</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

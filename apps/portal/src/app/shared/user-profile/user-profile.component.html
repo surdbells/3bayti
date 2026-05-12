@@ -1,0 +1,119 @@
+<!-- Dual shell: vendor gets side nav, admin gets aside + admin-top -->
+<app-vendor-shell *ngIf="user_session.is_vendor">
+  <ng-container *ngTemplateOutlet="profileContent"></ng-container>
+</app-vendor-shell>
+
+<app-admin-shell *ngIf="user_session.is_admin">
+  <ng-container *ngTemplateOutlet="profileContent"></ng-container>
+</app-admin-shell>
+
+<ng-template #profileContent>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <span class="ax-page-header-eyebrow">Account</span>
+        <h1 class="ax-page-title">{{ 'profile_title' | translate }}</h1>
+      </div>
+    </header>
+
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span>
+    </div>
+
+    <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+      <div class="ax-card ax-p-5" style="max-width: 48rem;">
+        <h2 class="ax-h5 ax-m-0 ax-mb-1">{{ 'profile_update_title' | translate }}</h2>
+        <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-4">{{ 'profile_update_subtext' | translate }}</p>
+
+        <!-- Avatar -->
+        <div class="ax-flex ax-gap-4 ax-items-center ax-mb-4 ax-flex-wrap">
+          <img
+            id="profilePreview"
+            [src]="user_single.avatar || 'assets/img/avatar-placeholder.png'"
+            [alt]="'profile_preview' | translate"
+            style="width: 6rem; height: 6rem; border-radius: 50%; object-fit: cover; object-position: center; border: 1px solid var(--ax-color-border-subtle);" />
+
+          <div style="flex: 1; min-width: 14rem;">
+            <label class="ax-label" for="profileUpload">{{ 'profile_picture' | translate }}</label>
+            <input
+              id="profileUpload"
+              type="file"
+              class="ax-input ax-input-sm"
+              accept="image/*"
+              (change)="select_avatar($event)"
+              name="avatar_file" />
+            <span class="ax-hint">Square image, JPG or PNG.</span>
+          </div>
+        </div>
+
+        <!-- Profile info -->
+        <div class="ax-form-field ax-mb-3">
+          <label class="ax-label" for="first_name">{{ 'first_name' | translate }}</label>
+          <input
+            id="first_name"
+            type="text"
+            class="ax-input"
+            disabled
+            readonly
+            name="first_name"
+            [(ngModel)]="user_single.first_name" />
+        </div>
+
+        <div class="ax-form-field ax-mb-3">
+          <label class="ax-label" for="last_name">{{ 'last_name' | translate }}</label>
+          <input
+            id="last_name"
+            type="text"
+            class="ax-input"
+            disabled
+            readonly
+            name="last_name"
+            [(ngModel)]="user_single.last_name" />
+        </div>
+
+        <div class="ax-form-field ax-mb-3">
+          <label class="ax-label" for="email">{{ 'email_address' | translate }}</label>
+          <input
+            id="email"
+            type="text"
+            class="ax-input"
+            disabled
+            readonly
+            name="email"
+            [(ngModel)]="user_single.email" />
+          <span class="ax-hint">{{ 'email_edit_notice' | translate }}</span>
+        </div>
+
+        <div class="ax-form-field ax-mb-4">
+          <label class="ax-label" for="phone">{{ 'phone_number' | translate }}</label>
+          <input
+            id="phone"
+            type="text"
+            class="ax-input"
+            name="phone"
+            [(ngModel)]="user_single.phone" />
+        </div>
+
+        <div class="ax-flex ax-justify-end">
+          <button
+            type="button"
+            class="ax-btn ax-btn-primary"
+            (click)="update_changes()"
+            [disabled]="ui_controls.is_saving">
+            <span *ngIf="ui_controls.is_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+            <span *ngIf="!ui_controls.is_saving" class="material-symbols-outlined" aria-hidden="true">save</span>
+            {{ 'save_changes' | translate }}
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</ng-template>

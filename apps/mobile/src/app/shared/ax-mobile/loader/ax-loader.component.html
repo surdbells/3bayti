@@ -1,0 +1,13 @@
+<span
+  class="ax-loader"
+  [class.ax-loader--sm]="size === 'sm'"
+  [class.ax-loader--md]="size === 'md'"
+  [class.ax-loader--lg]="size === 'lg'"
+  [style.color]="color || null"
+  role="status"
+  [attr.aria-label]="label"
+>
+  <span class="ax-loader__dot" aria-hidden="true"></span>
+  <span class="ax-loader__dot" aria-hidden="true"></span>
+  <span class="ax-loader__dot" aria-hidden="true"></span>
+</span>

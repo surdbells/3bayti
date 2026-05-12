@@ -1,0 +1,89 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ storeName }}</ion-title>
+  </ion-toolbar>
+  <div class="m7-subtitle">{{ 'select_order_to_chat' | translate }}</div>
+</ion-header>
+
+<ion-content class="page-content ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Loading State -->
+  @if(isLoading){
+    <div class="order-list">
+      @for(i of [1,2,3]; track i){
+        <div class="order-card skeleton">
+          <div class="order-image skeleton-box"></div>
+          <div class="order-info">
+            <div class="skeleton-text title-sk"></div>
+            <div class="skeleton-text meta-sk"></div>
+            <div class="skeleton-text status-sk"></div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Order List -->
+  @if(!isLoading && orders.length > 0){
+    <div class="order-list">
+      @for(order of orders; track order.order_item_id){
+        <button type="button" class="order-card" (click)="selectOrder(order)">
+          <div class="order-image">
+            <img [src]="order.product_image" [alt]="order.product_name" loading="lazy" (error)="onImageError($event)">
+          </div>
+
+          <div class="order-info">
+            <h3 class="order-name">{{ order.product_name }}</h3>
+
+            <div class="order-meta">
+              <span class="order-id">#{{ order.order_id }}</span>
+              <span class="separator">•</span>
+              <span class="order-date">{{ order.order_date | date:'mediumDate' }}</span>
+            </div>
+
+            <div class="order-details">
+              @if(order.size){
+                <span class="detail-tag">{{ order.size }}</span>
+              }
+              @if(order.color){
+                <span class="detail-tag">{{ order.color }}</span>
+              }
+              <span class="detail-tag">{{ 'label_qty' | translate }}: {{ order.quantity }}</span>
+            </div>
+
+            <div class="order-footer">
+              <span class="order-status" [class]="getStatusClass(order.status)">{{ order.status }}</span>
+              <span class="order-price">Ð{{ order.total_price | number }}</span>
+            </div>
+          </div>
+
+          <div class="order-actions">
+            @if(order.unread_count > 0){
+              <div class="unread-badge">{{ order.unread_count }}</div>
+            }
+            <ax-icon name="chevron-right" class="arrow-icon"></ax-icon>
+          </div>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Empty State -->
+  @if(!isLoading && orders.length === 0){
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="shopping-bag" />
+      </div>
+      <h3>{{ 'no_orders_from_vendor' | translate }}</h3>
+      <p>{{ 'no_orders_description' | translate }}</p>
+    </div>
+  }
+</ion-content>

@@ -1,0 +1,176 @@
+<div class="ax-auth-shell ax-auth-shell-narrow">
+  <div class="ax-auth-shell-inner">
+    <div>
+      <a routerLink="/" class="ax-auth-back">
+        <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        {{ 'back_to_website' | translate }}
+      </a>
+
+      <div class="ax-auth-panel">
+        <div class="ax-auth-header">
+          <img class="ax-auth-logo" src="assets/img/abayti.png" alt="Abayti" />
+          <app-language-switcher></app-language-switcher>
+        </div>
+
+        <!-- Step indicator -->
+        <div class="ax-px-6 ax-py-3" style="border-bottom: 1px solid var(--ax-color-border-subtle); background-color: var(--ax-color-bg-canvas);">
+          <div class="ax-flex ax-items-center ax-gap-2">
+            <span class="ax-flex ax-items-center ax-gap-2 ax-text-xs"
+                  [class.ax-text-brand]="!ui_controls.confirmed && !ui_controls.validated"
+                  [class.ax-text-tertiary]="ui_controls.confirmed || ui_controls.validated">
+              <span class="ax-badge"
+                    [class.ax-badge-brand]="!ui_controls.confirmed"
+                    [class.ax-badge-success]="ui_controls.confirmed">
+                {{ ui_controls.confirmed ? '✓' : '1' }}
+              </span>
+              <span class="ax-font-medium">Email</span>
+            </span>
+            <span class="ax-flex-1" style="height: 1px; background: var(--ax-color-border-subtle);"></span>
+            <span class="ax-flex ax-items-center ax-gap-2 ax-text-xs"
+                  [class.ax-text-brand]="ui_controls.confirmed && !ui_controls.validated"
+                  [class.ax-text-tertiary]="!ui_controls.confirmed || ui_controls.validated">
+              <span class="ax-badge"
+                    [class.ax-badge-neutral]="!ui_controls.confirmed"
+                    [class.ax-badge-brand]="ui_controls.confirmed && !ui_controls.validated"
+                    [class.ax-badge-success]="ui_controls.validated">
+                {{ ui_controls.validated ? '✓' : '2' }}
+              </span>
+              <span class="ax-font-medium">Verify</span>
+            </span>
+            <span class="ax-flex-1" style="height: 1px; background: var(--ax-color-border-subtle);"></span>
+            <span class="ax-flex ax-items-center ax-gap-2 ax-text-xs"
+                  [class.ax-text-brand]="ui_controls.validated"
+                  [class.ax-text-tertiary]="!ui_controls.validated">
+              <span class="ax-badge"
+                    [class.ax-badge-neutral]="!ui_controls.validated"
+                    [class.ax-badge-brand]="ui_controls.validated">3</span>
+              <span class="ax-font-medium">Password</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Step 1: email -->
+        <div *ngIf="!ui_controls.confirmed && !ui_controls.validated" class="ax-auth-body">
+          <div>
+            <h1 class="ax-auth-title">{{ 'reset_password' | translate }}</h1>
+            <p class="ax-auth-subtitle">{{ 'enter_email_to_search' | translate }}</p>
+          </div>
+
+          <form (ngSubmit)="user_confirm()" method="post" class="ax-flex ax-flex-col ax-gap-3">
+            <div class="ax-form-field">
+              <label for="email" class="ax-label ax-label-required">{{ 'email' | translate }}</label>
+              <div class="ax-input-group">
+                <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">mail</span>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  class="ax-input"
+                  [(ngModel)]="reset.email"
+                  autocomplete="email"
+                  required />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              class="ax-btn ax-btn-primary ax-btn-lg ax-mt-2"
+              [disabled]="ui_controls.loading">
+              <span *ngIf="ui_controls.loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <span>{{ 'reset_password' | translate }}</span>
+            </button>
+          </form>
+
+          <p class="ax-auth-meta">
+            {{ 'have_account' | translate }}
+            <a routerLink="/login">{{ 'sign_in' | translate }}</a>
+          </p>
+        </div>
+
+        <!-- Step 2: OTP -->
+        <div *ngIf="ui_controls.confirmed && !ui_controls.validated" class="ax-auth-body">
+          <div>
+            <h1 class="ax-auth-title">{{ 'confirm_email' | translate }}</h1>
+            <p class="ax-auth-subtitle">{{ 'otp_message' | translate }}</p>
+          </div>
+
+          <form (ngSubmit)="user_validate()" method="post" class="ax-flex ax-flex-col ax-gap-3">
+            <div class="ax-form-field">
+              <label for="otp" class="ax-label ax-label-required">{{ 'otp' | translate }}</label>
+              <input
+                type="text"
+                id="otp"
+                name="otp"
+                class="ax-input"
+                style="font-size: 1.5rem; letter-spacing: 0.5rem; text-align: center; font-family: var(--ax-font-display); font-weight: 600;"
+                [(ngModel)]="confirm.input_otp"
+                maxlength="6"
+                inputmode="numeric"
+                pattern="\d*"
+                placeholder="••••••"
+                autocomplete="one-time-code"
+                required />
+            </div>
+
+            <button
+              type="submit"
+              class="ax-btn ax-btn-primary ax-btn-lg ax-mt-2"
+              [disabled]="ui_controls.loading">
+              <span *ngIf="ui_controls.loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <span>{{ 'validate' | translate }}</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Step 3: new password -->
+        <div *ngIf="ui_controls.confirmed && ui_controls.validated" class="ax-auth-body">
+          <div>
+            <h1 class="ax-auth-title">{{ 'set_a_new_password' | translate }}</h1>
+            <p class="ax-auth-subtitle">{{ 'otp_confirm' | translate }}</p>
+          </div>
+
+          <form (ngSubmit)="reset_password()" method="post" class="ax-flex ax-flex-col ax-gap-3">
+            <div class="ax-grid ax-grid-cols-2 ax-gap-3">
+              <div class="ax-form-field">
+                <label for="password" class="ax-label ax-label-required">{{ 'password' | translate }}</label>
+                <input
+                  [type]="fieldTextType ? 'text' : 'password'"
+                  id="password"
+                  name="password"
+                  class="ax-input"
+                  [(ngModel)]="r_password.password"
+                  autocomplete="new-password"
+                  required />
+              </div>
+              <div class="ax-form-field">
+                <label for="confirm_password" class="ax-label ax-label-required">{{ 'confirm_password' | translate }}</label>
+                <input
+                  [type]="fieldTextType ? 'text' : 'password'"
+                  id="confirm_password"
+                  name="confirm_password"
+                  class="ax-input"
+                  [(ngModel)]="r_password.confirm_password"
+                  autocomplete="new-password"
+                  required />
+              </div>
+            </div>
+
+            <label class="ax-check">
+              <input type="checkbox" (change)="fieldTextType = !fieldTextType" />
+              <span class="ax-check-box"></span>
+              <span class="ax-check-label">Show passwords</span>
+            </label>
+
+            <button
+              type="submit"
+              class="ax-btn ax-btn-primary ax-btn-lg ax-mt-2"
+              [disabled]="ui_controls.loading">
+              <span *ngIf="ui_controls.loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <span>{{ 'reset_password' | translate }}</span>
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

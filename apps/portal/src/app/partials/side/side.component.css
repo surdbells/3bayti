@@ -1,0 +1,7 @@
+.float_profile_card {
+  position: absolute;
+  bottom: 0;
+  left: 25px;
+  border: 1px solid #ddd;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}

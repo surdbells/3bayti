@@ -1,0 +1,15 @@
+<div class="chips-wrap" role="list">
+  @for (s of sizesList; track s) {
+    <ion-chip
+      class="size-chip"
+      [class.available]="s.available"
+      [class.unavailable]="!s.available"
+      [class.selected]="s.selected"
+      (click)="selectSize(s)"
+      [attr.aria-pressed]="s.selected"
+      [attr.aria-disabled]="!s.available"
+      role="button">
+      <ion-label>{{ s.label }}</ion-label>
+    </ion-chip>
+  }
+</div>

@@ -1,0 +1,88 @@
+/* =========================================================================
+   Bottom navigation — mobile-only, vendor app shell
+   ========================================================================= */
+
+.ax-bottom-nav {
+  /* Hidden on desktop — sidenav handles primary navigation there. */
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .ax-bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--ax-z-sidenav);
+
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+
+    background-color: var(--ax-color-bg-surface);
+    border-top: 1px solid var(--ax-color-border-subtle);
+    box-shadow: 0 -4px 12px rgba(46, 36, 28, 0.06);
+
+    /* iOS safe-area padding so labels aren't covered by the home indicator. */
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+.ax-bottom-nav-item {
+  flex: 1 1 0;
+  min-width: 0;
+  /* Stack icon over label, vertically centred */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+
+  /* Touch target ≥ 44px */
+  min-height: 56px;
+  padding: var(--ax-space-2) var(--ax-space-1);
+
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+  color: var(--ax-color-text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--ax-duration-fast) var(--ax-ease-out),
+              background-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+.ax-bottom-nav-item:hover {
+  color: var(--ax-color-text-primary);
+  background-color: var(--ax-color-bg-muted);
+}
+
+.ax-bottom-nav-item:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ax-color-border-focus);
+}
+
+.ax-bottom-nav-item .material-symbols-outlined {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.ax-bottom-nav-label {
+  font-size: 0.6875rem;
+  font-weight: var(--ax-fw-medium);
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+}
+
+.ax-bottom-nav-item-active,
+.ax-bottom-nav-item-active:hover {
+  color: var(--ax-color-text-brand);
+  background: transparent;
+}
+
+.ax-bottom-nav-item-active .material-symbols-outlined {
+  /* Subtle filled-icon look when active. Material Symbols supports a fill axis;
+     we approximate via font-variation-settings for a slightly weightier glyph. */
+  font-variation-settings: 'FILL' 1, 'wght' 500;
+}

@@ -1,0 +1,73 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'messages' | translate }}</ion-title>
+  </ion-toolbar>
+  <div class="m7-subtitle">{{ 'select_vendor_to_chat' | translate }}</div>
+</ion-header>
+
+<ion-content class="page-content ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Loading State -->
+  @if(isLoading){
+    <div class="vendor-list">
+      @for(i of [1,2,3,4]; track i){
+        <div class="vendor-card skeleton">
+          <div class="vendor-logo skeleton-box"></div>
+          <div class="vendor-info">
+            <div class="skeleton-text title-sk"></div>
+            <div class="skeleton-text subtitle-sk"></div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Vendor List -->
+  @if(!isLoading && vendors.length > 0){
+    <div class="vendor-list">
+      @for(vendor of vendors; track vendor.vendor_id){
+        <button type="button" class="vendor-card" (click)="selectVendor(vendor)">
+          <div class="vendor-logo">
+            @if(vendor.store_logo){
+              <img [src]="vendor?.store_logo || 'assets/images/store.png'" [alt]="vendor?.store_name || 'Store'">
+            } @else {
+              <div class="logo-placeholder">
+                <ax-icon name="store"></ax-icon>
+              </div>
+            }
+          </div>
+
+          <div class="vendor-info">
+            <h3 class="vendor-name">{{ vendor.store_name }}</h3>
+            <p class="vendor-meta">{{ vendor.order_count }} {{ vendor.order_count === 1 ? ('order' | translate) : ('orders' | translate) }}</p>
+          </div>
+
+          @if(vendor.total_unread > 0){
+            <div class="unread-badge">{{ vendor.total_unread }}</div>
+          }
+          <ax-icon name="chevron-right"></ax-icon>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Empty State -->
+  @if(!isLoading && vendors.length === 0){
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="message-square"></ax-icon>
+      </div>
+      <h3>{{ 'no_messages_yet' | translate }}</h3>
+      <p>{{ 'no_messages_description' | translate }}</p>
+      <button type="button" class="shop-btn" (click)="goToShop()">{{ 'start_shopping' | translate }}</button>
+    </div>
+  }
+</ion-content>

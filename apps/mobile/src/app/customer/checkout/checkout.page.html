@@ -1,0 +1,223 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/cart']" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'button_checkout' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="user_wishlist()" fill="clear" class="m7-header-action">
+        <ax-icon name="heart"/>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg ion-padding-horizontal">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  <!-- Info notices -->
+  <div class="info-notice">{{ 'review_info' | translate }}</div>
+  <div class="info-notice">{{ 'delivery_time_multiple' | translate }}</div>
+
+  <ion-accordion-group class="ion-margin-vertical" #accordionGroup [value]="['first']">
+    <ion-accordion value="first">
+      <ion-item slot="header" color="light">
+        <ion-label>{{ 'delivery_info' | translate }}</ion-label>
+      </ion-item>
+      <div class="ion-padding" slot="content">
+        @if (!ui_controls.is_loading){
+          <ion-row>
+            <ion-col>
+              <ax-text-field
+                [label]="'label_name' | translate"
+                type="text"
+                [maxlength]="15"
+                autocomplete="name"
+                [(ngModel)]="update.name"
+                name="name">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>
+              <ax-text-field
+                [label]="'label_phone' | translate"
+                type="tel"
+                inputmode="numeric"
+                autocomplete="tel-national"
+                [(ngModel)]="update.phone"
+                name="phone">
+              </ax-text-field>
+            </ion-col>
+            <ion-col>
+              <ax-text-field
+                [label]="'label_email' | translate"
+                type="email"
+                autocomplete="email"
+                [(ngModel)]="update.email"
+                name="email">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>
+              <label class="checkout-field-label">{{ 'label_city' | translate }}</label>
+              <ion-button expand="block" class="ion-margin-vertical" type="button" (click)="isCityOpen = true">
+                <span class="cc-code">{{ update.city }}</span>
+                <ax-icon name="chevron-down" slot="end" [style.color]="'var(--ion-color-secondary)'"/>
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              @if (ui_controls.is_loading_area) {
+                <div class="loader-row">
+                  <ax-loader></ax-loader>
+                </div>
+              }
+              @if (!ui_controls.is_loading_area) {
+                <label class="checkout-field-label">{{ 'label_area' | translate }}</label>
+                <ion-button expand="block" class="ion-margin-vertical" type="button" (click)="isAreaOpen = true">
+                  <span class="cc-code">{{ update.area }}</span>
+                  <ax-icon name="chevron-down" slot="end" [style.color]="'var(--ion-color-secondary)'"/>
+                </ion-button>
+              }
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>
+              <ax-place-autocomplete
+                [label]="'label_street_address' | translate"
+                [placeholder]="'placeholder_search_address' | translate"
+                autocomplete="street-address"
+                [(ngModel)]="update.street"
+                name="street"
+                (placeSelected)="onPlaceSelected($event)">
+              </ax-place-autocomplete>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>
+              <ax-text-field
+                [label]="'label_villa_number' | translate"
+                type="text"
+                [(ngModel)]="update.villa_number"
+                name="villa_number">
+              </ax-text-field>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col>
+              @if (!ui_controls.is_updating) {
+                <ion-button (click)="update_billing()" expand="block" class="ion-margin-vertical" type="button"> {{ 'confirm_delivery_info' | translate }}
+                </ion-button>
+              }
+              @if (ui_controls.is_updating) {
+                <div class="loader-row">
+                  <ax-loader></ax-loader>
+                </div>
+              }
+            </ion-col>
+          </ion-row>
+        }
+      </div>
+    </ion-accordion>
+    <ion-accordion value="second">
+      <ion-item slot="header" color="light">
+        <ion-label>{{ 'order_summary' | translate }}</ion-label>
+      </ion-item>
+      <div class="ion-padding" slot="content">
+        @if (!ui_controls.is_loading){
+          <ion-card class="cart-card">
+            <ion-title class="cart-card__title">{{ 'order_summary' | translate }}</ion-title>
+            <ion-list lines="none" class="contact-list">
+              <ion-item lines="none" detail="false">
+                <ion-label>{{ 'label_items' | translate }}</ion-label>
+                <ion-text slot="end">{{bill.count}}</ion-text>
+              </ion-item>
+              <ion-item lines="none" detail="false">
+                <ion-label>{{ 'label_delivery_fee' | translate }}</ion-label>
+                Ð{{ bill.f_delivery }}
+              </ion-item>
+              <ion-item detail="false">
+                <ion-label>{{ 'label_discount' | translate }}</ion-label>
+                <ion-text slot="end">
+                  Ð{{ bill.f_discount }}
+                </ion-text>
+              </ion-item>
+              <ion-item lines="none" detail="false">
+                <ion-label>{{ 'label_sub_total' | translate }}</ion-label>
+                <ion-text slot="end">
+                  Ð{{ bill.f_subtotal }}
+                </ion-text>
+              </ion-item>
+              <ion-item detail="false">
+                <hr class="summary-divider" />
+              </ion-item>
+              <ion-item lines="none" detail="false">
+                <ion-label>{{ 'label_total' | translate }}</ion-label>
+                <ion-text slot="end">
+                  Ð{{ bill.total }}
+                </ion-text>
+              </ion-item>
+            </ion-list>
+          </ion-card>
+        }
+      </div>
+    </ion-accordion>
+  </ion-accordion-group>
+
+  <ion-button (click)="checkout_initiate()" expand="block" class="checkout-cta ion-margin-vertical" type="button">
+    <ax-icon name="shopping-cart" slot="start" />
+    {{ 'button_checkout' | translate }}
+  </ion-button>
+
+  @if (ui_controls.checking_out){
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  @if (!ui_controls.is_loading) {
+    <ax-bottom-sheet
+      [isOpen]="isCityOpen"
+      (didDismiss)="isCityOpen = false"
+      [snapPoints]="[0.5, 0.9]"
+      [initialSnap]="0"
+      [title]="'title_select_city' | translate">
+
+      <ul class="picker-list">
+        @for (cities of city; track cities) {
+          <li class="picker-list__item" (click)="selectCode(cities.name, cities.city_ID); isCityOpen = false" role="button" tabindex="0">
+            <span class="picker-list__name">{{ cities.name }}</span>
+          </li>
+        }
+      </ul>
+    </ax-bottom-sheet>
+  }
+  @if (!ui_controls.is_loading_area) {
+    <ax-bottom-sheet
+      [isOpen]="isAreaOpen"
+      (didDismiss)="isAreaOpen = false"
+      [snapPoints]="[0.5, 0.9]"
+      [initialSnap]="0"
+      [title]="'title_select_area' | translate">
+
+      <ul class="picker-list">
+        @for (areas of area; track areas) {
+          <li class="picker-list__item" (click)="selectArea(areas.name); isAreaOpen = false" role="button" tabindex="0">
+            <span class="picker-list__name">{{ areas.name }}</span>
+          </li>
+        }
+      </ul>
+    </ax-bottom-sheet>
+  }
+</ion-content>

@@ -1,0 +1,1512 @@
+@use '@angular/cdk/overlay-prebuilt.css';
+
+/* Abayti mobile design tokens — must load before any rule that consumes them.
+   Defined as :root CSS custom properties; SCSS doesn't transform them. */
+@use 'app/shared/ax-mobile/tokens';
+/*
+ * App Global CSS
+ * ----------------------------------------------------------------------------
+ * Put style rules here that you want to apply globally. These styles are for
+ * the entire app and not just one component. Additionally, this file can be
+ * used as an entry point to import other CSS/Sass files to be included in the
+ * output CSS.
+ * For more information on global stylesheets, visit the documentation:
+ * https://ionicframework.com/docs/layout/global-stylesheets
+ */
+
+/* Core CSS required for Ionic components to work properly */
+@import "@ionic/angular/css/core.css";
+
+/* Basic CSS for apps built with Ionic */
+@import "@ionic/angular/css/normalize.css";
+@import "@ionic/angular/css/structure.css";
+@import "@ionic/angular/css/typography.css";
+@import "@ionic/angular/css/display.css";
+
+/* Optional CSS utils that can be commented out */
+@import "@ionic/angular/css/padding.css";
+@import "@ionic/angular/css/float-elements.css";
+@import "@ionic/angular/css/text-alignment.css";
+@import "@ionic/angular/css/text-transformation.css";
+@import "@ionic/angular/css/flex-utils.css";
+
+/**
+ * Ionic Dark Mode
+ * -----------------------------------------------------
+ * For more info, please see:
+ * https://ionicframework.com/docs/theming/dark-mode
+ */
+
+/* @import "@ionic/angular/css/palettes/dark.always.css"; */
+/* @import "@ionic/angular/css/palettes/dark.class.css"; */
+/* @import '@ionic/angular/css/palettes/dark.system.css'; */
+
+/* Body type. Display type is applied selectively via headings + .ax-display. */
+:root,
+body {
+  font-family: var(--ax-font-body);
+}
+
+/* Display type for headings and any element opting in via .ax-display */
+h1, h2, h3, h4, h5, h6,
+.ax-display,
+ion-toolbar ion-title {
+  font-family: var(--ax-font-display);
+  letter-spacing: var(--ax-ls-tight);
+}
+
+/* =========================================================================
+   M2c — Component pattern overrides
+   --------------------------------------------------------------------------
+   Per-component rules that complete the M2 design system. Color tokens
+   come from theme/variables.scss (set in M2b). Font and heading rules
+   are above (M2a). This block deals only with shape, spacing, motion,
+   and the few interaction states Ionic doesn't theme via CSS variables.
+
+   Locked design decisions consumed here:
+     - Buttons: 12px corners, 48px height, generous padding
+     - Cards: no border, soft warm shadow, white surface
+     - Toolbar: beige bg + Poltawski display title (sized + weighted here)
+     - Tab bar: white bg, espresso active, subtle warm top border
+     - Inputs: white, 1px warm border, brown focus ring
+   ========================================================================= */
+
+/* ----- Buttons ----- */
+ion-button {
+  --border-radius: var(--ax-radius-lg);    /* 12px */
+  --padding-start: var(--ax-space-6);      /* 24px */
+  --padding-end:   var(--ax-space-6);
+  --padding-top:    0;
+  --padding-bottom: 0;
+  --box-shadow: none;
+  height: 48px;
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-sm);              /* 14px */
+  font-weight: var(--ax-fw-medium);        /* 500 */
+  letter-spacing: var(--ax-ls-wide);       /* 0.04em */
+  text-transform: none;
+  --transition: background-color var(--ax-duration-base) var(--ax-ease-out);
+}
+
+/* Outline variant: 1px brown border, transparent bg, brown text */
+ion-button[fill="outline"] {
+  --border-color: var(--ax-color-border-default);
+  --border-width: 1px;
+  --color: var(--ax-color-text-primary);
+}
+
+/* Clear (text) variant: brown text only */
+ion-button[fill="clear"] {
+  --color: var(--ax-color-text-brand);
+}
+
+/* Smaller chip-like buttons keep proportional height */
+ion-button[size="small"] {
+  height: 36px;
+  --padding-start: var(--ax-space-4);
+  --padding-end:   var(--ax-space-4);
+  font-size: var(--ax-fs-xs);              /* 13px */
+}
+
+/* ----- Cards ----- */
+ion-card {
+  --background: var(--ax-color-bg-surface);
+  border: none;
+  border-radius: var(--ax-radius-lg);      /* 12px */
+  box-shadow: var(--ax-shadow-sm);
+  margin: var(--ax-space-3);               /* 12px */
+}
+
+ion-card-header {
+  padding: var(--ax-space-4);
+}
+
+ion-card-content {
+  padding: var(--ax-space-4);
+}
+
+ion-card-title {
+  font-family: var(--ax-font-display);
+  font-size: var(--ax-fs-lg);              /* 18px */
+  font-weight: var(--ax-fw-semibold);      /* 600 */
+  letter-spacing: var(--ax-ls-snug);
+  color: var(--ax-color-text-primary);
+}
+
+ion-card-subtitle {
+  font-size: var(--ax-fs-2xs);             /* 12px */
+  font-weight: var(--ax-fw-medium);
+  letter-spacing: var(--ax-ls-wider);      /* 0.08em — eyebrow */
+  text-transform: uppercase;
+  color: var(--ax-color-text-tertiary);
+}
+
+/* ----- Toolbar ----- */
+ion-toolbar {
+  --border-color: transparent;             /* clean toolbar, no underline */
+  --min-height: var(--ax-header-height);   /* 56px */
+  --padding-start: var(--ax-space-4);
+  --padding-end:   var(--ax-space-4);
+}
+
+ion-toolbar ion-title {
+  font-size: var(--ax-fs-lg);              /* 18px — title scale */
+  font-weight: var(--ax-fw-semibold);      /* 600 */
+  letter-spacing: var(--ax-ls-snug);
+}
+
+/* Toolbar buttons (back arrow, hamburger, etc.) */
+ion-toolbar ion-buttons ion-button {
+  --color: var(--ax-color-text-primary);
+  --background: transparent;
+  height: 40px;
+  width: 40px;
+}
+
+/* ----- Tab bar ----- */
+ion-tab-bar {
+  --background: var(--ion-tab-bar-background);
+  --border: 1px solid var(--ax-color-border-subtle);
+  height: var(--ax-tabbar-height);
+  padding-top: var(--ax-space-1);
+  padding-bottom: var(--ax-space-1);
+}
+
+ion-tab-button {
+  --color: var(--ion-tab-bar-color);
+  --color-selected: var(--ion-tab-bar-color-selected);
+  --padding-top: var(--ax-space-1);
+  --padding-bottom: var(--ax-space-1);
+  font-family: var(--ax-font-body);
+}
+
+ion-tab-button ion-label {
+  font-size: var(--ax-fs-3xs);             /* 11px — tight tab label */
+  font-weight: var(--ax-fw-regular);
+  margin-top: 2px;
+}
+
+ion-tab-button.tab-selected ion-label {
+  font-weight: var(--ax-fw-medium);        /* 500 — slight weight bump on active */
+}
+
+/* ----- Inputs ----- */
+ion-input,
+ion-textarea {
+  --background: var(--ax-color-bg-surface);
+  --border-color: var(--ax-color-border-default);
+  --border-width: 1px;
+  --border-radius: var(--ax-radius-md);    /* 8px */
+  --padding-start: var(--ax-space-4);
+  --padding-end:   var(--ax-space-4);
+  --padding-top:    var(--ax-space-3);
+  --padding-bottom: var(--ax-space-3);
+  --color: var(--ax-color-text-primary);
+  --placeholder-color: var(--ax-color-text-tertiary);
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-base);            /* 16px — prevents iOS zoom on focus */
+}
+
+ion-searchbar {
+  --background: var(--ax-color-bg-surface);
+  --color: var(--ax-color-text-primary);
+  --placeholder-color: var(--ax-color-text-tertiary);
+  --icon-color: var(--ax-color-text-tertiary);
+  --border-radius: var(--ax-radius-md);
+  --box-shadow: none;
+  padding: var(--ax-space-2) var(--ax-space-3);
+}
+
+/* ----- Items / Lists ----- */
+ion-item {
+  --background: var(--ion-item-background);
+  --border-color: var(--ax-color-border-subtle);
+  --color: var(--ax-color-text-primary);
+  --padding-start: var(--ax-space-4);
+  --inner-padding-end: var(--ax-space-4);
+  font-family: var(--ax-font-body);
+}
+
+ion-item ion-label {
+  font-family: var(--ax-font-body);
+}
+
+ion-list {
+  background: transparent;
+  padding: 0;
+}
+
+/* ----- Default surface ----- */
+ion-content {
+  --background: var(--ion-background-color);
+}
+
+/* ----- Action sheet (logout confirm, delete account, etc) -----
+   Ionic's defaults don't track our tokens, so without these overrides
+   the sheet stays white in dark mode with white button text — invisible.
+   Vars per https://ionicframework.com/docs/api/action-sheet */
+ion-action-sheet {
+  --background: var(--ax-color-bg-raised);
+  --color: var(--ax-color-text-secondary);  /* description / title color */
+
+  --button-background: transparent;
+  --button-background-activated: var(--ax-color-bg-muted);
+  --button-background-focused: var(--ax-color-bg-muted);
+  --button-background-hover: var(--ax-color-bg-muted);
+  --button-background-selected: var(--ax-color-bg-muted);
+
+  --button-color: var(--ax-color-text-primary);
+  --button-color-activated: var(--ax-color-text-primary);
+  --button-color-focused: var(--ax-color-text-primary);
+  --button-color-hover: var(--ax-color-text-primary);
+  --button-color-selected: var(--ax-color-text-brand);
+
+  /* Destructive actions — keep red in both themes for clarity */
+  .action-sheet-destructive {
+    color: var(--ax-color-text-danger) !important;
+  }
+}
+
+/* ----- Alert dialog ----- proactive: same problem as action sheet */
+ion-alert {
+  --background: var(--ax-color-bg-raised);
+  --color: var(--ax-color-text-primary);
+}
+
+/* End M2c overrides
+   ========================================================================= */
+
+.abayti_primary_background {
+  background-color: var(--ax-color-bg-brand);
+}
+
+.abayti_primary_color {
+  color: var(--ax-palette-beige-300);
+}
+.abayti_white {
+  color: var(--ax-palette-neutral-0) !important;
+}
+.abayti_secondary_background {
+  color: var(--ax-palette-neutral-0) !important;
+  background-color: var(--ax-color-bg-brand) !important;
+}
+.abayti_light_background {
+  color: var(--ax-palette-neutral-0) !important;
+  background-color: var(--ax-palette-brown-400) !important;
+}
+
+.abayti_secondary_color {
+  color: var(--ax-color-text-brand);
+}
+
+.back-chip{
+  position:absolute; top:10px; left:10px; z-index:2;
+  display:inline-flex; align-items:center; gap:6px;
+  padding:4px 10px; border-radius:9999px;
+  margin-bottom: 20px;
+  color: var(--ax-palette-neutral-0); text-decoration:none; font-weight:800; letter-spacing:.02em;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.35);
+  backdrop-filter: saturate(120%) blur(2px);
+}
+.back-chip tui-icon{ width:18px; height:18px; color: var(--ax-palette-neutral-0); }
+
+/* Search */
+.search-wrap {
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-top: 8px;
+
+  ion-searchbar {
+    --background: var(--ax-color-bg-surface);
+    --border-radius: var(--ax-radius-xl);
+    --box-shadow: var(--ax-shadow-sm);
+    --placeholder-color: var(--ax-color-text-tertiary);
+    --color: var(--text);
+    padding: 0;
+    height: 44px;
+  }
+
+  .filter-btn {
+    --background: var(--ax-color-bg-surface);
+    --border-radius: var(--ax-radius-lg);
+    --box-shadow: var(--ax-shadow-sm);
+    width: 44px;
+    height: 44px;
+    color: var(--accent);
+  }
+}
+
+/* Sections */
+.section {
+  .section-head {
+    h2 {
+      margin: 0;
+      font-size: 16px;
+      color: var(--ion-color-primary-contrast);
+      font-weight: 700;
+    }
+
+    ion-button {
+      --color: var(--muted);
+      text-transform: none;
+      font-weight: 500;
+      letter-spacing: 0;
+      padding-inline: 0;
+      height: auto;
+    }
+  }
+}
+
+ion-toolbar {
+  --background: transparent !important;
+  --border-style: none;
+}
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 350px;
+  ion-card {
+    max-width: 320px;
+    width: 100%;
+    box-shadow: var(--ion-box-shadow);
+    border-radius: 1rem;
+  }
+  ion-card-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    h2 {
+      margin-top: 0.75rem;
+      font-weight: 600;
+    }
+
+    p {
+      font-size: 0.9rem;
+      color: var(--ion-color-medium);
+      margin: 0.5rem 0 1rem;
+    }
+  }
+}
+
+ion-content.page-bg {
+  /* Ionic supports setting background via a CSS var */
+  --background: var(--ax-color-bg-canvas);
+}
+
+
+/* Landscape override (optional) */
+@media (orientation: landscape) {
+  ion-content.page-bg {
+    --background: var(--ax-color-bg-canvas);
+  }
+}
+
+/* Tablet-specific tweaks (optional) */
+@media (min-width: 768px) {
+  ion-content.page-bg {
+    /* you can choose a tablet-optimized asset here if needed */
+    /* --background: var(--ax-color-bg-canvas); */
+  }
+}
+
+.transparent-modal {
+  --background: transparent;
+}
+
+ion-tab-button  {
+  background-color: transparent;
+}
+.custom-list {
+  background: transparent !important;
+  ion-item {
+    --background: var(--ax-color-bg-surface);
+    --inner-border-width: 0;
+    --padding-start: 12px;
+    --padding-end: 12px;
+    --min-height: 54px;
+    border-radius: var(--ax-radius-lg);
+    margin: 8px 0;
+    box-shadow: var(--ax-shadow-sm);
+    backdrop-filter: blur(6px);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--ax-shadow-md);
+    }
+
+    ion-icon[slot="start"] {
+      font-size: 22px;
+      color: var(--ax-color-bg-brand); /* brand brown */
+      margin-right: 12px;
+    }
+
+    ion-icon[slot="end"] {
+      font-size: 18px;
+      color: var(--ax-color-text-tertiary);
+    }
+
+    ion-label {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--ax-color-text-primary);
+    }
+  }
+}
+.abayti_border {
+  border: 2px solid var(--ax-palette-brown-400);
+  border-radius: var(--radius-2xl);
+}
+
+ion-header.ios ion-toolbar {
+  --min-height: 46px;
+}
+ion-header.md ion-toolbar {
+  --min-height: 50px;
+}
+
+/* ============================================================
+   M7-1 — Tab bar / footer (moved from account.page.scss)
+   These styles apply to any page using the m6f-* class names
+   on its <ion-footer> + <ion-tab-bar> + <ion-tab-button>
+   structure. Originally introduced in M6f-1 for account.page;
+   moved here in M7-1 so it can be reused across all pages
+   that previously had the deep-red #7C2108 footer.
+   ============================================================ */
+
+/* ============================================================
+   M6f — Tab bar + wishlist modal
+   ============================================================ */
+
+/* Footer wrapper — white background replaces the deep red #7C2108
+   that was on every page. The 0.5px top border separates the tab
+   bar from content above without being heavy. */
+.m6f-footer {
+  background: var(--ax-color-bg-surface);  /* white */
+
+  /* Ionic safe-area handling preserved: the original had
+     padding-bottom: 15px to clear iOS home indicator area;
+     keep this generous bottom padding. */
+  padding-bottom: 15px;
+}
+
+.m6f-tab-bar {
+  /* Override Ionic's default tab-bar styling */
+  --background: var(--ax-color-bg-surface);
+  --border: 0.5px solid var(--ax-color-border-subtle);
+  --color: var(--ax-color-text-tertiary);
+  /* Active color is set per-tab below since we don't bind to
+     route — see comment in the .m6f-tab--active block. */
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+/* Each tab — by default muted grey. */
+.m6f-tab {
+  --color: var(--ax-color-text-tertiary);
+  --color-selected: var(--ax-color-text-tertiary);
+  --background: transparent;
+  --background-focused: transparent;
+  --background-hover: transparent;
+  --ripple-color: transparent;
+
+  ax-icon {
+    font-size: 22px;
+    color: var(--ax-color-text-tertiary);  /* #a8a092 */
+  }
+
+  ion-label {
+    font-family: inherit;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--ax-color-text-tertiary);
+    margin-top: 4px;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+}
+
+/* Active tab — brown accent. The active state is currently
+   driven by a hardcoded class on the Home tab (the existing
+   production behavior was an underline on the Home label,
+   never updated based on route). When a route-driven active
+   state is wired up later, this class can be applied dynamically
+   via [class.m6f-tab--active] on each <ion-tab-button>. */
+.m6f-tab--active {
+  ax-icon {
+    color: var(--ax-color-bg-brand);  /* #906952 */
+  }
+
+  ion-label {
+    color: var(--ax-color-bg-brand);
+    font-weight: 500;
+  }
+
+  position: relative;
+
+  /* 2px brown underline 6px below the label */
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--ax-color-bg-brand);
+  }
+}
+
+/* ============================================================
+   M7-2 — Page header inner classes (shared by all variants)
+   These classes (.m7-title, .m7-header-back, .m7-header-action)
+   are reused by all three M7 header style variants
+   (.m7-header-shadow, .m7-header-pill, .m7-floating-buttons).
+   Defined once here, used everywhere.
+   ============================================================ */
+
+/* Title — Poltawski regular, sentence case, single line ellipsis */
+.m7-title {
+  font-family: var(--ax-font-display);  /* Poltawski Nowy */
+  font-weight: 400;
+  font-size: 17px;
+  letter-spacing: -0.005em;
+  color: var(--ax-color-text-primary);
+  text-align: center;
+  /* Ionic default behavior: center on iOS, left-align on Android.
+     Forcing center for consistency. The title still respects the
+     space taken by start/end buttons via Ionic's flex layout. */
+}
+
+/* Back button — 44x44 tappable area, plain transparent bg, no
+   shadow, no circle. Just the icon. Contrast comes from the bg
+   border below, not from a chrome shape on the button itself. */
+.m7-header-back {
+  --color: var(--ax-color-text-primary);
+  --background: transparent;
+  --background-hover: transparent;
+  --background-focused: transparent;
+  --background-activated: rgba(28, 25, 22, 0.06);
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+
+  ax-icon {
+    font-size: 22px;
+    color: var(--ax-color-text-primary);
+  }
+}
+
+/* Right-side action button — same chrome treatment as the back
+   button. Lucide-stroke icons at 22px in body color. No circle,
+   no shadow. */
+.m7-header-action {
+  --color: var(--ax-color-text-primary);
+  --background: transparent;
+  --background-hover: transparent;
+  --background-focused: transparent;
+  --background-activated: rgba(28, 25, 22, 0.06);
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+
+  ax-icon {
+    font-size: 22px;
+    color: var(--ax-color-text-primary);
+  }
+}
+
+
+/* ============================================================
+   M7-2 redux — Three header styles
+   ============================================================
+   Three independently usable header patterns. Each handles
+   safe-area-inset-top automatically (iOS notch / Dynamic
+   Island / Android cutout) via env(safe-area-inset-top).
+
+   Pick one per page based on the page's needs:
+
+   A) .m7-header-shadow   — full-width white header with soft
+                            warm-brown shadow underneath. Safe
+                            default for content-pages with text/
+                            list content directly under the
+                            header. No border, just shadow.
+
+   B) .m7-header-floating — no header bar at all, just floating
+                            circular white buttons over the page
+                            background. For image-led pages
+                            (product detail, single, hero pages)
+                            where the content already provides
+                            visual context. Title goes IN page
+                            content, not the header.
+
+   C) .m7-header-pill     — single rounded white pill containing
+                            back + title + actions, sitting on
+                            the page background with side margins.
+                            Most distinctive look, more designed.
+
+   Common inner classes (shared by A and C):
+     .m7-toolbar          — toolbar styling (backgrounds, height)
+     .m7-title            — Poltawski Nowy regular 17px
+     .m7-header-back      — 44x44 transparent back button (A)
+     .m7-header-action    — 44x44 transparent action button (A)
+     .m7-btn-shadow       — 44x44 white circle button + shadow,
+                            used by B and C variants
+
+   All three keep page-specific click handlers and content
+   verbatim. Switch styles by changing the class on <ion-header>
+   only. Inner content layout stays the same.
+
+   Usage examples:
+
+   <!-- Style A — shadow header (cart-like pages) -->
+   <ion-header class="m7-header-shadow ion-no-border">
+     <ion-toolbar class="m7-toolbar ion-no-border">
+       <ion-buttons slot="start">
+         <ion-button class="m7-header-back" (click)="back()">
+           <ax-icon name="arrow-left" />
+         </ion-button>
+       </ion-buttons>
+       <ion-title class="m7-title">Page title</ion-title>
+       <ion-buttons slot="end">
+         <ion-button class="m7-header-action" (click)="...">
+           <ax-icon name="heart" />
+         </ion-button>
+       </ion-buttons>
+     </ion-toolbar>
+   </ion-header>
+
+   <!-- Style B — floating buttons (image-led pages) -->
+   <!-- Place at top of <ion-content> as a floating overlay, NOT
+        inside <ion-header>. Two raw buttons, page bg shows. -->
+   <div class="m7-floating-buttons">
+     <ion-button class="m7-btn-shadow" (click)="back()">
+       <ax-icon name="arrow-left" />
+     </ion-button>
+     <ion-button class="m7-btn-shadow" (click)="...">
+       <ax-icon name="heart" />
+     </ion-button>
+   </div>
+
+   <!-- Style C — rounded pill (any page) -->
+   <ion-header class="m7-header-pill ion-no-border">
+     <ion-toolbar class="m7-pill-toolbar ion-no-border">
+       <!-- pill wraps the toolbar contents -->
+       <ion-buttons slot="start">
+         <ion-button class="m7-header-back" (click)="back()">
+           <ax-icon name="arrow-left" />
+         </ion-button>
+       </ion-buttons>
+       <ion-title class="m7-title">Page title</ion-title>
+       <ion-buttons slot="end">
+         <ion-button class="m7-header-action" (click)="...">
+           <ax-icon name="heart" />
+         </ion-button>
+       </ion-buttons>
+     </ion-toolbar>
+   </ion-header>
+   ============================================================ */
+
+/* ----- Option A: soft-shadow header ----- */
+
+.m7-header-shadow {
+  background: var(--ax-color-bg-surface);  /* surface color extends INTO the
+     safe-area visually because ion-toolbar's own safe-area inset takes
+     room INSIDE this header element. The header's background covers
+     the whole area including the status-bar inset, so we don't need
+     a manual padding-top here — Ionic's toolbar handles the inset. */
+
+  ion-toolbar.m7-toolbar {
+    --background: var(--ax-color-bg-surface);
+    --border-width: 0;  /* no hairline border, shadow does the work */
+    --color: var(--ax-color-text-primary);
+    --min-height: 56px;
+    --padding-start: 4px;
+    --padding-end: 4px;
+  }
+
+  /* Two-layer warm-brown shadow — same recipe as M6d-fix1 product
+     cards. Tight contact + softer ambient. Brown-tinted (not
+     neutral grey) to harmonize with the M2 palette. */
+  box-shadow: 0 2px 8px rgba(46, 36, 28, 0.06),
+              0 1px 2px rgba(46, 36, 28, 0.04);
+
+  /* Position relative + z-index so the shadow renders above the
+     content scrolling beneath. Without this, ion-content's
+     background can clip the shadow. */
+  position: relative;
+  z-index: 10;
+}
+
+/* ----- Option B: floating buttons ----- */
+
+.m7-floating-buttons {
+  /* Container that positions 1-3 floating buttons across the top
+     of the page. Sits inside <ion-content> as a sticky overlay
+     so it stays pinned at the top while page content scrolls
+     underneath. This is the standard mobile pattern for image-
+     led detail pages (Apple Music, Spotify, Net-a-Porter). */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: env(safe-area-inset-top, 0) 12px 0 12px;
+  /* Extra top space below the safe-area inset so buttons sit
+     visually below the status bar, not flush against it. */
+  margin-top: 8px;
+  pointer-events: none;  /* container ignores taps; buttons re-enable */
+
+  /* Sticky positioning: stays pinned at the top edge of
+     <ion-content> while content scrolls behind it. Requires
+     <ion-content> to allow sticky children (default behavior). */
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  > * {
+    pointer-events: auto;  /* re-enable taps on actual buttons */
+  }
+
+  /* When there's only a back button (no end actions), pin it
+     left and don't stretch. */
+  &.has-back-only {
+    justify-content: flex-start;
+  }
+}
+
+/* ----- Option C: rounded pill header ----- */
+
+.m7-header-pill {
+  background: transparent;  /* page bg shows through */
+  /* Safe area handled OUTSIDE the pill — the pill itself doesn't
+     extend into the safe area. The header just gets enough top
+     padding to push the pill below the notch. */
+  padding-top: calc(env(safe-area-inset-top, 0) + 8px);
+  padding-bottom: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+
+  ion-toolbar.m7-pill-toolbar {
+    /* The pill itself: rounded white card */
+    --background: var(--ax-color-bg-surface);
+    --border-radius: 28px;  /* pill shape */
+    --border-width: 0;
+    --min-height: 52px;  /* slightly tighter than m7-toolbar */
+    --padding-start: 6px;
+    --padding-end: 6px;
+
+    /* Stronger shadow than option A because the pill needs to
+     visually float on the page bg (which may be beige, white,
+     or any other color). */
+    box-shadow: 0 4px 16px rgba(46, 36, 28, 0.10),
+                0 1px 3px rgba(46, 36, 28, 0.05);
+    border-radius: 28px;  /* in case the CSS var doesn't apply */
+    overflow: hidden;
+  }
+
+  /* Title in pill is slightly smaller — pill is tighter overall */
+  .m7-title {
+    font-size: 16px;
+  }
+}
+
+/* ----- Shared white-circle button (used by B and C variants) ----- */
+
+.m7-btn-shadow {
+  --background: var(--ax-color-bg-surface);
+  --background-hover: var(--ax-palette-neutral-0);
+  --background-focused: var(--ax-palette-neutral-0);
+  --background-activated: rgba(28, 25, 22, 0.06);
+  --color: var(--ax-color-text-primary);
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+
+  /* Floating shadow — slightly stronger than option A's header
+     shadow because these buttons stand alone, not on a header
+     bar. The shadow gives them lift. */
+  box-shadow: 0 2px 8px rgba(46, 36, 28, 0.08),
+              0 1px 2px rgba(46, 36, 28, 0.04);
+
+  ax-icon {
+    font-size: 20px;  /* slightly smaller than m7-header-back */
+    color: var(--ax-color-text-primary);
+  }
+}
+
+
+/* ============================================================
+   M7-3-listing — Filter chips + subtitle row
+   ============================================================
+   Used by listing pages with filter UI under the header
+   (best-sellers, category, new-arrivals, plus future pages
+   with the same shape).
+
+   The chips are white pills by default, brown-filled when
+   active. The subtitle row is small italic Inter in muted
+   grey — quiet, supplementary copy that tells the user
+   what they're looking at.
+
+   Place inside <ion-header class="m7-header-shadow"> AFTER
+   the <ion-toolbar> closes, so the subtitle and chips sit
+   below the title in the same white shadow area.
+
+   Usage:
+     <ion-header class="m7-header-shadow ion-no-border">
+       <ion-toolbar class="m7-toolbar ion-no-border"> ... </ion-toolbar>
+       <div class="m7-subtitle">Page tagline copy</div>
+       <div class="m7-filter-chips h-scroll">
+         <button class="m7-filter-chip"
+                 [class.m7-filter-chip--active]="selected === 'all'">
+           All
+         </button>
+         ...
+       </div>
+     </ion-header>
+   ============================================================ */
+
+.m7-subtitle {
+  font-family: inherit;
+  font-size: 12px;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--ax-color-text-tertiary);  /* #a8a092 */
+  text-align: center;
+  padding: 6px 16px 10px;
+  /* Sits below the toolbar, above the filter chips */
+}
+
+.m7-filter-chips {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding: 0 16px 12px;
+  /* Hide the scroll bar on mobile (utility shared with .h-scroll) */
+  &::-webkit-scrollbar { display: none; }
+  /* Allow children to bleed past the right edge for nice scroll feel */
+  scroll-padding-right: 16px;
+}
+
+.m7-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  background: var(--ax-color-bg-surface);  /* white */
+  border: 0.5px solid var(--ax-color-border-default);
+  border-radius: 999px;
+  padding: 7px 14px;
+  color: var(--ax-color-text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &:active {
+    background: var(--ax-palette-beige-100);
+  }
+}
+
+.m7-filter-chip--active {
+  background: var(--ax-color-bg-brand);  /* #906952 */
+  color: var(--ax-palette-neutral-0);  /* white */
+  border-color: var(--ax-color-bg-brand);
+
+  &:active {
+    /* Don't lighten on tap when already active — subtle press
+       feedback only via opacity. */
+    opacity: 0.85;
+  }
+}
+
+
+/* ============================================================
+   M6d — Product card (moved from account.page.scss in M7-4-2)
+   ============================================================
+   Used by account.page horizontal carousels (Best Sellers,
+   New Arrivals) and 2-column grids on listing pages
+   (best-sellers, category, new-arrivals). Width is fluid by
+   default; inside .h-scroll it's pinned to 158px.
+   ============================================================ */
+
+/* ============================================================
+   M6d — Section headers + product cards
+   ============================================================ */
+
+/* Section header — used by Best Sellers, New Arrivals, and the
+   redesigned Popular Stores in M6e. */
+.m6d-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 20px 4px 8px;
+  margin: 0;
+}
+
+.m6d-section-title {
+  font-family: var(--ax-font-display);  /* Poltawski Nowy */
+  font-weight: 400;
+  font-size: 22px;
+  color: var(--ax-color-text-primary);  /* #1c1916 */
+  letter-spacing: -0.005em;
+  margin: 0;
+  line-height: 1.2;
+}
+
+.m6d-show-all {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--ax-color-text-brand);  /* #614536 */
+  text-decoration: none;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  ax-icon {
+    font-size: 14px;
+  }
+}
+
+/* Product card — replaces the chrome-heavy .product-card. The image
+   IS the product; no surrounding border, shadow, or fill. Caption
+   sits below the image with no separator. */
+.m6d-product-card {
+  /* Width is fluid by default — fills its container. Used in
+     2-column grid on listing pages (best-sellers, category,
+     new-arrivals). Inside .h-scroll context (account.page
+     horizontal carousels), gets pinned to 158px so cards don't
+     stretch as the user scrolls. */
+  width: 100%;
+  background: var(--ax-color-bg-surface);  /* white */
+  border-radius: var(--ax-radius-lg);       /* 12px outer radius */
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06),
+              0 4px 12px rgba(46, 36, 28, 0.04);
+  overflow: hidden;  /* ensures image top corners respect parent radius */
+}
+
+.h-scroll .m6d-product-card {
+  /* Account.page horizontal carousels: fixed width so cards
+     don't stretch. flex-shrink:0 prevents flex sibling pressure. */
+  width: 158px;
+  flex-shrink: 0;
+}
+
+.m6d-img-wrap {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  background: var(--ax-color-bg-placeholder);  /* #ead9ca — warm neutral */
+  /* No standalone border-radius here — the parent .m6d-product-card's
+     border-radius + overflow:hidden gives the image rounded top corners.
+     Bottom of the image meets the caption area flush, no gap. */
+  overflow: hidden;
+
+  /* Skeleton overlay while image loads */
+  .m6d-img-skeleton {
+    position: absolute;
+    inset: 0;
+    background: var(--ax-color-bg-placeholder);
+    z-index: 2;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+
+    &.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    cursor: pointer;
+
+    &.loaded {
+      opacity: 1;
+    }
+  }
+
+  /* Wishlist heart-plus button — top-right of card image. The button
+     sits over the product image (which can be any color) so we need
+     it visible on both light and dark backgrounds. We use the surface
+     token (white in light, espresso-700 in dark) plus a soft shadow
+     so it always reads as a separate UI element. */
+  .m6d-like {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: var(--ax-color-bg-surface);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 3;
+    padding: 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18);
+    transition: background 0.15s ease;
+
+    &:active {
+      background: var(--ax-color-bg-raised);
+    }
+
+    ax-icon {
+      font-size: 14px;
+      color: var(--ax-color-text-brand);  /* dark in light mode, beige-300 in dark */
+    }
+  }
+
+  /* Vendor badge — bottom-left, dark translucent overlay */
+  .m6d-vendor-badge {
+    position: absolute;
+    left: 8px;
+    bottom: 8px;
+    padding: 3px 8px;
+    background: rgba(28, 25, 22, 0.7);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--ax-palette-neutral-0);
+    letter-spacing: 0;
+    text-transform: none;
+    z-index: 3;
+    max-width: calc(100% - 50px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.m6d-info {
+  padding: 12px 14px 14px;
+  cursor: pointer;
+}
+
+.m6d-name {
+  /* Single-line ellipsis truncation. Long product names get
+     clipped with "..." to keep card heights consistent across
+     the grid. Trade-off: information loss for very long names,
+     accepted in favor of clean grid alignment. */
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ax-color-text-primary);  /* #1c1916 */
+  line-height: 1.4;
+  margin: 0 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.m6d-price-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.m6d-price {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);  /* #1c1916 — dropped the deep red */
+  line-height: 1.4;
+}
+
+/* Add-to-cart button — small brown circle with plus icon, replaces
+   the inline 50-line SVG that used #7C2108 deep red. */
+.m6d-add-to-cart {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--ax-color-bg-brand);  /* #906952 */
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s ease;
+
+  &:active {
+    background: var(--ax-palette-brown-600);  /* #7a5844 */
+  }
+
+  ax-icon {
+    font-size: 14px;
+    color: var(--ax-palette-neutral-0);
+  }
+}
+
+/* End M6d styles */
+/* ============================================================ */
+
+
+/* ----- M6d flag badge (e.g. "NEW") — top-left of img-wrap ----- */
+.m6d-img-wrap .m6d-flag-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 3px 8px;
+  background: var(--ax-color-bg-brand);  /* #906952 brown */
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--ax-palette-neutral-0);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  z-index: 3;
+  line-height: 1;
+}
+
+
+/* ----- M7 header badge — passive count (e.g. total unread) ----- */
+.m7-header-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 11px;
+  background: var(--ax-color-bg-brand);  /* #906952 */
+  color: var(--ax-palette-neutral-0);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  margin-inline-end: 12px;
+  /* Distinct from .m7-header-action because this is a passive
+     count display, not a button. No padding/hover/tap states. */
+}
+
+
+/* ============================================================
+   M7 — Segment tabs (mutually-exclusive view switcher)
+   ============================================================
+   Pill-style segment tabs for switching between mutually-exclusive
+   views on the same page. Used by styles.page (Community / 3bayti
+   / My Styles). Different from filter chips in m7-filter-chips:
+   filter chips are additive selectors, segment tabs are
+   mutually-exclusive views.
+
+   Place inside <ion-header class="m7-header-shadow"> AFTER the
+   <ion-toolbar> closes, OR at the top of <ion-content> below the
+   header — same render either way. The container provides its
+   own pill-track background.
+
+   Usage:
+     <div class="m7-segment-tabs">
+       <button class="m7-segment-tab"
+               [class.m7-segment-tab--active]="activeTab === 'a'"
+               (click)="switch('a')">Tab A</button>
+       <button class="m7-segment-tab"
+               [class.m7-segment-tab--active]="activeTab === 'b'"
+               (click)="switch('b')">Tab B</button>
+       <button class="m7-segment-tab"
+               [class.m7-segment-tab--active]="activeTab === 'c'"
+               (click)="switch('c')">Tab C</button>
+     </div>
+   ============================================================ */
+
+.m7-segment-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 16px 12px;
+  background: var(--ax-color-bg-canvas);  /* warm beige track */
+  border-radius: 999px;
+}
+
+.m7-segment-tab {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
+  padding: 8px 4px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--ax-color-text-secondary);  /* muted by default */
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
+  white-space: nowrap;
+
+  &:active {
+    /* Subtle press feedback when not active */
+    opacity: 0.7;
+  }
+}
+
+.m7-segment-tab--active {
+  background: var(--ax-color-bg-surface);  /* white pill on beige track */
+  color: var(--ax-color-text-primary);
+  font-weight: 500;
+  /* Soft shadow for the lifted-pill effect */
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.08),
+              0 1px 1px rgba(46, 36, 28, 0.04);
+
+  &:active {
+    /* Already active — no opacity dip on tap */
+    opacity: 1;
+  }
+}
+
+
+
+/* ============================================================
+ * M38: Shared empty-state + loader-row utilities
+ *
+ * The .empty-state pattern was duplicated across 17+ pages.
+ * Pages had two minor variants of the icon wrapper class
+ * (.empty-icon-wrap on 11 pages, .empty-icon on 3 pages) and
+ * two heading levels (h2 on 12 pages, h3 on 7 pages). This
+ * rule covers both so any page using the standard structure
+ * picks up the same look without per-page styling.
+ *
+ * Page-level rules still apply via CSS specificity (page rules
+ * are equally-specific or more, so a page can override). New
+ * pages just adding markup get the right styling for free.
+ *
+ * CSS variables let pages tweak proportions without redeclaring
+ * the entire ruleset.
+ * ============================================================ */
+
+.empty-state {
+  --empty-state-padding: 60px 20px;
+  --empty-state-gap: 12px;
+  --empty-state-icon-size: 80px;
+  --empty-state-icon-margin-bottom: 20px;
+  --empty-state-text-max-width: 280px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--empty-state-padding);
+  gap: var(--empty-state-gap);
+
+  .empty-icon-wrap,
+  .empty-icon {
+    width: var(--empty-state-icon-size);
+    height: var(--empty-state-icon-size);
+    border-radius: 50%;
+    background: var(--ax-color-bg-brand-subtle);
+    color: var(--ax-color-text-brand);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--empty-state-icon-margin-bottom);
+
+    /* ax-icon inherits color from parent */
+    ax-icon {
+      color: var(--ax-color-text-brand);
+    }
+  }
+
+  h2,
+  h3 {
+    font-family: var(--ax-font-display);
+    font-size: 18px;
+    font-weight: 400;  /* Tier 3 default; Tier 4 pages can override to 700 */
+    color: var(--ax-color-text-primary);
+    margin: 0;
+    line-height: 1.3;
+  }
+
+  p {
+    font-size: 14px;
+    color: var(--ax-color-text-secondary);
+    margin: 0;
+    max-width: var(--empty-state-text-max-width);
+    line-height: 1.5;
+  }
+}
+
+.loader-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+/* End M38 utilities */
+
+
+/* ============================================================
+ * M39: Shared status-screen utility
+ *
+ * Used by failed/success/process pages — full-viewport centered
+ * status messages with optional illustration, heading, body,
+ * and one or more CTA buttons. Vertically + horizontally centered
+ * via flex (replaces hand-tweaked margin-top: 25%/30% hacks).
+ * ============================================================ */
+
+.status-screen {
+  --status-screen-padding: 32px 24px;
+  --status-screen-illustration-size: 200px;
+  --status-screen-content-max-width: 360px;
+  --status-screen-gap: 16px;
+
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--status-screen-padding);
+  gap: var(--status-screen-gap);
+
+  .status-illustration {
+    width: var(--status-screen-illustration-size);
+    height: var(--status-screen-illustration-size);
+    object-fit: contain;
+    margin-bottom: 8px;
+  }
+
+  .status-spinner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+  }
+
+  h1, h2 {
+    font-family: var(--ax-font-display);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--ax-color-text-primary);
+    margin: 0;
+    line-height: 1.3;
+    max-width: var(--status-screen-content-max-width);
+  }
+
+  p {
+    font-size: 14px;
+    color: var(--ax-color-text-secondary);
+    margin: 0;
+    max-width: var(--status-screen-content-max-width);
+    line-height: 1.5;
+  }
+
+  .status-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    max-width: 280px;
+    margin-top: 8px;
+  }
+}
+
+/* End M39 utilities */
+
+
+/* ============================================================
+ * M44: Shared skeleton shimmer keyframe + baseline overlay
+ *
+ * The .skeleton-shimmer pattern is duplicated across 8 pages
+ * with near-identical bodies, plus an additional 6 pages have
+ * @keyframes shimmer with no .skeleton-shimmer rule. Total of
+ * 14 duplicate keyframe definitions across the app.
+ *
+ * This rule covers all of them. Per-page rules still cascade
+ * so any page that wants a stronger or weaker shimmer (e.g.
+ * vertican uses 0.08, product uses 0.40) can override the
+ * --skeleton-shimmer-color CSS variable.
+ *
+ * NOTE: This is foundation-only. The page-level .skeleton-text,
+ * .skeleton-card, .skeleton-box, .skeleton-pager, etc rules
+ * are NOT extracted because their structure varies too much
+ * across pages (each page's skeleton matches its own card
+ * shape). Per-page deduplication of those is deferred.
+ * ============================================================ */
+
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.skeleton-shimmer {
+  --skeleton-shimmer-color: rgba(255, 255, 255, 0.35);
+
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--skeleton-shimmer-color) 50%,
+    transparent 100%
+  );
+  animation: shimmer 1.5s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
+}
+
+/* End M44 utilities */
+
+
+/* ============================================================
+ * M59: Tiny replacement for animate.css's animate__fadeIn
+ *
+ * The animate.css library was used in just 4 places across the
+ * codebase, all for a single one-time mount-time fade-in. The
+ * full library is ~3000 lines of CSS for hundreds of effects
+ * we don't use; this 9-line drop-in replacement replaces all
+ * usage of `animate__animated animate__fadeIn` and lets us
+ * drop the dependency.
+ * ============================================================ */
+
+@keyframes app-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.app-fade-in {
+  animation: app-fade-in 0.6s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-fade-in {
+    animation: none;
+  }
+}
+
+/* End M59 utility */

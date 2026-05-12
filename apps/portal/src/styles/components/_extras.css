@@ -1,0 +1,397 @@
+/* =========================================================================
+   Abayti Design System — Extra primitives for the dashboard PoC
+   .ax-stat-card, .ax-segment, .ax-table
+   ========================================================================= */
+
+
+/* ============== STAT CARD (KPI) ============== */
+.ax-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ax-space-3);
+  padding: var(--ax-space-5) var(--ax-space-6);
+  background-color: var(--ax-color-bg-surface);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+  min-height: 9rem;
+  transition: transform var(--ax-duration-base) var(--ax-ease-out),
+              box-shadow var(--ax-duration-base) var(--ax-ease-out),
+              border-color var(--ax-duration-base) var(--ax-ease-out);
+  position: relative;
+  overflow: hidden;
+}
+.ax-stat-card-interactive {
+  cursor: pointer;
+}
+.ax-stat-card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--ax-color-border-strong);
+  box-shadow: var(--ax-shadow-md);
+}
+
+.ax-stat-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ax-space-3);
+}
+
+.ax-stat-card-label {
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-2xs);
+  font-weight: var(--ax-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--ax-ls-wider);
+  color: var(--ax-color-text-tertiary);
+}
+
+.ax-stat-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--ax-radius-md);
+  background-color: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
+  flex-shrink: 0;
+}
+.ax-stat-card-icon .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+.ax-stat-card-value {
+  font-family: var(--ax-font-display);
+  font-size: var(--ax-fs-4xl);
+  font-weight: var(--ax-fw-semibold);
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--ax-color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ax-stat-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ax-space-3);
+  margin-top: auto;
+}
+
+.ax-stat-card-delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-medium);
+  color: var(--ax-color-text-success);
+}
+.ax-stat-card-delta-down { color: var(--ax-color-text-danger); }
+.ax-stat-card-delta-flat { color: var(--ax-color-text-tertiary); }
+
+.ax-stat-card-caption {
+  font-size: var(--ax-fs-xs);
+  color: var(--ax-color-text-tertiary);
+}
+
+/* Inline sparkline container */
+.ax-stat-card-spark {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 9rem;
+  height: 3rem;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* Brand variant — a single card can be elevated to hero treatment */
+.ax-stat-card-brand {
+  background: linear-gradient(135deg, var(--ax-palette-brown-500) 0%, var(--ax-palette-brown-700) 100%);
+  border-color: transparent;
+  color: var(--ax-color-text-on-brand);
+}
+.ax-stat-card-brand .ax-stat-card-label,
+.ax-stat-card-brand .ax-stat-card-caption {
+  color: var(--ax-palette-beige-200);
+}
+.ax-stat-card-brand .ax-stat-card-value {
+  color: var(--ax-color-text-on-brand);
+}
+.ax-stat-card-brand .ax-stat-card-icon {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: var(--ax-palette-beige-100);
+}
+.ax-stat-card-brand .ax-stat-card-delta {
+  color: var(--ax-palette-beige-100);
+}
+
+
+/* ============== SEGMENT CONTROL (pill nav) ============== */
+/*
+  A horizontal group of buttons used as a tab switcher.
+  e.g. [ Dashboard | Platform | Recent Sales ]
+*/
+.ax-segment {
+  display: inline-flex;
+  padding: 0.25rem;
+  gap: 2px;
+  background-color: var(--ax-color-bg-sunken);
+  border-radius: var(--ax-radius-lg);
+  border: 1px solid var(--ax-color-border-subtle);
+}
+
+.ax-segment-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ax-space-2);
+  padding: 0.5rem 1rem;
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-medium);
+  color: var(--ax-color-text-secondary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--ax-radius-md);
+  cursor: pointer;
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out),
+              color var(--ax-duration-fast) var(--ax-ease-out);
+  white-space: nowrap;
+}
+
+.ax-segment-item:hover {
+  color: var(--ax-color-text-primary);
+  background-color: var(--ax-color-bg-surface);
+}
+
+.ax-segment-item.ax-segment-item-active,
+.ax-segment-item[aria-selected='true'] {
+  background-color: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-primary);
+  box-shadow: var(--ax-shadow-xs);
+}
+
+
+/* ============== TABLE ============== */
+.ax-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  background-color: var(--ax-color-bg-surface);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+}
+
+.ax-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-primary);
+}
+
+.ax-table thead th {
+  padding: var(--ax-space-4) var(--ax-space-5);
+  text-align: left;
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-2xs);
+  font-weight: var(--ax-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--ax-ls-wider);
+  color: var(--ax-color-text-tertiary);
+  background-color: var(--ax-color-bg-canvas);
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+  white-space: nowrap;
+}
+
+.ax-table tbody td {
+  padding: var(--ax-space-4) var(--ax-space-5);
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+  vertical-align: middle;
+}
+
+.ax-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.ax-table tbody tr {
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+.ax-table-hover tbody tr:hover {
+  background-color: var(--ax-color-bg-muted);
+}
+
+.ax-table-interactive tbody tr {
+  cursor: pointer;
+}
+
+.ax-table-compact thead th,
+.ax-table-compact tbody td {
+  padding: var(--ax-space-3) var(--ax-space-4);
+}
+
+/* Table empty state helper (row-level) */
+.ax-table-empty {
+  text-align: center;
+  padding: var(--ax-space-9) var(--ax-space-6);
+  color: var(--ax-color-text-tertiary);
+}
+
+
+/* ============== EMPTY STATE (block-level) ============== */
+.ax-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--ax-space-10) var(--ax-space-6);
+  gap: var(--ax-space-3);
+}
+
+.ax-empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background-color: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
+  margin-bottom: var(--ax-space-2);
+}
+.ax-empty-icon .material-symbols-outlined {
+  font-size: 1.75rem;
+}
+
+.ax-empty-title {
+  font-family: var(--ax-font-display);
+  font-size: var(--ax-fs-xl);
+  font-weight: var(--ax-fw-semibold);
+  color: var(--ax-color-text-primary);
+  margin: 0;
+}
+
+.ax-empty-description {
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-secondary);
+  max-width: 28rem;
+  line-height: var(--ax-lh-relaxed);
+  margin: 0;
+}
+
+
+/* ============== DROPDOWN (menu) ============== */
+/* Presentation only — toggle behavior wired by AxDropdownDirective in Phase 3.
+   Phase 1 uses minimal JS / native <details>/click for the topbar menu. */
+.ax-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.ax-dropdown-menu {
+  /* Visual chrome — applies whether the menu is a child of .ax-dropdown
+     or attached to a CDK overlay pane (via panelClass). */
+  z-index: var(--ax-z-dropdown);
+  min-width: 14rem;
+  padding: var(--ax-space-2);
+  background-color: var(--ax-color-bg-raised);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+  box-shadow: var(--ax-shadow-xl);
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity var(--ax-duration-fast) var(--ax-ease-out),
+              transform var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+/* Static positioning only applies in the legacy
+   <div class="ax-dropdown"><div class="ax-dropdown-menu"> pattern.
+   When attached to a CDK overlay pane, CDK supplies its own positioning. */
+.ax-dropdown > .ax-dropdown-menu {
+  position: absolute;
+  top: calc(100% + var(--ax-space-2));
+  right: 0;
+}
+
+.ax-dropdown > .ax-dropdown-menu-start {
+  right: auto;
+  left: 0;
+}
+
+.ax-dropdown.ax-dropdown-open > .ax-dropdown-menu,
+.ax-dropdown-menu.ax-dropdown-menu-open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.ax-dropdown-header {
+  padding: var(--ax-space-2) var(--ax-space-3);
+  font-size: var(--ax-fs-2xs);
+  font-weight: var(--ax-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--ax-ls-wider);
+  color: var(--ax-color-text-tertiary);
+}
+
+.ax-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-3);
+  width: 100%;
+  padding: 0.5rem 0.625rem;
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-primary);
+  background: transparent;
+  border: 0;
+  border-radius: var(--ax-radius-sm);
+  cursor: pointer;
+  text-align: left;
+  text-decoration: none;
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-dropdown-item:hover {
+  background-color: var(--ax-color-bg-muted);
+  color: var(--ax-color-text-primary);
+}
+.ax-dropdown-item .material-symbols-outlined {
+  font-size: 1.1rem;
+  color: var(--ax-color-text-tertiary);
+}
+
+.ax-dropdown-item-danger {
+  color: var(--ax-color-text-danger);
+}
+.ax-dropdown-item-danger:hover {
+  background-color: var(--ax-color-bg-danger-subtle);
+  color: var(--ax-color-text-danger);
+}
+.ax-dropdown-item-danger .material-symbols-outlined {
+  color: var(--ax-color-text-danger);
+}
+
+.ax-dropdown-divider {
+  height: 1px;
+  background-color: var(--ax-color-border-subtle);
+  margin: var(--ax-space-1) 0;
+}
+
+
+/* ============== ICON BUTTON WITH NOTIF DOT ============== */
+.ax-icon-btn-indicator {
+  position: relative;
+}
+.ax-icon-btn-indicator::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background-color: var(--ax-color-bg-danger);
+  border: 2px solid var(--ax-color-bg-surface);
+}

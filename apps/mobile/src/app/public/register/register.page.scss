@@ -1,0 +1,69 @@
+.h-100 { height: 100%; }
+
+ion-content.app-bg {
+  /* M2 beige canvas */
+  --background: var(--ax-color-bg-canvas);
+}
+
+@media (prefers-color-scheme: dark) {
+  ion-content.app-bg {
+    --background: var(--ax-color-bg-canvas);
+  }
+}
+
+@media (orientation: landscape) {
+  ion-content.app-bg {
+    --background: var(--ax-color-bg-canvas);
+  }
+}
+
+/* Header stack (logo + title + subtitle) */
+.stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-logo {
+  max-width: 160px;
+  height: auto;
+  margin-bottom: 0.5rem;
+}
+
+/* Title & subtitle — M2 typography (Poltawski display + Inter) */
+.title {
+  font-family: var(--ax-font-display);   /* Poltawski Nowy */
+  font-weight: 400;
+  font-size: 26px;
+  letter-spacing: -0.005em;
+  margin: 0;
+  color: var(--ax-color-text-primary);
+  line-height: 1.2;
+}
+
+.subtitle {
+  font-family: inherit;                  /* Inter */
+  font-weight: 400;
+  margin: 0.4rem 0 .6rem;
+  color: var(--ax-color-text-secondary);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Loader row — centered (matches login + reset pattern) */
+.loader-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+/* Terms-of-service modal: scale down body text on narrow screens */
+@media (max-width: 360px) {
+  div[dir="ltr"],
+  div[dir="rtl"] {
+    font-size: 13px !important;
+  }
+}

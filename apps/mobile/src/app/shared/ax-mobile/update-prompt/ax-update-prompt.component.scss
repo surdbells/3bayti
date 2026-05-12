@@ -1,0 +1,184 @@
+/* ============================================================================
+   AxUpdatePromptComponent — centered floating modal for force-update prompts
+
+   Visually distinct from AxBottomSheet:
+     - Centered (not bottom-aligned)
+     - No drag handle, no dismiss affordance
+     - Stronger backdrop opacity (this is a blocker, not a sheet)
+     - Tighter card with single primary CTA
+
+   All colors via semantic tokens so dark mode works automatically.
+   ============================================================================ */
+
+:host {
+  display: contents;
+}
+
+.ax-update-prompt {
+  /* Full-viewport overlay positioned above all app content. The 9999
+     z-index puts us above tab bars (z-1000), notification host (z-1500),
+     bottom sheets (z-1000), and Ionic's own modals/toasts (z-2000).
+     We're a hard blocker — nothing should sit on top of us. */
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  /* Respect notch / dynamic island so the card doesn't touch screen edge. */
+  padding-top: calc(24px + env(safe-area-inset-top, 0));
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0));
+}
+
+.ax-update-prompt__backdrop {
+  position: absolute;
+  inset: 0;
+  /* Stronger than typical sheet backdrop (rgba(0,0,0,0.4)) — makes
+     clear that the underlying app is non-interactive. */
+  background: rgba(0, 0, 0, 0.65);
+  /* Block pointer events so the user can't tap through to the page
+     behind us — even though there's no Cancel button, scrolls and
+     accidental taps shouldn't reach the app. */
+  pointer-events: auto;
+}
+
+.ax-update-prompt__card {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  background: var(--ax-color-bg-raised);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-2xl, 1.5rem);
+  box-shadow: var(--ax-shadow-xl);
+  padding: 28px 24px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  /* Subtle entrance animation — fades in + scales up. Cubic ease-out
+     for a "settle" feel rather than linear. */
+  animation: ax-update-prompt-enter 220ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes ax-update-prompt-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ----- Icon medallion ---------------------------------------------------- */
+
+.ax-update-prompt__icon-wrap {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--ax-color-bg-brand-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.ax-update-prompt__icon {
+  color: var(--ax-color-text-brand);
+}
+
+/* ----- Title / version / message ---------------------------------------- */
+
+.ax-update-prompt__title {
+  font-family: var(--ax-font-display, inherit);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ax-color-text-primary);
+  margin: 0 0 4px;
+}
+
+.ax-update-prompt__version {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ax-color-text-tertiary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0 0 12px;
+}
+
+.ax-update-prompt__message {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ax-color-text-secondary);
+  margin: 0 0 24px;
+  max-width: 280px;
+}
+
+/* ----- CTA button -------------------------------------------------------- */
+
+.ax-update-prompt__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  background: var(--ax-color-bg-brand);
+  color: var(--ax-palette-neutral-0);
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover {
+    background: var(--ax-color-bg-brand-hover);
+  }
+
+  &:active {
+    background: var(--ax-color-bg-brand-active);
+    transform: scale(0.98);
+  }
+}
+
+.ax-update-prompt__cta-icon {
+  color: var(--ax-palette-neutral-0);
+}
+
+/* ----- "Later" button (soft-prompt mode only) --------------------------- */
+
+.ax-update-prompt__later {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 44px;
+  margin-top: 8px;
+  background: transparent;
+  color: var(--ax-color-text-secondary);
+  border: none;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--ax-color-bg-muted);
+    color: var(--ax-color-text-primary);
+  }
+
+  &:active {
+    background: var(--ax-color-bg-subtle, var(--ax-color-bg-muted));
+  }
+}

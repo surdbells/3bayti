@@ -1,0 +1,94 @@
+/* =========================================================================
+   ax-notification-host — stack container
+   ========================================================================= */
+
+:host {
+  /*
+    The host element is in the normal DOM flow, but its inner stack
+    regions are absolutely positioned. We pin to the viewport via
+    fixed positioning on the stacks themselves (and rely on Ionic's
+    full-height app layout to make body the fixed-position context
+    we want).
+  */
+  display: contents;
+}
+
+.ax-notification-host {
+  /* Empty wrapper — visual styling lives on the per-position stacks. */
+}
+
+.ax-notification-host__stack {
+  position: fixed;
+  z-index: 9999; /* above ion-modal/ion-toast/etc. */
+  display: flex;
+  flex-direction: column-reverse; /* newest visually on top */
+  gap: 8px;
+  pointer-events: none; /* Container ignores taps; cards opt back in. */
+
+  /* Mobile-first width: edge-to-edge minus 16px. */
+  width: calc(100vw - 32px);
+  max-width: 480px;
+
+  /* Pass pointer events through to the cards themselves (they set
+     pointer-events: auto in their own component styles). */
+  > * {
+    pointer-events: auto;
+  }
+}
+
+/* ----- Position variants ----- */
+
+.ax-notification-host__stack--top-center {
+  /* Sit just below the header. The previous offset (header + 16px buffer)
+     positioned the toast too far from the header on tall-header pages,
+     making it feel disconnected. Reducing to a 4px buffer keeps the
+     toast visually anchored to the header without overlapping the
+     toolbar content. */
+  top: calc(env(safe-area-inset-top, 0px) + var(--ax-header-height, 56px) + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.ax-notification-host__stack--bottom-center {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--ax-tabbar-height, 56px) + 16px);
+  left: 50%;
+  transform: translateX(-50%);
+  flex-direction: column; /* newest at the bottom of the visible stack */
+}
+
+.ax-notification-host__stack--top-left {
+  top: calc(env(safe-area-inset-top, 0px) + var(--ax-header-height, 56px) + 16px);
+  inset-inline-start: 16px; /* RTL-aware (left in LTR, right in RTL) */
+}
+
+.ax-notification-host__stack--top-right {
+  top: calc(env(safe-area-inset-top, 0px) + var(--ax-header-height, 56px) + 16px);
+  inset-inline-end: 16px;
+}
+
+.ax-notification-host__stack--bottom-left {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--ax-tabbar-height, 56px) + 16px);
+  inset-inline-start: 16px;
+  flex-direction: column;
+}
+
+.ax-notification-host__stack--bottom-right {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + var(--ax-tabbar-height, 56px) + 16px);
+  inset-inline-end: 16px;
+  flex-direction: column;
+}
+
+/* ----- Tablet / desktop refinements ----- */
+
+@media (min-width: 640px) {
+  .ax-notification-host__stack {
+    width: 480px;
+  }
+
+  .ax-notification-host__stack--top-left,
+  .ax-notification-host__stack--top-right,
+  .ax-notification-host__stack--bottom-left,
+  .ax-notification-host__stack--bottom-right {
+    width: 380px; /* slightly narrower at corners */
+  }
+}

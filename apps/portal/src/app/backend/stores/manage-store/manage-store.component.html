@@ -1,0 +1,309 @@
+<app-admin-shell>
+  <div class="ax-container">
+      <!-- Page header -->
+      <header class="ax-page-header">
+        <div class="ax-page-header-content">
+          <button
+            type="button"
+            (click)="goBack()"
+            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+            style="align-self: flex-start;">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            Back to stores
+          </button>
+          <span class="ax-page-header-eyebrow">Store management</span>
+          <h1 class="ax-page-title">{{ store_name || store.store_name || 'Manage store' }}</h1>
+          <p *ngIf="store.store_email" class="ax-page-subtitle">{{ store.store_email }}</p>
+        </div>
+
+        <div class="ax-flex ax-gap-2 ax-items-center">
+          <span *ngIf="store.approved" class="ax-badge ax-badge-success">Approved</span>
+          <span *ngIf="!store.approved" class="ax-badge ax-badge-warning">Pending approval</span>
+          <button
+            type="button"
+            class="ax-btn ax-btn-outline ax-btn-sm"
+            (click)="get_store()"
+            [disabled]="ui_controls.is_loading">
+            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <!-- Loading -->
+      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+        <span class="ax-spinner ax-spinner-lg" aria-label="Loading store"></span>
+      </div>
+
+      <!-- Tabs -->
+      <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+        <app-ax-tabs>
+          <!-- Tab 1: Setup progress -->
+          <app-ax-tab label="Setup progress">
+            <app-account-setup [profile]="store"></app-account-setup>
+          </app-ax-tab>
+
+          <!-- Tab 2: Information -->
+          <app-ax-tab label="Information">
+            <div style="max-width: 64rem; margin: 0 auto;">
+              <!-- Vendor info card -->
+              <section class="ax-card ax-p-5 ax-mb-4">
+                <h3 class="ax-h5 ax-m-0 ax-mb-4">Vendor information</h3>
+                <div class="ax-flex ax-gap-4 ax-items-center ax-mb-4">
+                  <img
+                    [src]="store.avatar || 'assets/img/avatar-placeholder.png'"
+                    alt="Vendor avatar"
+                    style="width: 5rem; height: 5rem; border-radius: 50%; object-fit: cover; object-position: center; border: 1px solid var(--ax-color-border-subtle);" />
+                  <div>
+                    <h4 class="ax-h5 ax-m-0">{{ store.first_name }} {{ store.last_name }}</h4>
+                    <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ store.email }}</div>
+                    <div class="ax-text-sm ax-text-secondary">{{ store.phone }}</div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Store info card -->
+              <section class="ax-card ax-p-5 ax-mb-4">
+                <h3 class="ax-h5 ax-m-0 ax-mb-4">Store information</h3>
+                <div class="ax-form-field ax-mb-3">
+                  <label class="ax-label">Store name</label>
+                  <input
+                    type="text"
+                    class="ax-input"
+                    [maxlength]="50"
+                    readonly
+                    [(ngModel)]="store.store_name"
+                    name="store_name" />
+                </div>
+                <div class="ax-form-field ax-mb-3">
+                  <label class="ax-label">Store location</label>
+                  <input
+                    type="text"
+                    class="ax-input"
+                    [maxlength]="255"
+                    readonly
+                    [(ngModel)]="store.store_address"
+                    name="store_address" />
+                </div>
+                <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
+                  <div class="ax-form-field">
+                    <label class="ax-label">Email</label>
+                    <input
+                      type="text"
+                      class="ax-input"
+                      readonly
+                      [(ngModel)]="store.store_email"
+                      name="store_email" />
+                  </div>
+                  <div class="ax-form-field">
+                    <label class="ax-label">Phone</label>
+                    <input
+                      type="text"
+                      class="ax-input"
+                      readonly
+                      [(ngModel)]="store.store_phone"
+                      name="store_phone" />
+                  </div>
+                </div>
+                <div class="ax-form-field">
+                  <label class="ax-label">Description</label>
+                  <div
+                    class="ax-card ax-p-3 ax-text-sm ax-text-secondary"
+                    style="background: var(--ax-color-bg-canvas); min-height: 4rem;"
+                    [innerHTML]="store.store_description || '<em>No description provided.</em>'">
+                  </div>
+                </div>
+              </section>
+
+              <!-- Billing card -->
+              <section class="ax-card ax-p-5 ax-mb-4">
+                <h3 class="ax-h5 ax-m-0 ax-mb-1">Billing</h3>
+                <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-4">
+                  Payment information is only used to settle sales.
+                </p>
+                <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-3">
+                  <div>
+                    <div class="ax-text-2xs ax-text-tertiary">Bank name</div>
+                    <div class="ax-font-medium ax-text-primary ax-mt-1">{{ store.store_bank_name || '—' }}</div>
+                  </div>
+                  <div>
+                    <div class="ax-text-2xs ax-text-tertiary">Account name</div>
+                    <div class="ax-font-medium ax-text-primary ax-mt-1">{{ store.store_account_name || '—' }}</div>
+                  </div>
+                  <div>
+                    <div class="ax-text-2xs ax-text-tertiary">Account number</div>
+                    <div class="ax-font-medium ax-numeric ax-mt-1">{{ store.store_account_number || '—' }}</div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Tax card -->
+              <section class="ax-card ax-p-5 ax-mb-4">
+                <h3 class="ax-h5 ax-m-0 ax-mb-1">Tax information</h3>
+                <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-4">
+                  UAE tax details for VAT-compliant invoices and payouts.
+                </p>
+
+                <div class="ax-form-field ax-mb-3">
+                  <label class="ax-label">Tax status</label>
+                  <div class="ax-flex ax-gap-4 ax-flex-wrap">
+                    <label class="ax-radio">
+                      <input
+                        type="radio"
+                        name="vat_status"
+                        value="registered"
+                        [(ngModel)]="store.vat_status" />
+                      <span class="ax-radio-dot"></span>
+                      <span class="ax-radio-label">Registered</span>
+                    </label>
+                    <label class="ax-radio">
+                      <input
+                        type="radio"
+                        name="vat_status"
+                        value="not_registered"
+                        [(ngModel)]="store.vat_status" />
+                      <span class="ax-radio-dot"></span>
+                      <span class="ax-radio-label">Not registered</span>
+                    </label>
+                    <label class="ax-radio">
+                      <input
+                        type="radio"
+                        name="vat_status"
+                        value="exempt"
+                        [(ngModel)]="store.vat_status" />
+                      <span class="ax-radio-dot"></span>
+                      <span class="ax-radio-label">Exempt</span>
+                    </label>
+                  </div>
+                  <span class="ax-hint">Shown as vendor declared it; read-only.</span>
+                </div>
+
+                <ng-container *ngIf="store.vat_status === 'registered'">
+                  <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
+                    <div class="ax-form-field">
+                      <label class="ax-label">Registered business name</label>
+                      <input type="text" class="ax-input" readonly [(ngModel)]="store.store_legal_name" name="store_legal_name" />
+                    </div>
+                    <div class="ax-form-field">
+                      <label class="ax-label">Trade license number</label>
+                      <input type="text" class="ax-input" readonly [(ngModel)]="store.trade_license_number" name="trade_license_number" />
+                    </div>
+                  </div>
+
+                  <div class="ax-form-field ax-mb-3">
+                    <label class="ax-label">Licensing authority</label>
+                    <div class="ax-flex ax-gap-4 ax-flex-wrap">
+                      <label class="ax-radio">
+                        <input type="radio" name="licensing_authority" value="dubai_ded" [(ngModel)]="store.licensing_authority" disabled />
+                        <span class="ax-radio-dot"></span>
+                        <span class="ax-radio-label">Dubai DED</span>
+                      </label>
+                      <label class="ax-radio">
+                        <input type="radio" name="licensing_authority" value="free_zone" [(ngModel)]="store.licensing_authority" disabled />
+                        <span class="ax-radio-dot"></span>
+                        <span class="ax-radio-label">Free zone</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div class="ax-form-field ax-mb-3">
+                    <label class="ax-label">Tax Registration Number (TRN) — 15 digits</label>
+                    <input type="text" class="ax-input" readonly [(ngModel)]="store.tax_registration_number" name="tax_registration_number" />
+                  </div>
+
+                  <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-3 ax-mb-3">
+                    <div class="ax-form-field">
+                      <label class="ax-label">VAT Reg. Effective Date</label>
+                      <input type="date" class="ax-input" readonly [(ngModel)]="store.vat_registration_effective_date" name="vat_registration_effective_date" />
+                    </div>
+                    <div class="ax-form-field" style="grid-column: span 2;">
+                      <label class="ax-label">Registered tax address (UAE)</label>
+                      <input type="text" class="ax-input" readonly [(ngModel)]="store.registered_tax_address" name="registered_tax_address" />
+                    </div>
+                  </div>
+
+                  <div class="ax-form-field">
+                    <label class="ax-label">Tax contact email</label>
+                    <input type="email" class="ax-input" readonly [(ngModel)]="store.tax_contact_email" name="tax_contact_email" />
+                  </div>
+                </ng-container>
+              </section>
+
+              <!-- Compliance images -->
+              <section class="ax-card ax-p-5">
+                <h3 class="ax-h5 ax-m-0 ax-mb-4">Compliance documents</h3>
+                <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-3">
+                  <div class="ax-card ax-p-4">
+                    <div class="ax-font-medium ax-text-primary ax-mb-3">ID (Front)</div>
+                    <img
+                      [src]="store.id_front || 'assets/img/placeholder-1.png'"
+                      alt="ID front"
+                      style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+                  </div>
+                  <div class="ax-card ax-p-4">
+                    <div class="ax-font-medium ax-text-primary ax-mb-3">ID (Back)</div>
+                    <img
+                      [src]="store.id_back || 'assets/img/placeholder-1.png'"
+                      alt="ID back"
+                      style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+                  </div>
+                  <div class="ax-card ax-p-4">
+                    <div class="ax-font-medium ax-text-primary ax-mb-3">License document</div>
+                    <img
+                      [src]="store.license_doc || 'assets/img/placeholder-1.png'"
+                      alt="License document"
+                      style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+                  </div>
+                </div>
+              </section>
+            </div>
+          </app-ax-tab>
+
+          <!-- Tab 3: Message vendor -->
+          <app-ax-tab label="Message vendor">
+            <div style="max-width: 56rem; margin: 0 auto;">
+              <div class="ax-card ax-p-5">
+                <h3 class="ax-h5 ax-m-0 ax-mb-1">Send a message</h3>
+                <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-4">
+                  Direct email to the vendor: {{ store.email }}
+                </p>
+
+                <div class="ax-form-field ax-mb-3">
+                  <label class="ax-label ax-label-required" for="subject">Subject</label>
+                  <input
+                    id="subject"
+                    type="text"
+                    class="ax-input"
+                    [maxlength]="100"
+                    [(ngModel)]="message.subject"
+                    placeholder="Subject line"
+                    name="subject" />
+                </div>
+
+                <div class="ax-form-field ax-mb-4">
+                  <label class="ax-label ax-label-required">Message</label>
+                  <app-ax-rich-editor
+                    name="message_body"
+                    [(ngModel)]="message.message"
+                    placeholder="Your message to the vendor."
+                    minHeight="200px">
+                  </app-ax-rich-editor>
+                </div>
+
+                <div class="ax-flex ax-justify-end">
+                  <button
+                    type="button"
+                    class="ax-btn ax-btn-primary"
+                    (click)="send_message()"
+                    [disabled]="ui_controls.sending_message">
+                    <span *ngIf="ui_controls.sending_message" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                    <span *ngIf="!ui_controls.sending_message" class="material-symbols-outlined" aria-hidden="true">send</span>
+                    Send message
+                  </button>
+                </div>
+              </div>
+            </div>
+          </app-ax-tab>
+        </app-ax-tabs>
+      </section>  </div>
+</app-admin-shell>

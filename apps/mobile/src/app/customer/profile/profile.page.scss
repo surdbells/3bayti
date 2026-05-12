@@ -1,0 +1,152 @@
+/* ============================================================================
+   Profile page — edit user details
+   Used in HTML: .sheet, .cc-flag, .cc-code, .cc-sheet*, .cc-list*
+   ============================================================================ */
+
+.sheet {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: clamp(12px, 3vw, 20px);
+  display: grid;
+  gap: 16px;
+}
+
+/* ----- Form field label (matches ax-text-field's internal label style)
+         Used for the dial-code button's label, since it sits next to
+         migrated <ax-text-field> phone input and needs to align visually. */
+.profile-field-label {
+  display: block;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: var(--ax-color-text-secondary);
+  margin-bottom: 6px;
+}
+
+/* ----- Country-code picker — flag + code displayed inside the dial-code button */
+.cc-flag { font-size: 1rem; line-height: 1; }
+.cc-code { font-weight: 600; }
+
+/* ----- Country-code picker sheet (rendered via <ax-bottom-sheet>) ----- */
+
+.cc-sheet__header {
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-sheet__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px 8px;
+}
+
+.cc-sheet__title {
+  margin: 0;
+  font-family: var(--ax-font-display);
+  font-weight: 400;
+  font-size: 18px;
+  letter-spacing: -0.005em;
+  color: var(--ax-color-text-primary);
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cc-sheet__close {
+  background: transparent;
+  border: none;
+  padding: 6px 4px;
+  color: var(--ax-color-text-brand);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    text-decoration: underline;
+  }
+}
+
+/* ion-searchbar inside the slotted header gets minimal restyling.
+   Keep it visually quiet — the default chrome is fine in this context. */
+.cc-sheet__header ion-searchbar {
+  --background: transparent;
+  --box-shadow: none;
+  padding: 0 8px 4px;
+}
+
+.cc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cc-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  min-height: 48px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: var(--ax-radius-md);
+  transition: background 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(90, 58, 44, 0.04);
+    outline: none;
+  }
+
+  &:active {
+    background: rgba(90, 58, 44, 0.08);
+  }
+
+  & + .cc-list__item {
+    border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  }
+}
+
+.cc-list__flag {
+  width: 1.5rem;
+  text-align: center;
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.cc-list__name {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+}
+
+.cc-list__code {
+  flex-shrink: 0;
+  color: var(--ax-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.cc-list__empty {
+  padding: 24px 8px;
+  text-align: center;
+  color: var(--ax-color-text-secondary);
+  font-size: 13px;
+}

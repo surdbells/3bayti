@@ -1,0 +1,170 @@
+/* =========================================================================
+   Abayti Design System — Reset
+   Modern, opinionated baseline. Built on tokens.
+   ========================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -moz-tab-size: 4;
+  tab-size: 4;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-sm);
+  font-weight: var(--ax-fw-regular);
+  line-height: var(--ax-lh-normal);
+  letter-spacing: var(--ax-ls-snug);
+  color: var(--ax-color-text-primary);
+  background-color: var(--ax-color-bg-canvas);
+  -webkit-tap-highlight-color: transparent;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+img {
+  height: auto;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+p,
+h1, h2, h3, h4, h5, h6 {
+  overflow-wrap: break-word;
+}
+
+#root,
+#__next,
+app-root {
+  isolation: isolate;
+  display: block;
+  min-height: 100%;
+}
+
+a {
+  color: var(--ax-color-text-link);
+  text-decoration: none;
+  transition: color var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+a:hover {
+  color: var(--ax-color-text-link-hover);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--ax-color-border-subtle);
+  margin: var(--ax-space-4) 0;
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--ax-font-mono);
+  font-size: 0.9em;
+}
+
+small {
+  font-size: 0.875em;
+}
+
+strong,
+b {
+  font-weight: var(--ax-fw-semibold);
+}
+
+/* Focus-visible baseline */
+:focus-visible {
+  outline: 2px solid var(--ax-color-border-focus);
+  outline-offset: 2px;
+}
+
+/* Remove default focus ring on buttons/inputs where we handle it ourselves */
+.ax-btn:focus,
+.ax-input:focus,
+.ax-select:focus,
+.ax-textarea:focus {
+  outline: none;
+}
+
+/* Custom scrollbar — subtle, premium */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ax-color-border-strong) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--ax-color-border-strong);
+  border-radius: var(--ax-radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--ax-color-text-tertiary);
+}
+
+/* Hide scrollbar utility */
+.ax-scrollbar-hidden {
+  scrollbar-width: none;
+}
+.ax-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--ax-palette-beige-300);
+  color: var(--ax-palette-espresso-900);
+}

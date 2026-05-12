@@ -1,0 +1,185 @@
+/* ============================================================================
+   AxTextField — abayti M2 text input primitive
+   ============================================================================ */
+
+:host {
+  display: block;
+  width: 100%;
+}
+
+.ax-text-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+/* ----- Label ------------------------------------------------------------- */
+
+.ax-text-field__label {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: var(--ax-color-text-secondary);
+  cursor: pointer;
+
+  /* Disabled label sits a touch lighter */
+  .ax-text-field--disabled & {
+    color: var(--ax-color-text-tertiary);
+    cursor: not-allowed;
+  }
+}
+
+.ax-text-field__required {
+  color: var(--ax-color-text-brand);
+  margin-inline-start: 2px;
+  font-weight: 500;
+}
+
+/* ----- Control wrapper (input + optional toggle) ------------------------- */
+
+.ax-text-field__control {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+/* ----- Input ------------------------------------------------------------- */
+
+.ax-text-field__input {
+  width: 100%;
+  height: var(--ax-input-height, 48px);
+  padding: 0 var(--ax-input-padding-x, 14px);
+  margin: 0;
+
+  font-family: inherit;
+  font-size: 16px;          /* iOS Safari: <16px causes zoom on focus */
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ax-color-text-primary);
+
+  background: var(--ax-color-bg-surface);
+  border: var(--ax-input-border-width, 1px) solid var(--ax-color-border-default);
+  border-radius: var(--ax-input-radius, 0.5rem);
+
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+
+  /* Placeholder */
+  &::placeholder {
+    color: var(--ax-color-text-tertiary);
+    font-weight: 400;
+    opacity: 1;             /* Firefox respects opacity by default */
+  }
+
+  /* Hover (desktop only — mobile won't see :hover) */
+  @media (hover: hover) {
+    &:hover:not(:disabled) {
+      border-color: var(--ax-color-border-strong);
+    }
+  }
+
+  /* Focus */
+  &:focus,
+  &:focus-visible {
+    border-color: var(--ax-color-border-focus);
+    border-width: var(--ax-input-border-width-focus, 1.5px);
+    /* Soft outer glow ring at brown / 0.15 opacity (~2px wide) */
+    box-shadow: 0 0 0 3px rgba(144, 105, 82, 0.15);
+  }
+
+  /* Disabled */
+  &:disabled {
+    background: var(--ax-color-bg-canvas);
+    color: var(--ax-color-text-tertiary);
+    border-color: var(--ax-color-border-subtle);
+    cursor: not-allowed;
+  }
+
+  /* Right padding when password toggle is present (44px = 32 button + 12 spacing) */
+  &--has-toggle {
+    padding-inline-end: var(--ax-input-padding-x-end, 44px);
+  }
+
+  /* Multiline / textarea variant. Replaces fixed height with min-height
+     based on rows + padding, allows manual vertical resize. */
+  &--multiline {
+    height: auto;
+    min-height: calc(var(--ax-input-height, 48px) + 36px); /* ~3 rows by default */
+    padding: 12px var(--ax-input-padding-x, 14px);
+    line-height: 1.5;
+    resize: vertical;
+    /* iOS: prevent the default rounded textarea look from overriding our radius */
+    -webkit-appearance: none;
+    /* Use the same font as the input */
+    font-family: inherit;
+  }
+
+  /* Error state — ring becomes danger */
+  .ax-text-field--error & {
+    border-color: var(--ax-palette-danger-500);
+    border-width: var(--ax-input-border-width-focus, 1.5px);
+
+    &:focus,
+    &:focus-visible {
+      box-shadow: 0 0 0 3px rgba(165, 56, 38, 0.15);
+    }
+  }
+}
+
+/* ----- Password visibility toggle ---------------------------------------- */
+
+.ax-text-field__toggle {
+  position: absolute;
+  inset-inline-end: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+
+  background: transparent;
+  border: 0;
+  border-radius: var(--ax-radius-sm);
+  color: var(--ax-color-text-tertiary);
+  cursor: pointer;
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  transition: color 120ms ease, background 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--ax-color-text-secondary);
+    background: var(--ax-color-bg-muted);
+  }
+
+  &:active {
+    background: var(--ax-color-bg-sunken);
+  }
+}
+
+/* ----- Helper / error message ------------------------------------------- */
+
+.ax-text-field__message {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  margin: 0;
+  color: var(--ax-color-text-tertiary);
+
+  &--error {
+    color: var(--ax-color-text-danger);
+  }
+}

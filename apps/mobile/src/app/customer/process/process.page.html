@@ -1,0 +1,11 @@
+<ion-content [fullscreen]="true" class="page-bg">
+  @if (ui_controls.confirming_transaction) {
+    <div class="status-screen">
+      <div class="status-spinner">
+        <ax-loader size="lg"></ax-loader>
+      </div>
+      <h1>{{ 'text_confirming_transaction' | translate }}</h1>
+      <p>{{ 'text_processing_subtitle' | translate }}</p>
+    </div>
+  }
+</ion-content>

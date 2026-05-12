@@ -1,0 +1,17 @@
+# Hashed bundles — safe to cache forever (filename changes on every build)
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable
+
+# Never cache the shell — new deploys must be seen instantly
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Images and fonts — cache aggressively
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

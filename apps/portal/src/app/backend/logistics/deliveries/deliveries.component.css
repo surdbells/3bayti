@@ -1,0 +1,15 @@
+.card {
+  border-radius: 1rem;
+  overflow: hidden;
+}
+.table th {
+  font-weight: 500;
+  color: #6c757d;
+  vertical-align: top;
+}
+.table td {
+  color: #212529;
+}
+.card-body {
+  background-color: #fff;
+}

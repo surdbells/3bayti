@@ -1,0 +1,179 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="triggerBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'new_arrivals' | translate }}</ion-title>
+  </ion-toolbar>
+  <div class="m7-subtitle">{{ 'subtitle_new_arrivals' | translate }}</div>
+  <div class="m7-filter-chips">
+    <!-- All Button -->
+    <button
+      type="button"
+      class="m7-filter-chip"
+      [class.m7-filter-chip--active]="selectedFilter === 'all'"
+      (click)="selectFilter('all'); newArrivals()">
+      {{ 'button_all' | translate }}
+    </button>
+
+    <!-- Price Filter Chips -->
+    @for(price of priceFilters; track price){
+      <button
+        type="button"
+        class="m7-filter-chip"
+        [class.m7-filter-chip--active]="selectedFilter === price"
+        (click)="selectFilter(price); filterByPrice(price)">
+        {{ 'label_under' | translate }} Ð{{ price | number }}
+      </button>
+    }
+  </div>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg ion-padding-horizontal ion-padding-vertical">
+  <!-- Pull to Refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+
+
+  <!-- Results Count -->
+  @if(!ui_controls.is_loading && new_arrivals.length > 0){
+    <div class="results-count">
+      <span>{{ new_arrivals.length }} {{ 'label_new_products' | translate }}</span>
+    </div>
+  }
+
+  <!-- Products Grid -->
+  @if(!ui_controls.is_loading){
+    <ion-grid class="products-grid">
+      <ion-row>
+        @for(product of new_arrivals; track product.product_id){
+          <ion-col size="6">
+            <article class="m6d-product-card">
+              <div class="m6d-img-wrap">
+                <!-- Image skeleton -->
+                <div class="m6d-img-skeleton" [class.hidden]="imageLoaded[product.product_id]">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+                <!-- Actual image -->
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  [src]="product.image_1"
+                  [alt]="product.product_name"
+                  [class.loaded]="imageLoaded[product.product_id]"
+                  (load)="onImageLoad(product.product_id)"
+                  (error)="onImageError(product.product_id)"
+                  (click)="open_product(product.product_id, product.product_name)" />
+                <!-- NEW flag (top-left) -->
+                <span class="m6d-flag-badge">NEW</span>
+                <!-- Heart-plus (top-right) -->
+                <button
+                  type="button"
+                  class="m6d-like"
+                  (click)="startAddToCloset(product.product_id, product.product_name, product.image_1); $event.stopPropagation()"
+                  aria-label="Add to closet">
+                  <ax-icon name="heart-plus" />
+                </button>
+                <!-- Vendor badge (bottom-left) -->
+                <span class="m6d-vendor-badge">{{ product.store_name }}</span>
+              </div>
+              <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
+                <p class="m6d-name">{{ product.product_name }}</p>
+                <div class="m6d-price-row">
+                  <span class="m6d-price">Ð{{ product.price | number }}</span>
+                  <button
+                    type="button"
+                    class="m6d-add-to-cart"
+                    (click)="open_product(product.product_id, product.product_name); $event.stopPropagation()"
+                    aria-label="View product">
+                    <ax-icon name="plus" />
+                  </button>
+                </div>
+              </div>
+            </article>
+          </ion-col>
+        }
+      </ion-row>
+    </ion-grid>
+  }
+
+  <!-- Loading Skeleton Grid -->
+  @if(ui_controls.is_loading){
+    <ion-grid class="products-grid">
+      <ion-row>
+        @for(skeleton of [1,2,3,4,5,6]; track skeleton){
+          <ion-col size="6">
+            <article class="m6d-product-card">
+              <div class="m6d-img-wrap">
+                <div class="m6d-img-skeleton">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+              </div>
+              <div class="m6d-info">
+                <div class="skeleton-text name-sk">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+                <div class="skeleton-text price-sk">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+              </div>
+            </article>
+          </ion-col>
+        }
+      </ion-row>
+    </ion-grid>
+  }
+
+  <!-- Empty State -->
+  @if(!ui_controls.is_loading && new_arrivals.length === 0){
+    <div class="empty-state">
+      <div class="empty-icon">
+        <ax-icon name="sparkles"></ax-icon>
+      </div>
+      <h3>{{ 'heading_no_new_arrivals' | translate }}</h3>
+      <p>{{ 'text_check_back_soon' | translate }}</p>
+      <button type="button" class="reset-btn" (click)="selectFilter('all'); newArrivals()">
+        {{ 'button_refresh' | translate }}
+      </button>
+    </div>
+  }
+
+  <!-- Infinite Scroll -->
+  @if(!ui_controls.is_empty && !ui_controls.is_loading && new_arrivals.length > 0){
+    <ion-infinite-scroll threshold="150px" (ionInfinite)="onIonInfinite($event)">
+      <ion-infinite-scroll-content [loadingText]="'text_loading_more' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+  }
+
+  <!-- Wishlist sheet -->
+  <ax-bottom-sheet
+    [isOpen]="isWishOpen"
+    (didDismiss)="onDismiss(); isWishOpen = false"
+    [snapPoints]="[0.5, 0.9]"
+    [initialSnap]="0"
+    [title]="('save' | translate) + ' ' + addCloset.product_name + ' ' + ('to' | translate)">
+
+    @if(!ui_controls.is_loading_category){
+      <ul class="wishlist-list">
+        @for(category of categories; track category.id){
+          <li class="wishlist-item" (click)="addToCloset(category.id)" role="button" tabindex="0">
+            <div class="folder-icon">
+              <ax-icon name="folder-plus"></ax-icon>
+            </div>
+            <span class="wishlist-item__label">{{ category.name }}</span>
+            <ax-icon name="chevron-right" class="chevron-icon"></ax-icon>
+          </li>
+        }
+      </ul>
+    }
+    @if(ui_controls.is_loading_category){
+      <div class="modal-loading">
+        <ax-loader></ax-loader>
+      </div>
+    }
+  </ax-bottom-sheet>
+</ion-content>

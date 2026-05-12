@@ -1,0 +1,913 @@
+/* ========================================
+   PAGE-LOCAL TOKEN MAP — points to M2
+   ========================================
+   These page-scoped CSS vars exist for backward compat with the
+   ~49 `var(--brand-*)` / `var(--text-*)` / `var(--radius-*)` refs
+   throughout this file. New code should reference M2 tokens
+   directly via `var(--ax-color-text-brand)` etc. */
+:host {
+  --brand-dark: var(--ax-color-text-brand);     /* was #7C2108 (deep-red) */
+  --brand-light: var(--ax-color-bg-brand-hover); /* was #B12C06 */
+  --brand-cream: var(--ax-color-bg-brand-subtle); /* was #FBEDE2 */
+  --text-primary: var(--ax-color-text-primary);   /* was #1a1a1a */
+  --text-secondary: var(--ax-color-text-secondary); /* was #666 */
+  --radius-sm: var(--ax-radius-sm, 8px);
+  --radius-md: var(--ax-radius-md, 12px);
+  --radius-lg: var(--ax-radius-lg, 16px);
+  --radius-xl: var(--ax-radius-xl, 24px);
+}
+
+/* ========================================
+   SKELETON ANIMATION
+   ======================================== */
+/* M44: shimmer pattern in global.scss; this page overrides the opacity. */
+.skeleton-shimmer {
+  --skeleton-shimmer-color: rgba(255, 255, 255, 0.40);
+}
+
+/* ========================================
+   HEADER
+   ========================================
+   The page now uses standard .m7-header-shadow chrome from
+   global.scss, so no page-scoped header rules are needed. */
+
+.back-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--ax-color-bg-surface);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+.header-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+/* ========================================
+   IMAGE SLIDER
+   ======================================== */
+.page-bg {
+  --background: var(--brand-cream);
+}
+
+/* Reserve image-area height upfront — even before `images` data
+   arrives — to prevent layout shift when slides populate.
+   Same aspect-ratio (4:5) and gradient as .img-wrap so the
+   transition between empty placeholder and rendered slides is
+   visually seamless. */
+.slides-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(135deg, var(--ax-palette-beige-100) 0%, var(--ax-palette-beige-200) 100%);
+  overflow: hidden;
+}
+
+/* Placeholder shimmer when images haven't loaded yet (data still
+   in flight). Sits inside .slides-wrapper, fills the reserved
+   height, hidden once swiper-slides render. */
+.slides-placeholder {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
+swiper-container,
+.slides {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+swiper-slide,
+.slide {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+
+  .model {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    border-radius: 0;
+  }
+}
+
+.img-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* aspect-ratio kept here too — .slides-wrapper has the same
+     ratio set as a fallback for the empty/loading state, but
+     .img-wrap needs its own intrinsic height because .hero
+     parent has no explicit height (flex shrink-fits to content
+     by default). Without aspect-ratio here, height: 100% has
+     nothing to resolve against and the wrap collapses to 0,
+     hiding the absolutely-positioned <ion-img> inside. */
+  aspect-ratio: 4 / 5;
+  background: linear-gradient(135deg, var(--ax-palette-beige-100) 0%, var(--ax-palette-beige-200) 100%);
+  overflow: hidden;
+
+  ion-img, img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    will-change: opacity;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+  }
+
+  &.loaded ion-img,
+  &.loaded img {
+    opacity: 1;
+  }
+
+  .skeleton {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--ax-palette-beige-200) 0%, var(--ax-palette-beige-100) 50%, var(--ax-palette-beige-200) 100%);
+    overflow: hidden;
+  }
+}
+
+/* ========================================
+   PRODUCT CARD
+   ======================================== */
+.product-card {
+  background: var(--ax-color-bg-surface);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  margin-top: -24px;
+  position: relative;
+  z-index: 10;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+
+  // GPU acceleration
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+/* Pagination Dots */
+.pager-wrapper {
+  padding: 16px 0 8px;
+}
+
+.pager {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+
+    &.active {
+      width: 24px;
+      background: linear-gradient(90deg, var(--brand-dark), var(--brand-light));
+    }
+  }
+}
+
+/* Card Content */
+.card-content {
+  padding: 8px 20px 24px;
+}
+
+/* Product Header */
+.product-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.product-info {
+  flex: 1;
+  min-width: 0;
+
+  .category-label {
+    font-size: 12px;
+    color: var(--brand-dark);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .product-name {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 4px 0 0;
+    line-height: 1.3;
+  }
+}
+
+/* Quantity Dial */
+.quantity-dial {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ax-color-bg-muted);
+  border-radius: var(--radius-md);
+  padding: 4px;
+
+  .dial-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--ax-color-bg-surface);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+
+    &:active {
+      background: var(--ax-color-bg-muted);
+      transform: scale(0.95);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  .dial-value {
+    min-width: 28px;
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+}
+
+/* Description */
+.product-description {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+/* Delivery Badge */
+.delivery-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(144, 105, 82, 0.08);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  margin-bottom: 20px;
+  span {
+    font-size: 13px;
+    color: var(--brand-dark);
+    font-weight: 500;
+  }
+}
+
+/* ========================================
+   COLOR PILLS SECTION
+   ======================================== */
+.color-section {
+  margin-bottom: 20px;
+}
+
+.section-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+
+  .label-text {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+
+  .selected-color-name {
+    font-size: 13px;
+    color: var(--brand-dark);
+    font-weight: 500;
+  }
+}
+
+.color-pills-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.color-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 3px;
+  background: var(--ax-color-bg-canvas);
+  border: 2px solid transparent;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  &.selected {
+    border-color: var(--brand-dark);
+    background: rgba(144, 105, 82, 0.06);
+
+    .color-label {
+      color: var(--brand-dark);
+      font-weight: 600;
+    }
+  }
+
+  .color-preview {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    flex-shrink: 0;
+
+    // For light colors, add inner shadow
+    &.light-color {
+      border-color: rgba(0, 0, 0, 0.15);
+
+      .check-icon {
+        color: var(--ax-color-text-primary) !important;
+      }
+    }
+
+    // Multicolor gradient
+    &.is-multicolor {
+      border: none;
+      background-size: 200% 200%;
+      animation: gradientShift 3s ease infinite;
+    }
+
+    .check-icon {
+      font-size: 14px;
+      color: var(--ax-color-bg-surface);
+      filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+    }
+  }
+
+  .color-label {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* ========================================
+   SIZE SECTION
+   ======================================== */
+.size-section {
+  margin-bottom: 20px;
+}
+
+.size-guide-link {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: var(--brand-dark);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  &:active {
+    background: rgba(144, 105, 82, 0.1);
+  }
+}
+
+.custom-measurement-btn {
+  width: 100%;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background: var(--ax-color-bg-canvas);
+  border: 2px dashed rgba(144, 105, 82, 0.3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  .btn-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    span {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+  }
+  &:active {
+    background: rgba(144, 105, 82, 0.08);
+  }
+}
+
+/* Store Sizes */
+.store-sizes-section {
+  margin-top: 16px;
+
+  .section-subtitle {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: 10px;
+    display: block;
+  }
+}
+
+.store-size-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.store-size-pill {
+  padding: 8px 16px;
+  background: var(--ax-color-bg-muted);
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &.selected {
+    background: var(--brand-dark);
+    color: var(--ax-color-bg-surface);
+    border-color: var(--brand-dark);
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+}
+
+/* ========================================
+   LOADING SKELETON
+   ======================================== */
+.loading-skeleton {
+  background: var(--ax-color-bg-surface);
+  border-top-left-radius: var(--radius-xl);
+  border-top-right-radius: var(--radius-xl);
+  margin-top: -24px;
+  padding: 20px;
+  position: relative;
+  z-index: 10;
+}
+
+.skeleton-pager {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  .skeleton-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background: var(--ax-color-border-subtle);
+    position: relative;
+    overflow: hidden;
+  }
+}
+
+.skeleton-content {
+  .skeleton-text {
+    border-radius: 6px;
+    position: relative;
+    overflow: hidden;
+
+    &.title-sk {
+      width: 40%;
+      height: 14px;
+      background: var(--ax-color-bg-muted);
+      margin-bottom: 8px;
+    }
+
+    &.name-sk {
+      width: 70%;
+      height: 22px;
+      background: var(--ax-color-border-subtle);
+      margin-bottom: 16px;
+    }
+
+    &.desc-sk {
+      width: 100%;
+      height: 14px;
+      background: var(--ax-color-bg-muted);
+      margin-bottom: 8px;
+
+      &.short {
+        width: 60%;
+      }
+    }
+  }
+}
+
+.skeleton-colors {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+
+  .skeleton-color-pill {
+    width: 90px;
+    height: 40px;
+    border-radius: 50px;
+    background: var(--ax-color-bg-muted);
+    position: relative;
+    overflow: hidden;
+  }
+}
+
+/* ========================================
+   SIZE CHART MODAL
+   ======================================== */
+.size-chart {
+  background: var(--ax-color-bg-canvas);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+
+  .chart-row {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+
+    span {
+      padding: 12px 8px;
+      text-align: center;
+      font-size: 12px;
+      border-bottom: 1px solid var(--ax-color-border-subtle);
+    }
+
+    &.header {
+      background: var(--brand-dark);
+
+      span {
+        color: var(--ax-color-text-primary);
+        font-weight: 600;
+        writing-mode: vertical-lr;
+        border-bottom: none;
+      }
+    }
+
+    &:last-child span {
+      border-bottom: none;
+    }
+  }
+}
+
+/* ========================================
+   MEASUREMENT SHEET (rendered via <ax-bottom-sheet>)
+   ======================================== */
+
+.measurement-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.measurement-input {
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  .input-wrap {
+    display: flex;
+    align-items: center;
+    background: var(--ax-color-bg-surface);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--ax-color-border-subtle);
+    overflow: hidden;
+
+    input {
+      flex: 1;
+      border: none;
+      padding: 12px;
+      font-size: 16px;
+      outline: none;
+
+      &::placeholder {
+        color: var(--ax-color-border-default);
+      }
+    }
+
+    .unit {
+      padding: 12px;
+      background: var(--ax-color-bg-muted);
+      font-size: 12px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+  }
+}
+
+.extra-measurement {
+  margin-bottom: 20px;
+
+  .extra-label {
+    color: var(--brand-dark);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+  }
+
+  textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--ax-color-border-subtle);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    resize: none;
+    outline: none;
+
+    &:focus {
+      border-color: var(--brand-dark);
+    }
+  }
+}
+
+.confirm-measurement-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, var(--ax-color-bg-brand), var(--ax-color-bg-brand-hover));
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--ax-color-bg-surface);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.loading-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+/* ========================================
+   FOOTER
+   ======================================== */
+.product-footer {
+  background: var(--ax-color-bg-surface);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  padding: 16px 20px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.price-display {
+  .price-label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .price-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+}
+
+.add-cart-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand-light));
+  border: none;
+  border-radius: var(--radius-lg);
+  color: var(--ax-color-bg-surface);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.out-of-stock {
+    background: var(--ax-color-border-default);
+    cursor: not-allowed;
+  }
+
+  &.in-cart {
+    background: var(--ax-color-text-success);
+  }
+
+  &.backorder {
+    background: var(--ax-color-text-warning);
+  }
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+@media (max-width: 360px) {
+  .product-info .product-name {
+    font-size: 18px;
+  }
+
+  .color-pill {
+    padding: 5px 10px 5px 5px;
+
+    .color-preview {
+      width: 24px;
+      height: 24px;
+    }
+
+    .color-label {
+      font-size: 12px;
+    }
+  }
+
+  .price-display .price-value {
+    font-size: 18px;
+  }
+
+  .add-cart-btn {
+    padding: 14px 16px;
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 768px) {
+  .product-info .product-name {
+    font-size: 24px;
+  }
+
+  .color-pill {
+    padding: 8px 16px 8px 8px;
+
+    .color-preview {
+      width: 32px;
+      height: 32px;
+    }
+
+    .color-label {
+      font-size: 14px;
+    }
+  }
+
+  .card-content {
+    padding: 12px 32px 32px;
+  }
+}
+
+/* ========================================
+   REDUCED MOTION
+   ======================================== */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer {
+    animation: none;
+  }
+
+  .color-pill,
+  .dial-btn,
+  .add-cart-btn,
+  .back-btn {
+    transition: none;
+  }
+
+  @keyframes gradientShift {
+    0%, 100% { background-position: 0% 50%; }
+  }
+}
+
+/* ----- Floating back button (top-left, fully transparent) -----
+   Sits above the image slider, no background. White icon with a
+   subtle drop-shadow for legibility on light hero images.
+   Uses fixed positioning so it stays visible when scrolling.
+   Safe-area top inset honored for iOS notch / Android status bar.
+*/
+.floating-back-btn {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 12px;
+  z-index: 100;
+
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ax-icon {
+    color: #ffffff;
+    font-size: 22px;
+    /* Subtle drop-shadow for legibility on light hero images */
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+
+  /* RTL: flip to top-right (defensive — i18n service currently
+     doesn't apply dir='rtl' but ready when it does) */
+  :host-context([dir="rtl"]) & {
+    left: auto;
+    right: 12px;
+  }
+}

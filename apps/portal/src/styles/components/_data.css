@@ -1,0 +1,352 @@
+/* =========================================================================
+   Abayti Design System — Data display primitives
+   Progress, skeleton, breadcrumb, pagination, extended table styles.
+   ========================================================================= */
+
+
+/* ============== PROGRESS ============== */
+
+.ax-progress {
+  display: block;
+  width: 100%;
+  height: 0.5rem;
+  background-color: var(--ax-color-bg-sunken);
+  border-radius: var(--ax-radius-pill);
+  overflow: hidden;
+  position: relative;
+}
+
+.ax-progress-bar {
+  height: 100%;
+  background-color: var(--ax-color-bg-brand);
+  border-radius: inherit;
+  transition: width var(--ax-duration-slow) var(--ax-ease-out);
+}
+
+.ax-progress-bar-success { background-color: var(--ax-color-bg-success); }
+.ax-progress-bar-warning { background-color: var(--ax-color-bg-warning); }
+.ax-progress-bar-danger  { background-color: var(--ax-color-bg-danger); }
+
+.ax-progress-sm { height: 0.25rem; }
+.ax-progress-lg { height: 0.75rem; }
+
+/* Indeterminate — runs a slider across the track */
+.ax-progress-indeterminate .ax-progress-bar {
+  width: 30% !important;
+  animation: ax-progress-slide 1.5s infinite var(--ax-ease-in-out);
+}
+@keyframes ax-progress-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(calc(100% / 0.3 * 1)); }
+}
+
+/* Circular progress (SVG-based — gets its own class on the SVG root) */
+.ax-progress-circle {
+  display: inline-block;
+  transform: rotate(-90deg);
+}
+.ax-progress-circle-track {
+  fill: none;
+  stroke: var(--ax-color-bg-sunken);
+}
+.ax-progress-circle-fill {
+  fill: none;
+  stroke: var(--ax-color-bg-brand);
+  stroke-linecap: round;
+  transition: stroke-dashoffset var(--ax-duration-slow) var(--ax-ease-out);
+}
+
+
+/* ============== SKELETON ============== */
+
+.ax-skeleton {
+  display: block;
+  background: linear-gradient(
+    90deg,
+    var(--ax-color-bg-sunken) 0%,
+    var(--ax-color-bg-muted) 50%,
+    var(--ax-color-bg-sunken) 100%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--ax-radius-sm);
+  animation: ax-skeleton-shimmer 1.5s infinite linear;
+}
+
+@keyframes ax-skeleton-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.ax-skeleton-line { height: 0.875rem; width: 100%; }
+.ax-skeleton-text { height: 1rem; width: 100%; margin-bottom: 0.5rem; }
+.ax-skeleton-heading { height: 1.5rem; width: 60%; margin-bottom: 0.75rem; }
+.ax-skeleton-circle { border-radius: 50%; width: 3rem; height: 3rem; }
+.ax-skeleton-avatar-sm { border-radius: 50%; width: 2rem; height: 2rem; }
+.ax-skeleton-avatar-lg { border-radius: 50%; width: 4rem; height: 4rem; }
+.ax-skeleton-rect { width: 100%; height: 8rem; border-radius: var(--ax-radius-md); }
+.ax-skeleton-button { height: 2.5rem; width: 6rem; border-radius: var(--ax-radius-md); }
+
+
+/* ============== BREADCRUMB ============== */
+
+.ax-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ax-space-1);
+  font-size: var(--ax-fs-xs);
+  color: var(--ax-color-text-tertiary);
+}
+
+.ax-breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ax-space-1);
+  color: var(--ax-color-text-tertiary);
+  text-decoration: none;
+  transition: color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-breadcrumb-item:hover {
+  color: var(--ax-color-text-primary);
+}
+.ax-breadcrumb-item[aria-current='page'] {
+  color: var(--ax-color-text-primary);
+  font-weight: var(--ax-fw-medium);
+  cursor: default;
+}
+.ax-breadcrumb-item[aria-current='page']:hover {
+  color: var(--ax-color-text-primary);
+}
+
+.ax-breadcrumb-item .material-symbols-outlined {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.ax-breadcrumb-separator {
+  color: var(--ax-color-border-strong);
+  display: inline-flex;
+  align-items: center;
+}
+.ax-breadcrumb-separator .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+
+/* ============== PAGINATION ============== */
+
+.ax-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ax-space-4);
+  padding: var(--ax-space-3) var(--ax-space-5);
+  flex-wrap: wrap;
+}
+
+.ax-pagination-summary {
+  font-size: var(--ax-fs-xs);
+  color: var(--ax-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.ax-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-1);
+}
+
+.ax-pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.5rem;
+  border-radius: var(--ax-radius-sm);
+  border: 0;
+  background: transparent;
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-medium);
+  color: var(--ax-color-text-secondary);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out),
+              color var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+.ax-pagination-btn:hover:not(:disabled):not(.ax-pagination-btn-active):not(.ax-pagination-ellipsis) {
+  background-color: var(--ax-color-bg-muted);
+  color: var(--ax-color-text-primary);
+}
+
+.ax-pagination-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ax-shadow-focus);
+}
+
+.ax-pagination-btn-active,
+.ax-pagination-btn[aria-current='page'] {
+  background-color: var(--ax-color-bg-brand);
+  color: var(--ax-color-text-on-brand);
+}
+
+.ax-pagination-btn:disabled {
+  color: var(--ax-color-text-disabled);
+  cursor: not-allowed;
+}
+
+.ax-pagination-btn .material-symbols-outlined {
+  font-size: 1.1rem;
+}
+
+.ax-pagination-ellipsis {
+  min-width: 2rem;
+  height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ax-color-text-tertiary);
+  cursor: default;
+}
+
+.ax-pagination-size {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ax-space-2);
+  font-size: var(--ax-fs-xs);
+  color: var(--ax-color-text-secondary);
+}
+.ax-pagination-size select {
+  padding: 0.25rem 1.75rem 0.25rem 0.5rem;
+  font-size: var(--ax-fs-xs);
+  font-family: var(--ax-font-body);
+  color: var(--ax-color-text-primary);
+  background-color: var(--ax-color-bg-surface);
+  border: 0.5px solid var(--ax-color-border-default);
+  border-radius: var(--ax-radius-sm);
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%237d7669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m4 6 4 4 4-4'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.35rem center;
+  background-size: 12px 12px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+
+/* ============== TABLE — extended (builds on Phase 1 .ax-table) ============== */
+
+/* Sortable header cells */
+.ax-table th.ax-th-sortable {
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  padding-right: 1.75rem;
+  transition: color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-table th.ax-th-sortable:hover {
+  color: var(--ax-color-text-primary);
+}
+.ax-table th.ax-th-sortable .ax-th-sort-icon {
+  position: absolute;
+  right: var(--ax-space-3);
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  color: var(--ax-color-border-strong);
+  opacity: 0.6;
+  transition: opacity var(--ax-duration-fast) var(--ax-ease-out),
+              color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-table th.ax-th-sortable:hover .ax-th-sort-icon { opacity: 1; }
+.ax-table th.ax-th-sort-asc .ax-th-sort-icon,
+.ax-table th.ax-th-sort-desc .ax-th-sort-icon {
+  opacity: 1;
+  color: var(--ax-color-text-brand);
+}
+.ax-table th.ax-th-sortable .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+/* Selection column */
+.ax-th-select,
+.ax-td-select {
+  width: 3rem;
+  padding-left: var(--ax-space-4);
+  padding-right: 0;
+}
+
+/* Cell alignment helpers */
+.ax-td-right { text-align: right; }
+.ax-td-center { text-align: center; }
+.ax-td-numeric { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Row states */
+.ax-table tr.ax-tr-selected {
+  background-color: var(--ax-color-bg-brand-subtle);
+}
+.ax-table-hover tr.ax-tr-selected:hover {
+  background-color: var(--ax-palette-beige-200);
+}
+
+/* Loading overlay on the table */
+.ax-table-wrapper {
+  position: relative;
+  /* Allow wide tables to scroll horizontally inside their card on small screens.
+     Without this, content overflows the page and forces the body to scroll. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Tables inside a wrapper that aren't using .ax-table-responsive (stack rows)
+   behaviour should at minimum stay aligned via min-width on mobile so columns
+   don't collapse awkwardly. */
+@media (max-width: 768px) {
+  .ax-table-wrapper > .ax-table:not(.ax-table-responsive) {
+    min-width: max-content;
+  }
+}
+.ax-table-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Responsive — stack rows at <md */
+@media (max-width: 767.98px) {
+  .ax-table-responsive thead {
+    display: none;
+  }
+  .ax-table-responsive tbody tr {
+    display: block;
+    padding: var(--ax-space-3) var(--ax-space-4);
+    border-bottom: 1px solid var(--ax-color-border-subtle);
+  }
+  .ax-table-responsive tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--ax-space-2) 0;
+    border: 0;
+  }
+  .ax-table-responsive tbody td::before {
+    content: attr(data-label);
+    font-size: var(--ax-fs-2xs);
+    font-weight: var(--ax-fw-semibold);
+    text-transform: uppercase;
+    letter-spacing: var(--ax-ls-wider);
+    color: var(--ax-color-text-tertiary);
+    margin-right: var(--ax-space-4);
+  }
+  .ax-table-responsive tbody td.ax-td-select::before {
+    display: none;
+  }
+}

@@ -1,0 +1,22 @@
+<ion-content [fullscreen]="true" class="page-bg">
+  <div class="status-screen">
+    <img loading="lazy"
+         class="status-illustration"
+         src="assets/images/success.gif"
+         alt="" />
+
+    <h1>{{ 'text_purchase_successful' | translate }}</h1>
+    <p>{{ 'text_purchase_successful_subtitle' | translate }}</p>
+
+    <div class="status-actions">
+      <ion-button shape="round" expand="block" [routerLink]="['/account']">
+        <ax-icon name="house" slot="start"></ax-icon>
+        <span>{{ 'button_home' | translate }}</span>
+      </ion-button>
+      <ion-button shape="round" expand="block" fill="outline" [routerLink]="['/messages']">
+        <ax-icon name="message-square-text" slot="start"></ax-icon>
+        <span>{{ 'button_message_vendor' | translate }}</span>
+      </ion-button>
+    </div>
+  </div>
+</ion-content>

@@ -1,0 +1,119 @@
+<header class="ax-topbar">
+  <!-- Mobile hamburger -->
+  <button type="button"
+          class="ax-topbar-menu-toggle"
+          (click)="menuToggle.emit()"
+          aria-label="Open navigation">
+    <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+  </button>
+
+  <div class="ax-topbar-brand">
+    <span class="ax-topbar-title">Dashboard</span>
+    <span class="ax-topbar-subtitle ax-md-inline-block">Manage your store</span>
+  </div>
+
+  <!-- Search slot (reserved for Phase 2 search wiring) -->
+  <div class="ax-topbar-search">
+    <div class="ax-input-group ax-w-full">
+      <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">search</span>
+      <input type="search"
+             class="ax-input ax-input-sm"
+             placeholder="Search your store…"
+             aria-label="Search your store" />
+    </div>
+  </div>
+
+  <div class="ax-topbar-spacer"></div>
+
+  <div class="ax-topbar-actions">
+    <app-language-switcher></app-language-switcher>
+
+    <!-- Notifications -->
+    <div class="ax-dropdown" [class.ax-dropdown-open]="ui_controls.notif_open">
+      <button type="button"
+              class="ax-btn ax-btn-ghost ax-btn-icon ax-icon-btn-indicator"
+              (click)="toggle_notif(); $event.stopPropagation()"
+              aria-label="Notifications"
+              aria-haspopup="true"
+              [attr.aria-expanded]="ui_controls.notif_open">
+        <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+      </button>
+      <div class="ax-dropdown-menu"
+           [class.ax-dropdown-menu-open]="ui_controls.notif_open"
+           (click)="$event.stopPropagation()"
+           style="width: 22rem; max-width: calc(100vw - 1rem);">
+        <div class="ax-flex ax-items-center ax-justify-between ax-px-3 ax-py-2">
+          <span class="ax-dropdown-header ax-p-0">Notifications</span>
+          <button type="button"
+                  class="ax-btn ax-btn-link ax-btn-sm"
+                  (click)="mark_notifications()">
+            <span class="material-symbols-outlined" aria-hidden="true">done_all</span>
+            Mark all read
+          </button>
+        </div>
+        <div class="ax-divider ax-my-1"></div>
+
+        <div *ngIf="ui_controls.is_loading" class="ax-py-6 ax-flex ax-justify-center">
+          <span class="ax-spinner" aria-label="Loading"></span>
+        </div>
+
+        <div *ngIf="!ui_controls.is_loading && (!notifications || notifications.length === 0)"
+             class="ax-empty ax-py-6">
+          <span class="ax-empty-icon"><span class="material-symbols-outlined" aria-hidden="true">notifications_off</span></span>
+          <p class="ax-text-sm ax-text-secondary ax-m-0">You're all caught up</p>
+        </div>
+
+        <div *ngIf="!ui_controls.is_loading && notifications && notifications.length > 0"
+             class="ax-flex ax-flex-col ax-gap-1 ax-overflow-y-auto"
+             style="max-height: 24rem;">
+          <div *ngFor="let n of notifications"
+               class="ax-p-3 ax-rounded-md ax-hover-bg-muted ax-transition-colors ax-cursor-pointer"
+               [class.ax-font-semibold]="!n.is_read">
+            <p class="ax-text-sm ax-m-0 ax-leading-snug">{{ n.message }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Profile -->
+    <div class="ax-dropdown" [class.ax-dropdown-open]="ui_controls.profile_open">
+      <button type="button"
+              class="ax-btn ax-btn-ghost ax-btn-sm"
+              (click)="toggle_profile(); $event.stopPropagation()"
+              aria-label="Account menu"
+              aria-haspopup="true"
+              [attr.aria-expanded]="ui_controls.profile_open">
+        <span class="ax-avatar ax-avatar-xs" *ngIf="!user_session.avatar">
+          {{ (user_session.first_name?.[0] || '') + (user_session.last_name?.[0] || '') }}
+        </span>
+        <span class="ax-avatar ax-avatar-xs" *ngIf="user_session.avatar">
+          <img [src]="user_session.avatar" [alt]="user_session.first_name" />
+        </span>
+        <span class="ax-hidden ax-md-inline ax-text-sm ax-font-medium">
+          {{ user_session.first_name }}
+        </span>
+        <span class="material-symbols-outlined ax-text-tertiary" style="font-size: 1rem;" aria-hidden="true">expand_more</span>
+      </button>
+      <div class="ax-dropdown-menu" [class.ax-dropdown-menu-open]="ui_controls.profile_open">
+        <div class="ax-px-3 ax-py-2">
+          <p class="ax-text-sm ax-font-semibold ax-m-0">{{ user_session.first_name }} {{ user_session.last_name }}</p>
+          <p class="ax-text-2xs ax-text-tertiary ax-m-0 ax-mt-1">{{ user_session.email }}</p>
+        </div>
+        <div class="ax-dropdown-divider"></div>
+        <a routerLink="/profile" class="ax-dropdown-item" (click)="close_all()">
+          <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
+          Profile
+        </a>
+        <a routerLink="/security" class="ax-dropdown-item" (click)="close_all()">
+          <span class="material-symbols-outlined" aria-hidden="true">shield</span>
+          Security
+        </a>
+        <div class="ax-dropdown-divider"></div>
+        <button type="button" class="ax-dropdown-item ax-dropdown-item-danger" (click)="sign_out()">
+          <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+          Sign out
+        </button>
+      </div>
+    </div>
+  </div>
+</header>

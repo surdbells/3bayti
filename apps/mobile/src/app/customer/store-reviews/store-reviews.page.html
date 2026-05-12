@@ -1,0 +1,60 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ rqst_param.store_name }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content fullscreen="true" class="page-bg ion-padding-horizontal">
+
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  @if (!ui_controls.is_loading) {
+    <div class="reviews-list">
+      @for (item of reviews; track item) {
+        <div class="review-card">
+          <div class="review-head">
+            <div class="reviewer">
+              <div class="reviewer-avatar">
+                <ax-icon name="user" [size]="18"></ax-icon>
+              </div>
+              <div class="reviewer-name">{{ item?.customer || '—' }}</div>
+            </div>
+            @if (item.star > 0) {
+              <div class="rating" [attr.aria-label]="item.star + ' / 5'">
+                @for (s of [1,2,3,4,5]; track s) {
+                  <ax-icon
+                    name="star"
+                    [size]="14"
+                    [class.rating__star--filled]="s <= item.star"
+                    class="rating__star"></ax-icon>
+                }
+              </div>
+            }
+          </div>
+          @if (item?.comment) {
+            <p class="review-comment">{{ item.comment }}</p>
+          }
+        </div>
+      }
+    </div>
+  }
+
+  @if (ui_controls.is_empty && !ui_controls.is_loading) {
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="star" [size]="32"></ax-icon>
+      </div>
+      <h2>{{ 'heading_no_reviews_yet' | translate }}</h2>
+      <p>{{ 'text_store_has_no_reviews_yet' | translate }}</p>
+    </div>
+  }
+
+</ion-content>

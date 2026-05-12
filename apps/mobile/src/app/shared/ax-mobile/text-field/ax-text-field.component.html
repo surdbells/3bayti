@@ -1,0 +1,58 @@
+<div class="ax-text-field" [class.ax-text-field--error]="!!error" [class.ax-text-field--disabled]="disabled" [class.ax-text-field--multiline]="multiline">
+  <label class="ax-text-field__label" [for]="id">
+    {{ label }}<span *ngIf="required" class="ax-text-field__required" aria-hidden="true">*</span>
+  </label>
+
+  <div class="ax-text-field__control">
+    <ng-container *ngIf="!multiline; else multilineTpl">
+      <input
+        [id]="id"
+        class="ax-text-field__input"
+        [class.ax-text-field__input--has-toggle]="hasPasswordToggle"
+        [type]="effectiveType"
+        [placeholder]="placeholder"
+        [required]="required"
+        [disabled]="disabled"
+        [attr.autocomplete]="autocomplete || null"
+        [attr.inputmode]="inputmode || null"
+        [attr.maxlength]="maxlength || null"
+        [attr.name]="name || null"
+        [attr.aria-invalid]="!!error"
+        [attr.aria-describedby]="(error || hint) ? id + '-msg' : null"
+        [value]="value"
+        (input)="handleInput($event)"
+        (blur)="handleBlur()" />
+
+      <button
+        *ngIf="hasPasswordToggle"
+        type="button"
+        class="ax-text-field__toggle"
+        [attr.aria-label]="passwordToggleLabel"
+        (click)="togglePasswordVisibility($event)">
+        <ax-icon [name]="passwordToggleIcon" size="sm"></ax-icon>
+      </button>
+    </ng-container>
+
+    <ng-template #multilineTpl>
+      <textarea
+        [id]="id"
+        class="ax-text-field__input ax-text-field__input--multiline"
+        [placeholder]="placeholder"
+        [required]="required"
+        [disabled]="disabled"
+        [rows]="rows"
+        [attr.autocomplete]="autocomplete || null"
+        [attr.maxlength]="maxlength || null"
+        [attr.name]="name || null"
+        [attr.aria-invalid]="!!error"
+        [attr.aria-describedby]="(error || hint) ? id + '-msg' : null"
+        [value]="value"
+        (input)="handleInput($event)"
+        (blur)="handleBlur()"></textarea>
+    </ng-template>
+  </div>
+
+  <p *ngIf="error || hint" class="ax-text-field__message" [class.ax-text-field__message--error]="!!error" [id]="id + '-msg'">
+    {{ error || hint }}
+  </p>
+</div>

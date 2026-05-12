@@ -1,0 +1,254 @@
+<app-admin-shell>
+  <div class="ax-container">
+      <header class="ax-page-header">
+        <div class="ax-page-header-content">
+          <button
+            type="button"
+            (click)="goBack()"
+            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+            style="align-self: flex-start;">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            Back to dashboard
+          </button>
+          <span class="ax-page-header-eyebrow">Access control</span>
+          <h1 class="ax-page-title">Platform users</h1>
+          <p *ngIf="customers && customers.length > 0" class="ax-page-subtitle">
+            {{ customers.length }} user{{ customers.length !== 1 ? 's' : '' }} with access to the admin platform.
+          </p>
+        </div>
+
+        <div class="ax-flex ax-gap-2 ax-items-center">
+          <button
+            type="button"
+            class="ax-btn ax-btn-outline ax-btn-sm"
+            (click)="get_users()"
+            [disabled]="ui_controls.is_loading">
+            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <section class="ax-page-section">
+        <div class="ax-grid ax-grid-cols-1 ax-lg-grid-cols-4 ax-gap-3">
+          <!-- Register card -->
+          <div class="ax-card ax-p-4" style="align-self: start;">
+            <h3 class="ax-h6 ax-m-0 ax-mb-3">Add new user</h3>
+
+            <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-2 ax-mb-3">
+              <div class="ax-form-field">
+                <label class="ax-label ax-text-2xs ax-label-required" for="first_name">{{ 'first_name' | translate }}</label>
+                <input id="first_name" autocomplete="off" [(ngModel)]="register.first_name" name="first_name" class="ax-input ax-input-sm" type="text" />
+              </div>
+              <div class="ax-form-field">
+                <label class="ax-label ax-text-2xs ax-label-required" for="last_name">{{ 'last_name' | translate }}</label>
+                <input id="last_name" autocomplete="off" [(ngModel)]="register.last_name" name="last_name" class="ax-input ax-input-sm" type="text" />
+              </div>
+            </div>
+
+            <div class="ax-form-field ax-mb-3">
+              <label class="ax-label ax-text-2xs ax-label-required" for="email">{{ 'email' | translate }}</label>
+              <input id="email" autocomplete="off" [(ngModel)]="register.email" name="email" class="ax-input ax-input-sm" type="email" />
+            </div>
+
+            <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-2 ax-mb-3">
+              <div class="ax-form-field">
+                <label class="ax-label ax-text-2xs ax-label-required" for="password">{{ 'password' | translate }}</label>
+                <input id="password" autocomplete="off" [(ngModel)]="register.password" name="password" class="ax-input ax-input-sm" type="password" />
+              </div>
+              <div class="ax-form-field">
+                <label class="ax-label ax-text-2xs ax-label-required" for="confirm_password">{{ 'confirm_password' | translate }}</label>
+                <input id="confirm_password" autocomplete="off" [(ngModel)]="register.confirm_password" name="confirm_password" class="ax-input ax-input-sm" type="password" />
+              </div>
+            </div>
+
+            <div class="ax-mb-3">
+              <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Roles</div>
+              <label class="ax-check ax-mb-2">
+                <input type="checkbox" class="ax-check-box" [(ngModel)]="register.is_finance" name="is_finance" />
+                <span class="ax-check-label">Finance manager</span>
+              </label>
+              <label class="ax-check ax-mb-2">
+                <input type="checkbox" class="ax-check-box" [(ngModel)]="register._sub_admin" name="is_sub_admin" />
+                <span class="ax-check-label">Sub admin</span>
+              </label>
+              <label class="ax-check">
+                <input type="checkbox" class="ax-check-box" [(ngModel)]="register.is_support" name="is_support" />
+                <span class="ax-check-label">Customer support</span>
+              </label>
+            </div>
+
+            <button
+              type="button"
+              class="ax-btn ax-btn-primary"
+              style="width: 100%;"
+              (click)="user_register()"
+              [disabled]="ui_controls.is_registering">
+              <span *ngIf="ui_controls.is_registering" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <span *ngIf="!ui_controls.is_registering" class="material-symbols-outlined" aria-hidden="true">person_add</span>
+              Add user
+            </button>
+          </div>
+
+          <!-- Users table -->
+          <div style="grid-column: span 3;">
+            <!-- Loading -->
+            <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+              <span class="ax-spinner ax-spinner-lg" aria-label="Loading users"></span>
+            </div>
+
+            <div *ngIf="!ui_controls.is_loading" class="ax-card ax-p-0">
+              <div class="ax-table-wrapper">
+                <table class="ax-table ax-table-hover">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Last login</th>
+                      <th>Roles</th>
+                      <th>Status</th>
+                      <th style="width: 11rem; text-align: right;"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let a_customer of customers; let i = index">
+                      <td>
+                        <span class="ax-font-medium ax-text-primary">{{ a_customer.first_name }} {{ a_customer.last_name }}</span>
+                      </td>
+                      <td><span class="ax-text-sm ax-text-secondary">{{ a_customer.email }}</span></td>
+                      <td><span class="ax-text-2xs ax-text-tertiary">{{ a_customer.last_login }}</span></td>
+                      <td>
+                        <div class="ax-flex ax-gap-1 ax-flex-wrap">
+                          <span *ngIf="a_customer.is_finance" class="ax-badge ax-badge-info">Finance</span>
+                          <span *ngIf="a_customer.is_sub_admin" class="ax-badge ax-badge-brand">Sub-admin</span>
+                          <span *ngIf="a_customer.is_support" class="ax-badge ax-badge-neutral">Support</span>
+                          <span *ngIf="!a_customer.is_finance && !a_customer.is_sub_admin && !a_customer.is_support" class="ax-text-2xs ax-text-tertiary">—</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span *ngIf="a_customer.status" class="ax-badge ax-badge-success">Active</span>
+                        <span *ngIf="!a_customer.status" class="ax-badge ax-badge-danger">Inactive</span>
+                      </td>
+                      <td style="text-align: right;">
+                        <div class="ax-flex ax-gap-1 ax-justify-end">
+                          <button
+                            *ngIf="!a_customer.status"
+                            type="button"
+                            class="ax-btn ax-btn-ghost ax-btn-sm"
+                            (click)="start_activate(a_customer.id, a_customer.first_name)">
+                            Activate
+                          </button>
+                          <button
+                            *ngIf="a_customer.status"
+                            type="button"
+                            class="ax-btn ax-btn-ghost ax-btn-sm"
+                            (click)="start_deactivate(a_customer.id, a_customer.first_name)">
+                            Deactivate
+                          </button>
+                          <button
+                            type="button"
+                            class="ax-btn ax-btn-outline ax-btn-sm"
+                            (click)="start_edit(a_customer)">
+                            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                            Edit
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Empty state -->
+            <div *ngIf="!ui_controls.is_loading && (!customers || customers.length === 0)" class="ax-card ax-p-8 ax-text-center ax-mt-3">
+              <span
+                class="material-symbols-outlined"
+                style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
+                aria-hidden="true">group</span>
+              <h3 class="ax-h4 ax-m-0 ax-mt-3">No platform users yet</h3>
+              <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+                Use the form on the left to add your first admin user.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>  </div>
+</app-admin-shell>
+
+<!-- Edit user drawer -->
+<div
+  *ngIf="open()"
+  class="ax-drawer-overlay"
+  (click)="onCloseDrawer()"
+  style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 1000; animation: fadeIn 150ms ease;"></div>
+
+<aside
+  *ngIf="open()"
+  class="ax-drawer ax-drawer-right"
+  style="position: fixed; top: 0; right: 0; bottom: 0; width: min(100%, 28rem); background: var(--ax-color-bg-surface); z-index: 1001; display: flex; flex-direction: column; box-shadow: var(--ax-shadow-lg);">
+  <header class="ax-drawer-header">
+    <div class="ax-drawer-header-content">
+      <h2 class="ax-drawer-title">Edit user</h2>
+      <p class="ax-drawer-subtitle">{{ single.first_name }} {{ single.last_name }}</p>
+    </div>
+    <button type="button" class="ax-drawer-close" (click)="onCloseDrawer()" aria-label="Close">
+      <span class="material-symbols-outlined" aria-hidden="true">close</span>
+    </button>
+  </header>
+
+  <div class="ax-drawer-body">
+    <!-- User info form -->
+    <div class="ax-mb-4">
+      <h3 class="ax-h6 ax-m-0 ax-mb-3">Profile</h3>
+      <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-2 ax-mb-3">
+        <div class="ax-form-field">
+          <label class="ax-label ax-text-2xs">{{ 'first_name' | translate }}</label>
+          <input class="ax-input ax-input-sm" type="text" [(ngModel)]="single.first_name" name="first_name" />
+        </div>
+        <div class="ax-form-field">
+          <label class="ax-label ax-text-2xs">{{ 'last_name' | translate }}</label>
+          <input class="ax-input ax-input-sm" type="text" [(ngModel)]="single.last_name" name="last_name" />
+        </div>
+      </div>
+
+      <div class="ax-form-field ax-mb-3">
+        <label class="ax-label ax-text-2xs">{{ 'email' | translate }}</label>
+        <input class="ax-input ax-input-sm" type="email" [(ngModel)]="single.email" name="email" />
+      </div>
+
+      <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Roles</div>
+      <label class="ax-check ax-mb-2">
+        <input type="checkbox" class="ax-check-box" [(ngModel)]="single.is_finance" name="edit_is_finance" />
+        <span class="ax-check-label">Finance manager</span>
+      </label>
+      <label class="ax-check ax-mb-2">
+        <input type="checkbox" class="ax-check-box" [(ngModel)]="single.is_sub_admin" name="edit_is_sub_admin" />
+        <span class="ax-check-label">Sub admin</span>
+      </label>
+      <label class="ax-check ax-mb-3">
+        <input type="checkbox" class="ax-check-box" [(ngModel)]="single.is_support" name="edit_is_support" />
+        <span class="ax-check-label">Customer support</span>
+      </label>
+    </div>
+
+    <!-- Password reset -->
+    <div class="ax-card ax-p-3">
+      <h3 class="ax-h6 ax-m-0 ax-mb-3">Reset password</h3>
+      <div class="ax-form-field ax-mb-3">
+        <label class="ax-label ax-text-2xs">{{ 'password' | translate }}</label>
+        <input class="ax-input ax-input-sm" type="text" [(ngModel)]="password_c.password" name="new_password" autocomplete="new-password" />
+      </div>
+      <button
+        type="button"
+        class="ax-btn ax-btn-primary"
+        style="width: 100%;"
+        (click)="update_password()"
+        [disabled]="ui_controls.is_updating_password">
+        <span *ngIf="ui_controls.is_updating_password" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+        <span *ngIf="!ui_controls.is_updating_password" class="material-symbols-outlined" aria-hidden="true">key</span>
+        Update password
+      </button>
+    </div>
+  </div>
+</aside>

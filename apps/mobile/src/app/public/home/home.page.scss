@@ -1,0 +1,419 @@
+/* ============================================================================
+   Home (public/logged-out) — Tier 1 redesign
+   ============================================================================ */
+
+:host {
+  --brand-dark: var(--ax-color-text-brand);     /* was #7C2108 (deep-red) */
+  --brand-light: var(--ax-color-bg-brand-hover); /* was #B12C06 */
+  --brand-cream: var(--ax-color-bg-brand-subtle); /* was #FBEDE2 */
+  --text-primary: var(--ax-color-text-primary);   /* was #1a1a1a */
+  --text-secondary: var(--ax-color-text-secondary); /* was #666 */
+  --radius-sm: var(--ax-radius-sm, 8px);
+  --radius-md: var(--ax-radius-md, 12px);
+  --radius-lg: var(--ax-radius-lg, 16px);
+  --radius-xl: var(--ax-radius-xl, 24px);
+}
+ion-content.page-bg {
+  --background: var(--ax-color-bg-canvas);
+}
+
+/* ----- Sections ---------------------------------------------------------- */
+
+.section {
+  margin-bottom: 24px;
+
+  &:first-of-type {
+    margin-top: 8px;
+  }
+}
+
+.section-title {
+  font-family: var(--ax-font-display);   /* Poltawski Nowy */
+  font-weight: 400;
+  font-size: 22px;
+  letter-spacing: -0.005em;
+  margin: 0 0 12px;
+  color: var(--ax-color-text-primary);
+  line-height: 1.2;
+}
+
+.section-title--popular {
+  margin-top: 24px;
+  margin-bottom: 16px;
+}
+
+/* ----- Horizontal scroll container (for product card carousels) -------- */
+
+.h-scroll {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  gap: 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 10px;
+
+  /* Hide scrollbar (matches account.page pattern) */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+
+  & > * {
+    scroll-snap-align: start;
+  }
+}
+
+/* Note: .m6d-product-card pinned to 158px width inside .h-scroll
+   is defined globally in src/global.scss line 995. */
+
+/* ----- Vendor card (each featured store + thumbnails) ------------------ */
+
+.vendor-card {
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-lg);
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06),
+              0 4px 12px rgba(46, 36, 28, 0.04);
+  margin: 16px 12px;
+  padding: 16px;
+
+  /* Override ion-card defaults */
+  --ion-background-color: var(--ax-color-bg-surface);
+  border: none;
+}
+
+.vendor-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.vendor-card__desc {
+  margin: 0 0 16px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ax-color-text-secondary);
+
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Vendor name chip — replaces <tui-chip> */
+.vendor-name-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--ax-color-bg-brand-subtle);
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ax-color-text-brand);
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  ax-icon {
+    color: var(--ax-color-text-brand);
+    font-size: 14px;
+  }
+
+  span {
+    line-height: 1;
+  }
+
+  transition: background 120ms ease;
+
+  &:active {
+    background: var(--ax-color-bg-brand-muted);
+  }
+}
+
+/* Vendor rating chip — replaces <ion-chip outline> */
+.vendor-rating-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: transparent;
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.12));
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  ax-icon {
+    color: #d6a800;  /* gold star — keep as a literal accent, not a token */
+    font-size: 12px;
+  }
+
+  &__count {
+    color: var(--ax-color-text-secondary);
+    font-weight: 400;
+  }
+
+  &:active {
+    background: var(--ax-color-bg-brand-subtle);
+  }
+}
+
+/* ----- Vendor thumbnail row -------------------------------------------- */
+
+.vendor-thumb-row {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 110px;
+  gap: 8px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.vendor-thumb {
+  position: relative;
+  display: block;
+  width: 110px;
+  height: 140px;
+  padding: 0;
+  background: var(--ax-color-bg-placeholder);
+  border: none;
+  border-radius: var(--ax-radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  scroll-snap-align: start;
+
+  appearance: none;
+  -webkit-appearance: none;
+
+  img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+
+    &.loaded {
+      opacity: 1;
+    }
+  }
+
+  &__skeleton {
+    position: absolute;
+    inset: 0;
+    background: var(--ax-color-bg-placeholder);
+    z-index: 2;
+    overflow: hidden;
+    transition: opacity 0.3s ease;
+
+    &.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  &__price {
+    position: absolute;
+    bottom: 6px;
+    left: 6px;
+    z-index: 3;
+    padding: 3px 8px;
+    background: rgba(28, 25, 22, 0.7);
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ax-palette-neutral-0);
+  }
+}
+
+/* ----- Loader row ------------------------------------------------------ */
+
+.loader-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+/* ============================================================================
+   Premium public header — page-scoped (overrides M7 chrome for this page)
+   ============================================================================ */
+
+ion-header.public-header {
+  background: var(--ax-color-bg-surface);
+  /* No manual padding-top here — ion-toolbar handles its own safe-area
+     inset, and the header's bg color extends into that inset region
+     for visual continuity. */
+  border-bottom: 1px solid rgba(46, 36, 28, 0.08);
+
+  ion-toolbar.public-header__toolbar {
+    --background: var(--ax-color-bg-surface);
+    --border-color: transparent;
+    --border-width: 0;
+    --min-height: 56px;
+    --padding-top: 8px;
+    --padding-bottom: 6px;
+    --padding-start: 12px;
+    --padding-end: 12px;
+  }
+
+  .brand-title {
+    --color: var(--ax-color-text-primary);
+    text-align: center;
+    padding: 0;
+
+    .brand-mark {
+      height: 32px;
+      width: auto;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  }
+}
+
+/* Auth pill CTAs */
+.auth-cta {
+  --border-radius: 999px;
+  --padding-start: 16px;
+  --padding-end: 16px;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  margin: 0;
+
+  /* The <ion-buttons slot="start"> wrapper applies tight defaults
+     (compact width, height: 100%) for icon-only toolbar buttons.
+     For text pills with custom backgrounds, we need to override
+     the inner native button height + give the button its own
+     auto width sized by content + padding. */
+  height: 32px;
+  min-height: 32px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+
+  &::part(native) {
+    height: 32px;
+    min-height: 32px;
+    padding-inline: 16px;
+    /* Reset any inherited box decoration that might fight the pill shape */
+    border-radius: 999px;
+  }
+}
+
+.auth-cta--primary {
+  --background: var(--ax-color-bg-brand);
+  --background-hover: var(--ax-color-bg-brand);
+  --background-activated: rgba(90, 58, 44, 0.85);
+  --background-focused: var(--ax-color-text-brand);
+  --color: var(--ax-palette-neutral-0);
+  --border-width: 0;
+  --box-shadow: none;
+}
+
+.auth-cta--secondary {
+  --background: transparent;
+  --background-hover: rgba(90, 58, 44, 0.06);
+  --background-activated: rgba(90, 58, 44, 0.10);
+  --background-focused: rgba(90, 58, 44, 0.06);
+  --color: var(--ax-color-text-brand);
+  --border-width: 1px;
+  --border-style: solid;
+  --border-color: rgba(90, 58, 44, 0.4);
+  --box-shadow: none;
+}
+
+
+/* ========================================
+   FOOTER
+   ======================================== */
+.product-footer {
+  background: var(--ax-color-bg-surface);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  padding: 16px 20px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.price-display {
+  .price-label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+
+  .price-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+}
+
+.add-cart-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 24px;
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand-light));
+  border: none;
+  border-radius: var(--radius-lg);
+  color: var(--ax-color-bg-surface);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  tui-icon {
+    font-size: 18px;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  &.out-of-stock {
+    background: var(--ax-color-border-default);
+    cursor: not-allowed;
+  }
+
+  &.in-cart {
+    background: var(--ax-color-text-success);
+  }
+
+  &.backorder {
+    background: var(--ax-color-text-warning);
+  }
+}

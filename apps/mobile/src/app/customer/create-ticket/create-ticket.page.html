@@ -1,0 +1,72 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/ticketlist']" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_create_ticket' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  @if (!ui_controls.is_loading) {
+    <div class="form-sheet ion-padding">
+
+      <!-- Subject -->
+      <div class="form-field">
+        <ax-text-field
+          [label]="'placeholder_short_subject' | translate"
+          [placeholder]="'placeholder_short_subject' | translate"
+          [(ngModel)]="create.subject"
+          [maxlength]="60"
+          name="subject">
+        </ax-text-field>
+      </div>
+
+      <!-- Summary (multiline) -->
+      <div class="form-field">
+        <ax-text-field
+          [label]="'label_summary' | translate"
+          [placeholder]="'placeholder_describe_issue' | translate"
+          [(ngModel)]="create.message"
+          [multiline]="true"
+          [rows]="4"
+          [maxlength]="160"
+          name="summary">
+        </ax-text-field>
+      </div>
+
+      <!-- Reference (store selector) -->
+      <div class="form-field">
+        <label class="form-field__label">{{ 'label_reference' | translate }}</label>
+        <ion-select
+          [(ngModel)]="create.store"
+          interface="action-sheet"
+          class="form-select"
+          [interfaceOptions]="{ cssClass: 'ax-action-sheet' }">
+          @for(t of stores; track t.store){
+            <ion-select-option [value]="t.store">{{ t.store_name }}</ion-select-option>
+          }
+        </ion-select>
+      </div>
+
+      <!-- Submit -->
+      <ion-button
+        (click)="create_ticket()"
+        expand="block"
+        class="submit-btn"
+        type="button">
+        {{ 'button_create_ticket' | translate }}
+      </ion-button>
+    </div>
+  }
+
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+</ion-content>
+
+<app-tab-bar></app-tab-bar>

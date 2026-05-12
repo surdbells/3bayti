@@ -1,0 +1,229 @@
+<app-admin-shell>
+  <div class="ax-container">
+      <header class="ax-page-header">
+        <div class="ax-page-header-content">
+          <button
+            type="button"
+            (click)="goBack()"
+            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+            style="align-self: flex-start;">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            Back to dashboard
+          </button>
+          <span class="ax-page-header-eyebrow">Support</span>
+          <h1 class="ax-page-title">Support tickets</h1>
+          <p *ngIf="tickets && tickets.length > 0" class="ax-page-subtitle">
+            {{ tickets.length }} ticket{{ tickets.length !== 1 ? 's' : '' }} matching current filters.
+          </p>
+        </div>
+
+        <div class="ax-flex ax-gap-2 ax-items-center ax-flex-wrap">
+          <label class="ax-label ax-text-2xs" style="margin: 0; white-space: nowrap;">Priority</label>
+          <select
+            class="ax-select ax-input-sm"
+            style="width: auto;"
+            (change)="get_ticketPriority($event)"
+            [(ngModel)]="get_ticket_priority.priority"
+            name="priority_filter">
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+
+          <label class="ax-label ax-text-2xs" style="margin: 0; white-space: nowrap;">Status</label>
+          <select
+            class="ax-select ax-input-sm"
+            style="width: auto;"
+            (change)="get_ticketStatus($event)"
+            [(ngModel)]="get_ticket_status.status"
+            name="status_filter">
+            <option value="open">Open</option>
+            <option value="pending">Pending</option>
+            <option value="resolved">Resolved</option>
+            <option value="closed">Closed</option>
+          </select>
+
+          <button
+            type="button"
+            class="ax-btn ax-btn-outline ax-btn-sm"
+            (click)="get_tickets()"
+            [disabled]="ui_controls.is_loading">
+            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <!-- Loading -->
+      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+        <span class="ax-spinner ax-spinner-lg" aria-label="Loading tickets"></span>
+      </div>
+
+      <!-- Table -->
+      <section
+        *ngIf="!ui_controls.is_loading && !ui_controls.no_data"
+        class="ax-card ax-p-0">
+        <div class="ax-table-wrapper">
+          <table class="ax-table ax-table-hover">
+            <thead>
+              <tr>
+                <th style="width: 4rem;">ID</th>
+                <th>Ref</th>
+                <th>Store</th>
+                <th>Subject</th>
+                <th style="text-align: center; width: 4rem;">Msg</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th>Updated</th>
+                <th style="width: 6rem;"></th>
+                <th style="width: 7rem;"></th>
+                <th style="width: 7rem;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a_ticket of tickets; let i = index">
+                <td><span class="ax-text-2xs ax-text-tertiary">#{{ a_ticket.ticket_id }}</span></td>
+                <td><span class="ax-text-2xs ax-text-tertiary">{{ a_ticket.ticket_ref }}</span></td>
+                <td><span class="ax-text-sm ax-text-secondary">{{ a_ticket.store_name }}</span></td>
+                <td>
+                  <div class="ax-font-medium ax-text-primary">{{ a_ticket.subject }}</div>
+                  <div class="ax-text-2xs ax-text-tertiary ax-truncate" style="max-width: 18rem;">{{ a_ticket.message }}</div>
+                </td>
+                <td style="text-align: center;">
+                  <span class="ax-badge ax-badge-neutral ax-numeric">{{ a_ticket.messages }}</span>
+                </td>
+                <td>
+                  <span [ngClass]="priorityBadge(a_ticket.priority)" style="text-transform: capitalize;">{{ a_ticket.priority }}</span>
+                </td>
+                <td>
+                  <span [ngClass]="statusBadge(a_ticket.status)" style="text-transform: capitalize;">{{ a_ticket.status }}</span>
+                </td>
+                <td>
+                  <div class="ax-text-2xs ax-text-tertiary">{{ a_ticket.created }}</div>
+                  <div *ngIf="a_ticket.minutes_after_created > 60" class="ax-mt-1">
+                    <span class="ax-badge ax-badge-danger">Urgent</span>
+                  </div>
+                </td>
+                <td>
+                  <div class="ax-text-2xs ax-text-tertiary">{{ a_ticket.updated }}</div>
+                  <div *ngIf="a_ticket.minutes_after_updated > 60" class="ax-mt-1">
+                    <span class="ax-badge ax-badge-danger">Urgent</span>
+                  </div>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="ax-btn ax-btn-ghost ax-btn-sm"
+                    (click)="manage_ticket(a_ticket.ticket_id, a_ticket.subject)">
+                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                    Manage
+                  </button>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="ax-btn ax-btn-outline ax-btn-sm"
+                    [axDropdown]="priorityMenu">
+                    Priority
+                    <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                  </button>
+                  <ng-template #priorityMenu>
+                    <button
+                      *ngIf="a_ticket.priority !== 'low'"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_changePriority(a_ticket.ticket_id, a_ticket.subject, 'low')">
+                      <span class="material-symbols-outlined" aria-hidden="true">arrow_downward</span>
+                      Low
+                    </button>
+                    <button
+                      *ngIf="a_ticket.priority !== 'medium'"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_changePriority(a_ticket.ticket_id, a_ticket.subject, 'medium')">
+                      <span class="material-symbols-outlined" aria-hidden="true">horizontal_rule</span>
+                      Medium
+                    </button>
+                    <button
+                      *ngIf="a_ticket.priority !== 'high'"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_changePriority(a_ticket.ticket_id, a_ticket.subject, 'high')">
+                      <span class="material-symbols-outlined" aria-hidden="true">arrow_upward</span>
+                      High
+                    </button>
+                    <button
+                      *ngIf="a_ticket.priority !== 'urgent'"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_changePriority(a_ticket.ticket_id, a_ticket.subject, 'urgent')">
+                      <span class="material-symbols-outlined" aria-hidden="true">priority_high</span>
+                      Urgent
+                    </button>
+                  </ng-template>
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    class="ax-btn ax-btn-outline ax-btn-sm"
+                    [axDropdown]="statusMenu">
+                    Status
+                    <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                  </button>
+                  <ng-template #statusMenu>
+                    <button
+                      *ngIf="a_ticket.status !== 'open'"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_changeStatus(a_ticket.ticket_id, a_ticket.subject, 'open')">
+                      <span class="material-symbols-outlined" aria-hidden="true">lock_open</span>
+                      Open
+                    </button>
+                    <button
+                      *ngIf="a_ticket.status !== 'pending'"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_changeStatus(a_ticket.ticket_id, a_ticket.subject, 'pending')">
+                      <span class="material-symbols-outlined" aria-hidden="true">pending</span>
+                      Pending
+                    </button>
+                    <button
+                      *ngIf="a_ticket.status !== 'resolved'"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_changeStatus(a_ticket.ticket_id, a_ticket.subject, 'resolved')">
+                      <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+                      Resolved
+                    </button>
+                    <button
+                      *ngIf="a_ticket.status !== 'closed'"
+                      type="button"
+                      axDropdownItem
+                      (click)="start_changeStatus(a_ticket.ticket_id, a_ticket.subject, 'closed')">
+                      <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+                      Closed
+                    </button>
+                  </ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Empty state -->
+      <section *ngIf="!ui_controls.is_loading && ui_controls.no_data" class="ax-page-section">
+        <div class="ax-card ax-p-8 ax-text-center">
+          <span
+            class="material-symbols-outlined"
+            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
+            aria-hidden="true">support_agent</span>
+          <h3 class="ax-h4 ax-m-0 ax-mt-3">No tickets match the filters</h3>
+          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+            Try switching to a different priority or status.
+          </p>
+        </div>
+      </section>  </div>
+</app-admin-shell>

@@ -1,0 +1,230 @@
+<app-admin-shell>
+    <div class="ax-container" style="max-width: 56rem;">
+      <!-- Page header -->
+      <header class="ax-page-header">
+        <div class="ax-page-header-content">
+          <button
+            type="button"
+            (click)="goBack()"
+            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+            style="align-self: flex-start;">
+            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            Back
+          </button>
+          <span class="ax-page-header-eyebrow">Order management</span>
+          <h1 class="ax-page-title">{{ single.product || 'Order details' }}</h1>
+          <p *ngIf="data.order_ref" class="ax-page-subtitle">
+            Order #{{ data.order_ref || data.order }}
+          </p>
+        </div>
+
+        <div *ngIf="!ui_controls.is_loading && data.status" class="ax-flex ax-gap-2 ax-items-center ax-flex-wrap">
+          <button
+            *ngIf="data.status === 'Accepted'"
+            type="button"
+            class="ax-btn ax-btn-primary ax-btn-sm"
+            (click)="startStatusChange(data.order, 'Ready for Delivery', data.customer_email)"
+            [disabled]="ui_controls.updating_order">
+            <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+            Mark ready for delivery
+          </button>
+          <button
+            *ngIf="data.status === 'Ready for Delivery'"
+            type="button"
+            class="ax-btn ax-btn-primary ax-btn-sm"
+            (click)="startStatusChange(data.order, 'Delivered', data.customer_email)"
+            [disabled]="ui_controls.updating_order">
+            <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+            Mark as delivered
+          </button>
+          <button
+            type="button"
+            class="ax-btn ax-btn-outline ax-btn-sm"
+            (click)="downloadPdf()">
+            <span class="material-symbols-outlined" aria-hidden="true">download</span>
+            Download PDF
+          </button>
+        </div>
+      </header>
+
+      <!-- Loading -->
+      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+        <span class="ax-spinner ax-spinner-lg" aria-label="Loading order"></span>
+      </div>
+
+      <!-- Updating overlay -->
+      <div *ngIf="ui_controls.updating_order" class="ax-flex ax-justify-center ax-py-4">
+        <span class="ax-spinner ax-spinner-sm" aria-label="Updating order"></span>
+      </div>
+
+      <!-- Invoice card -->
+      <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+        <article id="invoiceToPrint" class="ax-card ax-p-0" style="overflow: hidden;">
+          <!-- Header meta -->
+          <div class="ax-p-5" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
+              <div>
+                <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Order reference</div>
+                <div class="ax-font-semibold ax-text-primary ax-mt-1">{{ data.order_ref || data.order }}</div>
+              </div>
+              <div>
+                <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Merchant reference</div>
+                <div class="ax-font-semibold ax-text-primary ax-mt-1">{{ data.merchantReference || '—' }}</div>
+              </div>
+              <div>
+                <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Order status</div>
+                <div class="ax-mt-1">
+                  <span [ngClass]="statusBadgeClass(data.status)">{{ data.status }}</span>
+                </div>
+              </div>
+              <div *ngIf="data.payment_status">
+                <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Payment</div>
+                <div class="ax-mt-1">
+                  <span class="ax-badge ax-badge-neutral">{{ data.payment_status }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Addresses -->
+          <div class="ax-p-5" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-5">
+              <div>
+                <h3 class="ax-h6 ax-m-0 ax-mb-2">Bill to</h3>
+                <div class="ax-font-medium ax-text-primary">{{ data.customer_name }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ data.customer_email }}</div>
+                <div class="ax-text-sm ax-text-secondary">{{ data.delivery_phone }}</div>
+              </div>
+              <div>
+                <h3 class="ax-h6 ax-m-0 ax-mb-2">Deliver to</h3>
+                <div class="ax-font-medium ax-text-primary">{{ data.delivery_name }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">
+                  {{ data.delivery_street_address }}<span *ngIf="data.villa_number">, {{ data.villa_number }}</span>
+                </div>
+                <div class="ax-text-sm ax-text-secondary">
+                  {{ data.delivery_area }}<span *ngIf="data.delivery_city">, {{ data.delivery_city }}</span>
+                </div>
+                <div class="ax-text-2xs ax-text-tertiary ax-mt-2">
+                  <span *ngIf="data.delivery_phone">Phone: {{ data.delivery_phone }}</span>
+                  <span *ngIf="data.delivery_phone && data.delivery_email"> · </span>
+                  <span *ngIf="data.delivery_email">Email: {{ data.delivery_email }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Items -->
+          <div style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <div class="ax-table-wrapper">
+              <table class="ax-table">
+                <thead>
+                  <tr>
+                    <th style="width: 4.5rem;">Image</th>
+                    <th>Product</th>
+                    <th>Size</th>
+                    <th>Colour</th>
+                    <th style="text-align: center; width: 5rem;">Qty</th>
+                    <th style="text-align: right; width: 7rem;">Price</th>
+                    <th style="text-align: right; width: 7rem;">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <img
+                        [src]="data.image"
+                        [alt]="data.name"
+                        style="width: 48px; height: 48px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+                    </td>
+                    <td>
+                      <div class="ax-font-medium ax-text-primary">{{ data.name }}</div>
+                      <div *ngIf="data.note" class="ax-mt-1">
+                        <span class="ax-badge ax-badge-neutral">Note</span>
+                        <div class="ax-text-2xs ax-text-secondary ax-mt-1">{{ data.note }}</div>
+                      </div>
+                    </td>
+                    <td><span class="ax-text-sm ax-text-secondary" style="text-transform: uppercase;">{{ data.size || '—' }}</span></td>
+                    <td><span class="ax-text-sm ax-text-secondary" style="text-transform: uppercase;">{{ data.color || '—' }}</span></td>
+                    <td style="text-align: center;"><span class="ax-numeric">{{ data.quantity }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ data.price }}</span></td>
+                    <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ data.total }}</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Measurements + totals -->
+          <div class="ax-p-5" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-5">
+              <!-- Measurements -->
+              <div>
+                <h3 *ngIf="data.measurement" class="ax-h6 ax-m-0 ax-mb-2">Measurements</h3>
+                <div *ngIf="data.measurement" class="ax-grid ax-grid-cols-3 ax-gap-2">
+                  <div>
+                    <div class="ax-text-2xs ax-text-tertiary">Bust</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.bust || '—' }}</div>
+                  </div>
+                  <div>
+                    <div class="ax-text-2xs ax-text-tertiary">Neck</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.neck || '—' }}</div>
+                  </div>
+                  <div>
+                    <div class="ax-text-2xs ax-text-tertiary">Waist</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.waist || '—' }}</div>
+                  </div>
+                  <div>
+                    <div class="ax-text-2xs ax-text-tertiary">Length</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.length || '—' }}</div>
+                  </div>
+                  <div>
+                    <div class="ax-text-2xs ax-text-tertiary">Hip</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.hip || '—' }}</div>
+                  </div>
+                  <div>
+                    <div class="ax-text-2xs ax-text-tertiary">Arm</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.arm || '—' }}</div>
+                  </div>
+                </div>
+
+                <div *ngIf="data.extra_measurement" class="ax-mt-4">
+                  <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Extra measurement</div>
+                  <div class="ax-text-sm ax-mt-1">{{ data.extra_measurement }}</div>
+                </div>
+
+                <div *ngIf="data.note" class="ax-mt-4">
+                  <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Customer note</div>
+                  <div class="ax-text-sm ax-mt-1">{{ data.note }}</div>
+                </div>
+              </div>
+
+              <!-- Totals -->
+              <div>
+                <div class="ax-flex ax-items-center ax-justify-between ax-py-2">
+                  <span class="ax-text-sm ax-text-secondary">Items subtotal</span>
+                  <span class="ax-font-medium ax-numeric">{{ data.price }}</span>
+                </div>
+                <div
+                  class="ax-flex ax-items-center ax-justify-between ax-py-3"
+                  style="border-top: 1px solid var(--ax-color-border-subtle);">
+                  <span class="ax-h6 ax-m-0">Grand total</span>
+                  <span class="ax-h5 ax-m-0 ax-font-semibold ax-numeric">{{ data.total }}</span>
+                </div>
+                <div *ngIf="data.charges" class="ax-text-2xs ax-text-tertiary ax-mt-2">
+                  Platform charges: {{ data.charges }}
+                </div>
+                <div *ngIf="data.vendor_pay" class="ax-text-2xs ax-text-tertiary">
+                  Vendor payout: {{ data.vendor_pay }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer -->
+          <div class="ax-p-4 ax-flex ax-items-center ax-justify-between ax-flex-wrap ax-gap-2">
+            <div class="ax-text-2xs ax-text-tertiary">{{ data.cart_code }}</div>
+            <div class="ax-text-2xs ax-text-tertiary">This order is no longer editable.</div>
+          </div>
+        </article>
+      </section>
+    </div></app-admin-shell>

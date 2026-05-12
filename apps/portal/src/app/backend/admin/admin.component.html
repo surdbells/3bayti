@@ -1,0 +1,296 @@
+<app-admin-shell>
+    <!-- Page header -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">Welcome back</span>
+        <h1 class="ax-page-title">Good to see you, {{ user_session.first_name || 'there' }}</h1>
+        <p class="ax-page-subtitle">
+          Here's what's happening across the marketplace today.
+        </p>
+      </div>
+
+      <div class="ax-page-actions">
+        <button type="button" class="ax-btn ax-btn-outline" aria-label="Refresh" (click)="get_dashboard()">
+          <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+          Refresh
+        </button>
+        <button type="button" class="ax-btn ax-btn-primary" (click)="open_products()">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          New action
+        </button>
+      </div>
+    </header>
+
+    <!-- Segmented tabs -->
+    <div class="ax-segment ax-mb-7" role="tablist" aria-label="Dashboard sections">
+      <button type="button"
+              role="tab"
+              class="ax-segment-item"
+              [class.ax-segment-item-active]="ui_controls.viewing_dashboard"
+              [attr.aria-selected]="ui_controls.viewing_dashboard"
+              (click)="show_dashboard()">
+        <span class="material-symbols-outlined" aria-hidden="true">analytics</span>
+        Overview
+      </button>
+
+      <button type="button"
+              role="tab"
+              class="ax-segment-item"
+              [class.ax-segment-item-active]="ui_controls.viewing_menu"
+              [attr.aria-selected]="ui_controls.viewing_menu"
+              (click)="show_menu()">
+        <span class="material-symbols-outlined" aria-hidden="true">apps</span>
+        Quick actions
+      </button>
+
+      <button type="button"
+              role="tab"
+              class="ax-segment-item"
+              [class.ax-segment-item-active]="ui_controls.viewing_recent_orders"
+              [attr.aria-selected]="ui_controls.viewing_recent_orders"
+              (click)="show_recent()">
+        <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+        Recent sales
+      </button>
+    </div>
+
+    <!-- Loading state -->
+    <div *ngIf="ui_controls.is_loading" class="ax-py-10 ax-flex ax-justify-center">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading dashboard"></span>
+    </div>
+
+    <!-- ============== OVERVIEW TAB ============== -->
+    <ng-container *ngIf="!ui_controls.is_loading && ui_controls.viewing_dashboard">
+      <!-- KPI stat cards -->
+      <section class="ax-page-section" *ngIf="user_session.is_admin">
+        <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-5">
+          <!-- Products — brand variant -->
+          <div role="button"
+               tabindex="0"
+               class="ax-stat-card ax-stat-card-brand ax-stat-card-interactive"
+               (click)="open_products()"
+               (keydown.enter)="open_products()"
+               aria-label="View all products">
+            <div class="ax-stat-card-header">
+              <span class="ax-stat-card-label">Products</span>
+              <span class="ax-stat-card-icon">
+                <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+              </span>
+            </div>
+            <div class="ax-stat-card-value">{{ total_products | number }}</div>
+            <div class="ax-stat-card-footer">
+              <span class="ax-stat-card-caption">Live across the platform</span>
+              <span class="material-symbols-outlined ax-text-on-brand ax-opacity-75" aria-hidden="true">arrow_forward</span>
+            </div>
+          </div>
+
+          <!-- Orders -->
+          <div role="button"
+               tabindex="0"
+               class="ax-stat-card ax-stat-card-interactive"
+               (click)="open_processing()"
+               (keydown.enter)="open_processing()"
+               aria-label="View orders">
+            <div class="ax-stat-card-header">
+              <span class="ax-stat-card-label">Orders</span>
+              <span class="ax-stat-card-icon">
+                <span class="material-symbols-outlined" aria-hidden="true">shopping_cart</span>
+              </span>
+            </div>
+            <div class="ax-stat-card-value">{{ total_orders | number }}</div>
+            <div class="ax-stat-card-footer">
+              <span class="ax-stat-card-caption">Total lifetime orders</span>
+            </div>
+          </div>
+
+          <!-- Products sold -->
+          <div role="button"
+               tabindex="0"
+               class="ax-stat-card ax-stat-card-interactive"
+               (click)="open_sales()"
+               (keydown.enter)="open_sales()"
+               aria-label="View sales">
+            <div class="ax-stat-card-header">
+              <span class="ax-stat-card-label">Products sold</span>
+              <span class="ax-stat-card-icon">
+                <span class="material-symbols-outlined" aria-hidden="true">sell</span>
+              </span>
+            </div>
+            <div class="ax-stat-card-value">{{ products_sold | number }}</div>
+            <div class="ax-stat-card-footer">
+              <span class="ax-stat-card-caption">Units moved to date</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chart card -->
+      <section class="ax-page-section">
+        <div class="ax-card ax-card-elevated">
+          <div class="ax-card-header">
+            <div>
+              <h2 class="ax-card-title">Sales performance</h2>
+              <p class="ax-card-subtitle">Monthly products sold vs. total orders</p>
+            </div>
+            <div class="ax-flex ax-gap-2 ax-items-center">
+              <span class="ax-badge ax-badge-brand">This year</span>
+            </div>
+          </div>
+          <div class="ax-card-body">
+            <div #chart>
+              <apx-chart
+                [series]="chartOptions.series || []"
+                [chart]="chartOptions.chart!"
+                [dataLabels]="chartOptions.dataLabels || {}"
+                [plotOptions]="chartOptions.plotOptions ?? {}"
+                [yaxis]="chartOptions.yaxis || {}"
+                [legend]="chartOptions.legend!"
+                [fill]="chartOptions.fill || {}"
+                [stroke]="chartOptions.stroke!"
+                [tooltip]="chartOptions.tooltip!"
+                [xaxis]="chartOptions.xaxis!">
+              </apx-chart>
+            </div>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+
+    <!-- ============== QUICK ACTIONS TAB ============== -->
+    <ng-container *ngIf="!ui_controls.is_loading && ui_controls.viewing_menu">
+      <section class="ax-page-section">
+        <ng-container *ngIf="user_session.is_admin; else adminTierCheck">
+          <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-3 ax-lg-grid-cols-4 ax-gap-4">
+            <a *ngFor="let a of super_admin"
+               [routerLink]="a.route"
+               class="ax-card ax-card-interactive ax-p-5 ax-text-left ax-no-underline"
+               [attr.title]="a.title">
+              <div class="ax-flex ax-items-start ax-justify-between ax-mb-3">
+                <span class="ax-stat-card-icon">
+                  <span class="material-symbols-outlined" aria-hidden="true">{{ getIcon(a.icon) }}</span>
+                </span>
+                <span *ngIf="a.badge" class="ax-badge ax-badge-danger">{{ a.badge }}</span>
+              </div>
+              <h3 class="ax-text-base ax-font-semibold ax-text-primary ax-m-0 ax-mb-1">{{ a.title }}</h3>
+              <p class="ax-text-xs ax-text-tertiary ax-m-0 ax-leading-snug">{{ a.desc }}</p>
+            </a>
+          </div>
+        </ng-container>
+
+        <ng-template #adminTierCheck>
+          <ng-container *ngIf="user_session._sub_admin; else supportTierCheck">
+            <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-3 ax-lg-grid-cols-4 ax-gap-4">
+              <a *ngFor="let a of admin"
+                 [routerLink]="a.route"
+                 class="ax-card ax-card-interactive ax-p-5 ax-text-left ax-no-underline"
+                 [attr.title]="a.title">
+                <div class="ax-flex ax-items-start ax-justify-between ax-mb-3">
+                  <span class="ax-stat-card-icon">
+                    <span class="material-symbols-outlined" aria-hidden="true">{{ getIcon(a.icon) }}</span>
+                  </span>
+                  <span *ngIf="a.badge" class="ax-badge ax-badge-danger">{{ a.badge }}</span>
+                </div>
+                <h3 class="ax-text-base ax-font-semibold ax-text-primary ax-m-0 ax-mb-1">{{ a.title }}</h3>
+                <p class="ax-text-xs ax-text-tertiary ax-m-0 ax-leading-snug">{{ a.desc }}</p>
+              </a>
+            </div>
+          </ng-container>
+          <ng-template #supportTierCheck>
+            <ng-container *ngIf="user_session.is_support; else financeTier">
+              <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-3 ax-lg-grid-cols-4 ax-gap-4">
+                <a *ngFor="let a of support"
+                   [routerLink]="a.route"
+                   class="ax-card ax-card-interactive ax-p-5 ax-text-left ax-no-underline"
+                   [attr.title]="a.title">
+                  <div class="ax-flex ax-items-start ax-justify-between ax-mb-3">
+                    <span class="ax-stat-card-icon">
+                      <span class="material-symbols-outlined" aria-hidden="true">{{ getIcon(a.icon) }}</span>
+                    </span>
+                    <span *ngIf="a.badge" class="ax-badge ax-badge-danger">{{ a.badge }}</span>
+                  </div>
+                  <h3 class="ax-text-base ax-font-semibold ax-text-primary ax-m-0 ax-mb-1">{{ a.title }}</h3>
+                  <p class="ax-text-xs ax-text-tertiary ax-m-0 ax-leading-snug">{{ a.desc }}</p>
+                </a>
+              </div>
+            </ng-container>
+            <ng-template #financeTier>
+              <div *ngIf="user_session.is_finance" class="ax-grid ax-grid-cols-2 ax-md-grid-cols-3 ax-lg-grid-cols-4 ax-gap-4">
+                <a *ngFor="let a of finance"
+                   [routerLink]="a.route"
+                   class="ax-card ax-card-interactive ax-p-5 ax-text-left ax-no-underline"
+                   [attr.title]="a.title">
+                  <div class="ax-flex ax-items-start ax-justify-between ax-mb-3">
+                    <span class="ax-stat-card-icon">
+                      <span class="material-symbols-outlined" aria-hidden="true">{{ getIcon(a.icon) }}</span>
+                    </span>
+                    <span *ngIf="a.badge" class="ax-badge ax-badge-danger">{{ a.badge }}</span>
+                  </div>
+                  <h3 class="ax-text-base ax-font-semibold ax-text-primary ax-m-0 ax-mb-1">{{ a.title }}</h3>
+                  <p class="ax-text-xs ax-text-tertiary ax-m-0 ax-leading-snug">{{ a.desc }}</p>
+                </a>
+              </div>
+            </ng-template>
+          </ng-template>
+        </ng-template>
+      </section>
+    </ng-container>
+
+    <!-- ============== RECENT SALES TAB ============== -->
+    <ng-container *ngIf="!ui_controls.is_loading && ui_controls.viewing_recent_orders">
+      <section class="ax-page-section">
+        <div *ngIf="!ui_controls.no_recent" class="ax-table-wrapper">
+          <table class="ax-table ax-table-hover ax-table-interactive">
+            <thead>
+              <tr>
+                <th>{{ 'table_order' | translate }}</th>
+                <th>{{ 'table_date' | translate }}</th>
+                <th>{{ 'table_customer' | translate }}</th>
+                <th>{{ 'table_store' | translate }}</th>
+                <th>{{ 'product' | translate }}</th>
+                <th>{{ 'quantity' | translate }}</th>
+                <th>{{ 'table_total' | translate }}</th>
+                <th>{{ 'table_status' | translate }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let a_recent of pagedRecent">
+                <td class="ax-font-medium ax-text-primary">{{ a_recent.order_ref }}</td>
+                <td class="ax-text-secondary">{{ a_recent.added }}</td>
+                <td>{{ a_recent.customer_name }}</td>
+                <td class="ax-text-secondary">{{ a_recent.store_name }}</td>
+                <td>{{ a_recent.product_name }}</td>
+                <td class="ax-text-secondary">{{ a_recent.quantity }}</td>
+                <td class="ax-font-semibold">{{ a_recent.total_price }}</td>
+                <td>
+                  <span *ngIf="a_recent.status === 'Accepted'"          class="ax-badge ax-badge-warning">Accepted</span>
+                  <span *ngIf="a_recent.status === 'Ready for Delivery'" class="ax-badge ax-badge-info">Ready for delivery</span>
+                  <span *ngIf="a_recent.status === 'Delivered'"          class="ax-badge ax-badge-success">Delivered</span>
+                  <span *ngIf="a_recent.status === 'Return Requested'"   class="ax-badge ax-badge-warning">Return requested</span>
+                  <span *ngIf="a_recent.status === 'Returned'"           class="ax-badge ax-badge-neutral">Returned</span>
+                  <span *ngIf="a_recent.status === 'Cancelled'"          class="ax-badge ax-badge-danger">Cancelled</span>
+                  <span *ngIf="a_recent.status === 'Refunded'"           class="ax-badge ax-badge-brand">Refunded</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+          <app-ax-pagination
+            *ngIf="recent && recent.length > pageSize"
+            [totalCount]="recent.length"
+            [pageSize]="pageSize"
+            [pageIndex]="pageIndex"
+            (pageIndexChange)="onPageIndexChange($event)">
+          </app-ax-pagination>
+        </div>
+
+        <div *ngIf="ui_controls.no_recent" class="ax-card">
+          <div class="ax-empty">
+            <span class="ax-empty-icon">
+              <span class="material-symbols-outlined" aria-hidden="true">shopping_bag</span>
+            </span>
+            <h3 class="ax-empty-title">No recent orders</h3>
+            <p class="ax-empty-description">When new orders come in, they'll show up here for quick review.</p>
+          </div>
+        </div>
+      </section>
+    </ng-container></app-admin-shell>

@@ -1,0 +1,181 @@
+/* ============================================================================
+   Category page — M2 redesign (M21 Tier 3)
+   ============================================================================ */
+
+ion-content.page-bg {
+  --background: var(--ax-color-bg-canvas);
+}
+
+/* ----- Skeleton shimmer ---------------------------------------- */
+/* ----- Results info row --------------------------------------- */
+
+.results-info {
+  margin-bottom: 12px;
+  padding: 0 4px;
+
+  .count {
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--ax-color-text-secondary);
+    font-weight: 500;
+  }
+}
+
+/* ----- Products grid ------------------------------------------ */
+
+.product-grid {
+  --ion-grid-padding: 0;
+
+  ion-row {
+    --ion-grid-column-padding: 6px;
+  }
+
+  contain: layout style;
+}
+
+/* ----- Empty state -------------------------------------------- */
+
+/* M38/M46: layout, icon-wrap, h3, p covered by global .empty-state.
+   This page keeps the .reset-btn-ion child + small margin overrides. */
+.empty-state {
+
+  .empty-icon-wrap ax-icon {
+    font-size: 36px;
+  }
+
+  h3 {
+    margin: 0 0 8px;
+  }
+
+  p {
+    margin: 0 0 20px;
+  }
+
+  .reset-btn-ion {
+    --color: var(--ax-color-text-brand);
+    --border-color: var(--ax-color-text-brand);
+    --border-radius: 999px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0.02em;
+  }
+}
+
+/* ----- Wishlist sheet (rendered via <ax-bottom-sheet>) ----- */
+
+.wishlist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wishlist-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-md);
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(46, 36, 28, 0.10);
+    outline: none;
+  }
+
+  &:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(46, 36, 28, 0.08);
+  }
+
+  .folder-icon {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: var(--ax-radius-md);
+    background: var(--ax-color-bg-brand-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ax-icon {
+      font-size: 20px;
+      color: var(--ax-color-text-brand);
+    }
+  }
+
+  &__label {
+    flex: 1;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ax-color-text-primary);
+  }
+
+  /* Note: pre-existing template uses .chevron (not .chevron-icon).
+     Old SCSS targeted .chevron-icon and never applied. Fixed. */
+  .chevron {
+    flex-shrink: 0;
+    font-size: 18px;
+    color: var(--ax-color-text-tertiary);
+  }
+}
+
+.modal-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px;
+}
+
+/* ----- Skeleton text placeholders ----------------------------- */
+
+.skeleton-text {
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+
+  &.name-sk {
+    height: 14px;
+    width: 90%;
+    background: linear-gradient(
+      135deg,
+      var(--ax-palette-brown-100) 0%,
+      var(--ax-palette-brown-50, #f5ebe4) 50%,
+      var(--ax-palette-brown-100) 100%
+    );
+    margin-bottom: 10px;
+  }
+
+  &.price-sk {
+    height: 16px;
+    width: 50%;
+    background: linear-gradient(
+      135deg,
+      var(--ax-palette-brown-200, #dbc8bc) 0%,
+      var(--ax-palette-brown-100) 50%,
+      var(--ax-palette-brown-200, #dbc8bc) 100%
+    );
+  }
+}
+
+/* ----- Responsive --------------------------------------------- */
+
+@media (min-width: 768px) {
+  .product-grid {
+    ion-col {
+      flex: 0 0 33.333%;
+      max-width: 33.333%;
+    }
+  }
+}

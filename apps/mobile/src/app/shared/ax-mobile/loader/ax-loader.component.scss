@@ -1,0 +1,98 @@
+/* =========================================================================
+   ax-loader — three-dot pulsing spinner
+   ========================================================================= */
+
+@keyframes ax-loader-pulse {
+  0%, 80%, 100% {
+    opacity: 0.3;
+    transform: scale(0.85);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+:host {
+  /*
+   * Display as a block-level flex container that centers its content
+   * horizontally. This is the right default for page-level loading
+   * states (the dominant use case — see M4 audit showing 46/46
+   * callsites are content-area loading, not inline button spinners).
+   *
+   * For inline-button cases (e.g. <ax-loader size="sm"> next to text
+   * inside a button), callers can override with an explicit
+   * `style="display: inline-flex"` or we add an `inline` input later.
+   * No current callsite needs that.
+   *
+   * Brand brown is the default color; callers can override via [color]
+   * input or by setting `color` on a parent (currentColor inheritance).
+   */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ax-color-bg-brand);
+}
+
+.ax-loader {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* gap varies per size — set in size variants below. */
+}
+
+.ax-loader__dot {
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.3;
+  animation: ax-loader-pulse 1.4s ease-in-out infinite;
+
+  /* Each dot starts later than the previous one — creates the
+     left-to-right wave effect. */
+  &:nth-child(2) {
+    animation-delay: 0.16s;
+  }
+
+  &:nth-child(3) {
+    animation-delay: 0.32s;
+  }
+}
+
+/* ----- Size variants ----- */
+
+.ax-loader--sm {
+  gap: 4px;
+
+  .ax-loader__dot {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+.ax-loader--md {
+  gap: 6px;
+
+  .ax-loader__dot {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+.ax-loader--lg {
+  gap: 8px;
+
+  .ax-loader__dot {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+/* ----- Reduced-motion preference ----- */
+
+@media (prefers-reduced-motion: reduce) {
+  .ax-loader__dot {
+    animation: none;
+    opacity: 0.7;
+    transform: none;
+  }
+}

@@ -1,0 +1,29 @@
+.table th {
+  width: 30%;
+  font-weight: 600;
+  color: #64748b;
+  background-color: #fafafa;
+  border-right: 1px solid #f1f5f9;
+}
+
+.table td {
+  color: #1e293b;
+}
+
+.table tr:not(:last-child) td,
+.table tr:not(:last-child) th {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.card {
+  border-radius: 12px;
+}
+
+.card-header h6 {
+  letter-spacing: -0.2px;
+}
+
+.badge {
+  font-size: 0.8rem;
+  border-radius: 6px;
+}

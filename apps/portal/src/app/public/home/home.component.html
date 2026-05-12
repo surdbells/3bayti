@@ -1,0 +1,414 @@
+<app-home-top></app-home-top>
+
+<!-- HERO -->
+<header id="home" class="ax-home-hero">
+  <div class="ax-home-hero-inner">
+    <div>
+      <span class="ax-home-hero-badge">
+        <span class="material-symbols-outlined" aria-hidden="true">waving_hand</span>
+        {{ 'welcome' | translate }}
+      </span>
+      <h1 class="ax-home-hero-title">{{ 'welcome_statement' | translate }}</h1>
+      <p class="ax-home-hero-lead">{{ 'welcome_sub_statement' | translate }}</p>
+
+      <div class="ax-home-hero-actions">
+        <a routerLink="/register" class="ax-btn ax-btn-primary ax-btn-lg">
+          {{ 'start_selling' | translate }}
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+        </a>
+        <a routerLink="/login" class="ax-btn ax-btn-outline ax-btn-lg">
+          {{ 'sign_in' | translate }}
+        </a>
+      </div>
+
+      <div class="ax-home-hero-trust">
+        <span class="ax-home-hero-trust-item">
+          <span class="material-symbols-outlined">verified_user</span>
+          {{ 'no_setup' | translate }}
+        </span>
+        <span class="ax-home-hero-trust-item">
+          <span class="material-symbols-outlined">credit_card</span>
+          {{ 'secure_pay' | translate }}
+        </span>
+        <span class="ax-home-hero-trust-item">
+          <span class="material-symbols-outlined">rocket_launch</span>
+          {{ 'go_live' | translate }}
+        </span>
+      </div>
+
+      <div class="ax-home-hero-stats">
+        <div>
+          <span class="ax-home-hero-stat-value">5k+</span>
+          <span class="ax-home-hero-stat-label">{{ 'monthly_shoppers' | translate }}</span>
+        </div>
+        <div>
+          <span class="ax-home-hero-stat-value">3 min</span>
+          <span class="ax-home-hero-stat-label">{{ 'average_signup_time' | translate }}</span>
+        </div>
+        <div>
+          <span class="ax-home-hero-stat-value">99.9%</span>
+          <span class="ax-home-hero-stat-label">{{ 'uptime' | translate }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hero visual: simplified dashboard mockup -->
+    <div class="ax-home-hero-visual">
+      <div class="ax-home-hero-visual-card">
+        <div class="ax-flex ax-items-center ax-justify-between ax-mb-4">
+          <div class="ax-flex ax-items-center ax-gap-2">
+            <span class="ax-badge ax-badge-neutral">{{ 'vendor' | translate }}</span>
+            <span class="ax-text-brand ax-font-semibold">{{ 'dashboard' | translate }}</span>
+          </div>
+          <span class="material-symbols-outlined ax-text-tertiary" aria-hidden="true">more_vert</span>
+        </div>
+
+        <div class="ax-grid ax-grid-cols-4 ax-gap-2 ax-mb-4">
+          <div class="ax-card ax-p-3 ax-text-center">
+            <div class="ax-text-2xs ax-text-tertiary">{{ 'products' | translate }}</div>
+            <div class="ax-text-xl ax-font-semibold ax-text-brand">35</div>
+          </div>
+          <div class="ax-card ax-p-3 ax-text-center">
+            <div class="ax-text-2xs ax-text-tertiary">{{ 'orders' | translate }}</div>
+            <div class="ax-text-xl ax-font-semibold">463</div>
+          </div>
+          <div class="ax-card ax-p-3 ax-text-center">
+            <div class="ax-text-2xs ax-text-tertiary">{{ 'pending' | translate }}</div>
+            <div class="ax-text-xl ax-font-semibold">32</div>
+          </div>
+          <div class="ax-card ax-p-3 ax-text-center">
+            <div class="ax-text-2xs ax-text-tertiary">{{ 'returns' | translate }}</div>
+            <div class="ax-text-xl ax-font-semibold">3</div>
+          </div>
+        </div>
+
+        <div class="ax-grid ax-grid-cols-2 ax-gap-3">
+          <!-- Sales performance sparkline -->
+          <div class="ax-card ax-p-3">
+            <div class="ax-flex ax-items-center ax-justify-between ax-mb-2">
+              <small class="ax-text-2xs ax-font-semibold ax-text-secondary">{{ 'sales_performance' | translate }}</small>
+              <span class="material-symbols-outlined ax-text-tertiary" style="font-size: 1rem;">bar_chart</span>
+            </div>
+            <svg viewBox="0 0 240 80" preserveAspectRatio="none" style="width: 100%; height: 4rem;" aria-labelledby="sales-title">
+              <title id="sales-title">{{ 'sales_performance_monthly_title' | translate }}</title>
+              <defs>
+                <linearGradient id="sales-fill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#906952" stop-opacity="0.35"/>
+                  <stop offset="100%" stop-color="#906952" stop-opacity="0.02"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,65 L20,70 L40,55 L60,60 L80,45 L100,50 L120,55 L140,15 L160,45 L180,35 L200,28 L220,18 L240,18 L240,80 L0,80 Z" fill="url(#sales-fill)"/>
+              <path d="M0,65 L20,70 L40,55 L60,60 L80,45 L100,50 L120,55 L140,15 L160,45 L180,35 L200,28 L220,18 L240,18" fill="none" stroke="#906952" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            </svg>
+          </div>
+
+          <!-- Top products mini -->
+          <div class="ax-card ax-p-3">
+            <div class="ax-flex ax-items-center ax-justify-between ax-mb-2">
+              <small class="ax-text-2xs ax-font-semibold ax-text-secondary">{{ 'top_selling_product' | translate }}</small>
+              <span class="material-symbols-outlined ax-text-tertiary" style="font-size: 1rem;">trending_up</span>
+            </div>
+            <div class="ax-flex ax-items-center ax-gap-2 ax-mb-2">
+              <svg viewBox="0 0 40 40" style="width: 3rem; height: 3rem; flex-shrink: 0;" aria-labelledby="pie-title">
+                <title id="pie-title">{{ 'sales_share' | translate }}</title>
+                <circle cx="20" cy="20" r="15" fill="#f1ede7"/>
+                <path d="M20,5 A15,15 0 0,1 34.27,15.15 L20,20 Z" fill="#906952"/>
+                <path d="M34.27,15.15 A15,15 0 0,1 28.5,31.5 L20,20 Z" fill="#c9a227"/>
+                <circle cx="20" cy="20" r="8" fill="white"/>
+              </svg>
+              <div class="ax-flex-1" style="min-width: 0;">
+                <div class="ax-text-xs ax-font-medium">{{ 'vintage_abaya' | translate }}</div>
+                <div class="ax-text-2xs ax-text-tertiary">{{ 'sales_share' | translate }}: 45%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- FEATURES -->
+<section id="features" class="ax-home-section">
+  <div class="ax-home-section-header">
+    <div class="ax-home-section-eyebrow">{{ 'why_vendors_choose_abayti' | translate }}</div>
+    <h2 class="ax-home-section-title">{{ 'everything_you_need_to_grow' | translate }}</h2>
+    <p class="ax-home-section-subtitle">{{ 'onboarding_to_payout_streamlined' | translate }}</p>
+  </div>
+
+  <div class="ax-home-features">
+    <div class="ax-home-feature">
+      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">storefront</span></span>
+      <h3 class="ax-home-feature-title">{{ 'beautiful_storefront' | translate }}</h3>
+      <p class="ax-home-feature-desc">{{ 'beautiful_storefront_desc' | translate }}</p>
+    </div>
+    <div class="ax-home-feature">
+      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">credit_card</span></span>
+      <h3 class="ax-home-feature-title">{{ 'payments_and_payouts' | translate }}</h3>
+      <p class="ax-home-feature-desc">{{ 'payments_and_payouts_desc' | translate }}</p>
+    </div>
+    <div class="ax-home-feature">
+      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">local_shipping</span></span>
+      <h3 class="ax-home-feature-title">{{ 'integrated_logistics' | translate }}</h3>
+      <p class="ax-home-feature-desc">{{ 'integrated_logistics_desc' | translate }}</p>
+    </div>
+    <div class="ax-home-feature">
+      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">insights</span></span>
+      <h3 class="ax-home-feature-title">{{ 'sales_analytics' | translate }}</h3>
+      <p class="ax-home-feature-desc">{{ 'sales_analytics_desc' | translate }}</p>
+    </div>
+    <div class="ax-home-feature">
+      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">campaign</span></span>
+      <h3 class="ax-home-feature-title">{{ 'marketing_tools' | translate }}</h3>
+      <p class="ax-home-feature-desc">{{ 'marketing_tools_desc' | translate }}</p>
+    </div>
+    <div class="ax-home-feature">
+      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">shield</span></span>
+      <h3 class="ax-home-feature-title">{{ 'trust_and_support' | translate }}</h3>
+      <p class="ax-home-feature-desc">{{ 'trust_and_support_desc' | translate }}</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how" class="ax-home-section ax-home-section-alt">
+  <div class="ax-home-section-header">
+    <div class="ax-home-section-eyebrow">Onboarding</div>
+    <h2 class="ax-home-section-title">{{ 'start_selling_in_3_steps' | translate }}</h2>
+  </div>
+
+  <div class="ax-home-steps">
+    <div class="ax-home-step">
+      <h3 class="ax-home-step-title">{{ 'step_1_title' | translate }}</h3>
+      <p class="ax-home-step-desc">{{ 'step_1_desc' | translate }}</p>
+    </div>
+    <div class="ax-home-step">
+      <h3 class="ax-home-step-title">{{ 'step_2_title' | translate }}</h3>
+      <p class="ax-home-step-desc">{{ 'step_2_desc' | translate }}</p>
+    </div>
+    <div class="ax-home-step">
+      <h3 class="ax-home-step-title">{{ 'step_3_title' | translate }}</h3>
+      <p class="ax-home-step-desc">{{ 'step_3_desc' | translate }}</p>
+    </div>
+  </div>
+
+  <div class="ax-text-center ax-mt-6">
+    <a routerLink="/register" class="ax-btn ax-btn-primary ax-btn-lg">
+      {{ 'register_now' | translate }}
+      <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+    </a>
+  </div>
+</section>
+
+<!-- STATS STRIP -->
+<section class="ax-home-section">
+  <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-4 ax-text-center">
+    <div>
+      <div class="ax-home-hero-stat-value">1,200</div>
+      <div class="ax-home-hero-stat-label">{{ 'active_vendors' | translate }}</div>
+    </div>
+    <div>
+      <div class="ax-home-hero-stat-value">48,000</div>
+      <div class="ax-home-hero-stat-label">{{ 'products_listed' | translate }}</div>
+    </div>
+    <div>
+      <div class="ax-home-hero-stat-value">98</div>
+      <div class="ax-home-hero-stat-label">{{ 'cities_delivered' | translate }}</div>
+    </div>
+    <div>
+      <div class="ax-home-hero-stat-value">4.8</div>
+      <div class="ax-home-hero-stat-label">{{ 'avg_rating' | translate }}</div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="ax-home-section ax-home-section-alt">
+  <div class="ax-home-section-header">
+    <div class="ax-home-section-eyebrow">Pricing</div>
+    <h2 class="ax-home-section-title">{{ 'simple_vendor_pricing' | translate }}</h2>
+    <p class="ax-home-section-subtitle">{{ 'no_hidden_fees' | translate }}</p>
+  </div>
+
+  <div class="ax-home-pricing" style="max-width: 32rem;">
+    <div class="ax-home-plan ax-home-plan-featured">
+      <h3 class="ax-home-plan-name">{{ 'become_a_vendor' | translate }}</h3>
+      <div class="ax-home-plan-price">
+        {{ 'commission_rate' | translate }}
+        <small>{{ 'per_order' | translate }}</small>
+      </div>
+      <ul class="ax-home-plan-features">
+        <li>
+          <span class="material-symbols-outlined">check_circle</span>
+          {{ 'zero_monthly_subscription' | translate }}
+        </li>
+        <li>
+          <span class="material-symbols-outlined">check_circle</span>
+          {{ 'automated_payouts_weekly' | translate }}
+        </li>
+        <li>
+          <span class="material-symbols-outlined">check_circle</span>
+          {{ 'unlimited_products' | translate }}
+        </li>
+        <li>
+          <span class="material-symbols-outlined">check_circle</span>
+          {{ 'support_via_chat_email' | translate }}
+        </li>
+      </ul>
+      <a routerLink="/register" class="ax-btn ax-btn-primary ax-btn-lg" style="width: 100%;">
+        {{ 'become_a_vendor' | translate }}
+      </a>
+      <small class="ax-text-center ax-text-xs ax-text-tertiary ax-mt-3 ax-block">
+        {{ 'custom_rates_for_high_volume' | translate }}
+      </small>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="ax-home-testimonial-strip ax-home-section">
+  <div class="ax-home-section-header">
+    <div class="ax-home-section-eyebrow">Testimonials</div>
+    <h2 class="ax-home-section-title">{{ 'what_vendors_are_saying' | translate }}</h2>
+    <p class="ax-home-section-subtitle">{{ 'real_results_from_real_sellers' | translate }}</p>
+  </div>
+
+  <div class="ax-home-testimonials" style="grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));">
+    <div class="ax-home-testimonial">
+      <p class="ax-home-testimonial-quote">{{ 'testimonial_1_quote' | translate }}</p>
+      <div class="ax-home-testimonial-author">
+        <span class="ax-home-testimonial-avatar">{{ ('testimonial_1_name' | translate).charAt(0) }}</span>
+        <div>
+          <span class="ax-home-testimonial-author-name">{{ 'testimonial_1_name' | translate }}</span>
+          <span class="ax-home-testimonial-author-role">{{ 'testimonial_1_title' | translate }}</span>
+        </div>
+        <span class="ax-ml-auto" style="color: var(--ax-palette-gold-500);">
+          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+          <span class="material-symbols-outlined" style="font-size: 1rem;">star_half</span>
+        </span>
+      </div>
+    </div>
+
+    <div class="ax-home-testimonial">
+      <p class="ax-home-testimonial-quote">{{ 'testimonial_2_quote' | translate }}</p>
+      <div class="ax-home-testimonial-author">
+        <span class="ax-home-testimonial-avatar">{{ ('testimonial_2_name' | translate).charAt(0) }}</span>
+        <div>
+          <span class="ax-home-testimonial-author-name">{{ 'testimonial_2_name' | translate }}</span>
+          <span class="ax-home-testimonial-author-role">{{ 'testimonial_2_title' | translate }}</span>
+        </div>
+        <span class="ax-ml-auto" style="color: var(--ax-palette-gold-500);">
+          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="ax-home-section ax-home-section-alt">
+  <div class="ax-home-section-header">
+    <div class="ax-home-section-eyebrow">FAQ</div>
+    <h2 class="ax-home-section-title">{{ 'frequently_asked_questions' | translate }}</h2>
+    <p class="ax-home-section-subtitle">{{ 'faq_sub' | translate }}</p>
+  </div>
+
+  <div class="ax-home-faq">
+    <app-ax-accordion [defaultOpenIndex]="0">
+      <app-ax-accordion-item [title]="'faq_q1' | translate">
+        <p class="ax-m-0">{{ 'faq_a1' | translate }}</p>
+      </app-ax-accordion-item>
+      <app-ax-accordion-item [title]="'faq_q2' | translate">
+        <p class="ax-m-0">{{ 'faq_a2' | translate }}</p>
+      </app-ax-accordion-item>
+      <app-ax-accordion-item [title]="'faq_q3' | translate">
+        <p class="ax-m-0">{{ 'faq_a3' | translate }}</p>
+      </app-ax-accordion-item>
+      <app-ax-accordion-item [title]="'faq_q4' | translate">
+        <p class="ax-m-0">{{ 'faq_a4' | translate }}</p>
+      </app-ax-accordion-item>
+    </app-ax-accordion>
+  </div>
+</section>
+
+<!-- LEGAL / POLICIES -->
+<section id="legal" class="ax-home-section">
+  <div class="ax-home-section-header">
+    <div class="ax-home-section-eyebrow">Information</div>
+    <h2 class="ax-home-section-title">Policies &amp; contact</h2>
+  </div>
+
+  <div style="max-width: 56rem; margin: 0 auto;">
+    <app-ax-tabs ariaLabel="Legal policies">
+      <app-ax-tab [label]="'contact' | translate" icon="call">
+        <div class="ax-p-4">
+          <h3 class="ax-h4 ax-mb-3">{{ 'contact' | translate }}</h3>
+          <p class="ax-m-0 ax-text-secondary">{{ 'contact_support_text' | translate }}</p>
+          <h4 class="ax-h5 ax-mt-4 ax-mb-2">{{ 'location' | translate }}</h4>
+        </div>
+      </app-ax-tab>
+      <app-ax-tab [label]="'privacy_policy' | translate" icon="lock">
+        <div class="ax-p-4">
+          <h3 class="ax-h4 ax-mb-3">{{ 'privacy_policy' | translate }}</h3>
+          <p class="ax-m-0 ax-text-secondary">{{ 'privacy_policy_text' | translate }}</p>
+        </div>
+      </app-ax-tab>
+      <app-ax-tab [label]="'refund_policy' | translate" icon="credit_card">
+        <div class="ax-p-4">
+          <h3 class="ax-h4 ax-mb-3">{{ 'refund_policy' | translate }}</h3>
+          <p class="ax-m-0 ax-text-secondary">{{ 'refund_policy_text' | translate }}</p>
+        </div>
+      </app-ax-tab>
+      <app-ax-tab [label]="'shipping_policy' | translate" icon="local_shipping">
+        <div class="ax-p-4">
+          <h3 class="ax-h4 ax-mb-3">{{ 'shipping_policy' | translate }}</h3>
+          <p class="ax-m-0 ax-text-secondary">{{ 'shipping_policy_text' | translate }}</p>
+        </div>
+      </app-ax-tab>
+      <app-ax-tab [label]="'terms_and_conditions' | translate" icon="description">
+        <div class="ax-p-4">
+          <h3 class="ax-h4 ax-mb-3">{{ 'terms_and_conditions' | translate }}</h3>
+          <p class="ax-m-0 ax-text-secondary">{{ 'terms_and_conditions_text' | translate }}</p>
+        </div>
+      </app-ax-tab>
+    </app-ax-tabs>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="ax-home-cta-strip">
+  <div class="ax-home-cta-strip-inner">
+    <h2 class="ax-home-cta-strip-title">{{ 'ready_to_reach_more_customers' | translate }}</h2>
+    <p class="ax-home-cta-strip-desc">{{ 'create_free_vendor_account' | translate }}</p>
+    <div class="ax-flex ax-gap-2 ax-justify-center ax-flex-wrap">
+      <a routerLink="/register" class="ax-btn ax-btn-primary ax-btn-lg">
+        {{ 'register_button' | translate }}
+        <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+      </a>
+      <a routerLink="/login" class="ax-btn ax-btn-outline ax-btn-lg" style="border-color: rgba(245, 241, 235, 0.3); color: var(--ax-color-text-inverse);">
+        {{ 'login_button' | translate }}
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer style="background-color: var(--ax-palette-beige-200); padding: var(--ax-space-5);">
+  <div style="max-width: var(--ax-page-max-width); margin: 0 auto;" class="ax-flex ax-items-center ax-justify-between ax-flex-wrap ax-gap-3">
+    <span class="ax-text-sm ax-text-secondary">{{ 'footer_copyright' | translate }}</span>
+    <nav class="ax-flex ax-gap-4 ax-flex-wrap">
+      <a href="#features" class="ax-text-sm ax-text-primary" style="text-decoration: none;">{{ 'footer_features' | translate }}</a>
+      <a href="#pricing" class="ax-text-sm ax-text-primary" style="text-decoration: none;">{{ 'footer_pricing' | translate }}</a>
+      <a href="#faq" class="ax-text-sm ax-text-primary" style="text-decoration: none;">{{ 'footer_faq' | translate }}</a>
+      <a routerLink="/login" class="ax-text-sm ax-text-primary" style="text-decoration: none;">{{ 'footer_login' | translate }}</a>
+      <a routerLink="/register" class="ax-text-sm ax-text-primary" style="text-decoration: none;">{{ 'footer_register' | translate }}</a>
+    </nav>
+  </div>
+</footer>

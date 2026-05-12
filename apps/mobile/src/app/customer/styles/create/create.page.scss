@@ -1,0 +1,290 @@
+/* ============================================================================
+   Create Style page — M2 redesign (M22 Tier 3)
+   ============================================================================ */
+
+ion-content.page-bg {
+  --background: var(--ax-color-bg-canvas);
+}
+
+/* ----- Form card --------------------------------------------- */
+
+.form-card {
+  margin: 0;
+  border-radius: var(--ax-radius-lg);
+  background: var(--ax-color-bg-surface);
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06);
+  border: none;
+  padding: 16px;
+}
+
+.field {
+  margin-bottom: 4px;
+}
+
+.field__label {
+  display: block;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ax-color-text-secondary);
+  margin-bottom: 6px;
+}
+
+.input-frame {
+  --background: transparent;
+  --border-color: var(--ax-color-border-subtle, rgba(46, 36, 28, 0.12));
+  --inner-padding-end: 0;
+  --padding-start: 12px;
+  --min-height: 44px;
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.12));
+  border-radius: var(--ax-radius-md);
+}
+
+.input-box {
+  --color: var(--ax-color-text-primary);
+  --placeholder-color: var(--ax-color-text-tertiary);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+ion-select {
+  --color: var(--ax-color-text-primary);
+  --placeholder-color: var(--ax-color-text-tertiary);
+  font-family: inherit;
+  font-size: 14px;
+  min-height: 44px;
+  width: 100%;
+  padding-inline-start: 0;
+}
+
+ion-checkbox {
+  --color: var(--ax-color-text-primary);
+  --color-checked: var(--ax-color-text-brand);
+  --background-checked: var(--ax-color-text-brand);
+  --border-color: var(--ax-color-border-subtle, rgba(46, 36, 28, 0.3));
+  --border-color-checked: var(--ax-color-text-brand);
+  --border-radius: 4px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+/* ----- Selected products section ------------------------------ */
+
+.section-label-row {
+  margin-top: 16px;
+  margin-bottom: 8px;
+}
+
+.section-label {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ax-color-text-secondary);
+}
+
+.selected-grid {
+  --ion-grid-padding: 0;
+
+  ion-row {
+    --ion-grid-column-padding: 4px;
+  }
+}
+
+/* ----- Product card (in selected grid + modal) --------------- */
+
+.product-card {
+  position: relative;
+  margin: 0;
+  border-radius: var(--ax-radius-md);
+  background: var(--ax-color-bg-surface);
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06);
+  border: none;
+  cursor: pointer;
+  overflow: hidden;
+
+  .product-image {
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+  }
+
+  .remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 5;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--ax-palette-neutral-0);
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+
+    ax-icon {
+      font-size: 14px;
+    }
+  }
+
+  .product-title {
+    padding: 8px 8px 0;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ax-color-text-primary);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .product-price {
+    padding: 4px 8px 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ax-color-text-brand);
+  }
+}
+
+/* ----- Action buttons ---------------------------------------- */
+
+.button-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.secondary-btn {
+  --background: transparent;
+  --background-hover: rgba(90, 58, 44, 0.06);
+  --background-activated: rgba(90, 58, 44, 0.10);
+  --color: var(--ax-color-text-brand);
+  --border-color: var(--ax-color-text-brand);
+  --border-width: 1px;
+  --border-style: solid;
+  --border-radius: 999px;
+  --box-shadow: none;
+  --min-height: 44px;
+  margin: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.primary-btn {
+  --background: var(--ax-color-bg-brand);
+  --background-hover: var(--ax-color-bg-brand);
+  --background-activated: rgba(90, 58, 44, 0.85);
+  --color: var(--ax-palette-neutral-0);
+  --border-radius: 999px;
+  --box-shadow: none;
+  --min-height: 48px;
+  margin: 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+/* ----- Loader --------------------------------------------- */
+
+.loader-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+/* ============================================================================
+   Select Products sheet (rendered via <ax-bottom-sheet>)
+   ============================================================================ */
+
+.select-products-modal__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 20px 14px;
+}
+
+.select-products-modal__title {
+  margin: 0;
+  font-family: var(--ax-font-display);
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--ax-color-text-primary);
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.select-products-modal__close-btn {
+  background: transparent;
+  border: none;
+  padding: 6px 4px;
+  color: var(--ax-color-text-brand);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+
+  &:hover,
+  &:focus-visible {
+    outline: none;
+    text-decoration: underline;
+  }
+}
+
+.store-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.store-accordion {
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-md);
+  margin-bottom: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06);
+}
+
+.store-header {
+  --background: var(--ax-color-bg-surface);
+  --inner-padding-end: 12px;
+  --padding-start: 14px;
+  --min-height: 48px;
+
+  ion-label {
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ax-color-text-primary);
+  }
+}
+
+.store-content {
+  padding: 8px;
+  background: var(--ax-color-bg-canvas);
+}

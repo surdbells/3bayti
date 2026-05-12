@@ -1,0 +1,368 @@
+// settings.page — M7 chrome + M2 token migration (M40)
+// Drops the entire dark-mode CSS variable system + dark-mode
+// override block + custom .settings-header. Apple-Settings-style
+// section card layout preserved (sections of grouped rows with
+// .item-icon + .item-label + .item-arrow). All colors via M2
+// tokens. No animate.css. Standard m6f-footer + m7-header chrome
+// from global.scss handles the page edges.
+
+// =========================================================
+// Body container
+// =========================================================
+
+.settings-body {
+  padding-top: 16px;
+  padding-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+// =========================================================
+// Profile card
+// =========================================================
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-lg, 16px);
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  box-shadow: 0 4px 12px rgba(46, 36, 28, 0.04);
+  padding: 16px;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+
+  &:active {
+    transform: scale(0.99);
+    box-shadow: 0 2px 6px rgba(46, 36, 28, 0.06);
+  }
+}
+
+.avatar-wrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.avatar-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--ax-color-bg-canvas);
+  border: 2px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.08));
+  display: block;
+}
+
+.avatar-badge {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ax-color-bg-brand);
+  color: var(--ax-palette-neutral-0, #ffffff);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--ax-color-bg-surface);
+}
+
+.profile-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.profile-name {
+  font-family: var(--ax-font-display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ax-color-text-primary);
+  margin: 0 0 2px;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-email {
+  font-size: 13px;
+  color: var(--ax-color-text-secondary);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-edit-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease;
+
+  &:active {
+    transform: scale(0.94);
+  }
+}
+
+// =========================================================
+// Settings sections
+// =========================================================
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.section-title {
+  font-family: var(--ax-font-display);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ax-color-text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+  padding: 0 8px;
+}
+
+.settings-card {
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-lg, 16px);
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  box-shadow: 0 4px 12px rgba(46, 36, 28, 0.04);
+  overflow: hidden;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: start;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.12s ease;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.05));
+  }
+
+  &:active {
+    background: var(--ax-color-bg-brand-subtle);
+  }
+}
+
+.item-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  &--danger {
+    background: rgba(192, 57, 43, 0.10);
+    color: #c0392b;
+  }
+}
+
+.item-label {
+  flex: 1 1 auto;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &--danger {
+    color: #c0392b;
+  }
+}
+
+.item-value {
+  font-size: 13px;
+  color: var(--ax-color-text-tertiary);
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.item-arrow {
+  color: var(--ax-color-text-tertiary);
+  flex-shrink: 0;
+}
+
+.item-control {
+  flex-shrink: 0;
+}
+
+// =========================================================
+// Toggle switch (notifications etc)
+// =========================================================
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background: var(--ax-color-border-subtle, rgba(46, 36, 28, 0.15));
+    border-radius: 999px;
+    transition: background-color 0.2s ease;
+
+    &::before {
+      content: '';
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      top: 3px;
+      left: 3px;
+      background: var(--ax-color-bg-surface);
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(46, 36, 28, 0.15);
+      transition: transform 0.2s ease;
+    }
+  }
+
+  input:checked + .toggle-slider {
+    background: var(--ax-color-bg-brand);
+
+    &::before {
+      transform: translateX(20px);
+    }
+  }
+}
+
+// =========================================================
+// App version footer
+// =========================================================
+
+.app-version {
+  text-align: center;
+  padding: 8px 0 16px;
+
+  p {
+    font-size: 12px;
+    color: var(--ax-color-text-tertiary);
+    margin: 0;
+  }
+}
+
+// =========================================================
+// Location bottom sheet body
+// =========================================================
+
+.modal-body {
+  padding: 16px 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.save-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 48px;
+  background: var(--ax-color-bg-brand);
+  color: var(--ax-palette-neutral-0, #ffffff);
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: opacity 0.18s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active:not([disabled]) {
+    transform: scale(0.99);
+  }
+
+  &[disabled] {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &--loading {
+    pointer-events: none;
+  }
+}
+
+// Inline button loader (when save is running)
+.btn-loader {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: btn-loader-spin 0.7s linear infinite;
+}
+
+@keyframes btn-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// =========================================================
+// Active state on the bottom tab for this page
+// =========================================================
+
+.m6f-tab--active {
+  ax-icon, ion-label {
+    color: var(--ax-color-text-brand);
+  }
+  ion-label {
+    font-weight: 700;
+  }
+}

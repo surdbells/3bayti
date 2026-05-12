@@ -1,0 +1,67 @@
+/* ============================================================================
+   Addresses page — M2 styling
+   ============================================================================ */
+
+/* Picker-button label (matches ax-text-field's __label style for visual
+   alignment with adjacent migrated <ax-text-field> inputs) */
+.address-field-label {
+  display: block;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: var(--ax-color-text-secondary);
+  margin-bottom: 6px;
+}
+
+/* Loader row — centered (matches auth pattern) */
+.loader-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
+}
+
+/* City / area picker sheet list rows (rendered via <ax-bottom-sheet>) */
+.picker-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.picker-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 4px;
+  min-height: 48px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  border-radius: var(--ax-radius-md);
+  transition: background 120ms ease;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(90, 58, 44, 0.04);
+    outline: none;
+  }
+
+  &:active {
+    background: rgba(90, 58, 44, 0.08);
+  }
+
+  & + .picker-list__item {
+    border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  }
+}
+
+.picker-list__name {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+}

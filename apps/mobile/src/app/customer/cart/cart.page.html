@@ -1,0 +1,163 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="triggerBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_my_cart' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="user_wishlist()" class="m7-header-action" aria-label="Wishlist">
+        <ax-icon name="heart"/>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg ion-padding-horizontal">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (!ui_controls.is_loading && !ui_controls.is_empty) {
+    <p class="cart-count">{{ bill.count }} {{ 'label_item' | translate }}</p>
+  }
+
+  @for (cart of carts; track cart.id) {
+    @if (!ui_controls.is_loading) {
+      <ion-card class="cart-card">
+        <div class="card-row">
+          <div (click)="open_product(cart.product)" class="img-wrap" role="button">
+            <img loading="lazy" class="cart-img" src="{{ cart.product_image }}" alt="{{ cart.product_name }}" />
+          </div>
+          <div class="content-wrap">
+            <div class="row row-top">
+              <div (click)="open_product(cart.product)" class="title" title="{{ cart.product_name }}">{{ cart.product_name }}</div>
+              <div class="icons">
+                <ion-button (click)="startAddToCloset(cart.product, cart.product_name, cart.product_image)" fill="clear" size="small" class="icon-btn icon-btn--save" aria-label="Save to closet">
+                  <ax-icon name="heart-plus" />
+                </ion-button>
+                <ion-button (click)="startRemove(cart.item, cart.product_name)" fill="clear" size="small" class="icon-btn icon-btn--remove" aria-label="Remove">
+                  <ax-icon name="trash-2" />
+                </ion-button>
+              </div>
+            </div>
+            <div (click)="open_product(cart.product)" class="row row-mid">
+              <div class="desc" [innerHTML]="cart.description"></div>
+            </div>
+            <div class="row row-bottom">
+              <div class="left-meta">
+                <div (click)="open_product(cart.product)" class="price">
+                  Ð{{ cart.price_formatted }}
+                </div>
+              </div>
+              <div class="size"><strong>{{ cart.size }}</strong></div>
+              <div class="qty-controls">
+                <ion-button [disabled]="cart.quantity === 1" (click)="DecreaseItem(cart.item, cart.quantity)" fill="outline" size="small" class="qty-btn">
+                  <ax-icon name="minus" />
+                </ion-button>
+                <div class="qty" aria-live="polite">{{ cart.quantity }}</div>
+                <ion-button (click)="IncreaseItem(cart.item, cart.quantity)" fill="outline" size="small" class="qty-btn">
+                  <ax-icon name="plus" />
+                </ion-button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ion-card>
+    }
+  }
+
+  @if (!ui_controls.is_loading && !ui_controls.is_empty) {
+    <ion-card class="cart-card summary-card">
+      <h2 class="summary-title">{{ 'title_order_summary' | translate }}</h2>
+      <ion-list lines="none" class="summary-list">
+        <ion-item lines="none" class="summary-item" detail="false">
+          <ion-label>{{ 'label_items' | translate }}</ion-label>
+          <ion-text slot="end">{{ bill.count }}</ion-text>
+        </ion-item>
+        <ion-item lines="none" class="summary-item" detail="false">
+          <ion-label>{{ 'label_delivery_fee' | translate }}</ion-label>
+          <ion-text slot="end">Ð{{ bill.f_delivery }}</ion-text>
+        </ion-item>
+        <ion-item class="summary-item" detail="false">
+          <ion-label>{{ 'label_discount' | translate }}</ion-label>
+          <ion-text slot="end">Ð{{ bill.f_discount }}</ion-text>
+        </ion-item>
+        <ion-item lines="none" class="summary-item" detail="false">
+          <ion-label>{{ 'label_sub_total' | translate }}</ion-label>
+          <ion-text slot="end">Ð{{ bill.f_subtotal }}</ion-text>
+        </ion-item>
+        <div class="summary-divider"></div>
+        <ion-item lines="none" class="summary-item summary-item--total" detail="false">
+          <ion-label>{{ 'label_total' | translate }}</ion-label>
+          <ion-text slot="end">Ð{{ bill.total }}</ion-text>
+        </ion-item>
+      </ion-list>
+    </ion-card>
+
+    <ion-button
+      (click)="check_out()"
+      expand="block"
+      class="checkout-btn"
+      type="button">
+      <ax-icon name="shopping-bag" slot="start"></ax-icon>
+      {{ 'button_checkout' | translate }}
+    </ion-button>
+  }
+
+  @if (ui_controls.is_empty) {
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="shopping-basket" />
+      </div>
+      <h2>{{ 'cart_empty_title' | translate }}</h2>
+      <p>{{ 'cart_empty_message' | translate }}</p>
+      <ion-button class="empty-cta" [routerLink]="['/account']">
+        <ax-icon name="shopping-cart" slot="start"></ax-icon>
+        {{ 'button_start_shopping' | translate }}
+      </ion-button>
+    </div>
+  }
+
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  <!-- Wishlist modal -->
+  <ax-bottom-sheet
+    [isOpen]="isWishOpen"
+    (didDismiss)="onDismiss(); isWishOpen = false"
+    [snapPoints]="[0.5, 0.9]"
+    [initialSnap]="0">
+
+    <div ax-sheet-header class="wishlist-modal__title-row">
+      <h2 class="wishlist-modal__title">
+        {{ 'save' | translate }} {{ addCloset.product_name }} {{ 'to' | translate }}
+      </h2>
+      <button type="button" class="wishlist-modal__close-btn" (click)="isWishOpen = false">
+        {{ 'close' | translate }}
+      </button>
+    </div>
+
+    @if (!ui_controls.is_loading_category) {
+      <ul class="custom-list">
+        @for (category of categories; track category.id) {
+          <li class="custom-list__item" (click)="addToCloset(category.id)" role="button" tabindex="0">
+            <ax-icon name="folder-plus" class="custom-list__icon" />
+            <span class="custom-list__label">{{ category.name }}</span>
+          </li>
+        }
+      </ul>
+    }
+    @if (ui_controls.is_loading_category) {
+      <div class="loader-row">
+        <ax-loader></ax-loader>
+      </div>
+    }
+  </ax-bottom-sheet>
+</ion-content>
+
+<app-tab-bar active="cart"></app-tab-bar>

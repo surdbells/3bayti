@@ -1,0 +1,33 @@
+<ion-content [fullscreen]="true" class="welcome-bg">
+  <div class="welcome-stack">
+
+    <!-- Brand wordmark logo -->
+    <div class="welcome-logo-wrap">
+      <img class="welcome-logo" src="assets/images/logo.png" alt="3bayti" />
+    </div>
+
+    <!-- Intro copy -->
+    <p class="welcome-intro">{{ 'text_welcome_intro' | translate }}</p>
+
+    <!-- Primary CTA -->
+    <ion-button
+      (click)="start_shopping()"
+      expand="block"
+      class="welcome-cta welcome-cta--primary">
+      {{ 'button_shop_now' | translate }}
+    </ion-button>
+
+    <!-- Secondary CTA -->
+    <ion-button
+      (click)="start_shopping()"
+      expand="block"
+      fill="outline"
+      class="welcome-cta welcome-cta--secondary">
+      {{ 'button_browse_collections' | translate }}
+    </ion-button>
+
+    <!-- Tagline -->
+    <p class="welcome-tagline">{{ 'text_welcome_tagline' | translate }}</p>
+
+  </div>
+</ion-content>

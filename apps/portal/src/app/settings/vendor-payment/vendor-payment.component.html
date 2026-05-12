@@ -1,0 +1,76 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back to account
+        </button>
+        <span class="ax-page-header-eyebrow">Settings</span>
+        <h1 class="ax-page-title">Payment information</h1>
+        <p class="ax-page-subtitle">How you'd like to receive your payouts.</p>
+      </div>
+    </header>
+
+    <!-- Loading -->
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span>
+    </div>
+
+    <!-- Form -->
+    <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+      <div class="ax-card ax-p-5" style="max-width: 48rem;">
+        <h2 class="ax-h5 ax-m-0 ax-mb-1">Bank transfer</h2>
+        <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-4">
+          Please provide your bank details to receive payouts.
+        </p>
+
+        <div class="ax-form-field ax-mb-3">
+          <label class="ax-label" for="store_bank_name">Bank name</label>
+          <input
+            id="store_bank_name"
+            type="text"
+            class="ax-input"
+            name="store_bank_name"
+            [(ngModel)]="store_single.store_bank_name" />
+        </div>
+
+        <div class="ax-form-field ax-mb-3">
+          <label class="ax-label" for="store_account_name">Account name</label>
+          <input
+            id="store_account_name"
+            type="text"
+            class="ax-input"
+            name="store_account_name"
+            [(ngModel)]="store_single.store_account_name" />
+        </div>
+
+        <div class="ax-form-field ax-mb-4">
+          <label class="ax-label" for="store_account_number">Account number / IBAN</label>
+          <input
+            id="store_account_number"
+            type="text"
+            class="ax-input ax-numeric"
+            name="store_account_number"
+            [(ngModel)]="store_single.store_account_number" />
+        </div>
+
+        <div class="ax-flex ax-justify-end">
+          <button
+            type="button"
+            class="ax-btn ax-btn-primary"
+            (click)="save_change()"
+            [disabled]="ui_controls.is_saving">
+            <span *ngIf="ui_controls.is_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+            <span *ngIf="!ui_controls.is_saving" class="material-symbols-outlined" aria-hidden="true">save</span>
+            Save changes
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</app-vendor-shell>

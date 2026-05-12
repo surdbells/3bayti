@@ -1,0 +1,392 @@
+<ion-content fullscreen="true" class="page-bg">
+  <button type="button" class="floating-back-btn" (click)="triggerBack()" aria-label="Back">
+    <ax-icon name="arrow-left"></ax-icon>
+  </button>
+  <div class="safe-area">
+    <!-- Image Slider -->
+    <div class="slides-wrapper">
+      <!-- Placeholder shimmer while data is loading (before any
+           swiper slides exist). Reserves the visual space and
+           shows a skeleton; disappears once images.length > 0. -->
+      @if(images.length === 0){
+        <div class="slides-placeholder">
+          <div class="skeleton">
+            <div class="skeleton-shimmer"></div>
+          </div>
+        </div>
+      }
+      <swiper-container
+        #swiper
+        class="slides"
+        grabCursor="true"
+        allow-touch-move="true">
+        @for(image of images; track $index){
+          <swiper-slide class="slide">
+            <div class="hero">
+              <div class="img-wrap" [class.loaded]="imgLoaded[$index]">
+                <ion-img
+                  [src]="image"
+                  [alt]="rqst_param.product_name"
+                  class="model"
+                  (ionImgWillLoad)="onWillLoad($index)"
+                  (ionImgDidLoad)="onDidLoad($index)">
+                </ion-img>
+                @if(!imgLoaded[$index]){
+                  <div class="skeleton">
+                    <div class="skeleton-shimmer"></div>
+                  </div>
+                }
+              </div>
+            </div>
+          </swiper-slide>
+        }
+      </swiper-container>
+    </div>
+  </div>
+
+  <!-- Product Card -->
+  @if(!ui_controls.is_loading){
+    <div class="product-card">
+      <!-- Image Pagination -->
+      <div class="pager-wrapper">
+        <div class="pager">
+          @for(image of images; track $index){
+            <span class="dot" [class.active]="index() === $index"></span>
+          }
+        </div>
+      </div>
+
+      <div class="card-content">
+        <!-- Product Header -->
+        <div class="product-header">
+          <div class="product-info">
+            <span class="category-label">{{ single.category_name }}</span>
+            <h1 class="product-name">{{ single.name }}</h1>
+          </div>
+
+          <!-- Quantity Dial -->
+          <div class="quantity-dial">
+            <button type="button" class="dial-btn" (click)="decreaseQuantity()" [disabled]="add_cart.quantity <= 1">
+              <span>−</span>
+            </button>
+            <span class="dial-value">{{ add_cart.quantity }}</span>
+            <button type="button" class="dial-btn" (click)="increaseQuantity()">
+              <span>+</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Description -->
+        <div class="product-description" [innerHTML]="single.description"></div>
+
+        <!-- Delivery Info -->
+        <div class="delivery-badge">
+          <ax-icon name="truck"></ax-icon>
+          @if(single.delivery_time !== 'custom'){
+            <span>{{ 'delivery' | translate }}: {{ single.delivery_time }} {{ 'days' | translate }}</span>
+          } @else {
+            <span>{{ 'delivery' | translate }}: {{ single.custom_delivery_time }} {{ 'days' | translate }}</span>
+          }
+        </div>
+
+        <!-- Color Selection Pills -->
+        @if(single.category_id !== '5' && colors.length > 0){
+          <div class="color-section">
+            <div class="section-label">
+              <span class="label-text">{{ 'color' | translate }}</span>
+              @if(add_cart.color){
+                <span class="selected-color-name">{{ getColorLabel(add_cart.color) }}</span>
+              }
+            </div>
+
+            <div class="color-pills-container">
+              @for(color of colors; track color){
+                <button
+                  type="button"
+                  class="color-pill"
+                  [class.selected]="add_cart.color === color"
+                  (click)="selectColor(color)"
+                  [attr.aria-label]="'Select ' + getColorLabel(color)">
+                  <span
+                    class="color-preview"
+                    [style.background]="getColorHex(color)"
+                    [class.light-color]="isLightColor(color)"
+                    [class.is-multicolor]="color === 'multicolor'">
+                    @if(add_cart.color === color){
+                      <ax-icon name="check" class="check-icon"></ax-icon>
+                    }
+                  </span>
+                  <span class="color-label">{{ getColorLabel(color) }}</span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+
+        <!-- Size Selection -->
+        @if(single.category_id !== '4' && single.category_id !== '5'){
+          <div class="size-section">
+                <div class="section-label">
+                  <span class="label-text">{{ 'size' | translate }}</span>
+                  <button type="button" class="size-guide-link" (click)="isSizeGuideOpen = true">
+                    <ax-icon name="ruler"></ax-icon>
+                    {{ 'text_size_chart' | translate }}
+                  </button>
+                </div>
+
+                <app-size-chips [sizes]="apiSizes" (selected)="onSizeSelected($event)">
+                </app-size-chips>
+
+            @if(single.size_custom){
+              <button  type="button" class="custom-measurement-btn" (click)="openMeasurement()" id="measurement">
+                <div class="btn-content">
+                  <ax-icon name="pencil-ruler"></ax-icon>
+                  <span>{{ 'custom_measurements' | translate }}</span>
+                </div>
+                <ax-icon name="chevron-right"></ax-icon>
+              </button>
+            }
+          </div>
+          <!--
+          <div class="size-section">
+              @if(!single.size_custom){
+                <div class="section-label">
+                  <span class="label-text">Size</span>
+                  <button type="button" class="size-guide-link" id="size_guide">
+                    <ax-icon name="ruler"></ax-icon>
+                    Size Chart
+                  </button>
+                </div>
+                <app-size-chips [sizes]="apiSizes" (selected)="onSizeSelected($event)">
+                </app-size-chips>
+              } @else {
+                <button type="button" class="custom-measurement-btn" (click)="openMeasurement()" id="measurement">
+                  <div class="btn-content">
+                    <ax-icon name="pencil-ruler"></ax-icon>
+                    <span>Custom Measurements</span>
+                  </div>
+                  <ax-icon name="chevron-right"></ax-icon>
+                </button>
+              }
+          </div>
+-->
+          }
+          <!--
+          &lt;!&ndash; Store Sizes &ndash;&gt;
+          @if(!single.size_custom && store_measurement.length > 0){
+            <div class="store-sizes-section">
+              <span class="section-subtitle">Store Sizes</span>
+              <div class="store-size-pills">
+                @for(m of store_measurement; track m.id){
+                  <button  type="button"  class="store-size-pill" [class.selected]="add_cart.size === m.size"  (click)="selectStoreSize(m)">
+                    {{ m.size }}
+                  </button>
+                }
+              </div>
+            </div>
+          }-->
+        <ax-text-field
+          [label]="'note' | translate"
+          type="text"
+          [maxlength]="200"
+          [(ngModel)]="add_cart.note"
+          name="note">
+        </ax-text-field>
+      </div>
+    </div>
+  }
+
+  <!-- Loading Skeleton -->
+  @if(ui_controls.is_loading){
+    <div class="loading-skeleton">
+      <div class="skeleton-pager">
+        @for(dot of [1,2,3]; track dot){
+          <div class="skeleton-dot"><div class="skeleton-shimmer"></div></div>
+        }
+      </div>
+      <div class="skeleton-content">
+        <div class="skeleton-text title-sk"><div class="skeleton-shimmer"></div></div>
+        <div class="skeleton-text name-sk"><div class="skeleton-shimmer"></div></div>
+        <div class="skeleton-text desc-sk"><div class="skeleton-shimmer"></div></div>
+        <div class="skeleton-text desc-sk short"><div class="skeleton-shimmer"></div></div>
+        <div class="skeleton-colors">
+          @for(c of [1,2,3,4,5]; track c){
+            <div class="skeleton-color-pill"><div class="skeleton-shimmer"></div></div>
+          }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Size Guide sheet -->
+  @if(!ui_controls.is_loading){
+    <ax-bottom-sheet
+      [isOpen]="isSizeGuideOpen"
+      (didDismiss)="isSizeGuideOpen = false"
+      [snapPoints]="[0.55, 0.9]"
+      [initialSnap]="0"
+      [title]="'title_size_guide' | translate">
+
+      <div class="size-chart">
+        @if (store_measurement.length){
+          <div class="chart-row header">
+            <span>{{ 'label_size' | translate }}</span>
+            <span>{{ 'label_bust' | translate }}</span>
+            <span>{{ 'label_waist' | translate }}</span>
+            <span>{{ 'label_hip' | translate }}</span>
+            <span>{{ 'label_length' | translate }}</span>
+            <span>{{ 'label_neck' | translate }}</span>
+            <span>{{ 'label_arm' | translate }}</span>
+            <span>{{ 'label_armhole' | translate }}</span>
+            <span>{{ 'label_shoulder' | translate }}</span>
+          </div>
+        }
+        @for(item of store_measurement; track $index){
+          <div class="chart-row">
+            <span>{{ item.size }}</span>
+            <span>{{ item.bust }}</span>
+            <span>{{ item.waist }}</span>
+            <span>{{ item.hip }}</span>
+            <span>{{ item.length }}</span>
+            <span>{{ item.neck }}</span>
+            <span>{{ item.arm }}</span>
+            <span>{{ item.armhole }}</span>
+            <span>{{ item.shoulder }}</span>
+          </div>
+          } @empty {
+          <ion-card>
+            <ion-row>
+              <ion-col>
+                <ion-text class="ion-text-center ion-margin ion-padding">{{ 'text_no_size_guide' | translate }}</ion-text>
+              </ion-col>
+            </ion-row>
+          </ion-card>
+
+          }
+      </div>
+    </ax-bottom-sheet>
+  }
+
+  <!-- Measurement sheet -->
+  @if(!ui_controls.is_loading){
+    <ax-bottom-sheet
+      [isOpen]="isMeasureOpen"
+      (didDismiss)="onDismiss(); isMeasureOpen = false"
+      [snapPoints]="[0.85, 1]"
+      [initialSnap]="0"
+      [title]="'custom_measurements' | translate">
+
+      @if(!ui_controls.is_loading_measurement){
+        <div class="measurement-grid">
+          <div class="measurement-input">
+            <label>{{ 'label_bust' | translate }}</label>
+            <div class="input-wrap">
+              <input type="number" [(ngModel)]="update.bust" placeholder="0">
+              <span class="unit">{{ 'text_inches' | translate }}</span>
+            </div>
+          </div>
+          <div class="measurement-input">
+            <label>{{ 'label_shoulder' | translate }}</label>
+            <div class="input-wrap">
+              <input type="number" [(ngModel)]="update.shoulder" placeholder="0">
+              <span class="unit">{{ 'text_inches' | translate }}</span>
+            </div>
+          </div>
+          <div class="measurement-input">
+            <label>{{ 'label_hip' | translate }}</label>
+            <div class="input-wrap">
+              <input type="number" [(ngModel)]="update.hip" placeholder="0">
+              <span class="unit">{{ 'text_inches' | translate }}</span>
+            </div>
+          </div>
+          <div class="measurement-input">
+            <label>{{ 'label_length' | translate }}</label>
+            <div class="input-wrap">
+              <input type="number" [(ngModel)]="update.length" placeholder="0">
+              <span class="unit">{{ 'text_inches' | translate }}</span>
+            </div>
+          </div>
+          <div class="measurement-input">
+            <label>{{ 'label_armhole' | translate }}</label>
+            <div class="input-wrap">
+              <input type="number" [(ngModel)]="update.armhole" placeholder="0">
+              <span class="unit">{{ 'text_inches' | translate }}</span>
+            </div>
+          </div>
+          <div class="measurement-input">
+            <label>{{ 'label_arm' | translate }}</label>
+            <div class="input-wrap">
+              <input type="number" [(ngModel)]="update.arm" placeholder="0">
+              <span class="unit">{{ 'text_inches' | translate }}</span>
+            </div>
+          </div>
+        </div>
+
+        @if(single.require_extra_msmt){
+          <div class="extra-measurement">
+            <p class="extra-label">{{ single.extra_msmt }}</p>
+            <ax-text-field
+              [label]="'extra_m_required' | translate"
+              [multiline]="true"
+              [rows]="3"
+              [maxlength]="200"
+              placeholder="Enter additional measurements..."
+              [(ngModel)]="add_cart.extra_measurement"
+              name="extra_measurement">
+            </ax-text-field>
+          </div>
+        }
+
+        <button type="button" class="confirm-measurement-btn" (click)="update_measurement()">
+          {{ 'c_measure' | translate }}
+        </button>
+      }
+
+      @if(ui_controls.is_loading_measurement){
+        <div class="loading-center">
+          <ax-loader></ax-loader>
+        </div>
+      }
+    </ax-bottom-sheet>
+  }
+</ion-content>
+
+<!-- Footer -->
+<ion-footer class="product-footer ion-no-border">
+  @if(ui_controls.is_adding_to_cart){
+    <div class="loading-center">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  @if(!ui_controls.is_adding_to_cart && !ui_controls.is_loading){
+    <div class="footer-content">
+      <div class="price-display">
+        <span class="price-label">{{ 'total' | translate }}</span>
+        <span class="price-value">Ð{{ single.price_formated }}</span>
+      </div>
+
+      @if(single.stock_status === 'out_of_stock'){
+        <button type="button" class="add-cart-btn out-of-stock" disabled>
+          {{ 'out_of_stock' | translate }}
+        </button>
+      } @else if(itemExists){
+        <button type="button" class="add-cart-btn in-cart" (click)="openCart()">
+          <ax-icon name="check"></ax-icon>
+          <span>{{ 'already_in_cart' | translate }}</span>
+        </button>
+      } @else if(single.stock_status === 'on_backorder'){
+        <button type="button" class="add-cart-btn backorder" (click)="addToCart()">
+          <ax-icon name="clock"></ax-icon>
+          <span>{{ 'back_order' | translate }}</span>
+        </button>
+      } @else {
+        <button type="button" class="add-cart-btn" (click)="addToCart()">
+          <ax-icon name="shopping-cart"></ax-icon>
+          <span>{{ 'button_add_to_cart' | translate }}</span>
+        </button>
+      }
+    </div>
+  }
+</ion-footer>
+

@@ -1,0 +1,245 @@
+<!-- Dual shell: vendor side nav / admin aside -->
+<app-vendor-shell *ngIf="user_session.is_vendor">
+  <ng-container *ngTemplateOutlet="couponsContent"></ng-container>
+</app-vendor-shell>
+
+<app-admin-shell *ngIf="user_session.is_admin">
+  <ng-container *ngTemplateOutlet="couponsContent"></ng-container>
+</app-admin-shell>
+
+<ng-template #couponsContent>
+  <div class="ax-container">
+    <!-- Header -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <span class="ax-page-header-eyebrow">Promotions</span>
+        <h1 class="ax-page-title">Coupons</h1>
+        <p *ngIf="pagination.total > 0" class="ax-page-subtitle">
+          {{ pagination.total }} coupon{{ pagination.total !== 1 ? 's' : '' }} on the platform.
+        </p>
+      </div>
+
+      <div class="ax-flex ax-gap-2 ax-items-center">
+        <button
+          type="button"
+          class="ax-btn ax-btn-outline ax-btn-sm"
+          (click)="toggleFilters()"
+          style="position: relative;">
+          <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+          Filters
+          <span *ngIf="activeFilterCount > 0" class="ax-badge ax-badge-solid-brand" style="margin-left: 0.25rem;">{{ activeFilterCount }}</span>
+        </button>
+        <a routerLink="/create-coupon" class="ax-btn ax-btn-primary ax-btn-sm">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          New coupon
+        </a>
+      </div>
+    </header>
+
+    <!-- Search -->
+    <section class="ax-page-section">
+      <div class="ax-input-group">
+        <span class="ax-input-group-prefix">
+          <span class="material-symbols-outlined" aria-hidden="true" style="color: var(--ax-color-text-tertiary);">search</span>
+        </span>
+        <input
+          type="text"
+          class="ax-input"
+          placeholder="Search by code or name…"
+          name="search"
+          [(ngModel)]="filters.search"
+          (ngModelChange)="onSearchInput()" />
+        <button
+          *ngIf="filters.search"
+          type="button"
+          class="ax-btn ax-btn-ghost ax-input-group-action"
+          (click)="filters.search = ''; onSearchInput()">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Filters panel -->
+    <section *ngIf="ui.filters_open" class="ax-page-section">
+      <div class="ax-card ax-p-4">
+        <div class="ax-flex ax-gap-3 ax-flex-wrap ax-items-end">
+          <div class="ax-form-field" style="flex: 1; min-width: 10rem;">
+            <label class="ax-label ax-text-2xs" for="filter_status">Status</label>
+            <select id="filter_status" class="ax-select ax-input-sm" name="filter_status" [(ngModel)]="filters.status">
+              <option value="">All statuses</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+              <option value="expired">Expired</option>
+            </select>
+          </div>
+          <div class="ax-form-field" style="flex: 1; min-width: 10rem;">
+            <label class="ax-label ax-text-2xs" for="filter_type">Type</label>
+            <select id="filter_type" class="ax-select ax-input-sm" name="filter_type" [(ngModel)]="filters.discount_type">
+              <option value="">All types</option>
+              <option value="percentage">Percentage</option>
+              <option value="fixed_amount">Fixed amount</option>
+              <option value="free_shipping">Free shipping</option>
+            </select>
+          </div>
+          <button
+            type="button"
+            class="ax-btn ax-btn-primary ax-btn-sm"
+            (click)="applyFilters()">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_list</span>
+            Apply
+          </button>
+          <button
+            *ngIf="hasActiveFilters"
+            type="button"
+            class="ax-btn ax-btn-ghost ax-btn-sm"
+            (click)="clearFilters()">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_list_off</span>
+            Clear
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Loading -->
+    <div *ngIf="ui.loading || ui.deleting || ui.toggling" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span>
+    </div>
+
+    <!-- Table -->
+    <section
+      *ngIf="!ui.loading && !ui.no_coupons && !ui.deleting && !ui.toggling"
+      class="ax-card ax-p-0">
+      <div class="ax-table-wrapper">
+        <table class="ax-table ax-table-hover">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Discount</th>
+              <th>Status</th>
+              <th style="text-align: center;">Usage</th>
+              <th>Expires</th>
+              <th style="width: 4rem;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of coupons; trackBy: trackById">
+              <td>
+                <div class="ax-flex ax-gap-2 ax-items-center">
+                  <span class="ax-font-semibold" style="font-family: ui-monospace, monospace; letter-spacing: 0.03em;">{{ c.code }}</span>
+                  <span *ngIf="c.first_order_only" class="ax-badge ax-badge-info">1st order</span>
+                </div>
+                <div class="ax-text-2xs ax-text-tertiary">{{ c.name }}</div>
+              </td>
+              <td>
+                <span [ngClass]="getDiscountTypeBadge(c.discount_type)">{{ getDiscountTypeLabel(c.discount_type) }}</span>
+                <div class="ax-text-sm ax-text-primary ax-mt-1">{{ getDiscountLabel(c) }}</div>
+                <div *ngIf="c.min_order_amount > 0" class="ax-text-2xs ax-text-tertiary">
+                  Min: AED {{ c.min_order_amount }}
+                </div>
+              </td>
+              <td>
+                <span [ngClass]="getStatusBadge(c.status)" style="text-transform: capitalize;">{{ c.status }}</span>
+                <div *ngIf="isScheduled(c)" class="ax-text-2xs ax-text-tertiary ax-mt-1">
+                  Starts {{ c.starts_at | date:'MMM d' }}
+                </div>
+              </td>
+              <td style="text-align: center;">
+                <div class="ax-font-medium ax-text-sm ax-numeric">{{ getUsageText(c) }}</div>
+                <div *ngIf="c.max_uses" class="ax-progress ax-mt-1" style="height: 4px; max-width: 6rem; margin-left: auto; margin-right: auto;">
+                  <div class="ax-progress-bar" [ngClass]="usageToneClass(c)" [style.width.%]="getUsagePercent(c)"></div>
+                </div>
+              </td>
+              <td>
+                <span *ngIf="c.expires_at && !isExpired(c)" class="ax-text-sm ax-text-secondary">{{ c.expires_at | date:'MMM d, y' }}</span>
+                <span *ngIf="c.expires_at && isExpired(c)" class="ax-text-sm" style="color: var(--ax-color-text-danger);">Expired {{ c.expires_at | date:'MMM d' }}</span>
+                <span *ngIf="!c.expires_at" class="ax-text-2xs ax-text-tertiary">Never</span>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-ghost ax-btn-sm"
+                  [axDropdown]="rowMenu"
+                  aria-label="Row actions">
+                  <span class="material-symbols-outlined" aria-hidden="true">more_vert</span>
+                </button>
+                <ng-template #rowMenu>
+                  <button type="button" axDropdownItem (click)="viewAnalytics(c.coupon_id)">
+                    <span class="material-symbols-outlined" aria-hidden="true">bar_chart</span>
+                    Analytics
+                  </button>
+                  <button type="button" axDropdownItem (click)="editCoupon(c.coupon_id)">
+                    <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                    Edit
+                  </button>
+                  <button type="button" axDropdownItem (click)="toggleStatus(c)">
+                    <span class="material-symbols-outlined" aria-hidden="true">
+                      {{ c.status === 'active' ? 'pause_circle' : 'play_circle' }}
+                    </span>
+                    {{ c.status === 'active' ? 'Deactivate' : 'Activate' }}
+                  </button>
+                  <div class="ax-dropdown-divider"></div>
+                  <button
+                    type="button"
+                    axDropdownItem
+                    class="ax-dropdown-item-danger"
+                    (click)="startDelete(c)">
+                    <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                    Delete
+                  </button>
+                </ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Pagination -->
+    <section
+      *ngIf="!ui.loading && !ui.no_coupons && pagination.total_pages > 0"
+      class="ax-page-section">
+      <app-ax-pagination
+        [totalCount]="pagination.total"
+        [pageSize]="pagination.per_page"
+        [pageIndex]="pageIndex"
+        [pageSizeOptions]="per_page_options"
+        (pageIndexChange)="onPageIndexChange($event)"
+        (pageSizeChange)="pagination.per_page = $event; onPerPageChange()">
+      </app-ax-pagination>
+    </section>
+
+    <!-- Empty state -->
+    <section *ngIf="!ui.loading && ui.no_coupons" class="ax-page-section">
+      <div class="ax-card ax-p-8 ax-text-center">
+        <span
+          class="material-symbols-outlined"
+          style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
+          aria-hidden="true">sell</span>
+        <h3 *ngIf="!hasActiveFilters" class="ax-h4 ax-m-0 ax-mt-3">No coupons yet</h3>
+        <h3 *ngIf="hasActiveFilters" class="ax-h4 ax-m-0 ax-mt-3">No matching coupons</h3>
+        <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+          <span *ngIf="!hasActiveFilters">Create your first coupon to start driving sales.</span>
+          <span *ngIf="hasActiveFilters">Try adjusting your search or filter criteria.</span>
+        </p>
+        <div class="ax-mt-4">
+          <a *ngIf="!hasActiveFilters" routerLink="/create-coupon" class="ax-btn ax-btn-primary">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            Create first coupon
+          </a>
+          <button *ngIf="hasActiveFilters" type="button" class="ax-btn ax-btn-outline" (click)="clearFilters()">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_list_off</span>
+            Clear filters
+          </button>
+        </div>
+      </div>
+    </section>
+  </div>
+</ng-template>

@@ -1,0 +1,180 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back to account
+        </button>
+        <span class="ax-page-header-eyebrow">Settings</span>
+        <h1 class="ax-page-title">Manage your store</h1>
+        <p class="ax-page-subtitle">Keep your storefront information up to date.</p>
+      </div>
+
+      <div class="ax-flex ax-gap-2 ax-items-center">
+        <span *ngIf="store_single.store_approved" class="ax-badge ax-badge-success">Approved</span>
+        <span *ngIf="!store_single.store_approved" class="ax-badge ax-badge-warning">Pending approval</span>
+      </div>
+    </header>
+
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span>
+    </div>
+
+    <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+      <div class="ax-grid ax-grid-cols-1 ax-lg-grid-cols-3 ax-gap-3">
+        <!-- Main form -->
+        <div class="ax-card ax-p-5" style="grid-column: span 2;">
+          <h2 class="ax-h5 ax-m-0 ax-mb-1">Store information</h2>
+          <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-4">
+            Details customers see on your storefront.
+          </p>
+
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label ax-label-required" for="store_name">Store name</label>
+            <input
+              id="store_name"
+              type="text"
+              class="ax-input"
+              [maxlength]="50"
+              name="store_name"
+              [(ngModel)]="store_single.store_name" />
+          </div>
+
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label ax-label-required" for="store_address">Store location</label>
+            <input
+              id="store_address"
+              type="text"
+              class="ax-input"
+              [maxlength]="255"
+              name="store_address"
+              [(ngModel)]="store_single.store_address" />
+          </div>
+
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
+            <div class="ax-form-field">
+              <label class="ax-label ax-label-required" for="store_email">Email</label>
+              <input
+                id="store_email"
+                type="text"
+                class="ax-input"
+                name="store_email"
+                [(ngModel)]="store_single.store_email" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label ax-label-required" for="store_phone">Phone</label>
+              <input
+                id="store_phone"
+                type="text"
+                class="ax-input"
+                name="store_phone"
+                [(ngModel)]="store_single.store_phone" />
+            </div>
+          </div>
+
+          <div class="ax-form-field ax-mb-4">
+            <label class="ax-label ax-label-required">Description</label>
+            <app-ax-rich-editor
+              name="store_description"
+              [(ngModel)]="store_single.store_description"
+              placeholder="Tell customers about your store."
+              minHeight="200px">
+            </app-ax-rich-editor>
+          </div>
+
+          <!-- Logo + cover -->
+          <h3 class="ax-h6 ax-m-0 ax-mb-3">Brand imagery</h3>
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
+            <div class="ax-card ax-p-3">
+              <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Store logo</div>
+              <img
+                [src]="store_single.store_logo"
+                alt="Store logo"
+                style="width: 100%; aspect-ratio: 1 / 1; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+              <input
+                type="file"
+                class="ax-input ax-input-sm ax-mt-3"
+                accept="image/png,image/jpeg,image/jpg"
+                (change)="select_logo($event)"
+                name="store_logo_file" />
+              <span class="ax-hint">Square, 600×600 px. JPG, JPEG or PNG.</span>
+            </div>
+            <div class="ax-card ax-p-3">
+              <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Cover image</div>
+              <img
+                [src]="store_single.store_cover"
+                alt="Store cover"
+                style="width: 100%; aspect-ratio: 800 / 428; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+              <input
+                type="file"
+                class="ax-input ax-input-sm ax-mt-3"
+                accept="image/png,image/jpeg,image/jpg"
+                (change)="select_cover($event)"
+                name="store_cover_file" />
+              <span class="ax-hint">Landscape, 800×428 px. JPG, JPEG or PNG.</span>
+            </div>
+          </div>
+
+          <div class="ax-flex ax-justify-end ax-mt-3">
+            <button
+              type="button"
+              class="ax-btn ax-btn-primary"
+              (click)="update_changes()"
+              [disabled]="ui_controls.is_saving_basic">
+              <span *ngIf="ui_controls.is_saving_basic" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <span *ngIf="!ui_controls.is_saving_basic" class="material-symbols-outlined" aria-hidden="true">save</span>
+              Save changes
+            </button>
+          </div>
+        </div>
+
+        <!-- Side: Store status -->
+        <div>
+          <div class="ax-card ax-p-5">
+            <h2 class="ax-h6 ax-m-0 ax-mb-1">Store visibility</h2>
+            <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-4">
+              Control whether customers can browse and order from your storefront.
+            </p>
+
+            <label class="ax-switch ax-mb-3">
+              <input
+                type="checkbox"
+                name="store_status"
+                [(ngModel)]="store_single.store_status"
+                [disabled]="!store_single.store_approved" />
+              <span class="ax-switch-track"></span>
+              <span class="ax-switch-label">
+                {{ store_single.store_status ? 'Visible to customers' : 'Hidden from customers' }}
+              </span>
+            </label>
+
+            <button
+              type="button"
+              class="ax-btn ax-btn-primary ax-btn-sm"
+              style="width: 100%;"
+              (click)="change_store_status()"
+              [disabled]="!store_single.store_approved || ui_controls.is_saving_status">
+              <span *ngIf="ui_controls.is_saving_status" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+              <span *ngIf="!ui_controls.is_saving_status" class="material-symbols-outlined" aria-hidden="true">save</span>
+              Save visibility
+            </button>
+
+            <div *ngIf="!store_single.store_approved" class="ax-card ax-p-3 ax-mt-4" style="background: rgba(var(--ax-color-bg-warning-rgb, 253 230 138), 0.18); border-color: var(--ax-color-border-warning, rgba(234, 179, 8, 0.3));">
+              <div class="ax-flex ax-gap-2 ax-items-start">
+                <span class="material-symbols-outlined" aria-hidden="true" style="font-size: 1.125rem; color: var(--ax-color-text-warning);">info</span>
+                <div class="ax-text-2xs ax-text-secondary">
+                  We're reviewing your store. Until approval is finalised, you can't change visibility. Contact support with any questions.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</app-vendor-shell>

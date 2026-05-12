@@ -60,3 +60,26 @@ yarn-debug.log*
 # OS-specific Cloudflare wrangler local state
 .dev.vars
 wrangler.toml.bak
+
+# ---- M0-followup: nested app build outputs (mobile + portal) ----
+# These are real apps brought into the monorepo from separate repos.
+# Their build outputs, deps, and platform-specific generated dirs
+# don't belong in git.
+apps/mobile/node_modules
+apps/mobile/dist
+apps/mobile/.angular
+apps/mobile/www
+# Capacitor native projects — build outputs and IDE state
+apps/mobile/android/.gradle
+apps/mobile/android/build
+apps/mobile/android/app/build
+apps/mobile/android/.idea
+apps/mobile/android/local.properties
+apps/mobile/ios/build
+apps/mobile/ios/Pods
+apps/mobile/ios/Podfile.lock
+apps/mobile/ios/.cocoapod-build-settings
+
+apps/portal/node_modules
+apps/portal/dist
+apps/portal/.angular

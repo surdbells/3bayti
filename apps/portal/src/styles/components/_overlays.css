@@ -1,0 +1,519 @@
+/* =========================================================================
+   Abayti Design System — Overlay Form Components
+   Shared styles for .ax-multiselect, .ax-combobox, .ax-date-picker and
+   their dropdown panels. The components themselves are Angular CDK-based.
+   ========================================================================= */
+
+
+/* ============== TRIGGER (shared across multiselect, combobox, date) ============== */
+/*
+  The visible input-like button that opens the overlay.
+  Matches .ax-input visual language so controls feel consistent.
+*/
+.ax-select-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-2);
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.875rem;
+
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-primary);
+  text-align: left;
+
+  background-color: var(--ax-color-bg-surface);
+  border: 1px solid var(--ax-color-border-default);
+  border-radius: var(--ax-radius-md);
+  cursor: pointer;
+
+  transition: border-color var(--ax-duration-fast) var(--ax-ease-out),
+              box-shadow var(--ax-duration-fast) var(--ax-ease-out);
+}
+
+.ax-select-trigger:hover:not(:disabled):not(.ax-select-trigger-disabled) {
+  border-color: var(--ax-color-border-strong);
+}
+
+.ax-select-trigger.ax-select-trigger-open,
+.ax-select-trigger:focus-visible {
+  outline: none;
+  border-color: var(--ax-color-border-focus);
+  box-shadow: var(--ax-shadow-focus);
+}
+
+.ax-select-trigger.ax-select-trigger-invalid {
+  border-color: var(--ax-color-bg-danger);
+}
+.ax-select-trigger.ax-select-trigger-invalid:focus-visible,
+.ax-select-trigger.ax-select-trigger-invalid.ax-select-trigger-open {
+  box-shadow: 0 0 0 3px rgba(209, 84, 63, 0.2);
+}
+
+.ax-select-trigger.ax-select-trigger-disabled,
+.ax-select-trigger:disabled {
+  background-color: var(--ax-color-bg-sunken);
+  color: var(--ax-color-text-disabled);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.ax-select-trigger-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-2);
+  flex-wrap: wrap;
+}
+
+.ax-select-trigger-placeholder {
+  color: var(--ax-color-text-tertiary);
+}
+
+.ax-select-trigger-caret {
+  flex-shrink: 0;
+  color: var(--ax-color-text-tertiary);
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: transform var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-select-trigger-open .ax-select-trigger-caret {
+  transform: rotate(180deg);
+}
+
+.ax-select-trigger-clear {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: transparent;
+  border: 0;
+  color: var(--ax-color-text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  font-size: 1rem;
+  line-height: 1;
+}
+.ax-select-trigger-clear:hover {
+  background-color: var(--ax-color-bg-muted);
+  color: var(--ax-color-text-primary);
+}
+
+/* Chips inside multiselect trigger */
+.ax-select-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 2px 6px 2px 8px;
+  font-size: var(--ax-fs-2xs);
+  font-weight: var(--ax-fw-medium);
+  background-color: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
+  border-radius: var(--ax-radius-sm);
+  line-height: 1.3;
+  max-width: 12rem;
+}
+.ax-select-chip-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ax-select-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.875rem;
+  line-height: 1;
+  padding: 0;
+  opacity: 0.7;
+}
+.ax-select-chip-remove:hover {
+  opacity: 1;
+  background-color: rgba(144, 105, 82, 0.15);
+}
+
+
+/* ============== PANEL (dropdown / popup) ============== */
+
+.ax-select-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 14rem;
+  max-height: 20rem;
+  background-color: var(--ax-color-bg-raised);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+  box-shadow: var(--ax-shadow-xl);
+  overflow: hidden;
+}
+
+.ax-select-panel-header {
+  flex-shrink: 0;
+  padding: var(--ax-space-3);
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+}
+
+.ax-select-panel-search {
+  position: relative;
+}
+.ax-select-panel-search .material-symbols-outlined {
+  position: absolute;
+  top: 50%;
+  left: 0.625rem;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  color: var(--ax-color-text-tertiary);
+  pointer-events: none;
+}
+.ax-select-panel-search-input {
+  width: 100%;
+  padding: 0.5rem 0.625rem 0.5rem 2rem;
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-primary);
+  background-color: var(--ax-color-bg-surface);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-md);
+  transition: border-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-select-panel-search-input::placeholder {
+  color: var(--ax-color-text-tertiary);
+}
+.ax-select-panel-search-input:focus {
+  outline: none;
+  border-color: var(--ax-color-border-focus);
+  box-shadow: var(--ax-shadow-focus);
+}
+
+.ax-select-panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ax-space-2);
+  padding: var(--ax-space-2) var(--ax-space-3);
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+  background-color: var(--ax-color-bg-canvas);
+  font-size: var(--ax-fs-xs);
+  color: var(--ax-color-text-secondary);
+}
+.ax-select-panel-actions-left {
+  flex: 1;
+  font-variant-numeric: tabular-nums;
+}
+.ax-select-panel-actions button {
+  background: transparent;
+  border: 0;
+  color: var(--ax-color-text-brand);
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-medium);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--ax-radius-xs);
+}
+.ax-select-panel-actions button:hover {
+  background-color: var(--ax-color-bg-brand-subtle);
+}
+
+.ax-select-panel-options {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--ax-space-1);
+}
+
+.ax-select-panel-option {
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-2);
+  padding: 0.5rem 0.625rem;
+  min-height: 2.25rem;
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-primary);
+  cursor: pointer;
+  border-radius: var(--ax-radius-sm);
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-select-panel-option:hover,
+.ax-select-panel-option.ax-select-panel-option-active {
+  background-color: var(--ax-color-bg-muted);
+}
+
+.ax-select-panel-option.ax-select-panel-option-selected {
+  color: var(--ax-color-text-brand);
+  font-weight: var(--ax-fw-medium);
+}
+
+.ax-select-panel-option-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ax-select-panel-option-check {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ax-color-text-brand);
+}
+.ax-select-panel-option-check .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.ax-select-panel-option-disabled {
+  color: var(--ax-color-text-disabled);
+  cursor: not-allowed;
+}
+.ax-select-panel-option-disabled:hover {
+  background-color: transparent;
+}
+
+.ax-select-panel-empty {
+  padding: var(--ax-space-6) var(--ax-space-4);
+  text-align: center;
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-tertiary);
+}
+
+.ax-select-panel-footer {
+  flex-shrink: 0;
+  padding: var(--ax-space-2) var(--ax-space-3);
+  border-top: 1px solid var(--ax-color-border-subtle);
+  background-color: var(--ax-color-bg-canvas);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ax-space-2);
+}
+
+
+/* ============== DATE PICKER (calendar specifics) ============== */
+
+.ax-calendar {
+  padding: var(--ax-space-3);
+  user-select: none;
+}
+
+.ax-calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ax-space-2);
+  padding: 0 var(--ax-space-1) var(--ax-space-2);
+}
+
+.ax-calendar-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--ax-radius-md);
+  border: 0;
+  background: transparent;
+  color: var(--ax-color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-calendar-nav:hover:not(:disabled) {
+  background-color: var(--ax-color-bg-muted);
+}
+.ax-calendar-nav:disabled {
+  color: var(--ax-color-text-disabled);
+  cursor: not-allowed;
+}
+.ax-calendar-nav .material-symbols-outlined {
+  font-size: 1.25rem;
+}
+
+.ax-calendar-title {
+  font-family: var(--ax-font-display);
+  font-size: var(--ax-fs-md);
+  font-weight: var(--ax-fw-semibold);
+  color: var(--ax-color-text-primary);
+  display: flex;
+  gap: var(--ax-space-2);
+}
+
+.ax-calendar-title-btn {
+  background: transparent;
+  border: 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--ax-radius-sm);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-calendar-title-btn:hover {
+  background-color: var(--ax-color-bg-muted);
+}
+
+.ax-calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: var(--ax-space-1);
+}
+.ax-calendar-weekday {
+  text-align: center;
+  font-size: var(--ax-fs-2xs);
+  font-weight: var(--ax-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--ax-ls-wider);
+  color: var(--ax-color-text-tertiary);
+  padding: 4px 0;
+}
+
+.ax-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.ax-calendar-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  margin: 0 auto;
+  border-radius: var(--ax-radius-md);
+  border: 0;
+  background: transparent;
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-medium);
+  color: var(--ax-color-text-primary);
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out),
+              color var(--ax-duration-fast) var(--ax-ease-out);
+  position: relative;
+}
+
+.ax-calendar-day:hover:not(:disabled):not(.ax-calendar-day-selected) {
+  background-color: var(--ax-color-bg-muted);
+}
+
+.ax-calendar-day-outside {
+  color: var(--ax-color-text-disabled);
+}
+
+.ax-calendar-day-today {
+  color: var(--ax-color-text-brand);
+  font-weight: var(--ax-fw-semibold);
+}
+.ax-calendar-day-today::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background-color: var(--ax-color-text-brand);
+}
+
+.ax-calendar-day-selected {
+  background-color: var(--ax-color-bg-brand);
+  color: var(--ax-color-text-on-brand);
+}
+.ax-calendar-day-selected.ax-calendar-day-today::after {
+  background-color: var(--ax-color-text-on-brand);
+}
+
+.ax-calendar-day:disabled {
+  color: var(--ax-color-text-disabled);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Range selection */
+.ax-calendar-day-range {
+  background-color: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
+  border-radius: 0;
+}
+.ax-calendar-day-range-start {
+  background-color: var(--ax-color-bg-brand);
+  color: var(--ax-color-text-on-brand);
+  border-top-left-radius: var(--ax-radius-md);
+  border-bottom-left-radius: var(--ax-radius-md);
+}
+.ax-calendar-day-range-end {
+  background-color: var(--ax-color-bg-brand);
+  color: var(--ax-color-text-on-brand);
+  border-top-right-radius: var(--ax-radius-md);
+  border-bottom-right-radius: var(--ax-radius-md);
+}
+.ax-calendar-day-range-start.ax-calendar-day-range-end {
+  border-radius: var(--ax-radius-md);
+}
+
+/* Month / year picker grid */
+.ax-calendar-picker {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--ax-space-1);
+  padding: var(--ax-space-2);
+}
+.ax-calendar-picker-item {
+  padding: 0.625rem 0.5rem;
+  border: 0;
+  background: transparent;
+  border-radius: var(--ax-radius-md);
+  font-size: var(--ax-fs-sm);
+  font-weight: var(--ax-fw-medium);
+  color: var(--ax-color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-calendar-picker-item:hover {
+  background-color: var(--ax-color-bg-muted);
+}
+.ax-calendar-picker-item.ax-calendar-picker-item-selected {
+  background-color: var(--ax-color-bg-brand);
+  color: var(--ax-color-text-on-brand);
+}
+
+.ax-calendar-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ax-space-2);
+  padding: var(--ax-space-3) 0 0;
+  margin-top: var(--ax-space-2);
+  border-top: 1px solid var(--ax-color-border-subtle);
+}
+
+/* Date-range specific: two-month layout on desktop */
+.ax-calendar-range {
+  display: flex;
+  flex-direction: column;
+}
+@media (min-width: 640px) {
+  .ax-calendar-range-months {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ax-space-4);
+  }
+}

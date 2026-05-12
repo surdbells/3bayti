@@ -1,0 +1,259 @@
+<!-- Dual shell -->
+<app-vendor-shell *ngIf="user_session.is_vendor">
+  <ng-container *ngTemplateOutlet="analyticsContent"></ng-container>
+</app-vendor-shell>
+
+<app-admin-shell *ngIf="user_session.is_admin">
+  <ng-container *ngTemplateOutlet="analyticsContent"></ng-container>
+</app-admin-shell>
+
+<ng-template #analyticsContent>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back to coupons
+        </button>
+        <span class="ax-page-header-eyebrow">Promotions</span>
+        <h1 *ngIf="coupon_id === 0" class="ax-page-title">Coupon analytics</h1>
+        <h1 *ngIf="coupon_id > 0" class="ax-page-title">{{ coupon_name }}</h1>
+        <p *ngIf="coupon_id > 0" class="ax-page-subtitle" style="font-family: ui-monospace, monospace; letter-spacing: 0.05em;">
+          {{ coupon_code }}
+        </p>
+      </div>
+
+      <div *ngIf="coupon_id > 0" class="ax-flex ax-gap-2 ax-items-center">
+        <span
+          aria-hidden="true"
+          style="display: inline-block; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--ax-color-bg-success); animation: pulse 2s ease-in-out infinite;"></span>
+        <span class="ax-text-sm ax-text-secondary">
+          <span class="ax-font-semibold ax-numeric">{{ live_count }}</span> uses
+        </span>
+      </div>
+    </header>
+
+    <div *ngIf="ui.loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading analytics"></span>
+    </div>
+
+    <ng-container *ngIf="!ui.loading">
+      <!-- ─── OVERVIEW STATS ──────────────────────────────────── -->
+      <section *ngIf="coupon_id === 0" class="ax-page-section">
+        <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-3">
+          <div class="ax-stat-card">
+            <span class="material-symbols-outlined ax-text-brand" style="font-size: 1.5rem;" aria-hidden="true">confirmation_number</span>
+            <div class="ax-h4 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">{{ overview.active_coupons }}</div>
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Active coupons</div>
+          </div>
+          <div class="ax-stat-card">
+            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-success);" aria-hidden="true">receipt_long</span>
+            <div class="ax-h4 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">{{ overview.total_redemptions }}</div>
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Total redemptions</div>
+          </div>
+          <div class="ax-stat-card">
+            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-warning);" aria-hidden="true">sell</span>
+            <div class="ax-h5 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">AED {{ overview.total_discount_given | number:'1.0-0' }}</div>
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Discount given</div>
+          </div>
+          <div class="ax-stat-card">
+            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-brand);" aria-hidden="true">trending_up</span>
+            <div class="ax-h5 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">AED {{ overview.total_revenue_with_coupons | number:'1.0-0' }}</div>
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Revenue w/ coupons</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── PER-COUPON STATS ──────────────────────────────── -->
+      <section *ngIf="coupon_id > 0" class="ax-page-section">
+        <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-3">
+          <div class="ax-stat-card">
+            <span class="material-symbols-outlined ax-text-brand" style="font-size: 1.5rem;" aria-hidden="true">receipt_long</span>
+            <div class="ax-h4 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">{{ coupon_stats.total_uses }}</div>
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Total uses</div>
+          </div>
+          <div class="ax-stat-card">
+            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-success);" aria-hidden="true">group</span>
+            <div class="ax-h4 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">{{ coupon_stats.unique_customers }}</div>
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Unique customers</div>
+          </div>
+          <div class="ax-stat-card">
+            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-warning);" aria-hidden="true">sell</span>
+            <div class="ax-h5 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">AED {{ coupon_stats.total_discount_given | number:'1.2-2' }}</div>
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Discount given</div>
+          </div>
+          <div class="ax-stat-card">
+            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-brand);" aria-hidden="true">trending_up</span>
+            <div class="ax-h5 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">AED {{ coupon_stats.total_revenue_generated | number:'1.2-2' }}</div>
+            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Revenue generated</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── USAGE OVER TIME — CSS bar chart ────────────────────── -->
+      <section class="ax-page-section">
+        <div class="ax-card ax-p-0">
+          <div class="ax-flex ax-items-center ax-justify-between ax-flex-wrap ax-gap-2 ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <h3 class="ax-h6 ax-m-0">Usage over time</h3>
+            <div class="ax-flex ax-gap-2">
+              <select class="ax-select ax-input-sm" style="width: auto;" name="chart_group" [(ngModel)]="chart_group_by" (ngModelChange)="onChartSettingsChange()">
+                <option value="day">Daily</option>
+                <option value="week">Weekly</option>
+                <option value="month">Monthly</option>
+              </select>
+              <select class="ax-select ax-input-sm" style="width: auto;" name="chart_days" [(ngModel)]="chart_days_back" (ngModelChange)="onChartSettingsChange()">
+                <option [ngValue]="7">7 days</option>
+                <option [ngValue]="30">30 days</option>
+                <option [ngValue]="90">90 days</option>
+                <option [ngValue]="180">6 months</option>
+                <option [ngValue]="365">1 year</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="ax-p-5">
+            <div *ngIf="usage_series.length > 0" style="display: flex; align-items: flex-end; gap: 0.25rem; height: 12rem;">
+              <div
+                *ngFor="let s of usage_series"
+                style="flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 0.25rem;"
+                [attr.title]="s.period + ': ' + s.uses + ' uses, AED ' + s.total_revenue + ' revenue'">
+                <span *ngIf="s.uses > 0" class="ax-text-2xs ax-text-tertiary ax-numeric">{{ s.uses }}</span>
+                <div
+                  style="width: 100%; min-height: 4px; background: var(--ax-color-bg-brand); border-radius: var(--ax-radius-sm) var(--ax-radius-sm) 0 0;"
+                  [style.height.%]="getBarHeight(s.uses)"></div>
+                <span class="ax-text-2xs ax-text-tertiary" style="white-space: nowrap;">{{ getBarLabel(s.period) }}</span>
+              </div>
+            </div>
+            <div *ngIf="usage_series.length === 0" class="ax-text-center ax-py-5">
+              <span class="ax-text-secondary">No usage data for the selected period.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── TOP COUPONS (overview only) ─────────────────────── -->
+      <section *ngIf="coupon_id === 0" class="ax-page-section">
+        <div class="ax-card ax-p-0">
+          <div class="ax-flex ax-items-center ax-justify-between ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <h3 class="ax-h6 ax-m-0">Top coupons</h3>
+            <select class="ax-select ax-input-sm" style="width: auto;" name="top_sort" [(ngModel)]="top_sort_by" (ngModelChange)="onTopSortChange()">
+              <option value="uses">By uses</option>
+              <option value="revenue">By revenue</option>
+              <option value="discount">By discount</option>
+            </select>
+          </div>
+
+          <div *ngIf="top_coupons.length > 0" class="ax-table-wrapper">
+            <table class="ax-table ax-table-hover">
+              <thead>
+                <tr>
+                  <th>Coupon</th>
+                  <th style="text-align: center;">Uses</th>
+                  <th style="text-align: center;">Customers</th>
+                  <th style="text-align: right;">Discount given</th>
+                  <th style="text-align: right;">Revenue</th>
+                  <th style="width: 4rem;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let tc of top_coupons">
+                  <td>
+                    <span class="ax-font-semibold" style="font-family: ui-monospace, monospace; letter-spacing: 0.03em;">{{ tc.code }}</span>
+                    <div class="ax-text-2xs ax-text-tertiary">{{ tc.name }}</div>
+                  </td>
+                  <td style="text-align: center;"><span class="ax-numeric ax-font-semibold">{{ tc.total_uses }}</span></td>
+                  <td style="text-align: center;"><span class="ax-numeric">{{ tc.unique_customers }}</span></td>
+                  <td style="text-align: right;"><span class="ax-numeric">AED {{ tc.total_discount | number:'1.2-2' }}</span></td>
+                  <td style="text-align: right;"><span class="ax-numeric ax-font-semibold">AED {{ tc.total_revenue | number:'1.2-2' }}</span></td>
+                  <td>
+                    <button
+                      type="button"
+                      class="ax-btn ax-btn-ghost ax-btn-sm"
+                      (click)="viewCouponAnalytics(tc.coupon_id)"
+                      title="View details">
+                      <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="top_coupons.length === 0" class="ax-text-center ax-py-5">
+            <span class="ax-text-secondary">No coupon data yet.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── USAGE LOG (per-coupon mode) ─────────────────────── -->
+      <section *ngIf="coupon_id > 0" class="ax-page-section">
+        <div class="ax-card ax-p-0">
+          <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <h3 class="ax-h6 ax-m-0">Usage history</h3>
+          </div>
+
+          <div *ngIf="ui.log_loading" class="ax-flex ax-justify-center ax-py-5">
+            <span class="ax-spinner" aria-label="Loading log"></span>
+          </div>
+
+          <div *ngIf="!ui.log_loading && usage_log.length > 0" class="ax-table-wrapper">
+            <table class="ax-table ax-table-hover">
+              <thead>
+                <tr>
+                  <th>Customer</th>
+                  <th style="text-align: center;">Order</th>
+                  <th style="text-align: right;">Cart before</th>
+                  <th style="text-align: right;">Discount</th>
+                  <th style="text-align: right;">Cart after</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let u of usage_log">
+                  <td>
+                    <div class="ax-font-medium ax-text-primary">{{ u.customer_name }}</div>
+                    <div class="ax-text-2xs ax-text-tertiary">{{ u.customer_email }}</div>
+                  </td>
+                  <td style="text-align: center;"><span class="ax-text-sm">#{{ u.order_id }}</span></td>
+                  <td style="text-align: right;"><span class="ax-numeric">AED {{ u.order_total_before | number:'1.2-2' }}</span></td>
+                  <td style="text-align: right;"><span class="ax-numeric ax-font-semibold" style="color: var(--ax-color-text-danger);">−AED {{ u.discount_amount | number:'1.2-2' }}</span></td>
+                  <td style="text-align: right;"><span class="ax-numeric ax-font-semibold">AED {{ u.order_total_after | number:'1.2-2' }}</span></td>
+                  <td><span class="ax-text-2xs ax-text-tertiary">{{ u.used_at | date:'MMM d, y HH:mm' }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div *ngIf="!ui.log_loading && usage_log.length === 0" class="ax-text-center ax-py-5">
+            <span class="ax-text-secondary">No usage recorded yet.</span>
+          </div>
+
+          <!-- Log pagination -->
+          <div *ngIf="log_pagination.total_pages > 1" class="ax-flex ax-justify-center ax-gap-2 ax-py-3" style="border-top: 1px solid var(--ax-color-border-subtle);">
+            <button
+              type="button"
+              class="ax-btn ax-btn-ghost ax-btn-sm"
+              (click)="goToLogPage(log_pagination.page - 1)"
+              [disabled]="log_pagination.page === 1">
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+            </button>
+            <span class="ax-text-sm ax-text-secondary" style="display: inline-flex; align-items: center;">
+              {{ log_pagination.page }} / {{ log_pagination.total_pages }}
+            </span>
+            <button
+              type="button"
+              class="ax-btn ax-btn-ghost ax-btn-sm"
+              (click)="goToLogPage(log_pagination.page + 1)"
+              [disabled]="log_pagination.page === log_pagination.total_pages">
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</ng-template>

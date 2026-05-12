@@ -1,0 +1,49 @@
+<ng-template #sheetTemplate>
+  <div
+    class="ax-sheet"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="title ? sheetId + '-title' : null"
+    [attr.aria-label]="!title ? ariaLabel : null"
+    [style.height]="sheetHeightVh + 'vh'"
+    [style.transform]="'translate3d(0, ' + dragOffsetPx + 'px, 0)'"
+    (pointerdown)="onPointerDown($event)"
+    (pointermove)="onPointerMove($event)"
+    (pointerup)="onPointerUp($event)"
+    (pointercancel)="onPointerUp($event)">
+
+    <!-- Drag zone: handle + header are draggable; body is not -->
+    <div class="ax-sheet__drag-zone">
+      @if (showHandle) {
+        <div class="ax-sheet__handle" aria-hidden="true"></div>
+      }
+
+      <!-- Custom slotted header (preferred when set) -->
+      <ng-content select="[ax-sheet-header]"></ng-content>
+
+      <!-- OR inline title row (when no slotted header) -->
+      @if (title) {
+        <div class="ax-sheet__title-row">
+          <h2 class="ax-sheet__title" [id]="sheetId + '-title'">{{ title }}</h2>
+          @if (showCloseButton !== false) {
+            <button
+              type="button"
+              class="ax-sheet__close"
+              (click)="onCloseClick()"
+              aria-label="Close">
+              <ax-icon name="x" />
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    <!-- Body content -->
+    <div class="ax-sheet__body">
+      <ng-content></ng-content>
+    </div>
+
+    <!-- Optional sticky footer -->
+    <ng-content select="[ax-sheet-footer]"></ng-content>
+  </div>
+</ng-template>

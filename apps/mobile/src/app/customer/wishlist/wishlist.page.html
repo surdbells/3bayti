@@ -1,0 +1,139 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/account']" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_my_closet' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg ion-padding-horizontal">
+
+  <!-- Categories section: horizontal scroll with Add-card first -->
+  @if (!ui_controls.is_loading) {
+    <section class="section section--categories">
+      <h3 class="section-title">{{ 'text_categories' | translate }}</h3>
+
+      <div class="categories-row">
+        <!-- Add new category card -->
+        <button (click)="isAddLabelOpen = true" class="category-card category-card--add" type="button" aria-label="{{ 'heading_new_category' | translate }}">
+          <span class="category-card__icon-wrap category-card__icon-wrap--add">
+            <ax-icon name="plus" size="md"></ax-icon>
+          </span>
+          <span class="category-card__name">{{ 'heading_new_category' | translate }}</span>
+        </button>
+
+        <!-- User-created categories -->
+        @for (cat of categories; track cat.id) {
+          <button (click)="get_wishlist_by_label(cat.id, cat.name)"
+                  class="category-card"
+                  [class.category-card--active]="selected_label_id === cat.id"
+                  type="button">
+            <span class="category-card__icon-wrap">
+              <ax-icon name="heart" size="md"></ax-icon>
+            </span>
+            <span class="category-card__name">{{ cat.name }}</span>
+            <span class="category-card__count">{{ cat.count }} {{ 'text_items' | translate }}</span>
+          </button>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Items section title — direct child of ion-content (matches best-sellers layout) -->
+  @if (!ui_controls.is_loading && selected_label_id !== 0) {
+    <h3 class="section-title section-title--items">{{ selected_label }}</h3>
+
+    @if (wishlists.length > 0) {
+      <ion-grid class="products-grid">
+        <ion-row>
+          @for (a_wishlist of wishlists; track a_wishlist.id) {
+            <ion-col size="6">
+              <article class="m6d-product-card">
+                <div class="m6d-img-wrap">
+                  <!-- Image skeleton -->
+                  <div class="m6d-img-skeleton" [class.hidden]="imageLoaded[a_wishlist.id]">
+                    <div class="skeleton-shimmer"></div>
+                  </div>
+                  <!-- Actual image -->
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    [src]="a_wishlist.image"
+                    [alt]="a_wishlist.name"
+                    [class.loaded]="imageLoaded[a_wishlist.id]"
+                    (load)="onImageLoad(a_wishlist.id)"
+                    (error)="onImageError(a_wishlist.id)"
+                    (click)="open_product(a_wishlist.product, a_wishlist.name)" />
+                </div>
+                <div (click)="open_product(a_wishlist.product, a_wishlist.name)" class="m6d-info">
+                  <p class="m6d-name">{{ a_wishlist.name }}</p>
+                </div>
+              </article>
+            </ion-col>
+          }
+        </ion-row>
+      </ion-grid>
+    }
+
+    @if (ui_controls.is_empty) {
+      <div class="empty-state">
+        <ax-icon name="heart" size="xl"></ax-icon>
+        <h2>{{ 'heading_no_items_in_wishlist' | translate }}</h2>
+      </div>
+    }
+  }
+
+  <!-- Initial state: prompt to tap a category -->
+  @if (!ui_controls.is_loading && selected_label_id === 0 && categories.length > 0) {
+    <div class="initial-prompt">
+      <ax-icon name="heart" size="xl"></ax-icon>
+      <p>{{ 'text_tap_category_to_view' | translate }}</p>
+    </div>
+  }
+
+  <!-- Loader -->
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  <!-- Add new category sheet -->
+  @if (!ui_controls.is_loading) {
+    <ax-bottom-sheet
+      [isOpen]="isAddLabelOpen"
+      (didDismiss)="isAddLabelOpen = false"
+      [snapPoints]="[0.5, 0.9]"
+      [initialSnap]="0"
+      [backdropDismiss]="false"
+      [title]="'button_add_new' | translate">
+
+      <div class="add-label-form">
+        @if (!ui_controls.is_creating) {
+          <ax-text-field
+            [label]="'label_category_name' | translate"
+            type="text"
+            [maxlength]="25"
+            [required]="true"
+            [(ngModel)]="add_label.label_name"
+            name="label_name">
+          </ax-text-field>
+
+          <ion-button (click)="add_wishlist_label()" expand="block" class="ion-margin-vertical" type="button">
+            {{ 'button_add' | translate }}
+          </ion-button>
+        }
+        @if (ui_controls.is_creating) {
+          <div class="loader-row">
+            <ax-loader></ax-loader>
+          </div>
+        }
+      </div>
+    </ax-bottom-sheet>
+  }
+</ion-content>
+
+<app-tab-bar></app-tab-bar>

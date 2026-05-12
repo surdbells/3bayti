@@ -1,0 +1,142 @@
+<ion-header class="vendor-header ion-no-border">
+  <!-- Cover image with gradient overlay -->
+  <div class="vendor-cover-wrapper">
+    <img loading="lazy"
+         class="vendor-cover"
+         [src]="view_vendor.cover || 'assets/images/vendor-cover-default.png'"
+         alt="Vendor cover" />
+
+    <!-- Floating back button (overlay, top-left) -->
+    <button type="button"
+            class="vendor-back-btn"
+            (click)="goBack()"
+            aria-label="Back">
+      <ax-icon name="arrow-left" [size]="20" />
+    </button>
+
+    <!-- Logo + name + tagline overlay -->
+    <div class="vendor-overlay">
+      <div class="vendor-logo">
+        @if (view_vendor.logo) {
+          <img loading="lazy" [src]="view_vendor.logo" alt="{{ view_vendor.name }}" />
+        } @else {
+          <span class="logo-initial">{{ view_vendor.name | slice:0:1 }}</span>
+        }
+      </div>
+      <div class="vendor-meta">
+        <h2>{{ view_vendor.name }}</h2>
+        <p [innerHTML]="view_vendor.tagline || ('text_vendor_tagline_fallback' | translate)"></p>
+      </div>
+    </div>
+  </div>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  <!-- Action buttons: follow + reviews -->
+  <div class="vendor-actions ion-padding">
+    <ion-button expand="block"
+                shape="round"
+                [fill]="view_vendor.following ? 'outline' : 'solid'"
+                (click)="toggleFollow()"
+                class="vendor-action-btn">
+      @if (view_vendor.following) {
+        <ax-icon name="user-check" slot="start" />
+      } @else {
+        <ax-icon name="user-minus" slot="start" />
+      }
+      {{ (view_vendor.following ? 'button_followed' : 'button_follow') | translate }}
+    </ion-button>
+    <ion-button expand="block"
+                shape="round"
+                fill="outline"
+                (click)="goToReviews(read_vendor.store_id, view_vendor.name)"
+                class="vendor-action-btn">
+      <ax-icon name="star" slot="start" />
+      {{ 'button_reviews' | translate }}
+    </ion-button>
+  </div>
+
+  <!-- Latest section -->
+  @if (!ui_controls.is_loading && latest.length > 0) {
+    <section class="section ion-padding-horizontal">
+      <h2 class="section-title">{{ 'heading_latest' | translate }}</h2>
+      <app-h-scroll-progress>
+        @for(latest_product of latest; track latest_product.product_id){
+          <article class="m6d-product-card">
+            <div class="m6d-img-wrap">
+              <!-- Image skeleton -->
+              <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['latest-' + latest_product.product_id]">
+                <div class="skeleton-shimmer"></div>
+              </div>
+              <!-- Actual image -->
+              <img
+                (click)="open_product(latest_product.product_id, latest_product.product_name)"
+                [class.loaded]="imageLoaded['latest-' + latest_product.product_id]"
+                (load)="onImageLoad('latest-' + latest_product.product_id)"
+                (error)="onImageError('latest-' + latest_product.product_id)"
+                [src]="latest_product.image_1"
+                alt="{{latest_product.product_name}}" />
+            </div>
+            <div (click)="open_product(latest_product.product_id, latest_product.product_name)" class="m6d-info">
+              <p class="m6d-name">{{latest_product.product_name}}</p>
+              <div class="m6d-price-row">
+                <span class="m6d-price">Ð{{latest_product.price}}</span>
+                <button (click)="open_product(latest_product.product_id, latest_product.product_name); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
+                  <ax-icon name="plus" />
+                </button>
+              </div>
+            </div>
+          </article>
+        }
+      </app-h-scroll-progress>
+    </section>
+  }
+
+  <!-- Per-category sections -->
+  @if (!ui_controls.is_loading) {
+    @for(category of categories; track category.id){
+      <section class="section ion-padding-horizontal">
+        <h2 class="section-title">{{ category.name }}</h2>
+        <app-h-scroll-progress>
+          @for(product of products; track product.product_id){
+            @if(category.id === product.collection){
+              <article class="m6d-product-card">
+                <div class="m6d-img-wrap">
+                  <!-- Image skeleton -->
+                  <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['cat-' + product.product_id]">
+                    <div class="skeleton-shimmer"></div>
+                  </div>
+                  <!-- Actual image -->
+                  <img
+                    (click)="open_product(product.product_id, product.product_name)"
+                    [class.loaded]="imageLoaded['cat-' + product.product_id]"
+                    (load)="onImageLoad('cat-' + product.product_id)"
+                    (error)="onImageError('cat-' + product.product_id)"
+                    [src]="product.image_1"
+                    alt="{{product.product_name}}" />
+                </div>
+                <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
+                  <p class="m6d-name">{{product.product_name}}</p>
+                  <div class="m6d-price-row">
+                    <span class="m6d-price">Ð{{product.price}}</span>
+                    <button (click)="open_product(product.product_id, product.product_name); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
+                      <ax-icon name="plus" />
+                    </button>
+                  </div>
+                </div>
+              </article>
+            }
+          }
+        </app-h-scroll-progress>
+      </section>
+    }
+  }
+
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+</ion-content>
+
+<app-tab-bar active="explore"></app-tab-bar>

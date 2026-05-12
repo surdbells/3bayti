@@ -1,0 +1,229 @@
+<aside class="ax-sidenav" [class.ax-sidenav-open]="isOpen" aria-label="Vendor navigation">
+  <!-- Brand -->
+  <a routerLink="/account" class="ax-sidenav-brand" aria-label="Abayti vendor home">
+    <span class="ax-sidenav-brand-mark" aria-hidden="true">Ab</span>
+    <span class="ax-sidenav-brand-text">
+      <span class="ax-sidenav-brand-name">Abayti</span>
+      <span class="ax-sidenav-brand-role">{{ 'vendor_portal' | translate }}</span>
+    </span>
+  </a>
+
+  <!-- Quick-action: add product -->
+  <div class="ax-sidenav-section">
+    <a
+      routerLink="/create-product"
+      class="ax-btn ax-btn-primary ax-btn-sm"
+      style="width: 100%;"
+      (click)="close()">
+      <span class="material-symbols-outlined" aria-hidden="true">add</span>
+      <span>{{ 'add_product' | translate }}</span>
+    </a>
+  </div>
+
+  <!-- Scrollable nav -->
+  <nav class="ax-sidenav-body" aria-label="Primary navigation">
+
+    <div class="ax-sidenav-section">
+      <p class="ax-sidenav-section-title">{{ 'main_menu' | translate }}</p>
+      <ul class="ax-sidenav-nav">
+        <li>
+          <a
+            routerLink="/account"
+            routerLinkActive="ax-sidenav-link-active"
+            [routerLinkActiveOptions]="{ exact: true }"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+            <span class="ax-sidenav-link-label">{{ 'dashboard' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/products"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+            <span class="ax-sidenav-link-label">{{ 'manage_products' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/orders"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+            <span class="ax-sidenav-link-label">{{ 'manage_orders' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/delivery"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+            <span class="ax-sidenav-link-label">{{ 'delivery_list' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/returns"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">assignment_return</span>
+            <span class="ax-sidenav-link-label">{{ 'process_returns' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/reviews"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">reviews</span>
+            <span class="ax-sidenav-link-label">{{ 'product_reviews' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/messages"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">chat</span>
+            <span class="ax-sidenav-link-label">Messages</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/coupons"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">sell</span>
+            <span class="ax-sidenav-link-label">Coupons &amp; discounts</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Store settings group -->
+    <div class="ax-sidenav-section">
+      <p class="ax-sidenav-section-title">{{ 'store_settings' | translate }}</p>
+      <ul class="ax-sidenav-nav">
+        <li>
+          <a
+            routerLink="/store"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">store</span>
+            <span class="ax-sidenav-link-label">{{ 'manage_store' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/payment_info"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">credit_card</span>
+            <span class="ax-sidenav-link-label">{{ 'payment_information' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/tax_information"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">receipt</span>
+            <span class="ax-sidenav-link-label">{{ 'tax_information' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/labels"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">label</span>
+            <span class="ax-sidenav-link-label">{{ 'product_labels' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/measurements"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">straighten</span>
+            <span class="ax-sidenav-link-label">{{ 'measurements' | translate }}</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Account group -->
+    <div class="ax-sidenav-section">
+      <p class="ax-sidenav-section-title">Account</p>
+      <ul class="ax-sidenav-nav">
+        <li>
+          <a
+            routerLink="/profile"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">person</span>
+            <span class="ax-sidenav-link-label">{{ 'user_profile' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/security"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">lock</span>
+            <span class="ax-sidenav-link-label">{{ 'security' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/notifications"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+            <span class="ax-sidenav-link-label">{{ 'notifications' | translate }}</span>
+          </a>
+        </li>
+        <li>
+          <a
+            routerLink="/compliance"
+            routerLinkActive="ax-sidenav-link-active"
+            class="ax-sidenav-link"
+            (click)="close()">
+            <span class="material-symbols-outlined" aria-hidden="true">policy</span>
+            <span class="ax-sidenav-link-label">{{ 'compliance' | translate }}</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Bottom: sign out -->
+    <div class="ax-sidenav-section" style="margin-top: auto; padding-top: var(--ax-space-4); border-top: 1px solid var(--ax-color-border-subtle);">
+      <button
+        type="button"
+        class="ax-sidenav-link ax-sidenav-link-danger"
+        (click)="sign_out()"
+        style="width: 100%; background: transparent; border: 0; cursor: pointer; text-align: left; font: inherit;">
+        <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+        <span class="ax-sidenav-link-label">{{ 'sign_out' | translate }}</span>
+      </button>
+    </div>
+  </nav>
+</aside>

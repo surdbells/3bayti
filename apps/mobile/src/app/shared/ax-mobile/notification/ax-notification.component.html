@@ -1,0 +1,24 @@
+<div
+  class="ax-notification"
+  [class.ax-notification--success]="item.status === 'success'"
+  [class.ax-notification--error]="item.status === 'error'"
+  [class.ax-notification--warning]="item.status === 'warning'"
+  [class.ax-notification--info]="item.status === 'info'"
+  [class.ax-notification--loading]="item.status === 'loading'"
+  [class.ax-notification--has-title]="!!item.title"
+  [class.ax-notification--entering]="item.animState === 'entering'"
+  [class.ax-notification--visible]="item.animState === 'visible'"
+  [class.ax-notification--leaving]="item.animState === 'leaving'"
+  [class]="item.className"
+  role="status"
+  [attr.aria-live]="ariaLive"
+  tabindex="0"
+  (click)="onTap()"
+  (keydown)="onKeydown($event)"
+>
+  <span class="ax-notification__dot" aria-hidden="true"></span>
+  <div class="ax-notification__body">
+    <div *ngIf="item.title" class="ax-notification__title">{{ item.title }}</div>
+    <div class="ax-notification__message">{{ item.message }}</div>
+  </div>
+</div>

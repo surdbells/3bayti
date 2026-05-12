@@ -1,0 +1,210 @@
+/* =========================================================================
+   Abayti Design System — Form primitives
+   .ax-input, .ax-textarea, .ax-select, .ax-label, .ax-form-field, .ax-hint, .ax-error
+   Phase 1 ships the basic controls. Checkbox, radio, switch, and multiselect
+   components are built in Phase 2.
+   ========================================================================= */
+
+.ax-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ax-space-2);
+}
+
+.ax-label {
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-1);
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-medium);
+  color: var(--ax-color-text-primary);
+  letter-spacing: var(--ax-ls-snug);
+}
+
+.ax-label-required::after {
+  content: '*';
+  color: var(--ax-color-text-danger);
+  margin-left: 2px;
+}
+
+.ax-hint {
+  font-size: var(--ax-fs-2xs);
+  color: var(--ax-color-text-tertiary);
+  line-height: 1.4;
+}
+
+.ax-error {
+  font-size: var(--ax-fs-2xs);
+  color: var(--ax-color-text-danger);
+  line-height: 1.4;
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-1);
+}
+
+
+/* ---------- Input base ---------- */
+.ax-input,
+.ax-textarea,
+.ax-select {
+  display: block;
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  min-height: 2.5rem;
+
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-sm);
+  font-weight: var(--ax-fw-regular);
+  line-height: 1.4;
+  color: var(--ax-color-text-primary);
+
+  background-color: var(--ax-color-bg-surface);
+  border: 1px solid var(--ax-color-border-default);
+  border-radius: var(--ax-radius-md);
+
+  transition: border-color var(--ax-duration-fast) var(--ax-ease-out),
+              box-shadow var(--ax-duration-fast) var(--ax-ease-out),
+              background-color var(--ax-duration-fast) var(--ax-ease-out);
+
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.ax-input::placeholder,
+.ax-textarea::placeholder {
+  color: var(--ax-color-text-tertiary);
+  opacity: 1;
+}
+
+.ax-input:hover,
+.ax-textarea:hover,
+.ax-select:hover {
+  border-color: var(--ax-color-border-strong);
+}
+
+.ax-input:focus,
+.ax-textarea:focus,
+.ax-select:focus {
+  outline: none;
+  border-color: var(--ax-color-border-focus);
+  box-shadow: var(--ax-shadow-focus);
+}
+
+.ax-input:disabled,
+.ax-textarea:disabled,
+.ax-select:disabled {
+  background-color: var(--ax-color-bg-sunken);
+  color: var(--ax-color-text-disabled);
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.ax-input[readonly],
+.ax-textarea[readonly] {
+  background-color: var(--ax-color-bg-sunken);
+  cursor: default;
+}
+
+
+/* ---------- Size modifiers ---------- */
+.ax-input-sm,
+.ax-textarea-sm,
+.ax-select-sm {
+  padding: 0.375rem 0.625rem;
+  min-height: 2rem;
+  font-size: var(--ax-fs-xs);
+  border-radius: var(--ax-radius-sm);
+}
+
+.ax-input-lg,
+.ax-textarea-lg,
+.ax-select-lg {
+  padding: 0.875rem 1rem;
+  min-height: 3rem;
+  font-size: var(--ax-fs-base);
+  border-radius: var(--ax-radius-lg);
+}
+
+
+/* ---------- Validation states ---------- */
+.ax-input-invalid,
+.ax-textarea-invalid,
+.ax-select-invalid,
+.ax-input.ax-invalid,
+.ax-textarea.ax-invalid,
+.ax-select.ax-invalid {
+  border-color: var(--ax-color-bg-danger);
+}
+.ax-input-invalid:focus,
+.ax-textarea-invalid:focus,
+.ax-select-invalid:focus,
+.ax-input.ax-invalid:focus,
+.ax-textarea.ax-invalid:focus,
+.ax-select.ax-invalid:focus {
+  box-shadow: 0 0 0 3px rgba(209, 84, 63, 0.2);
+}
+
+
+/* ---------- Textarea ---------- */
+.ax-textarea {
+  min-height: 6rem;
+  resize: vertical;
+  line-height: var(--ax-lh-normal);
+}
+
+
+/* ---------- Select ---------- */
+.ax-select {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%237d7669' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpath d='m4 6 4 4 4-4'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 16px 16px;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+
+/* ---------- Input group (icon prefix/suffix) ---------- */
+.ax-input-group {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+.ax-input-group .ax-input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Prefix/suffix icon slot */
+.ax-input-group-prefix,
+.ax-input-group-suffix {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ax-color-text-tertiary);
+  pointer-events: none;
+  font-size: 1.1em;
+  line-height: 1;
+}
+.ax-input-group-prefix { left: 0.875rem; }
+.ax-input-group-suffix { right: 0.875rem; }
+
+.ax-input-group-prefix ~ .ax-input {
+  padding-left: 2.5rem;
+}
+.ax-input-group:has(.ax-input-group-suffix) .ax-input {
+  padding-right: 2.5rem;
+}
+
+/* If suffix is actionable (button), allow clicks */
+.ax-input-group-suffix.ax-input-group-action {
+  pointer-events: auto;
+  cursor: pointer;
+  background: none;
+  border: 0;
+}

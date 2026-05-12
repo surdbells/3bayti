@@ -1,0 +1,44 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/account']" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'messages' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [routerLink]="['/ticketlist']" fill="solid" class="support-cta">
+        <ax-icon name="headset" slot="start" />
+        {{ 'support' | translate }}
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  @if (!ui_controls.is_loading) {
+    <div class="contacts-sheet ion-padding-horizontal">
+      @for(store of stores; track store.store){
+        <ion-list class="contact-list">
+          <ion-item (click)="conversations(store.store, store.store_name)" detail="false" button class="contact-item">
+            <ion-label>
+              <strong class="contact-name">{{ store.store_name }}</strong>
+              <ion-note color="medium" class="ion-text-wrap contact-address">
+                {{ store.store_address }}
+              </ion-note>
+            </ion-label>
+            <span class="count-pill" slot="end">{{ store.total_products }}</span>
+          </ion-item>
+        </ion-list>
+      }
+    </div>
+  }
+
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+</ion-content>
+
+<app-tab-bar></app-tab-bar>

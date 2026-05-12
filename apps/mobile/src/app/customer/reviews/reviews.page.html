@@ -1,0 +1,54 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/settings']" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_your_reviews' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  <div class="reviews-sheet ion-padding-horizontal">
+
+    @if (ui_controls.is_loading) {
+      <div class="loader-row">
+        <ax-loader></ax-loader>
+      </div>
+    }
+
+    @if (!ui_controls.is_loading) {
+      <div class="reviews-list">
+        @for (item of reviews; track item.id) {
+          <ion-card (click)="start_delete_review(item.id)" class="review-card">
+            <ion-card-content>
+              <div class="review-card__header">
+                <ax-icon name="store" class="review-card__icon" />
+                <span class="review-card__store">{{ item?.store_name || '—' }}</span>
+              </div>
+              <div class="review-card__body">
+                <p class="review-card__comment">{{ item?.comment || '' }}</p>
+                @if (item.star && item.star > 0) {
+                  <div class="review-card__stars" [attr.aria-label]="item.star + ' stars'">
+                    @for (n of [0, 1, 2, 3, 4]; track n) {
+                      <ax-icon name="star" class="review-card__star" [class.review-card__star--filled]="n < item.star" />
+                    }
+                  </div>
+                }
+              </div>
+            </ion-card-content>
+          </ion-card>
+        }
+      </div>
+    }
+
+    @if (ui_controls.is_empty && !ui_controls.is_loading) {
+      <div class="empty-state">
+        <ax-icon name="shopping-basket" />
+        <h2>{{ 'heading_no_reviews' | translate }}</h2>
+        <p>{{ 'text_no_reviews_description' | translate }}</p>
+      </div>
+    }
+  </div>
+</ion-content>

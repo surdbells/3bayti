@@ -1,0 +1,68 @@
+<ion-content class="intro-content" [fullscreen]="true">
+  <!-- Background Decorations -->
+  <div class="bg-decorations">
+    <div class="circle circle-1"></div>
+    <div class="circle circle-2"></div>
+    <div class="circle circle-3"></div>
+  </div>
+
+  <!-- Swiper Slides -->
+  <swiper-container
+    #swiper
+    class="intro-swiper"
+    (swiperslidechange)="onSlideChange($event)">
+
+    @for(slide of slides; track slide.id; let i = $index) {
+      <swiper-slide>
+        <div class="slide-content">
+          <!-- Image Container -->
+          <div class="image-container">
+            <img
+              [src]="slide.image"
+              [alt]="slide.title"
+              (load)="onImageLoad(i)"
+              [class.loaded]="slide.imageLoaded">
+            <div class="image-skeleton" *ngIf="!slide.imageLoaded"></div>
+          </div>
+
+          <!-- Text Content -->
+          <div class="text-content">
+            <h1 class="slide-title">{{ slide.title | translate }}</h1>
+            <p class="slide-description">{{ slide.description | translate }}</p>
+          </div>
+        </div>
+      </swiper-slide>
+    }
+  </swiper-container>
+
+  <!-- Bottom Controls -->
+  <div class="bottom-controls">
+    <!-- Pagination Dots -->
+    <div class="pagination-dots">
+      @for(slide of slides; track slide.id; let i = $index) {
+        <span
+          class="dot"
+          [class.active]="i === currentIndex"
+          (click)="goToSlide(i)">
+        </span>
+      }
+    </div>
+
+    <!-- Next/Get Started Button -->
+    @if(currentIndex === slides.length - 1) {
+      <ion-button
+        class="get-started-btn"
+        (click)="onNextClick()"
+        shape="round"
+        expand="block">
+        {{ 'get_started' | translate }}
+      </ion-button>
+    } @else {
+      <ion-fab-button
+        class="next-fab"
+        (click)="onNextClick()">
+        <ax-icon name="chevron-right" />
+      </ion-fab-button>
+    }
+  </div>
+</ion-content>

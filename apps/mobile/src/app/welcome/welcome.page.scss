@@ -1,0 +1,89 @@
+/* ============================================================================
+   Welcome page (first-time user entry) — M2 redesign
+   ============================================================================ */
+
+ion-content.welcome-bg {
+  --background: var(--ax-color-bg-canvas);
+}
+
+.welcome-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: calc(100vh - env(safe-area-inset-top, 0) - env(safe-area-inset-bottom, 0));
+  padding: 2rem 1.5rem;
+  text-align: center;
+  max-width: 420px;
+  margin-inline: auto;
+}
+
+/* ----- Brand logo --------------------------------------------------- */
+
+.welcome-logo-wrap {
+  margin-bottom: 32px;
+}
+
+.welcome-logo {
+  display: block;
+  max-width: 220px;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+/* ----- Intro copy --------------------------------------------------- */
+
+.welcome-intro {
+  margin: 0 0 32px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ax-color-text-secondary);
+  max-width: 320px;
+}
+
+/* ----- CTAs --------------------------------------------------------- */
+
+.welcome-cta {
+  width: 100%;
+  --border-radius: 999px;
+  --box-shadow: none;
+  --min-height: 48px;
+  margin: 0 0 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+
+.welcome-cta--primary {
+  --background: var(--ax-color-bg-brand);
+  --background-hover: var(--ax-color-bg-brand);
+  --background-activated: rgba(90, 58, 44, 0.85);
+  --color: var(--ax-palette-neutral-0);
+}
+
+.welcome-cta--secondary {
+  --background: transparent;
+  --background-hover: rgba(90, 58, 44, 0.06);
+  --background-activated: rgba(90, 58, 44, 0.10);
+  --color: var(--ax-color-text-brand);
+  --border-width: 1px;
+  --border-style: solid;
+  --border-color: rgba(90, 58, 44, 0.4);
+  margin-bottom: 28px;
+}
+
+/* ----- Tagline ----------------------------------------------------- */
+
+.welcome-tagline {
+  margin: 0;
+  font-family: var(--ax-font-display);   /* Poltawski Nowy */
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ax-color-text-tertiary);
+  font-style: italic;
+}

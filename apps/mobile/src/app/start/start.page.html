@@ -1,0 +1,63 @@
+<ion-content [fullscreen]="true" class="start-bg">
+  <div class="safe-area">
+    <div class="slides"> <!-- 👈 ensures a block with height -->
+    <swiper-container
+      #swiper
+      class="slides"
+      allow-touch-move="true">
+
+      <swiper-slide class="slide">
+        <div class="hero">
+          <img src="assets/onboarding/model1.png" alt="Model 1" class="model" />
+        </div>
+        <div class="cta">
+          <h1 class="title">MAKING EMIRATI MODEST FASHION<br/>MORE ACCESSIBLE</h1>
+          <p class="subtitle">
+            Explore curated modest collections that celebrate your unique style and cultural elegance
+          </p>
+        </div>
+      </swiper-slide>
+
+      <swiper-slide class="slide">
+        <div class="hero">
+          <img src="assets/onboarding/model2.png" alt="Model 2" class="model" />
+        </div>
+        <div class="cta">
+          <h1 class="title">SHOP MODERN MODEST<br/>COLLECTIONS WITH EASE</h1>
+          <p class="subtitle">
+            Browse our boutique-inspired collections with warmth, sophistication, and cultural authenticity
+          </p>
+        </div>
+      </swiper-slide>
+
+      <swiper-slide class="slide">
+        <div class="hero">
+          <img src="assets/onboarding/model3.png" alt="Model 3" class="model" />
+        </div>
+        <div class="cta">
+          <h1 class="title">SECURE CHECKOUT, FAST DELIVERY<br/>&amp; REWARDS</h1>
+          <p class="subtitle">
+            Experience seamless shopping with secure payments, swift delivery, and exclusive member benefits
+          </p>
+        </div>
+      </swiper-slide>
+    </swiper-container>
+    </div>
+    <div class="footer">
+      <div class="pager">
+        <span class="dot" [class.active]="index()===0"></span>
+        <span class="dot" [class.active]="index()===1"></span>
+        <span class="dot" [class.active]="index()===2"></span>
+      </div>
+
+      <ion-button
+        size="large"
+        shape="round"
+        class="cta-btn"
+        (click)="next(swiper)">
+        {{ index() === 2 ? 'Get Started' : 'Next' }}
+        <ax-icon name="chevron-right" class="ion-text-start ion-padding-horizontal" [style.color]="'var(--ion-color-secondary-contrast)'"/>
+      </ion-button>
+    </div>
+  </div>
+</ion-content>

@@ -1,0 +1,11 @@
+/* Component-scoped field card for the account-setup progress view. */
+.ax-field-card {
+  padding: var(--ax-space-3);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-md);
+  background: var(--ax-color-bg-surface);
+}
+.ax-field-card.ax-field-empty {
+  background: var(--ax-color-bg-canvas);
+  border-style: dashed;
+}

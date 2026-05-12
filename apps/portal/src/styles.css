@@ -1,0 +1,42 @@
+/* =========================================================================
+   Abayti Vendor — Global Styles
+   --------------------------------------------------------------------------
+   The design system (`ax-*`) is the only style layer.
+   Phases 1–11: page-by-page migration off Bootstrap to the ax design system.
+   Phase 12: removed legacy theme bundles (Bootstrap CSS/JS, jQuery, vendor
+             plugins). All pages now render exclusively via ax-* tokens.
+   ========================================================================= */
+
+/* External fonts & icons */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0..200&display=swap');
+
+/* Design system — tokens must load first */
+@import './styles/_tokens.css';
+@import './styles/_reset.css';
+@import './styles/_typography.css';
+@import './styles/_utilities.css';
+
+/* Design system — component primitives */
+@import './styles/components/_button.css';
+@import './styles/components/_card.css';
+@import './styles/components/_input.css';
+@import './styles/components/_misc.css';
+@import './styles/components/_sidenav.css';
+@import './styles/components/_layout.css';
+@import './styles/components/_extras.css';
+@import './styles/components/_controls.css';
+@import './styles/components/_overlays.css';
+@import './styles/components/_shells.css';
+@import './styles/components/_data.css';
+@import './styles/components/_rich.css';
+@import './styles/components/_pages.css';
+
+/* Loaded last so it overrides component CSS at mobile breakpoints. */
+@import './styles/_mobile-safety-net.css';
+
+/* Legacy desktop sidebar offset — still in use until receipt page is restructured */
+@media (min-width: 1180px) {
+  .ml-desktop-22rem { margin-left: 18rem; }
+}

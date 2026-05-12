@@ -1,0 +1,171 @@
+// ticket-messages.page — M2 token migration (M37 / Tier 4)
+// Drops dead :host theme block (deep-red gradient + dead radius
+// vars). Drops Sass variable-based brand color ($brand: #BA2E06).
+// Replaces nested grid-row-col-item-label-note with clean message
+// bubbles. Composer footer uses M2 token-based styling.
+
+// =========================================================
+// Accessibility
+// =========================================================
+
+.sr-only {
+  position: absolute !important;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
+}
+
+// =========================================================
+// Message thread
+// =========================================================
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 16px;
+  padding-bottom: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.message {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.message-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-primary);
+  border-radius: var(--ax-radius-lg, 16px);
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  box-shadow: 0 2px 6px rgba(46, 36, 28, 0.04);
+}
+
+.message-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--ax-color-text-primary);
+}
+
+.message-time {
+  font-size: 11px;
+  color: var(--ax-color-text-tertiary);
+  padding-left: 8px;
+}
+
+// =========================================================
+// Loader spacing
+// =========================================================
+
+.loader-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+// =========================================================
+// Composer footer
+// =========================================================
+
+.ticket-footer {
+  background: var(--ax-color-bg-surface);
+  padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 12px);
+  border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.08));
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.composer-input {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.1));
+  outline: none;
+  padding: 11px 16px;
+  border-radius: 24px;
+  background: var(--ax-color-bg-canvas);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ax-color-text-primary);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+
+  &::placeholder {
+    color: var(--ax-color-text-tertiary);
+    opacity: 1;
+  }
+
+  &:focus {
+    border-color: var(--ax-color-text-brand);
+    box-shadow: 0 0 0 3px rgba(90, 58, 44, 0.08);
+  }
+}
+
+.send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: none;
+  border-radius: 50%;
+  background: var(--ax-color-bg-brand);
+  color: var(--ax-palette-neutral-0, #ffffff);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--ax-color-text-brand);
+    outline-offset: 2px;
+  }
+
+  &[disabled] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.send-loader {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+// =========================================================
+// Responsive
+// =========================================================
+
+@media (max-width: 420px) {
+  .composer-input {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+  .send-btn,
+  .send-loader {
+    width: 40px;
+    height: 40px;
+  }
+}

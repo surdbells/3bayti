@@ -1,0 +1,7 @@
+{
+  "icon": { "sources": ["resources/splash.png"] },
+  "splash": {
+    "sources": ["resources/splash.png"],
+    "backgroundColor": "#e8dccb"
+  }
+}

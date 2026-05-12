@@ -1,0 +1,222 @@
+/* ============================================================================
+   AxPlaceAutocomplete — address autocomplete primitive
+
+   Visual aesthetics intentionally mirror ax-text-field (same border/radius/
+   focus ring/spacing) so the input is indistinguishable when the dropdown
+   is closed. The dropdown adds a suggestions list directly below.
+
+   All colors use semantic tokens (bg-surface, text-primary, etc) so dark
+   mode is automatic.
+   ============================================================================ */
+
+:host {
+  display: block;
+  width: 100%;
+  /* Allow the dropdown to escape the input's box when needed. The
+     parent's overflow-clip would otherwise hide it. */
+  position: relative;
+}
+
+.ax-place-autocomplete {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  position: relative;
+}
+
+/* ----- Label ------------------------------------------------------------- */
+
+.ax-place-autocomplete__label {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  color: var(--ax-color-text-secondary);
+  cursor: pointer;
+
+  .ax-place-autocomplete--disabled & {
+    color: var(--ax-color-text-tertiary);
+    cursor: not-allowed;
+  }
+}
+
+.ax-place-autocomplete__required {
+  color: var(--ax-color-text-brand);
+  margin-inline-start: 2px;
+  font-weight: 500;
+}
+
+/* ----- Control wrapper --------------------------------------------------- */
+
+.ax-place-autocomplete__control {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+}
+
+/* ----- Input ------------------------------------------------------------- */
+
+.ax-place-autocomplete__input {
+  width: 100%;
+  height: var(--ax-input-height, 48px);
+  padding: 0 var(--ax-input-padding-x, 14px);
+  /* Reserve space on the right for the spinner — only visible when
+     loading=true but layout-stable either way to prevent jitter. */
+  padding-inline-end: calc(var(--ax-input-padding-x, 14px) + 24px);
+  margin: 0;
+
+  font-family: inherit;
+  font-size: 16px;            /* iOS Safari: <16px causes zoom on focus */
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--ax-color-text-primary);
+
+  background: var(--ax-color-bg-surface);
+  border: var(--ax-input-border-width, 1px) solid var(--ax-color-border-default);
+  border-radius: var(--ax-input-radius, 0.5rem);
+
+  appearance: none;
+  -webkit-appearance: none;
+  outline: none;
+
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+
+  &::placeholder {
+    color: var(--ax-color-text-tertiary);
+    font-weight: 400;
+    opacity: 1;
+  }
+
+  &:focus,
+  &:focus-visible {
+    border-color: var(--ax-color-border-focus, var(--ax-color-text-brand));
+    box-shadow: var(--ax-shadow-focus, 0 0 0 3px rgba(144, 105, 82, 0.18));
+  }
+
+  &:disabled {
+    background: var(--ax-color-bg-muted);
+    color: var(--ax-color-text-tertiary);
+    cursor: not-allowed;
+  }
+
+  .ax-place-autocomplete--error & {
+    border-color: var(--ax-color-text-danger);
+  }
+}
+
+/* ----- Spinner ----------------------------------------------------------- */
+
+.ax-place-autocomplete__spinner {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--ax-color-border-default);
+  border-top-color: var(--ax-color-text-brand);
+  border-radius: 50%;
+  animation: ax-place-autocomplete-spin 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes ax-place-autocomplete-spin {
+  to { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* ----- Suggestions dropdown --------------------------------------------- */
+
+.ax-place-autocomplete__list {
+  position: absolute;
+  /* Attach below the input. The input lives inside __control, which
+     sits below the label (~22px). The list is positioned relative
+     to the host, so we offset by the input's top-edge distance. */
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin: 4px 0 0 0;
+  padding: 4px;
+  list-style: none;
+
+  background: var(--ax-color-bg-raised);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-input-radius, 0.5rem);
+  box-shadow: var(--ax-shadow-md);
+
+  /* Cap height so 10+ results don't fill the whole screen. */
+  max-height: 280px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+
+  /* Above other page content. The bottom-sheet uses 1000+, so 50 is
+     fine for inline dropdowns inside normal pages. */
+  z-index: 50;
+}
+
+.ax-place-autocomplete__item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: var(--ax-radius-sm, 0.375rem);
+  transition: background 120ms ease;
+
+  &:hover,
+  &:focus,
+  &:active {
+    background: var(--ax-color-bg-muted);
+  }
+
+  & + & {
+    /* Subtle separator between items — not borders, just spacing. */
+    margin-top: 1px;
+  }
+}
+
+.ax-place-autocomplete__item-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--ax-color-text-tertiary);
+}
+
+.ax-place-autocomplete__item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ax-place-autocomplete__item-main {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+  /* Ellipsis for very long street names */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ax-place-autocomplete__item-secondary {
+  font-size: 12px;
+  color: var(--ax-color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ----- Helper / error message ------------------------------------------- */
+
+.ax-place-autocomplete__message {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ax-color-text-secondary);
+
+  &--error {
+    color: var(--ax-color-text-danger);
+  }
+}

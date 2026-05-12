@@ -1,0 +1,17 @@
+.message-box {
+  max-height: 400px;
+  overflow-y: auto;
+}
+.message {
+  padding: 10px 14px;
+  border-radius: 15px;
+  margin-bottom: 8px;
+  display: inline-block;
+  position: relative;
+}
+.message-time {
+  font-size: 0.75rem;
+  color: #888;
+  display: block;
+  margin-top: 4px;
+}

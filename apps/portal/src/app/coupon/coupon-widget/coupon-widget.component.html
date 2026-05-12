@@ -1,0 +1,47 @@
+<div *ngIf="loaded" class="coupon-widget ax-card ax-shadow-sm">
+  <div class="ax-card-body">
+    <div class="ax-flex ax-justify-between ax-items-start ax-mb-3">
+      <div>
+        <h6 class="ax-font-bold ax-mb-0">Coupons</h6>
+        <small class="ax-text-secondary">Quick overview</small>
+      </div>
+      <button class="ax-btn ax-btn-sm ax-btn-ghost ax-btn-icon" (click)="goToAnalytics()" title="View full analytics" aria-label="View full analytics">
+        <span class="material-symbols-outlined">open_in_new</span>
+      </button>
+    </div>
+
+    <!-- Mini stats grid -->
+    <div class="ax-grid ax-grid-cols-2 ax-gap-2 ax-mb-3">
+      <div class="widget-stat">
+        <div class="widget-stat-value">{{ stats.active_coupons }}</div>
+        <div class="widget-stat-label">Active</div>
+      </div>
+      <div class="widget-stat">
+        <div class="widget-stat-value">{{ stats.total_redemptions }}</div>
+        <div class="widget-stat-label">Redeemed</div>
+      </div>
+      <div class="widget-stat">
+        <div class="widget-stat-value">AED {{ stats.total_discount_given | number:'1.0-0' }}</div>
+        <div class="widget-stat-label">Discounts</div>
+      </div>
+      <div class="widget-stat">
+        <div class="widget-stat-value">AED {{ stats.total_revenue_with_coupons | number:'1.0-0' }}</div>
+        <div class="widget-stat-label">Revenue</div>
+      </div>
+    </div>
+
+    <!-- Top 3 coupons -->
+    <div *ngIf="top_coupons.length > 0">
+      <small class="ax-font-semibold ax-text-secondary ax-block ax-mb-2">Top Coupons</small>
+      <div *ngFor="let tc of top_coupons" class="ax-flex ax-justify-between ax-items-center ax-py-1 ax-border-b">
+        <span class="ax-text-sm ax-font-bold widget-coupon-code">{{ tc.code }}</span>
+        <span class="ax-text-sm ax-text-secondary">{{ tc.total_uses }} uses</span>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <button class="ax-btn ax-btn-sm ax-btn-primary ax-btn-block ax-mt-3" (click)="goToCoupons()">
+      Manage Coupons
+    </button>
+  </div>
+</div>

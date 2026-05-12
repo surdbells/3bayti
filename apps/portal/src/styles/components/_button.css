@@ -1,0 +1,244 @@
+/* =========================================================================
+   Abayti Design System — Buttons
+   .ax-btn base + modifiers: --primary --secondary --ghost --danger --link
+   Sizes: --sm (default) --md --lg --icon
+   ========================================================================= */
+
+.ax-btn {
+  /* layout */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ax-space-2);
+
+  /* sizing */
+  padding: 0.625rem 1rem;
+  min-height: 2.25rem;
+  border-radius: var(--ax-radius-md);
+
+  /* typography */
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-sm);
+  font-weight: var(--ax-fw-medium);
+  line-height: 1.25;
+  letter-spacing: var(--ax-ls-snug);
+  white-space: nowrap;
+
+  /* color (overridden by variants) */
+  color: var(--ax-color-text-primary);
+  background-color: transparent;
+  border: 1px solid transparent;
+
+  /* interaction */
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--ax-duration-fast) var(--ax-ease-out),
+    border-color var(--ax-duration-fast) var(--ax-ease-out),
+    color var(--ax-duration-fast) var(--ax-ease-out),
+    box-shadow var(--ax-duration-fast) var(--ax-ease-out),
+    transform var(--ax-duration-fast) var(--ax-ease-out);
+
+  /* reset */
+  text-decoration: none;
+  appearance: none;
+}
+
+.ax-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ax-shadow-focus);
+}
+
+.ax-btn:disabled,
+.ax-btn[aria-disabled='true'],
+.ax-btn.ax-btn-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Icon sizing inside button */
+.ax-btn .material-symbols-outlined,
+.ax-btn .ax-btn-icon {
+  font-size: 1.15em;
+  line-height: 1;
+}
+
+/* ---------- Size modifiers ---------- */
+.ax-btn-sm {
+  padding: 0.375rem 0.75rem;
+  min-height: 1.875rem;
+  font-size: var(--ax-fs-xs);
+  border-radius: var(--ax-radius-sm);
+}
+
+.ax-btn-md {
+  padding: 0.75rem 1.25rem;
+  min-height: 2.5rem;
+  font-size: var(--ax-fs-sm);
+}
+
+.ax-btn-lg {
+  padding: 0.875rem 1.5rem;
+  min-height: 3rem;
+  font-size: var(--ax-fs-base);
+  border-radius: var(--ax-radius-lg);
+}
+
+.ax-btn-icon {
+  padding: 0;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  min-width: 2.25rem;
+}
+.ax-btn-icon.ax-btn-sm {
+  width: 1.875rem;
+  min-height: 1.875rem;
+  min-width: 1.875rem;
+}
+.ax-btn-icon.ax-btn-lg {
+  width: 3rem;
+  min-height: 3rem;
+  min-width: 3rem;
+}
+
+.ax-btn-block {
+  width: 100%;
+}
+
+
+/* ---------- Variants ---------- */
+
+/* Primary — solid brand brown */
+.ax-btn-primary {
+  color: var(--ax-color-text-on-brand);
+  background-color: var(--ax-color-bg-brand);
+  border-color: var(--ax-color-bg-brand);
+}
+.ax-btn-primary:hover {
+  background-color: var(--ax-color-bg-brand-hover);
+  border-color: var(--ax-color-bg-brand-hover);
+}
+.ax-btn-primary:active {
+  background-color: var(--ax-color-bg-brand-active);
+  border-color: var(--ax-color-bg-brand-active);
+}
+
+/* Secondary — neutral sand */
+.ax-btn-secondary {
+  color: var(--ax-color-text-primary);
+  background-color: var(--ax-color-bg-muted);
+  border-color: var(--ax-color-bg-muted);
+}
+.ax-btn-secondary:hover {
+  background-color: var(--ax-color-bg-brand-subtle);
+  border-color: var(--ax-color-bg-brand-subtle);
+}
+.ax-btn-secondary:active {
+  background-color: var(--ax-color-bg-brand-muted);
+  border-color: var(--ax-color-bg-brand-muted);
+}
+
+/* Outline */
+.ax-btn-outline {
+  color: var(--ax-color-text-primary);
+  background-color: transparent;
+  border-color: var(--ax-color-border-default);
+}
+.ax-btn-outline:hover {
+  background-color: var(--ax-color-bg-muted);
+  border-color: var(--ax-color-border-strong);
+}
+.ax-btn-outline:active {
+  background-color: var(--ax-color-bg-sunken);
+}
+
+/* Outline brand */
+.ax-btn-outline-brand {
+  color: var(--ax-color-text-brand);
+  background-color: transparent;
+  border-color: var(--ax-color-border-brand);
+}
+.ax-btn-outline-brand:hover {
+  background-color: var(--ax-color-bg-brand-subtle);
+  color: var(--ax-color-text-brand);
+}
+.ax-btn-outline-brand:active {
+  background-color: var(--ax-color-bg-brand-muted);
+}
+
+/* Ghost — no border, no bg until hover */
+.ax-btn-ghost {
+  color: var(--ax-color-text-primary);
+  background-color: transparent;
+  border-color: transparent;
+}
+.ax-btn-ghost:hover {
+  background-color: var(--ax-color-bg-muted);
+}
+.ax-btn-ghost:active {
+  background-color: var(--ax-color-bg-sunken);
+}
+
+/* Link — looks like a link, behaves like a button */
+.ax-btn-link {
+  color: var(--ax-color-text-link);
+  background-color: transparent;
+  border-color: transparent;
+  padding-left: 0;
+  padding-right: 0;
+  min-height: auto;
+}
+.ax-btn-link:hover {
+  color: var(--ax-color-text-link-hover);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Danger — destructive action */
+.ax-btn-danger {
+  color: var(--ax-color-text-inverse);
+  background-color: var(--ax-color-bg-danger);
+  border-color: var(--ax-color-bg-danger);
+}
+.ax-btn-danger:hover {
+  background-color: var(--ax-palette-danger-600);
+  border-color: var(--ax-palette-danger-600);
+}
+
+.ax-btn-outline-danger {
+  color: var(--ax-color-text-danger);
+  background-color: transparent;
+  border-color: var(--ax-color-bg-danger);
+}
+.ax-btn-outline-danger:hover {
+  background-color: var(--ax-color-bg-danger-subtle);
+}
+
+/* Success */
+.ax-btn-success {
+  color: var(--ax-color-text-inverse);
+  background-color: var(--ax-color-bg-success);
+  border-color: var(--ax-color-bg-success);
+}
+.ax-btn-success:hover {
+  background-color: var(--ax-palette-success-600);
+  border-color: var(--ax-palette-success-600);
+}
+
+/* Button group */
+.ax-btn-group {
+  display: inline-flex;
+  gap: 1px;
+}
+.ax-btn-group .ax-btn {
+  border-radius: 0;
+}
+.ax-btn-group .ax-btn:first-child {
+  border-top-left-radius: var(--ax-radius-md);
+  border-bottom-left-radius: var(--ax-radius-md);
+}
+.ax-btn-group .ax-btn:last-child {
+  border-top-right-radius: var(--ax-radius-md);
+  border-bottom-right-radius: var(--ax-radius-md);
+}

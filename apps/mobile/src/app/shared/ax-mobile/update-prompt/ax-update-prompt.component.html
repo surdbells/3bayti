@@ -1,0 +1,45 @@
+<div *ngIf="isOpen"
+     class="ax-update-prompt"
+     role="alertdialog"
+     aria-modal="true"
+     [attr.aria-labelledby]="'ax-update-prompt-title'"
+     [attr.aria-describedby]="'ax-update-prompt-message'">
+  <!-- Backdrop is intentionally non-interactive — no click-to-dismiss
+       on a hard-prompt force-update flow. -->
+  <div class="ax-update-prompt__backdrop"></div>
+
+  <div class="ax-update-prompt__card">
+    <div class="ax-update-prompt__icon-wrap" aria-hidden="true">
+      <ax-icon name="circle-alert" size="lg" class="ax-update-prompt__icon"></ax-icon>
+    </div>
+
+    <h2 id="ax-update-prompt-title" class="ax-update-prompt__title">
+      {{ title }}
+    </h2>
+
+    <p *ngIf="versionLabel" class="ax-update-prompt__version">
+      {{ versionLabel }}
+    </p>
+
+    <p id="ax-update-prompt-message" class="ax-update-prompt__message">
+      {{ message }}
+    </p>
+
+    <button type="button"
+            class="ax-update-prompt__cta"
+            (click)="onUpdateClick()">
+      <ax-icon name="download" size="sm" class="ax-update-prompt__cta-icon"></ax-icon>
+      <span>{{ buttonLabel }}</span>
+    </button>
+
+    <!-- Soft-prompt mode only — explicit secondary action. Backdrop
+         tap is still non-interactive even here, to prevent accidental
+         dismissals. Tapping Later requires deliberate intent. -->
+    <button *ngIf="canDismiss"
+            type="button"
+            class="ax-update-prompt__later"
+            (click)="onDismissClick()">
+      {{ dismissLabel }}
+    </button>
+  </div>
+</div>

@@ -1,0 +1,307 @@
+<ion-header class="ion-no-border m6-header">
+  <ion-toolbar class="toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-avatar class="m6-avatar" (click)="user_profile()">
+        @if (single_user.avatar) {
+          <img [src]="single_user.avatar" [alt]="single_user.first_name" />
+        } @else {
+          <div class="m6-avatar-fallback">{{ (single_user.first_name || '?').charAt(0).toUpperCase() }}</div>
+        }
+      </ion-avatar>
+      <div class="hello">
+        <div class="hey">{{ 'welcome_back' | translate }} <span>{{ single_user.first_name }}</span></div>
+        <div class="loc">  {{ 'greeting' | translate }} </div>
+      </div>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      @if(single_user.is_vendor && single_user.is_store_active && single_user.is_store_approved){
+        <ion-button (click)="user_store()" fill="clear">
+          <ax-icon name="store" [style.color]="'var(--text)'"/>
+        </ion-button>
+      }
+      <ion-button (click)="user_wishlist()" fill="clear">
+        <ax-icon name="heart" [style.color]="'var(--text)'"/>
+      </ion-button>
+      <ion-button (click)="user_messages()" fill="clear">
+        <ax-icon name="message-square-more" [style.color]="'var(--text)'"/>
+      </ion-button>
+      <ion-button (click)="openCart()" fill="clear">
+        <app-cart-icon [count]="bill.count"></app-cart-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <div class="search-wrap">
+    <ion-grid>
+      <ion-row>
+        <ion-col>
+          <div class="m6-search app-fade-in" (click)="user_search()">
+            <ax-icon name="search" class="m6-search-icon"/>
+            <span class="m6-search-placeholder">Search abaya, kaftans</span>
+          </div>
+        </ion-col>
+<!--    <ion-col (click)="isFilterOpen = true" style="margin-top: 10px;" size="2">
+          <ax-icon name="sliders-horizontal" class="ion-float-end" [style.color]="'var(&#45;&#45;ion-color-secondary)'" />
+        </ion-col>-->
+      </ion-row>
+      <ion-row>
+        <ion-col>
+          <section class="section">
+            <div class="h-scroll categories">
+              <button class="m6-chip" type="button" (click)="open_category(1, 'Abayas');">
+                <span class="m6-chip-ico"><ion-icon src="assets/icon/abayas.svg"></ion-icon></span>
+                <span class="m6-chip-text">{{ 'abayas' | translate }}</span>
+              </button>
+              <button class="m6-chip" type="button" (click)="open_category(2, 'Mukhawars');">
+                <span class="m6-chip-ico"><ion-icon src="assets/icon/mukhawar.svg"></ion-icon></span>
+                <span class="m6-chip-text">{{ 'mukhawars' | translate }}</span>
+              </button>
+              <button class="m6-chip" type="button" (click)="open_category(3, 'Kaftan');">
+                <span class="m6-chip-ico"><ion-icon src="assets/icon/kaftan.svg"></ion-icon></span>
+                <span class="m6-chip-text">{{ 'kaftans' | translate }}</span>
+              </button>
+              <button class="m6-chip" type="button" (click)="open_category(4, 'Bags');">
+                <span class="m6-chip-ico"><ion-icon src="assets/icon/bag.svg"></ion-icon></span>
+                <span class="m6-chip-text">{{ 'bags' | translate }}</span>
+              </button>
+              <button class="m6-chip" type="button" (click)="open_category(5, 'Accessories');">
+                <span class="m6-chip-ico"><ion-icon src="assets/icon/accessories.svg"></ion-icon></span>
+                <span class="m6-chip-text">{{ 'accessories' | translate }}</span>
+              </button>
+              <button class="m6-chip" type="button" (click)="open_category(6, 'Modest Clothes');">
+                <span class="m6-chip-ico"><ion-icon src="assets/icon/modest.svg"></ion-icon></span>
+                <span class="m6-chip-text">{{ 'modest_clothes' | translate }}</span>
+              </button>
+              <button class="m6-chip" type="button" (click)="open_category(7, 'Dresses');">
+                <span class="m6-chip-ico"><ion-icon src="assets/icon/dress.svg"></ion-icon></span>
+                <span class="m6-chip-text">{{ 'dresses' | translate }}</span>
+              </button>
+               <button class="m6-chip" type="button" (click)="open_category(8, 'Pyjamas');">
+                <span class="m6-chip-ico"><ion-icon src="assets/icon/dress.svg"></ion-icon></span>
+                <span class="m6-chip-text">{{ 'Pyjamas' | translate }}</span>
+              </button>
+            </div>
+          </section>
+        </ion-col>
+      </ion-row>
+    </ion-grid>
+  </div>
+</ion-header>
+
+<ion-content fullscreen="true" class="home-bg">
+  <!-- Best Sellers Section -->
+  @if (!ui_controls.is_loading){
+    <section class="section ion-padding-horizontal">
+      <div class="m6d-section-head">
+        <h2 class="m6d-section-title">{{ 'best_seller' | translate }}</h2>
+        <a class="m6d-show-all" (click)="bestSellers()">{{ 'show_all' | translate }} <ax-icon name="arrow-right" /></a>
+      </div>
+      <div class="h-scroll">
+        @for(best_seller of best_sellers; track best_seller.product_id){
+          <article class="m6d-product-card">
+            <div class="m6d-img-wrap">
+              <!-- Image skeleton -->
+              <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['best-' + best_seller.product_id]">
+                <div class="skeleton-shimmer"></div>
+              </div>
+              <!-- Actual image -->
+              <img
+                (click)="open_product(best_seller.product_id)"
+                [class.loaded]="imageLoaded['best-' + best_seller.product_id]"
+                (load)="onImageLoad('best-' + best_seller.product_id)"
+                (error)="onImageError('best-' + best_seller.product_id)"
+                [src]="best_seller.image_1"
+                alt="{{best_seller.product_name}}" />
+              <button (click)="startAddToCloset(best_seller.product_id, best_seller.product_name, best_seller.image_1)" class="m6d-like" type="button" aria-label="Add to closet">
+                <ax-icon name="heart-plus" />
+              </button>
+              <span class="m6d-vendor-badge">{{best_seller.store_name}}</span>
+            </div>
+            <div (click)="open_product(best_seller.product_id)" class="m6d-info">
+              <p class="m6d-name">{{best_seller.product_name}}</p>
+              <div class="m6d-price-row">
+                <span class="m6d-price">Ð{{best_seller.price}}</span>
+                <button (click)="open_product(best_seller.product_id); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
+                  <ax-icon name="plus" />
+                </button>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- New Arrivals Section -->
+  @if (!ui_controls.is_loading){
+    <section class="section ion-padding-horizontal">
+      <div class="m6d-section-head">
+        <h2 class="m6d-section-title">{{ 'new_arrivals' | translate }}</h2>
+        <a class="m6d-show-all" (click)="newArrivals()">{{ 'show_all' | translate }} <ax-icon name="arrow-right" /></a>
+      </div>
+      <div class="h-scroll">
+        @for(new_arrival of new_arrivals; track new_arrival.product_id){
+          <article class="m6d-product-card">
+            <div class="m6d-img-wrap">
+              <!-- Image skeleton -->
+              <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['new-' + new_arrival.product_id]">
+                <div class="skeleton-shimmer"></div>
+              </div>
+              <!-- Actual image -->
+              <img
+                (click)="open_product(new_arrival.product_id)"
+                [class.loaded]="imageLoaded['new-' + new_arrival.product_id]"
+                (load)="onImageLoad('new-' + new_arrival.product_id)"
+                (error)="onImageError('new-' + new_arrival.product_id)"
+                [src]="new_arrival.image_1"
+                alt="{{new_arrival.product_name}}" />
+              <button (click)="startAddToCloset(new_arrival.product_id, new_arrival.product_name, new_arrival.image_1)" class="m6d-like" type="button" aria-label="Add to closet">
+                <ax-icon name="heart-plus" />
+              </button>
+              <span class="m6d-vendor-badge">{{new_arrival.store_name}}</span>
+            </div>
+            <div (click)="open_product(new_arrival.product_id)" class="m6d-info">
+              <p class="m6d-name">{{new_arrival.product_name}}</p>
+              <div class="m6d-price-row">
+                <span class="m6d-price">Ð{{new_arrival.price}}</span>
+                <button (click)="open_product(new_arrival.product_id); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
+                  <ax-icon name="plus" />
+                </button>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Vendor Featured Section -->
+  @if (!ui_controls.is_loading){
+    @for (vendor_feature of vendor_featured; track vendor_feature; let index = $index){
+      @if(vendor_feature.products.length > 0){
+        <section class="ion-padding-horizontal">
+          <article class="m6e-featured-card">
+            <!-- Hero: first product image with store name + rating overlay -->
+            <div class="m6e-featured-hero" (click)="open_vendor(vendor_feature.store_id, vendor_feature.store_name)">
+              <div class="m6e-featured-hero-skeleton" [class.hidden]="imageLoaded['vendor-hero-' + vendor_feature.store_id]">
+                <div class="skeleton-shimmer"></div>
+              </div>
+              <img
+                [class.loaded]="imageLoaded['vendor-hero-' + vendor_feature.store_id]"
+                (load)="onImageLoad('vendor-hero-' + vendor_feature.store_id)"
+                (error)="onImageError('vendor-hero-' + vendor_feature.store_id)"
+                [src]="vendor_feature.products[0].image"
+                alt="{{ vendor_feature.store_name }}" />
+              <div class="m6e-featured-hero-overlay">
+                <h3 class="m6e-featured-store-name">{{ vendor_feature.store_name }}</h3>
+                @if(vendor_feature.rating_count !== 0){
+                  <div class="m6e-featured-rating" (click)="open_reviews(vendor_feature.store_id, vendor_feature.store_name); $event.stopPropagation()">
+                    <ax-icon name="star" class="m6e-rating-star" />
+                    <span>{{ vendor_feature.rating }} · {{ vendor_feature.rating_count }} reviews</span>
+                  </div>
+                }
+              </div>
+            </div>
+
+            <!-- Body: label + remaining product thumbs (skip first since it's the hero) -->
+            <div class="m6e-featured-body">
+              <div class="m6e-featured-label">{{ 'featured_store' | translate }}</div>
+              @if (vendor_feature.products.length > 1){
+                <div class="m6e-featured-thumbs" role="list">
+                  @for(vendor_products of vendor_feature.products; track vendor_products.product_id; let i = $index){
+                    @if (i > 0){
+                      <div class="m6e-featured-thumb" role="listitem" (click)="open_product(vendor_products.product_id)">
+                        <div class="m6e-featured-thumb-skeleton" [class.hidden]="imageLoaded['vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id]">
+                          <div class="skeleton-shimmer"></div>
+                        </div>
+                        <img
+                          [class.loaded]="imageLoaded['vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id]"
+                          (load)="onImageLoad('vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id)"
+                          (error)="onImageError('vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id)"
+                          [src]="vendor_products.image"
+                          alt="product" />
+                        <span class="m6e-featured-thumb-price">Ð{{ vendor_products.price }}</span>
+                      </div>
+                    }
+                  }
+                </div>
+              }
+            </div>
+          </article>
+        </section>
+      }
+    }
+  }
+
+  <span class="ion-text-center ion-padding-vertical ion-margin-vertical">
+    @if (ui_controls.is_loading){
+      <ax-loader></ax-loader>
+    }
+  </span>
+
+  @if(!ui_controls.is_empty){
+    <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)">
+      <ion-infinite-scroll-content loadingText="Please wait..." loadingSpinner="dots"></ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+  }
+
+
+  <!-- Wishlist sheet -->
+  <ax-bottom-sheet
+    [isOpen]="isWishOpen"
+    (didDismiss)="OnDidDismiss(); isWishOpen = false"
+    [snapPoints]="[0.5, 0.9]"
+    [initialSnap]="0">
+
+    <div ax-sheet-header class="m6f-wishlist-sheet__title-row">
+      <h2 class="m6f-wishlist-sheet__title">
+        {{ 'save' | translate }} {{ addCloset.product_name }} {{ 'to' | translate }}
+      </h2>
+      <button type="button" class="m6f-wishlist-sheet__close-btn" (click)="isWishOpen = false">
+        {{ 'close' | translate }}
+      </button>
+    </div>
+
+    @if (!ui_controls.is_loading_category){
+      <ul class="m6f-wishlist-list">
+        @for(category of categories; track category.id; let i = $index){
+          <li class="m6f-wishlist-item" (click)="addToCloset(category.id)" role="button" tabindex="0">
+            <span class="m6f-wishlist-add">
+              <ax-icon name="plus" />
+            </span>
+            <span class="m6f-wishlist-label">{{category.name}}</span>
+          </li>
+        }
+      </ul>
+    }
+    @if (ui_controls.is_loading_category){
+      <div class="m6f-wishlist-loading">
+        <ax-loader></ax-loader>
+      </div>
+    }
+  </ax-bottom-sheet>
+</ion-content>
+
+<ion-footer class="m6f-footer ion-no-border">
+  <ion-tab-bar class="m6f-tab-bar" slot="bottom">
+    <ion-tab-button (click)="refresh_products()" tab="home" class="m6f-tab m6f-tab--active">
+      <ax-icon name="house" />
+      <ion-label>{{ 'nav_home' | translate }}</ion-label>
+    </ion-tab-button>
+    <ion-tab-button (click)="user_explore()" tab="explore" class="m6f-tab">
+      <ax-icon name="globe" />
+      <ion-label>{{ 'explore' | translate }}</ion-label>
+    </ion-tab-button>
+    <ion-tab-button (click)="user_cart()" tab="cart" class="m6f-tab">
+      <ax-icon name="shopping-cart" />
+      <ion-label>{{ 'title_my_cart' | translate }}</ion-label>
+    </ion-tab-button>
+    <ion-tab-button (click)="user_styles()" tab="sketch" class="m6f-tab">
+      <ax-icon name="blocks" />
+      <ion-label>{{ 'nav_style_hub' | translate }}</ion-label>
+    </ion-tab-button>
+    <ion-tab-button (click)="user_profile()" tab="profile" class="m6f-tab">
+      <ax-icon name="user-pen" />
+      <ion-label>{{ 'title_user_profile' | translate }}</ion-label>
+    </ion-tab-button>
+  </ion-tab-bar>
+</ion-footer>

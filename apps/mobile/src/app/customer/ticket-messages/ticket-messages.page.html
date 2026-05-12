@@ -1,0 +1,56 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button [routerLink]="['/ticketlist']" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ request.subject }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content [fullscreen]="true" class="page-bg">
+
+  @if (!ui_controls.is_loading){
+    <div class="thread ion-padding-horizontal">
+      @for (conversation of messages; track $index){
+        <div class="message">
+          <div class="message-bubble">
+            <p class="message-text">{{ conversation.message }}</p>
+          </div>
+          <span class="message-time">{{ conversation.timestamp }}</span>
+        </div>
+      }
+    </div>
+  }
+
+  <div class="loader-row">
+    @if (ui_controls.is_loading){
+      <ax-loader></ax-loader>
+    }
+  </div>
+
+</ion-content>
+<ion-footer collapse="none" class="ion-no-border ticket-footer">
+  <div class="composer">
+    <label class="sr-only" for="ticketMessage">{{ 'label_type_message' | translate }}</label>
+    <input
+      id="ticketMessage"
+      class="composer-input"
+      type="text"
+      [maxlength]="200"
+      [(ngModel)]="message.message"
+      [attr.placeholder]="'label_type_message' | translate"
+      autocomplete="off" />
+
+    @if (!ui_controls.sending){
+      <button (click)="send_message()" class="send-btn" aria-label="Send message">
+        <ax-icon name="send-horizontal" [size]="20"></ax-icon>
+      </button>
+    }
+    @if (ui_controls.sending){
+      <div class="send-loader">
+        <ax-loader></ax-loader>
+      </div>
+    }
+  </div>
+</ion-footer>

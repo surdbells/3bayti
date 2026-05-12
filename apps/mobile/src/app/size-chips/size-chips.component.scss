@@ -1,0 +1,47 @@
+:host {
+  display: block;
+}
+
+.chips-wrap {
+  display: flex;
+  gap: 2px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.size-chip {
+  padding: 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.08);
+  transition: transform 120ms ease, background-color 120ms ease, color 120ms ease;
+  cursor: pointer;
+  user-select: none;
+  opacity: 1;
+  color: var(--ion-color-primary);
+}
+
+/* available chips default */
+.size-chip.available {
+  background: transparent;
+  color: inherit;
+}
+
+/* unavailable chips */
+.size-chip.unavailable {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* selected */
+.size-chip.selected {
+  background: var(--ion-color-primary);
+  color: white !important;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(56, 128, 255, 0.18);
+}
+ion-label {
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}

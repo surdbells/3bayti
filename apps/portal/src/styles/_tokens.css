@@ -1,0 +1,370 @@
+/* =========================================================================
+   Abayti Design System — Tokens
+   --------------------------------------------------------------------------
+   All visual properties source from CSS custom properties.
+   Light and dark modes are defined here. Every utility and component
+   reads semantic tokens (e.g. --ax-color-surface), never raw palette
+   tokens (e.g. --ax-palette-beige-500). This lets us theme the entire
+   app by flipping semantic tokens in one place.
+   ========================================================================= */
+
+:root {
+  /* -----------------------------------------------------------------------
+     PALETTE — raw values. Never reference these directly in components.
+     Always go through a semantic token below.
+     ----------------------------------------------------------------------- */
+
+  /* Brand — beige (primary brand) */
+  --ax-palette-beige-50:  #fbf7f1;
+  --ax-palette-beige-100: #f5ede0;
+  --ax-palette-beige-200: #efe2cf;
+  --ax-palette-beige-300: #e8dccb;   /* abayti primary */
+  --ax-palette-beige-400: #d9c7a8;
+  --ax-palette-beige-500: #c9ae85;
+  --ax-palette-beige-600: #b89567;
+
+  /* Brand — warm brown (secondary brand) */
+  --ax-palette-brown-50:  #f7f1ec;
+  --ax-palette-brown-100: #ead9ca;
+  --ax-palette-brown-200: #d5b49e;
+  --ax-palette-brown-300: #b68e75;
+  --ax-palette-brown-400: #a27a60;
+  --ax-palette-brown-500: #906952;   /* abayti secondary */
+  --ax-palette-brown-600: #7a5844;
+  --ax-palette-brown-700: #614536;
+  --ax-palette-brown-800: #4a3429;
+  --ax-palette-brown-900: #2f2119;
+
+  /* Espresso — deepest neutrals for dark surfaces */
+  --ax-palette-espresso-50:  #f6f4f1;
+  --ax-palette-espresso-100: #ebe7e1;
+  --ax-palette-espresso-200: #c7bfb4;
+  --ax-palette-espresso-300: #9b9185;
+  --ax-palette-espresso-400: #6a6056;
+  --ax-palette-espresso-500: #46403a;
+  --ax-palette-espresso-600: #342f2a;
+  --ax-palette-espresso-700: #28231f;
+  --ax-palette-espresso-800: #1c1916;
+  --ax-palette-espresso-900: #120f0d;
+
+  /* Neutral — warm grey, tinted toward the brand */
+  --ax-palette-neutral-0:   #ffffff;
+  --ax-palette-neutral-50:  #faf8f5;
+  --ax-palette-neutral-100: #f1ede7;
+  --ax-palette-neutral-200: #e4ddd3;
+  --ax-palette-neutral-300: #d1c8bb;
+  --ax-palette-neutral-400: #a8a092;
+  --ax-palette-neutral-500: #7d7669;
+  --ax-palette-neutral-600: #5a554a;
+  --ax-palette-neutral-700: #403c34;
+  --ax-palette-neutral-800: #2a2722;
+  --ax-palette-neutral-900: #1a1814;
+
+  /* Gold — accent for success / premium highlights */
+  --ax-palette-gold-100: #f6eed9;
+  --ax-palette-gold-200: #ead6a0;
+  --ax-palette-gold-400: #c9a227;
+  --ax-palette-gold-500: #b18f1f;
+
+  /* Status */
+  --ax-palette-success-100: #e4f3e6;
+  --ax-palette-success-400: #4ca35f;
+  --ax-palette-success-500: #2e7d40;
+  --ax-palette-success-600: #225d30;
+
+  --ax-palette-warning-100: #fbead0;
+  --ax-palette-warning-400: #e5a03a;
+  --ax-palette-warning-500: #b77520;
+
+  --ax-palette-danger-100: #f9dfd9;
+  --ax-palette-danger-400: #d1543f;
+  --ax-palette-danger-500: #a53826;
+  --ax-palette-danger-600: #822518;
+
+  --ax-palette-info-100: #dbe6ed;
+  --ax-palette-info-400: #477a97;
+  --ax-palette-info-500: #2f5b75;
+
+
+  /* -----------------------------------------------------------------------
+     SEMANTIC TOKENS — LIGHT MODE (default)
+     These are the only tokens components and utilities should reference.
+     ----------------------------------------------------------------------- */
+
+  /* Backgrounds */
+  --ax-color-bg-canvas:    var(--ax-palette-neutral-50);   /* page background */
+  --ax-color-bg-surface:   var(--ax-palette-neutral-0);    /* cards, sheets */
+  --ax-color-bg-raised:    var(--ax-palette-neutral-0);    /* modals, popovers */
+  --ax-color-bg-sunken:    var(--ax-palette-neutral-100);  /* inset panels */
+  --ax-color-bg-muted:     var(--ax-palette-neutral-100);  /* hover states on surface */
+  --ax-color-bg-overlay:   rgba(28, 25, 22, 0.48);         /* modal backdrop */
+
+  /* Brand backgrounds */
+  --ax-color-bg-brand:          var(--ax-palette-brown-500);
+  --ax-color-bg-brand-hover:    var(--ax-palette-brown-600);
+  --ax-color-bg-brand-active:   var(--ax-palette-brown-700);
+  --ax-color-bg-brand-subtle:   var(--ax-palette-beige-100);
+  --ax-color-bg-brand-muted:    var(--ax-palette-beige-300);
+
+  /* Sidebar uses espresso for premium dark treatment */
+  --ax-color-bg-sidenav:          var(--ax-palette-espresso-700);
+  --ax-color-bg-sidenav-hover:    var(--ax-palette-espresso-600);
+  --ax-color-bg-sidenav-active:   var(--ax-palette-brown-500);
+
+  /* Text */
+  --ax-color-text-primary:   var(--ax-palette-espresso-800);
+  --ax-color-text-secondary: var(--ax-palette-neutral-600);
+  --ax-color-text-tertiary:  var(--ax-palette-neutral-500);
+  --ax-color-text-disabled:  var(--ax-palette-neutral-400);
+  --ax-color-text-inverse:   var(--ax-palette-neutral-0);
+  --ax-color-text-brand:     var(--ax-palette-brown-600);
+  --ax-color-text-link:      var(--ax-palette-brown-600);
+  --ax-color-text-link-hover:var(--ax-palette-brown-700);
+
+  --ax-color-text-on-brand:    var(--ax-palette-neutral-0);
+  --ax-color-text-on-sidenav:  var(--ax-palette-beige-100);
+  --ax-color-text-on-sidenav-muted: var(--ax-palette-espresso-200);
+
+  /* Borders */
+  --ax-color-border-subtle:  var(--ax-palette-neutral-200);
+  --ax-color-border-default: var(--ax-palette-neutral-300);
+  --ax-color-border-strong:  var(--ax-palette-neutral-400);
+  --ax-color-border-brand:   var(--ax-palette-brown-500);
+  --ax-color-border-focus:   var(--ax-palette-brown-500);
+  --ax-color-border-sidenav: var(--ax-palette-espresso-600);
+
+  /* Status — foreground */
+  --ax-color-text-success: var(--ax-palette-success-600);
+  --ax-color-text-warning: var(--ax-palette-warning-500);
+  --ax-color-text-danger:  var(--ax-palette-danger-600);
+  --ax-color-text-info:    var(--ax-palette-info-500);
+
+  /* Status — backgrounds (solid) */
+  --ax-color-bg-success: var(--ax-palette-success-500);
+  --ax-color-bg-warning: var(--ax-palette-warning-400);
+  --ax-color-bg-danger:  var(--ax-palette-danger-500);
+  --ax-color-bg-info:    var(--ax-palette-info-500);
+
+  /* Status — backgrounds (subtle, for badges/alerts) */
+  --ax-color-bg-success-subtle: var(--ax-palette-success-100);
+  --ax-color-bg-warning-subtle: var(--ax-palette-warning-100);
+  --ax-color-bg-danger-subtle:  var(--ax-palette-danger-100);
+  --ax-color-bg-info-subtle:    var(--ax-palette-info-100);
+
+  /* Gold accent */
+  --ax-color-bg-gold:        var(--ax-palette-gold-400);
+  --ax-color-bg-gold-subtle: var(--ax-palette-gold-100);
+  --ax-color-text-gold:      var(--ax-palette-gold-500);
+
+  /* Focus ring */
+  --ax-color-ring:       rgba(144, 105, 82, 0.35);
+  --ax-color-ring-strong:rgba(144, 105, 82, 0.6);
+
+
+  /* -----------------------------------------------------------------------
+     TYPOGRAPHY
+     ----------------------------------------------------------------------- */
+  --ax-font-body:    'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --ax-font-display: 'Fraunces', 'Inter', Georgia, serif;
+  --ax-font-mono:    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+  --ax-fs-3xs:  0.6875rem;   /* 11px */
+  --ax-fs-2xs:  0.75rem;     /* 12px */
+  --ax-fs-xs:   0.8125rem;   /* 13px */
+  --ax-fs-sm:   0.875rem;    /* 14px — default body */
+  --ax-fs-md:   0.9375rem;   /* 15px */
+  --ax-fs-base: 1rem;        /* 16px */
+  --ax-fs-lg:   1.125rem;    /* 18px */
+  --ax-fs-xl:   1.25rem;     /* 20px */
+  --ax-fs-2xl:  1.5rem;      /* 24px */
+  --ax-fs-3xl:  1.875rem;    /* 30px */
+  --ax-fs-4xl:  2.25rem;     /* 36px */
+  --ax-fs-5xl:  2.875rem;    /* 46px */
+  --ax-fs-6xl:  3.75rem;     /* 60px */
+
+  --ax-fw-regular:  400;
+  --ax-fw-medium:   500;
+  --ax-fw-semibold: 600;
+  --ax-fw-bold:     700;
+
+  --ax-lh-tight:   1.15;
+  --ax-lh-snug:    1.3;
+  --ax-lh-normal:  1.5;
+  --ax-lh-relaxed: 1.65;
+
+  --ax-ls-tight:   -0.02em;
+  --ax-ls-snug:    -0.01em;
+  --ax-ls-normal:  0;
+  --ax-ls-wide:    0.04em;
+  --ax-ls-wider:   0.08em;
+
+
+  /* -----------------------------------------------------------------------
+     SPACING — 4px base, geometric scale
+     ----------------------------------------------------------------------- */
+  --ax-space-0:  0;
+  --ax-space-px: 1px;
+  --ax-space-1:  0.25rem;   /* 4 */
+  --ax-space-2:  0.5rem;    /* 8 */
+  --ax-space-3:  0.75rem;   /* 12 */
+  --ax-space-4:  1rem;      /* 16 */
+  --ax-space-5:  1.25rem;   /* 20 */
+  --ax-space-6:  1.5rem;    /* 24 */
+  --ax-space-7:  2rem;      /* 32 */
+  --ax-space-8:  2.5rem;    /* 40 */
+  --ax-space-9:  3rem;      /* 48 */
+  --ax-space-10: 4rem;      /* 64 */
+  --ax-space-11: 5rem;      /* 80 */
+  --ax-space-12: 6rem;      /* 96 */
+  --ax-space-13: 8rem;      /* 128 */
+
+
+  /* -----------------------------------------------------------------------
+     RADIUS — soft, slightly generous for a premium feel
+     ----------------------------------------------------------------------- */
+  --ax-radius-none: 0;
+  --ax-radius-xs:   0.25rem;
+  --ax-radius-sm:   0.375rem;
+  --ax-radius-md:   0.5rem;
+  --ax-radius-lg:   0.75rem;
+  --ax-radius-xl:   1rem;
+  --ax-radius-2xl:  1.25rem;
+  --ax-radius-3xl:  1.5rem;
+  --ax-radius-pill: 999px;
+  --ax-radius-full: 50%;
+
+
+  /* -----------------------------------------------------------------------
+     SHADOWS — warm, soft, premium. Avoid harsh black.
+     ----------------------------------------------------------------------- */
+  --ax-shadow-none: none;
+  --ax-shadow-xs:   0 1px 2px rgba(46, 36, 28, 0.05);
+  --ax-shadow-sm:   0 1px 2px rgba(46, 36, 28, 0.05), 0 1px 3px rgba(46, 36, 28, 0.06);
+  --ax-shadow-md:   0 4px 6px -1px rgba(46, 36, 28, 0.06), 0 2px 4px -2px rgba(46, 36, 28, 0.04);
+  --ax-shadow-lg:   0 10px 15px -3px rgba(46, 36, 28, 0.08), 0 4px 6px -4px rgba(46, 36, 28, 0.05);
+  --ax-shadow-xl:   0 20px 25px -5px rgba(46, 36, 28, 0.10), 0 8px 10px -6px rgba(46, 36, 28, 0.05);
+  --ax-shadow-2xl:  0 25px 50px -12px rgba(46, 36, 28, 0.22);
+  --ax-shadow-inner: inset 0 2px 4px rgba(46, 36, 28, 0.05);
+
+  /* Focus ring */
+  --ax-shadow-focus: 0 0 0 3px var(--ax-color-ring);
+
+
+  /* -----------------------------------------------------------------------
+     MOTION
+     ----------------------------------------------------------------------- */
+  --ax-duration-instant: 75ms;
+  --ax-duration-fast:    150ms;
+  --ax-duration-base:    200ms;
+  --ax-duration-slow:    300ms;
+  --ax-duration-slower:  500ms;
+
+  --ax-ease-linear:  linear;
+  --ax-ease-in:      cubic-bezier(0.4, 0, 1, 1);
+  --ax-ease-out:     cubic-bezier(0, 0, 0.2, 1);
+  --ax-ease-in-out:  cubic-bezier(0.4, 0, 0.2, 1);
+  --ax-ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+
+
+  /* -----------------------------------------------------------------------
+     LAYOUT
+     ----------------------------------------------------------------------- */
+  --ax-sidenav-width: 17rem;       /* 272px */
+  --ax-sidenav-collapsed-width: 4.5rem;
+  --ax-topbar-height: 4rem;        /* 64px */
+  --ax-page-max-width: 90rem;      /* 1440px */
+  --ax-content-padding-x: var(--ax-space-6);
+  --ax-content-padding-y: var(--ax-space-7);
+
+
+  /* -----------------------------------------------------------------------
+     Z-INDEX
+     ----------------------------------------------------------------------- */
+  --ax-z-base:     0;
+  --ax-z-raised:   10;
+  --ax-z-dropdown: 1000;
+  --ax-z-sticky:   1020;
+  --ax-z-sidenav:  1030;
+  --ax-z-topbar:   1040;
+  --ax-z-drawer:   1050;
+  --ax-z-modal:    1060;
+  --ax-z-popover:  1070;
+  --ax-z-tooltip:  1080;
+  --ax-z-toast:    1090;
+
+
+  /* -----------------------------------------------------------------------
+     BREAKPOINTS (for JS reference — CSS uses @media directly)
+     ----------------------------------------------------------------------- */
+  --ax-bp-sm: 576px;
+  --ax-bp-md: 768px;
+  --ax-bp-lg: 992px;
+  --ax-bp-xl: 1200px;
+  --ax-bp-2xl: 1400px;
+}
+
+
+/* =========================================================================
+   DARK MODE
+   Activated by [data-ax-theme="dark"] on <html> or any ancestor.
+   ========================================================================= */
+[data-ax-theme='dark'] {
+  --ax-color-bg-canvas:    var(--ax-palette-espresso-800);
+  --ax-color-bg-surface:   var(--ax-palette-espresso-700);
+  --ax-color-bg-raised:    var(--ax-palette-espresso-600);
+  --ax-color-bg-sunken:    var(--ax-palette-espresso-900);
+  --ax-color-bg-muted:     var(--ax-palette-espresso-600);
+  --ax-color-bg-overlay:   rgba(0, 0, 0, 0.7);
+
+  --ax-color-bg-brand:          var(--ax-palette-brown-400);
+  --ax-color-bg-brand-hover:    var(--ax-palette-brown-300);
+  --ax-color-bg-brand-active:   var(--ax-palette-brown-200);
+  --ax-color-bg-brand-subtle:   var(--ax-palette-espresso-600);
+  --ax-color-bg-brand-muted:    var(--ax-palette-brown-700);
+
+  --ax-color-bg-sidenav:        var(--ax-palette-espresso-900);
+  --ax-color-bg-sidenav-hover:  var(--ax-palette-espresso-700);
+  --ax-color-bg-sidenav-active: var(--ax-palette-brown-500);
+
+  --ax-color-text-primary:   var(--ax-palette-neutral-100);
+  --ax-color-text-secondary: var(--ax-palette-neutral-300);
+  --ax-color-text-tertiary:  var(--ax-palette-neutral-400);
+  --ax-color-text-disabled:  var(--ax-palette-espresso-300);
+  --ax-color-text-inverse:   var(--ax-palette-espresso-900);
+  --ax-color-text-brand:     var(--ax-palette-beige-300);
+  --ax-color-text-link:      var(--ax-palette-beige-300);
+  --ax-color-text-link-hover:var(--ax-palette-beige-100);
+
+  --ax-color-text-on-brand:    var(--ax-palette-espresso-900);
+  --ax-color-text-on-sidenav:  var(--ax-palette-beige-100);
+  --ax-color-text-on-sidenav-muted: var(--ax-palette-espresso-300);
+
+  --ax-color-border-subtle:  var(--ax-palette-espresso-600);
+  --ax-color-border-default: var(--ax-palette-espresso-500);
+  --ax-color-border-strong:  var(--ax-palette-espresso-400);
+  --ax-color-border-brand:   var(--ax-palette-brown-400);
+  --ax-color-border-focus:   var(--ax-palette-beige-400);
+  --ax-color-border-sidenav: var(--ax-palette-espresso-700);
+
+  --ax-color-ring:        rgba(201, 174, 133, 0.3);
+  --ax-color-ring-strong: rgba(201, 174, 133, 0.55);
+  --ax-shadow-focus: 0 0 0 3px var(--ax-color-ring);
+
+  --ax-shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.3);
+  --ax-shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.25);
+  --ax-shadow-md:   0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.25);
+  --ax-shadow-lg:   0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.25);
+  --ax-shadow-xl:   0 20px 25px -5px rgba(0, 0, 0, 0.45), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+}
+
+
+/* Reduced-motion respect */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ax-duration-instant: 0ms;
+    --ax-duration-fast:    0ms;
+    --ax-duration-base:    0ms;
+    --ax-duration-slow:    0ms;
+    --ax-duration-slower:  0ms;
+  }
+}

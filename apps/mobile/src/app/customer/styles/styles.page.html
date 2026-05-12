@@ -1,0 +1,183 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="triggerBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_style_hub' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="createStyle()" class="m7-header-action" aria-label="Create style">
+        <ax-icon name="plus" />
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <!-- Segment Tabs -->
+  <div class="m7-segment-tabs">
+    <button
+      type="button"
+      class="m7-segment-tab"
+      [class.m7-segment-tab--active]="activeTab === 'community'"
+      (click)="switchTab('community')">
+      {{ 'tab_community' | translate }}
+    </button>
+    <button
+      type="button"
+      class="m7-segment-tab"
+      [class.m7-segment-tab--active]="activeTab === 'abayti'"
+      (click)="switchTab('abayti')">
+      {{ 'tab_3bayti' | translate }}
+    </button>
+    <button
+      type="button"
+      class="m7-segment-tab"
+      [class.m7-segment-tab--active]="activeTab === 'personal'"
+      (click)="switchTab('personal')">
+      {{ 'tab_my_styles' | translate }}
+    </button>
+  </div>
+</ion-header>
+
+<ion-content class="page-bg ion-padding" [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Empty State -->
+  @if(!ui_controls.is_loading && styles.length === 0){
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="shirt"></ax-icon>
+      </div>
+      <h3>{{ activeTab === 'personal' ? ('heading_no_styles_yet' | translate) : ('heading_no_styles_available' | translate) }}</h3>
+      <p>{{ activeTab === 'personal' ? ('text_create_first_style' | translate) : ('text_check_back_styles' | translate) }}</p>
+      @if(activeTab === 'personal'){
+        <ion-button type="button" fill="outline" size="small" class="empty-cta" (click)="createStyle()">
+          <ax-icon name="plus" slot="start"></ax-icon>
+          {{ 'button_create_style' | translate }}
+        </ion-button>
+      }
+    </div>
+  }
+
+  <!-- Loading Skeleton Grid -->
+  @if(ui_controls.is_loading){
+    <div class="style-grid">
+      @for(skeleton of [1,2,3,4,5,6]; track skeleton){
+        <div class="style-card skeleton-card">
+          <div class="card-images">
+            <div class="main-img-skeleton">
+              <div class="skeleton-shimmer"></div>
+            </div>
+            <div class="sub-images">
+              <div class="sub-img-skeleton">
+                <div class="skeleton-shimmer"></div>
+              </div>
+              <div class="sub-img-skeleton">
+                <div class="skeleton-shimmer"></div>
+              </div>
+            </div>
+          </div>
+          <div class="card-info">
+            <div class="skeleton-text title-skeleton">
+              <div class="skeleton-shimmer"></div>
+            </div>
+            <div class="skeleton-text count-skeleton">
+              <div class="skeleton-shimmer"></div>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Styles Grid -->
+  @if(!ui_controls.is_loading && styles.length > 0){
+    <div class="style-grid">
+      @for(style of styles; track style.id){
+        <div class="style-card" (click)="open_style(style)">
+          <div class="card-images">
+            <!-- Main Image -->
+            <div class="main-img-wrap">
+              @if(style.products[0]){
+                <div class="img-skeleton" [class.hidden]="imageLoaded[style.id + '-0']">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  [src]="style.products[0].image"
+                  class="main-img"
+                  [class.loaded]="imageLoaded[style.id + '-0']"
+                  (load)="onImageLoad(style.id, 0)"
+                  (error)="onImageError(style.id, 0)"
+                  alt="{{style.style_name}}">
+              } @else {
+                <div class="empty-tile" aria-hidden="true"></div>
+              }
+            </div>
+
+            <!-- Sub Images -->
+            <div class="sub-images">
+              <div class="sub-img-wrap">
+                @if(style.products[1]){
+                  <div class="img-skeleton" [class.hidden]="imageLoaded[style.id + '-1']">
+                    <div class="skeleton-shimmer"></div>
+                  </div>
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    [src]="style.products[1].image"
+                    class="sub-img"
+                    [class.loaded]="imageLoaded[style.id + '-1']"
+                    (load)="onImageLoad(style.id, 1)"
+                    (error)="onImageError(style.id, 1)"
+                    alt="{{style.style_name}}">
+                } @else {
+                  <div class="empty-tile" aria-hidden="true"></div>
+                }
+              </div>
+              <div class="sub-img-wrap">
+                @if(style.products[2]){
+                  <div class="img-skeleton" [class.hidden]="imageLoaded[style.id + '-2']">
+                    <div class="skeleton-shimmer"></div>
+                  </div>
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    [src]="style.products[2].image"
+                    class="sub-img"
+                    [class.loaded]="imageLoaded[style.id + '-2']"
+                    (load)="onImageLoad(style.id, 2)"
+                    (error)="onImageError(style.id, 2)"
+                    alt="{{style.style_name}}">
+                } @else {
+                  <div class="empty-tile" aria-hidden="true"></div>
+                }
+              </div>
+            </div>
+          </div>
+
+          <div class="card-info">
+            <h3 class="style-title">{{ style.style_name }}</h3>
+            <p class="style-count">{{ style.products.length }} {{ 'label_items' | translate }}</p>
+            @if(style.total_price){
+              <p class="style-price">Ð{{ style.total_price }}</p>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- Infinite Scroll -->
+  @if(!ui_controls.is_empty && !ui_controls.is_loading && styles.length > 0){
+    <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)" threshold="150px">
+      <ion-infinite-scroll-content loadingSpinner="dots"></ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+  }
+</ion-content>
+
+
+<app-tab-bar active="sketch"></app-tab-bar>

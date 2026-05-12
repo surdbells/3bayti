@@ -1,0 +1,22 @@
+.coupon-widget { border-radius: var(--ax-radius-lg); }
+
+.widget-stat {
+  background: var(--ax-color-bg-sunken);
+  border-radius: var(--ax-radius-md);
+  padding: var(--ax-space-2);
+  text-align: center;
+}
+.widget-stat-value {
+  font-size: var(--ax-fs-base);
+  font-weight: 700;
+  color: var(--ax-color-text-primary);
+}
+.widget-stat-label {
+  font-size: var(--ax-fs-3xs);
+  color: var(--ax-color-text-tertiary);
+  margin-top: 2px;
+}
+
+.widget-coupon-code {
+  font-family: var(--ax-font-mono);
+}

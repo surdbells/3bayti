@@ -1,0 +1,170 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="triggerBack(rqst_param.store_id, view_vendor.name)" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_store_reviews' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg ion-padding-horizontal ion-padding-vertical">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (!ui_controls.is_loading) {
+    <!-- Store summary card -->
+    <div class="store-summary-card">
+      <div class="store-image">
+        <img loading="lazy" [src]="view_vendor.logo" [alt]="view_vendor.name" />
+      </div>
+      <div class="store-info">
+        <div class="store-name">{{ view_vendor.name }}</div>
+        <div class="store-rating-title">{{ 'label_store_rating' | translate }}</div>
+        <div class="stars-row" [attr.aria-label]="view_vendor.rating + ' / 5'">
+          @for (n of [0, 1, 2, 3, 4]; track n) {
+            <ax-icon name="star" class="rating-star" [class.rating-star--filled]="n < view_vendor.rating" />
+          }
+        </div>
+        <div class="rating-sub">
+          {{ view_vendor.rating }} {{ 'label_out_of_5' | translate }} ({{ reviews.length }} {{ 'label_reviews_count' | translate }})
+        </div>
+      </div>
+    </div>
+
+    <!-- Write a store review button -->
+    <ion-button expand="block" class="write-review-btn" (click)="onWriteReview()">
+      <ax-icon name="pencil" slot="start"></ax-icon>
+      {{ 'button_write_review' | translate }}
+    </ion-button>
+
+    <!-- Section title + sort -->
+    <div class="section-row">
+      <h3 class="section-title">{{ 'title_store_reviews' | translate }}</h3>
+      <ion-item lines="none" class="sort-item">
+        <ion-select interface="popover" [(ngModel)]="sortBy" (ionChange)="applySort()" class="sort-select">
+          <ion-select-option value="recent">{{ 'label_most_recent' | translate }}</ion-select-option>
+          <ion-select-option value="ratingDesc">{{ 'label_highest_rating' | translate }}</ion-select-option>
+          <ion-select-option value="ratingAsc">{{ 'label_lowest_rating' | translate }}</ion-select-option>
+        </ion-select>
+      </ion-item>
+    </div>
+
+    <!-- Reviews list -->
+    <div class="reviews-list">
+      @for (r of reviews; track r.id) {
+        <ion-card class="review-card ion-no-margin">
+          <div class="review-header">
+            <div class="avatar">{{ r.authorInitial }}</div>
+            <div class="name-date">
+              <div class="name">{{ r.author }}</div>
+              <div class="date">{{ r.relativeDate }}</div>
+            </div>
+            <div class="rating-stars" [attr.aria-label]="r.rating + ' / 5'">
+              @for (n of [0, 1, 2, 3, 4]; track n) {
+                <ax-icon name="star" class="rating-star rating-star--sm" [class.rating-star--filled]="n < r.rating" />
+              }
+            </div>
+          </div>
+          <div class="review-title">{{ r.title }}</div>
+          <div class="review-text">{{ r.text }}</div>
+          <div class="review-divider"></div>
+          <div class="review-actions">
+            <button type="button" class="action-btn" (click)="toggleHelpful(r.id)">
+              <ax-icon name="heart"></ax-icon>
+              {{ 'label_helpful' | translate }} ({{ r.helpfulCount }})
+            </button>
+            @if (r.verified) {
+              <span class="verified-badge">
+                <ax-icon name="check-check"></ax-icon>
+                {{ 'label_verified_purchase' | translate }}
+              </span>
+            }
+          </div>
+        </ion-card>
+      }
+    </div>
+  }
+
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  @if (!ui_controls.is_loading && reviews.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="star" />
+      </div>
+      <h2>{{ 'heading_no_reviews' | translate }}</h2>
+    </div>
+  }
+
+  @if(!ui_controls.is_empty){
+    <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)">
+      <ion-infinite-scroll-content [loadingText]="'please_wait' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+  }
+
+  <!-- Write Review sheet -->
+  <ax-bottom-sheet
+    [isOpen]="isReviewOpen"
+    (didDismiss)="OnDidDismiss(); isReviewOpen = false"
+    [snapPoints]="[0.8, 0.95]"
+    [initialSnap]="0"
+    [title]="'title_write_review' | translate">
+
+    <!-- Rating (editable) -->
+    <div class="form-field">
+      <label class="form-field__label">{{ 'label_your_rating' | translate }}</label>
+      <div class="rating-input">
+        @for (n of [1, 2, 3, 4, 5]; track n) {
+          <button type="button" class="rating-star-btn" [class.rating-star-btn--filled]="n <= add_new_review.star" (click)="add_new_review.star = n" [attr.aria-label]="n + ' stars'">
+            <ax-icon name="star" />
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Review title -->
+    <div class="form-field">
+      <label class="form-field__label">{{ 'label_title' | translate }}</label>
+      <ion-item class="input-frame" lines="none">
+        <ion-input [(ngModel)]="add_new_review.title" [placeholder]="'placeholder_summarize' | translate" class="input-box"></ion-input>
+      </ion-item>
+    </div>
+
+    <!-- Product name (read-only) -->
+    <div class="form-field">
+      <label class="form-field__label">{{ 'label_product' | translate }}</label>
+      <ion-item class="input-frame" lines="none">
+        <ion-input [(ngModel)]="add_new_review.product_name" [readonly]="true" [placeholder]="'placeholder_tell_about_product' | translate" class="input-box"></ion-input>
+      </ion-item>
+    </div>
+
+    <!-- Review body -->
+    <div class="form-field">
+      <label class="form-field__label">{{ 'label_your_review' | translate }}</label>
+      <ion-item class="input-frame" lines="none">
+        <ion-textarea [(ngModel)]="add_new_review.comment" [placeholder]="'placeholder_share_thoughts' | translate" auto-grow="true" class="textarea-box" [rows]="4"></ion-textarea>
+      </ion-item>
+    </div>
+
+    <!-- Submit -->
+    @if (!ui_controls.is_creating){
+      <ion-button (click)="add_review()" class="submit-btn" expand="block" type="button">
+        {{ 'button_submit_review' | translate }}
+      </ion-button>
+    }
+    @if (ui_controls.is_creating){
+      <div class="loader-row">
+        <ax-loader></ax-loader>
+      </div>
+    }
+  </ax-bottom-sheet>
+</ion-content>
+
+<app-tab-bar></app-tab-bar>

@@ -1,0 +1,178 @@
+/* =========================================================================
+   Ionic theme — Abayti mobile (M2)
+   --------------------------------------------------------------------------
+   This file maps Ionic's CSS variables to the ax-* design tokens defined in
+   src/app/shared/ax-mobile/_tokens.scss. Every <ion-*> component inherits
+   the abayti brand without any per-component changes.
+
+   Brand model:
+     - Primary    = brown-500 (#906952). Solid, used on CTAs.
+     - Secondary  = espresso-700. Dark accent (rare).
+     - Tertiary   = beige-300. Soft brand surface.
+     - Status     = ax success / warning / danger / info palette.
+     - Light      = ax neutral-100 (warm subtle bg).
+     - Medium     = ax neutral-500 (muted text / icons).
+   Surfaces: warm canvas (neutral-50), white cards/sheets, beige-200 toolbar.
+   Type: --ion-font-family points at the Inter body font (set in M2a).
+   ========================================================================= */
+
+:root {
+	/* ----- Font (set in M2a, kept here for readability) ----- */
+	--ion-font-family: var(--ax-font-body);
+
+	/* ----- Primary: brown ----- */
+	--ion-color-primary:           var(--ax-palette-brown-500);
+	--ion-color-primary-rgb:       144, 105, 82;
+	--ion-color-primary-contrast:  var(--ax-palette-neutral-0);
+	--ion-color-primary-contrast-rgb: 255, 255, 255;
+	--ion-color-primary-shade:     var(--ax-palette-brown-600);
+	--ion-color-primary-tint:      var(--ax-palette-brown-400);
+
+	/* ----- Secondary: espresso ----- */
+	--ion-color-secondary:           var(--ax-palette-espresso-700);
+	--ion-color-secondary-rgb:       40, 35, 31;
+	--ion-color-secondary-contrast:  var(--ax-palette-neutral-0);
+	--ion-color-secondary-contrast-rgb: 255, 255, 255;
+	--ion-color-secondary-shade:     var(--ax-palette-espresso-800);
+	--ion-color-secondary-tint:      var(--ax-palette-espresso-600);
+
+	/* ----- Tertiary: beige (soft brand surface) ----- */
+	--ion-color-tertiary:           var(--ax-palette-beige-300);
+	--ion-color-tertiary-rgb:       232, 220, 203;
+	--ion-color-tertiary-contrast:  var(--ax-palette-espresso-800);
+	--ion-color-tertiary-contrast-rgb: 28, 25, 22;
+	--ion-color-tertiary-shade:     var(--ax-palette-beige-400);
+	--ion-color-tertiary-tint:      var(--ax-palette-beige-200);
+
+	/* ----- Status colors (ax-* palette) ----- */
+	--ion-color-success:           var(--ax-palette-success-500);
+	--ion-color-success-rgb:       46, 125, 64;
+	--ion-color-success-contrast:  var(--ax-palette-neutral-0);
+	--ion-color-success-contrast-rgb: 255, 255, 255;
+	--ion-color-success-shade:     var(--ax-palette-success-600);
+	--ion-color-success-tint:      var(--ax-palette-success-400);
+
+	--ion-color-warning:           var(--ax-palette-warning-400);
+	--ion-color-warning-rgb:       229, 160, 58;
+	--ion-color-warning-contrast:  var(--ax-palette-espresso-800);
+	--ion-color-warning-contrast-rgb: 28, 25, 22;
+	--ion-color-warning-shade:     var(--ax-palette-warning-500);
+	--ion-color-warning-tint:      var(--ax-palette-warning-100);
+
+	--ion-color-danger:           var(--ax-palette-danger-500);
+	--ion-color-danger-rgb:       165, 56, 38;
+	--ion-color-danger-contrast:  var(--ax-palette-neutral-0);
+	--ion-color-danger-contrast-rgb: 255, 255, 255;
+	--ion-color-danger-shade:     var(--ax-palette-danger-600);
+	--ion-color-danger-tint:      var(--ax-palette-danger-400);
+
+	/* ----- Neutral utilities ----- */
+	--ion-color-light:           var(--ax-palette-neutral-100);
+	--ion-color-light-rgb:       241, 237, 231;
+	--ion-color-light-contrast:  var(--ax-palette-espresso-800);
+	--ion-color-light-contrast-rgb: 28, 25, 22;
+	--ion-color-light-shade:     var(--ax-palette-neutral-200);
+	--ion-color-light-tint:      var(--ax-palette-neutral-50);
+
+	--ion-color-medium:           var(--ax-palette-neutral-500);
+	--ion-color-medium-rgb:       125, 118, 105;
+	--ion-color-medium-contrast:  var(--ax-palette-neutral-0);
+	--ion-color-medium-contrast-rgb: 255, 255, 255;
+	--ion-color-medium-shade:     var(--ax-palette-neutral-600);
+	--ion-color-medium-tint:      var(--ax-palette-neutral-400);
+
+	/* ----- Surfaces ----- */
+	--ion-background-color:       var(--ax-color-bg-canvas);   /* warm off-white */
+	--ion-background-color-rgb:   250, 248, 245;
+	--ion-text-color:             var(--ax-color-text-primary);
+	--ion-text-color-rgb:         28, 25, 22;
+
+	--ion-toolbar-background:     var(--ax-color-bg-toolbar); /* M2 locked: beige toolbar */
+	--ion-toolbar-color:          var(--ax-color-text-primary);
+	--ion-toolbar-border-color:   var(--ax-color-border-subtle);
+
+	--ion-tab-bar-background:     var(--ax-color-bg-surface); /* white tab bar */
+	--ion-tab-bar-border-color:   var(--ax-color-border-subtle);
+	--ion-tab-bar-color:          var(--ax-color-text-tertiary);
+	--ion-tab-bar-color-selected: var(--ax-color-text-primary); /* M2 locked: espresso */
+
+	--ion-card-background:        var(--ax-color-bg-surface);
+	--ion-item-background:        var(--ax-color-bg-surface);
+	--ion-item-border-color:      var(--ax-color-border-subtle);
+
+	--ion-border-color:           var(--ax-color-border-subtle);
+
+	/* ----- App-specific custom vars (retargeted to ax tokens) -----
+	   These vars are referenced from page-level SCSS files that we have not
+	   yet migrated. Retargeting them here lets the app pick up the new
+	   tokens without per-page edits. As pages get rewritten in M6+ they
+	   should reference ax-* directly and these can be removed. */
+
+	/* Text color shorthand (used in 31 places) */
+	--text:    var(--ax-color-text-primary);
+	--ink:     var(--ax-color-text-primary);
+	--muted:   var(--ax-color-text-secondary);
+
+	/* Surface shorthand */
+	--bg:      var(--ax-color-bg-canvas);
+	--card:    var(--ax-palette-neutral-0);
+	--profile-bg: var(--ax-color-bg-canvas);
+	--header-bg: var(--ax-color-bg-toolbar);
+	--header-text: var(--ax-color-text-primary);
+
+	/* Borders + shadows shorthand */
+	--border:    var(--ax-color-border-subtle);
+	--shadow-sm: var(--ax-shadow-sm);
+	--shadow-md: var(--ax-shadow-md);
+
+	/* Radius shorthand */
+	--radius-lg:  var(--ax-radius-lg);
+	--radius-xl:  var(--ax-radius-xl);
+	--radius-2xl: var(--ax-radius-2xl);
+}
+
+
+/* =========================================================================
+   IONIC DARK MODE OVERRIDES
+   --------------------------------------------------------------------------
+   Most --ion-* vars above already cascade through ax tokens that flip
+   automatically (--ion-text-color points at --ax-color-text-primary, which
+   the tokens.scss dark block remaps to neutral-100). The vars below DON'T
+   cascade — they're pinned to specific palette values (white card bg, beige
+   toolbar) that would stay light in dark mode. Override them here.
+
+   Same selector strategy as tokens.scss: an SCSS mixin applied under both
+   the manual data-attribute and the prefers-color-scheme media query.
+   ========================================================================= */
+@mixin ax-ionic-dark-overrides {
+	/* Toolbar — beige in light, surface (espresso-700) in dark */
+	--ion-toolbar-background: var(--ax-color-bg-surface);
+	--ion-toolbar-color:      var(--ax-color-text-primary);
+
+	/* Tab bar — white in light, surface (espresso-700) in dark */
+	--ion-tab-bar-background: var(--ax-color-bg-surface);
+
+	/* Cards + items — white in light, surface in dark */
+	--ion-card-background: var(--ax-color-bg-surface);
+	--ion-item-background: var(--ax-color-bg-surface);
+
+	/* RGB tuples for any Ionic CSS that uses rgba(var(--ion-*-rgb), alpha).
+	   Match the espresso-800 canvas + neutral-100 text values. */
+	--ion-background-color-rgb: 28, 25, 22;
+	--ion-text-color-rgb: 241, 237, 231;
+
+	/* Shorthand vars — pages still consume these; keep them in sync. */
+	--card:        var(--ax-color-bg-surface);
+	--header-bg:   var(--ax-color-bg-surface);
+	--header-text: var(--ax-color-text-primary);
+}
+
+:root:not([data-ax-theme='light']) {
+	@media (prefers-color-scheme: dark) {
+		@include ax-ionic-dark-overrides;
+	}
+}
+
+[data-ax-theme='dark'] {
+	@include ax-ionic-dark-overrides;
+}

@@ -1,0 +1,175 @@
+<ion-header class="public-header ion-no-border">
+  <ion-toolbar class="public-header__toolbar ion-no-border">
+    <ion-title class="brand-title">
+      <img src="assets/images/abayti_small.png" alt="3bayti" class="brand-mark" />
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+
+  <!-- Best Sellers Section -->
+  @if (!ui_controls.is_loading && best_sellers.length > 0) {
+    <section class="section ion-padding-horizontal">
+      <h2 class="section-title">{{ 'best_seller' | translate }}</h2>
+      <div class="h-scroll">
+        @for(best_seller of best_sellers; track best_seller.product_id){
+          <article class="m6d-product-card">
+            <div class="m6d-img-wrap">
+              <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['best-' + best_seller.product_id]">
+                <div class="skeleton-shimmer"></div>
+              </div>
+              <img
+                loading="lazy"
+                decoding="async"
+                [src]="best_seller.image_1"
+                [alt]="best_seller.product_name"
+                [class.loaded]="imageLoaded['best-' + best_seller.product_id]"
+                (load)="onImageLoad('best-' + best_seller.product_id)"
+                (error)="onImageError('best-' + best_seller.product_id)"
+                (click)="open_product(best_seller.product_id)" />
+              <button
+                type="button"
+                class="m6d-like"
+                (click)="startAddToCloset(best_seller.product_id, best_seller.product_name, best_seller.image_1); $event.stopPropagation()"
+                aria-label="Add to closet">
+                <ax-icon name="heart-plus" />
+              </button>
+              <span class="m6d-vendor-badge">{{ best_seller.store_name }}</span>
+            </div>
+            <div (click)="open_product(best_seller.product_id)" class="m6d-info">
+              <p class="m6d-name">{{ best_seller.product_name }}</p>
+              <div class="m6d-price-row">
+                <span class="m6d-price">Ð{{ best_seller.price | number }}</span>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- New Arrivals Section -->
+  @if (!ui_controls.is_loading && new_arrivals.length > 0) {
+    <section class="section ion-padding-horizontal">
+      <h2 class="section-title">{{ 'new_arrivals' | translate }}</h2>
+      <div class="h-scroll">
+        @for(new_arrival of new_arrivals; track new_arrival.product_id){
+          <article class="m6d-product-card">
+            <div class="m6d-img-wrap">
+              <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['new-' + new_arrival.product_id]">
+                <div class="skeleton-shimmer"></div>
+              </div>
+              <img
+                loading="lazy"
+                decoding="async"
+                [src]="new_arrival.image_1"
+                [alt]="new_arrival.product_name"
+                [class.loaded]="imageLoaded['new-' + new_arrival.product_id]"
+                (load)="onImageLoad('new-' + new_arrival.product_id)"
+                (error)="onImageError('new-' + new_arrival.product_id)"
+                (click)="open_product(new_arrival.product_id)" />
+              <button
+                type="button"
+                class="m6d-like"
+                (click)="startAddToCloset(new_arrival.product_id, new_arrival.product_name, new_arrival.image_1); $event.stopPropagation()"
+                aria-label="Add to closet">
+                <ax-icon name="heart-plus" />
+              </button>
+              <span class="m6d-vendor-badge">{{ new_arrival.store_name }}</span>
+            </div>
+            <div (click)="open_product(new_arrival.product_id)" class="m6d-info">
+              <p class="m6d-name">{{ new_arrival.product_name }}</p>
+              <div class="m6d-price-row">
+                <span class="m6d-price">Ð{{ new_arrival.price | number }}</span>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Popular Stores section header -->
+  @if (!ui_controls.is_loading && vendor_featured.length > 0) {
+    <h2 class="section-title section-title--popular ion-padding-horizontal">{{ 'popular_stores' | translate }}</h2>
+  }
+
+  <!-- Vendor Featured Section -->
+  @if (!ui_controls.is_loading) {
+    @for (vendor_feature of vendor_featured; track vendor_feature; let index = $index) {
+      @if(vendor_feature.products.length > 0){
+        <ion-card class="vendor-card">
+          <div class="vendor-card__top">
+            <button
+              type="button"
+              class="vendor-name-chip"
+              (click)="open_vendor(vendor_feature.store_id, vendor_feature.store_name)">
+              <ax-icon name="store" />
+              <span>{{ vendor_feature.store_name }}</span>
+            </button>
+            @if(vendor_feature.rating_count !== 0){
+              <button
+                type="button"
+                class="vendor-rating-chip"
+                (click)="open_reviews(vendor_feature.store_id, vendor_feature.store_name)">
+                <ax-icon name="star" />
+                <span>{{ vendor_feature.rating }}</span>
+                <span class="vendor-rating-chip__count">({{ vendor_feature.rating_count }})</span>
+              </button>
+            }
+          </div>
+          @if (vendor_feature.store_desc){
+            <p class="vendor-card__desc" [innerHTML]="vendor_feature.store_desc"></p>
+          }
+          <div class="vendor-thumb-row" role="list" aria-label="products">
+            @for(vendor_products of vendor_feature.products; track vendor_products.product_id){
+              <button
+                type="button"
+                class="vendor-thumb"
+                role="listitem"
+                (click)="open_product(vendor_products.product_id)">
+                <div class="vendor-thumb__skeleton" [class.hidden]="imageLoaded['vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id]">
+                  <div class="skeleton-shimmer"></div>
+                </div>
+                <img
+                  loading="lazy"
+                  decoding="async"
+                  [src]="vendor_products.image"
+                  [alt]="vendor_feature.store_name + ' product'"
+                  [class.loaded]="imageLoaded['vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id]"
+                  (load)="onImageLoad('vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id)"
+                  (error)="onImageError('vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id)" />
+                <span class="vendor-thumb__price">Ð{{ vendor_products.price | number }}</span>
+              </button>
+            }
+          </div>
+        </ion-card>
+      }
+    }
+  }
+
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  @if(!ui_controls.is_empty){
+    <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)">
+      <ion-infinite-scroll-content [loadingText]="'please_wait' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+  }
+
+</ion-content>
+<!-- Footer -->
+<ion-footer class="product-footer ion-no-border">
+    <div class="footer-content">
+      <button type="button" class="add-cart-btn backorder" (click)="user_register()">
+        <span>{{ 'sign_up' | translate }}</span>
+      </button>
+      <button type="button" class="add-cart-btn" (click)="user_login()">
+        <span>{{ 'sign_in' | translate }}</span>
+      </button>
+    </div>
+</ion-footer>

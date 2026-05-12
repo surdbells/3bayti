@@ -1,0 +1,256 @@
+/* =========================================================================
+   Abayti Design System — Sidenav
+   The persistent app navigation on the left (desktop) /
+   off-canvas drawer (mobile). Uses espresso dark treatment.
+   ========================================================================= */
+
+.ax-sidenav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: var(--ax-sidenav-width);
+  background-color: var(--ax-color-bg-sidenav);
+  color: var(--ax-color-text-on-sidenav);
+  display: flex;
+  flex-direction: column;
+  z-index: var(--ax-z-sidenav);
+  overflow: hidden;
+  transition: transform var(--ax-duration-slow) var(--ax-ease-emphasized);
+  /* Subtle vertical rule separating sidenav from content */
+  border-right: 1px solid var(--ax-color-border-sidenav);
+}
+
+/* Mobile: drawer behavior */
+@media (max-width: 991.98px) {
+  .ax-sidenav {
+    transform: translateX(-100%);
+    box-shadow: var(--ax-shadow-2xl);
+  }
+  .ax-sidenav.ax-sidenav-open {
+    transform: translateX(0);
+  }
+}
+
+/* Sidenav brand area */
+.ax-sidenav-brand {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-3);
+  padding: var(--ax-space-5) var(--ax-space-5) var(--ax-space-6);
+  color: var(--ax-color-text-on-sidenav);
+  text-decoration: none;
+}
+
+.ax-sidenav-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--ax-radius-md);
+  background: linear-gradient(135deg, var(--ax-palette-beige-300) 0%, var(--ax-palette-brown-500) 100%);
+  color: var(--ax-palette-espresso-900);
+  font-family: var(--ax-font-display);
+  font-weight: var(--ax-fw-semibold);
+  font-size: 1rem;
+  letter-spacing: -0.04em;
+  flex-shrink: 0;
+}
+
+.ax-sidenav-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+.ax-sidenav-brand-text .ax-sidenav-brand-name {
+  font-family: var(--ax-font-display);
+  font-weight: var(--ax-fw-semibold);
+  font-size: var(--ax-fs-base);
+  letter-spacing: var(--ax-ls-snug);
+  color: var(--ax-color-text-on-sidenav);
+}
+.ax-sidenav-brand-text .ax-sidenav-brand-role {
+  font-size: var(--ax-fs-3xs);
+  font-weight: var(--ax-fw-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--ax-ls-wider);
+  color: var(--ax-palette-beige-300);
+  margin-top: 0.15rem;
+}
+
+/* Scrollable nav body */
+.ax-sidenav-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: var(--ax-space-2) var(--ax-space-3);
+
+  /* subtle scrollbar override for dark surface */
+  scrollbar-color: var(--ax-palette-espresso-500) transparent;
+}
+.ax-sidenav-body::-webkit-scrollbar-thumb {
+  background-color: var(--ax-palette-espresso-500);
+}
+
+.ax-sidenav-section {
+  margin-bottom: var(--ax-space-5);
+}
+
+.ax-sidenav-section-title {
+  font-size: var(--ax-fs-3xs);
+  font-weight: var(--ax-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--ax-ls-wider);
+  color: var(--ax-color-text-on-sidenav-muted);
+  padding: var(--ax-space-3) var(--ax-space-3) var(--ax-space-2);
+  margin: 0;
+}
+
+/* Nav list */
+.ax-sidenav-nav {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ax-sidenav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-3);
+  padding: 0.625rem 0.75rem;
+  border-radius: var(--ax-radius-md);
+  font-size: var(--ax-fs-sm);
+  font-weight: var(--ax-fw-medium);
+  color: var(--ax-color-text-on-sidenav);
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out),
+              color var(--ax-duration-fast) var(--ax-ease-out);
+  position: relative;
+}
+
+.ax-sidenav-link:hover {
+  background-color: var(--ax-color-bg-sidenav-hover);
+  color: var(--ax-color-text-on-sidenav);
+}
+
+.ax-sidenav-link .material-symbols-outlined {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+  color: var(--ax-palette-beige-200);
+  opacity: 0.85;
+  transition: opacity var(--ax-duration-fast) var(--ax-ease-out),
+              color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-sidenav-link:hover .material-symbols-outlined {
+  opacity: 1;
+}
+
+.ax-sidenav-link-label {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ax-sidenav-link-badge {
+  flex-shrink: 0;
+  font-size: var(--ax-fs-3xs);
+  padding: 0.125rem 0.5rem;
+  background-color: var(--ax-palette-brown-500);
+  color: var(--ax-color-text-on-brand);
+  border-radius: var(--ax-radius-pill);
+  font-weight: var(--ax-fw-semibold);
+}
+
+/* Active state — brown highlight + subtle vertical bar */
+.ax-sidenav-link.ax-sidenav-link-active,
+.ax-sidenav-link.active {
+  background-color: var(--ax-color-bg-sidenav-active);
+  color: var(--ax-color-text-on-brand);
+}
+.ax-sidenav-link.ax-sidenav-link-active .material-symbols-outlined,
+.ax-sidenav-link.active .material-symbols-outlined {
+  color: var(--ax-color-text-on-brand);
+  opacity: 1;
+}
+
+/* Danger link (sign out) */
+.ax-sidenav-link-danger {
+  color: var(--ax-palette-beige-200);
+}
+.ax-sidenav-link-danger:hover {
+  background-color: rgba(209, 84, 63, 0.16);
+  color: #f5c9bf;
+}
+.ax-sidenav-link-danger .material-symbols-outlined {
+  color: #e5a99c;
+}
+
+
+/* Sidenav footer — user card */
+.ax-sidenav-footer {
+  flex-shrink: 0;
+  padding: var(--ax-space-3);
+  border-top: 1px solid var(--ax-color-border-sidenav);
+}
+
+.ax-sidenav-user {
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-3);
+  padding: var(--ax-space-2);
+  border-radius: var(--ax-radius-md);
+  cursor: pointer;
+  transition: background-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-sidenav-user:hover {
+  background-color: var(--ax-color-bg-sidenav-hover);
+}
+.ax-sidenav-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.ax-sidenav-user-name {
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-semibold);
+  color: var(--ax-color-text-on-sidenav);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ax-sidenav-user-role {
+  font-size: var(--ax-fs-3xs);
+  color: var(--ax-color-text-on-sidenav-muted);
+  text-transform: uppercase;
+  letter-spacing: var(--ax-ls-wider);
+  margin-top: 0.1rem;
+}
+
+
+/* ---------- Mobile backdrop for open drawer ---------- */
+.ax-sidenav-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: var(--ax-color-bg-overlay);
+  z-index: calc(var(--ax-z-sidenav) - 1);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--ax-duration-base) var(--ax-ease-out);
+}
+.ax-sidenav-backdrop.ax-sidenav-backdrop-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (min-width: 992px) {
+  .ax-sidenav-backdrop {
+    display: none;
+  }
+}

@@ -1,0 +1,28 @@
+<ion-app>
+  <ion-router-outlet [animated]="true" [animation]="fadeTransition" ></ion-router-outlet>
+  <ax-notification-host></ax-notification-host>
+  <!-- Force-update prompt — full-viewport blocker when shown.
+       Driven by AppUpdateService.check() in app.component.ts. -->
+  <ax-update-prompt
+    [isOpen]="showForceUpdate"
+    [title]="forceUpdateTitle"
+    [message]="forceUpdateMessage"
+    [versionLabel]="forceUpdateVersionLabel"
+    [buttonLabel]="forceUpdateButton"
+    [canDismiss]="forceUpdateCanDismiss"
+    [dismissLabel]="forceUpdateLaterLabel"
+    (updateClicked)="onUpdateClicked()"
+    (dismissed)="onDismissed()">
+  </ax-update-prompt>
+
+  <!-- Debug overlay for the update-check diagnostic. Visible only when
+       ?debug=update is in the URL or localStorage.ax_debug_update=1.
+       Renders the most recent check() result + the per-step decision
+       trail so we can see WHY the prompt did or didn't fire. -->
+  @if (showUpdateDebug) {
+    <div class="update-debug-overlay">
+      <div class="update-debug-overlay__header">Update check diagnostic</div>
+      <pre class="update-debug-overlay__log">{{ lastUpdateDiag }}</pre>
+    </div>
+  }
+</ion-app>

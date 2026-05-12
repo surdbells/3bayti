@@ -1,0 +1,222 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'settings' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+<ion-content [fullscreen]="true" class="page-bg">
+  <div class="settings-body ion-padding-horizontal">
+
+    <!-- Profile Card -->
+    <div class="profile-card" (click)="openProfile()" role="button" tabindex="0">
+      <div class="avatar-wrapper">
+        <img
+          [src]="single_user.avatar || 'assets/img/avatar-placeholder.jpg'"
+          alt="Profile"
+          class="avatar-img"
+          (error)="onAvatarError($event)">
+        <div class="avatar-badge">
+          <ax-icon name="camera" [size]="14"></ax-icon>
+        </div>
+      </div>
+      <div class="profile-info">
+        <h2 class="profile-name">{{ single_user.first_name }} {{ single_user.last_name }}</h2>
+        <p class="profile-email">{{ single_user.email }}</p>
+      </div>
+      <button type="button" class="profile-edit-btn" aria-label="Edit profile">
+        <ax-icon name="pencil" [size]="18"></ax-icon>
+      </button>
+    </div>
+
+    <!-- Account Section -->
+    <div class="settings-section">
+      <h3 class="section-title">{{ 'account' | translate }}</h3>
+      <div class="settings-card">
+        <button type="button" class="settings-item" (click)="openProfile()">
+          <div class="item-icon">
+            <ax-icon name="user" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'edit_profile' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+
+        <button type="button" class="settings-item" (click)="openAddresses()">
+          <div class="item-icon">
+            <ax-icon name="map-pin" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'addresses' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+
+        <button type="button" class="settings-item" (click)="openMeasurement()">
+          <div class="item-icon">
+            <ax-icon name="ruler" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'measurements' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+
+        <button type="button" class="settings-item" (click)="isLocationOpen = true">
+          <div class="item-icon">
+            <ax-icon name="navigation" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'location' | translate }}</span>
+          <span class="item-value">{{ single_user.location || ('not_set' | translate) }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Orders Section -->
+    <div class="settings-section">
+      <h3 class="section-title">{{ 'orders_shopping' | translate }}</h3>
+      <div class="settings-card">
+        <button type="button" class="settings-item" (click)="my_orders()">
+          <div class="item-icon">
+            <ax-icon name="shopping-bag" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'my_orders' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+
+        <button type="button" class="settings-item" (click)="openReviews()">
+          <div class="item-icon">
+            <ax-icon name="star" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'my_reviews' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+
+        <button type="button" class="settings-item" (click)="user_styles()">
+          <div class="item-icon">
+            <ax-icon name="sparkles" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'my_styles' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Preferences Section -->
+    <div class="settings-section">
+      <h3 class="section-title">{{ 'preferences' | translate }}</h3>
+      <div class="settings-card">
+        <div class="settings-item">
+          <div class="item-icon">
+            <ax-icon name="globe" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'language' | translate }}</span>
+          <app-language-switcher class="item-control"></app-language-switcher>
+        </div>
+
+        <div class="settings-item">
+          <div class="item-icon">
+            <ax-icon name="bell" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'notifications' | translate }}</span>
+          <label class="toggle-switch">
+            <input type="checkbox" [(ngModel)]="notificationsEnabled" (change)="toggleNotifications()">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Support Section -->
+    <div class="settings-section">
+      <h3 class="section-title">{{ 'support' | translate }}</h3>
+      <div class="settings-card">
+        <button type="button" class="settings-item" (click)="openHelp()">
+          <div class="item-icon">
+            <ax-icon name="message-circle" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'whatsapp_support' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+
+        <button type="button" class="settings-item" (click)="OpenEmail()">
+          <div class="item-icon">
+            <ax-icon name="mail" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'email_support' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+
+        <button type="button" class="settings-item" (click)="openTickets()">
+          <div class="item-icon">
+            <ax-icon name="tickets" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'support_tickets' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="settings-section">
+      <div class="settings-card danger-card">
+        <button type="button" class="settings-item" (click)="confirmDelete()">
+          <div class="item-icon item-icon--danger">
+            <ax-icon name="trash-2" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label item-label--danger">{{ 'delete_account' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+
+        <button type="button" class="settings-item" (click)="signOut()">
+          <div class="item-icon item-icon--danger">
+            <ax-icon name="log-out" [size]="20"></ax-icon>
+          </div>
+          <span class="item-label item-label--danger">{{ 'logout' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- App Version -->
+    <div class="app-version">
+      <p>{{ 'version' | translate }} 1.0.0</p>
+    </div>
+  </div>
+
+  <!-- Location bottom sheet -->
+  <ax-bottom-sheet
+    [isOpen]="isLocationOpen"
+    (didDismiss)="isLocationOpen = false"
+    [snapPoints]="[0.5, 0.85]"
+    [initialSnap]="0"
+    [title]="'update_location' | translate">
+
+    <div class="modal-body">
+      <div class="input-group">
+        <ax-place-autocomplete
+          [label]="'your_location' | translate"
+          [placeholder]="'enter_location' | translate"
+          autocomplete="street-address"
+          [(ngModel)]="u_location.location"
+          name="location"
+          (placeSelected)="onLocationSelected($event)">
+        </ax-place-autocomplete>
+      </div>
+      <button
+        type="button"
+        class="save-btn"
+        [class.save-btn--loading]="ui_controls.updating_location"
+        [disabled]="ui_controls.updating_location"
+        (click)="update_location()">
+        @if (ui_controls.updating_location) {
+          <span class="btn-loader"></span>
+        } @else {
+          <ax-icon name="check" [size]="20"></ax-icon>
+          <span>{{ 'save_changes' | translate }}</span>
+        }
+      </button>
+    </div>
+  </ax-bottom-sheet>
+
+</ion-content>
+<app-tab-bar active="profile"></app-tab-bar>
