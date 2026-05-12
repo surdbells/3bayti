@@ -65,6 +65,21 @@ class Category
     private ?int $id = null;
 
     /**
+     * Legacy `category.category_id` reference. Nullable because v3-native
+     * categories have no legacy counterpart. UNIQUE so idempotent re-migration
+     * is safe (script checks legacyCategoryId before INSERT).
+     */
+    #[ORM\Column(name: 'legacy_category_id', type: 'integer', nullable: true, unique: true)]
+    private ?int $legacyCategoryId = null;
+
+    /**
+     * Icon ref (legacy uses @tui.* tokens like @tui.sparkles, @tui.flower).
+     * Stored verbatim; frontend interprets. v3-native categories can leave this null.
+     */
+    #[ORM\Column(name: 'icon', type: 'string', length: 50, nullable: true)]
+    private ?string $icon = null;
+
+    /**
      * Self-referential FK. NULL = root category.
      *
      * Why self-referential one-to-many vs many-to-one + collection
@@ -177,6 +192,12 @@ class Category
     public function setDisplayOrder(int $order): void { $this->displayOrder = $order; }
     public function setImageUrl(?string $url): void { $this->imageUrl = $url; }
     public function setActive(bool $active): void { $this->isActive = $active; }
+
+    public function getLegacyCategoryId(): ?int { return $this->legacyCategoryId; }
+    public function setLegacyCategoryId(?int $id): void { $this->legacyCategoryId = $id; }
+
+    public function getIcon(): ?string { return $this->icon; }
+    public function setIcon(?string $icon): void { $this->icon = $icon; }
 
     /**
      * Reparent this category. Path is rebuilt; descendants need

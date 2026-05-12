@@ -82,6 +82,85 @@ class Vendor
     private bool $isVerified = false;
 
     /**
+     * Approval status separate from is_active. is_active=true means
+     * the vendor record exists (not soft-deleted). is_store_approved=true
+     * means admin has reviewed and approved them. Legacy `store_approved`
+     * tinyint maps here.
+     */
+    #[ORM\Column(name: 'is_store_approved', type: 'boolean')]
+    private bool $isStoreApproved = false;
+
+    /**
+     * Owner User — the user record with is_vendor=1 that owns this store.
+     * Optional because: (a) old M2.1 vendors have no owner since they
+     * predate this field; (b) admin-created vendors don't always have a
+     * user account at creation time.
+     */
+    #[ORM\ManyToOne(targetEntity: \Bayti\Api\Domain\User\User::class)]
+    #[ORM\JoinColumn(name: 'owner_user_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?\Bayti\Api\Domain\User\User $ownerUser = null;
+
+    // ---- store identity (legacy store_* columns) ----
+
+    #[ORM\Column(name: 'legal_name', type: 'string', length: 255, nullable: true)]
+    private ?string $legalName = null;
+
+    #[ORM\Column(name: 'store_email', type: 'string', length: 255, nullable: true)]
+    private ?string $storeEmail = null;
+
+    #[ORM\Column(name: 'store_phone_raw', type: 'text', nullable: true)]
+    private ?string $storePhoneRaw = null;
+
+    #[ORM\Column(name: 'store_address', type: 'string', length: 500, nullable: true)]
+    private ?string $storeAddress = null;
+
+    // ---- bank / payout ----
+
+    #[ORM\Column(name: 'store_bank_name', type: 'string', length: 255, nullable: true)]
+    private ?string $storeBankName = null;
+
+    #[ORM\Column(name: 'store_bank_account_name', type: 'string', length: 255, nullable: true)]
+    private ?string $storeBankAccountName = null;
+
+    #[ORM\Column(name: 'store_bank_account_number', type: 'string', length: 40, nullable: true)]
+    private ?string $storeBankAccountNumber = null;
+
+    // ---- tax compliance (UAE-specific) ----
+
+    #[ORM\Column(name: 'vat_status', type: 'string', length: 50, nullable: true)]
+    private ?string $vatStatus = null;
+
+    #[ORM\Column(name: 'trade_license_number', type: 'string', length: 255, nullable: true)]
+    private ?string $tradeLicenseNumber = null;
+
+    #[ORM\Column(name: 'licensing_authority', type: 'string', length: 50, nullable: true)]
+    private ?string $licensingAuthority = null;
+
+    #[ORM\Column(name: 'tax_registration_number', type: 'string', length: 50, nullable: true)]
+    private ?string $taxRegistrationNumber = null;
+
+    #[ORM\Column(name: 'vat_registration_effective_date', type: 'date_immutable', nullable: true)]
+    private ?DateTimeImmutable $vatRegistrationEffectiveDate = null;
+
+    #[ORM\Column(name: 'registered_tax_address', type: 'string', length: 500, nullable: true)]
+    private ?string $registeredTaxAddress = null;
+
+    #[ORM\Column(name: 'tax_contact_email', type: 'string', length: 255, nullable: true)]
+    private ?string $taxContactEmail = null;
+
+    /**
+     * Legacy logo as a data: URL preserved verbatim. Image migration (M5)
+     * extracts these to Flysystem and populates logo_url with a CDN URL.
+     * For demo, this field sits dormant — public APIs surface logo_url
+     * (which is null for migrated vendors) OR fall back to a placeholder.
+     */
+    #[ORM\Column(name: 'legacy_logo_data_url', type: 'text', nullable: true)]
+    private ?string $legacyLogoDataUrl = null;
+
+    #[ORM\Column(name: 'legacy_cover_data_url', type: 'text', nullable: true)]
+    private ?string $legacyCoverDataUrl = null;
+
+    /**
      * Commission percentage. Stored as decimal — DB CHECK enforces 0-100.
      * Doctrine maps decimal to string by default to preserve precision;
      * we expose a float accessor for callers who need numeric ops.
@@ -135,6 +214,62 @@ class Vendor
     public function setContactPhone(?string $phone): void { $this->contactPhone = $phone; }
     public function setActive(bool $active): void { $this->isActive = $active; }
     public function setVerified(bool $verified): void { $this->isVerified = $verified; }
+
+    // ----- legacy store_* getters/setters -----
+
+    public function isStoreApproved(): bool { return $this->isStoreApproved; }
+    public function setStoreApproved(bool $approved): void { $this->isStoreApproved = $approved; }
+
+    public function getOwnerUser(): ?\Bayti\Api\Domain\User\User { return $this->ownerUser; }
+    public function setOwnerUser(?\Bayti\Api\Domain\User\User $user): void { $this->ownerUser = $user; }
+
+    public function getLegalName(): ?string { return $this->legalName; }
+    public function setLegalName(?string $name): void { $this->legalName = $name; }
+
+    public function getStoreEmail(): ?string { return $this->storeEmail; }
+    public function setStoreEmail(?string $email): void { $this->storeEmail = $email; }
+
+    public function getStorePhoneRaw(): ?string { return $this->storePhoneRaw; }
+    public function setStorePhoneRaw(?string $phone): void { $this->storePhoneRaw = $phone; }
+
+    public function getStoreAddress(): ?string { return $this->storeAddress; }
+    public function setStoreAddress(?string $address): void { $this->storeAddress = $address; }
+
+    public function getStoreBankName(): ?string { return $this->storeBankName; }
+    public function setStoreBankName(?string $name): void { $this->storeBankName = $name; }
+
+    public function getStoreBankAccountName(): ?string { return $this->storeBankAccountName; }
+    public function setStoreBankAccountName(?string $name): void { $this->storeBankAccountName = $name; }
+
+    public function getStoreBankAccountNumber(): ?string { return $this->storeBankAccountNumber; }
+    public function setStoreBankAccountNumber(?string $num): void { $this->storeBankAccountNumber = $num; }
+
+    public function getVatStatus(): ?string { return $this->vatStatus; }
+    public function setVatStatus(?string $status): void { $this->vatStatus = $status; }
+
+    public function getTradeLicenseNumber(): ?string { return $this->tradeLicenseNumber; }
+    public function setTradeLicenseNumber(?string $num): void { $this->tradeLicenseNumber = $num; }
+
+    public function getLicensingAuthority(): ?string { return $this->licensingAuthority; }
+    public function setLicensingAuthority(?string $auth): void { $this->licensingAuthority = $auth; }
+
+    public function getTaxRegistrationNumber(): ?string { return $this->taxRegistrationNumber; }
+    public function setTaxRegistrationNumber(?string $num): void { $this->taxRegistrationNumber = $num; }
+
+    public function getVatRegistrationEffectiveDate(): ?DateTimeImmutable { return $this->vatRegistrationEffectiveDate; }
+    public function setVatRegistrationEffectiveDate(?DateTimeImmutable $date): void { $this->vatRegistrationEffectiveDate = $date; }
+
+    public function getRegisteredTaxAddress(): ?string { return $this->registeredTaxAddress; }
+    public function setRegisteredTaxAddress(?string $addr): void { $this->registeredTaxAddress = $addr; }
+
+    public function getTaxContactEmail(): ?string { return $this->taxContactEmail; }
+    public function setTaxContactEmail(?string $email): void { $this->taxContactEmail = $email; }
+
+    public function getLegacyLogoDataUrl(): ?string { return $this->legacyLogoDataUrl; }
+    public function setLegacyLogoDataUrl(?string $dataUrl): void { $this->legacyLogoDataUrl = $dataUrl; }
+
+    public function getLegacyCoverDataUrl(): ?string { return $this->legacyCoverDataUrl; }
+    public function setLegacyCoverDataUrl(?string $dataUrl): void { $this->legacyCoverDataUrl = $dataUrl; }
 
     /**
      * Set commission rate. Float input is converted to fixed-precision string
