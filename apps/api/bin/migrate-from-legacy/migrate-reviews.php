@@ -113,7 +113,7 @@ try {
                      :reviewer_name, :reviewer_email, :product_name,
                      :star, :title, :comment, :reply,
                      'approved', FALSE, 0,
-                     :created, NOW())
+                     :created, date_trunc('second', NOW()))
                  ON CONFLICT (legacy_review_id) DO UPDATE SET
                      vendor_id = EXCLUDED.vendor_id,
                      user_id = EXCLUDED.user_id,
@@ -124,7 +124,7 @@ try {
                      title = EXCLUDED.title,
                      comment = EXCLUDED.comment,
                      vendor_reply = EXCLUDED.vendor_reply,
-                     updated_at = NOW()",
+                     updated_at = date_trunc('second', NOW())",
                 [
                     'legacy_id' => $legacyId,
                     'vendor_id' => $vendorId,

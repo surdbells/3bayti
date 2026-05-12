@@ -99,7 +99,7 @@ final class MigrationSteps
                             (legacy_category_id, slug, name, parent_id, path, display_order,
                              is_active, icon, created_at, updated_at)
                          VALUES
-                            (:legacy_id, :slug, :name, NULL, :path, 0, :is_active, :icon, NOW(), NOW())",
+                            (:legacy_id, :slug, :name, NULL, :path, 0, :is_active, :icon, date_trunc('second', NOW()), date_trunc('second', NOW()))",
                         [
                             'legacy_id' => $legacyId,
                             'slug' => $slug,
@@ -131,7 +131,7 @@ final class MigrationSteps
 
                     $this->conn->executeStatement(
                         "UPDATE categories
-                         SET name = :name, icon = :icon, is_active = :is_active, updated_at = NOW()
+                         SET name = :name, icon = :icon, is_active = :is_active, updated_at = date_trunc('second', NOW())
                          WHERE legacy_category_id = :legacy_id",
                         [
                             'legacy_id' => $legacyId,
@@ -297,7 +297,7 @@ final class MigrationSteps
                                  :is_active, :is_2fa, FALSE, FALSE,
                                  'en', 'Asia/Dubai',
                                  :store_legal_name, :trade_license,
-                                 :last_login, :created, NOW())",
+                                 :last_login, :created, date_trunc('second', NOW()))",
                             [
                                 'legacy_id' => $legacyId,
                                 'first_name' => $firstName,
@@ -343,7 +343,7 @@ final class MigrationSteps
                                 (legacy_user_id, v3_user_id, original_email, renamed_email,
                                  conflict_with_user_id, resolution_status, created_at)
                              VALUES
-                                (:lid, :v3id, :orig, :renamed, :conflict_id, 'pending', NOW())
+                                (:lid, :v3id, :orig, :renamed, :conflict_id, 'pending', date_trunc('second', NOW()))
                              ON CONFLICT DO NOTHING",
                             [
                                 'lid' => $legacyId,
@@ -407,7 +407,7 @@ final class MigrationSteps
                         continue;
                     }
 
-                    $set[] = 'updated_at = NOW()';
+                    $set[] = 'updated_at = date_trunc('second', NOW())';
                     $sql = 'UPDATE users SET ' . implode(', ', $set) . ' WHERE legacy_user_id = :legacy_id';
                     try {
                         $this->conn->executeStatement($sql, $params);
@@ -601,7 +601,7 @@ final class MigrationSteps
                                  :tax_reg_num, :vat_reg_date,
                                  :tax_addr, :tax_email,
                                  :legacy_logo, :legacy_cover,
-                                 :created, NOW())",
+                                 :created, date_trunc('second', NOW()))",
                             [
                                 'legacy_id' => $userId, 'slug' => $slug, 'name' => $storeName,
                                 'description' => $description, 'contact_email' => $contactEmail,
@@ -666,7 +666,7 @@ final class MigrationSteps
                                 vat_registration_effective_date = :vat_reg_date,
                                 registered_tax_address = :tax_addr, tax_contact_email = :tax_email,
                                 is_store_approved = :is_approved, is_verified = :is_verified,
-                                updated_at = NOW()
+                                updated_at = date_trunc('second', NOW())
                              WHERE legacy_vendor_id = :legacy_id",
                             [
                                 'legacy_id' => $userId, 'name' => $storeName,
@@ -944,7 +944,7 @@ final class MigrationSteps
                              extra_msmt = EXCLUDED.extra_msmt,
                              delivery_info = EXCLUDED.delivery_info,
                              label_id = EXCLUDED.label_id,
-                             updated_at = NOW()",
+                             updated_at = date_trunc('second', NOW())",
                         [
                             'legacy_id' => $legacyId, 'vendor_id' => $vendorId,
                             'category_id' => $categoryId, 'slug' => $slug,
@@ -1069,7 +1069,7 @@ final class MigrationSteps
                              :reviewer_name, :reviewer_email, :product_name,
                              :star, :title, :comment, :reply,
                              'approved', FALSE, 0,
-                             :created, NOW())
+                             :created, date_trunc('second', NOW()))
                          ON CONFLICT (legacy_review_id) DO UPDATE SET
                              vendor_id = EXCLUDED.vendor_id,
                              user_id = EXCLUDED.user_id,
@@ -1080,7 +1080,7 @@ final class MigrationSteps
                              title = EXCLUDED.title,
                              comment = EXCLUDED.comment,
                              vendor_reply = EXCLUDED.vendor_reply,
-                             updated_at = NOW()",
+                             updated_at = date_trunc('second', NOW())",
                         [
                             'legacy_id' => $legacyId,
                             'vendor_id' => $vendorId, 'user_id' => $userId,

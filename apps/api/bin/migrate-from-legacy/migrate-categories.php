@@ -95,7 +95,7 @@ try {
                 "INSERT INTO categories
                     (legacy_category_id, slug, name, parent_id, path, display_order, is_active, icon, created_at, updated_at)
                  VALUES
-                    (:legacy_id, :slug, :name, NULL, :path, 0, :is_active, :icon, NOW(), NOW())",
+                    (:legacy_id, :slug, :name, NULL, :path, 0, :is_active, :icon, date_trunc('second', NOW()), date_trunc('second', NOW()))",
                 [
                     'legacy_id' => $legacyId,
                     'slug' => $slug,
@@ -128,7 +128,7 @@ try {
 
             $conn->executeStatement(
                 "UPDATE categories
-                 SET name = :name, icon = :icon, is_active = :is_active, updated_at = NOW()
+                 SET name = :name, icon = :icon, is_active = :is_active, updated_at = date_trunc('second', NOW())
                  WHERE legacy_category_id = :legacy_id",
                 [
                     'legacy_id' => $legacyId,

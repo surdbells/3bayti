@@ -248,7 +248,7 @@ try {
                          :tax_reg_num, :vat_reg_date,
                          :tax_addr, :tax_email,
                          :legacy_logo, :legacy_cover,
-                         :created, NOW())",
+                         :created, date_trunc('second', NOW()))",
                     [
                         'legacy_id' => $userId,
                         'slug' => $slug,
@@ -354,7 +354,7 @@ try {
                         tax_contact_email = :tax_email,
                         is_store_approved = :is_approved,
                         is_verified = :is_verified,
-                        updated_at = NOW()
+                        updated_at = date_trunc('second', NOW())
                      WHERE legacy_vendor_id = :legacy_id",
                     [
                         'legacy_id' => $userId,

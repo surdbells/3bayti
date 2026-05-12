@@ -44,7 +44,7 @@ declare(strict_types=1);
  *
  * 7. Created column (varchar)
  *    ------------------------
- *    Parse as 'Y-m-d H:i:s'. Fallback to NOW() if unparseable.
+ *    Parse as 'Y-m-d H:i:s'. Fallback to date_trunc('second', NOW()) if unparseable.
  *
  * Idempotency
  * ===========
@@ -233,7 +233,7 @@ try {
                          :is_active, :is_2fa, FALSE, FALSE,
                          'en', 'Asia/Dubai',
                          :store_legal_name, :trade_license,
-                         :last_login, :created, NOW())",
+                         :last_login, :created, date_trunc('second', NOW()))",
                     [
                         'legacy_id' => $legacyId,
                         'first_name' => $firstName,
@@ -280,7 +280,7 @@ try {
                         (legacy_user_id, v3_user_id, original_email, renamed_email,
                          conflict_with_user_id, resolution_status, created_at)
                      VALUES
-                        (:lid, :v3id, :orig, :renamed, :conflict_id, 'pending', NOW())
+                        (:lid, :v3id, :orig, :renamed, :conflict_id, 'pending', date_trunc('second', NOW()))
                      ON CONFLICT DO NOTHING",
                     [
                         'lid' => $legacyId,
@@ -351,7 +351,7 @@ try {
                 continue; // No drift — silent
             }
 
-            $set[] = 'updated_at = NOW()';
+            $set[] = 'updated_at = date_trunc('second', NOW())';
             $sql = 'UPDATE users SET ' . implode(', ', $set) . ' WHERE legacy_user_id = :legacy_id';
             try {
                 $conn->executeStatement($sql, $params);

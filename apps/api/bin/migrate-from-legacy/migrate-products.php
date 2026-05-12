@@ -346,7 +346,7 @@ try {
                      extra_msmt = EXCLUDED.extra_msmt,
                      delivery_info = EXCLUDED.delivery_info,
                      label_id = EXCLUDED.label_id,
-                     updated_at = NOW()",
+                     updated_at = date_trunc('second', NOW())",
                 [
                     'legacy_id' => $legacyId,
                     'vendor_id' => $vendorId,
