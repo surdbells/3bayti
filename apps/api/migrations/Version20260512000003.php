@@ -101,7 +101,8 @@ final class Version20260512000003 extends AbstractMigration
                 resolved_at       TIMESTAMPTZ  NULL,
                 resolved_by_user_id BIGINT     NULL REFERENCES users(id) ON DELETE SET NULL,
                 notes             TEXT         NULL,
-                created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+                created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+                UNIQUE (legacy_user_id)
             )
         SQL);
 

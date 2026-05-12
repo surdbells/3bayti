@@ -156,15 +156,11 @@ try {
     foreach ($legacy->iterate($sql) as $row) {
         $legacyId = (int) $row['product_id'];
 
-        // Idempotency
-        $existing = $conn->fetchOne(
-            'SELECT id FROM products WHERE legacy_product_id = ?',
+        // Read existing v3 product if any
+        $existingProduct = $conn->fetchAssociative(
+            'SELECT id, slug FROM products WHERE legacy_product_id = ?',
             [$legacyId]
         );
-        if ($existing !== false) {
-            $skipped++;
-            continue;
-        }
 
         // Resolve vendor (REQUIRED — product can't exist without vendor)
         $legacyStoreId = (int) ($row['store_id'] ?? 0);
@@ -189,11 +185,16 @@ try {
             $skipped++;
             continue;
         }
-        $slug = $slugger->make($name, fallback: 'product-' . $legacyId);
-        if ($slug === null) {
-            $log->error('products', $legacyId, "Slug generation failed for name '{$name}'");
-            $errors++;
-            continue;
+        // Slug: reuse existing on UPDATE, generate on INSERT (per stable-slug decision)
+        if ($existingProduct !== false) {
+            $slug = $existingProduct['slug'];
+        } else {
+            $slug = $slugger->make($name, fallback: 'product-' . $legacyId);
+            if ($slug === null) {
+                $log->error('products', $legacyId, "Slug generation failed for name '{$name}'");
+                $errors++;
+                continue;
+            }
         }
 
         // Status mapping
@@ -288,6 +289,8 @@ try {
         $updatedAt = parseLegacyTimestamp((string) ($row['updated_at'] ?? '')) ?? $createdAt;
 
         try {
+            // Postgres UPSERT — on conflict of legacy_product_id, update
+            // every column EXCEPT slug + created_at (stable per decision).
             $conn->executeStatement(
                 "INSERT INTO products
                     (legacy_product_id, vendor_id, category_id, slug, name, description,
@@ -314,7 +317,36 @@ try {
                      :req_extra, :extra_msmt,
                      :delivery::jsonb,
                      :label_id,
-                     :created_at, :updated_at)",
+                     :created_at, :updated_at)
+                 ON CONFLICT (legacy_product_id) DO UPDATE SET
+                     vendor_id = EXCLUDED.vendor_id,
+                     category_id = EXCLUDED.category_id,
+                     name = EXCLUDED.name,
+                     description = EXCLUDED.description,
+                     status = EXCLUDED.status,
+                     is_active = EXCLUDED.is_active,
+                     price = EXCLUDED.price,
+                     sale_price = EXCLUDED.sale_price,
+                     cost_per_item = EXCLUDED.cost_per_item,
+                     stock_quantity = EXCLUDED.stock_quantity,
+                     allow_oversell = EXCLUDED.allow_oversell,
+                     stock_status = EXCLUDED.stock_status,
+                     min_order_qty = EXCLUDED.min_order_qty,
+                     max_order_qty = EXCLUDED.max_order_qty,
+                     primary_image_url = EXCLUDED.primary_image_url,
+                     images = EXCLUDED.images,
+                     available_sizes = EXCLUDED.available_sizes,
+                     available_colors = EXCLUDED.available_colors,
+                     is_featured = EXCLUDED.is_featured,
+                     is_new = EXCLUDED.is_new,
+                     is_hot = EXCLUDED.is_hot,
+                     is_sale = EXCLUDED.is_sale,
+                     try_on_enabled = EXCLUDED.try_on_enabled,
+                     requires_extra_msmt = EXCLUDED.requires_extra_msmt,
+                     extra_msmt = EXCLUDED.extra_msmt,
+                     delivery_info = EXCLUDED.delivery_info,
+                     label_id = EXCLUDED.label_id,
+                     updated_at = NOW()",
                 [
                     'legacy_id' => $legacyId,
                     'vendor_id' => $vendorId,
@@ -365,7 +397,7 @@ try {
 
         $migrated++;
         if ($migrated % 200 === 0) {
-            echo "  ... {$migrated} migrated\n";
+            echo "  ... {$migrated} processed (INSERT or UPDATE)\n";
         }
     }
 
@@ -377,7 +409,7 @@ try {
     $conn->commit();
 
     echo "\n===== products migration complete =====\n";
-    echo "  Migrated:  {$migrated}\n";
+    echo "  Processed (INSERT or UPDATE): {$migrated}\n";
     echo "  Skipped:   {$skipped}\n";
     echo "  Errors:    {$errors}\n";
 

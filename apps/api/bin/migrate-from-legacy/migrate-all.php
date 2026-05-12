@@ -6,37 +6,41 @@ declare(strict_types=1);
  * Orchestrator — runs the full migration in correct dependency order.
  *
  * Usage:
- *   php bin/migrate-from-legacy/migrate-all.php
+ *   php bin/migrate-from-legacy/migrate-all.php              # default: skip seed rollback
+ *   php bin/migrate-from-legacy/migrate-all.php --wipe-seed  # also wipe fictional seed first
  *
- * Optional flags:
- *   --dry-run    Skip writes; show what would happen.
- *                NOT YET IMPLEMENTED — individual scripts wrap their
- *                inserts in a transaction so this is moot. Run scripts
- *                individually if you want partial state.
+ * Re-runnable safely. Each migration script uses UPSERT semantics:
+ *   - First run: INSERT all rows
+ *   - Subsequent runs: pick up new rows + apply edits to existing rows
+ *   - Stable fields preserved on re-sync: product slugs, vendor slugs,
+ *     user emails (per Sodiq's decision; see day-4-migration.md §Re-sync semantics)
  *
- *   --skip-seed  Skip the rollback-fictional-seed step. Use if you've
- *                already wiped seed data manually.
+ * Flags:
+ *   --wipe-seed   Run rollback-fictional-seed.php first. Use on the
+ *                 INITIAL migration only. Subsequent re-syncs should
+ *                 NOT use this flag — it would delete real migrated
+ *                 data (rollback script targets all rows in vendors,
+ *                 categories, brands, not just the seed).
+ *                 NOTE: Currently the rollback wipes brands+categories+vendors
+ *                 INCLUDING migrated ones. We rely on the runbook
+ *                 explicitly stating this flag is "first run only".
+ *
+ *   --dry-run     Not yet implemented.
  *
  * Order matters
  * =============
  *
- *   1. Rollback fictional seed (categories, vendors, brands)
+ *   1. (optional) Rollback fictional seed (categories, vendors, brands)
  *   2. Migrate categories  (no dependencies)
  *   3. Migrate users       (no dependencies; produces legacy_user_id map)
  *   4. Migrate vendors     (depends on users via owner_user_id FK)
  *   5. Migrate products    (depends on vendors AND categories)
  *   6. Migrate reviews     (depends on vendors AND users)
- *
- * Each step is its own PHP process — failures don't cascade. If migrate-
- * products fails partway, migrate-reviews will still run (and just
- * find no matching products, which is fine — reviews don't link to
- * products in our design).
- *
- * Re-running this script is safe. Each underlying script is idempotent
- * (skips rows whose legacy_*_id already exists in v3).
  */
 
-$skipSeed = in_array('--skip-seed', $argv, true);
+$wipeSeed = in_array('--wipe-seed', $argv, true);
+// --skip-seed retained for backward compatibility — now the default
+$skipSeedFlag = in_array('--skip-seed', $argv, true);
 $dryRun = in_array('--dry-run', $argv, true);
 
 if ($dryRun) {
@@ -54,10 +58,10 @@ echo "============================================================\n\n";
 $start = microtime(true);
 $step = 0;
 
-if (!$skipSeed) {
+if ($wipeSeed) {
     runStep(++$step, 'rollback fictional seed', $apiRoot . '/bin/rollback-fictional-seed.php', ['--yes']);
 } else {
-    echo "[step " . (++$step) . "] SKIPPED rollback-fictional-seed (--skip-seed)\n\n";
+    echo "[step " . (++$step) . "] SKIPPED rollback-fictional-seed (pass --wipe-seed to run; only use on INITIAL migration)\n\n";
 }
 
 runStep(++$step, 'migrate-categories',  $binDir . '/migrate-categories.php');

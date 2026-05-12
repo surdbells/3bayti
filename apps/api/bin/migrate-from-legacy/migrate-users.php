@@ -134,16 +134,6 @@ try {
     ) as $row) {
         $legacyId = (int) $row['user_id'];
 
-        // Idempotency
-        $existing = $conn->fetchOne(
-            'SELECT id FROM users WHERE legacy_user_id = ?',
-            [$legacyId]
-        );
-        if ($existing !== false) {
-            $skipped++;
-            continue;
-        }
-
         $email = strtolower(trim((string) ($row['email'] ?? '')));
         if ($email === '') {
             $log->skip('users', $legacyId, 'Empty email');
@@ -156,11 +146,24 @@ try {
             $log->warn('users', $legacyId, "Suspicious password hash (len=" . strlen($passwordHash) . ")");
         }
 
-        // Email collision handling
-        $renamedEmail = null;
+        // ---- Email collision handling — only matters on first INSERT ----
+        // Per Sodiq's decision, email is STABLE across re-syncs. So if a v3 row
+        // already exists for this legacy_user_id, we keep its current email
+        // regardless of what's in legacy now. Collision logic only applies
+        // when this row is brand new.
+        $existingUser = $conn->fetchAssociative(
+            'SELECT id, email, phone, country_code, first_name, last_name,
+                    password_hash, is_customer, is_vendor, is_admin, is_active,
+                    is_finance, is_support, is_sub_admin, store_legal_name,
+                    trade_license_number, is_2fa_enabled
+             FROM users WHERE legacy_user_id = ?',
+            [$legacyId]
+        );
+
         $isCollisionLoser = ($emailWinners[$email] ?? null) !== $legacyId;
-        if ($isCollisionLoser) {
-            // Split on @, splice +legacy{id} before it
+        $renamedEmail = null;
+        if ($isCollisionLoser && $existingUser === false) {
+            // First-time insert AND we're a collision loser — generate suffixed email
             $atPos = strrpos($email, '@');
             if ($atPos === false) {
                 $log->skip('users', $legacyId, "Malformed email '{$email}'");
@@ -190,15 +193,13 @@ try {
         $phone = trim((string) ($row['phone'] ?? ''));
         $phone = $phone === '' ? null : $phone;
 
-        // Created — parse varchar
         $created = parseLegacyTimestamp((string) ($row['created'] ?? ''));
         $lastLogin = parseLegacyTimestamp((string) ($row['last_login'] ?? ''));
 
-        // is_vendor logic: real vendor only if store_name populated
+        // is_vendor: real vendor only if store_name populated
         $storeName = trim((string) ($row['store_name'] ?? ''));
         $isReallyVendor = ((int) ($row['is_vendor'] ?? 0) === 1) && $storeName !== '';
 
-        // Boolean flags
         $isCustomer = (int) ($row['is_customer'] ?? 1) === 1;
         $isAdmin = (int) ($row['is_admin'] ?? 0) === 1;
         $isFinance = (int) ($row['is_finance'] ?? 0) === 1;
@@ -207,90 +208,165 @@ try {
         $isActive = (int) ($row['is_active'] ?? 1) === 1;
         $is2fa = (int) ($row['is_2fa'] ?? 0) === 1;
 
-        // Measurements present?
-        $hasMeasurements = !empty($row['arm']) || !empty($row['bust']) || !empty($row['hip']);
+        $firstName = trim((string) ($row['first_name'] ?? '')) ?: null;
+        $lastName = trim((string) ($row['last_name'] ?? '')) ?: null;
+        $storeLegalName = trim((string) ($row['store_legal_name'] ?? '')) ?: null;
+        $tradeLicense = trim((string) ($row['trade_license_number'] ?? '')) ?: null;
 
-        $insertEmail = $renamedEmail ?? $email;
-
-        try {
-            $conn->executeStatement(
-                "INSERT INTO users
-                    (legacy_user_id, first_name, last_name, email, phone, country_code,
-                     password_hash, password_changed_at,
-                     is_customer, is_vendor, is_admin, is_finance, is_support, is_sub_admin,
-                     is_active, is_2fa_enabled, is_phone_verified, is_email_verified,
-                     locale, timezone,
-                     store_legal_name, trade_license_number,
-                     last_login_at, created_at, updated_at)
-                 VALUES
-                    (:legacy_id, :first_name, :last_name, :email, :phone, :cc,
-                     :pw_hash, NULL,
-                     :is_customer, :is_vendor, :is_admin, :is_finance, :is_support, :is_subadmin,
-                     :is_active, :is_2fa, FALSE, FALSE,
-                     'en', 'Asia/Dubai',
-                     :store_legal_name, :trade_license,
-                     :last_login, :created, NOW())",
-                [
-                    'legacy_id' => $legacyId,
-                    'first_name' => trim((string) ($row['first_name'] ?? '')) ?: null,
-                    'last_name' => trim((string) ($row['last_name'] ?? '')) ?: null,
+        if ($existingUser === false) {
+            // -------- INSERT --------
+            $insertEmail = $renamedEmail ?? $email;
+            try {
+                $conn->executeStatement(
+                    "INSERT INTO users
+                        (legacy_user_id, first_name, last_name, email, phone, country_code,
+                         password_hash, password_changed_at,
+                         is_customer, is_vendor, is_admin, is_finance, is_support, is_sub_admin,
+                         is_active, is_2fa_enabled, is_phone_verified, is_email_verified,
+                         locale, timezone,
+                         store_legal_name, trade_license_number,
+                         last_login_at, created_at, updated_at)
+                     VALUES
+                        (:legacy_id, :first_name, :last_name, :email, :phone, :cc,
+                         :pw_hash, NULL,
+                         :is_customer, :is_vendor, :is_admin, :is_finance, :is_support, :is_subadmin,
+                         :is_active, :is_2fa, FALSE, FALSE,
+                         'en', 'Asia/Dubai',
+                         :store_legal_name, :trade_license,
+                         :last_login, :created, NOW())",
+                    [
+                        'legacy_id' => $legacyId,
+                        'first_name' => $firstName,
+                        'last_name' => $lastName,
+                        'email' => $insertEmail,
+                        'phone' => $phone,
+                        'cc' => $cc,
+                        'pw_hash' => $passwordHash,
+                        'is_customer' => $isCustomer ? 'true' : 'false',
+                        'is_vendor' => $isReallyVendor ? 'true' : 'false',
+                        'is_admin' => $isAdmin ? 'true' : 'false',
+                        'is_finance' => $isFinance ? 'true' : 'false',
+                        'is_support' => $isSupport ? 'true' : 'false',
+                        'is_subadmin' => $isSubAdmin ? 'true' : 'false',
+                        'is_active' => $isActive ? 'true' : 'false',
+                        'is_2fa' => $is2fa ? 'true' : 'false',
+                        'store_legal_name' => $storeLegalName,
+                        'trade_license' => $tradeLicense,
+                        'last_login' => $lastLogin,
+                        'created' => $created ?? date('Y-m-d H:i:sP'),
+                    ]
+                );
+            } catch (\Throwable $e) {
+                $log->error('users', $legacyId, "INSERT failed: " . $e->getMessage(), [
                     'email' => $insertEmail,
-                    'phone' => $phone,
-                    'cc' => $cc,
-                    'pw_hash' => $passwordHash,
-                    'is_customer' => $isCustomer ? 'true' : 'false',
-                    'is_vendor' => $isReallyVendor ? 'true' : 'false',
-                    'is_admin' => $isAdmin ? 'true' : 'false',
-                    'is_finance' => $isFinance ? 'true' : 'false',
-                    'is_support' => $isSupport ? 'true' : 'false',
-                    'is_subadmin' => $isSubAdmin ? 'true' : 'false',
-                    'is_active' => $isActive ? 'true' : 'false',
-                    'is_2fa' => $is2fa ? 'true' : 'false',
-                    'store_legal_name' => trim((string) ($row['store_legal_name'] ?? '')) ?: null,
-                    'trade_license' => trim((string) ($row['trade_license_number'] ?? '')) ?: null,
-                    'last_login' => $lastLogin,
-                    'created' => $created ?? date('Y-m-d H:i:sP'),
-                ]
-            );
-        } catch (\Throwable $e) {
-            $log->error('users', $legacyId, "INSERT failed: " . $e->getMessage(), [
-                'email' => $insertEmail,
-            ]);
-            $errors++;
-            continue;
+                ]);
+                $errors++;
+                continue;
+            }
+
+            // If we renamed the email, log conflict
+            if ($renamedEmail !== null) {
+                $winnerLegacyId = $emailWinners[$email];
+                $winnerV3Id = $conn->fetchOne(
+                    'SELECT id FROM users WHERE legacy_user_id = ?',
+                    [$winnerLegacyId]
+                );
+                $newUserId = $conn->fetchOne(
+                    'SELECT id FROM users WHERE legacy_user_id = ?',
+                    [$legacyId]
+                );
+                $conn->executeStatement(
+                    "INSERT INTO migration_email_conflicts
+                        (legacy_user_id, v3_user_id, original_email, renamed_email,
+                         conflict_with_user_id, resolution_status, created_at)
+                     VALUES
+                        (:lid, :v3id, :orig, :renamed, :conflict_id, 'pending', NOW())
+                     ON CONFLICT DO NOTHING",
+                    [
+                        'lid' => $legacyId,
+                        'v3id' => $newUserId,
+                        'orig' => $email,
+                        'renamed' => $renamedEmail,
+                        'conflict_id' => $winnerV3Id !== false ? $winnerV3Id : null,
+                    ]
+                );
+                $log->warn('users', $legacyId, "Email collision -> renamed to {$renamedEmail}");
+            }
+
+            $migrated++;
+        } else {
+            // -------- UPDATE — email stable, password stable, all else updated --------
+            $changes = [];
+            $set = [];
+            $params = ['legacy_id' => $legacyId];
+
+            if ($existingUser['first_name'] !== $firstName) {
+                $changes['first_name'] = ['from' => $existingUser['first_name'], 'to' => $firstName];
+                $set[] = 'first_name = :first_name'; $params['first_name'] = $firstName;
+            }
+            if ($existingUser['last_name'] !== $lastName) {
+                $changes['last_name'] = ['from' => $existingUser['last_name'], 'to' => $lastName];
+                $set[] = 'last_name = :last_name'; $params['last_name'] = $lastName;
+            }
+            if ($existingUser['phone'] !== $phone) {
+                $changes['phone'] = ['from' => $existingUser['phone'], 'to' => $phone];
+                $set[] = 'phone = :phone'; $params['phone'] = $phone;
+            }
+            if ($existingUser['country_code'] !== $cc) {
+                $changes['country_code'] = ['from' => $existingUser['country_code'], 'to' => $cc];
+                $set[] = 'country_code = :cc'; $params['cc'] = $cc;
+            }
+            // Boolean comparison — normalize before compare
+            $cmpBool = static fn ($v): bool => $v === true || $v === 't' || $v === '1' || $v === 1;
+
+            if ($cmpBool($existingUser['is_customer']) !== $isCustomer) {
+                $changes['is_customer'] = ['from' => $existingUser['is_customer'], 'to' => $isCustomer];
+                $set[] = 'is_customer = :is_customer'; $params['is_customer'] = $isCustomer ? 'true' : 'false';
+            }
+            if ($cmpBool($existingUser['is_vendor']) !== $isReallyVendor) {
+                $changes['is_vendor'] = ['from' => $existingUser['is_vendor'], 'to' => $isReallyVendor];
+                $set[] = 'is_vendor = :is_vendor'; $params['is_vendor'] = $isReallyVendor ? 'true' : 'false';
+            }
+            if ($cmpBool($existingUser['is_active']) !== $isActive) {
+                $changes['is_active'] = ['from' => $existingUser['is_active'], 'to' => $isActive];
+                $set[] = 'is_active = :is_active'; $params['is_active'] = $isActive ? 'true' : 'false';
+            }
+            if (($existingUser['store_legal_name'] ?? null) !== $storeLegalName) {
+                $changes['store_legal_name'] = ['from' => $existingUser['store_legal_name'], 'to' => $storeLegalName];
+                $set[] = 'store_legal_name = :sln'; $params['sln'] = $storeLegalName;
+            }
+            if (($existingUser['trade_license_number'] ?? null) !== $tradeLicense) {
+                $changes['trade_license_number'] = ['from' => $existingUser['trade_license_number'], 'to' => $tradeLicense];
+                $set[] = 'trade_license_number = :tln'; $params['tln'] = $tradeLicense;
+            }
+
+            // Password hash UPDATE — legacy may rotate, we want re-sync to pick that up.
+            // Email and renamed_email are NOT updated (stable per decision).
+            if ($existingUser['password_hash'] !== $passwordHash && $passwordHash !== '') {
+                $changes['password_hash'] = ['from' => '***', 'to' => '*** (rotated)'];
+                $set[] = 'password_hash = :pw_hash'; $params['pw_hash'] = $passwordHash;
+            }
+
+            if (count($changes) === 0) {
+                continue; // No drift — silent
+            }
+
+            $set[] = 'updated_at = NOW()';
+            $sql = 'UPDATE users SET ' . implode(', ', $set) . ' WHERE legacy_user_id = :legacy_id';
+            try {
+                $conn->executeStatement($sql, $params);
+            } catch (\Throwable $e) {
+                $log->error('users', $legacyId, "UPDATE failed: " . $e->getMessage());
+                $errors++;
+                continue;
+            }
+
+            $log->info('users', $legacyId, "UPDATE (email stable: '{$existingUser['email']}')", $changes);
+            $migrated++;
         }
 
-        // If we renamed the email, log to migration_email_conflicts
-        if ($renamedEmail !== null) {
-            $winnerLegacyId = $emailWinners[$email];
-            $winnerV3Id = $conn->fetchOne(
-                'SELECT id FROM users WHERE legacy_user_id = ?',
-                [$winnerLegacyId]
-            );
-            $newUserId = $conn->fetchOne(
-                'SELECT id FROM users WHERE legacy_user_id = ?',
-                [$legacyId]
-            );
-            $conn->executeStatement(
-                "INSERT INTO migration_email_conflicts
-                    (legacy_user_id, v3_user_id, original_email, renamed_email,
-                     conflict_with_user_id, resolution_status, created_at)
-                 VALUES
-                    (:lid, :v3id, :orig, :renamed, :conflict_id, 'pending', NOW())",
-                [
-                    'lid' => $legacyId,
-                    'v3id' => $newUserId,
-                    'orig' => $email,
-                    'renamed' => $renamedEmail,
-                    'conflict_id' => $winnerV3Id !== false ? $winnerV3Id : null,
-                ]
-            );
-            $log->warn('users', $legacyId, "Email collision -> renamed to {$renamedEmail}");
-        }
-
-        $migrated++;
-        if ($migrated % 500 === 0) {
-            echo "  ... {$migrated} migrated\n";
+        if (($migrated % 500) === 0) {
+            echo "  ... {$migrated} processed\n";
         }
     }
 

@@ -76,16 +76,6 @@ try {
     foreach ($rows as $row) {
         $legacyId = (int) $row['id'];
 
-        // Idempotency
-        $existing = $conn->fetchOne(
-            'SELECT id FROM product_reviews WHERE legacy_review_id = ?',
-            [$legacyId]
-        );
-        if ($existing !== false) {
-            $skipped++;
-            continue;
-        }
-
         $vendorLegacyId = (int) ($row['store_id'] ?? 0);
         $vendorId = $vendorMap[$vendorLegacyId] ?? null;
         if ($vendorId === null) {
@@ -103,12 +93,14 @@ try {
             $log->warn('reviews', $legacyId, "Star {$star} out of range — clamping");
             $star = max(0.0, min(5.0, $star));
         }
-        // Round to 1 decimal place to match NUMERIC(2,1)
         $starFormatted = number_format($star, 1, '.', '');
 
         $createdAt = parseLegacyTimestamp((string) ($row['created_at'] ?? '')) ?? date('Y-m-d H:i:sP');
 
         try {
+            // UPSERT — reviews have no slug/email stability concerns.
+            // Every column updatable except product_id (set NULL by design)
+            // and legacy_review_id (the conflict key).
             $conn->executeStatement(
                 "INSERT INTO product_reviews
                     (legacy_review_id, product_id, vendor_id, user_id,
@@ -121,7 +113,18 @@ try {
                      :reviewer_name, :reviewer_email, :product_name,
                      :star, :title, :comment, :reply,
                      'approved', FALSE, 0,
-                     :created, NOW())",
+                     :created, NOW())
+                 ON CONFLICT (legacy_review_id) DO UPDATE SET
+                     vendor_id = EXCLUDED.vendor_id,
+                     user_id = EXCLUDED.user_id,
+                     reviewer_name = EXCLUDED.reviewer_name,
+                     reviewer_email = EXCLUDED.reviewer_email,
+                     product_name_snapshot = EXCLUDED.product_name_snapshot,
+                     star = EXCLUDED.star,
+                     title = EXCLUDED.title,
+                     comment = EXCLUDED.comment,
+                     vendor_reply = EXCLUDED.vendor_reply,
+                     updated_at = NOW()",
                 [
                     'legacy_id' => $legacyId,
                     'vendor_id' => $vendorId,
@@ -137,7 +140,7 @@ try {
                 ]
             );
         } catch (\Throwable $e) {
-            $log->error('reviews', $legacyId, "INSERT failed: " . $e->getMessage());
+            $log->error('reviews', $legacyId, "INSERT/UPDATE failed: " . $e->getMessage());
             $errors++;
             continue;
         }

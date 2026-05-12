@@ -68,52 +68,78 @@ try {
     foreach ($rows as $row) {
         $legacyId = (int) $row['category_id'];
 
-        // Idempotency check
-        $existing = $conn->fetchOne(
-            'SELECT id FROM categories WHERE legacy_category_id = ?',
-            [$legacyId]
-        );
-        if ($existing !== false) {
-            $log->skip('categories', $legacyId, "Already migrated (v3 id={$existing})");
-            continue;
-        }
-
         $name = trim((string) $row['category_name']);
         if ($name === '') {
             $log->error('categories', $legacyId, 'Empty name — skipping');
             continue;
         }
 
-        $slug = $slugger->make($name, fallback: 'cat-' . $legacyId);
-        if ($slug === null) {
-            $log->error('categories', $legacyId, "Slug generation failed for name '{$name}'");
-            continue;
-        }
-
         $icon = trim((string) ($row['icon'] ?? ''));
         $isActive = (bool) ((int) $row['is_active']);
 
-        $conn->executeStatement(
-            "INSERT INTO categories
-                (legacy_category_id, slug, name, parent_id, path, display_order, is_active, icon, created_at, updated_at)
-             VALUES
-                (:legacy_id, :slug, :name, NULL, :path, 0, :is_active, :icon, NOW(), NOW())",
-            [
-                'legacy_id' => $legacyId,
-                'slug' => $slug,
-                'name' => $name,
-                'path' => $slug,
-                'is_active' => $isActive ? 'true' : 'false',
-                'icon' => $icon !== '' ? $icon : null,
-            ]
+        // Existing v3 row?
+        $existing = $conn->fetchAssociative(
+            'SELECT id, slug, name, icon, is_active FROM categories WHERE legacy_category_id = ?',
+            [$legacyId]
         );
 
-        $log->info('categories', $legacyId, "Migrated as '{$slug}' ({$name})", [
-            'name' => $name,
-            'slug' => $slug,
-            'icon' => $icon,
-            'is_active' => $isActive,
-        ]);
+        if ($existing === false) {
+            // First-time INSERT — generate slug
+            $slug = $slugger->make($name, fallback: 'cat-' . $legacyId);
+            if ($slug === null) {
+                $log->error('categories', $legacyId, "Slug generation failed for name '{$name}'");
+                continue;
+            }
+
+            $conn->executeStatement(
+                "INSERT INTO categories
+                    (legacy_category_id, slug, name, parent_id, path, display_order, is_active, icon, created_at, updated_at)
+                 VALUES
+                    (:legacy_id, :slug, :name, NULL, :path, 0, :is_active, :icon, NOW(), NOW())",
+                [
+                    'legacy_id' => $legacyId,
+                    'slug' => $slug,
+                    'name' => $name,
+                    'path' => $slug,
+                    'is_active' => $isActive ? 'true' : 'false',
+                    'icon' => $icon !== '' ? $icon : null,
+                ]
+            );
+
+            $log->info('categories', $legacyId, "INSERT as '{$slug}' ({$name})");
+        } else {
+            // Re-sync — UPDATE everything except slug (stable per decision)
+            $changes = [];
+            if ($existing['name'] !== $name) {
+                $changes['name'] = ['from' => $existing['name'], 'to' => $name];
+            }
+            if (((string) ($existing['icon'] ?? '')) !== $icon) {
+                $changes['icon'] = ['from' => $existing['icon'], 'to' => $icon];
+            }
+            // Note: Postgres returns boolean as 't'/'f' string via DBAL fetch.
+            $existingActive = ($existing['is_active'] === true) || ($existing['is_active'] === 't') || ($existing['is_active'] === '1') || ($existing['is_active'] === 1);
+            if ($existingActive !== $isActive) {
+                $changes['is_active'] = ['from' => $existingActive, 'to' => $isActive];
+            }
+
+            if (count($changes) === 0) {
+                continue; // No drift — silent skip
+            }
+
+            $conn->executeStatement(
+                "UPDATE categories
+                 SET name = :name, icon = :icon, is_active = :is_active, updated_at = NOW()
+                 WHERE legacy_category_id = :legacy_id",
+                [
+                    'legacy_id' => $legacyId,
+                    'name' => $name,
+                    'icon' => $icon !== '' ? $icon : null,
+                    'is_active' => $isActive ? 'true' : 'false',
+                ]
+            );
+
+            $log->info('categories', $legacyId, "UPDATE (slug stable: '{$existing['slug']}')", $changes);
+        }
     }
 
     // Reset sequence to max(id) + 1 so admin-creates don't collide
