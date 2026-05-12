@@ -213,6 +213,12 @@ final class AuditEmitter
                 => $this->snapshotAddress($subject),
             $subject instanceof \Bayti\Api\Domain\User\Measurement
                 => $this->snapshotMeasurement($subject),
+            $subject instanceof \Bayti\Api\Domain\Catalog\Brand
+                => $this->snapshotBrand($subject),
+            $subject instanceof \Bayti\Api\Domain\Catalog\Vendor
+                => $this->snapshotVendor($subject),
+            $subject instanceof \Bayti\Api\Domain\Catalog\Category
+                => $this->snapshotCategory($subject),
             default => throw new \InvalidArgumentException(
                 'No snapshot strategy for ' . $subject::class,
             ),
@@ -417,6 +423,68 @@ final class AuditEmitter
             'category_id' => $m->getCategoryId(),
             'values' => $m->getValues(),
             'notes' => $m->getNotes(),
+        ];
+    }
+
+    /**
+     * Brand snapshot.
+     *
+     * No redaction needed — Brand has no sensitive fields.
+     */
+    private function snapshotBrand(\Bayti\Api\Domain\Catalog\Brand $b): array
+    {
+        return [
+            'slug' => $b->getSlug(),
+            'name' => $b->getName(),
+            'logo_url' => $b->getLogoUrl(),
+            'is_active' => $b->isActive(),
+        ];
+    }
+
+    /**
+     * Vendor snapshot.
+     *
+     * Includes commission_rate because that's a meaningful business
+     * detail to audit (admin changing a vendor's commission cut is
+     * exactly the kind of change forensics cares about).
+     *
+     * Contact email/phone are NOT PII-redacted here — they're
+     * vendor-business data, not customer PII, and Q5=A policy only
+     * redacts *_hash and *_token fields.
+     */
+    private function snapshotVendor(\Bayti\Api\Domain\Catalog\Vendor $v): array
+    {
+        return [
+            'slug' => $v->getSlug(),
+            'name' => $v->getName(),
+            'description' => $v->getDescription(),
+            'logo_url' => $v->getLogoUrl(),
+            'cover_image_url' => $v->getCoverImageUrl(),
+            'contact_email' => $v->getContactEmail(),
+            'contact_phone' => $v->getContactPhone(),
+            'commission_rate' => $v->getCommissionRate(),
+            'is_active' => $v->isActive(),
+            'is_verified' => $v->isVerified(),
+        ];
+    }
+
+    /**
+     * Category snapshot.
+     *
+     * parent_id captured as scalar (not the parent entity) — the
+     * audit log is meant to be readable without joins.
+     */
+    private function snapshotCategory(\Bayti\Api\Domain\Catalog\Category $c): array
+    {
+        return [
+            'slug' => $c->getSlug(),
+            'name' => $c->getName(),
+            'description' => $c->getDescription(),
+            'parent_id' => $c->getParent()?->getId(),
+            'path' => $c->getPath(),
+            'display_order' => $c->getDisplayOrder(),
+            'image_url' => $c->getImageUrl(),
+            'is_active' => $c->isActive(),
         ];
     }
 
