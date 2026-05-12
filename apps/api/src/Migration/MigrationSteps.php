@@ -224,7 +224,7 @@ final class MigrationSteps
                     'SELECT id, email, phone, country_code, first_name, last_name,
                             password_hash, is_customer, is_vendor, is_admin, is_active,
                             is_finance, is_support, is_sub_admin, store_legal_name,
-                            trade_license_number, is_2fa_enabled
+                            trade_license_number, is_2fa
                      FROM users WHERE legacy_user_id = ?',
                     [$legacyId]
                 );
@@ -286,7 +286,7 @@ final class MigrationSteps
                                 (legacy_user_id, first_name, last_name, email, phone, country_code,
                                  password_hash, password_changed_at,
                                  is_customer, is_vendor, is_admin, is_finance, is_support, is_sub_admin,
-                                 is_active, is_2fa_enabled, is_phone_verified, is_email_verified,
+                                 is_active, is_2fa, is_phone_verified, is_email_verified,
                                  locale, timezone,
                                  store_legal_name, trade_license_number,
                                  last_login_at, created_at, updated_at)
