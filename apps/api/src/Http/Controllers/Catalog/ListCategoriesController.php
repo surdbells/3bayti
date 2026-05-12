@@ -6,6 +6,7 @@ namespace Bayti\Api\Http\Controllers\Catalog;
 
 use Bayti\Api\Domain\Catalog\Category;
 use Bayti\Api\Domain\Catalog\CategoryRepository;
+use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\CategorySerializer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -59,8 +60,6 @@ final class ListCategoriesController
             );
         }
 
-        return $this->ok([
-            'categories' => $tree,
-        ]);
+        return $this->ok(PaginatedEnvelope::single($tree));
     }
 }

@@ -1,0 +1,215 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Bayti\Api\Http\Serializers;
+
+use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\ProductReview;
+use DateTimeInterface;
+
+/**
+ * Serialize Product entities to the contract apps/web (and shortly
+ * mobile + portal) expect.
+ *
+ * Two shapes:
+ *   - listShape:   compact card-grid form (what /v3/products returns
+ *                  per item).
+ *   - detailShape: full product detail (PDP) — superset of listShape.
+ *
+ * The shapes match apps/web/src/app/features/catalog/product.model.ts:
+ *   Product (listShape) + ProductDetail (detailShape).
+ *
+ * Currency
+ * --------
+ * Hardcoded AED since this is a UAE marketplace and the legacy schema
+ * has no currency column. If we add multi-currency later, this becomes
+ * a per-product or per-region field.
+ *
+ * primary_image fallback
+ * ----------------------
+ * If `primary_image_url` is set, use it. Otherwise pick the first image
+ * from `images` if present. Otherwise null. The frontend Card renders a
+ * placeholder when null — we don't need to fabricate one server-side.
+ *
+ * sizes / colors transformation
+ * -----------------------------
+ * Legacy stores available sizes as 22 boolean columns; we collapsed to
+ * a JSON array of strings on migration. The shape apps/web wants is
+ * `[{label, in_stock}, ...]`. Since legacy doesn't track per-size stock,
+ * every size is `in_stock: true` if the product has positive stock,
+ * false otherwise. This matches what the legacy v2 API returned (we
+ * verified by reading the legacy code — it emits a flat "in_stock"
+ * boolean per size based on overall product stock).
+ *
+ * vendor embed
+ * ------------
+ * We embed `{ slug, name }` rather than the full Vendor object — apps/web
+ * needs only those two fields for the card. Saves bytes on long lists.
+ */
+final class ProductSerializer
+{
+    private const CURRENCY = 'AED';
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function listShape(Product $p): array
+    {
+        $primaryImage = $this->primaryImage($p);
+        $reviewStats = null; // populated only in detailShape for now
+
+        return [
+            'id' => $p->getId(),
+            'slug' => $p->getSlug(),
+            'name' => $p->getName(),
+            'sku' => null, // legacy has no SKU column; we may add later
+            'price' => $this->money($p->getPrice()),
+            'sale_price' => $p->getSalePrice() !== null ? $this->money($p->getSalePrice()) : null,
+            'primary_image' => $primaryImage,
+            'category_slug' => $p->getCategory()?->getSlug(),
+            'vendor' => $p->getVendor()->getSlug() !== ''
+                ? ['slug' => $p->getVendor()->getSlug(), 'name' => $p->getVendor()->getName()]
+                : null,
+            'rating' => null, // computed later when we have review aggregation
+            'review_count' => 0,
+            'in_stock' => $p->getStockQuantity() > 0 || $p->getAllowOversell(),
+            'is_new' => $p->isNew(),
+            'is_bestseller' => false, // computed later via order joins (M3)
+        ];
+    }
+
+    /**
+     * @param list<Product> $products
+     * @return list<array<string, mixed>>
+     */
+    public function listShapeMany(array $products): array
+    {
+        return array_map(fn (Product $p) => $this->listShape($p), $products);
+    }
+
+    /**
+     * Full ProductDetail shape — superset of listShape.
+     *
+     * @param list<ProductReview> $reviews
+     * @return array<string, mixed>
+     */
+    public function detailShape(Product $p, array $reviews = []): array
+    {
+        $base = $this->listShape($p);
+
+        // Sizes: legacy doesn't track per-size stock, so in_stock mirrors
+        // the product-level boolean.
+        $inStock = $p->getStockQuantity() > 0 || $p->getAllowOversell();
+        $sizes = array_map(
+            static fn (string $label) => ['label' => $label, 'in_stock' => $inStock],
+            $p->getAvailableSizes(),
+        );
+        $colors = array_map(
+            static fn (string $label) => [
+                'label' => $label,
+                'hex_code' => null, // legacy doesn't store hex codes
+                'in_stock' => $inStock,
+            ],
+            $p->getAvailableColors(),
+        );
+
+        $detail = array_merge($base, [
+            'description' => $p->getDescription() ?? '',
+            'images' => $this->imagesArray($p),
+            'sizes' => $sizes,
+            'colors' => $colors,
+            'fabric' => null,
+            'care_instructions' => null,
+            'materials' => [],
+            'related_products' => [], // populated by controller if needed
+            'recent_reviews' => array_map(
+                fn (ProductReview $r) => $this->reviewShape($r),
+                $reviews,
+            ),
+        ]);
+
+        // Update rating + review_count if reviews provided
+        if (count($reviews) > 0) {
+            $sum = 0.0;
+            foreach ($reviews as $r) {
+                $sum += (float) $r->getStar();
+            }
+            $detail['rating'] = round($sum / count($reviews), 1);
+            $detail['review_count'] = count($reviews);
+        }
+
+        return $detail;
+    }
+
+    /**
+     * @return array{amount: float, currency: string}
+     */
+    private function money(string $decimalString): array
+    {
+        return [
+            'amount' => (float) $decimalString,
+            'currency' => self::CURRENCY,
+        ];
+    }
+
+    /**
+     * @return array{url: string, alt: string|null, width: int|null, height: int|null}|null
+     */
+    private function primaryImage(Product $p): ?array
+    {
+        $url = $p->getPrimaryImageUrl();
+        if ($url === null || $url === '') {
+            $images = $p->getImages();
+            $url = $images[0] ?? null;
+        }
+        if ($url === null) {
+            return null;
+        }
+        return [
+            'url' => $url,
+            'alt' => $p->getName(),
+            'width' => null,
+            'height' => null,
+        ];
+    }
+
+    /**
+     * @return list<array{url: string, alt: string|null, width: int|null, height: int|null}>
+     */
+    private function imagesArray(Product $p): array
+    {
+        $name = $p->getName();
+        $images = $p->getImages();
+        // Ensure primary appears first if it's not already in the list
+        $primary = $p->getPrimaryImageUrl();
+        if ($primary !== null && !in_array($primary, $images, true)) {
+            array_unshift($images, $primary);
+        }
+        return array_map(
+            static fn (string $url) => [
+                'url' => $url,
+                'alt' => $name,
+                'width' => null,
+                'height' => null,
+            ],
+            $images,
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function reviewShape(ProductReview $r): array
+    {
+        return [
+            'id' => $r->getId(),
+            'rating' => (float) $r->getStar(),
+            'title' => $r->getTitle(),
+            'body' => $r->getComment() ?? '',
+            'author' => $r->getReviewerName() ?? 'Anonymous',
+            'created_at' => $r->getCreatedAt()->format(DateTimeInterface::ATOM),
+            'verified' => $r->isVerified(),
+        ];
+    }
+}

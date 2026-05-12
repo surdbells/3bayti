@@ -7,6 +7,7 @@ namespace Bayti\Api\Http\Controllers\Catalog;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Http\Errors\HttpException;
+use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\VendorSerializer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -50,8 +51,8 @@ final class GetVendorController
             throw HttpException::notFound('Vendor not found.');
         }
 
-        return $this->ok([
-            'vendor' => $this->serializer->publicShape($vendor),
-        ]);
+        return $this->ok(PaginatedEnvelope::single(
+            $this->serializer->publicShape($vendor),
+        ));
     }
 }

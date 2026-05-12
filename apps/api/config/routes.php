@@ -139,6 +139,14 @@ return function (App $app): void {
     $app->get('/v3/vendors', \Bayti\Api\Http\Controllers\Catalog\ListVendorsController::class);
     $app->get('/v3/vendors/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class);
 
+    // M2.2 — Products (Day 2 of 10-day rollout)
+    $app->get('/v3/products', \Bayti\Api\Http\Controllers\Catalog\ListProductsController::class);
+    $app->get('/v3/products/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetProductController::class);
+    $app->get('/v3/vendors/{slug}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class);
+
+    // M2.2 — Sitemap data for apps/web build-time generator
+    $app->get('/v3/sitemap-data', \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class);
+
     // ===================================================================
     // M2.1 — Catalog: admin endpoints (admin auth required)
     // ===================================================================

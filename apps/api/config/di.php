@@ -184,6 +184,13 @@ return [
     \Bayti\Api\Http\Controllers\Catalog\ListCategoriesController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetCategoryController::class => \DI\autowire(),
 
+    // M2.2 — Product endpoints (Day 2 of 10-day rollout)
+    \Bayti\Api\Http\Serializers\ProductSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\ListProductsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\GetProductController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class => \DI\autowire(),
+
     // -------------------------------------------------------------------
     // OTP — provider selection + service
     // -------------------------------------------------------------------

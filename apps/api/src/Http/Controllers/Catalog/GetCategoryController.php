@@ -7,6 +7,7 @@ namespace Bayti\Api\Http\Controllers\Catalog;
 use Bayti\Api\Domain\Catalog\Category;
 use Bayti\Api\Domain\Catalog\CategoryRepository;
 use Bayti\Api\Http\Errors\HttpException;
+use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\CategorySerializer;
 use Doctrine\ORM\EntityManagerInterface;
@@ -59,8 +60,6 @@ final class GetCategoryController
         $shape = $this->serializer->publicShape($category);
         $shape['children'] = $this->serializer->publicShapeMany($children);
 
-        return $this->ok([
-            'category' => $shape,
-        ]);
+        return $this->ok(PaginatedEnvelope::single($shape));
     }
 }
