@@ -4824,3 +4824,1292 @@ CREATE INDEX idx_ticketmsg ON ticket_messages (ticket_id, sent_at);
 - `GET /v3/me/chats` is scope-aware (customer vs vendor view via auth role)
 - `GET /v3/me/chats/unread-count` cached briefly (~5s) for tab badge polling
 
+
+---
+
+### 5.6 (M3.1.0e.6) — Vendor Self-Service contracts
+
+**Status:** ✅ Complete (May 13, 2026)
+**Scope:** 39 unique operations across vendor store management.
+
+#### 5.6.0 Reality audit
+
+**EXISTS in v3:**
+- `Vendor` and `Product` entities (Day 4 migration foundation)
+- `/v3/admin/vendors` admin CRUD (5 endpoints) — but this is ADMIN-managing-vendors, NOT vendor-self-management. Different scope.
+- ZERO `/v3/me/store/*` routes.
+
+**To BUILD:** All 39 ops + supporting entities (StoreSettings, Label, Coupon, MeasurementGuide, Notification, etc.).
+
+This is the largest single net-new category in M3.
+
+#### 5.6.1 Section design approach
+
+To manage complexity at this size, this section uses a different structure than 0e.2-0e.5:
+
+1. **Common patterns** — auth, scope check, response envelopes, error codes — declared once and referenced by every endpoint
+2. **Resource clusters** — endpoints grouped by domain (Store Settings, Products, Orders, Labels, Measurements, Coupons, Notifications, Compliance, Dashboard)
+3. **Per-endpoint specs** kept tight — only the differences (request body, URL params, side effects) are spelled out; common parts inherit from §5.6.2
+
+This is the same approach Stripe and GitHub use for large APIs. Keeps per-endpoint spec at ~10-15 lines instead of 25-30.
+
+#### 5.6.2 Common patterns for all vendor self-service endpoints
+
+**Path prefix:** `/v3/me/store/*` for all endpoints in this section.
+
+**Auth:** `vendor` scope. JWT must contain `roles[]` including `'vendor'`. Per 0e.1 §5.1.4:
+- Missing token → 401 `AUTH_MISSING_TOKEN`
+- Token without vendor role → 403 `FORBIDDEN`
+
+**Scope check:** Beyond role, every write endpoint asserts the operating user IS the vendor whose store is being modified. Reads scope to the user's own store automatically.
+
+**Response envelopes:** Per 0e.1 §5.1.1.
+- List endpoints: Shape B (paginated)
+- Single-resource: Shape A
+- Empty success body (e.g. DELETE): 204 no body
+
+**Error codes (added to ErrorCodes.php in M3.1.10):**
+
+```
+STORE_NOT_FOUND                   No store associated with this vendor user
+PRODUCT_NOT_OWNED                 Product belongs to a different vendor
+ORDER_NOT_OWNED                   Order belongs to a different vendor
+LABEL_NOT_OWNED                   Label belongs to a different vendor
+COUPON_NOT_OWNED                  Coupon belongs to a different vendor
+MEASUREMENT_GUIDE_NOT_OWNED       Guide belongs to a different vendor
+PRODUCT_SLUG_TAKEN                Generating a slug for this product collides; rename
+COUPON_CODE_TAKEN                 Coupon code conflicts with existing (per vendor)
+ORDER_STATUS_INVALID_TRANSITION   Trying to set order to disallowed state
+COMPLIANCE_INCOMPLETE             Some required compliance fields missing
+```
+
+**Common request patterns:**
+- All POST/PATCH/PUT bodies are JSON (`application/json`)
+- Product/coupon CREATE uses POST returning 201 with full resource
+- Product/coupon UPDATE uses PATCH (Merge Patch) returning 200 with full resource
+- Product image upload uses `multipart/form-data` (separate sub-resource endpoint)
+
+**Pagination defaults:** `limit=24, offset=0`, same as other list endpoints.
+
+**Sort defaults:** Most list endpoints default to `?sort=newest` (created_at DESC) for consistency with catalog.
+
+**Filtering:** Status-based filtering via `?status=...`. Date range via `?from=&to=` (ISO-8601 dates).
+
+#### 5.6.3 Dashboard + statistics (2 ops)
+
+---
+
+##### GET /v3/me/store/dashboard
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Purpose:** Headline metrics for vendor's home dashboard. Replaces both `vendor_dashboard` (mobile) and `getVendorStats` (portal).
+
+**Response 200:**
+```typescript
+{
+  data: {
+    store: {
+      name: string,
+      slug: string,
+      status: 'active' | 'paused' | 'suspended',
+      logo_url: string | null
+    },
+    sales: {
+      today: { count: number, amount: number },
+      this_week: { count: number, amount: number },
+      this_month: { count: number, amount: number },
+      currency: 'AED'
+    },
+    orders: {
+      pending: number,        // pending_payment or paid-but-not-shipped
+      processing: number,
+      shipped_recent: number, // last 7 days
+      cancellations_pending: number
+    },
+    inventory: {
+      total_products: number,
+      out_of_stock: number,
+      low_stock: number       // < 5 units (threshold configurable)
+    },
+    notifications: {
+      unread: number
+    },
+    reviews: {
+      new_this_week: number,
+      average_rating: number | null,
+      total: number
+    }
+  }
+}
+```
+
+**Migration coverage:** mobile's `vendor_dashboard` + portal's `getVendorStats` (DEDUP win)
+
+---
+
+##### PATCH /v3/me/store/status
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Purpose:** Toggle store between `active` and `paused`. (Cannot self-transition to `suspended` — admin only.)
+
+**Request:**
+```typescript
+{ status: 'active' | 'paused' }
+```
+
+**Response 200:** Store summary (slug, name, status, updated_at).
+
+**Migration coverage:** mobile's `vendor_toggle_status` + portal's `updateStoreStatus` (DEDUP win)
+
+#### 5.6.4 Store settings (8 ops)
+
+---
+
+##### GET /v3/me/store
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 200:**
+```typescript
+{
+  data: {
+    slug: string,
+    name: string,
+    bio: string,
+    logo_url: string | null,
+    cover_image_url: string | null,
+    is_verified: boolean,
+    status: 'active' | 'paused' | 'suspended',
+    contact: {
+      email: string,
+      phone: string,
+      whatsapp: string | null
+    },
+    social_links: {
+      instagram_url: string | null,
+      facebook_url: string | null,
+      website_url: string | null
+    },
+    location: {
+      city: string | null,
+      country_code: string | null
+    },
+    primary_category_slug: string | null,
+    member_since: string,
+    follower_count: number,
+    product_count: number,
+    average_rating: number | null,
+    review_count: number,
+    created_at: string,
+    updated_at: string
+  }
+}
+```
+
+**Migration coverage:** portal's `getVendorStore`
+
+---
+
+##### PATCH /v3/me/store
+
+**Status:** ❌ NEW (M3.1.10)
+**Method semantics:** JSON Merge Patch.
+
+**Request:** Same shape as GET, all fields optional. Restricted fields (cannot self-edit): `slug`, `is_verified`, `status` (use dedicated endpoint), `follower_count`, ratings.
+
+**Response 200:** Full store.
+
+**Migration coverage:** portal's `updateStoreBasic`
+
+---
+
+##### GET /v3/me/store/payment-settings
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 200:**
+```typescript
+{
+  data: {
+    payout_method: 'bank_transfer' | 'cheque' | 'wallet' | null,
+    bank_account: {
+      account_name: string | null,
+      account_number_masked: string | null,    // '****1234'
+      iban_masked: string | null,
+      bank_name: string | null,
+      swift_code: string | null
+    } | null,
+    payout_frequency: 'weekly' | 'biweekly' | 'monthly',
+    minimum_payout: { amount: number, currency: 'AED' },
+    pending_balance: { amount: number, currency: 'AED' },
+    available_balance: { amount: number, currency: 'AED' },
+    last_payout: {
+      amount: number,
+      currency: string,
+      paid_at: string
+    } | null
+  }
+}
+```
+
+**Migration coverage:** portal's `getVendorPayment`
+
+**Notes:** Sensitive fields (full account number, IBAN) are MASKED in reads. Updates supply full values; never echoed back.
+
+---
+
+##### PATCH /v3/me/store/payment-settings
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:**
+```typescript
+{
+  payout_method?: 'bank_transfer' | 'cheque' | 'wallet',
+  bank_account?: {
+    account_name?: string,
+    account_number?: string,    // FULL — server stores encrypted
+    iban?: string,              // FULL — server stores encrypted
+    bank_name?: string,
+    swift_code?: string
+  } | null,
+  payout_frequency?: 'weekly' | 'biweekly' | 'monthly'
+}
+```
+
+**Response 200:** Same shape as GET (with masked values).
+
+**Security notes:**
+- Bank account numbers + IBAN encrypted at rest (envelope encryption)
+- Audit log entry on every change
+- Admin alerted on bank-account change (fraud signal)
+
+**Migration coverage:** portal's `updateStorePayment`
+
+---
+
+##### GET /v3/me/store/tax-settings
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 200:**
+```typescript
+{
+  data: {
+    is_vat_registered: boolean,
+    vat_number: string | null,        // TRN for UAE
+    tax_rate_percent: number,         // typically 5.0 for UAE VAT
+    prices_include_tax: boolean,      // true = listed prices are VAT-inclusive
+    invoice_prefix: string | null     // e.g. 'INV-MYSTORE-'
+  }
+}
+```
+
+**Migration coverage:** portal's `getVendorTax`
+
+---
+
+##### PATCH /v3/me/store/tax-settings
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:** Same shape as GET, all optional.
+
+**Migration coverage:** portal's `updateStoreTax`
+
+---
+
+##### GET /v3/me/store/notification-settings
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 200:**
+```typescript
+{
+  data: {
+    email_notifications: {
+      new_order: boolean,
+      order_cancelled: boolean,
+      new_review: boolean,
+      payout_processed: boolean,
+      low_stock: boolean,
+      compliance_reminder: boolean
+    },
+    push_notifications: {
+      new_order: boolean,
+      new_message: boolean,
+      order_status_change: boolean
+    },
+    sms_notifications: {
+      payout_processed: boolean,
+      high_priority_only: boolean
+    }
+  }
+}
+```
+
+**Migration coverage:** portal's `getVendorNotifications`
+
+---
+
+##### PATCH /v3/me/store/notification-settings
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:** Same shape as GET, partial.
+
+**Migration coverage:** portal's `updateStoreNotifications`
+
+#### 5.6.5 Compliance (2 ops)
+
+---
+
+##### GET /v3/me/store/compliance
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Purpose:** UAE trade license + KYB documentation status.
+
+**Response 200:**
+```typescript
+{
+  data: {
+    status: 'incomplete' | 'pending_review' | 'approved' | 'rejected',
+    trade_license: {
+      number: string | null,
+      expiry_date: string | null,
+      uploaded_url: string | null,
+      verified: boolean
+    },
+    identity_document: {
+      type: 'emirates_id' | 'passport' | null,
+      number_masked: string | null,
+      uploaded_url: string | null,
+      verified: boolean
+    },
+    address_proof: {
+      uploaded_url: string | null,
+      verified: boolean
+    },
+    submitted_at: string | null,
+    reviewed_at: string | null,
+    rejection_reason: string | null,    // present if status='rejected'
+    required_fields_missing: string[]   // e.g. ['trade_license', 'address_proof']
+  }
+}
+```
+
+**Migration coverage:** portal's `getCompliance`
+
+---
+
+##### PATCH /v3/me/store/compliance
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:**
+```typescript
+{
+  trade_license?: { number, expiry_date, uploaded_url },
+  identity_document?: { type, number, uploaded_url },
+  address_proof?: { uploaded_url }
+}
+```
+
+**Response 200:** Same shape as GET, with `submitted_at` set if all required fields now present.
+
+**Error responses:**
+- `422 COMPLIANCE_INCOMPLETE` — missing required fields per UAE law
+
+**Side effects:**
+- If all required fields present, transition to `pending_review`
+- Emit `ComplianceSubmittedEvent` for admin queue
+
+**Migration coverage:** portal's `updateCompliance`
+
+#### 5.6.6 Products (6 ops)
+
+---
+
+##### GET /v3/me/store/products
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Query parameters:** `?limit=&offset=&status=&category=&sort=`
+- `status`: `active` | `inactive` | `out_of_stock` | `draft` | `all`
+- `category`: filter by category slug
+- `sort`: `newest` (default) | `oldest` | `name_asc` | `price_asc` | `price_desc` | `stock_asc` | `bestsellers`
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      slug: string,
+      name: string,
+      sku: string | null,
+      status: string,
+      category: { slug, name },
+      price: { amount, currency },
+      original_price?: { amount, currency },
+      stock: number,
+      image_url: string | null,
+      total_sold: number,
+      created_at: string,
+      updated_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Migration coverage:** portal's `getProduct`
+
+---
+
+##### GET /v3/me/store/products/:id
+
+**Status:** ❌ NEW (M3.1.10)
+
+**URL note:** Uses internal `id` (not slug) because vendor's product management UI is internal. Slug is for public catalog.
+
+**Response 200:** Full product detail. Same shape as public `GET /v3/products/:slug` PLUS vendor-only fields:
+```typescript
+{
+  data: {
+    // ... all fields from public PDP
+    stock: number,
+    cost_price: { amount, currency } | null,
+    notes_internal: string | null,
+    status: 'active' | 'inactive' | 'draft',
+    visibility: 'public' | 'unlisted' | 'private',
+    total_sold: number,
+    revenue_lifetime: { amount, currency },
+    margin_percent: number | null
+  }
+}
+```
+
+**Error responses:**
+- `404 PRODUCT_NOT_OWNED` — product belongs to different vendor (collapsed for privacy)
+
+**Migration coverage:** portal's `getProductById`
+
+---
+
+##### POST /v3/me/store/products
+
+**Status:** ❌ NEW (M3.1.10)
+**Idempotency:** ACCEPTED
+
+**Request:**
+```typescript
+{
+  name: string,
+  category_id: number,
+  brand_id: number | null,
+  description: string,
+  price: { amount: number, currency: 'AED' },
+  original_price?: { amount, currency },
+  stock: number,
+  available_sizes: string[],
+  available_colors: [{ name: string, hex: string | null }],
+  sku: string | null,
+  weight_grams: number | null,
+  dimensions_cm: { width, height, depth } | null,
+  care_instructions: string | null,
+  composition: string | null,
+  status: 'draft' | 'active',
+  images: [
+    { url: string, alt: string | null, order: number }
+  ]
+}
+```
+
+**Response 201:** Full product (same as GET /v3/me/store/products/:id).
+
+**Slug generation:** Server generates `slug` from `name` (lowercase, hyphens, collision-suffix). Returns it in response. Per 0e.1 §5.1.8, slugs are stable once assigned.
+
+**Error responses:**
+- `422 VALIDATION_FAILED` — missing required fields, prices ≤ 0, etc.
+- `409 PRODUCT_SLUG_TAKEN` — slug collision detection failed even with suffix (rare)
+- `404 NOT_FOUND` — category_id unknown
+
+**Side effects:**
+- Insert product
+- If `status: 'active'`, surfaces to public catalog immediately
+- Emit `ProductCreatedEvent`
+
+**Image upload note:** Images are uploaded SEPARATELY to a CDN endpoint (M3.1.10: `POST /v3/me/store/products/images` returning CDN URLs), THEN passed in the `images[]` array as URLs. Two-step process keeps this endpoint JSON-only.
+
+**Migration coverage:** portal's `createProduct`
+
+---
+
+##### PATCH /v3/me/store/products/:id
+
+**Status:** ❌ NEW (M3.1.10)
+**Method semantics:** Merge Patch.
+
+**Request:** Same shape as POST, all fields optional.
+
+**Response 200:** Updated product.
+
+**Error responses:**
+- `404 PRODUCT_NOT_OWNED`
+- `422 VALIDATION_FAILED`
+
+**Side effects:**
+- If `status` changes from `draft` → `active`, surface to public catalog
+- Recompute `average_rating` if any computed fields touched
+
+**Migration coverage:** portal's `updateProduct`
+
+---
+
+##### DELETE /v3/me/store/products/:id
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 204**
+
+**Behavior:**
+- Soft delete (`deleted_at` timestamp). Product removed from public catalog immediately.
+- HARD delete only via admin (`DELETE /v3/admin/products/:id` in 0e.7)
+- Cart items referencing this product are NOT removed; they get `in_stock: false` and `unavailable_reason: 'product_removed'` on cart read
+
+**Error responses:**
+- `404 PRODUCT_NOT_OWNED`
+- `409 PRODUCT_HAS_PENDING_ORDERS` — product has orders in `pending_payment` or `processing`; cannot delete
+
+**Migration coverage:** portal's `deleteProductById`
+
+---
+
+##### GET /v3/me/store/products/:id/reviews
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 200:** Same shape as public `GET /v3/vendors/:slug/reviews` (defined in 0e.3) but scoped to ONE product, with FULL reviewer name (vendor sees their customers' full names, not anonymized).
+
+**Migration coverage:** portal's `getProductReviews`
+
+#### 5.6.7 Orders — vendor side (5 ops)
+
+---
+
+##### GET /v3/me/store/orders
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Query parameters:** `?limit=&offset=&status=&from=&to=&customer=`
+
+Status values for vendor view:
+- `paid` — order placed, awaiting vendor action
+- `processing` — vendor is preparing
+- `ready_to_ship` — vendor marked ready, awaiting logistics
+- `shipped` — handed to courier
+- `delivered`
+- `cancellation_requested` — customer asked to cancel
+- `cancelled`
+- `returned`
+- `all`
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      number: string,
+      status: string,
+      customer: {
+        name: string,
+        avatar_url: string | null
+      },
+      items: [
+        { product_name, quantity, image_url }
+      ],
+      item_count: number,
+      vendor_revenue: { amount, currency },  // vendor's share after commission
+      placed_at: string,
+      requires_action: boolean,              // status needs vendor to do something
+      shipping_address_preview: string       // 'Dubai, UAE'
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Migration coverage:** Replaces all four of portal's filtered order endpoints (`getVendorOrders`, `getVendorOrdersByStatus`, `getVendorReturnOrders`, `getVendorDeliveryOrders`) via `?status=` parameter. **DEDUP WIN: 4 → 1.**
+
+---
+
+##### GET /v3/me/store/orders/:order_number
+
+**Status:** ❌ NEW (M3.1.10)
+
+**URL note:** Order numbers (`ORD-YYYY-NNNNNNN`) per 0e.1 §5.1.8.
+
+**Response 200:** Full order detail. Same shape as customer's `GET /v3/me/orders/:order_number` (0e.4) BUT:
+- Only items belonging to THIS vendor included (orders with mixed-vendor items are split per-vendor for the vendor's view)
+- Customer name and address fully visible (no privacy redaction)
+- Includes commission breakdown: `commission_amount`, `vendor_revenue`, `platform_revenue`
+
+**Error responses:**
+- `404 ORDER_NOT_OWNED` — order doesn't include any items from this vendor
+
+**Migration coverage:** portal's `getOrderById`
+
+---
+
+##### PATCH /v3/me/store/orders/:order_number/status
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:**
+```typescript
+{
+  status: 'processing' | 'ready_to_ship' | 'shipped',
+  tracking?: {                       // required when status='shipped'
+    carrier: string,
+    tracking_number: string,
+    url: string | null
+  },
+  note?: string | null               // optional internal note
+}
+```
+
+**Response 200:** Updated order detail.
+
+**Allowed transitions:**
+- `paid` → `processing` → `ready_to_ship` → `shipped`
+- Backward transitions NOT allowed via this endpoint
+
+**Error responses:**
+- `404 ORDER_NOT_OWNED`
+- `409 ORDER_STATUS_INVALID_TRANSITION` — trying to skip steps or go backwards
+
+**Side effects:**
+- Update order status
+- If `shipped`: emit `OrderShippedEvent` → customer email + push
+- If `delivered`: customer-initiated only (via `POST /v3/me/orders/:number/confirm-delivery` — TBD; M4)
+
+**Migration coverage:** portal's `updateOrderStatus`
+
+---
+
+##### POST /v3/me/store/orders/:order_number/cancel
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Purpose:** Vendor-initiated cancellation. Different from customer-initiated cancel.
+
+**Request:**
+```typescript
+{
+  reason: 'out_of_stock' | 'unable_to_ship' | 'customer_request' | 'other',
+  customer_note?: string             // visible to customer
+}
+```
+
+**Response 200:** Updated order (status='cancelled').
+
+**Error responses:**
+- `404 ORDER_NOT_OWNED`
+- `409 ORDER_STATUS_INVALID_TRANSITION` — cannot cancel `shipped`/`delivered`
+
+**Side effects:**
+- Refund if paid (via `PaymentService::refund`)
+- Restore stock (advisory; if other orders consumed it, oversold flag)
+- Email customer with reason
+- Emit `OrderCancelledByVendorEvent`
+
+---
+
+##### POST /v3/me/store/orders/:order_number/message-customer
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Purpose:** Vendor sends a message to the customer about this order. Creates or appends to the order-scoped chat conversation.
+
+**Request:**
+```typescript
+{
+  body: string                        // 1-2000 chars
+}
+```
+
+**Response 200:**
+```typescript
+{
+  conversation: {
+    id: string,    // UUID; same shape as 0e.5 chat
+    // ... new message included
+  }
+}
+```
+
+**Notes:**
+- Same domain model as 0e.5 chat (conversations + messages tables)
+- Order-scoped conversations have `order_id` populated
+- One conversation per (customer, vendor, order) — re-uses existing if any
+
+#### 5.6.8 Labels / collections (4 ops)
+
+Vendor's own labels for organizing products (e.g. "Eid Collection", "Summer 2026"). Customer-facing via `GET /v3/vendors/:slug/labels` (0e.3).
+
+---
+
+##### GET /v3/me/store/labels
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      slug: string,
+      name: string,
+      description: string | null,
+      cover_image_url: string | null,
+      product_count: number,
+      is_public: boolean,             // visible to customers
+      created_at: string,
+      updated_at: string
+    }
+  ]
+}
+```
+
+**Migration coverage:** portal's `readLabel` (4 callers, heavy use)
+
+---
+
+##### POST /v3/me/store/labels
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:**
+```typescript
+{
+  name: string,
+  description?: string,
+  cover_image_url?: string,
+  is_public?: boolean                 // defaults true
+}
+```
+
+**Response 201:** Single label.
+
+**Slug:** generated from name.
+
+**Migration coverage:** portal's `createLabel`
+
+---
+
+##### PATCH /v3/me/store/labels/:id
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:** Same as POST, all optional.
+
+**Response 200:** Updated label.
+
+**Error responses:**
+- `404 LABEL_NOT_OWNED`
+
+**Migration coverage:** portal's `updateLabel`
+
+---
+
+##### DELETE /v3/me/store/labels/:id
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 204**
+
+**Behavior:**
+- Removes the label
+- Products previously tagged with this label have the tag dropped (no cascade delete on products)
+
+**Migration coverage:** portal's `deleteLabel`
+
+#### 5.6.9 Measurement guides (4 ops)
+
+Per-product measurement charts vendors publish (e.g. size S = bust 86cm, M = 90cm, etc.).
+
+---
+
+##### GET /v3/me/store/measurement-guides
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      name: string,
+      category_id: number | null,     // optional — guide can be category-specific or general
+      category_name: string | null,
+      unit: 'cm' | 'inch',
+      size_chart: [                   // each row is a size; columns are body measurements
+        { size: 'S', bust: 86, waist: 70, hips: 92 },
+        { size: 'M', bust: 90, waist: 74, hips: 96 },
+        // ...
+      ],
+      created_at: string,
+      updated_at: string
+    }
+  ]
+}
+```
+
+**Migration coverage:** mobile's `readStoreMeasurement` AND portal's `readMeasurement` (DEDUP win — same data via two legacy paths)
+
+---
+
+##### POST /v3/me/store/measurement-guides
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:**
+```typescript
+{
+  name: string,
+  category_id?: number,
+  unit: 'cm' | 'inch',
+  size_chart: [{ size, bust?, waist?, hips?, /* any fields */ }]
+}
+```
+
+**Response 201:** Single guide.
+
+**Migration coverage:** portal's `createMeasurement`
+
+---
+
+##### PATCH /v3/me/store/measurement-guides/:id
+
+**Status:** ❌ NEW (M3.1.10)
+**Method semantics:** Merge Patch. To REPLACE the whole size_chart, send the new array; to keep, omit the field.
+
+**Migration coverage:** portal's `updateMeasurement`
+
+---
+
+##### DELETE /v3/me/store/measurement-guides/:id
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 204**
+
+**Migration coverage:** portal's `deleteMeasurement`
+
+#### 5.6.10 Coupons (7 ops)
+
+---
+
+##### GET /v3/me/store/coupons
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Query parameters:** `?limit=&offset=&status=` (status: `active` | `expired` | `paused` | `all`)
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      code: string,                   // 'SUMMER25'
+      type: 'percentage' | 'fixed' | 'shipping',
+      value: number,                  // 25 for percentage, 50.00 for fixed
+      currency?: 'AED',               // only present for type='fixed'
+      min_order_amount: number | null,
+      max_discount_amount: number | null,
+      status: 'active' | 'paused' | 'expired' | 'exhausted',
+      usage_limit: number | null,     // total across all customers
+      usage_limit_per_customer: number | null,
+      used_count: number,
+      starts_at: string,
+      expires_at: string | null,
+      applies_to_categories: string[],   // category slugs
+      applies_to_products: string[],     // product slugs
+      created_at: string,
+      updated_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Migration coverage:** portal's `getCoupons`
+
+---
+
+##### GET /v3/me/store/coupons/:id
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 200:** Single coupon detail (same shape as list).
+
+**Migration coverage:** portal's `getCouponById`
+
+---
+
+##### POST /v3/me/store/coupons
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:**
+```typescript
+{
+  code: string,                       // 3-30 chars, alphanumeric + dashes; uppercased by server
+  type: 'percentage' | 'fixed' | 'shipping',
+  value: number,
+  min_order_amount?: number,
+  max_discount_amount?: number,
+  usage_limit?: number,
+  usage_limit_per_customer?: number,
+  starts_at?: string,
+  expires_at?: string,
+  applies_to_categories?: string[],
+  applies_to_products?: string[]
+}
+```
+
+**Response 201:** Single coupon.
+
+**Error responses:**
+- `409 COUPON_CODE_TAKEN` — coupon code unique per vendor
+- `422 VALIDATION_FAILED` — value out of range for type, etc.
+
+**Migration coverage:** portal's `createCoupon`
+
+---
+
+##### PATCH /v3/me/store/coupons/:id
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:** Same as POST, all optional. NOTE: `code` and `type` cannot be changed once created (would invalidate cached lookups).
+
+**Response 200:** Updated coupon.
+
+**Migration coverage:** portal's `updateCoupon`
+
+---
+
+##### PATCH /v3/me/store/coupons/:id/status
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:**
+```typescript
+{ status: 'active' | 'paused' }
+```
+
+**Response 200:** Coupon with updated status.
+
+**Migration coverage:** portal's `toggleCouponStatus`
+
+---
+
+##### DELETE /v3/me/store/coupons/:id
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 204**
+
+**Behavior:**
+- Hard delete OK if `used_count == 0`
+- Otherwise soft delete (`deleted_at`) — preserve usage history
+
+**Migration coverage:** portal's `deleteCoupon`
+
+---
+
+##### GET /v3/me/store/coupons/:id/analytics
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Response 200:**
+```typescript
+{
+  data: {
+    coupon_id: number,
+    code: string,
+    total_uses: number,
+    unique_customers: number,
+    total_discount_amount: { amount, currency },
+    revenue_with_coupon: { amount, currency },
+    average_order_value: { amount, currency },
+    usage_by_day: [
+      { date: 'YYYY-MM-DD', count: number, discount_amount: number }
+    ],
+    top_categories: [{ slug, name, use_count }]
+  }
+}
+```
+
+**Migration coverage:** portal's `couponAnalytics`
+
+#### 5.6.11 Notifications (2 ops)
+
+---
+
+##### GET /v3/me/notifications
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Query parameters:** `?limit=&offset=&unread_only=true|false`
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      type: 'new_order' | 'order_cancelled' | 'new_review' | 'payout_processed' | 'low_stock' | 'new_message' | 'compliance_reminder',
+      title: string,
+      body: string,
+      action_url: string | null,      // deep link to relevant page
+      metadata: object,                // type-specific extra fields (order_number, product_slug, etc.)
+      read_at: string | null,
+      created_at: string
+    }
+  ],
+  meta: {
+    /* pagination */
+    total_unread: number               // extra meta field
+  }
+}
+```
+
+**Notes:**
+- Same endpoint serves vendor AND customer; metadata varies by type
+- Sort: `created_at DESC`
+
+**Migration coverage:** portal's `getNotifications`
+
+---
+
+##### POST /v3/me/notifications/mark-read
+
+**Status:** ❌ NEW (M3.1.10)
+
+**Request:**
+```typescript
+{
+  notification_ids?: number[],        // mark specific ones
+  mark_all?: boolean                   // OR mark all unread as read
+}
+```
+
+**Response 200:**
+```typescript
+{
+  marked_read_count: number,
+  unread_count_after: number
+}
+```
+
+**Migration coverage:** portal's `markNotifications`
+
+#### 5.6.12 Vendor profile self-update (2 ops covered elsewhere)
+
+The vendor's USER profile (first_name, last_name, etc.) is updated via `PATCH /v3/me/profile` (0e.2). The vendor's STORE is updated via `PATCH /v3/me/store` (5.6.4 above).
+
+#### 5.6.13 0e.6 Summary
+
+**39 operations specified.**
+
+| Cluster | Ops | DEDUP wins |
+|---|---|---|
+| Dashboard + status | 2 | 2 mobile/portal pairs collapsed |
+| Store settings | 8 | direct portal mapping |
+| Compliance | 2 | direct portal mapping |
+| Products | 6 | direct portal mapping |
+| Orders (vendor side) | 5 | **4 portal endpoints collapse to 1 with `?status=`** |
+| Labels | 4 | direct portal mapping |
+| Measurement guides | 4 | DEDUP: mobile readStoreMeasurement + portal readMeasurement |
+| Coupons | 7 | direct portal mapping |
+| Notifications | 2 | direct portal mapping |
+| **Total** | **40** | ~5-6 endpoint collapses |
+
+(40 not 39 — added `POST /v3/me/store/orders/:n/message-customer` and `POST /v3/me/store/orders/:n/cancel` while structuring. Net new vs 0d: +1.)
+
+**All net-new in v3.** Largest single block of M3 implementation work.
+
+#### 5.6.14 Supporting tables needed (built in M3.1.10)
+
+Significant new schema. High-level:
+
+```sql
+-- Vendor store metadata (extends existing `vendors` table or new `vendor_settings`)
+ALTER TABLE vendors ADD COLUMN bio TEXT;
+ALTER TABLE vendors ADD COLUMN status TEXT DEFAULT 'active';
+ALTER TABLE vendors ADD COLUMN contact_email TEXT;
+ALTER TABLE vendors ADD COLUMN contact_phone TEXT;
+ALTER TABLE vendors ADD COLUMN whatsapp TEXT;
+ALTER TABLE vendors ADD COLUMN instagram_url TEXT;
+ALTER TABLE vendors ADD COLUMN facebook_url TEXT;
+ALTER TABLE vendors ADD COLUMN website_url TEXT;
+ALTER TABLE vendors ADD COLUMN city TEXT;
+ALTER TABLE vendors ADD COLUMN country_code TEXT;
+-- (additional fields from migration if not yet present)
+
+CREATE TABLE vendor_payment_settings (
+  vendor_id INTEGER PRIMARY KEY REFERENCES vendors(id),
+  payout_method TEXT,
+  bank_account_name TEXT,
+  bank_account_number_encrypted BYTEA,
+  iban_encrypted BYTEA,
+  bank_name TEXT,
+  swift_code TEXT,
+  payout_frequency TEXT NOT NULL DEFAULT 'monthly',
+  minimum_payout_amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE vendor_tax_settings (
+  vendor_id INTEGER PRIMARY KEY REFERENCES vendors(id),
+  is_vat_registered BOOLEAN NOT NULL DEFAULT false,
+  vat_number TEXT,
+  tax_rate_percent NUMERIC(5,2) NOT NULL DEFAULT 5.00,
+  prices_include_tax BOOLEAN NOT NULL DEFAULT false,
+  invoice_prefix TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE vendor_notification_settings (
+  vendor_id INTEGER PRIMARY KEY REFERENCES vendors(id),
+  preferences JSONB NOT NULL DEFAULT '{}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE vendor_compliance (
+  vendor_id INTEGER PRIMARY KEY REFERENCES vendors(id),
+  status TEXT NOT NULL DEFAULT 'incomplete',
+  trade_license_number TEXT,
+  trade_license_expiry DATE,
+  trade_license_url TEXT,
+  identity_document_type TEXT,
+  identity_document_number_encrypted BYTEA,
+  identity_document_url TEXT,
+  address_proof_url TEXT,
+  submitted_at TIMESTAMPTZ,
+  reviewed_at TIMESTAMPTZ,
+  rejection_reason TEXT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE vendor_labels (
+  id BIGSERIAL PRIMARY KEY,
+  vendor_id INTEGER NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  slug TEXT NOT NULL,
+  name TEXT NOT NULL,
+  description TEXT,
+  cover_image_url TEXT,
+  is_public BOOLEAN NOT NULL DEFAULT true,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (vendor_id, slug)
+);
+
+CREATE TABLE product_labels (
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  label_id BIGINT NOT NULL REFERENCES vendor_labels(id) ON DELETE CASCADE,
+  PRIMARY KEY (product_id, label_id)
+);
+
+CREATE TABLE measurement_guides (
+  id BIGSERIAL PRIMARY KEY,
+  vendor_id INTEGER NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+  name TEXT NOT NULL,
+  unit TEXT NOT NULL DEFAULT 'cm',
+  size_chart JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE coupons (
+  id BIGSERIAL PRIMARY KEY,
+  vendor_id INTEGER NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  code TEXT NOT NULL,
+  type TEXT NOT NULL,                  -- 'percentage' | 'fixed' | 'shipping'
+  value NUMERIC(10,2) NOT NULL,
+  currency TEXT,
+  min_order_amount NUMERIC(10,2),
+  max_discount_amount NUMERIC(10,2),
+  status TEXT NOT NULL DEFAULT 'active',
+  usage_limit INTEGER,
+  usage_limit_per_customer INTEGER,
+  used_count INTEGER NOT NULL DEFAULT 0,
+  starts_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ,
+  applies_to_categories JSONB NOT NULL DEFAULT '[]'::jsonb,
+  applies_to_products JSONB NOT NULL DEFAULT '[]'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  deleted_at TIMESTAMPTZ,
+  UNIQUE (vendor_id, code)
+);
+
+CREATE TABLE coupon_uses (
+  id BIGSERIAL PRIMARY KEY,
+  coupon_id BIGINT NOT NULL REFERENCES coupons(id),
+  order_id INTEGER NOT NULL REFERENCES orders(id),
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  discount_amount NUMERIC(10,2) NOT NULL,
+  used_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_coupon_uses_coupon ON coupon_uses (coupon_id, used_at);
+
+CREATE TABLE notifications (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  action_url TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  read_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_notif_user ON notifications (user_id, created_at DESC);
+CREATE INDEX idx_notif_unread ON notifications (user_id) WHERE read_at IS NULL;
+```
+
+That's a lot of schema. Most of it is straightforward but the COUPON system (3 tables + multiple complex constraints) is the most non-trivial.
+
+#### 5.6.15 Decisions locked in 0e.6
+
+- All vendor self-service under `/v3/me/store/*`
+- Vendor user's USER profile (first/last name) updated via `/v3/me/profile` (0e.2 scope); STORE updated via `/v3/me/store`
+- Order list dedup: `?status=` query param collapses 4 portal endpoints into 1
+- Order status forward-only via vendor; backward via admin only
+- Products use internal `id` in vendor-management URLs (not slug)
+- Product slug generated server-side from name; stable once assigned
+- Product images uploaded via separate multipart endpoint, then URLs passed in JSON
+- Product hard-delete is admin-only; vendor does soft-delete
+- Bank account numbers + IBAN encrypted at rest; masked in reads
+- Coupon code unique PER VENDOR (not platform-wide)
+- Coupon `code` and `type` are immutable once created
+- Coupon analytics endpoint is heavyweight; cache aggressively
+- Labels are vendor-specific; distinct from platform-wide collections (0e.3)
+- Measurement guides are PER-VENDOR (each vendor sets their own size chart per category)
+- Compliance status: vendor self-submits → admin reviews → approve/reject
+- Notifications endpoint shared with non-vendor users (same schema, type-driven metadata)
+- Order-related vendor↔customer messaging integrates with chat conversations (0e.5 domain)
+- All vendor reads include commission breakdown
+- Vendor cannot self-modify: slug, is_verified, status (paused vs suspended distinction)
+
