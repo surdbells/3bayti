@@ -3780,3 +3780,1047 @@ This sub-phase surfaces specific risks worth flagging:
 
 These get added to `docs/plans/m3-plan.md` §6 in the planned Plan Revision commit.
 
+
+---
+
+### 5.5 (M3.1.0e.5) — Wishlist + Reviews + Follow + Chat + Tickets contracts
+
+**Status:** ✅ Complete (May 13, 2026)
+**Scope:** 29 unique operations across customer engagement surfaces.
+
+#### 5.5.0 Reality audit
+
+**EXISTS in v3:** 0 controllers, 1 domain entity (`ProductReview` from Day 4 migration — 27 reviews migrated; entity exists, no endpoints).
+
+**To BUILD:** All 29 operations + supporting tables (conversations, messages, ticket_threads, wishlist_items, follows).
+
+This is the second-largest greenfield section after 0e.6. Less stakes than 0e.4 (no money flows) but realtime-adjacent (chat).
+
+#### 5.5.1 Wishlist contracts (5 ops)
+
+Wishlist is a list of products the user has favorited, optionally grouped into user-defined "labels" (e.g. "Eid 2026", "For wedding").
+
+**Design decision:** Wishlist items can belong to ZERO or ONE label. Cross-listing (one product in multiple labels) is M4. Per-product is the common case.
+
+---
+
+##### GET /v3/me/wishlist
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Query parameters:** `?limit=&offset=&label_id=` (filter by label; omit to get unlabeled items only; `?label_id=all` for all)
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      product: {
+        slug: string,
+        name: string,
+        image_url: string | null,
+        vendor: { slug: string, name: string },
+        price: { amount: number, currency: 'AED' },
+        original_price?: { amount, currency },
+        in_stock: boolean,
+        is_on_sale: boolean
+      },
+      label: { id: number, name: string } | null,
+      added_at: string                  // ISO-8601
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Notes:**
+- Default ordering: `added_at DESC` (most-recently-added first)
+- `product.in_stock` re-computed at read time
+- If a wishlisted product is soft-deleted (vendor removed it), include with `in_stock: false` and mark the item — don't omit silently
+- Empty wishlist returns `data: []` with `meta.total: 0`
+
+**Migration coverage:** mobile's `readWishlist` (`customer/read_wishlist`)
+
+---
+
+##### POST /v3/me/wishlist/items
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Request:**
+```typescript
+{
+  product_slug: string,
+  label_id?: number | null            // optional; null/omitted = unlabeled
+}
+```
+
+**Response 201:**
+```typescript
+{
+  data: {
+    id: number,
+    product: { /* same shape as list */ },
+    label: { id, name } | null,
+    added_at: string
+  }
+}
+```
+
+**Error responses:**
+- `404 NOT_FOUND` — product slug unknown
+- `404 WISHLIST_LABEL_NOT_FOUND` — label_id unknown for this user
+- `409 WISHLIST_ITEM_ALREADY_EXISTS` — product already in wishlist (with same label; different label = different item)
+
+**Behavior:**
+- Uniqueness: `(user_id, product_id, label_id)` is unique. Adding the same product to the SAME label twice → 409. Adding to a DIFFERENT label is allowed.
+
+**Migration coverage:** mobile's `addWishlist` (`customer/add_wishlist`)
+
+---
+
+##### DELETE /v3/me/wishlist/items/:product_slug
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**URL design:** Uses `product_slug`, NOT wishlist item ID. Rationale: client typically clicks "remove from wishlist" on a product card showing the slug; spares a lookup.
+
+**Query parameter:** `?label_id=` (optional; if present, removes only the entry under that label; if omitted, removes ALL entries of this product across labels)
+
+**Response 200:**
+```typescript
+{
+  removed_count: number               // how many wishlist entries were deleted
+}
+```
+
+**Error responses:**
+- (none — DELETE is idempotent; missing item returns `removed_count: 0`)
+
+**Migration coverage:** apps/web's currently-routed `DELETE /wishlist/:productId` (routing exists; not wired in apps/web yet)
+
+---
+
+##### GET /v3/me/wishlist/labels
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      name: string,
+      item_count: number,
+      created_at: string,
+      updated_at: string
+    }
+  ]
+}
+```
+
+**Notes:**
+- Not paginated (typical user has < 20 labels)
+- Sorted by `created_at DESC`
+
+**Migration coverage:** mobile's `readWishlistLabel` (`customer/read_wishlist_label` — 9 callers, heaviest-used wishlist endpoint)
+
+---
+
+##### POST /v3/me/wishlist/labels
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Request:**
+```typescript
+{
+  name: string                        // 1-50 chars, trimmed
+}
+```
+
+**Response 201:**
+```typescript
+{
+  data: { id, name, item_count: 0, created_at, updated_at }
+}
+```
+
+**Error responses:**
+- `422 VALIDATION_FAILED` — name empty or > 50 chars
+- `409 CONFLICT_LABEL_NAME_TAKEN` — user already has a label with this name
+
+**Migration coverage:** mobile's `addWishlistLabel` (`customer/add_wishlist_label`)
+
+**Notes for M4:**
+- DELETE label endpoint deferred to M4 (low priority; labels can grow unbounded but usually < 20 per user)
+- RENAME label deferred to M4 (PATCH /v3/me/wishlist/labels/:id)
+
+#### 5.5.2 Reviews contracts (5 ops)
+
+Reviews are written by customers on products. They include rating + body + optional title. Vendor can reply (vendor self-service in 0e.6).
+
+**Design decision:** One review per (user, product). Editing an existing review allowed via PATCH.
+
+---
+
+##### POST /v3/reviews
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+**Idempotency:** ACCEPTED (helps avoid double-submit from network retries)
+
+**Request:**
+```typescript
+{
+  product_slug: string,
+  rating: number,                     // 1-5 integer
+  title?: string | null,              // optional, max 100 chars
+  body: string                        // 10-2000 chars
+}
+```
+
+**Response 201:** Single review shape.
+
+**Response 200 (if user already has a review for this product):** Return existing review with `was_existing: true` flag. Don't create duplicate.
+
+**Error responses:**
+- `404 NOT_FOUND` — product slug unknown
+- `422 REVIEW_PRODUCT_NOT_PURCHASED` — if we enforce purchase requirement (decision point — see notes)
+- `422 VALIDATION_FAILED` — rating out of range, body too short/long, etc.
+
+**Decision point (DEFER to M4):** Whether to require the user to have purchased the product before reviewing it. Legacy didn't enforce this. M3 leaves it OPEN (no purchase requirement) for migration parity. M4 can add an admin toggle.
+
+**Side effects:**
+- Increment `product.review_count`
+- Recompute `product.average_rating`
+- Emit `ReviewCreatedEvent` for vendor notification
+
+**Migration coverage:** mobile's `add_review` (`customer/add-review`)
+
+---
+
+##### PATCH /v3/reviews/:id
+
+**Auth:** customer (must own the review)
+**Status:** ❌ NEW (M3.1.9)
+
+**Purpose:** Edit own review. Useful for typo fixes or rating changes after using the product longer.
+
+**Request:** Same shape as POST but all fields optional.
+
+**Response 200:** Updated review.
+
+**Error responses:**
+- `404 NOT_FOUND` — review doesn't exist OR belongs to another user (collapsed)
+
+**Side effects:**
+- Recompute product's `average_rating` if rating changed
+- Update `review.updated_at`
+
+---
+
+##### DELETE /v3/reviews/:id
+
+Covered in 0e.2 §5.2.6 as `DELETE /v3/me/reviews/:id`. Same endpoint; the `/me/reviews/:id` and `/reviews/:id` paths point to the same controller because review ownership is implied by auth.
+
+**Decision in 0e.5:** Use `/v3/me/reviews/:id` (user-scoped) NOT `/v3/reviews/:id`. Admin can delete any review via `/v3/admin/reviews/:id` (0e.7 scope).
+
+---
+
+##### POST /v3/reviews/:id/helpful
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Purpose:** Mark another user's review as "helpful". Increments the `helpful_count` on the review.
+
+**Request:** empty body
+
+**Response 200:**
+```typescript
+{
+  review_id: number,
+  helpful_count: number,              // updated count
+  user_has_voted: true
+}
+```
+
+**Error responses:**
+- `404 NOT_FOUND` — review doesn't exist
+- `409 ALREADY_VOTED` — user already marked this review helpful
+
+**Storage:** `review_helpful_votes` table with `(user_id, review_id)` UNIQUE constraint.
+
+**Migration coverage:** mobile's `make_helpful` (`customer/helpful`)
+
+---
+
+##### DELETE /v3/reviews/:id/helpful
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Purpose:** Undo a helpful vote.
+
+**Response 200:**
+```typescript
+{
+  review_id: number,
+  helpful_count: number,
+  user_has_voted: false
+}
+```
+
+**Error responses:**
+- (none — idempotent; if no vote exists, no-op)
+
+#### 5.5.3 Follow contracts (2 ops)
+
+Follow lets a customer subscribe to a vendor — get notified of new products, sales, etc.
+
+---
+
+##### POST /v3/me/follows
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Request:**
+```typescript
+{
+  vendor_slug: string
+}
+```
+
+**Response 201:**
+```typescript
+{
+  vendor: {
+    slug: string,
+    name: string,
+    logo_url: string | null
+  },
+  followed_at: string
+}
+```
+
+**Error responses:**
+- `404 NOT_FOUND` — vendor slug unknown
+- `409 ALREADY_FOLLOWING` — user already follows this vendor
+
+**Side effects:**
+- Increment `vendor.follower_count` (denormalized for fast reads)
+- Emit `VendorFollowedEvent` (vendor may want to know; analytics)
+
+**Migration coverage:** mobile's `follow_vendor` (`customer/follow`)
+
+---
+
+##### DELETE /v3/me/follows/:vendor_slug
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Response 204**
+
+**Error responses:**
+- (idempotent — missing follow returns 204)
+
+**Side effects:**
+- Decrement `vendor.follower_count` if a follow existed
+
+**Migration coverage:** mobile's `unfollow_vendor` (`customer/unfollow`)
+
+**Also implied:** `GET /v3/me/follows` (list followed vendors). NOT in original 0d count but obviously needed. Adding to scope:
+
+---
+
+##### GET /v3/me/follows
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      vendor: {
+        slug, name, logo_url, is_verified,
+        new_products_count: number      // since user last viewed this vendor
+      },
+      followed_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Note:** 0d had Follow as 2 ops; 0e.5 adds this third one. Updated count: **3 follow ops** total.
+
+#### 5.5.4 Chat contracts (10 ops)
+
+The biggest section in 0e.5. Customer ↔ vendor messaging, with image support.
+
+**Realtime model decision (M3 scope):** POLLING. Per M3 plan §2.2 M3.1.9 notes: "current legacy uses polling; M3 keeps polling unless WebSockets are explicitly added (M4)". This sets the contract shape.
+
+**Domain model:**
+- `Conversation` — a thread between a customer and a vendor (possibly scoped to an order — `order_id` nullable). UUID identifier per 0e.1 §5.1.8.
+- `Message` — one message in a conversation. UUID identifier. Has `sender_id`, `body`, optional `image_url`.
+
+---
+
+##### GET /v3/me/chats
+
+**Auth:** customer OR vendor (different perspectives — see notes)
+**Status:** ❌ NEW (M3.1.9)
+
+**Query parameters:** `?limit=&offset=&unread_only=true|false`
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      id: string,                     // UUID
+      counterparty: {                  // the other side (vendor if user is customer; customer if user is vendor)
+        type: 'vendor' | 'customer',
+        slug?: string,                 // vendor slug (if counterparty is vendor)
+        id?: number,                   // user_id (if counterparty is customer)
+        display_name: string,
+        avatar_url: string | null
+      },
+      order: {                         // optional — chat may be tied to an order
+        number: string,
+        status: string,
+        total_amount: number
+      } | null,
+      last_message: {
+        body_preview: string,          // first 100 chars
+        sent_by_me: boolean,
+        sent_at: string,
+        has_image: boolean
+      } | null,
+      unread_count: number,            // messages I haven't read yet
+      updated_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Notes:**
+- Same endpoint serves customer view and vendor view; the `counterparty` field flips based on the authenticated user's role
+- Sort: `updated_at DESC` (most-recently-active first)
+- Vendor scope: returns chats where the user is the vendor of the conversation; uses `vendor` role
+- Empty `last_message` if conversation exists but no messages yet (vendor-side "prompt" conversations)
+
+**Migration coverage:**
+- mobile's `chat_get_conversation` (`chat/get_conversation`)
+- mobile's `chat_get_vendor_conversations` (vendor view; `chat/get_vendor_conversations.php`)
+
+**Dedup:** ONE endpoint for both customer and vendor views, scope-aware. Two legacy endpoints collapse.
+
+---
+
+##### POST /v3/me/chats
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Purpose:** Create a new conversation with a vendor. Idempotent — if a conversation already exists between (user, vendor, optional order), return that one.
+
+**Request:**
+```typescript
+{
+  vendor_slug: string,
+  order_number?: string | null,       // optional; conversations can be order-scoped or general
+  initial_message?: string | null     // optional; if present, also sends first message
+}
+```
+
+**Response 201 (new conversation):** Single conversation shape (same as GET list item).
+
+**Response 200 (existing conversation):** Same shape, with `was_existing: true`.
+
+**Error responses:**
+- `404 NOT_FOUND` — vendor or order unknown
+- `403 FORBIDDEN` — order doesn't belong to user
+- `422 CHAT_MESSAGE_TOO_LONG` — initial_message > 2000 chars
+
+**Migration coverage:** implicit in mobile's chat flow; legacy creates conversation on first message send
+
+---
+
+##### GET /v3/me/chats/:id/messages
+
+**Auth:** authenticated; must be participant in the conversation
+**Status:** ❌ NEW (M3.1.9)
+
+**Query parameters:** `?limit=&before=` (cursor pagination via message ID; loads OLDER messages on scroll-up)
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      id: string,                     // UUID
+      sender: {
+        type: 'customer' | 'vendor',
+        display_name: string,
+        avatar_url: string | null
+      },
+      body: string,
+      image_url: string | null,
+      sent_at: string,
+      read_at: string | null,         // null if not yet read by counterparty
+      sent_by_me: boolean
+    }
+  ],
+  // Cursor pagination here (not offset) — chat history can be very long
+  meta: {
+    limit: number,
+    has_more_before: boolean,         // older messages available
+    oldest_message_id: string | null
+  }
+}
+```
+
+**Notes:**
+- Cursor pagination on chat (unlike rest of API which uses offset) — chat history can be 10,000+ messages
+- Default `limit: 50`; max 200
+- Order: newest LAST in the array (so `data[data.length - 1]` is the latest)
+- `read_at`: set on the message when counterparty calls `POST /v3/me/chats/:id/read`
+
+**Migration coverage:** mobile's `chat_get_messages` (`chat/get_messages`)
+
+---
+
+##### POST /v3/me/chats/:id/messages
+
+**Auth:** participant in the conversation
+**Status:** ❌ NEW (M3.1.9)
+**Idempotency:** ACCEPTED via `Idempotency-Key` (prevents network-retry double-sends)
+
+**Request:**
+```typescript
+{
+  body: string                        // 1-2000 chars (text-only message)
+}
+```
+
+**Response 201:** Single message shape.
+
+**Error responses:**
+- `404 CHAT_CONVERSATION_NOT_FOUND` — conversation doesn't exist or user is not a participant
+- `422 CHAT_MESSAGE_TOO_LONG` — body > 2000 chars
+- `422 VALIDATION_FAILED` — body empty
+
+**Side effects:**
+- Insert message
+- Update conversation's `updated_at`
+- Increment counterparty's `unread_count`
+- Emit `ChatMessageSentEvent` for push notifications (M4)
+
+**Migration coverage:** mobile's `chat_send_message` (`chat/send_message`)
+
+---
+
+##### POST /v3/me/chats/:id/messages/image
+
+**Auth:** participant
+**Status:** ❌ NEW (M3.1.9)
+**Content-Type:** `multipart/form-data` (only multipart endpoint in 0e.5)
+
+**Multipart fields:**
+- `image` (file, required) — JPEG/PNG/WebP, max 5 MB
+- `caption` (text, optional) — max 500 chars
+
+**Response 201:** Single message shape with `image_url` populated, `body` = caption (may be empty).
+
+**Error responses:**
+- `404 CHAT_CONVERSATION_NOT_FOUND`
+- `422 VALIDATION_FAILED` — file missing, wrong MIME type, or > 5 MB
+
+**Side effects:**
+- Upload file to CDN (Cloudflare R2 or S3 — M3.1.9 decision)
+- Store `image_url` on the message
+- Same as text message side effects after upload
+
+**Migration coverage:** mobile's `chat_upload_image` (`chat/upload_image`)
+
+---
+
+##### POST /v3/me/chats/:id/read
+
+**Auth:** participant
+**Status:** ❌ NEW (M3.1.9)
+
+**Purpose:** Mark all unread messages in this conversation as read.
+
+**Request:** empty body
+
+**Response 200:**
+```typescript
+{
+  conversation_id: string,
+  marked_read_count: number,
+  unread_count_after: number          // 0 normally; could be > 0 in races
+}
+```
+
+**Side effects:**
+- Set `read_at` to NOW() on all unread messages where `sender_id != user_id`
+- Decrement vendor's unread count if user is customer (and vice versa)
+
+**Migration coverage:** mobile's `chat_mark_read` (`chat/mark_read`)
+
+---
+
+##### GET /v3/me/chats/unread-count
+
+**Auth:** authenticated
+**Status:** ❌ NEW (M3.1.9)
+
+**Purpose:** Lightweight count for tab badge. Hit on app foreground + periodically.
+
+**Response 200:**
+```typescript
+{
+  unread_conversation_count: number,
+  unread_message_count: number
+}
+```
+
+**Notes:**
+- Cached briefly (~5s) to avoid hammering DB
+- Eventually consistent — slight lag acceptable
+
+**Migration coverage:** mobile's `chat_get_unread_count` (`chat/get_unread_count`)
+
+---
+
+##### GET /v3/me/chats/prompts
+
+**Auth:** authenticated
+**Status:** ❌ NEW (M3.1.9)
+
+**Purpose:** Pre-filled quick-reply templates for vendor → customer (e.g. "Your order is being prepared", "Thank you for your purchase"). Vendor-side feature.
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      label: string,                  // "Order shipped"
+      body: string,                   // "Your order has been shipped via..."
+      category: 'order' | 'shipping' | 'support' | 'thanks'
+    }
+  ]
+}
+```
+
+**Notes:**
+- Read-only; prompts are admin-curated (in M4 portal admin panel)
+- For M3, ship with seed data (a dozen common prompts)
+- Distinct from per-vendor custom canned responses (M4)
+
+**Migration coverage:** mobile's `chat_get_prompts` (`chat/get_prompts`)
+
+---
+
+##### GET /v3/me/chats/vendors
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Purpose:** List vendors the user has placed orders with — for "start a chat" flow where customer picks a vendor.
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      slug: string,
+      name: string,
+      logo_url: string | null,
+      latest_order: {
+        number: string,
+        status: string,
+        date: string
+      },
+      has_existing_chat: boolean
+    }
+  ]
+}
+```
+
+**Migration coverage:** mobile's `chat_get_vendors` (`chat/get_vendors`)
+
+---
+
+##### GET /v3/me/chats/vendor-orders
+
+**Auth:** vendor
+**Status:** ❌ NEW (M3.1.9)
+
+**Purpose:** Vendor-side: list of customer orders that have active chat threads. Used by vendor's chat dashboard.
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      order: { number, status, total_amount, customer_name },
+      conversation: {
+        id: string,                   // UUID
+        unread_count: number,
+        last_message_at: string
+      }
+    }
+  ]
+}
+```
+
+**Migration coverage:** mobile's `chat_get_vendor_orders` (`chat/get_vendor_orders`)
+
+#### 5.5.5 Tickets contracts (5 ops customer-side; admin-side moved to 0e.7)
+
+Tickets are formal support requests, distinct from chat. Tickets have a status (`open`, `in_progress`, `resolved`, `closed`) and a priority. Threaded message log.
+
+**Identifier:** ticket number `TKT-YYYY-NNNNNNN` per 0e.1 §5.1.8.
+
+---
+
+##### POST /v3/me/tickets
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+**Idempotency:** ACCEPTED
+
+**Request:**
+```typescript
+{
+  subject: string,                    // 5-200 chars
+  body: string,                       // 10-5000 chars
+  category: 'order' | 'payment' | 'product' | 'account' | 'other',
+  order_number?: string | null,       // optional; if relating to a specific order
+  priority?: 'low' | 'normal' | 'high'  // defaults to 'normal'; high requires staff override later
+}
+```
+
+**Response 201:**
+```typescript
+{
+  data: {
+    number: string,                   // TKT-2026-0001234
+    subject: string,
+    category: string,
+    priority: string,
+    status: 'open',
+    related_order: { number, status } | null,
+    message_count: 1,
+    created_at: string
+  }
+}
+```
+
+**Error responses:**
+- `422 VALIDATION_FAILED` — subject/body length issues
+- `404 NOT_FOUND` — order_number unknown
+
+**Side effects:**
+- Create ticket + initial message (combined into one operation)
+- Emit `TicketOpenedEvent` for admin notification
+
+**Migration coverage:** mobile's `createTicket` (`customer/create_ticket`)
+
+---
+
+##### GET /v3/me/tickets
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.9)
+
+**Query parameters:** `?limit=&offset=&status=`
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      number: string,
+      subject: string,
+      category: string,
+      status: string,
+      priority: string,
+      message_count: number,
+      unread_count: number,           // staff replies user hasn't seen
+      last_message_at: string,
+      created_at: string,
+      updated_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Migration coverage:** Not explicit in mobile's GlobalComponent but implied (mobile's `readTicket` is single-ticket; this is list)
+
+---
+
+##### GET /v3/me/tickets/:number
+
+**Auth:** customer (must own)
+**Status:** ❌ NEW (M3.1.9)
+
+**Response 200:**
+```typescript
+{
+  data: {
+    number: string,
+    subject: string,
+    body: string,                     // initial body
+    category: string,
+    status: string,
+    priority: string,
+    related_order: { /* full order summary */ } | null,
+    message_count: number,
+    created_at: string,
+    updated_at: string,
+    resolved_at: string | null,
+    closed_at: string | null
+  }
+}
+```
+
+**Error responses:**
+- `404 TICKET_NOT_FOUND` — ticket doesn't exist or belongs to another user
+
+**Migration coverage:** mobile's `readTicket` (`customer/read_ticket`)
+
+---
+
+##### GET /v3/me/tickets/:number/messages
+
+**Auth:** customer (must own)
+**Status:** ❌ NEW (M3.1.9)
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      sender: {
+        type: 'customer' | 'staff',   // 'staff' = admin user
+        display_name: string,         // 'You' or 'Support Team'
+        avatar_url: string | null
+      },
+      body: string,
+      attachment_urls: string[],      // empty array if no attachments
+      sent_at: string,
+      read_at: string | null,
+      sent_by_me: boolean
+    }
+  ]
+}
+```
+
+**Notes:**
+- Not paginated (tickets typically have < 50 messages; threshold is fine)
+- Order: chronological (oldest first)
+- Initial message at index 0
+
+**Migration coverage:** mobile's `readTicketMessages` (`customer/read-ticket-messages`)
+
+---
+
+##### POST /v3/me/tickets/:number/messages
+
+**Auth:** customer (must own)
+**Status:** ❌ NEW (M3.1.9)
+**Idempotency:** ACCEPTED
+
+**Request:**
+```typescript
+{
+  body: string,                       // 1-5000 chars
+  // M4: attachment uploads via separate multipart endpoint
+}
+```
+
+**Response 201:** Single message shape.
+
+**Error responses:**
+- `404 TICKET_NOT_FOUND`
+- `409 TICKET_CLOSED` — ticket is in `closed` state; reopen via reply impossible
+- `422 VALIDATION_FAILED` — body empty/too long
+
+**Side effects:**
+- Add message to ticket thread
+- Update ticket `updated_at`
+- If ticket was `resolved`, transition to `open` (customer reply re-opens)
+- Emit `TicketRepliedEvent` for admin notification
+
+**Migration coverage:** mobile's `sendTicketMessage` (`customer/send-ticket-message`)
+
+#### 5.5.6 Account-side review surface (covered in 0e.2 §5.2.6)
+
+The 3 user-review-history ops (`GET /v3/me/reviews`, `DELETE /v3/me/reviews/:id`, `GET /v3/me/store/reviews`) are specified in 0e.2. Not duplicated here.
+
+#### 5.5.7 0e.5 Summary
+
+**29 operations specified** across 5 clusters. With 0e.5's additions (the `GET /v3/me/follows` endpoint not in 0d count), real total is **30 ops**.
+
+| Cluster | Ops in 0e.5 | v3 exists | v3 to BUILD |
+|---|---|---|---|
+| Wishlist (items + labels) | 5 | 0 | 5 |
+| Reviews (write+helpful) | 4 (3 in 0e.5 + 1 alias) | 0 | 4 |
+| Follow | 3 (2 in 0d + 1 added) | 0 | 3 |
+| Chat | 10 | 0 | 10 |
+| Tickets (customer-side) | 5 | 0 | 5 |
+| **Total in 0e.5** | **27** | **0** | **27** |
+
+(Account-side review ops covered in 0e.2; not re-counted here.)
+
+**ALL net-new.** No reality-check savings on this section.
+
+#### 5.5.8 Supporting tables needed (built in M3.1.9)
+
+```sql
+-- Wishlist
+CREATE TABLE wishlist_items (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  product_id INTEGER NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  label_id INTEGER REFERENCES wishlist_labels(id) ON DELETE SET NULL,
+  added_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, product_id, label_id)
+);
+CREATE INDEX idx_wishlist_user ON wishlist_items (user_id, added_at DESC);
+
+CREATE TABLE wishlist_labels (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, name)
+);
+
+-- Reviews helpful votes (reviews themselves are existing — ProductReview entity)
+CREATE TABLE review_helpful_votes (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  review_id INTEGER NOT NULL REFERENCES product_reviews(id) ON DELETE CASCADE,
+  voted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, review_id)
+);
+
+-- Follows
+CREATE TABLE vendor_follows (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vendor_id INTEGER NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  followed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, vendor_id)
+);
+CREATE INDEX idx_follows_user ON vendor_follows (user_id);
+CREATE INDEX idx_follows_vendor ON vendor_follows (vendor_id);
+
+-- Chat
+CREATE TABLE conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  vendor_id INTEGER NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_conv_customer ON conversations (customer_id, updated_at DESC);
+CREATE INDEX idx_conv_vendor ON conversations (vendor_id, updated_at DESC);
+
+CREATE TABLE messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID NOT NULL REFERENCES conversations(id) ON DELETE CASCADE,
+  sender_user_id INTEGER NOT NULL REFERENCES users(id),
+  body TEXT,
+  image_url TEXT,
+  sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  read_at TIMESTAMPTZ
+);
+CREATE INDEX idx_msg_conv ON messages (conversation_id, sent_at);
+CREATE INDEX idx_msg_unread ON messages (conversation_id) WHERE read_at IS NULL;
+
+CREATE TABLE chat_prompts (
+  id BIGSERIAL PRIMARY KEY,
+  label TEXT NOT NULL,
+  body TEXT NOT NULL,
+  category TEXT NOT NULL,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  is_active BOOLEAN NOT NULL DEFAULT true
+);
+
+-- Tickets
+CREATE TABLE support_tickets (
+  id BIGSERIAL PRIMARY KEY,
+  number TEXT NOT NULL UNIQUE,        -- TKT-YYYY-NNNNNNN
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  subject TEXT NOT NULL,
+  category TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'open',
+  priority TEXT NOT NULL DEFAULT 'normal',
+  related_order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  resolved_at TIMESTAMPTZ,
+  closed_at TIMESTAMPTZ
+);
+CREATE INDEX idx_tickets_user ON support_tickets (user_id, updated_at DESC);
+
+CREATE TABLE ticket_messages (
+  id BIGSERIAL PRIMARY KEY,
+  ticket_id INTEGER NOT NULL REFERENCES support_tickets(id) ON DELETE CASCADE,
+  sender_user_id INTEGER NOT NULL REFERENCES users(id),
+  sender_type TEXT NOT NULL,          -- 'customer' | 'staff'
+  body TEXT NOT NULL,
+  attachment_urls JSONB NOT NULL DEFAULT '[]'::jsonb,
+  sent_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  read_at TIMESTAMPTZ
+);
+CREATE INDEX idx_ticketmsg ON ticket_messages (ticket_id, sent_at);
+```
+
+#### 5.5.9 Decisions locked in 0e.5
+
+- Wishlist items can belong to ZERO or ONE label (multi-listing is M4)
+- Wishlist removal uses `DELETE /v3/me/wishlist/items/:product_slug` (not internal item id)
+- One review per (user, product) — POST with existing review returns existing with `was_existing: true`
+- Review purchase-requirement: NOT enforced in M3 (legacy didn't); M4 toggle
+- Helpful votes use separate endpoints (POST + DELETE) with `(user_id, review_id)` UNIQUE
+- Follow endpoints use `vendor_slug` in URL (not internal id)
+- Follow list includes `new_products_count` since-last-viewed (M3.1.9 implementation detail)
+- Chat polling, NOT WebSockets, in M3
+- Chat conversation IDs are UUID (privacy + collision avoidance)
+- Chat messages use cursor pagination (`?before=`) — chat history can be massive
+- Chat messages return order: chronological (oldest first); newest at end
+- Image messages are a SEPARATE endpoint (`POST /v3/me/chats/:id/messages/image`) with multipart
+- Image size cap: 5 MB; types: JPEG/PNG/WebP
+- Chat prompts are admin-curated (read-only for customers); M3 ships with seed data
+- Tickets use `TKT-YYYY-NNNNNNN` identifier in URLs
+- Ticket replies from customer RE-OPEN a `resolved` ticket
+- Ticket reply on `closed` ticket → 409 (must open new ticket)
+- Admin ticket endpoints in 0e.7 scope
+- All chat + ticket message timestamps are ISO-8601 UTC; client localizes
+- `GET /v3/me/chats` is scope-aware (customer vs vendor view via auth role)
+- `GET /v3/me/chats/unread-count` cached briefly (~5s) for tab badge polling
+
