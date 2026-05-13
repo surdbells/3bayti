@@ -6,21 +6,41 @@ import { ApiConfigService } from './api-config.service';
 /**
  * Thin HTTP client for the v2 (public, GET-only) API.
  *
- * Why we don't reuse the mobile app's NetworkService:
- *   - The mobile NetworkService uses `post_request` / `get_request`
- *     naming conventions that don't fit a typed Angular Universal app
- *   - It assumes a token + id pattern in every call body — irrelevant
- *     for v2 which is unauthenticated
- *   - SSR-safe HTTP needs a slightly different setup (HttpClient via
- *     `provideHttpClient(withFetch())` which we'll wire in app.config.ts
- *     in a later commit)
+ * @deprecated As of Day 5 of the 10-day rollout (M2.2.5), this service
+ * is legacy. New code SHOULD inject `RoutedHttpClient` from
+ * `app/core/http/routed-http-client.ts` instead. That client knows
+ * about ENDPOINT_ROUTING in `@3bayti/api-client` and picks the right
+ * backend (legacy v2 vs new v3) per logical endpoint.
  *
- * What this gives us:
- *   - Strongly-typed `get<T>()` + `getList<T>()` returning Observables
- *   - Centralized URL composition via ApiConfigService
- *   - Consistent error handling (logs once, propagates HttpErrorResponse)
- *   - Cache headers stripped on errors so we don't leak debug info
- *   - Works in both SSR (Node fetch) and browser contexts
+ * Existing consumers (HomeDataService, product-detail.ts, category-
+ * detail.ts) are being migrated incrementally in Phase 5.D. Once
+ * every call site has moved, this file gets deleted.
+ *
+ * Why it's still here right now:
+ *   - Keeping the migration to one commit per consumer (rather than a
+ *     big-bang rewrite) lets us flip endpoints one at a time and
+ *     verify rendering between each step.
+ *   - Some consumers might stay on the legacy path for a release if
+ *     v3 has a parity gap we discover at runtime — having the v2
+ *     escape hatch reduces risk.
+ *
+ * Original docstring (legacy context, preserved for posterity):
+ *
+ *   Why we don't reuse the mobile app's NetworkService:
+ *     - The mobile NetworkService uses `post_request` / `get_request`
+ *       naming conventions that don't fit a typed Angular Universal app
+ *     - It assumes a token + id pattern in every call body — irrelevant
+ *       for v2 which is unauthenticated
+ *     - SSR-safe HTTP needs a slightly different setup (HttpClient via
+ *       `provideHttpClient(withFetch())` which we'll wire in app.config.ts
+ *       in a later commit)
+ *
+ *   What this gives us:
+ *     - Strongly-typed `get<T>()` + `getList<T>()` returning Observables
+ *     - Centralized URL composition via ApiConfigService
+ *     - Consistent error handling (logs once, propagates HttpErrorResponse)
+ *     - Cache headers stripped on errors so we don't leak debug info
+ *     - Works in both SSR (Node fetch) and browser contexts
  */
 @Injectable({ providedIn: 'root' })
 export class ApiClientService {
@@ -28,12 +48,7 @@ export class ApiClientService {
   private config = inject(ApiConfigService);
 
   /**
-   * GET a single resource, returning the unwrapped `data` field of the
-   * v2 envelope. The v2 contract wraps responses as `{ data, meta }`,
-   * so we unwrap here so consumers don't have to.
-   *
-   * @param path  Path relative to the v2 base, e.g. `/categories/abayas`
-   * @param params Optional query params
+   * @deprecated Use `RoutedHttpClient.get(routeKey, options)` instead.
    */
   get<T>(path: string, params?: Record<string, string | number | boolean>): Observable<T> {
     const url = this.config.v2BaseUrl + path;
@@ -51,8 +66,7 @@ export class ApiClientService {
   }
 
   /**
-   * GET an envelope and return only `data`. Use for single-resource
-   * endpoints like `/products/:slug`.
+   * @deprecated Use `RoutedHttpClient.getData(routeKey, options)` instead.
    */
   getOne<T>(path: string, params?: Record<string, string | number | boolean>): Observable<T> {
     const url = this.config.v2BaseUrl + path;
@@ -68,8 +82,8 @@ export class ApiClientService {
   }
 
   /**
-   * GET an envelope of a list endpoint and return both `data` and `meta`.
-   * Use for paginated endpoints like `/products?category=:slug`.
+   * @deprecated Use `RoutedHttpClient.get(routeKey, options)` instead —
+   * it returns `NormalisedResponse<T>` which has both `data` and `meta`.
    */
   getList<T>(
     path: string,
@@ -115,6 +129,10 @@ export class ApiClientService {
   }
 }
 
+/**
+ * @deprecated Use `PaginationMeta` from `@3bayti/api-client` (re-exported
+ * via `RoutedHttpClient`'s `NormalisedResponse` type).
+ */
 export interface PaginationMeta {
   total: number;
   limit: number;
