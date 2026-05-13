@@ -1,9 +1,32 @@
+/* tsconfig for @3bayti/api-client.
+ *
+ * Inherits from @3bayti/tsconfig/lib.json (library defaults), then
+ * locally enables noPropertyAccessFromIndexSignature.
+ *
+ * Why noPropertyAccessFromIndexSignature locally:
+ * Day 5 of M2 rollout hit 14 TS4111 errors when apps/web (which has
+ * this flag in its tsconfig) consumed @3bayti/api-client as a workspace
+ * dep. The package's source uses dot-access on `Record<string, unknown>`
+ * typed values (obj.error, headers.Authorization). Each downstream
+ * consumer with the strict flag enabled would have hit those errors
+ * independently.
+ *
+ * Enabling the flag in this package's OWN tsconfig means the package's
+ * CI (the Packages workflow) catches violations at the source, not at
+ * downstream consume-time. The fix-up commit (M2.2.5d-ci) brought all
+ * existing dot-accesses to bracket notation. Now they stay correct.
+ *
+ * Consider promoting this flag to packages/tsconfig-3bayti/base.json
+ * when other packages have been audited. For now, surgical enablement
+ * here keeps blast radius small.
+ */
 {
   "extends": "@3bayti/tsconfig/lib.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM"],
     "rootDir": "./src",
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "noPropertyAccessFromIndexSignature": true
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
