@@ -1040,3 +1040,496 @@ A few endpoints have unclear semantics or are duplicates-of-duplicates needing c
 
 These get clarified during M3.1.0e (v3 contract design).
 
+
+---
+
+## Section 5 — Master v3 Contract Design (M3.1.0e)
+
+**Status:** 🚧 IN PROGRESS — broken into 7 sub-sub-phases per the M3.1.0e scoping decision.
+
+| Sub-phase | Categories | # ops | Status |
+|---|---|---|---|
+| **0e.1** | Foundations (conventions only) | n/a | ✅ Complete (this commit) |
+| **0e.2** | Auth + Identity + Account/Profile | 26 | Pending |
+| **0e.3** | Catalog + Search + Utility | 17 | Pending |
+| **0e.4** | Cart + Checkout + Orders + Payment | 12 | Pending |
+| **0e.5** | Wishlist + Reviews + Follow + Chat + Tickets | 29 | Pending |
+| **0e.6** | Vendor Self-Service | 39 | Pending |
+| **0e.7** | Admin / Platform | 30 | Pending |
+
+Per-endpoint contracts in 0e.2-0e.7 reference back to this Foundations section for shared conventions.
+
+---
+
+### 5.1 (M3.1.0e.1) — Foundations
+
+This sub-section defines the cross-cutting conventions that every v3 endpoint follows. It documents EXISTING conventions in the apps/api codebase (rather than inventing new ones) and locks them as the explicit standard for M3 work.
+
+#### 5.1.1 Response envelope (success)
+
+Every successful v3 response uses one of three envelope shapes:
+
+**Shape A — Single resource:**
+```typescript
+{
+  data: { /* the resource */ }
+}
+```
+Used by GET single-resource endpoints (`GET /v3/me/profile`, `GET /v3/products/:slug`, etc.).
+
+**Shape B — Paginated list:**
+```typescript
+{
+  data: Array<{ /* resources */ }>,
+  meta: {
+    total: number,    // unfiltered total (not just this page)
+    limit: number,    // echoed from request (1-100, default varies)
+    offset: number,   // echoed from request
+    has_more: boolean // (offset + items.length) < total
+  }
+}
+```
+Used by all GET-list endpoints. The `has_more` computation uses ACTUAL items returned, not requested limit — handles last-page correctly.
+
+**Shape C — Custom envelope (no `data` wrapper):**
+For endpoints whose response is conceptually a single object that wraps multiple related arrays. Auth responses fall here:
+```typescript
+{
+  access_token: string,
+  refresh_token: string,
+  user: { /* profile */ },
+  expires_in: number
+}
+```
+Used when wrapping in `data: { access_token: ... }` would feel forced. The general rule: **prefer Shape A**; use Shape C only when there's no single "resource" being returned.
+
+**HTTP status codes for success:**
+- `200 OK` — read endpoints, idempotent updates (PATCH/PUT)
+- `201 Created` — POST that creates a new resource (response includes the created resource)
+- `204 No Content` — DELETE, logout, mark-read, and other "success but nothing to return" operations. No body.
+
+The `Responder` trait in `apps/api/src/Http/Responder.php` provides `ok()`, `created()`, `noContent()` helpers. Controllers use these for consistency.
+
+**Critical formatting rules:**
+- `Content-Type: application/json` always
+- `JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION` encoding flags
+- Empty success body is `{}` not `[]` (object shape, not array)
+- ISO-8601 UTC for all timestamps (e.g. `"2026-05-13T10:03:01+00:00"`)
+- Decimal money values as numbers (e.g. `980.0`), not strings; always include `currency: "AED"` sibling field
+
+#### 5.1.2 Response envelope (error)
+
+Every error response uses this shape:
+
+```typescript
+{
+  error: {
+    code: string,       // ErrorCodes::* (see §5.1.3)
+    message: string,    // Safe-to-display public message
+    details?: object    // Optional structured context (per-field errors, etc.)
+  }
+}
+```
+
+The `details` field is OPTIONAL. When present, its shape depends on the error code:
+
+| Error code | `details` shape |
+|---|---|
+| `VALIDATION_FAILED` | `{ fields: { [fieldName: string]: string[] } }` (per-field error messages) |
+| `OTP_RATE_LIMITED` | `{ retry_after_seconds: number }` |
+| Most others | (omitted) |
+
+**HTTP status codes for errors:**
+- `400 Bad Request` — body wasn't parseable; not used for field-level validation
+- `401 Unauthorized` — auth failure (token missing/invalid, login failed, refresh expired)
+- `403 Forbidden` — authenticated but not allowed (role check failed)
+- `404 Not Found` — resource doesn't exist
+- `409 Conflict` — uniqueness violation (email taken, phone taken)
+- `422 Unprocessable Entity` — field-level validation errors (body parsed; fields invalid)
+- `429 Too Many Requests` — rate limited
+- `500 Internal Server Error` — uncaught exception; `code: "INTERNAL_ERROR"`
+
+The convention: **400 is for malformed body, 422 is for invalid field values.** This matches RFC 7807 spirit and common REST style. The legacy v1/v2 sometimes used 400 for everything; v3 is stricter.
+
+The `HttpException` class in `apps/api/src/Http/Errors/HttpException.php` provides named factories: `badRequest()`, `unauthorized()`, `forbidden()`, `notFound()`, `validation()`, `conflict()`, etc. Controllers throw these; `ApiErrorMiddleware` converts to the envelope.
+
+#### 5.1.3 Error code vocabulary
+
+Error codes are SHARED across endpoints. They're declared as constants in `apps/api/src/Http/Errors/ErrorCodes.php` and are part of the public API contract — clients switch on them to render appropriate UI.
+
+**Naming convention:** `DOMAIN_REASON` — domain prefix groups related codes; reason describes the failure. Examples: `AUTH_INVALID_CREDENTIALS`, `OTP_RATE_LIMITED`, `VALIDATION_FAILED`.
+
+**Current ErrorCodes inventory (will grow during M3):**
+
+```
+AUTH_MISSING_TOKEN              Authorization header missing/wrong shape
+AUTH_INVALID_TOKEN              Token sig/audience/expiry rejected
+AUTH_INVALID_CREDENTIALS        Email/password wrong
+AUTH_ACCOUNT_INACTIVE           User exists, is_active = false
+AUTH_PHONE_NOT_VERIFIED         Registration incomplete
+AUTH_REFRESH_TOKEN_INVALID      Refresh token unknown/revoked/expired
+
+OTP_RATE_LIMITED                Per-phone hourly cap exceeded
+OTP_VERIFICATION_FAILED         Wrong code, expired, consumed (collapsed)
+OTP_PROVIDER_ERROR              CPaaS failure
+
+VALIDATION_FAILED               Schema validation failed (details.fields populated)
+VALIDATION_BAD_REQUEST          Body not valid JSON or not a JSON object
+
+CONFLICT_EMAIL_TAKEN            Email already in use
+CONFLICT_PHONE_TAKEN            Phone already in use
+
+NOT_FOUND                       Resource doesn't exist
+FORBIDDEN                       Role check failed
+INTERNAL_ERROR                  Uncaught exception (500)
+```
+
+**M3 will add (per M3.1.0e.2+ contract design):**
+
+```
+CART_ITEM_NOT_FOUND             Cart item ID unknown or already removed
+CART_PRODUCT_UNAVAILABLE        Product is out of stock or deleted
+CART_INVALID_QUANTITY           Quantity ≤ 0 or > stock available
+
+ORDER_NOT_FOUND                 Order ID unknown for this user
+ORDER_NOT_CANCELLABLE           Order is already shipped / paid out
+
+PAYMENT_INITIATION_FAILED       Gateway rejected the initiate call
+PAYMENT_WEBHOOK_DUPLICATE       Idempotency-key replay (informational, returns 200)
+PAYMENT_WEBHOOK_SIGNATURE_INVALID  Gateway signature didn't verify
+PAYMENT_REFUND_FAILED           Refund attempt rejected by gateway
+
+WISHLIST_LABEL_NOT_FOUND        Label ID unknown
+WISHLIST_ITEM_ALREADY_EXISTS    Product already in wishlist (when uniqueness matters)
+
+REVIEW_ALREADY_EXISTS           User already reviewed this product
+REVIEW_PRODUCT_NOT_PURCHASED    Trying to review without buying (if we enforce that)
+
+CHAT_CONVERSATION_NOT_FOUND     Conversation ID unknown for this user
+CHAT_MESSAGE_TOO_LONG           Body exceeds max length
+
+TICKET_NOT_FOUND                Ticket ID unknown for this user
+TICKET_CLOSED                   Can't add messages to closed ticket
+
+COUPON_NOT_FOUND                Coupon code unknown
+COUPON_EXPIRED                  Coupon past valid date
+COUPON_NOT_APPLICABLE           Doesn't apply to current cart contents
+COUPON_USAGE_LIMIT_REACHED      Per-user or global limit hit
+```
+
+When a new error code is needed, the convention is: add to ErrorCodes.php first, then throw it. **Never throw a literal string** — IDE refactoring + PHPStan won't catch typos.
+
+#### 5.1.4 Authentication model
+
+**Token type:** JWT (HS256-signed; signing key in env).
+
+**Header format:**
+```
+Authorization: Bearer <jwt>
+```
+
+No support for other auth schemes. Cookies-based auth was not adopted in v3.
+
+**Token lifecycle:**
+- Access token: 30 minutes TTL (default; can extend to 24h via `remember_me: true` on web)
+- Refresh token: 30 days TTL (stored in `refresh_tokens` table; can be revoked server-side)
+- Refresh flow: `POST /v3/auth/refresh` with refresh token → new access + new refresh (rotation)
+
+**Token claims:**
+```typescript
+{
+  sub: string,    // user_id as string
+  email: string,
+  roles: string[], // ['customer'], ['vendor'], ['admin'], or combinations
+  iat: number,    // issued-at
+  exp: number,    // expiry
+  jti: string,    // unique JWT id (for refresh rotation tracking)
+  aud: string,    // 'api-v3.3bayti.ae' (audience check on validation)
+}
+```
+
+**Scopes:**
+
+Each endpoint declares its required scope via middleware. Three scopes (matching the three role classes):
+
+| Scope | Required roles | Endpoints |
+|---|---|---|
+| `public` | none | `/v3/health`, catalog browse, login, register |
+| `customer` | `customer` | `/v3/me/*` (any user can read their own data) |
+| `vendor` | `vendor` | `/v3/me/store/*` (vendor self-service; user must have vendor role) |
+| `admin` | `admin` | `/v3/admin/*` (admin operations) |
+
+A user can hold multiple roles (e.g. a vendor is also a customer). Routes requiring `vendor` accept users whose `roles` array contains `'vendor'`.
+
+**Middleware stack per route:**
+
+```
+Public route:    [BaseMiddleware]
+Customer route:  [BaseMiddleware, AuthMiddleware('customer')]
+Vendor route:    [BaseMiddleware, AuthMiddleware('vendor')]
+Admin route:     [BaseMiddleware, AuthMiddleware('admin')]
+```
+
+`AuthMiddleware` extracts the token, validates it, loads the User, attaches to request via `AuthMiddleware::ATTR_USER` attribute. Controllers retrieve the user via `$request->getAttribute(AuthMiddleware::ATTR_USER)`.
+
+**Failure modes:**
+- Missing `Authorization` header → `401 AUTH_MISSING_TOKEN`
+- Malformed token → `401 AUTH_INVALID_TOKEN`
+- Valid token but `is_active = false` → `401 AUTH_ACCOUNT_INACTIVE`
+- Token's `roles` doesn't include required scope → `403 FORBIDDEN`
+
+#### 5.1.5 Pagination
+
+Already locked in `PaginatedEnvelope` helper. Re-stated here for completeness:
+
+**Request:**
+```
+GET /v3/products?limit=24&offset=0
+```
+
+| Param | Range | Default | Notes |
+|---|---|---|---|
+| `limit` | 1-100 | 24 | Capped at 100 to prevent abuse |
+| `offset` | ≥ 0 | 0 | No upper bound, but large offsets are slow |
+
+Page-number-based pagination (`?page=1`) is NOT supported. Offset-based is consistent across the API.
+
+**Response meta:**
+```typescript
+meta: {
+  total: number,    // unfiltered-by-pagination total in DB
+  limit: number,
+  offset: number,
+  has_more: boolean
+}
+```
+
+**Cursor pagination:** NOT IMPLEMENTED. Would be a future enhancement (M5+) for very large lists. Offset-based works for all current data sizes (≤ 2,000 products, ≤ 100 vendors, etc.).
+
+#### 5.1.6 Filtering + sorting
+
+For list endpoints, two query parameter categories:
+
+**Filters** — narrow the result set:
+```
+?vendor=laduna-abaya         # slug-based filter
+?category=abayas             # slug-based filter
+?min_price=50&max_price=500  # range filter
+?featured=true               # boolean
+?status=processing           # enum (where applicable)
+?q=woven                     # full-text search
+```
+
+Slug-based filters resolve to internal IDs (e.g., `?vendor=laduna-abaya` → vendor_id lookup → SQL WHERE vendor_id=N). Unknown slugs return an empty result, not 404 ("no products for unknown vendor" is a valid empty list).
+
+**Sorting:**
+```
+?sort=newest        # created_at DESC (default for catalog)
+?sort=oldest        # created_at ASC
+?sort=price_asc     # price.amount ASC
+?sort=price_desc    # price.amount DESC
+?sort=popular       # internal popularity metric (TBD per category)
+```
+
+Sort values are CASE-SENSITIVE. Invalid sort values return `422 VALIDATION_FAILED` with `details.fields.sort`.
+
+Multi-sort (e.g. `?sort=newest,price_asc`) is NOT supported. Single sort key only. If a category needs different default ordering, the controller hard-codes it (e.g., wishlist defaults to "recently added").
+
+#### 5.1.7 Idempotency (for POST endpoints that create resources)
+
+For state-changing POST endpoints where double-submission could cause duplicate side effects (creating duplicate orders, charging twice, etc.), clients SHOULD supply an `Idempotency-Key` header:
+
+```
+POST /v3/checkout
+Authorization: Bearer <jwt>
+Idempotency-Key: client-generated-uuid-v4
+Content-Type: application/json
+
+{ ...checkout body... }
+```
+
+**Server behavior:**
+
+1. First call with this key: process normally, cache the response keyed by `(user_id, idempotency_key)` for 24 hours
+2. Subsequent calls with the same key (within 24h): return the cached response with same status code
+3. Calls with the same key but DIFFERENT request body: `422 VALIDATION_FAILED` with `details.idempotency_conflict: true`
+
+**Endpoints that REQUIRE idempotency key (M3.1.0e contracts will mark these):**
+
+- `POST /v3/checkout` (creating an order + initiating payment)
+- `POST /v3/cart/items` (adding to cart — though duplicates are less critical here)
+- `POST /v3/payment/webhook/noon` (Noon may deliver same webhook multiple times)
+- `POST /v3/reviews` (preventing accidental duplicate reviews)
+
+**Endpoints that accept but don't require:**
+- All other POST endpoints
+
+**Storage:** `idempotency_keys` table:
+
+```sql
+CREATE TABLE idempotency_keys (
+  id BIGSERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id),  -- nullable for webhooks
+  key TEXT NOT NULL,
+  request_hash TEXT NOT NULL,  -- SHA-256 of canonicalized body
+  response_status INTEGER NOT NULL,
+  response_body JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  expires_at TIMESTAMPTZ NOT NULL,
+  UNIQUE (user_id, key)
+);
+CREATE INDEX idx_idempotency_expires ON idempotency_keys (expires_at);
+```
+
+Background job deletes expired entries (key TTL = 24h).
+
+This table doesn't exist yet — M3.1.6 builds it as part of cart/checkout/orders infrastructure.
+
+#### 5.1.8 ID + slug conventions
+
+**Public-facing identifiers (in URLs and response bodies):**
+
+| Resource type | Identifier | Example | Why |
+|---|---|---|---|
+| Products | slug | `la23`, `woven-waves` | SEO-friendly URLs |
+| Vendors | slug | `laduna-abaya` | SEO-friendly URLs |
+| Categories | slug | `abayas`, `kaftans` | SEO-friendly URLs |
+| Collections | slug | (TBD) | SEO if public-facing |
+| Users | integer ID | `13` | No SEO need; admin only |
+| Orders | string (order number) | `ORD-2026-0001234` | Human-readable for support |
+| Cart items | integer ID | `42` | Internal only |
+| Reviews | integer ID | `42` | Internal only |
+| Coupons | code (string) | `WELCOME10`, `SUMMER25` | User-facing |
+| Labels | integer ID | `42` | Internal only |
+| Addresses | integer ID | `42` | Internal only |
+| Tickets | string (ticket number) | `TKT-2026-0001234` | Human-readable |
+| Conversations | UUID | `0188...` | Privacy + collision avoidance |
+| Messages | UUID | `0188...` | Same as conversations |
+
+**URL conventions:**
+
+- `/v3/products/:slug` — slug-based for catalog resources
+- `/v3/me/orders/:order_number` — order-number-based for orders
+- `/v3/me/cart/items/:item_id` — integer ID for cart items (private to user)
+
+**Slug generation:**
+
+- Lowercase
+- Hyphen-separated
+- Latin-only (Arabic transliterates via a library — M3.1.10 task per `m3-backlog.md`)
+- Numeric suffix for collisions: `laduna-abaya`, `laduna-abaya-2`, `laduna-abaya-3`
+- Stable: once assigned, never regenerated. The vendor #92 slug fix (Day 7) was a one-off correction; not a precedent for routine renames.
+
+**Order number format:** `ORD-YYYY-NNNNNNN`
+- `YYYY` = year of creation (4 digits)
+- `NNNNNNN` = zero-padded sequence within the year (7 digits supports 9.9M orders/year)
+- Example: `ORD-2026-0001234`
+
+**Ticket number format:** `TKT-YYYY-NNNNNNN` (same shape).
+
+#### 5.1.9 Versioning + URL prefix
+
+All v3 endpoints live under `/v3/`. The frontend uses route keys (`'POST /auth/login'`) and ENDPOINT_ROUTING maps to `/v3/auth/login`. The `/v3/` prefix is part of the backend's URL but not the routing key (so we can change versions without rewriting every route key).
+
+When v4 ships (hypothetical future): new endpoints under `/v4/`. ENDPOINT_ROUTING gets new entries with `newPath: '/v4/...'`. Old entries can either get a `oldPath: '/v3/...'` and target='old' (strangler pattern again) or be deleted after migration.
+
+#### 5.1.10 Request body content type
+
+Always `application/json` for write endpoints (POST/PATCH/PUT/DELETE-with-body). Form-encoded (`application/x-www-form-urlencoded`) is NOT supported.
+
+The single exception is file uploads (`multipart/form-data`) for:
+- `POST /v3/me/chats/:id/messages/image` — image upload in chat
+- (potentially future) product image uploads in vendor self-service
+
+Multipart endpoints will be clearly marked in 0e.6+ contracts.
+
+#### 5.1.11 CORS
+
+All v3 endpoints support CORS preflight (`OPTIONS` requests). Allowed origins are env-configured; production allows:
+- `https://staging.3bayti.ae` (web staging)
+- `https://3bayti.ae` (web production, when DNS flips)
+- `capacitor://localhost` (mobile Capacitor scheme)
+- `ionic://localhost` (legacy Ionic scheme)
+- portal's eventual production domain (TBD)
+
+Allowed headers: `Authorization, Content-Type, Idempotency-Key, X-Request-ID`.
+Allowed methods: `GET, POST, PUT, PATCH, DELETE, OPTIONS`.
+
+#### 5.1.12 Rate limiting
+
+Per-user rate limits apply to most write endpoints. Public endpoints (catalog) have per-IP limits.
+
+Limits (subject to tuning post-launch):
+
+| Endpoint pattern | Limit | Window | Code on exceed |
+|---|---|---|---|
+| `POST /v3/auth/login` | 5 attempts | 1 min per IP+email combo | `429 AUTH_RATE_LIMITED` |
+| `POST /v3/auth/send-otp` | 5 sends | 1 hour per phone | `429 OTP_RATE_LIMITED` |
+| `POST /v3/auth/validate-otp` | 5 attempts | 5 min per phone | `429 OTP_RATE_LIMITED` |
+| Public read endpoints (catalog) | 600 reqs | 1 min per IP | `429` (no code; standard) |
+| Authenticated read endpoints | 600 reqs | 1 min per user | `429` |
+| Authenticated write endpoints | 60 reqs | 1 min per user | `429` |
+
+Implementation: Redis-backed counters with sliding window. Already partially in place for OTP (per `OtpAttemptRepository`); generalize to a `RateLimitMiddleware` in M3.
+
+#### 5.1.13 Logging + observability
+
+Every request gets a `X-Request-ID` header in the response (UUID v7). If the client sends one, it's echoed; otherwise the server generates.
+
+Application logs include the request ID for correlation. Log levels:
+- `INFO` — successful auth events, payment events, refund events
+- `WARN` — recoverable errors (validation failures, etc.)
+- `ERROR` — unexpected failures, gateway errors, 500s
+- `CRITICAL` — security events (rate limit hits, repeated auth failures from same IP)
+
+**No PII in log messages.** Don't log email/phone/password — log only user_id when authenticated.
+
+#### 5.1.14 Deprecation policy
+
+Once an endpoint ships, its URL + request shape + response shape (success and error) are STABLE for a minimum of 90 days. Breaking changes require:
+1. New URL (e.g. `/v3/products/v2` or a `/v4/products`)
+2. Migration window during which both are supported
+3. Deprecation notice in response header on old URL: `Deprecation: <date>`, `Sunset: <date>`
+
+Patches (bugfixes, new optional fields) are permitted without notice.
+
+---
+
+### 5.1.15 What's NOT defined here (deferred to per-category contracts)
+
+The Foundations section deliberately doesn't cover:
+
+- Specific request/response shapes per endpoint — that's 0e.2-0e.7
+- Per-endpoint auth requirements — declared per contract
+- Specific error codes beyond the AUTH/OTP/VALIDATION/CONFLICT/generic ones — added per category
+- Webhook signature verification specifics (Noon's HMAC details) — covered in 0e.4 (payment)
+- Multipart upload field names — covered in 0e.5 (chat) and 0e.6 (vendor product images)
+- Notification/email-sending side effects of endpoints — covered per endpoint
+
+### 5.1.16 Locked decisions
+
+After 0e.1, these are LOCKED. M3.1.0e.2+ contracts conform to them without re-deciding:
+
+✅ JSON-only API; no form-encoded bodies (except file uploads as multipart)
+✅ Bearer JWT auth; no cookies
+✅ JWT claims include `roles[]` for scope-based access control
+✅ 30-min access tokens; 30-day refresh tokens with rotation
+✅ Three scopes: customer, vendor, admin
+✅ Error envelope: `{error: {code, message, details?}}`
+✅ Error codes are constants in `ErrorCodes.php`, never literal strings
+✅ Success envelopes: `{data}` for single, `{data, meta}` for paginated, custom for auth
+✅ Pagination: `?limit=&offset=` with `meta: {total, limit, offset, has_more}`
+✅ Filtering: slug-based filters resolve to IDs; unknown slugs return empty results
+✅ Sorting: single sort key via `?sort=...`; case-sensitive enum
+✅ Idempotency-Key header on `POST /checkout`, `POST /reviews`, webhook handlers
+✅ Slug-based public IDs for catalog; order/ticket numbers for human-readable resources
+✅ All under `/v3/` URL prefix
+✅ ISO-8601 UTC timestamps
+✅ Money: numeric amount + `currency` field; never strings
+✅ CORS configured per environment
+✅ Rate limiting at middleware layer with Redis counters
+✅ X-Request-ID for log correlation
+✅ 90-day deprecation policy
+
+These decisions answer the most common "should I do X or Y" questions during per-endpoint design. When a contract spec says "auth: customer", you know it means JWT bearer with `roles` includes `customer` — no need to re-spec.
+
