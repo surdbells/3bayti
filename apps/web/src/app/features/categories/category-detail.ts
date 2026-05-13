@@ -11,13 +11,13 @@ import {
 } from '@angular/core';
 import { isPlatformServer } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { SeoService } from '../../core/seo/seo.service';
 import { breadcrumbSchema, itemListSchema } from '../../core/seo/schema.helpers';
-import { ApiConfigService } from '../../core/api/api-config.service';
+import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { createSetSsrStatus } from '../../core/ssr/response-status';
 import { environment } from '../../../environments/environment';
 import {
@@ -79,8 +79,7 @@ import type { CategoryDetail, CategoryDetailMeta } from './category.model';
 })
 export class CategoryDetailComponent {
   private route = inject(ActivatedRoute);
-  private http = inject(HttpClient);
-  private apiConfig = inject(ApiConfigService);
+  private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
   private state = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
@@ -225,8 +224,16 @@ export class CategoryDetailComponent {
       return of(cached);
     }
 
-    const url = `${this.apiConfig.v2BaseUrl}/categories/${slug}`;
-    return this.http.get<CategoryDetailEnvelope>(url).pipe(
+    /* normaliseResponse returns NormalisedResponse<CategoryDetail> with
+       meta typed as PaginationMeta. The actual wire shape from
+       /v3/categories/:slug has meta: { total_products, page_size }
+       instead — endpoint-specific shape. The runtime payload is
+       correct; we cast to CategoryDetailEnvelope so the component's
+       computed signals get the right type. If v3 ever changes the
+       meta shape, this cast surfaces the drift via a runtime
+       failure in the components that read `.meta.total_products`. */
+    return this.routed.get<CategoryDetail>('GET /categories/:slug', { params: { slug } }).pipe(
+      map((env) => env as unknown as CategoryDetailEnvelope),
       tap((envelope) => {
         if (isPlatformServer(this.platformId)) {
           this.state.set(stateKey, envelope);

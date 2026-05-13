@@ -110,6 +110,22 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/vendors/:slug/products',
     shape: 'v3-envelope',
   },
+  // Designer Spotlight strip on the home page. The legacy endpoint
+  // returns vendors WITH their nested products array (a custom shape
+  // for that one UI strip). v3 has no equivalent yet — the
+  // Designer Spotlight curation rules + embedded-products feature
+  // need to land in v3 before we can flip this to 'new'.
+  // Tracked as a Day-5-followup; until then this stays on legacy v2
+  // and the strangler-fig pattern handles the cohabitation.
+  'GET /featured-vendors': {
+    target: 'old',
+    oldPath: '/v2/featured-vendors',
+    newPath: '/v3/featured-vendors',
+    // v2 happens to use the same `{data:[...]}` shape as v3 for this
+    // endpoint (no top-level response_code/status wrapper), so
+    // 'v3-envelope' is correct here even though we're hitting legacy.
+    shape: 'v3-envelope',
+  },
   'GET /sitemap-data': {
     target: 'new',
     oldPath: '/v2/sitemap-data',

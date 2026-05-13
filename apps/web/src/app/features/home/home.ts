@@ -11,7 +11,7 @@ import { isPlatformServer } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, tap } from 'rxjs';
 
-import { ApiClientService } from '../../core/api/api-client.service';
+import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { SeoService } from '../../core/seo/seo.service';
 import { organizationSchema, websiteSchema } from '../../core/seo/schema.helpers';
 import { environment } from '../../../environments/environment';
@@ -63,7 +63,7 @@ import { HomeDataService } from './home-data.service';
   styleUrl: './home.scss',
 })
 export class HomeComponent {
-  private api = inject(ApiClientService);
+  private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
   private state = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
@@ -72,10 +72,11 @@ export class HomeComponent {
   /* ----- Categories (one extra fetch beyond the 4 home-page endpoints)
    *
    * The home page wants the same categories list that /category renders.
-   * Reusing the existing ApiClient.getList<Category>('/categories') call
-   * with its own TransferState key. The /category index page uses a
-   * different key — that's intentional, so each page's data is cached
-   * independently and a stale entry for one doesn't poison the other.
+   * Reusing the routed.get<Category[]>('GET /categories') call (v3 via
+   * ENDPOINT_ROUTING) with its own TransferState key. The /category index
+   * page uses a different key — that's intentional, so each page's data
+   * is cached independently and a stale entry for one doesn't poison the
+   * other.
    * ----------------------------------------------------------------- */
 
   private readonly KEY_CATEGORIES = makeStateKey<Category[]>('home-categories');
@@ -160,7 +161,7 @@ export class HomeComponent {
     if (cached !== null) {
       return of(cached);
     }
-    return this.api.getList<Category>('/categories').pipe(
+    return this.routed.get<Category[]>('GET /categories').pipe(
       map(envelope => envelope.data),
       tap(categories => {
         if (isPlatformServer(this.platformId)) {

@@ -153,7 +153,11 @@ export class RoutedHttpClient {
     // substitution.
     const cfg = resolveConfig(routeKey);
     const bases = {
-      old: this.config.v2BaseUrl,
+      // legacyBaseUrl is the unversioned legacy host; ENDPOINT_ROUTING
+      // entries include the version segment in their `oldPath`
+      // (e.g. '/v2/featured-vendors', '/users/login'), so we must NOT
+      // use v2BaseUrl here — that would produce a double-prefix URL.
+      old: this.config.legacyBaseUrl,
       new: this.config.v3BaseUrl,
     };
     const url = resolveUrl(routeKey, bases, options.params);

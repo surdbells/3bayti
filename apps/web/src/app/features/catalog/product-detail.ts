@@ -11,12 +11,12 @@ import {
 } from '@angular/core';
 import { isPlatformServer } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
 
 import { SeoService } from '../../core/seo/seo.service';
-import { ApiConfigService } from '../../core/api/api-config.service';
+import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { createSetSsrStatus } from '../../core/ssr/response-status';
 import {
   productSchema,
@@ -83,8 +83,7 @@ import { ProductCardComponent } from './product-card';
 })
 export class ProductDetailComponent {
   private route = inject(ActivatedRoute);
-  private http = inject(HttpClient);
-  private apiConfig = inject(ApiConfigService);
+  private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
   private state = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
@@ -372,8 +371,7 @@ export class ProductDetailComponent {
       return of(cached);
     }
 
-    const url = `${this.apiConfig.v2BaseUrl}/products/${slug}`;
-    return this.http.get<{ data: ProductDetail }>(url).pipe(
+    return this.routed.get<ProductDetail>('GET /products/:slug', { params: { slug } }).pipe(
       map((envelope) => envelope.data),
       tap((product) => {
         if (isPlatformServer(this.platformId)) {

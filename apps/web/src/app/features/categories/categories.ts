@@ -11,7 +11,7 @@ import { isPlatformServer } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, tap } from 'rxjs';
 
-import { ApiClientService } from '../../core/api/api-client.service';
+import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { SeoService } from '../../core/seo/seo.service';
 import { breadcrumbSchema } from '../../core/seo/schema.helpers';
 import { environment } from '../../../environments/environment';
@@ -60,7 +60,7 @@ import { Category } from './category.model';
   styleUrl: './categories.scss',
 })
 export class CategoriesComponent {
-  private api = inject(ApiClientService);
+  private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
   private state = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
@@ -124,10 +124,11 @@ export class CategoriesComponent {
       return of(cached);
     }
 
-    /* Cache miss — fetch from the API. Errors degrade to empty array
-       so the page still renders (could swap to a "no data" UI in
-       Phase 2 polish). */
-    return this.api.getList<Category>('/categories').pipe(
+    /* Cache miss — fetch from the API via the routed client, which
+       resolves 'GET /categories' to v3 (per ENDPOINT_ROUTING). Errors
+       degrade to empty array so the page still renders (could swap to
+       a "no data" UI in Phase 2 polish). */
+    return this.routed.get<Category[]>('GET /categories').pipe(
       map((envelope) => envelope.data),
       tap((categories) => {
         /* Seed TransferState during SSR so the browser side picks it

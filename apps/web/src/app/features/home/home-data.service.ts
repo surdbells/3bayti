@@ -8,7 +8,7 @@ import {
 import { isPlatformServer } from '@angular/common';
 import { catchError, map, Observable, of, tap } from 'rxjs';
 
-import { ApiClientService } from '../../core/api/api-client.service';
+import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import type { Product } from '../catalog/product.model';
 import type { FeaturedVendor } from '../catalog/designer-card';
 
@@ -23,15 +23,24 @@ import type { FeaturedVendor } from '../catalog/designer-card';
  *     it here avoids repetition
  *   - Easy to mock in tests (Phase 9) without monkey-patching components
  *
+ * Routing
+ * -------
+ * All four endpoints go through RoutedHttpClient + ENDPOINT_ROUTING:
+ *   - GET /products     -> v3 (api-v3.3bayti.ae/v3/products)
+ *   - GET /featured-vendors -> legacy v2 (api.3bayti.ae/v2/featured-
+ *     vendors). v3 doesn't have a 'featured' curation yet; this
+ *     endpoint stays on legacy until M3 or a dedicated v3 endpoint
+ *     lands. Tracked as Day-5-followup.
+ *
  * Failure mode:
  *   Each method returns an Observable that emits an empty array on
  *   error. The home page degrades gracefully — a failed strip silently
  *   omits itself rather than showing a broken section. Errors still
- *   log to console (via ApiClient's handle()).
+ *   log to console (via RoutedHttpClient's handle()).
  */
 @Injectable({ providedIn: 'root' })
 export class HomeDataService {
-  private api = inject(ApiClientService);
+  private routed = inject(RoutedHttpClient);
   private state = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
 
@@ -54,51 +63,50 @@ export class HomeDataService {
 
   /**
    * Featured products — the curated "this week's edit" strip.
-   * Backed by /v2/products?sort=featured (computed: top-rated vendors,
-   * recent products, with a small randomness component).
+   * Backed by /products?sort=featured (v3 computes featured from
+   * top-rated vendors + recent products + a small randomness factor).
    */
   featuredProducts$(): Observable<Product[]> {
     return this.cached(this.KEY_FEATURED, () =>
-      this.api.getList<Product>('/products', { sort: 'featured', limit: this.STRIP_LIMIT })
+      this.routed
+        .get<Product[]>('GET /products', { query: { sort: 'featured', limit: this.STRIP_LIMIT } })
         .pipe(map(env => env.data))
     );
   }
 
   /**
-   * Best sellers — backed by /v2/products?sort=popular (which counts
+   * Best sellers — backed by /products?sort=popular (v3 counts
    * cart-add events per product as a popularity proxy).
    */
   bestSellers$(): Observable<Product[]> {
     return this.cached(this.KEY_BEST_SELLERS, () =>
-      this.api.getList<Product>('/products', { sort: 'popular', limit: this.STRIP_LIMIT })
+      this.routed
+        .get<Product[]>('GET /products', { query: { sort: 'popular', limit: this.STRIP_LIMIT } })
         .pipe(map(env => env.data))
     );
   }
 
   /**
-   * New arrivals — backed by /v2/products?sort=newest (product_id DESC,
+   * New arrivals — backed by /products?sort=newest (product_id DESC,
    * which is roughly chronological since IDs are auto-incremented).
    */
   newArrivals$(): Observable<Product[]> {
     return this.cached(this.KEY_NEW_ARRIVALS, () =>
-      this.api.getList<Product>('/products', { sort: 'newest', limit: this.STRIP_LIMIT })
+      this.routed
+        .get<Product[]>('GET /products', { query: { sort: 'newest', limit: this.STRIP_LIMIT } })
         .pipe(map(env => env.data))
     );
   }
 
   /**
-   * Featured vendors — backed by /v2/featured-vendors. Each vendor
-   * comes with up to 4 embedded product thumbnails for the
-   * Designer Spotlight section.
+   * Featured vendors — currently still on legacy /v2/featured-vendors
+   * (see top-of-file rationale). Each vendor comes with up to 4
+   * embedded product thumbnails for the Designer Spotlight section.
    */
   featuredVendors$(): Observable<FeaturedVendor[]> {
     return this.cached(this.KEY_FEATURED_VEND, () =>
-      /* /v2/featured-vendors uses a slightly different envelope shape
-         from the standard list endpoints — meta has { count, limit,
-         per_vendor } rather than the standard pagination meta. We
-         use api.get<T>() with manual unwrapping since getList expects
-         pagination meta. */
-      this.api.getList<FeaturedVendor>('/featured-vendors', { limit: this.SPOTLIGHT_LIMIT })
+      this.routed
+        .get<FeaturedVendor[]>('GET /featured-vendors', { query: { limit: this.SPOTLIGHT_LIMIT } })
         .pipe(map(env => env.data))
     );
   }
@@ -116,7 +124,7 @@ export class HomeDataService {
    *      tag in the prerendered HTML so the browser can pick it up.
    *   4. Errors: degrade to empty array — strip silently omits itself
    *      rather than showing broken UI. Console error already logged
-   *      by ApiClient.
+   *      by RoutedHttpClient.
    */
   private cached<T>(
     key: ReturnType<typeof makeStateKey<T[]>>,
