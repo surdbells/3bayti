@@ -260,3 +260,258 @@ That tracks with the M3 plan's estimate of "~50 v3 endpoints to build after dedu
 
 **Status:** ⏳ Pending
 
+
+---
+
+## Section 2 — Portal endpoint dump (M3.1.0b)
+
+**Status:** ✅ Complete (May 13, 2026)
+
+### 2.1 Headline numbers
+
+- **Endpoint constants in `apps/portal/src/app/global-component.ts`:** 96
+- **Actually used in code:** 86
+- **Dead code:** 10
+- **Caller file count:** 61 files (audited separately Day 8)
+
+Portal is much cleaner than mobile (10 dead vs mobile's 28). The codebase is more actively maintained.
+
+### 2.2 Critical findings
+
+1. **Three-namespace structure** is clean and intentional:
+   - `admin/*` (36 endpoints) — platform admin operations: collections, customer/store activation, transactions, dashboard stats, customer/store/user listings
+   - `vendors/*` (47 endpoints) — vendor self-service: products, orders, labels, coupons, measurements, settings, compliance
+   - `users/*` (8 endpoints) — shared auth (overlaps with mobile)
+   - `utility/*` (5 endpoints) — shared lookups (categories, collections, stores)
+
+   This is much cleaner than mobile's mostly-`customer/*` flat structure. v3 should preserve the three-namespace separation.
+
+2. **Auth overlap with mobile is EXACT for login + register:**
+   - Both apps' `UserLogin` → `users/login` ✓ duplicate
+   - Both apps' `UserRegister` → `users/register` ✓ duplicate
+   - These collapse to a single v3 contract (already implemented).
+
+3. **Auth DIFFERS for reset flow:**
+   - Mobile's `UserReset` → `users/resetMobile` (mobile-specific endpoint)
+   - Portal's `UserReset` → `users/reset` (different endpoint!)
+   - This is NOT a duplicate. v3 needs to either support both flows or design one that handles both.
+
+4. **Naming collision: `readMeasurement` means different things in mobile vs portal:**
+   - Mobile's `readMeasurement` → `customer/settings/measurement/read-measurement` (customer's OWN body measurements)
+   - Portal's `readMeasurement` → `vendors/measurement/get-measurements` (vendor's measurement GUIDES for their products)
+   - These are different business operations sharing a name. v3 should clarify with distinct paths:
+     - `GET /v3/me/measurements` — personal body measurements
+     - `GET /v3/vendors/:id/measurement-guides` — vendor's published measurement guides
+
+5. **Mobile's `readStoreMeasurement` IS A DUPLICATE of portal's `readMeasurement`** (same URL: `vendors/measurement/get-measurements`). v3 collapses these.
+
+6. **Portal has JWT-aware utilities** (`decodeJWT`, `encodeBase64`, `decodeBase64` in GlobalComponent). Suggests portal is already prepared for token-based auth, which v3 uses. Mobile uses plain bearer tokens; portal may already handle JWT format natively.
+
+7. **No payment endpoints in portal** (makes sense — admin views payments, doesn't initiate them). M3.1.8 Noon work is mobile + web only.
+
+8. **Coupons system is portal-only** (10 endpoints) — not visible from mobile. v3 needs coupon management endpoints but only portal will call them.
+
+### 2.3 USED endpoints (86) — grouped by category
+
+#### Admin operations (admin/*, 36 endpoints)
+
+**Common ops (28 endpoints, all admin/common/*):**
+
+| Const | Legacy URL | Callers | v3 status |
+|---|---|---|---|
+| `getStoreOrders` | `admin/common/get-store-orders` | 1 | NEW: `GET /v3/admin/stores/:id/orders` |
+| `getStoreOrdersByStatus` | `admin/common/getStoreOrdersByStatus` | 1 | NEW: `GET /v3/admin/stores/:id/orders?status=...` (dedup-able) |
+| `getAdminProducts` | `admin/common/products` | 1 | NEW: `GET /v3/admin/products` |
+| `messageVendor` | `admin/message-vendor` | 1 | NEW: `POST /v3/admin/vendors/:id/messages` |
+| `sales` | `admin/common/sales` | 2 | NEW: `GET /v3/admin/sales` |
+| `processing` | `admin/common/processing` | 1 | NEW: `GET /v3/admin/orders?status=processing` |
+| `processingById` | `admin/common/processingById` | 2 | NEW: `GET /v3/admin/orders/:id/processing` |
+| `pluralById` | `admin/common/pluralById` | 2 | NEW: investigate — name is unclear |
+| `productsByProcessingId` | `admin/common/productsByProcessingId` | 1 | NEW: `GET /v3/admin/orders/:id/products` |
+| `productsByVendorId` | `admin/common/productsByVendorId` | 2 | NEW: `GET /v3/admin/vendors/:id/products` |
+| `logistics` | `admin/common/logistics` | 1 | NEW: `GET /v3/admin/logistics` |
+| `commissions` | `admin/common/commissions` | 1 | NEW: `GET /v3/admin/commissions` |
+| `transactions` | `admin/common/transactions` | 1 | NEW: `GET /v3/admin/transactions` |
+| `tickets` | `admin/common/tickets` | 1 | NEW: `GET /v3/admin/tickets` |
+| `ticketsMessages` | `admin/common/ticket-messages` | 1 | NEW: `GET /v3/admin/tickets/:id/messages` |
+| `sendTicketMessage` | `admin/common/send-ticket-message` | 1 | NEW: `POST /v3/admin/tickets/:id/messages` |
+| `ticketsStatus` | `admin/common/ticket-status` | 1 | NEW: `PATCH /v3/admin/tickets/:id/status` |
+| `ticketsPriority` | `admin/common/ticket-priority` | 1 | NEW: `PATCH /v3/admin/tickets/:id/priority` |
+| `AdminUserRegister` | `admin/common/register` | 1 | NEW: `POST /v3/admin/users` (admin creates new admin user) |
+| `AdminUserPassword` | `admin/common/password` | 1 | NEW: `PATCH /v3/admin/users/:id/password` |
+| `activateCustomer` | `admin/common/activate-customer` | 2 | NEW: `POST /v3/admin/customers/:id/activate` |
+| `deactivateCustomer` | `admin/common/deactivate-customer` | 2 | NEW: `POST /v3/admin/customers/:id/deactivate` |
+| `activateStore` | `admin/common/activate-store` | 1 | NEW: `POST /v3/admin/stores/:id/activate` |
+| `deactivateStore` | `admin/common/deactivate-store` | 1 | NEW: `POST /v3/admin/stores/:id/deactivate` |
+| `deleteStore` | `admin/common/delete-store` | 1 | NEW: `DELETE /v3/admin/stores/:id` |
+| `getSingleStore` | `admin/common/getSingleStore` | 1 | NEW: `GET /v3/admin/stores/:id` |
+| `getAdminStats` | `admin/common/dashboard-activity` | 1 | NEW: `GET /v3/admin/dashboard` |
+| `getCustomers` | `admin/common/get-customers` | 1 | NEW: `GET /v3/admin/customers` |
+| `getStores` | `admin/common/get-stores` | 1 | NEW: `GET /v3/admin/stores` |
+| `getUsers` | `admin/common/get-users` | 1 | NEW: `GET /v3/admin/users` |
+
+**Collections (4 endpoints):**
+
+| Const | Legacy URL | v3 status |
+|---|---|---|
+| `createCollection` | `admin/collections/create-collection` | NEW: `POST /v3/admin/collections` |
+| `updateCollection` | `admin/collections/update-collection` | NEW: `PATCH /v3/admin/collections/:id` |
+| `getCollection` | `admin/collections/get-collection` | NEW: `GET /v3/admin/collections/:id` |
+| `readCollection` | `admin/collections/read-collection` | NEW: `GET /v3/admin/collections` (collapse with getCollection?) |
+
+#### Vendor operations (vendors/*, 47 endpoints)
+
+**Labels (4):**
+
+| Const | Legacy URL | Callers | v3 status |
+|---|---|---|---|
+| `createLabel` | `vendors/labels/create-label` | 4 | NEW: `POST /v3/me/store/labels` |
+| `updateLabel` | `vendors/labels/update-label` | 1 | NEW: `PATCH /v3/me/store/labels/:id` |
+| `deleteLabel` | `vendors/labels/delete-label` | 1 | NEW: `DELETE /v3/me/store/labels/:id` |
+| `readLabel` | `vendors/labels/read-label` | 4 | NEW: `GET /v3/me/store/labels` |
+
+**Orders (6 used; 1 unused):**
+
+| Const | Legacy URL | Callers | v3 status |
+|---|---|---|---|
+| `getVendorOrders` | `vendors/orders/get-orders` | 1 | NEW: `GET /v3/me/store/orders` |
+| `getVendorOrdersByStatus` | `vendors/orders/get-orders-byStatus` | 1 | NEW: same w/ ?status= |
+| `getVendorReturnOrders` | `vendors/orders/get-return-orders` | 1 | NEW: `GET /v3/me/store/orders?status=return` |
+| `getVendorDeliveryOrders` | `vendors/orders/get-ready-orders` | 1 | NEW: `GET /v3/me/store/orders?status=ready` |
+| `getOrderItems` (UNUSED) | `vendors/orders/get-order-items` | 0 | Defer |
+| `updateOrderStatus` | `vendors/orders/update-order-status` | 3 | NEW: `PATCH /v3/me/store/orders/:id/status` |
+| `getOrderById` | `vendors/orders/getOrderById` | 3 | NEW: `GET /v3/me/store/orders/:id` |
+
+**Products (6):**
+
+| Const | Legacy URL | Callers | v3 status |
+|---|---|---|---|
+| `getProductById` | `vendors/products/getProductById` | 3 | NEW: `GET /v3/me/store/products/:id` |
+| `deleteProductById` | `vendors/products/delete-product` | 1 | NEW: `DELETE /v3/me/store/products/:id` |
+| `getProduct` | `vendors/products/get-products` | 4 | NEW: `GET /v3/me/store/products` |
+| `createProduct` | `vendors/products/create-product` | 1 | NEW: `POST /v3/me/store/products` |
+| `updateProduct` | `vendors/products/update-product` | 2 | NEW: `PATCH /v3/me/store/products/:id` |
+| `getProductReviews` | `vendors/products/get-products-reviews` | 1 | NEW: `GET /v3/me/store/products/:id/reviews` |
+
+**Common (4 used; 1 unused):**
+
+| Const | Legacy URL | Callers | v3 status |
+|---|---|---|---|
+| `getNotifications` | `vendors/common/notifications` | 2 | NEW: `GET /v3/me/notifications` |
+| `markNotifications` | `vendors/common/mark_notifications` | 2 | NEW: `POST /v3/me/notifications/mark-read` |
+| `getVendorStats` | `vendors/common/dashboard-activity` | 1 | NEW: `GET /v3/me/store/dashboard` |
+| `getCompliance` | `vendors/common/compliance` | 1 | NEW: `GET /v3/me/store/compliance` |
+| `topSelling` (UNUSED) | `vendors/common/top-selling` | 0 | Defer |
+
+**Settings (12):**
+
+| Const | Legacy URL | Callers | v3 status |
+|---|---|---|---|
+| `getVendorStore` | `vendors/settings/vendor-store` | 1 | NEW: `GET /v3/me/store` |
+| `getVendorPayment` | `vendors/settings/vendor-store-payment` | 1 | NEW: `GET /v3/me/store/payment-settings` |
+| `getVendorTax` | `vendors/settings/vendor-store-tax` | 1 | NEW: `GET /v3/me/store/tax-settings` |
+| `getVendorNotifications` | `vendors/settings/vendor-store-notifications` | 1 | NEW: `GET /v3/me/store/notification-settings` |
+| `updateUserProfile` | `vendors/settings/update-user-basic` | 1 | NEW: `PATCH /v3/me` (overlaps with mobile updateProfile) |
+| `updateStoreBasic` | `vendors/settings/update-vendor-store` | 1 | NEW: `PATCH /v3/me/store` |
+| `updateStorePayment` | `vendors/settings/update-vendor-payment` | 1 | NEW: `PATCH /v3/me/store/payment-settings` |
+| `updateStoreTax` | `vendors/settings/update-vendor-tax` | 1 | NEW: `PATCH /v3/me/store/tax-settings` |
+| `updateStoreNotifications` | `vendors/settings/update-vendor-notifications` | 1 | NEW: `PATCH /v3/me/store/notification-settings` |
+| `updateStoreStatus` | `vendors/settings/switch-store-status` | 1 | NEW: `PATCH /v3/me/store/status` (active/inactive) |
+| `updateCompliance` | `vendors/settings/update-compliance` | 1 | NEW: `PATCH /v3/me/store/compliance` |
+
+**Measurements (4 used; 1 unused):**
+
+| Const | Legacy URL | Callers | v3 status |
+|---|---|---|---|
+| `createMeasurement` | `vendors/measurement/create-measurement` | 1 | NEW: `POST /v3/me/store/measurement-guides` |
+| `updateMeasurement` | `vendors/measurement/update-measurement` | 1 | NEW: `PATCH /v3/me/store/measurement-guides/:id` |
+| `readMeasurement` | `vendors/measurement/get-measurements` | 1 | **DUPLICATE of mobile's `readStoreMeasurement`** → `GET /v3/vendors/:id/measurement-guides` |
+| `deleteMeasurement` | `vendors/measurement/delete-measurement` | 1 | NEW: `DELETE /v3/me/store/measurement-guides/:id` |
+| `getMeasurementById` (UNUSED) | `vendors/measurement/getMeasurementById` | 0 | Defer |
+
+**Coupons (8 used; 2 unused):**
+
+| Const | Legacy URL | Callers | v3 status |
+|---|---|---|---|
+| `createCoupon` | `vendors/coupons/create-coupon` | 1 | NEW: `POST /v3/me/store/coupons` |
+| `getCouponById` | `vendors/coupons/get-coupon-by-id` | 2 | NEW: `GET /v3/me/store/coupons/:id` |
+| `couponAnalytics` | `vendors/coupons/coupon-analytics` | 2 | NEW: `GET /v3/me/store/coupons/:id/analytics` |
+| `getCoupons` | `vendors/coupons/get-coupons` | 1 | NEW: `GET /v3/me/store/coupons` |
+| `toggleCouponStatus` | `vendors/coupons/toggle-coupon-status` | 1 | NEW: `PATCH /v3/me/store/coupons/:id/status` |
+| `deleteCoupon` | `vendors/coupons/delete-coupon` | 1 | NEW: `DELETE /v3/me/store/coupons/:id` |
+| `updateCoupon` | `vendors/coupons/update-coupon` | 1 | NEW: `PATCH /v3/me/store/coupons/:id` |
+| `validateCoupon` (UNUSED) | `vendors/coupons/validate-coupon` | 0 | Defer (likely used at customer checkout — not portal) |
+| `applyCoupon` (UNUSED) | `vendors/coupons/apply-coupon` | 0 | Defer (same as above) |
+
+#### Shared auth (users/*, 6 used; 2 unused)
+
+| Const | Legacy URL | Callers | Notes |
+|---|---|---|---|
+| `UserLogin` | `users/login` | 1 | **DUPLICATE of mobile's `UserLogin`** → single v3 `POST /v3/auth/login` |
+| `UserRegister` | `users/register` | 1 | **DUPLICATE of mobile's `UserRegister`** → single v3 `POST /v3/auth/register` |
+| `UserValidate` | `users/validate` | 1 | NEW: `POST /v3/auth/validate` (mobile has same const but unused there) |
+| `UserReset` | `users/reset` | 1 | DIFFERENT from mobile's `users/resetMobile` — see §2.2 note 3 |
+| `UserConfirm` | `users/confirm` | 1 | NEW: `POST /v3/auth/confirm-account` |
+| `EmailValidate` (UNUSED) | `users/validate-email` | 0 | Defer |
+| `UserResetPassword` (UNUSED) | `users/reset` | 0 | DUPLICATE of UserReset same URL different name |
+| `UserSettings` (UNUSED) | `users/settings` | 0 | Defer |
+
+#### Utility (5 used)
+
+| Const | Legacy URL | Callers | v3 status |
+|---|---|---|---|
+| `getUserProfile` | `utility/shared/user` | 1 | **OVERLAPS with mobile's `readProfile`** → single v3 `GET /v3/me` |
+| `updateUserPassword` | `utility/shared/change-user-password` | 1 | NEW: `POST /v3/me/password` |
+| `UtilityCategory` | `utility/category` | 6 | **OVERLAPS with mobile's `ProductCategory`/v3's `/v3/categories`** |
+| `UtilityCollections` | `utility/collections` | 3 | NEW: `GET /v3/collections` (or admin's `readCollection`?) |
+| `UtilityStores` | `utility/stores` | 2 | **OVERLAPS with mobile's `vendors_listing`/v3's `/v3/vendors`** |
+
+### 2.4 Dead-code endpoints (10) — declared but unused
+
+| Const | Legacy URL | Notes |
+|---|---|---|
+| `EmailValidate` | `users/validate-email` | Auth — never wired |
+| `UserResetPassword` | `users/reset` | Duplicate of `UserReset` — never wired |
+| `UserSettings` | `users/settings` | Never wired |
+| `getOrderItems` | `vendors/orders/get-order-items` | Vendor order detail variant |
+| `getProductSales` | `admin/common/get-sales` | Admin sales variant — `sales` is the used one |
+| `topSelling` | `vendors/common/top-selling` | Vendor-side top sellers — never wired |
+| `topAdminSelling` | `admin/common/top-selling` | Admin-side top sellers — never wired |
+| `getMeasurementById` | `vendors/measurement/getMeasurementById` | Measurement detail variant |
+| `validateCoupon` | `vendors/coupons/validate-coupon` | Likely belongs to CUSTOMER checkout, not portal |
+| `applyCoupon` | `vendors/coupons/apply-coupon` | Same as above |
+
+**Recommendation:** Do NOT migrate the 10 unused. Note: `validateCoupon` and `applyCoupon` should likely live in v3 under `/v3/cart/apply-coupon` since they're customer-checkout operations even though declared in portal — flag this for M3.1.6 cart/checkout work.
+
+### 2.5 What M3.1.0b means for the rest of M3
+
+The real portal endpoint surface is **86 used endpoints**, not 97.
+
+This compresses the M3.3.x phase plan:
+- Admin operations: 35 endpoints (collections + common)
+- Vendor operations: 41 endpoints (products + orders + labels + measurements + coupons + settings + common)
+- Shared auth: 6 endpoints (4 overlap with mobile)
+- Utility: 5 endpoints (3 overlap with mobile/web)
+
+**Unique-to-portal endpoints (after deduplication with mobile/web): ~70-75**
+
+That's significantly more than mobile's vendor-side coverage (which has only 2 used vendor endpoints) — portal is the authoritative interface for vendor management.
+
+### 2.6 Cross-app duplicate findings (preview of §4 dedup pass)
+
+These are the highest-value dedup wins so far:
+
+| Operation | Mobile const | Portal const | Web | v3 contract |
+|---|---|---|---|---|
+| Login | `UserLogin` (`users/login`) | `UserLogin` (`users/login`) | existing | `POST /v3/auth/login` ✅ exists |
+| Register | `UserRegister` (`users/register`) | `UserRegister` (`users/register`) | existing | `POST /v3/auth/register` ✅ exists |
+| Get profile | `readProfile` (`customer/settings/read-profile`) | `getUserProfile` (`utility/shared/user`) | existing | `GET /v3/me` (NEW) |
+| Update profile | `updateProfile` | `updateUserProfile` (vendors/settings) | existing | `PATCH /v3/me` (NEW) |
+| Categories list | `ProductCategory`+`category_listing` | `UtilityCategory` | existing | `GET /v3/categories` ✅ exists |
+| Vendors list | `vendors_listing` | `UtilityStores` | existing | `GET /v3/vendors` ✅ exists |
+| Vendor measurement guides | `readStoreMeasurement` (mobile vendor-side) | `readMeasurement` (portal) | n/a | `GET /v3/vendors/:id/measurement-guides` (NEW) |
+| OTP duplicate inside mobile | `sendOTP`+`sendOOTP` | n/a | n/a | `POST /v3/auth/send-otp` (NEW) |
+| Cart quantity inside mobile | `IncreaseItem`+`DecreaseItem` | n/a | n/a | `PATCH /v3/cart/items/:id` (NEW) |
+
+**Estimated unique v3 endpoints needed across all three apps after dedup: ~80-90 net new (mobile + portal + web specific) on top of v3's existing ~10. Total v3 surface: ~100-110 endpoints.**
+
