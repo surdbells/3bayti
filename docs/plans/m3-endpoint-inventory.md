@@ -6113,3 +6113,1266 @@ That's a lot of schema. Most of it is straightforward but the COUPON system (3 t
 - All vendor reads include commission breakdown
 - Vendor cannot self-modify: slug, is_verified, status (paused vs suspended distinction)
 
+
+---
+
+### 5.7 (M3.1.0e.7) — Admin / Platform contracts
+
+**Status:** ✅ Complete (May 13, 2026)
+**Scope:** 30 unique platform-admin operations from 0d, plus 12 existing admin CRUD endpoints documented for completeness.
+
+#### 5.7.0 Reality audit
+
+**EXISTS in v3:** 12 endpoints (Brand/Category/Vendor CRUD admin scaffolds from M2.1):
+- 4 Brand admin endpoints
+- 4 Category admin endpoints
+- 4 Vendor admin endpoints (Create/Update/Delete/List)
+- `AdminAuthMiddleware` registered, route group `/v3/admin` exists
+
+**To BUILD:** 30 net-new admin endpoints + supporting infrastructure (audit logs, admin user management, refund flow).
+
+Total admin surface: ~42 endpoints. v3 has ~29% built.
+
+#### 5.7.1 Authoring approach for this section
+
+**Same compression as 0e.6** (common patterns lifted, per-endpoint specs tight) BUT with extra detail on **security-sensitive operations**:
+
+- Activate/deactivate customers + stores (account state changes)
+- Refund issuance (money operations)
+- Commission rate changes (vendor income impact)
+- Admin user creation + password (access escalation)
+- Compliance approvals (regulatory)
+
+For these, the contract explicitly notes: required audit log entries, who CAN perform the operation (super-admin vs regular admin — see §5.7.2), 2FA implications (M4 deferral noted), and any required confirmations.
+
+**Confidence flags:** Endpoints I'm less confident about — usually because legacy semantics are unclear — get flagged `⚠️ NEEDS LEGACY VERIFICATION` for someone to double-check before M3.3 implementation.
+
+#### 5.7.2 Common patterns for all admin endpoints
+
+**Path prefix:** `/v3/admin/*`
+
+**Auth:** `admin` scope. Two middleware in order:
+1. `AuthMiddleware` (validates JWT, loads User)
+2. `AdminAuthMiddleware` (asserts `user.roles` includes `'admin'`)
+
+Per the existing implementation in `apps/api/src/Http/Middleware/AdminAuthMiddleware.php`:
+- Missing token → 401
+- Token valid but not admin → 403
+
+**Admin role granularity (M4 deferral):**
+
+Currently a single `admin` role. M3 treats all admins as equally privileged. For M4 we should consider sub-roles (`super_admin`, `support_agent`, `finance_admin`, etc.) but this expansion is OUT OF SCOPE for M3 to avoid over-engineering. All admin endpoints in this section accept the single `admin` role for now.
+
+**This is a deliberate simplification.** Flagged for M4 plan when relevant.
+
+**Audit logging:**
+
+EVERY admin write operation generates an `admin_audit_log` entry. This is non-optional. Structure:
+
+```sql
+CREATE TABLE admin_audit_logs (
+  id BIGSERIAL PRIMARY KEY,
+  admin_user_id INTEGER NOT NULL REFERENCES users(id),
+  action TEXT NOT NULL,                    -- 'customer.deactivate', 'order.refund', etc.
+  resource_type TEXT NOT NULL,             -- 'user', 'order', 'vendor', etc.
+  resource_id TEXT NOT NULL,               -- generic so it can hold int or UUID
+  changes JSONB NOT NULL,                  -- {before, after} for updates; {} for actions
+  reason TEXT,                             -- admin-provided reason (required for sensitive ops)
+  ip_address INET,
+  request_id TEXT NOT NULL,                -- correlates with HTTP logs
+  performed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_audit_admin ON admin_audit_logs (admin_user_id, performed_at DESC);
+CREATE INDEX idx_audit_resource ON admin_audit_logs (resource_type, resource_id, performed_at DESC);
+```
+
+**Reason field:** Required for any operation marked sensitive in §5.7.1. Endpoints below note whether reason is required.
+
+**Error codes (added to ErrorCodes.php in M3.3):**
+
+```
+ADMIN_INSUFFICIENT_PRIVILEGE      Reserved for M4 sub-role era
+ADMIN_REASON_REQUIRED             Sensitive op missing 'reason' field in body
+CUSTOMER_ALREADY_ACTIVE           Activating already-active customer
+CUSTOMER_ALREADY_INACTIVE         Deactivating already-inactive customer
+STORE_ALREADY_ACTIVE              Activating already-active store
+STORE_ALREADY_INACTIVE            Deactivating already-inactive store
+STORE_HAS_PENDING_ORDERS          Cannot delete store with pending orders
+COMMISSION_RATE_OUT_OF_RANGE      Commission % must be 0-50
+REFUND_AMOUNT_EXCEEDS_ORDER       Refund > order total
+REFUND_ALREADY_FULL               Order already fully refunded
+COMPLIANCE_NOT_PENDING            Trying to approve/reject non-pending submission
+```
+
+**Common response envelopes:** Same as 0e.6 — Shape A single, Shape B paginated.
+
+#### 5.7.3 Dashboard + statistics (1 op)
+
+---
+
+##### GET /v3/admin/dashboard
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** Headline platform metrics for admin home.
+
+**Response 200:**
+```typescript
+{
+  data: {
+    sales: {
+      today: { count: number, amount: number },
+      this_week: { count: number, amount: number },
+      this_month: { count: number, amount: number },
+      currency: 'AED'
+    },
+    orders: {
+      pending_payment: number,
+      processing: number,
+      ready_to_ship: number,
+      shipped: number,
+      cancellation_requested: number
+    },
+    refunds: {
+      pending: number,
+      total_this_month: { amount: number, currency: 'AED' }
+    },
+    vendors: {
+      total_active: number,
+      pending_approval: number,
+      new_this_week: number,
+      compliance_pending_review: number
+    },
+    customers: {
+      total: number,
+      new_this_week: number,
+      active_this_month: number
+    },
+    tickets: {
+      open: number,
+      in_progress: number,
+      high_priority: number
+    }
+  }
+}
+```
+
+**Migration coverage:** portal's `getAdminStats` (`admin/common/dashboard-activity`)
+
+#### 5.7.4 Customers (4 ops)
+
+---
+
+##### GET /v3/admin/customers
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Query parameters:** `?limit=&offset=&q=&status=&from=&to=&sort=`
+- `q`: search by email/phone/name (full-text)
+- `status`: `active` | `inactive` | `all`
+- `from`/`to`: filter by `created_at` range
+- `sort`: `newest` | `oldest` | `name_asc` | `total_spent_desc` | `last_active`
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      email: string,
+      phone: string | null,
+      first_name: string | null,
+      last_name: string | null,
+      is_active: boolean,
+      is_phone_verified: boolean,
+      roles: string[],
+      order_count: number,
+      total_spent: { amount: number, currency: 'AED' },
+      last_login_at: string | null,
+      created_at: string
+    }
+  ],
+  meta: { /* pagination + extras */ }
+}
+```
+
+**Migration coverage:** portal's `getCustomers` (`admin/common/get-customers`)
+
+---
+
+##### GET /v3/admin/customers/:id
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Response 200:** Full customer detail. Includes everything from list view PLUS:
+- Address book summary (count, default)
+- Recent orders (last 5)
+- Recent reviews
+- Wishlist counts
+- Soft-delete status, ban reason if any
+- Login history (last 5 sessions)
+
+**Error responses:**
+- `404 NOT_FOUND`
+
+**Note:** No separate route key in portal's `global-component.ts`, but implicit need. Adding to scope.
+
+---
+
+##### POST /v3/admin/customers/:id/activate
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** HIGH — affects user access
+
+**Request:**
+```typescript
+{
+  reason: string                       // REQUIRED, 5-500 chars
+}
+```
+
+**Response 200:** Updated customer detail.
+
+**Error responses:**
+- `404 NOT_FOUND`
+- `409 CUSTOMER_ALREADY_ACTIVE`
+- `422 ADMIN_REASON_REQUIRED` — `reason` missing or empty
+
+**Side effects:**
+- Set `user.is_active = true`
+- Audit log entry (`customer.activate`)
+- Optionally send email to customer notifying they're reactivated
+
+**Migration coverage:** portal's `activateCustomer` (2 callers)
+
+---
+
+##### POST /v3/admin/customers/:id/deactivate
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** HIGH — affects user access
+
+**Request:**
+```typescript
+{
+  reason: string,                      // REQUIRED, 5-500 chars
+  ban_login?: boolean                  // if true, current sessions invalidated
+}
+```
+
+**Response 200:** Updated customer detail.
+
+**Error responses:**
+- `409 CUSTOMER_ALREADY_INACTIVE`
+- `422 ADMIN_REASON_REQUIRED`
+
+**Side effects:**
+- Set `user.is_active = false`
+- If `ban_login: true`, revoke all `refresh_tokens` for this user
+- Audit log
+- Optionally email customer with reason
+
+**Migration coverage:** portal's `deactivateCustomer` (2 callers)
+
+#### 5.7.5 Vendors / stores (8 ops)
+
+Note: 4 of these (`Create`, `Update`, `Delete`, `List`) ALREADY EXIST as v3 controllers (`/v3/admin/vendors/*`). Documented here for completeness. The other 4 (`activate`, `deactivate`, plus the legacy-stores endpoints) are NEW.
+
+---
+
+##### GET /v3/admin/vendors
+
+**Status:** ✅ EXISTS (`Admin/Vendor/ListVendorsAdminController.php`)
+
+Admin's list-all-vendors view. Same shape as public `GET /v3/vendors` but with extra admin-visible fields (status, compliance, commission rate).
+
+---
+
+##### GET /v3/admin/vendors/:id
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Note:** Implied complement to the existing list/CRUD endpoints. v3 doesn't have a Get-single yet; admin currently has list but no read-single.
+
+**Response 200:**
+```typescript
+{
+  data: {
+    /* full vendor shape from public GET /v3/vendors/:slug */
+    /* PLUS: */
+    id: number,
+    user: { id, email, phone, last_login_at },
+    status: 'active' | 'paused' | 'suspended' | 'pending_approval' | 'rejected',
+    commission_rate_percent: number,
+    compliance: { status, reviewed_at, rejection_reason },
+    bank_settings_set: boolean,            // don't expose bank details to admin without separate explicit endpoint
+    statistics: {
+      total_products: number,
+      total_orders: number,
+      total_revenue: { amount, currency },
+      total_payouts: { amount, currency },
+      pending_balance: { amount, currency }
+    },
+    notes: string | null,                  // admin's internal notes
+    created_at: string,
+    approved_at: string | null
+  }
+}
+```
+
+**Migration coverage:** portal's `getSingleStore` (`admin/common/getSingleStore`)
+
+---
+
+##### POST /v3/admin/vendors (CREATE)
+
+**Status:** ✅ EXISTS (`Admin/Vendor/CreateVendorController.php`)
+
+For admin to create a vendor directly (skipping the self-onboarding flow). Verify shape matches DTO.
+
+---
+
+##### PATCH /v3/admin/vendors/:id
+
+**Status:** ✅ EXISTS (`Admin/Vendor/UpdateVendorController.php`)
+
+Admin updates vendor metadata. Same shape as POST but partial.
+
+**Admin-only updatable fields:**
+- `status` (paused/suspended/approved — vendor cannot self-set these)
+- `is_verified`
+- `commission_rate_percent`
+- `notes`
+
+---
+
+##### DELETE /v3/admin/vendors/:id
+
+**Status:** ✅ EXISTS (`Admin/Vendor/DeleteVendorController.php`)
+
+Soft delete. Hard delete reserved for compliance reasons; documented separately.
+
+**Error responses:**
+- `409 STORE_HAS_PENDING_ORDERS` — must wait until pending orders cleared
+
+---
+
+##### POST /v3/admin/vendors/:id/activate
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** HIGH — store goes live
+
+**Request:**
+```typescript
+{
+  reason: string                       // REQUIRED
+}
+```
+
+**Response 200:** Updated vendor.
+
+**Error responses:**
+- `409 STORE_ALREADY_ACTIVE`
+- `422 ADMIN_REASON_REQUIRED`
+
+**Side effects:**
+- Set `vendor.status = 'active'`
+- Surface vendor's active products to public catalog
+- Audit log
+- Email vendor that they're activated
+
+**Migration coverage:** portal's `activateStore` (`admin/common/activate-store`)
+
+---
+
+##### POST /v3/admin/vendors/:id/deactivate
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** HIGH — store goes offline; in-flight orders frozen
+
+**Request:**
+```typescript
+{
+  reason: string,
+  freeze_orders?: boolean              // if true, in-flight orders move to admin-review queue
+}
+```
+
+**Response 200:** Updated vendor.
+
+**Side effects:**
+- Set `vendor.status = 'suspended'`
+- Remove products from public catalog
+- If `freeze_orders: true`, in-flight orders flagged for admin review
+- Audit log
+- Email vendor
+
+**Migration coverage:** portal's `deactivateStore`
+
+---
+
+##### DELETE /v3/admin/vendors/:id (HARD DELETE)
+
+**Status:** ⚠️ NEEDS LEGACY VERIFICATION
+
+Mobile/portal's `deleteStore` endpoint — unclear if this is soft-delete (existing `Admin/Vendor/DeleteVendorController.php`) or hard-delete. If hard delete is needed (e.g. GDPR compliance), it's a separate admin-only-with-2FA endpoint.
+
+**M3 decision:** Soft delete is the default (existing). Hard delete is M4 polish with explicit 2FA + reason + compliance officer override. Out of scope for M3.
+
+**Migration coverage:** portal's `deleteStore` — maps to existing soft-delete endpoint.
+
+#### 5.7.6 Orders (admin view) (6 ops)
+
+---
+
+##### GET /v3/admin/orders
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Query parameters:** `?limit=&offset=&status=&vendor_id=&customer_id=&from=&to=&q=`
+- `q`: search by order number or customer email
+- `status`: standard order statuses + `cancellation_requested`, `pending_refund`
+
+**Response 200:** Paginated list with order summaries (matches GET /v3/me/store/orders shape but cross-vendor).
+
+**Migration coverage:** Replaces multiple portal endpoints via `?status=`:
+- `processing` (`admin/common/processing`) → `?status=processing`
+- (other status-filter endpoints folded similarly)
+
+---
+
+##### GET /v3/admin/orders/:order_number
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Response 200:** Full order with admin-visible fields:
+- All customer info (no privacy redaction)
+- Vendor info
+- Per-line commission breakdown
+- Payment events history (from `payment_events` table, 0e.4)
+- Webhook events history (`webhook_events`)
+- Status timeline
+- Any refunds applied
+
+**Migration coverage:** Various portal order-detail endpoints
+
+---
+
+##### GET /v3/admin/orders/:order_number/processing
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** Processing-queue specific view. Shows pickup/shipment readiness, picker assignment, etc.
+
+**Response 200:**
+```typescript
+{
+  data: {
+    order: { /* full order */ },
+    processing: {
+      assigned_picker: { user_id, name } | null,
+      ready_at: string | null,
+      packed_at: string | null,
+      handed_off_at: string | null,
+      logistics: {
+        carrier: string | null,
+        tracking_number: string | null,
+        estimated_delivery: string | null
+      }
+    }
+  }
+}
+```
+
+**Migration coverage:** portal's `processingById` (`admin/common/processingById`)
+
+---
+
+##### GET /v3/admin/orders/:order_number/items
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** Order line items, separately fetchable for processing UX.
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      item_id: number,
+      product: { slug, name, image_url, sku },
+      vendor: { slug, name },
+      quantity: number,
+      unit_price: { amount, currency },
+      line_total: { amount, currency },
+      commission_amount: { amount, currency },
+      pick_status: 'pending' | 'picked' | 'packed' | 'unavailable',
+      notes: string | null
+    }
+  ]
+}
+```
+
+**Migration coverage:** portal's `productsByProcessingId` (`admin/common/productsByProcessingId`)
+
+---
+
+##### POST /v3/admin/orders/:order_number/refund
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** CRITICAL — money movement, irreversible
+
+**Request:**
+```typescript
+{
+  amount?: number,                    // omit for FULL refund; specify for partial
+  reason: 'customer_request' | 'damaged' | 'wrong_item' | 'late_delivery' | 'other',
+  notes: string,                       // REQUIRED, 5-500 chars
+  refund_shipping?: boolean,           // include shipping fee in refund
+  refund_to: 'original_payment_method' | 'store_credit'
+}
+```
+
+**Response 200:**
+```typescript
+{
+  data: {
+    refund_id: string,                  // gateway refund reference
+    order_number: string,
+    amount: { amount: number, currency: 'AED' },
+    method: 'original_payment_method' | 'store_credit',
+    gateway: 'noon',
+    status: 'pending' | 'processed' | 'failed',
+    processed_at: string | null,
+    created_at: string
+  },
+  order: { /* updated order */ }
+}
+```
+
+**Error responses:**
+- `404 NOT_FOUND` — order doesn't exist
+- `409 REFUND_AMOUNT_EXCEEDS_ORDER` — requested > remaining
+- `409 REFUND_ALREADY_FULL` — already fully refunded
+- `502 PAYMENT_REFUND_FAILED` — gateway rejected
+
+**Side effects:**
+- Call `PaymentService::refund` (0e.4 architecture)
+- Update order status to `refunded` or `partially_refunded`
+- Insert `payment_events` row for the refund
+- Audit log entry (`order.refund`)
+- Email customer with refund confirmation
+- Decrement vendor's `pending_balance` accordingly
+- Restore stock if order also being cancelled
+
+**Notes:**
+- This is the endpoint deferred from 0e.4 §5.4.7
+- For Noon: full refund supported via API; partial refund requires Noon admin dashboard intervention currently (verify with Noon API docs in M3.1.8)
+- Store credit refunds are M4 (no wallet system yet)
+
+**⚠️ Confidence flag:** Refund flow has multiple "details depend on Noon's actual API" notes. Implementation will need to verify against Noon docs.
+
+---
+
+##### POST /v3/admin/orders/:order_number/note
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** Add internal admin note to an order.
+
+**Request:**
+```typescript
+{
+  note: string                         // 1-2000 chars
+}
+```
+
+**Response 201:** Created note with admin metadata.
+
+#### 5.7.7 Products (admin view) (3 ops)
+
+---
+
+##### GET /v3/admin/products
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** Cross-vendor product list for admin moderation.
+
+**Query parameters:** `?limit=&offset=&q=&vendor=&category=&status=` + admin extras: `?reported=true` to surface flagged products
+
+**Response 200:** Same shape as vendor's `GET /v3/me/store/products` (0e.6) but cross-vendor.
+
+**Migration coverage:** portal's `getAdminProducts` (`admin/common/products`)
+
+---
+
+##### GET /v3/admin/vendors/:vendor_id/products
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** All products for a specific vendor.
+
+**Response 200:** Paginated product list scoped to vendor.
+
+**Migration coverage:** portal's `productsByVendorId`
+
+---
+
+##### DELETE /v3/admin/products/:id
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** MEDIUM — affects vendor catalog
+
+**Purpose:** Admin hard-delete (vs vendor's soft-delete in 0e.6 §5.6.6). For compliance/moderation: counterfeit, policy violations, etc.
+
+**Request:**
+```typescript
+{
+  reason: 'counterfeit' | 'policy_violation' | 'inappropriate_content' | 'other',
+  notes: string                        // REQUIRED, 5-500 chars
+}
+```
+
+**Response 204**
+
+**Side effects:**
+- Hard delete: row removed from `products`
+- Cart items referencing this product orphaned (display as "unavailable")
+- Audit log
+- Email vendor with reason
+
+#### 5.7.8 Sales / commissions / financial (4 ops)
+
+---
+
+##### GET /v3/admin/sales
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Query parameters:** `?from=&to=&vendor_id=&group_by=day|week|month`
+
+**Response 200:**
+```typescript
+{
+  data: {
+    period: { from: string, to: string, group_by: string },
+    totals: {
+      order_count: number,
+      gross_revenue: { amount, currency },
+      net_revenue: { amount, currency },         // after refunds
+      commissions: { amount, currency },          // platform's cut
+      vendor_payouts: { amount, currency }        // vendors' cut
+    },
+    series: [
+      {
+        period: string,                            // 'YYYY-MM-DD' or 'YYYY-W##' or 'YYYY-MM'
+        order_count: number,
+        gross: number,
+        net: number,
+        commissions: number
+      }
+    ]
+  }
+}
+```
+
+**Migration coverage:** portal's `sales` (`admin/common/sales` — 2 callers)
+
+---
+
+##### GET /v3/admin/commissions
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** List of commission settings per vendor.
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      vendor: { id, slug, name },
+      commission_rate_percent: number,
+      override_rates: [                     // category-specific overrides
+        { category_slug: string, rate_percent: number }
+      ],
+      last_modified_at: string,
+      last_modified_by: { admin_user_id: number, name: string }
+    }
+  ]
+}
+```
+
+**Migration coverage:** portal's `commissions` (`admin/common/commissions`)
+
+---
+
+##### PATCH /v3/admin/vendors/:id/commission
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** CRITICAL — affects vendor income directly
+
+**Request:**
+```typescript
+{
+  commission_rate_percent: number,    // 0-50
+  override_rates?: [
+    { category_slug: string, rate_percent: number }
+  ],
+  effective_at?: string,               // future-dated change; defaults to NOW()
+  reason: string                       // REQUIRED, 5-500 chars
+}
+```
+
+**Response 200:** Updated vendor.
+
+**Error responses:**
+- `422 COMMISSION_RATE_OUT_OF_RANGE` — % must be 0-50
+- `422 ADMIN_REASON_REQUIRED`
+
+**Side effects:**
+- Update vendor's commission settings
+- Audit log entry (`vendor.commission_change`) — INCLUDES before/after values in `changes` field
+- Email vendor of change with new rate + effective date
+
+**Note:** ⚠️ Commission changes for IN-FLIGHT orders: applies only to NEW orders after `effective_at`. Existing orders retain their commission at time of placement. This is a critical semantics decision; legacy may differ — flag for verification.
+
+---
+
+##### GET /v3/admin/transactions
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** Payment + refund event log across the platform.
+
+**Query parameters:** `?limit=&offset=&type=&vendor_id=&from=&to=`
+- `type`: `payment` | `refund` | `payout`
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      type: 'payment' | 'refund' | 'payout',
+      order_number: string | null,
+      vendor: { slug, name } | null,
+      amount: { amount, currency },
+      gateway: 'noon' | null,
+      gateway_reference: string | null,
+      status: 'success' | 'pending' | 'failed',
+      created_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Migration coverage:** portal's `transactions` (`admin/common/transactions`)
+
+#### 5.7.9 Tickets (admin side) (4 ops)
+
+---
+
+##### GET /v3/admin/tickets
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Query parameters:** `?limit=&offset=&status=&priority=&assigned_to=&q=`
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      number: string,
+      subject: string,
+      category: string,
+      status: string,
+      priority: string,
+      customer: { id, name, email },
+      assigned_to: { admin_user_id, name } | null,
+      message_count: number,
+      unread_count: number,
+      last_message_at: string,
+      created_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Migration coverage:** portal's `tickets` (`admin/common/tickets`)
+
+---
+
+##### GET /v3/admin/tickets/:number/messages
+
+**Status:** ❌ NEW (M3.3.1)
+
+Same shape as customer's `GET /v3/me/tickets/:number/messages` (0e.5 §5.5.5) but with admin-side `sender.type` values (`customer` | `staff`).
+
+**Migration coverage:** portal's `ticketsMessages`
+
+---
+
+##### POST /v3/admin/tickets/:number/messages
+
+**Status:** ❌ NEW (M3.3.1)
+
+Same shape as customer-side message-send (0e.5). Admin's reply has `sender_type: 'staff'`. Side effect: customer notified.
+
+**Migration coverage:** portal's `sendTicketMessage` (admin variant)
+
+---
+
+##### PATCH /v3/admin/tickets/:number
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** Update ticket metadata: status, priority, assignment.
+
+**Request:** (all optional)
+```typescript
+{
+  status?: 'open' | 'in_progress' | 'resolved' | 'closed',
+  priority?: 'low' | 'normal' | 'high',
+  assigned_to?: number | null         // admin user ID
+}
+```
+
+**Response 200:** Updated ticket.
+
+**Side effects:**
+- If status `resolved`: set `resolved_at`
+- If status `closed`: set `closed_at`
+- If assignment changed: notify new assignee
+- Audit log if status/priority changed
+
+**Migration coverage:** portal's `ticketsStatus` + `ticketsPriority` (DEDUP: 2 portal endpoints → 1 v3 endpoint)
+
+#### 5.7.10 Stores (admin "stores" namespace) (3 ops)
+
+Note: Portal has `getStores` + `getSingleStore` + others; semantically these are "vendor-as-store" views — slightly different framing from `/v3/admin/vendors`. To avoid endpoint duplication, M3 treats them as the SAME resource.
+
+**Mapping decision:** Portal's `getStores`, `getSingleStore`, etc. all redirect to `/v3/admin/vendors` and `/v3/admin/vendors/:id` (covered in 5.7.5).
+
+The `getStoreOrders` and `getStoreOrdersByStatus` endpoints from portal are covered by `/v3/admin/orders?vendor_id=&status=` (0e.7 5.7.6).
+
+**No NEW endpoints in this cluster — all collapse into existing scope.**
+
+#### 5.7.11 Users management (admin) (3 ops)
+
+For managing admin users themselves (creating staff accounts, password resets, etc.).
+
+---
+
+##### GET /v3/admin/users
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Query parameters:** `?role=customer|vendor|admin|all` (defaults to admin staff for this endpoint)
+
+**Response 200:** Paginated list. Same shape as customers list but cross-role.
+
+**Migration coverage:** portal's `getUsers` (`admin/common/get-users`)
+
+---
+
+##### POST /v3/admin/users (admin user creation)
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** CRITICAL — creates new admin access
+
+**Request:**
+```typescript
+{
+  email: string,
+  phone: string,
+  first_name: string,
+  last_name: string,
+  initial_password: string,            // server should require min 12 chars for admin
+  roles: ('admin')[],                  // M3: only 'admin'; M4 sub-roles deferred
+  must_change_password_on_first_login: boolean    // defaults true
+}
+```
+
+**Response 201:** Created user.
+
+**Error responses:**
+- `409 CONFLICT_EMAIL_TAKEN`
+- `422 VALIDATION_FAILED` — weak password (admin needs 12+ chars)
+
+**Side effects:**
+- Create user with `is_active: true`
+- Audit log (`admin_user.create`)
+- Email new admin with login + temporary password instructions
+- ⚠️ M4: 2FA enrollment required for all admin accounts; M3 doesn't enforce this
+
+**Migration coverage:** portal's `AdminUserRegister` (`admin/common/register`)
+
+---
+
+##### PATCH /v3/admin/users/:id/password
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** CRITICAL — admin account access
+
+**Purpose:** Force-set another admin's password (recovery scenario). Distinct from self-service password change.
+
+**Request:**
+```typescript
+{
+  new_password: string,
+  reason: string,                      // REQUIRED, 5-500 chars
+  notify_user: boolean                  // defaults true
+}
+```
+
+**Response 204**
+
+**Error responses:**
+- `404 NOT_FOUND`
+- `422 VALIDATION_FAILED` — weak password
+
+**Side effects:**
+- Set `user.password_hash`
+- Revoke all `refresh_tokens` for target user
+- Audit log (`admin_user.password_reset`)
+- If `notify_user: true`, email target with notification that admin reset their password
+
+**Migration coverage:** portal's `AdminUserPassword` (`admin/common/password`)
+
+#### 5.7.12 Collections (admin curation) (4 ops)
+
+Platform-wide collections (admin-curated). Public read at `GET /v3/collections` (0e.3); admin write here.
+
+---
+
+##### GET /v3/admin/collections
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Response 200:** Same shape as public `GET /v3/collections` but includes admin-only fields (display_order, is_published).
+
+**Migration coverage:** portal's `getCollection`/`readCollection` (admin scope)
+
+---
+
+##### POST /v3/admin/collections
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Request:**
+```typescript
+{
+  name: string,
+  description?: string,
+  cover_image_url?: string,
+  starts_at?: string,
+  ends_at?: string,
+  category_slugs?: string[],
+  vendor_slugs?: string[],
+  product_slugs?: string[],
+  is_published: boolean
+}
+```
+
+**Response 201:** Created collection.
+
+**Migration coverage:** portal's `createCollection`
+
+---
+
+##### PATCH /v3/admin/collections/:id
+
+**Status:** ❌ NEW (M3.3.1)
+
+Same shape as POST, all optional. Merge Patch semantics.
+
+**Migration coverage:** portal's `updateCollection`
+
+---
+
+##### DELETE /v3/admin/collections/:id
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Response 204**
+
+**Migration coverage:** Implied (not in 0d count but obviously needed for CRUD parity).
+
+#### 5.7.13 Logistics (1 op)
+
+---
+
+##### GET /v3/admin/logistics
+
+**Status:** ❌ NEW (M3.3.1)
+**⚠️ NEEDS LEGACY VERIFICATION**
+
+Mobile/portal's `logistics` endpoint — semantics unclear. Likely a view of orders by shipping carrier, by ready-to-ship status, or by region. Need to inspect legacy controller to determine real shape.
+
+**Provisional response 200:**
+```typescript
+{
+  data: {
+    ready_to_ship: number,
+    in_transit: number,
+    delivered_today: number,
+    failed_delivery: number,
+    by_carrier: [
+      {
+        carrier: string,
+        orders_in_transit: number,
+        orders_delivered_today: number
+      }
+    ]
+  }
+}
+```
+
+**Migration coverage:** portal's `logistics` (`admin/common/logistics`)
+
+**Recommendation:** Investigate the legacy endpoint's actual response shape before building. Likely 1-2 hours of investigation in M3.3.1 kickoff.
+
+#### 5.7.14 Vendor messaging (admin → vendor) (1 op)
+
+---
+
+##### POST /v3/admin/vendors/:vendor_id/messages
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Purpose:** Admin sends a system message to a vendor (e.g. policy reminder, compliance request).
+
+**Request:**
+```typescript
+{
+  subject: string,
+  body: string,                        // 1-5000 chars
+  category: 'compliance' | 'policy' | 'product_issue' | 'payment' | 'general',
+  attachments?: string[]               // URLs
+}
+```
+
+**Response 201:** Created message thread.
+
+**Side effects:**
+- Send via vendor's preferred notification channel (email + in-app per their settings)
+- Create a ticket on the vendor's behalf (or a notification record)
+- Audit log
+
+**Migration coverage:** portal's `messageVendor` (`admin/message-vendor`)
+
+#### 5.7.15 Plurals by ID (1 op) — ⚠️ NEEDS LEGACY VERIFICATION
+
+**`GET /v3/admin/plurals/:id`** — portal's `pluralById` (`admin/common/pluralById`).
+
+The name is opaque. "Plurals" might mean: order variants, batch operations, multi-unit-of-measure SKU groupings, or something else entirely. Without inspecting the legacy controller, I can't design this contract.
+
+**Recommendation:** Defer contract design. In M3.3.1 kickoff, audit the legacy PHP for this endpoint and update this inventory section.
+
+**Provisional contract (placeholder):** TBD pending investigation.
+
+#### 5.7.16 Compliance review (admin side) (2 ops — added to scope)
+
+Not in 0d's 30 but obviously needed given 0e.6's compliance submission flow.
+
+---
+
+##### GET /v3/admin/compliance-queue
+
+**Status:** ❌ NEW (M3.3.1)
+
+**Response 200:** Paginated list of vendors with `compliance.status = 'pending_review'`, sorted by submission age.
+
+---
+
+##### PATCH /v3/admin/vendors/:id/compliance
+
+**Status:** ❌ NEW (M3.3.2)
+**Sensitivity:** HIGH — regulatory
+
+**Request:**
+```typescript
+{
+  decision: 'approve' | 'reject',
+  reason?: string,                     // REQUIRED if reject
+  notes?: string                       // internal admin notes
+}
+```
+
+**Response 200:** Updated vendor with compliance details.
+
+**Error responses:**
+- `409 COMPLIANCE_NOT_PENDING` — submission isn't in `pending_review` state
+
+**Side effects:**
+- Update `vendor_compliance.status`
+- If `approve`: set `compliance.reviewed_at`, vendor can be activated
+- If `reject`: set `rejection_reason`, vendor must re-submit
+- Email vendor with decision
+- Audit log
+
+**Note:** This adds 2 endpoints to the 0d count of 30 → total 32 admin ops.
+
+#### 5.7.17 0e.7 Summary
+
+**32 admin operations specified** (30 from 0d + 2 added for compliance review).
+
+| Cluster | Ops | v3 exists | To BUILD |
+|---|---|---|---|
+| Dashboard | 1 | 0 | 1 |
+| Customers | 4 | 0 | 4 |
+| Vendors / stores | 8 | 4 | 4 |
+| Orders (admin view) | 6 | 0 | 6 |
+| Products (admin) | 3 | 0 | 3 |
+| Sales/commissions/financial | 4 | 0 | 4 |
+| Tickets (admin) | 4 | 0 | 4 |
+| Stores namespace | 0 | (folds into vendors) | 0 |
+| Users management | 3 | 0 | 3 |
+| Collections | 4 | 0 | 4 |
+| Logistics | 1 | 0 | 1 ⚠️ |
+| Vendor messaging | 1 | 0 | 1 |
+| Plurals (unclear semantics) | 1 | 0 | 1 ⚠️ |
+| Compliance | 2 | 0 | 2 |
+| **Total** | **42** | **4** | **38** |
+
+(42 admin endpoints total; 4 already exist; 38 NEW.)
+
+Of the 38 to build:
+- ✅ 36 have clear contracts
+- ⚠️ 2 flagged: `logistics`, `plurals` need legacy verification
+
+#### 5.7.18 Supporting tables needed (built in M3.3.x)
+
+Beyond the existing `users`, `vendors`, `orders`, `products`:
+
+```sql
+CREATE TABLE admin_audit_logs ( /* per §5.7.2 */ );
+
+CREATE TABLE admin_order_notes (
+  id BIGSERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES orders(id),
+  admin_user_id INTEGER NOT NULL REFERENCES users(id),
+  note TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE vendor_commission_overrides (
+  id BIGSERIAL PRIMARY KEY,
+  vendor_id INTEGER NOT NULL REFERENCES vendors(id) ON DELETE CASCADE,
+  category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
+  rate_percent NUMERIC(5,2) NOT NULL,
+  effective_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  set_by_admin_id INTEGER REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (vendor_id, category_id, effective_at)
+);
+
+CREATE TABLE order_refunds (
+  id BIGSERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES orders(id),
+  amount NUMERIC(10,2) NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'AED',
+  reason TEXT NOT NULL,
+  notes TEXT,
+  method TEXT NOT NULL,                  -- 'original_payment_method' | 'store_credit'
+  gateway TEXT NOT NULL,
+  gateway_refund_id TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  initiated_by_admin_id INTEGER REFERENCES users(id),
+  processed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_refunds_order ON order_refunds (order_id);
+
+CREATE TABLE collections (
+  id BIGSERIAL PRIMARY KEY,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  description TEXT,
+  cover_image_url TEXT,
+  starts_at TIMESTAMPTZ,
+  ends_at TIMESTAMPTZ,
+  is_published BOOLEAN NOT NULL DEFAULT false,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE collection_items (
+  collection_id BIGINT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  product_id INTEGER REFERENCES products(id) ON DELETE CASCADE,
+  vendor_id INTEGER REFERENCES vendors(id) ON DELETE CASCADE,
+  category_id INTEGER REFERENCES categories(id) ON DELETE CASCADE,
+  display_order INTEGER NOT NULL DEFAULT 0,
+  -- Exactly one of product/vendor/category set per row
+  CHECK (
+    (product_id IS NOT NULL)::int +
+    (vendor_id IS NOT NULL)::int +
+    (category_id IS NOT NULL)::int = 1
+  )
+);
+```
+
+#### 5.7.19 Decisions locked in 0e.7
+
+- All admin endpoints under `/v3/admin/*`
+- Single admin role for M3 (no sub-roles); M4 will introduce granularity
+- Every admin write generates an `admin_audit_logs` row — non-optional
+- Sensitive operations REQUIRE `reason` field in body (activate/deactivate, refund, commission change, password reset)
+- Refund flow integrates with `PaymentService::refund` (0e.4 architecture)
+- Commission rate changes apply to NEW orders only, not in-flight
+- Admin user creation requires 12-char minimum password (vs 8 for regular users)
+- Admin force-password-reset revokes all target's refresh tokens
+- Hard delete reserved for admin (vendor/customer only soft-delete)
+- Collections are platform-wide curation; vendor labels are vendor-specific (per 0e.3, 0e.6)
+- Stores namespace endpoints fold into vendors namespace (no separate endpoints)
+- Cross-vendor order list available at `/v3/admin/orders?vendor_id=&status=`
+- Compliance approval is admin gateway between vendor self-submission and activation
+- Logistics endpoint shape TBD pending legacy verification
+- Plurals endpoint shape TBD pending legacy verification
+
+**⚠️ FLAGGED FOR REVIEW:**
+
+1. `GET /v3/admin/logistics` — semantics unclear; needs legacy controller inspection
+2. `GET /v3/admin/plurals/:id` (portal's `pluralById`) — name opaque; needs legacy controller inspection
+3. Refund flow with Noon — partial refund details depend on Noon's API specifics (verify in M3.1.8)
+4. Soft vs hard vendor delete — confirm portal's `deleteStore` expectation
+5. Commission change effective semantics — confirm legacy applies "new orders only" not "all unbilled orders"
+
+These 5 items get explicit verification work assigned during M3.3.1 (admin endpoint build kickoff).
+
+#### 5.7.20 Cumulative M3 endpoint inventory (all 0e sub-phases)
+
+After 0e.7, the full picture across all 0e sub-phases:
+
+| Sub-phase | Ops in scope | v3 exists | To build |
+|---|---|---|---|
+| 0e.2 Auth + Identity + Account | 26-32 | 19-25 | 7 |
+| 0e.3 Catalog + Search + Utility | 15-17 | 9.5 | 5.5 |
+| 0e.4 Cart + Checkout + Orders + Payment | 11 | 0 | 11 |
+| 0e.5 Wishlist + Reviews + Follow + Chat + Tickets | 27 | 0 | 27 |
+| 0e.6 Vendor Self-Service | 40 | 0 | 40 |
+| 0e.7 Admin / Platform | 42 | 4 | 38 |
+| **Total** | **~163** | **~32** | **~128** |
+
+**Refined endpoint count to build in M3: ~128 endpoints.**
+
+Down from 0d's preliminary estimate of 139, refined by:
+- 0e.2 reality check: more auth/account exists than 0d realized
+- 0e.3 partial: most catalog exists
+- 0e.6/0e.7 reality: more added (cancel + message + plurals) than 0d counted
+
+Plus supporting infrastructure (NOT counted as endpoints):
+- Payment gateway interface + Noon adapter
+- Idempotency middleware + table
+- Webhook handler + signature verification
+- Shadow mode infra
+- Audit log table + middleware
+- 25+ new database tables across all sub-phases
+- 10+ new domain entities
+
