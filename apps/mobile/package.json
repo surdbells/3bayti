@@ -10,6 +10,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
+    "type-check": "tsc --noEmit -p tsconfig.app.json",
     "check-icons": "python3 scripts/check-icons.py",
     "wn-build": "./scripts/wn-build.sh"
   },

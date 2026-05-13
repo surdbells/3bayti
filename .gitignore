@@ -83,3 +83,12 @@ apps/mobile/ios/.cocoapod-build-settings
 apps/portal/node_modules
 apps/portal/dist
 apps/portal/.angular
+
+# Day 6 (M2.2.6) — apps/mobile and apps/portal converted from npm to
+# pnpm workspace members. Their package-lock.json files were deleted
+# along with this. Lock these out so 'npm install' run in those dirs
+# (e.g. by force of habit) doesn't accidentally restore them and
+# create lockfile drift. The pnpm-lock.yaml at the repo root is the
+# only lockfile in this project.
+apps/mobile/package-lock.json
+apps/portal/package-lock.json

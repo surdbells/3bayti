@@ -1,0 +1,104 @@
+name: Portal — type-check & build
+
+# Type-check + production build for the apps/portal Angular admin app.
+#
+# Portal differs from the mobile app: it's a web app (eventually
+# deployable to a separate portal subdomain) and uses Angular 19
+# (vs apps/web's 21 and apps/mobile's 21). Mixed major versions in
+# the monorepo are fine — pnpm's strict hoisting puts each version
+# in a separate .pnpm/ path. We'll consolidate in M3.
+#
+# Currently this CI does NOT deploy. Portal hosting plans are TBD
+# (could be Cloudflare Pages like web, or static hosting at
+# portal.3bayti.ae). Deploy step will be added when the hosting
+# decision is locked.
+#
+# What this CI guarantees:
+#   - TypeScript compiles against the latest workspace deps
+#   - 'ng build' produces a bundle without errors
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/portal/**'
+      - 'packages/api-client/**'
+      - 'packages/api-contracts/**'
+      - 'packages/design-tokens/**'
+      - 'packages/shared-ui/**'
+      - 'packages/tsconfig-3bayti/**'
+      - 'packages/eslint-config-3bayti/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/portal.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/portal/**'
+      - 'packages/api-client/**'
+      - 'packages/api-contracts/**'
+      - 'packages/design-tokens/**'
+      - 'packages/shared-ui/**'
+      - 'packages/tsconfig-3bayti/**'
+      - 'packages/eslint-config-3bayti/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/portal.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm --filter @3bayti/portal type-check
+
+      - name: Production build
+        # The Angular project name inside portal/angular.json is 'abayti'
+        # (a pre-existing artifact from before the rename to @3bayti/portal).
+        # We rely on the default 'ng build' selecting it as the only project.
+        run: pnpm --filter @3bayti/portal build
+
+      - name: Verify build output
+        working-directory: apps/portal
+        run: |
+          # Angular 19 default output is dist/<projectName>/browser when
+          # using application builder, or dist/<projectName> for legacy.
+          # We probe a few possibilities to tolerate either.
+          for candidate in dist/abayti/browser dist/abayti dist/portal/browser dist/portal; do
+            if [ -d "$candidate" ] && [ -f "$candidate/index.html" ]; then
+              BUNDLE=$candidate
+              break
+            fi
+          done
+
+          if [ -z "$BUNDLE" ]; then
+            echo "ERROR: no Angular build output with index.html found"
+            echo "Looked in: dist/abayti/{browser,}, dist/portal/{browser,}"
+            ls dist 2>/dev/null || echo "(no dist directory)"
+            exit 1
+          fi
+
+          echo "✓ Portal bundle in $BUNDLE ($(wc -c < $BUNDLE/index.html) bytes index.html)"
+          ls -la "$BUNDLE" | head -20

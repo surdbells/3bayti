@@ -1,0 +1,128 @@
+name: Mobile — type-check & build
+
+# Type-check + production build for the apps/mobile Ionic+Capacitor app.
+#
+# Important: this CI does NOT do a native Android/iOS build. Native
+# builds require Xcode (macOS runner, paid CI cycles) or Android SDK +
+# JDK setup (slow), and they're not needed to validate a TypeScript/
+# Angular code change. Native packaging happens on Sodiq's machine via
+# 'ionic capacitor sync' + the Xcode/Android Studio toolchain when a
+# real device test or store submission is needed.
+#
+# What this CI guarantees:
+#   - TypeScript compiles against the latest workspace deps
+#   - 'ng build' produces a web bundle without errors
+#   - Capacitor's web entry point (www/) is generated
+#
+# What it does NOT guarantee:
+#   - Native code (Java/Kotlin/Swift) compiles
+#   - The native plugins (Push, Splash, etc) initialize without error
+#   - The app actually launches on a phone
+#
+# Those are deferred to Sodiq's manual smoke test post-merge.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/api-client/**'
+      - 'packages/api-contracts/**'
+      - 'packages/design-tokens/**'
+      - 'packages/shared-ui/**'
+      - 'packages/tsconfig-3bayti/**'
+      - 'packages/eslint-config-3bayti/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/mobile.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/api-client/**'
+      - 'packages/api-contracts/**'
+      - 'packages/design-tokens/**'
+      - 'packages/shared-ui/**'
+      - 'packages/tsconfig-3bayti/**'
+      - 'packages/eslint-config-3bayti/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/mobile.yml'
+
+# Cancel in-progress runs when a newer commit is pushed.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        # --frozen-lockfile = strict; matches web + packages workflows.
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        # Surfaces TS errors faster than waiting for the full Angular
+        # build to choke on the same. Separate step makes the failure
+        # mode unambiguous in CI logs ("did types fail or did Angular
+        # build fail?").
+        run: pnpm --filter @3bayti/mobile type-check
+
+      - name: Production build
+        # ng build defaults to production for apps with a production
+        # configuration in angular.json. For a Capacitor app this
+        # produces the www/ bundle that 'cap sync' copies into the
+        # native projects.
+        run: pnpm --filter @3bayti/mobile build
+
+      - name: Verify build output
+        working-directory: apps/mobile
+        run: |
+          # Capacitor's webDir is 'www' (per capacitor.config.ts).
+          # Ng build writes to dist/app/browser by default; the Capacitor
+          # Angular template hooks a copy step or aliases the webDir.
+          # Check both common output locations so we tolerate either
+          # build configuration.
+          if [ -d www ] && [ -n "$(ls www 2>/dev/null)" ]; then
+            BUNDLE=www
+          elif [ -d dist/app/browser ]; then
+            BUNDLE=dist/app/browser
+          elif [ -d dist/app ]; then
+            BUNDLE=dist/app
+          else
+            echo "ERROR: no build output found in apps/mobile/www, dist/app/browser, or dist/app"
+            ls -la 2>&1
+            ls dist 2>/dev/null || echo "(no dist directory)"
+            exit 1
+          fi
+
+          if [ ! -f "$BUNDLE/index.html" ]; then
+            echo "ERROR: $BUNDLE/index.html missing — Angular build didn't produce an entry point"
+            exit 1
+          fi
+
+          # Sanity check: index.html should reference the Angular runtime.
+          if ! grep -q "polyfills\|main\.\|runtime\." "$BUNDLE/index.html"; then
+            echo "ERROR: $BUNDLE/index.html doesn't reference Angular bundles"
+            echo "       This usually means the build produced a stub."
+            exit 1
+          fi
+
+          echo "✓ Mobile bundle in $BUNDLE ($(wc -c < $BUNDLE/index.html) bytes index.html)"
+          ls -la "$BUNDLE" | head -20
