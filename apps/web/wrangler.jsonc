@@ -93,6 +93,24 @@
     "enabled": true
   },
 
+  // Module aliases — stub out modules that are imported by transitive
+  // deps but never reached at runtime. Each alias points esbuild at
+  // src/empty-shim.mjs (a no-op `export default {}`) instead of trying
+  // to resolve the real package.
+  //
+  // Current entries:
+  //   xhr2 — Angular's @angular/common/http SSR backend has a dynamic
+  //          `import("xhr2")` as a fallback for non-browser, non-fetch
+  //          environments. We configure HttpClient with
+  //          provideHttpClient(withFetch()) so the fallback is never
+  //          exercised, but wrangler 4.88+ became stricter about
+  //          resolving the import path at bundle time. Aliasing to
+  //          the empty shim makes the build succeed without changing
+  //          runtime behavior.
+  "alias": {
+    "xhr2": "./src/empty-shim.mjs"
+  },
+
   // Enable the *.workers.dev preview subdomain for staging/testing.
   // Once a custom domain is wired up (Phase 4), production traffic
   // hits the custom domain directly; workers_dev stays useful for
