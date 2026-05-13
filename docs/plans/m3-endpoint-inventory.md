@@ -3030,3 +3030,753 @@ After 0e.2 (saved 2-3 weeks on auth) and 0e.3 (catalog mostly done), the M3 time
 
 This will be quantified more precisely after 0e.4-0e.7 complete.
 
+
+---
+
+### 5.4 (M3.1.0e.4) — Cart + Checkout + Orders + Payment contracts
+
+**Status:** ✅ Complete (May 13, 2026)
+**Scope:** 12 unique operations covering cart CRUD, checkout, order management, payment lifecycle including Noon webhook.
+
+#### 5.4.0 Reality audit
+
+**EXISTS in v3:** ZERO. All 12 operations are greenfield. Routes file even has comments saying "/v3/cart/* (M3)", "/v3/checkout/* (M3)", "/v3/orders/* (M3)" — explicitly noted as M3 scope.
+
+**To BUILD:** All 12 endpoints + supporting infrastructure (entities, migrations, payment gateway interface, Noon adapter, webhook handler, idempotency table, shadow_diffs table).
+
+This is the largest single block of net-new work in M3.
+
+#### 5.4.1 Existing legacy Noon flow (for context)
+
+The legacy mobile checkout flow (per `apps/mobile/src/app/customer/checkout/checkout.page.ts`):
+
+```
+Client                          Legacy /customer/payment/initiate_payment
+  │                                                       │
+  │  POST initiate (Noon-shaped body)                    │
+  ├──────────────────────────────────────────────────────►│
+  │                                                       │  builds Noon Order
+  │                                                       │  Create request
+  │                                                       │
+  │  { resultCode, result: { checkoutData: { postUrl } } }│
+  │◄──────────────────────────────────────────────────────┤
+  │                                                       │
+  │  open InAppBrowser at postUrl                         │
+  │                                                       │
+  │  user pays on Noon's hosted page                      │
+  │                                                       │
+  │  Noon redirects to:                                   │
+  │  https://api.3bayti.ae/customer/complete?              │
+  │    orderId=...&merchantReference=...&paymentType=...   │
+  │                                                       │
+  │  Client detects URL change, captures params           │
+  │                                                       │
+  │  POST finalize_payment with captured params           │
+  ├──────────────────────────────────────────────────────►│
+  │                                                       │  marks order paid
+  │                                                       │
+  │  { status: 'success' }                                │
+  │◄──────────────────────────────────────────────────────┤
+```
+
+**Critical issue with legacy flow:** Server only learns of payment success via the client's `finalize_payment` call. If the client crashes between redirect-detection and the finalize call, the payment confirmation is LOST. There's no server-side webhook fallback.
+
+**M3 modernization fixes this:**
+1. Noon webhook handler (server-to-server signed events) — primary source of truth
+2. Client-initiated finalize → idempotent secondary path
+3. Daily reconciliation cron — compares Noon dashboard vs our DB
+
+#### 5.4.2 Architecture: pluggable PaymentGateway interface
+
+Per C11 (locked constraint), payment is built behind an interface to enable future gateways without churn:
+
+```php
+// apps/api/src/Payment/PaymentGatewayInterface.php (NEW)
+namespace Bayti\Api\Payment;
+
+interface PaymentGatewayInterface
+{
+    /**
+     * Begin a payment session. Returns gateway-specific URL/data
+     * the client should navigate to.
+     */
+    public function initiate(InitiatePaymentRequest $req): InitiatePaymentResult;
+
+    /**
+     * Process a webhook from the gateway. Verifies signature,
+     * handles idempotency, returns processing result.
+     */
+    public function handleWebhook(WebhookRequest $req): WebhookResult;
+
+    /**
+     * Look up the current state of a payment.
+     */
+    public function getStatus(string $gatewayTransactionId): PaymentStatus;
+
+    /**
+     * Issue a full or partial refund.
+     */
+    public function refund(RefundRequest $req): RefundResult;
+
+    /**
+     * Symbolic name; matches the value stored in DB column
+     * orders.payment_gateway. Used by PaymentService to route
+     * incoming webhooks to the correct adapter.
+     */
+    public function name(): string;  // 'noon', future: 'stripe', etc.
+}
+```
+
+**Noon implementation:** `apps/api/src/Payment/Adapters/NoonAdapter.php` implements all 4 methods, encapsulating Noon's specific request/response shapes, signature verification (HMAC-SHA256), retry behavior, and error mapping.
+
+**Future gateways** (M4+): Add a new class implementing `PaymentGatewayInterface`. Register in DI container. Update `orders.payment_gateway` to allow new values. Admin selects active gateway via config.
+
+#### 5.4.3 Cart contracts (4 ops)
+
+All NEW. All require `customer` auth.
+
+---
+
+##### GET /v3/cart
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.6)
+
+**Purpose:** Return current user's cart with line items, totals, and any applicable discounts.
+
+**Response 200:**
+```typescript
+{
+  data: {
+    items: [
+      {
+        id: number,
+        product: {
+          slug: string,
+          name: string,
+          image_url: string | null,
+          vendor: { slug: string, name: string }
+        },
+        size: string | null,           // selected variant
+        color: { name: string, hex: string | null } | null,
+        quantity: number,
+        unit_price: { amount: number, currency: 'AED' },
+        line_total: { amount: number, currency: 'AED' },
+        in_stock: boolean,             // refreshed at read time
+        max_quantity: number,          // stock available
+        added_at: string               // ISO-8601
+      }
+    ],
+    summary: {
+      subtotal: { amount: number, currency: 'AED' },
+      discount: { amount: number, currency: 'AED' },        // sum of applied coupons
+      shipping: { amount: number, currency: 'AED' } | null, // null until checkout step computes it
+      tax: { amount: number, currency: 'AED' } | null,
+      total: { amount: number, currency: 'AED' },           // subtotal - discount (+ shipping + tax if computed)
+      currency: 'AED',
+      item_count: number,              // sum of quantities
+      distinct_count: number            // count of distinct items[]
+    },
+    applied_coupons: [
+      {
+        code: string,
+        discount_amount: number,
+        type: 'percentage' | 'fixed' | 'shipping'
+      }
+    ],
+    updated_at: string                  // last modification (any of add/update/remove)
+  }
+}
+```
+
+**Notes:**
+- Cart is stored server-side, keyed by user_id (1-to-1 with users table)
+- Empty cart returns `data.items = []` with `summary.total.amount = 0`
+- `in_stock` and `max_quantity` are RE-COMPUTED on every read — handles vendor changing inventory between cart updates
+- Shipping is `null` until the user reaches checkout (depends on address; not known at cart browse time)
+- Tax: UAE VAT (5%) applies; computed at checkout. `null` at cart view.
+
+**Migration coverage:** mobile's `customerCart` (`customer/read-cart`)
+
+**Shape note for ENDPOINT_ROUTING fix:** 0e.4 confirms `GET /cart` should map `oldPath: '/customer/read-cart'` (NOT `/customer/cart` as currently scaffolded — see 0d §4.2).
+
+---
+
+##### POST /v3/cart/items
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.6)
+**Idempotency:** ACCEPTED (not required — duplicate adds with same key return cached result)
+
+**Request:**
+```typescript
+{
+  product_slug: string,
+  size: string | null,                 // required if product has variants
+  color: string | null,                // optional even if product has color variants
+  quantity: number                     // ≥ 1; capped at min(20, max_quantity)
+}
+```
+
+**Response 201:** Same shape as GET /v3/cart (returns full cart so client doesn't need to re-fetch).
+
+**Error responses:**
+- `404 NOT_FOUND` — product slug unknown or product inactive
+- `422 CART_PRODUCT_UNAVAILABLE` — product is out of stock
+- `422 CART_INVALID_QUANTITY` — quantity ≤ 0 OR exceeds `max_quantity`
+- `422 VALIDATION_FAILED` — missing required size for variant product
+
+**Behavior:**
+- If the exact same (product, size, color) combination already exists in cart: INCREMENT quantity by the new request's quantity
+- Otherwise: ADD as new line item
+- Stock check at write time (race condition possible but vanishingly small)
+
+**Migration coverage:** mobile's `addToCart` (`customer/addToCart`)
+
+---
+
+##### PATCH /v3/cart/items/:id
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.6)
+
+**Purpose:** Set the quantity for a cart item. Replaces mobile's `IncreaseItem` + `DecreaseItem` (separate endpoints → one endpoint with delta semantics).
+
+**Request:**
+```typescript
+{
+  quantity: number          // absolute new value, ≥ 1
+}
+```
+
+**Response 200:** Full cart (same as GET).
+
+**Error responses:**
+- `404 CART_ITEM_NOT_FOUND` — item doesn't exist OR belongs to different user
+- `422 CART_INVALID_QUANTITY` — ≤ 0 or > max_quantity
+
+**Dedup win:** This single endpoint replaces mobile's `IncreaseItem` (`customer/IncreaseItem`) + `DecreaseItem` (`customer/decreaseItem`). Client computes new quantity locally and sends absolute value.
+
+---
+
+##### DELETE /v3/cart/items/:id
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.6)
+
+**Response 200:** Full cart (post-removal, so client knows the new totals).
+
+**Error responses:**
+- `404 CART_ITEM_NOT_FOUND`
+
+**Migration coverage:** mobile's `RemoveCartItem` (`customer/removeFromCart`)
+
+**Note:** Returns 200 with full cart, NOT 204. Rationale: returning the updated cart saves the client a round trip and avoids race conditions where the deletion + re-fetch could see different states.
+
+#### 5.4.4 Checkout contracts (2 ops + 1 webhook)
+
+---
+
+##### POST /v3/checkout
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.8)
+**Idempotency:** REQUIRED via `Idempotency-Key` header
+
+**Purpose:** Convert the current cart into an order + initiate payment with the configured gateway. Returns gateway-specific data the client uses to complete payment.
+
+**Request:**
+```typescript
+{
+  shipping_address_id: number,         // from /v3/me/addresses
+  billing_address?: { ... } | null,    // optional; if absent, billing = shipping
+  coupon_code?: string,                // optional; applied to cart total
+  delivery_method: 'standard' | 'express',
+  notes?: string,                      // customer note (max 500 chars)
+  payment_gateway?: 'noon'             // optional; defaults to admin-configured active gateway
+}
+```
+
+**Response 201:**
+```typescript
+{
+  order: {
+    number: string,                     // ORD-2026-0001234 per 0e.1 §5.1.8
+    status: 'pending_payment',
+    items: [/* same shape as cart */],
+    shipping_address: { ... },
+    billing_address: { ... },
+    summary: {
+      subtotal, discount, shipping, tax, total, currency
+    },
+    payment_gateway: 'noon',
+    created_at: string,
+    payment_expires_at: string         // ISO-8601, +30 min from creation
+  },
+  payment: {
+    gateway: 'noon',
+    redirect_url: string,               // Noon's hosted-page URL (was checkoutData.postUrl in legacy)
+    transaction_reference: string       // gateway-side ID
+  }
+}
+```
+
+**Error responses:**
+- `400 CART_EMPTY` — no items in cart
+- `404 NOT_FOUND` — `shipping_address_id` invalid
+- `422 CART_PRODUCT_UNAVAILABLE` — one or more items now out of stock; details lists the items
+- `422 COUPON_NOT_APPLICABLE` / `COUPON_EXPIRED` / `COUPON_USAGE_LIMIT_REACHED`
+- `422 VALIDATION_FAILED` — bad delivery_method
+- `502 PAYMENT_INITIATION_FAILED` — gateway returned error; order was created but payment failed to initiate. Order remains in `pending_payment` for 30 min; if no payment lands, order auto-cancels.
+
+**Behavior:**
+- Stock re-check at write time; reserve stock if any (advisory; not transactional locks)
+- Compute totals including shipping + tax
+- Apply coupons (if `coupon_code` present)
+- Create order in `pending_payment` status
+- Call `PaymentService::initiate()` → routes to `NoonAdapter::initiate()`
+- Persist `merchant_reference` (Noon's idempotency key for this transaction) on the order
+- Return Noon's hosted-page URL for client to navigate to
+
+**Idempotency requirement:** Per 0e.1 §5.1.7, this endpoint REQUIRES `Idempotency-Key` header. Client generates UUIDv4 before submitting. Same key + same body → returns cached response. Same key + different body → 422.
+
+**Notes for shadow mode (per C7):**
+- Shadow mode applies. apps/mobile and apps/web call both legacy and v3 in parallel during shadow window.
+- User sees legacy result during shadow window; v3 result is logged + diffed.
+- After 7+ days clean shadow, flip to v3-only.
+
+**Migration coverage:** mobile's `initiatePayment` (`customer/payment/initiate_payment`)
+
+---
+
+##### GET /v3/checkout/return
+
+**Auth:** public (called via redirect, no auth header)
+**Status:** ❌ NEW (M3.1.8)
+
+**Purpose:** Noon redirect destination after user pays on hosted page. Captures `orderId`, `merchantReference`, `paymentType` query params and renders a success/failure page.
+
+**Why this is here:** The legacy `https://api.3bayti.ae/customer/complete` URL is hit by the user's browser after Noon redirects. v3 needs an equivalent at `https://api-v3.3bayti.ae/v3/checkout/return` (or `/v3/checkout/complete` for parity).
+
+**Query parameters (from Noon redirect):**
+- `orderId` — Noon's order ID
+- `merchantReference` — our order number (set during initiate)
+- `paymentType` — `card | applepay | googlepay | ...`
+- Possibly more depending on Noon's URL config
+
+**Response 200:** HTML page (not JSON) that:
+- Shows "Processing your order..." for 2-3 seconds
+- Calls `POST /v3/checkout/finalize` server-side via JS
+- Redirects to `https://3bayti.ae/order/:order_number` (web) or closes InAppBrowser (mobile)
+
+**Notes:**
+- This is the BROWSER-facing URL; the InAppBrowser on mobile detects this URL prefix and closes itself
+- For web, this is rendered by Cloudflare Workers / SSR — passes through
+
+---
+
+##### POST /v3/checkout/finalize
+
+**Auth:** customer (the order owner — verified via order_number lookup matching token's user)
+**Status:** ❌ NEW (M3.1.8)
+**Idempotency:** ACCEPTED (server is idempotent natively — see notes)
+
+**Purpose:** Client-side confirmation that payment completed. Updates order from `pending_payment` to `confirmed` if Noon also confirms.
+
+**Request:**
+```typescript
+{
+  order_number: string,
+  gateway_transaction_id: string,      // Noon's orderId
+  merchant_reference: string           // our order_number, echoed for verification
+}
+```
+
+**Response 200:**
+```typescript
+{
+  order: {
+    number: string,
+    status: 'confirmed' | 'failed' | 'pending_payment',
+    // ... full order
+  },
+  payment_verified: boolean             // true if Noon confirms; false if mismatch
+}
+```
+
+**Behavior:**
+- Look up order by `order_number`, verify it belongs to the authenticated user
+- Look up order's `merchant_reference`, verify it matches request's `merchant_reference`
+- Call `PaymentService::getStatus(gateway_transaction_id)` → checks Noon's API for current payment state
+- If Noon says PAID and our order is still `pending_payment`: update to `confirmed`, emit `OrderPaidEvent`
+- If Noon says PAID and our order is ALREADY `confirmed` (webhook beat the client): no-op, return current state
+- If Noon says FAILED: update to `failed`, emit `OrderFailedEvent`
+- If Noon says PENDING: leave order in `pending_payment`, client retries
+
+**Idempotency:** Native via the "current state" check. Client can call this multiple times safely — server only transitions state if Noon confirms.
+
+**Error responses:**
+- `404 ORDER_NOT_FOUND`
+- `403 FORBIDDEN` — order belongs to different user
+- `409 ORDER_REFERENCE_MISMATCH` — merchant_reference doesn't match the order's stored value
+- `502 PAYMENT_GATEWAY_UNREACHABLE` — Noon API call failed; order stays in pending_payment
+
+**Migration coverage:** mobile's `finalizePayment` (`customer/finalize_payment`)
+
+---
+
+##### POST /v3/payment/webhook/noon ⚠️ HIGH-STAKES
+
+**Auth:** NONE (no client auth) — verified via Noon's HMAC signature in header
+**Status:** ❌ NEW (M3.1.8)
+**Idempotency:** REQUIRED — multiple deliveries of same event must be safe
+
+**Purpose:** Noon's server-to-server callback. Source of truth for payment state. Delivered by Noon when payment completes (success or failure).
+
+**Request headers:**
+- `X-Noon-Signature` — HMAC-SHA256 of body using shared secret
+- `X-Noon-Event-Id` — unique event ID for idempotency
+- `Content-Type: application/json`
+
+**Request body (Noon's shape; exact fields per Noon docs):**
+```typescript
+{
+  eventType: 'ORDER_AUTHORIZED' | 'ORDER_CAPTURED' | 'ORDER_FAILED' | 'ORDER_CANCELLED' | 'REFUND_APPLIED' | ...,
+  orderId: string,                     // Noon's order ID
+  merchantReference: string,           // our order_number
+  amount: number,
+  currency: string,
+  paymentType: string,
+  // ... other Noon-specific fields
+}
+```
+
+**Response 200 always** (after processing; or 200 with `{duplicate: true}` for replays).
+
+**Behavior:**
+
+1. **Verify signature.** If `X-Noon-Signature` doesn't match HMAC-SHA256(body, shared_secret), respond `401 PAYMENT_WEBHOOK_SIGNATURE_INVALID`. Log security event.
+
+2. **Idempotency check.** Look up `webhook_events` table by `X-Noon-Event-Id`. If found: return cached response (200 with `{duplicate: true}`).
+
+3. **Persist event.** Insert into `webhook_events` (event_id UNIQUE constraint catches races).
+
+4. **Process atomically.** Single Doctrine transaction:
+   - Find order by `merchantReference`
+   - Verify amount matches order total (defense against tampering)
+   - Update order status per event type:
+     - `ORDER_AUTHORIZED` or `ORDER_CAPTURED` → `confirmed`
+     - `ORDER_FAILED` → `failed`
+     - `ORDER_CANCELLED` → `cancelled`
+     - `REFUND_APPLIED` → update refund records (M4 polish)
+   - Insert audit log row in `payment_events`
+   - Commit
+
+5. **Emit domain event.** `OrderPaidEvent` / `OrderFailedEvent` for downstream consumers (email notification, vendor notification, etc.).
+
+6. **Respond 200.** Noon retries if it doesn't get 2xx.
+
+**Error responses:**
+- `401 PAYMENT_WEBHOOK_SIGNATURE_INVALID` — wrong/missing signature
+- `200 PAYMENT_WEBHOOK_DUPLICATE` — replay (informational; not really an error)
+- `400 VALIDATION_BAD_REQUEST` — malformed body
+- `409 PAYMENT_AMOUNT_MISMATCH` — Noon reports different amount than order total (security event; do NOT update order, log loudly)
+- `404 ORDER_NOT_FOUND` — merchantReference doesn't match any order
+
+**Critical operational notes:**
+- Noon may retry delivery up to N times if it doesn't get 200
+- Idempotency is mandatory — without it, retries cause double-processing
+- Signature verification is the ONLY auth — anyone with the URL can POST, but only Noon has the shared secret
+- The webhook URL MUST be HTTPS and publicly reachable from Noon's servers
+- Logging is critical: every webhook receipt logged with event_id, timestamp, processing result
+- Daily reconciliation cron: compare last 24h `webhook_events` vs Noon dashboard. Flag discrepancies.
+
+**Supporting tables needed (M3.1.6 / M3.1.8 build):**
+
+```sql
+CREATE TABLE webhook_events (
+  id BIGSERIAL PRIMARY KEY,
+  event_id TEXT NOT NULL UNIQUE,           -- from X-Noon-Event-Id
+  gateway TEXT NOT NULL DEFAULT 'noon',
+  event_type TEXT NOT NULL,
+  raw_body JSONB NOT NULL,
+  signature_verified BOOLEAN NOT NULL,
+  processed_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  result TEXT NOT NULL,                    -- 'processed' | 'duplicate' | 'rejected_*'
+  order_id INTEGER REFERENCES orders(id) NULL
+);
+CREATE INDEX idx_webhook_events_processed_at ON webhook_events (processed_at DESC);
+
+CREATE TABLE payment_events (
+  id BIGSERIAL PRIMARY KEY,
+  order_id INTEGER NOT NULL REFERENCES orders(id),
+  event_type TEXT NOT NULL,                -- 'authorized', 'captured', 'failed', 'refunded'
+  source TEXT NOT NULL,                    -- 'webhook' | 'client_finalize' | 'admin_refund'
+  amount NUMERIC(10,2) NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'AED',
+  gateway TEXT NOT NULL,
+  gateway_transaction_id TEXT,
+  webhook_event_id BIGINT REFERENCES webhook_events(id) NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_payment_events_order ON payment_events (order_id, created_at);
+```
+
+#### 5.4.5 Orders contracts (4 ops)
+
+---
+
+##### GET /v3/me/orders
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.6)
+
+**Query parameters:** `?limit=&offset=&status=` (status: `pending_payment` | `confirmed` | `processing` | `shipped` | `delivered` | `cancelled` | `failed` | `refunded`)
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      number: string,                   // ORD-2026-0001234
+      status: string,
+      total: { amount: number, currency: 'AED' },
+      item_count: number,
+      item_preview: [                   // first 3 items for list view
+        {
+          product_name: string,
+          image_url: string | null,
+          quantity: number
+        }
+      ],
+      created_at: string,
+      paid_at: string | null,
+      shipped_at: string | null,
+      delivered_at: string | null
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Migration coverage:** mobile's `customerOrder` (`customer/read-orders`), `read_orders_listing`
+
+---
+
+##### GET /v3/me/orders/:order_number
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.6)
+
+**Response 200:**
+```typescript
+{
+  data: {
+    number: string,
+    status: string,
+    items: [
+      {
+        product: {
+          slug: string,
+          name: string,
+          image_url: string | null,
+          vendor: { slug, name }
+        },
+        size: string | null,
+        color: { name, hex } | null,
+        quantity: number,
+        unit_price: { amount, currency },
+        line_total: { amount, currency }
+      }
+    ],
+    shipping_address: { /* full address */ },
+    billing_address: { /* full address */ },
+    summary: { subtotal, discount, shipping, tax, total, currency },
+    payment: {
+      gateway: 'noon',
+      transaction_reference: string,
+      paid_at: string | null,
+      payment_method: string             // 'card' | 'apple_pay' | etc., from Noon
+    } | null,
+    tracking: {
+      carrier: string | null,
+      tracking_number: string | null,
+      url: string | null
+    } | null,
+    timeline: [
+      { event: string, at: string, note: string | null }   // 'created', 'paid', 'processing', 'shipped', 'delivered', etc.
+    ],
+    can_cancel: boolean,                  // computed; based on current status
+    created_at: string
+  }
+}
+```
+
+**Error responses:**
+- `404 ORDER_NOT_FOUND` — order doesn't exist OR belongs to different user (collapsed for privacy)
+
+**Migration coverage:** mobile's `orderDetails` (`customer/read-order-details`)
+
+**URL note:** Path uses `order_number` (ORD-YYYY-NNNNNNN) per 0e.1 §5.1.8, NOT integer ID.
+
+---
+
+##### POST /v3/me/orders/:order_number/cancel
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.6)
+
+**Purpose:** Customer requests to cancel an order. Only allowed for certain statuses.
+
+**Request:**
+```typescript
+{
+  reason?: 'changed_mind' | 'wrong_item' | 'long_wait' | 'other',
+  notes?: string                        // max 500 chars
+}
+```
+
+**Response 200:**
+```typescript
+{
+  order: { /* full order, status updated */ }
+}
+```
+
+**Behavior:**
+- Only allowed if `order.status` is `pending_payment`, `confirmed`, or `processing`
+- For `pending_payment` orders (no payment yet): immediate cancel
+- For `confirmed` / `processing` orders: status → `cancellation_requested`, vendor notified; final cancel happens when vendor confirms (admin/vendor portal action)
+- For `shipped` / `delivered`: returns `409 ORDER_NOT_CANCELLABLE`
+
+**Error responses:**
+- `404 ORDER_NOT_FOUND`
+- `409 ORDER_NOT_CANCELLABLE` — order already shipped or paid out
+
+**Side effects:**
+- If order was already paid: emit `RefundRequestedEvent` for admin to process via portal
+- Customer email notification: "Cancellation requested" or "Cancelled" depending on path
+
+---
+
+##### GET /v3/me/orders/:order_number/payment-status
+
+**Auth:** customer
+**Status:** ❌ NEW (M3.1.8)
+
+**Purpose:** Lightweight endpoint to poll payment state after redirect. Used by mobile's processing screen + web's order-confirmation page.
+
+**Response 200:**
+```typescript
+{
+  order_number: string,
+  status: string,                       // current order status
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded',
+  paid_at: string | null,
+  // Lighter response than full order — for fast polling
+}
+```
+
+**Behavior:**
+- May internally call Noon's API (`PaymentService::getStatus()`) if our DB shows `pending` and webhook hasn't arrived after 60s
+- Cached briefly (~5s) to avoid hammering Noon during polling
+
+#### 5.4.6 Billing address (covered in 0e.2 §5.2.4)
+
+The 2 billing-address ops (`GET /v3/me/billing-address`, `PATCH /v3/me/billing-address`) were specified in 0e.2. They support checkout but aren't part of the checkout flow itself.
+
+#### 5.4.7 Refund (M4 polish; admin-only)
+
+Per 0e.7 (admin contracts) — admin refund endpoint `POST /v3/admin/orders/:order_number/refund` lives there. Not in 0e.4's customer-scope. Noted here for completeness.
+
+#### 5.4.8 0e.4 Summary
+
+**12 operations specified.** Distribution:
+
+| Section | Ops | v3 exists | v3 to BUILD |
+|---|---|---|---|
+| Cart CRUD | 4 | 0 | 4 |
+| Checkout flow | 3 | 0 | 3 (incl. webhook) |
+| Orders read + cancel + status | 4 | 0 | 4 |
+| Payment infrastructure (gateway interface, adapter, webhook table, audit log) | infra | 0 | new tables + classes |
+| **Total** | **11** | **0** | **11** |
+
+(1 op deferred to admin scope: refund.)
+
+**All net-new.** Largest single block of M3 work.
+
+**Migration coverage:**
+- mobile's 10 cart/checkout/orders endpoints
+- mobile's 3 payment endpoints (`initiatePayment`, `finalizePayment`, `getToken`)
+- Net: 13 legacy endpoints collapse to 11 v3 endpoints
+
+#### 5.4.9 Operational requirements unique to this section
+
+Beyond endpoint contracts:
+
+1. **Shadow mode infrastructure** (built in M3.1.6 per M3 plan §1.4):
+   - `shadow_diffs` table
+   - `RoutedHttpClient.shadow*` methods
+   - Daily diff report
+   - 7-day clean window before each cutover
+
+2. **Idempotency infrastructure** (built in M3.1.6):
+   - `idempotency_keys` table (designed in 0e.1 §5.1.7)
+   - Middleware to intercept POST with Idempotency-Key
+
+3. **Payment gateway infrastructure** (built in M3.1.8):
+   - `PaymentGatewayInterface`
+   - `NoonAdapter` implementation
+   - `PaymentService` orchestration
+   - Webhook handler with signature verification
+   - `webhook_events` + `payment_events` tables
+
+4. **Reconciliation cron** (built in M3.1.8):
+   - Daily job: compare Noon dashboard vs our `payment_events`
+   - Flag discrepancies for admin review
+   - Documented manual reconciliation procedure
+
+5. **Domain events** (M3.1.8):
+   - `OrderCreatedEvent`
+   - `OrderPaidEvent`
+   - `OrderFailedEvent`
+   - `OrderCancelledEvent`
+   - `OrderShippedEvent`
+   - `RefundRequestedEvent`
+   - Subscribers: email notifier, vendor notifier, admin dashboard updater
+
+#### 5.4.10 Decisions locked in 0e.4
+
+- Cart is stored server-side, keyed by user_id (1-to-1 with users); NO client-only carts
+- Cart `summary.shipping` and `summary.tax` are `null` at cart view, computed at checkout
+- `POST /v3/cart/items` returns the FULL cart (not just the added item) to save a round trip
+- `PATCH /v3/cart/items/:id` uses ABSOLUTE quantity (not delta) — collapses Increase/Decrease
+- `DELETE /v3/cart/items/:id` returns 200 with full cart, NOT 204
+- Order numbers use `ORD-YYYY-NNNNNNN` format (locked in 0e.1)
+- Orders accessed by `order_number` in URLs (not integer ID) — human-readable for support
+- `POST /v3/checkout` REQUIRES `Idempotency-Key` header
+- `POST /v3/payment/webhook/noon` is the AUTHORITATIVE source for payment state
+- `POST /v3/checkout/finalize` (client-initiated) is a SECONDARY path — server state machine handles either source idempotently
+- Payment gateway is pluggable via `PaymentGatewayInterface`; Noon is the first adapter
+- Noon webhook signature verified via HMAC-SHA256 with shared secret
+- Webhook idempotency via `webhook_events.event_id` UNIQUE constraint
+- Amount tampering defense: webhook amount must match order total exactly
+- Daily reconciliation cron compares our payment_events vs Noon dashboard
+- Customer cancel endpoint distinguishes immediate-cancel (`pending_payment`) from request-cancel (`confirmed`/`processing`); latter requires vendor/admin action
+- Shadow mode applies to ALL cart/checkout/orders endpoints (per C7)
+- `/v3/checkout/return` is a BROWSER-facing HTML endpoint (not JSON) — Noon's redirect destination
+- All money values are numeric `{amount, currency}`; never strings
+
+#### 5.4.11 Risk register additions (extends M3 plan §6)
+
+This sub-phase surfaces specific risks worth flagging:
+
+- **R3 (existing, CRITICAL):** Noon webhook bug losing payment confirmation. Mitigation: idempotency + audit log + retry queue + daily reconciliation cron.
+- **R11 (new, HIGH):** Stock race during checkout — two customers buy the last unit simultaneously. Mitigation: optimistic stock check at write time + admin notified to oversold cases for manual resolution.
+- **R12 (new, HIGH):** Idempotency-Key conflicts — client sends same key twice with different bodies. Mitigation: 422 with `details.idempotency_conflict: true`; client must regenerate key.
+- **R13 (new, MEDIUM):** Pending payment timeout — order is created but customer abandons Noon page. Mitigation: 30-min `payment_expires_at`; cron auto-cancels expired orders + releases stock reservations.
+- **R14 (new, MEDIUM):** Amount tampering in webhook — attacker forges webhook claiming a smaller amount paid. Mitigation: HMAC signature + amount-must-match-order check + log loudly on mismatch.
+- **R15 (new, LOW):** Currency mismatch — all our orders are AED; defensive check anyway. Mitigation: assert in `PaymentService` initiate.
+
+These get added to `docs/plans/m3-plan.md` §6 in the planned Plan Revision commit.
+
