@@ -515,3 +515,164 @@ These are the highest-value dedup wins so far:
 
 **Estimated unique v3 endpoints needed across all three apps after dedup: ~80-90 net new (mobile + portal + web specific) on top of v3's existing ~10. Total v3 surface: ~100-110 endpoints.**
 
+
+---
+
+## Section 3 — Web endpoint audit (M3.1.0c)
+
+**Status:** ✅ Complete (May 13, 2026)
+
+### 3.1 Web is fundamentally different from mobile/portal
+
+Unlike mobile + portal, apps/web does NOT have a `global-component.ts`. M2 Day 5 introduced `packages/api-client/ENDPOINT_ROUTING` as the source of truth for routing decisions. Web's audit therefore has two parts:
+
+1. **What's registered in ENDPOINT_ROUTING** (the "intended" surface)
+2. **What apps/web actually calls** (the "real" surface)
+
+These are wildly different.
+
+### 3.2 ENDPOINT_ROUTING inventory (50 entries)
+
+The routing table has 50 entries, distributed as:
+
+| Section | Count | target='new' | target='old' |
+|---|---|---|---|
+| Health + catalog | 9 | 9 | 0 |
+| Auth | 7 | 7 | 0 |
+| Account (`/me/*`) | 11 | 11 | 0 |
+| Admin | 12 | 12 | 0 |
+| Cart | 4 | 0 | 4 |
+| Checkout/orders | 3 | 0 | 3 |
+| Wishlist | 3 | 0 | 3 |
+| **Total** | **49** | **39** | **10** |
+
+(Plus `GET /categories/:slug` and `GET /featured-vendors` on target='old' per M2 Day 5 fix.)
+
+### 3.3 The reality vs intention gap
+
+Counting calls by route key in apps/web's source code:
+
+```
+'GET /products'              — 1 caller (catalog browse)
+'GET /products/:slug'        — 1 caller (product detail)
+'GET /categories'            — 1 caller (categories index)
+'GET /categories/:slug'      — 1 caller (category detail)
+'GET /featured-vendors'      — 1 caller (home)
+'POST /auth/login'           — 1 caller (auth service stub?)
+'POST /me/addresses'         — 1 caller (address form stub?)
+```
+
+**That's 7 route keys actually used out of 50 registered.**
+
+The other 43 route keys are **scaffolding placeholders** in ENDPOINT_ROUTING that no apps/web feature references. They were added in anticipation of features that don't exist yet.
+
+### 3.4 Critical discovery: web is missing entire feature categories
+
+apps/web's feature tree:
+
+```
+apps/web/src/app/features/
+├── catalog/          (product-card, product-detail, product.model)
+├── categories/       (categories, category-detail, category.model, icons)
+├── dev-components/   (a sandbox for development)
+└── home/             (home, home-data.service)
+```
+
+**Web has NO implementations for:**
+- Cart (no cart page, no cart icon in header functional)
+- Checkout (no checkout flow at all)
+- Orders (no order history, no order detail)
+- Account / Profile / Settings (no account section)
+- Wishlist (no wishlist page)
+- Login / Register UI (auth/login route key referenced but no login page)
+- Designer/Vendor pages (Day 5 followup; sitemap entries stripped)
+- Address book
+- Reviews UI (read-only on PDP only)
+
+### 3.5 What this means for M3.2.x (web phases)
+
+The original M3 plan §3.2 estimated web at ~5-7 weeks because "much reuses M3.1 v3 work." That assumption was wrong. Re-examining:
+
+**Web cannot reuse v3 endpoints if its frontend doesn't HAVE the corresponding feature.** Most of the M3.2.x work is now:
+
+1. **Build the missing customer features** (cart, checkout, orders, account, wishlist, login)
+2. **Integrate them with v3 endpoints** (cheap because endpoints already exist from M3.1.x)
+3. **Build the missing designer/vendor pages** (M3.2.4 in original plan)
+4. **Implement Noon payment SDK** for web checkout (M3.2.3 in original plan)
+
+**Realistic revised web estimate: ~8-12 weeks** (was 5-7).
+
+The good news: most of this is "build the UI for endpoints that already exist." Backend complexity is low. The work is in Angular components, forms, validation, error handling, RTL/i18n, design polish.
+
+The bad news: cart + checkout + orders are the highest-stakes flows. Touching payment requires the same shadow-mode discipline as mobile. **Web's M3.2.2 phase essentially becomes "build the checkout flow from scratch on v3" rather than "flip an existing checkout flow."**
+
+### 3.6 What apps/web actually CALLS today (real HTTP traffic)
+
+These are the only live HTTP destinations the web app hits:
+
+| Endpoint | Backend | Source |
+|---|---|---|
+| `/v3/products` | v3 (via RoutedHttpClient) | catalog browse |
+| `/v3/products/:slug` | v3 | product detail |
+| `/v3/categories` | v3 | categories index |
+| `/v2/categories/:slug` | LEGACY v2 (via RoutedHttpClient `target: 'old'`) | category detail (Day 5 fallback) |
+| `/v2/featured-vendors` | LEGACY v2 (via `target: 'old'`) | home Designer Spotlight |
+| `/v3/sitemap-data` (build-time) | v3 | sitemap.xml generation + prerender slug discovery |
+
+That's it. 6 distinct endpoints.
+
+### 3.7 Updated web scope for M3
+
+Given web's reality (catalog-only frontend), the M3.2.x phases need a rewrite. Three categories of work:
+
+#### Category A — Backend flips (small)
+
+For the 5 existing catalog endpoints, the only remaining flips are:
+- `GET /categories/:slug` (currently `target: 'old'`) — needs v3 to add embedded products + meta first
+- `GET /featured-vendors` (currently `target: 'old'`) — needs v3 endpoint built
+
+Both are M3.1.0e (v3 contract design) outputs and the actual builds happen in M3.1.1+.
+
+#### Category B — New customer feature builds (big)
+
+Net-new Angular features that don't exist today:
+- Login/register/reset UI (auth UI not built)
+- Account dashboard (profile, addresses, password, measurements)
+- Wishlist
+- Cart + cart icon in header
+- Checkout flow (single page or multi-step)
+- Order history + order detail
+- Designer index + designer detail
+- Customer reviews submission UI
+
+Estimated effort: ~4-6 weeks of Angular component work, assuming designs/wireframes exist or get produced in parallel.
+
+#### Category C — Payment integration (medium)
+
+Noon hosted-page integration on the web (likely simpler than mobile's InAppBrowser flow).
+
+### 3.8 Updated M3.2.x phase estimates
+
+| Phase | Was | Now |
+|---|---|---|
+| M3.2.1 Web auth flip | 2-3 days | 5-7 days (build full auth UI first) |
+| M3.2.2 Web cart/checkout/orders | 3-4 weeks | 6-8 weeks (build features + integrate) |
+| M3.2.3 Web Noon payment | 7-10 days | 7-10 days (unchanged) |
+| M3.2.4 Web designer routes | 3-4 days | 3-5 days (slight rise; depends on M3.1.10 v3 vendor endpoints) |
+| M3.2.5 Web account management | 5-7 days | 2-3 weeks (build account UI; integrate with already-built v3 endpoints) |
+
+**Revised M3.2 total: 11-15 weeks (was 5-7).**
+
+This is the single biggest scope adjustment from the M3.1.0 audit so far.
+
+### 3.9 Implications for M3 plan §3 — should the plan be revised?
+
+The M3 plan in `docs/plans/m3-plan.md` says web is ~5-7 weeks. After M3.1.0c, the realistic estimate is ~11-15 weeks. That's a meaningful difference (4-8 weeks added).
+
+**Recommendation:** After M3.1.0e completes (full v3 contract inventory), do a single Plan Revision commit that updates §3 of the M3 plan to reflect:
+- Web's true starting state (catalog-only)
+- The revised M3.2.x estimates
+- A note that web is greenfield-like for non-catalog features
+
+This is not urgent today — M3.1.0d (dedup) and M3.1.0e (contracts) come first.
+
