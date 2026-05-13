@@ -676,3 +676,367 @@ The M3 plan in `docs/plans/m3-plan.md` says web is ~5-7 weeks. After M3.1.0c, th
 
 This is not urgent today — M3.1.0d (dedup) and M3.1.0e (contracts) come first.
 
+
+---
+
+## Section 4 — Deduplication pass (M3.1.0d)
+
+**Status:** ✅ Complete (May 13, 2026)
+
+Cross-references mobile + portal + web endpoints to produce the master list of **unique business operations**. For each operation, this section answers:
+1. Which apps perform this operation?
+2. What legacy URL(s) do they currently hit?
+3. What canonical v3 contract should serve all of them?
+
+This is the foundation M3.1.0e (v3 contract design) builds on.
+
+### 4.1 Exact URL duplicates (true duplicates)
+
+Six legacy URLs are referenced by BOTH mobile and portal:
+
+| Legacy URL | Mobile const | Portal const | Used? | v3 contract |
+|---|---|---|---|---|
+| `users/login` | `UserLogin` | `UserLogin` | both | `POST /v3/auth/login` ✅ exists |
+| `users/register` | `UserRegister` | `UserRegister` | both | `POST /v3/auth/register` ✅ exists |
+| `users/validate` | `UserValidate` (UNUSED) | `UserValidate` | portal only | `POST /v3/auth/validate` — NEW |
+| `users/validate-email` | `EmailValidate` (UNUSED) | `EmailValidate` (UNUSED) | neither | DEFER (dead code in both apps) |
+| `users/confirm` | `UserConfirm` (UNUSED) | `UserConfirm` | portal only | `POST /v3/auth/confirm-account` — NEW |
+| `vendors/measurement/get-measurements` | `readStoreMeasurement` | `readMeasurement` | both | `GET /v3/vendors/:id/measurement-guides` — NEW |
+
+### 4.2 Critical findings about ENDPOINT_ROUTING accuracy
+
+Discovered during M3.1.0d: **7 ENDPOINT_ROUTING entries have INCORRECT `oldPath` values** — they don't match any URL that mobile or portal actually call. These were written speculatively in M2 Day 5 without auditing the legacy URLs in use.
+
+This is critical because: if any of these routes were flipped to `target: 'old'` as a fallback, they'd hit non-existent legacy endpoints.
+
+| Route key | ENDPOINT_ROUTING's `oldPath` | Actual legacy URL mobile uses | Severity |
+|---|---|---|---|
+| `GET /cart` | `/customer/cart` | `customer/read-cart` | wrong path; would 404 if used |
+| `PUT /cart/items/:id` | `/customer/updateCartItem/:id` | `customer/IncreaseItem` + `customer/decreaseItem` (two separate ops, no :id) | shape mismatch |
+| `DELETE /cart/items/:id` | `/customer/removeFromCart/:id` | `customer/removeFromCart` (no :id, body-only) | wrong path |
+| `POST /checkout` | `/customer/checkout` | `customer/payment/initiate_payment` | wrong path |
+| `GET /orders` | `/customer/orders` | `customer/read-orders` | wrong path |
+| `GET /orders/:id` | `/customer/order/:id` | `customer/read-order-details` (slug-based or body-id) | wrong path |
+| `POST /me/addresses` | `/users/addAddress` | `customer/settings/billing/update-billing` (different shape entirely) | wrong path AND wrong shape |
+| `PUT /me/password` | `/users/changePassword` | `utility/shared/change-user-password` | wrong path |
+
+Currently these all have `target: 'new'` or `'old'` BUT NO APP CALLS THEM, so the bugs are latent — not affecting production. Still, they need correction before any consumer (M3.2.x web cart/checkout work) routes through them.
+
+**M3.1.0f will produce the corrected ENDPOINT_ROUTING.**
+
+### 4.3 Master deduplication table
+
+For each unique business operation across all three apps, the canonical v3 contract:
+
+#### Auth + identity
+
+| Operation | Mobile | Portal | Web | Canonical v3 | Status |
+|---|---|---|---|---|---|
+| Login | `UserLogin` → `users/login` | `UserLogin` → `users/login` | `POST /auth/login` (existing) | `POST /v3/auth/login` | ✅ exists |
+| Register | `UserRegister` → `users/register` | `UserRegister` → `users/register` | (no UI yet) | `POST /v3/auth/register` | ✅ exists |
+| Validate (post-register check?) | (UNUSED) | `UserValidate` → `users/validate` | (no UI) | `POST /v3/auth/validate` | NEW |
+| Confirm account (post-OTP activation) | (UNUSED) | `UserConfirm` → `users/confirm` | (no UI) | `POST /v3/auth/confirm-account` | NEW |
+| Password reset (mobile flow) | `UserReset` → `users/resetMobile` | n/a | n/a | `POST /v3/auth/password-reset-mobile` OR collapse with portal flow | NEW |
+| Password reset (web/portal flow) | n/a | `UserReset` → `users/reset` | (planned) | `POST /v3/auth/password-reset` | NEW |
+| Send OTP (mobile only) | `sendOTP` + `sendOOTP` (DUPLICATE) | n/a | n/a | `POST /v3/auth/send-otp` (collapsed) | NEW |
+| Validate OTP (mobile only) | `validateOTP` | n/a | n/a | `POST /v3/auth/validate-otp` | NEW |
+| Get Noon checkout token | `getToken` → `customer/getToken` | n/a | n/a | `POST /v3/checkout/payment-token` | NEW |
+| Refresh JWT | n/a | n/a | (routing exists) | `POST /v3/auth/refresh` | NEW (already routed) |
+| Logout | n/a | n/a | (routing exists) | `POST /v3/auth/logout` | NEW (already routed) |
+| Update location (first launch) | `UpdateLocation` | n/a | n/a | `PATCH /v3/me/location` | NEW |
+
+**Auth section totals:** 12 unique operations after dedup (was: 8 mobile + 8 portal + 7 routing = 23 declarations across apps). v3 needs 9 new endpoints; 3 already exist.
+
+#### Catalog reads (browse, search, listing)
+
+Most of this section has v3 equivalents from M2 Day 5 work. The mobile audit revealed shape mismatches that need shape-translation layer (in MobileNetworkAdapter).
+
+| Operation | Mobile | Portal | Web | Canonical v3 | Status |
+|---|---|---|---|---|---|
+| Products list (filtered/sorted/paginated) | `featured`, `best_sellers`, `new_arrivals`, `best_sellers_listing`, `new_arrivals_listing`, `featuredUtility` (unused), `best_sellersUtility` (unused) | n/a | `GET /products` (existing) | `GET /v3/products` with `?sort=&filter=&limit=&offset=` | ✅ exists |
+| Single product | `single_product`, `singleProduct` (UNUSED), `singleProductUtility` (unused) | n/a | `GET /products/:slug` (existing) | `GET /v3/products/:slug` | ✅ exists |
+| Categories list | `ProductCategory` (UNUSED), `category_listing` | `UtilityCategory` (heavy use) | `GET /categories` (existing) | `GET /v3/categories` | ✅ exists |
+| Category detail (with products) | (n/a — mobile uses different endpoint?) | (n/a) | `GET /categories/:slug` (currently routes to legacy v2) | `GET /v3/categories/:slug` | ⚠️ EXISTS but missing embedded products + meta (M2 Day 5 followup) |
+| Search products | `search` | n/a | (no UI yet) | `GET /v3/products?q=...` | ✅ exists (subset of products list) |
+| Vendors list (designers) | `vendors_listing` → `customer/vendors_list` | `UtilityStores` → `utility/stores` | (no UI yet) | `GET /v3/vendors` | ✅ exists |
+| Single vendor | `read_vendor` → `customer/read-vendor` | (n/a) | `GET /vendors/:slug` (in routing) | `GET /v3/vendors/:slug` | ✅ exists |
+| Vendor's products | `vendors_products_listing` → `customer/vendors_products`, `store_latest` | n/a | (no UI yet) | `GET /v3/vendors/:slug/products` | ✅ exists |
+| Featured vendors (Designer Spotlight) | n/a | n/a | `GET /featured-vendors` (currently legacy) | `GET /v3/featured-vendors` | ❌ NEEDS BUILDING (currently 500) |
+| Vendor's collections/labels | `store_labels` → `customer/read_vendor_collection` | `readLabel` → `vendors/labels/read-label` (vendor-side own) | (n/a) | `GET /v3/vendors/:id/labels` (customer view) + `GET /v3/me/store/labels` (vendor's own) | NEW (both) |
+| Vendor reviews list | `store_reviews` → `customer/store-reviews` | `getProductReviews` → `vendors/products/get-products-reviews` (vendor-side own) | (n/a) | `GET /v3/vendors/:slug/reviews` (customer) + `GET /v3/me/store/products/:id/reviews` (vendor's own) | NEW (both) |
+| Products by tag/label | `products_by_labels` → `customer/products_by_labels` | n/a | n/a | `GET /v3/products?label=...` | NEW (or extend existing /v3/products) |
+| Styles list (custom mobile UX) | `styles_list` → `customer/styles_list` | n/a | n/a | `GET /v3/styles` | NEW |
+| Sitemap data (build-time) | n/a | n/a | (existing) | `GET /v3/sitemap-data` | ✅ exists |
+
+**Catalog section totals:** 14 unique operations. v3 needs ~5 new endpoints (collections/labels, vendor reviews, styles, +featured-vendors fix, +categories/:slug fix). The rest exist.
+
+#### Cart + checkout + orders + payment
+
+This is the highest-stakes section (touches money). Heavy shadow-mode discipline required per M3 plan §1.4.
+
+| Operation | Mobile | Portal | Web | Canonical v3 | Status |
+|---|---|---|---|---|---|
+| Read cart | `customerCart` → `customer/read-cart` | n/a | (no UI yet) | `GET /v3/cart` | NEW |
+| Add to cart | `addToCart` → `customer/addToCart` | n/a | (no UI yet) | `POST /v3/cart/items` | NEW |
+| Update cart item quantity | `IncreaseItem` + `DecreaseItem` (DUPLICATE) | n/a | (no UI yet) | `PATCH /v3/cart/items/:id` with `{quantity: number}` | NEW |
+| Remove cart item | `RemoveCartItem` → `customer/removeFromCart` | n/a | (no UI yet) | `DELETE /v3/cart/items/:id` | NEW |
+| Checkout (initiate payment) | `initiatePayment` → `customer/payment/initiate_payment` | n/a | (no UI yet) | `POST /v3/checkout` (uses PaymentGateway internally) | NEW |
+| Finalize payment (post-Noon redirect) | `finalizePayment` → `customer/finalize_payment` | n/a | (no UI yet) | `POST /v3/checkout/finalize` (admin-internal; also called by webhook) | NEW |
+| Noon webhook (server-to-server) | n/a | n/a | n/a | `POST /v3/payment/webhook/noon` | NEW |
+| Update billing address | `updateBilling` → `customer/settings/billing/update-billing` | n/a | (no UI yet) | `PATCH /v3/me/billing-address` | NEW |
+| List user's orders | `customerOrder` → `customer/read-orders`, `read_orders_listing` → `customer/read_orders_listing` | n/a | (no UI yet) | `GET /v3/me/orders` | NEW |
+| Single order detail | `orderDetails` → `customer/read-order-details` | n/a | (no UI yet) | `GET /v3/me/orders/:id` | NEW |
+| Vendor's own orders (customer-side view) | `readCustomerOrders` → `customer/read-customer-orders` | (overlaps with portal's `getVendorOrders`) | n/a | `GET /v3/me/store/orders` | NEW |
+| Refund (admin) | n/a | (would be admin-only) | n/a | `POST /v3/admin/orders/:id/refund` | NEW |
+
+**Cart/checkout/orders/payment section totals:** 12 unique operations. v3 needs ALL 12 endpoints. None exist today.
+
+#### Account / profile / settings
+
+Mobile and portal both have profile management. Some overlap, some app-specific.
+
+| Operation | Mobile | Portal | Web | Canonical v3 | Status |
+|---|---|---|---|---|---|
+| Get current user profile | `readProfile` → `customer/settings/read-profile` | `getUserProfile` → `utility/shared/user` | (routing exists) | `GET /v3/me/profile` | NEW (already routed) |
+| Update profile | `updateProfile` → `customer/settings/update-profile` | `updateUserProfile` → `vendors/settings/update-user-basic` | (routing exists) | `PATCH /v3/me/profile` | NEW |
+| Change password | n/a | `updateUserPassword` → `utility/shared/change-user-password` | (routing exists) | `PATCH /v3/me/password` | NEW |
+| Get billing address | `readBilling` → `customer/settings/billing/read-billings` | (n/a) | n/a | `GET /v3/me/billing-address` | NEW |
+| Update billing | `updateBilling` (covered in cart section) | (n/a) | n/a | `PATCH /v3/me/billing-address` | (same as above) |
+| List addresses | n/a | n/a | (routing exists; wrong oldPath) | `GET /v3/me/addresses` | NEW (currently mis-routed) |
+| Add address | n/a | n/a | (routing exists; wrong oldPath) | `POST /v3/me/addresses` | NEW |
+| Update address | n/a | n/a | (routing exists) | `PUT /v3/me/addresses/:id` | NEW |
+| Delete address | n/a | n/a | (routing exists) | `DELETE /v3/me/addresses/:id` | NEW |
+| Customer measurements list | `readMeasurement` → `customer/settings/measurement/read-measurement` | n/a | (routing exists) | `GET /v3/me/measurements` | NEW |
+| Update customer measurement | `updateMeasurement` → `customer/settings/measurement/update-measurement` | n/a | (routing exists) | `POST /v3/me/measurements` + `PUT /v3/me/measurements/:id` | NEW |
+| Read user's review history | `readReviews` → `customer/settings/read-reviews` | n/a | n/a | `GET /v3/me/reviews` | NEW |
+| Vendor self-view: their own reviews | `storeReviews` → `customer/settings/store-reviews` | (overlaps with portal's `getProductReviews`) | n/a | `GET /v3/me/store/reviews` | NEW |
+| Delete user's review | `deleteReview` → `customer/settings/delete-review` | n/a | n/a | `DELETE /v3/me/reviews/:id` | NEW |
+| Update phone verification | n/a | n/a | (routing exists) | `POST /v3/auth/verify-phone` | NEW |
+
+**Account section totals:** 14 unique operations. v3 needs all 14 (some are already routed but not implemented).
+
+#### Wishlist + reviews + follow
+
+| Operation | Mobile | Portal | Web | Canonical v3 | Status |
+|---|---|---|---|---|---|
+| Read wishlist | `readWishlist` → `customer/read_wishlist` | n/a | (routing exists) | `GET /v3/me/wishlist` | NEW |
+| Read wishlist labels | `readWishlistLabel` → `customer/read_wishlist_label` | n/a | n/a | `GET /v3/me/wishlist/labels` | NEW |
+| Add wishlist label | `addWishlistLabel` → `customer/add_wishlist_label` | n/a | n/a | `POST /v3/me/wishlist/labels` | NEW |
+| Add to wishlist | `addWishlist` → `customer/add_wishlist` | n/a | (routing exists) | `POST /v3/me/wishlist/items` | NEW |
+| Remove from wishlist | n/a (but routing exists) | n/a | (routing exists) | `DELETE /v3/me/wishlist/items/:product_id` | NEW |
+| Add product review | `add_review` → `customer/add-review` | n/a | n/a | `POST /v3/reviews` | NEW |
+| Mark review helpful | `make_helpful` → `customer/helpful` | n/a | n/a | `POST /v3/reviews/:id/helpful` | NEW |
+| Follow vendor | `follow_vendor` → `customer/follow` | n/a | n/a | `POST /v3/me/follows` | NEW |
+| Unfollow vendor | `unfollow_vendor` → `customer/unfollow` | n/a | n/a | `DELETE /v3/me/follows/:vendor_id` | NEW |
+| Create style | `create_style` → `customer/create_style` | n/a | n/a | `POST /v3/me/styles` | NEW |
+
+**Wishlist/reviews/follow totals:** 10 unique operations. All NEW.
+
+#### Chat
+
+Mobile-only feature. 10 unique operations.
+
+| Operation | Mobile | Canonical v3 | Status |
+|---|---|---|---|
+| Get chat conversations | `chat_get_conversation` → `chat/get_conversation` | `GET /v3/me/chats` | NEW |
+| Get messages in conversation | `chat_get_messages` → `chat/get_messages` | `GET /v3/me/chats/:id/messages` | NEW |
+| Send message | `chat_send_message` → `chat/send_message` | `POST /v3/me/chats/:id/messages` | NEW |
+| Upload image (to chat) | `chat_upload_image` → `chat/upload_image` | `POST /v3/me/chats/:id/messages/image` | NEW |
+| Mark conversation read | `chat_mark_read` → `chat/mark_read` | `POST /v3/me/chats/:id/read` | NEW |
+| Get unread count | `chat_get_unread_count` → `chat/get_unread_count` | `GET /v3/me/chats/unread-count` | NEW |
+| Get chat prompts (templated quick replies?) | `chat_get_prompts` → `chat/get_prompts` | `GET /v3/me/chats/prompts` | NEW |
+| List vendors for chat | `chat_get_vendors` → `chat/get_vendors` | `GET /v3/me/chats/vendors` | NEW |
+| Vendor-side: list customer chat orders | `chat_get_vendor_orders` → `chat/get_vendor_orders` | `GET /v3/me/store/chats/orders` | NEW |
+| Vendor-side: list customer conversations | `chat_get_vendor_conversations` → `chat/get_vendor_conversations.php` | `GET /v3/me/store/chats` | NEW |
+
+**Chat totals:** 10 unique operations. All NEW. Note: realtime adjacency — current legacy uses polling; M3 keeps polling unless WebSockets are explicitly added (M4).
+
+#### Tickets / customer support
+
+| Operation | Mobile | Portal | Canonical v3 | Status |
+|---|---|---|---|---|
+| Create ticket (customer) | `createTicket` → `customer/create_ticket` | n/a | `POST /v3/me/tickets` | NEW |
+| Read ticket (customer) | `readTicket` → `customer/read_ticket` | n/a | `GET /v3/me/tickets/:id` | NEW |
+| Read ticket messages (customer) | `readTicketMessages` → `customer/read-ticket-messages` | n/a | `GET /v3/me/tickets/:id/messages` | NEW |
+| Send ticket message (customer) | `sendTicketMessage` → `customer/send-ticket-message` | n/a | `POST /v3/me/tickets/:id/messages` | NEW |
+| List tickets (admin) | n/a | `tickets` → `admin/common/tickets` | `GET /v3/admin/tickets` | NEW |
+| Read ticket messages (admin) | n/a | `ticketsMessages` → `admin/common/ticket-messages` | `GET /v3/admin/tickets/:id/messages` | NEW |
+| Send ticket message (admin) | n/a | `sendTicketMessage` (different from mobile's!) → `admin/common/send-ticket-message` | `POST /v3/admin/tickets/:id/messages` | NEW |
+| Update ticket status (admin) | n/a | `ticketsStatus` → `admin/common/ticket-status` | `PATCH /v3/admin/tickets/:id/status` | NEW |
+| Update ticket priority (admin) | n/a | `ticketsPriority` → `admin/common/ticket-priority` | `PATCH /v3/admin/tickets/:id/priority` | NEW |
+
+**Tickets totals:** 9 unique operations. All NEW.
+
+#### Vendor self-service (portal-heavy, mobile-light)
+
+This is portal's biggest section. Mobile only has 2 working endpoints; portal has ~41 covering same domain.
+
+| Operation | Mobile | Portal | Canonical v3 | Status |
+|---|---|---|---|---|
+| Vendor dashboard | `vendor_dashboard` → `vendors/dashboard` | `getVendorStats` → `vendors/common/dashboard-activity` | `GET /v3/me/store/dashboard` | NEW |
+| Toggle store status | `vendor_toggle_status` → `vendors/toggle_status` | `updateStoreStatus` → `vendors/settings/switch-store-status` | `PATCH /v3/me/store/status` | NEW |
+| Get store | n/a | `getVendorStore` → `vendors/settings/vendor-store` | `GET /v3/me/store` | NEW |
+| Update store basic info | n/a | `updateStoreBasic` → `vendors/settings/update-vendor-store` | `PATCH /v3/me/store` | NEW |
+| Get payment settings | n/a | `getVendorPayment` → `vendors/settings/vendor-store-payment` | `GET /v3/me/store/payment-settings` | NEW |
+| Update payment settings | n/a | `updateStorePayment` → `vendors/settings/update-vendor-payment` | `PATCH /v3/me/store/payment-settings` | NEW |
+| Get tax settings | n/a | `getVendorTax` → `vendors/settings/vendor-store-tax` | `GET /v3/me/store/tax-settings` | NEW |
+| Update tax settings | n/a | `updateStoreTax` → `vendors/settings/update-vendor-tax` | `PATCH /v3/me/store/tax-settings` | NEW |
+| Get notification settings | n/a | `getVendorNotifications` → `vendors/settings/vendor-store-notifications` | `GET /v3/me/store/notification-settings` | NEW |
+| Update notification settings | n/a | `updateStoreNotifications` → `vendors/settings/update-vendor-notifications` | `PATCH /v3/me/store/notification-settings` | NEW |
+| Get compliance status | n/a | `getCompliance` → `vendors/common/compliance` | `GET /v3/me/store/compliance` | NEW |
+| Update compliance | n/a | `updateCompliance` → `vendors/settings/update-compliance` | `PATCH /v3/me/store/compliance` | NEW |
+| List products (vendor's own) | n/a | `getProduct` → `vendors/products/get-products` | `GET /v3/me/store/products` | NEW |
+| Single product (vendor's own) | n/a | `getProductById` → `vendors/products/getProductById` | `GET /v3/me/store/products/:id` | NEW |
+| Create product | n/a | `createProduct` → `vendors/products/create-product` | `POST /v3/me/store/products` | NEW |
+| Update product | n/a | `updateProduct` → `vendors/products/update-product` | `PATCH /v3/me/store/products/:id` | NEW |
+| Delete product | n/a | `deleteProductById` → `vendors/products/delete-product` | `DELETE /v3/me/store/products/:id` | NEW |
+| List vendor orders | n/a | `getVendorOrders` + `getVendorOrdersByStatus` (different filters) | `GET /v3/me/store/orders?status=...` | NEW |
+| Return orders | n/a | `getVendorReturnOrders` → `vendors/orders/get-return-orders` | `GET /v3/me/store/orders?status=return` | NEW |
+| Delivery orders | n/a | `getVendorDeliveryOrders` → `vendors/orders/get-ready-orders` | `GET /v3/me/store/orders?status=ready` | NEW |
+| Single order | n/a | `getOrderById` → `vendors/orders/getOrderById` | `GET /v3/me/store/orders/:id` | NEW |
+| Update order status | n/a | `updateOrderStatus` → `vendors/orders/update-order-status` | `PATCH /v3/me/store/orders/:id/status` | NEW |
+| List labels | n/a | `readLabel` → `vendors/labels/read-label` | `GET /v3/me/store/labels` | NEW |
+| Create label | n/a | `createLabel` → `vendors/labels/create-label` | `POST /v3/me/store/labels` | NEW |
+| Update label | n/a | `updateLabel` → `vendors/labels/update-label` | `PATCH /v3/me/store/labels/:id` | NEW |
+| Delete label | n/a | `deleteLabel` → `vendors/labels/delete-label` | `DELETE /v3/me/store/labels/:id` | NEW |
+| List measurements (vendor's guides) | `readStoreMeasurement` (dupe with portal's) | `readMeasurement` → `vendors/measurement/get-measurements` | `GET /v3/me/store/measurement-guides` | NEW |
+| Create measurement guide | n/a | `createMeasurement` → `vendors/measurement/create-measurement` | `POST /v3/me/store/measurement-guides` | NEW |
+| Update measurement guide | n/a | `updateMeasurement` → `vendors/measurement/update-measurement` | `PATCH /v3/me/store/measurement-guides/:id` | NEW |
+| Delete measurement guide | n/a | `deleteMeasurement` → `vendors/measurement/delete-measurement` | `DELETE /v3/me/store/measurement-guides/:id` | NEW |
+| List coupons | n/a | `getCoupons` → `vendors/coupons/get-coupons` | `GET /v3/me/store/coupons` | NEW |
+| Single coupon | n/a | `getCouponById` → `vendors/coupons/get-coupon-by-id` | `GET /v3/me/store/coupons/:id` | NEW |
+| Coupon analytics | n/a | `couponAnalytics` → `vendors/coupons/coupon-analytics` | `GET /v3/me/store/coupons/:id/analytics` | NEW |
+| Create coupon | n/a | `createCoupon` → `vendors/coupons/create-coupon` | `POST /v3/me/store/coupons` | NEW |
+| Update coupon | n/a | `updateCoupon` → `vendors/coupons/update-coupon` | `PATCH /v3/me/store/coupons/:id` | NEW |
+| Toggle coupon status | n/a | `toggleCouponStatus` → `vendors/coupons/toggle-coupon-status` | `PATCH /v3/me/store/coupons/:id/status` | NEW |
+| Delete coupon | n/a | `deleteCoupon` → `vendors/coupons/delete-coupon` | `DELETE /v3/me/store/coupons/:id` | NEW |
+| Get notifications | n/a | `getNotifications` → `vendors/common/notifications` | `GET /v3/me/notifications` | NEW |
+| Mark notifications read | n/a | `markNotifications` → `vendors/common/mark_notifications` | `POST /v3/me/notifications/mark-read` | NEW |
+| Get product reviews (vendor's own products) | n/a | `getProductReviews` → `vendors/products/get-products-reviews` | `GET /v3/me/store/products/:id/reviews` | NEW |
+
+**Vendor self-service totals:** 39 unique operations. All NEW. This is the LARGEST single category.
+
+#### Admin / platform operations (portal-only)
+
+| Operation | Portal | Canonical v3 | Status |
+|---|---|---|---|
+| Admin dashboard | `getAdminStats` → `admin/common/dashboard-activity` | `GET /v3/admin/dashboard` | NEW |
+| List customers | `getCustomers` → `admin/common/get-customers` | `GET /v3/admin/customers` | NEW |
+| List stores | `getStores` → `admin/common/get-stores` | `GET /v3/admin/stores` | NEW |
+| Single store | `getSingleStore` → `admin/common/getSingleStore` | `GET /v3/admin/stores/:id` | NEW |
+| List users (combined customer+admin) | `getUsers` → `admin/common/get-users` | `GET /v3/admin/users` | NEW |
+| Activate customer | `activateCustomer` → `admin/common/activate-customer` | `POST /v3/admin/customers/:id/activate` | NEW |
+| Deactivate customer | `deactivateCustomer` → `admin/common/deactivate-customer` | `POST /v3/admin/customers/:id/deactivate` | NEW |
+| Activate store | `activateStore` → `admin/common/activate-store` | `POST /v3/admin/stores/:id/activate` | NEW |
+| Deactivate store | `deactivateStore` → `admin/common/deactivate-store` | `POST /v3/admin/stores/:id/deactivate` | NEW |
+| Delete store | `deleteStore` → `admin/common/delete-store` | `DELETE /v3/admin/stores/:id` | NEW |
+| Store's orders | `getStoreOrders` → `admin/common/get-store-orders` | `GET /v3/admin/stores/:id/orders` | NEW |
+| Store's orders by status | `getStoreOrdersByStatus` → `admin/common/getStoreOrdersByStatus` | `GET /v3/admin/stores/:id/orders?status=...` (dedup with above) | NEW |
+| All products view | `getAdminProducts` → `admin/common/products` | `GET /v3/admin/products` | NEW |
+| All products for one vendor | `productsByVendorId` → `admin/common/productsByVendorId` | `GET /v3/admin/vendors/:id/products` | NEW |
+| All sales view | `sales` → `admin/common/sales` | `GET /v3/admin/sales` | NEW |
+| Message vendor (admin → vendor) | `messageVendor` → `admin/message-vendor` | `POST /v3/admin/vendors/:id/messages` | NEW |
+| Processing queue | `processing` → `admin/common/processing` | `GET /v3/admin/orders?status=processing` | NEW |
+| Single processing item | `processingById` → `admin/common/processingById` | `GET /v3/admin/orders/:id/processing` | NEW |
+| Products for processing item | `productsByProcessingId` → `admin/common/productsByProcessingId` | `GET /v3/admin/orders/:id/products` | NEW |
+| Plurals by ID (?? naming unclear) | `pluralById` → `admin/common/pluralById` | INVESTIGATE — defer until clear what this does | NEW |
+| Logistics view | `logistics` → `admin/common/logistics` | `GET /v3/admin/logistics` | NEW |
+| Commissions view | `commissions` → `admin/common/commissions` | `GET /v3/admin/commissions` | NEW |
+| Transactions view | `transactions` → `admin/common/transactions` | `GET /v3/admin/transactions` | NEW |
+| Admin user register (admin adds new admin) | `AdminUserRegister` → `admin/common/register` | `POST /v3/admin/users` | NEW |
+| Admin user password | `AdminUserPassword` → `admin/common/password` | `PATCH /v3/admin/users/:id/password` | NEW |
+| Collections CRUD | `createCollection`, `updateCollection`, `getCollection`, `readCollection` (4 endpoints) | `GET/POST/PATCH /v3/admin/collections` and `/v3/admin/collections/:id` | NEW |
+| Brands CRUD (no legacy URL — admin-only feature) | n/a | (routing exists) `GET/POST/PUT/DELETE /v3/admin/brands` | NEW |
+
+**Admin totals:** ~30 unique operations. All NEW. The "no legacy URL" entries in ENDPOINT_ROUTING (brands, vendors, categories admin CRUD) are v3-only — they don't migrate FROM legacy; they're net-new admin features in v3.
+
+#### Utility / shared (overlapping operations across apps)
+
+| Operation | Mobile | Portal | Canonical v3 | Status |
+|---|---|---|---|---|
+| Categories list (catalog browse) | (covered above) | `UtilityCategory` (heavy use, 6 callers) | `GET /v3/categories` | ✅ exists |
+| Stores list | (covered above) | `UtilityStores` → `utility/stores` | `GET /v3/vendors` | ✅ exists |
+| Collections list | n/a | `UtilityCollections` → `utility/collections` (3 callers) | `GET /v3/collections` | NEW |
+
+#### Health + external
+
+| Operation | Source | Canonical v3 | Status |
+|---|---|---|---|
+| Health check | (web only) | `GET /v3/health` | ✅ exists |
+| Topex cities (external delivery API) | mobile only | EXTERNAL — do not migrate | n/a |
+| Topex areas (external) | mobile only | EXTERNAL — do not migrate | n/a |
+
+### 4.4 Operation totals after deduplication
+
+| Category | Unique ops | v3 exists | v3 to BUILD |
+|---|---|---|---|
+| Auth + identity | 12 | 3 | 9 |
+| Catalog reads | 14 | 9 | 5 |
+| Cart + checkout + orders + payment | 12 | 0 | 12 |
+| Account / profile / settings | 14 | 0 | 14 |
+| Wishlist + reviews + follow | 10 | 0 | 10 |
+| Chat | 10 | 0 | 10 |
+| Tickets / support | 9 | 0 | 9 |
+| Vendor self-service | 39 | 0 | 39 |
+| Admin / platform | 30 | 0 | 30 |
+| Utility / shared | 3 | 2 | 1 |
+| Health + external | 3 | 1 | 0 (2 external) |
+| **TOTAL** | **156** | **15** | **139** |
+
+### 4.5 Headline numbers from the dedup pass
+
+- **156 unique business operations** identified across mobile + portal + web
+- **15 already exist in v3** (mostly catalog reads from M2 Day 5)
+- **139 net new v3 endpoints to BUILD** during M3
+
+This is significantly higher than the M3 plan's "~50 endpoints to build" estimate. The original number was based on incomplete audits.
+
+**Where the M3 plan was wrong:**
+- Underestimated vendor self-service surface (portal has 39 unique ops; original assumed ~15)
+- Didn't separately count admin operations (~30 ops; original assumed ~10)
+- Didn't audit web's actual feature set vs intended (M3.1.0c discovery)
+
+### 4.6 Impact on M3 timeline
+
+Each new v3 endpoint takes ~0.5-2 days to implement properly (controller + Doctrine query + tests + ENDPOINT_ROUTING entry + shape validation + documentation). Conservatively: 1 day average.
+
+139 endpoints × 1 day = 139 dev-days. At 5 working days/week ≈ **28 weeks** of v3 endpoint building ALONE.
+
+Distributed across M3.1.x (mobile-driven), M3.2.x (web-driven), M3.3.x (portal-driven) phases per the M3 plan's just-in-time strategy (C10):
+
+| App phase | Endpoints to build | Approx duration |
+|---|---|---|
+| M3.1 mobile | ~60 unique (auth, catalog, cart, checkout, orders, account, wishlist, chat, tickets, payment) | 12-14 weeks |
+| M3.2 web | ~15 unique (re-uses mobile's; new are web-specific like designer routes, plus all the UI build work for greenfield features) | 11-15 weeks (mostly UI build; M3.1.0c discovery) |
+| M3.3 portal | ~70 unique (vendor self-service + admin) | 14-18 weeks |
+
+Some endpoints are shared across phases (login, register, profile) — counted once in the app that's first to need it.
+
+**Revised total M3 estimate: ~40-50 weeks elapsed, 10-12 months realistic.**
+
+(Previous estimate post-M3.1.0c was 9-12 months. The dedup pass refines but doesn't dramatically change.)
+
+### 4.7 Dedup wins worth highlighting
+
+These specific dedups simplify M3 design:
+
+1. **`UserLogin`/`UserRegister`** — exact match across mobile and portal. ONE v3 endpoint serves both.
+2. **`sendOTP` + `sendOOTP`** — same business op in mobile under two different legacy paths. ONE v3 endpoint with `?channel=sms|email` and `?destination=phone|email`.
+3. **`IncreaseItem` + `DecreaseItem`** — two endpoints become ONE `PATCH /v3/cart/items/:id` with `{quantity: number}`.
+4. **`readStoreMeasurement` (mobile) ≡ `readMeasurement` (portal)** — same business op. ONE v3 endpoint.
+5. **`UtilityCategory` (portal) ≡ `category_listing` (mobile) ≡ web's catalog read** — three apps, same underlying data. ONE v3 endpoint exists.
+6. **Multiple variants of order status filtering** (`getVendorOrdersByStatus`, `getVendorReturnOrders`, `getVendorDeliveryOrders`) — collapse to ONE endpoint with `?status=...` query param.
+
+These dedups together cut ~15-20 endpoints from the implementation count.
+
+### 4.8 Items requiring further investigation (M3.1.0e or later)
+
+A few endpoints have unclear semantics or are duplicates-of-duplicates needing clarification:
+
+1. **`pluralById`** (portal admin) — name unclear. What does "pluralById" mean? Need to read the controller code or ask Sodiq.
+2. **`readCustomerOrders`** (mobile, distinct from `customerOrder`) — sounds like vendor-side viewing their customer orders. Need to verify.
+3. **`storeReviews` vs `store_reviews`** (mobile) — confirmed in §1.2 they're different (settings vs public view). v3 needs both endpoints with clear naming.
+4. **`UserResetPassword` (portal, unused)** — has same URL as `UserReset` (`users/reset`). Likely a duplicate constant; safe to remove.
+
+These get clarified during M3.1.0e (v3 contract design).
+
