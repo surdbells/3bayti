@@ -36,26 +36,26 @@ export function normaliseError(response: Response, rawBody: string): ApiError {
     const obj = parsedBody as Record<string, unknown>;
 
     // NEW backend shape: { error: { code, message, details } }
-    if (obj.error && typeof obj.error === 'object') {
-      const innerError = obj.error as Record<string, unknown>;
-      error.message = String(innerError.message ?? `HTTP ${response.status}`);
-      if (typeof innerError.code === 'string') {
-        error.code = innerError.code;
+    if (obj['error'] && typeof obj['error'] === 'object') {
+      const innerError = obj['error'] as Record<string, unknown>;
+      error.message = String(innerError['message'] ?? `HTTP ${response.status}`);
+      if (typeof innerError['code'] === 'string') {
+        error.code = innerError['code'];
       }
-      if (innerError.details !== undefined) {
-        error.details = innerError.details;
+      if (innerError['details'] !== undefined) {
+        error.details = innerError['details'];
       }
       return error;
     }
 
     // OLD backend shape: { response_code, status, message, data }
     if ('response_code' in obj || 'status' in obj) {
-      error.message = String(obj.message ?? `HTTP ${response.status}`);
-      if (typeof obj.status === 'string' && obj.status !== 'success') {
-        error.code = obj.status;
+      error.message = String(obj['message'] ?? `HTTP ${response.status}`);
+      if (typeof obj['status'] === 'string' && obj['status'] !== 'success') {
+        error.code = obj['status'];
       }
-      if (obj.data !== undefined) {
-        error.details = obj.data;
+      if (obj['data'] !== undefined) {
+        error.details = obj['data'];
       }
       return error;
     }

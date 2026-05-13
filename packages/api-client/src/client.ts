@@ -89,7 +89,7 @@ export function createClient(options: ClientOptions) {
 
     const authHeader = options.authProvider?.();
     if (authHeader) {
-      headers.Authorization = authHeader;
+      headers['Authorization'] = authHeader;
     }
 
     const [method] = routeKey.split(' ');
