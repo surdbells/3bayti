@@ -7376,3 +7376,72 @@ Plus supporting infrastructure (NOT counted as endpoints):
 - 25+ new database tables across all sub-phases
 - 10+ new domain entities
 
+
+---
+
+## Section 6 — ENDPOINT_ROUTING bug fixes (M3.1.0f)
+
+**Status:** ✅ Complete (May 13, 2026)
+**Scope:** Fix the 8 scaffolding bugs in `packages/api-client/src/feature-flags.ts` identified in 0d §4.2 and refined by 0e contracts.
+
+### 6.1 What was wrong
+
+M2 Day 5 scaffolded 50 ENDPOINT_ROUTING entries to support the apps/web catalog flip. The 5 catalog entries (active path) had correct `oldPath` values verified against legacy.
+
+The other 45 entries were scaffolded SPECULATIVELY — paths were guessed without auditing legacy. M3.1.0d's audit found 8 entries with incorrect `oldPath` values that would have failed if any consumer routed through them.
+
+Currently latent (no apps/web consumer references them yet) but they need correction before M3.2.x cart/checkout work routes through them.
+
+### 6.2 Applied fixes
+
+| Route key | Before (oldPath) | After (oldPath) | After (target) | Notes |
+|---|---|---|---|---|
+| `GET /cart` | `/customer/cart` | `/customer/read-cart` | `old` (unchanged) | Mobile's actual URL |
+| `PUT /cart/items/:id` | `/customer/updateCartItem/:id` | `''` | `new` | v3-only: collapses mobile's `IncreaseItem` + `DecreaseItem`; no shape-compatible legacy |
+| `DELETE /cart/items/:id` | `/customer/removeFromCart/:id` | `''` | `new` | v3-only: legacy uses body-based ID, not URL-based |
+| `POST /checkout` | `/customer/checkout` | `/customer/payment/initiate_payment` | `old` (unchanged) | Real legacy URL |
+| `GET /orders` | `/customer/orders` | `/customer/read-orders` | `old` (unchanged) | Mobile's actual URL |
+| `GET /orders/:id` | `/customer/order/:id` | `''` | `new` | v3-only: legacy uses body-based ID, can't proxy cleanly |
+| `POST /me/addresses` | `/users/addAddress` | `''` | `new` | v3-only: legacy has no address book; v3 introduces this |
+| `PUT /me/password` | `/users/changePassword` | `/utility/shared/change-user-password` | `new` (unchanged) | Portal's actual URL |
+
+**8 entries fixed** (one more than 0d originally counted — `POST /me/addresses` was added when auditing in 0e.2).
+
+### 6.3 Design decision: `oldPath: ''` for v3-only endpoints
+
+For 4 of the 8 entries, the v3 endpoint has NO shape-compatible legacy. The right fix is `target: 'new'` + `oldPath: ''`. This matches the existing convention used by `GET /health` and all admin CRUD endpoints in the same file.
+
+When `oldPath: ''`, the entry is v3-only. The `RoutedHttpClient` will never route to legacy for these — they're effectively single-target.
+
+### 6.4 Verification
+
+- ✅ `packages/api-client` type-check passes (`pnpm --filter @3bayti/api-client type-check` returns 0)
+- ✅ `apps/mobile` type-check passes
+- ✅ `apps/portal` type-check passes
+- ✅ Entry count preserved (50 entries before and after)
+- ✅ No accidental changes to any other entry
+
+**Pre-existing tech debt noted** (NOT in 0f scope): `apps/web` type-check returns 7 `TS7006: implicitly has any type` errors. These exist on `main` BEFORE 0f changes (verified via `git stash` test). The errors are in files I didn't touch (`product-detail.ts`, `home.ts`) and were introduced in commits from May 4-5. Worth investigating separately; CI somehow passes despite these errors, suggesting a discrepancy between local + CI tsconfig resolution.
+
+### 6.5 What's NOT in 0f
+
+- Fixes to entries I didn't audit (the remaining 42 ENDPOINT_ROUTING entries). Most are catalog (already verified correct in M2 Day 5). The others remain UNVERIFIED until their consumer code is built in M3.x.
+- The `apps/web` implicit-any tech debt (separate concern; needs own commit)
+- Plan revision to reflect 0f findings (deferred to dedicated plan revision commit)
+
+### 6.6 M3.1.0 — FULLY COMPLETE
+
+After 0f, all 6 sub-phases of M3.1.0 are done:
+
+| Sub-phase | Output |
+|---|---|
+| 0a | Mobile endpoint dump (74 used, 28 dead) |
+| 0b | Portal endpoint dump (86 used, 10 dead) |
+| 0c | Web endpoint dump (catalog only; major scope discovery) |
+| 0d | Deduplication pass (156 unique ops; ~128 to build) |
+| 0e.1-0e.7 | Per-endpoint contracts across 7 categories |
+| 0f | ENDPOINT_ROUTING bug fixes (8 entries) |
+
+**M3.1.0 deliverable:** `docs/plans/m3-endpoint-inventory.md` — ~7,500 lines, full v3 surface designed.
+
+Next phase: **M3.1.1** — Auth + Identity + Account v3 endpoint build. Per 0e.2 reality check, this phase is much smaller than the M3 plan originally estimated (most endpoints already exist in v3; only 3 need building: `PATCH /v3/me/password`, billing-address, and `PATCH /v3/me/location`).

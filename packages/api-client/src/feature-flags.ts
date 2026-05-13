@@ -206,7 +206,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'PUT /me/password': {
     target: 'new',
-    oldPath: '/users/changePassword',
+    oldPath: '/utility/shared/change-user-password',
     newPath: '/v3/me/password',
     shape: 'v3-envelope',
   },
@@ -218,7 +218,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'POST /me/addresses': {
     target: 'new',
-    oldPath: '/users/addAddress',
+    oldPath: '',
     newPath: '/v3/me/addresses',
     shape: 'v3-envelope',
   },
@@ -339,7 +339,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // ---- Cart, checkout, orders (LEGACY - M3 work flips these) ----
   'GET /cart': {
     target: 'old',
-    oldPath: '/customer/cart',
+    oldPath: '/customer/read-cart',
     newPath: '/v3/cart',
     shape: 'v2',
   },
@@ -350,34 +350,34 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'v2',
   },
   'PUT /cart/items/:id': {
-    target: 'old',
-    oldPath: '/customer/updateCartItem/:id',
+    target: 'new',
+    oldPath: '',
     newPath: '/v3/cart/items/:id',
-    shape: 'v2',
+    shape: 'v3-envelope',
   },
   'DELETE /cart/items/:id': {
-    target: 'old',
-    oldPath: '/customer/removeFromCart/:id',
+    target: 'new',
+    oldPath: '',
     newPath: '/v3/cart/items/:id',
-    shape: 'v2',
+    shape: 'v3-envelope',
   },
   'POST /checkout': {
     target: 'old',
-    oldPath: '/customer/checkout',
+    oldPath: '/customer/payment/initiate_payment',
     newPath: '/v3/checkout',
     shape: 'v2',
   },
   'GET /orders': {
     target: 'old',
-    oldPath: '/customer/orders',
+    oldPath: '/customer/read-orders',
     newPath: '/v3/orders',
     shape: 'v2',
   },
   'GET /orders/:id': {
-    target: 'old',
-    oldPath: '/customer/order/:id',
+    target: 'new',
+    oldPath: '',
     newPath: '/v3/orders/:id',
-    shape: 'v2',
+    shape: 'v3-envelope',
   },
 
   // ---- Wishlist (legacy) ----
