@@ -1533,3 +1533,860 @@ After 0e.1, these are LOCKED. M3.1.0e.2+ contracts conform to them without re-de
 
 These decisions answer the most common "should I do X or Y" questions during per-endpoint design. When a contract spec says "auth: customer", you know it means JWT bearer with `roles` includes `customer` — no need to re-spec.
 
+
+---
+
+### 5.2 (M3.1.0e.2) — Auth + Identity + Account/Profile contracts
+
+**Status:** ✅ Complete (May 13, 2026)
+**Scope:** 26 unique operations across auth, identity, account, addresses, measurements, billing, reviews.
+
+#### 5.2.0 Major reality check (worth flagging upfront)
+
+During 0e.2 design, audit of `apps/api/src/Http/Controllers/{Auth,Profile,Address,Measurement}/` revealed that **MUCH MORE of the auth/account surface is already implemented in v3 than the 0d deduplication pass identified.** The 0d count of "15 endpoints exist in v3" was based on v3's CATALOG endpoints only. Auth/account was largely uncounted.
+
+Reality:
+- **19 of 26 ops in 0e.2 scope are ALREADY IMPLEMENTED** in v3 (controllers + DTOs + routes registered)
+- **7 ops are genuinely missing** and need building in M3.1.1
+
+This is good news for M3 scope:
+- The original M3 plan's "M3.1.1 v3 auth endpoint build (5-7 days)" phase is mostly NO-OP. Auth is already done.
+- The originally-scoped 9 new auth endpoints actually need ~0 (login, register, OTP send, OTP validate, confirm, reset, refresh, logout — all exist)
+- Revised: M3.1.1 becomes "audit existing v3 auth contracts + document gaps" rather than "build from scratch"
+
+**This finding alone shaves 2-3 weeks off M3 timeline.** Documented for the Plan Revision commit deferred until post-0e.
+
+The 7 actually-missing endpoints (covered in this section as NEW):
+1. `PATCH /v3/me/password` — change password while authenticated
+2. `GET /v3/me/billing-address` — get billing (distinct from shipping addresses)
+3. `PATCH /v3/me/billing-address` — update billing
+4. `GET /v3/me/reviews` — user's own review history
+5. `DELETE /v3/me/reviews/:id` — delete user's review
+6. `GET /v3/me/store/reviews` — vendor self-view of their store's reviews
+7. `PATCH /v3/me/location` — first-launch location capture (mobile-specific)
+
+#### 5.2.1 Auth + session contracts (10 ops)
+
+Reference: 0e.1 Auth model (§5.1.4), Error codes (§5.1.3), Idempotency (§5.1.7).
+
+---
+
+##### POST /v3/auth/login
+
+**Auth:** public (no token)
+**Status:** ✅ EXISTS (`apps/api/src/Http/Controllers/Auth/LoginController.php`)
+
+**Request:**
+```typescript
+{
+  email: string,      // trimmed; lowercased by repo on lookup
+  password: string,   // NOT trimmed (legacy passwords with whitespace are valid)
+  device_id?: string  // optional client identifier (currently ignored server-side)
+}
+```
+
+**Response 200 (Shape C — auth custom envelope):**
+```typescript
+{
+  access_token: string,
+  access_token_expires_at: string,    // ISO-8601 UTC
+  refresh_token: string,
+  refresh_token_expires_at: string,   // ISO-8601 UTC
+  user: {                              // UserSerializer::publicProfile
+    id: number,
+    email: string,
+    phone: string | null,
+    first_name: string | null,
+    last_name: string | null,
+    is_phone_verified: boolean,
+    roles: string[],                   // 'customer' | 'vendor' | 'admin'
+    created_at: string                 // ISO-8601 UTC
+  }
+}
+```
+
+**Error responses:**
+- `401 AUTH_INVALID_CREDENTIALS` — any combination of: email not found, account inactive, password mismatch, account soft-deleted. (Deliberately collapsed to avoid user enumeration.)
+- `422 VALIDATION_FAILED` — body missing `email` or `password`
+
+**Side effects:**
+- Updates `user.last_login_at` and `user.last_login_ip`
+- Persists `RefreshToken` row
+- Wrapped in single Doctrine transaction
+
+**Notes for migration:**
+- Mobile's `UserLogin` (`users/login`) and Portal's `UserLogin` both route here directly
+- Frontend should check `user.is_phone_verified` after login; if false, route to OTP confirmation screen
+- Bcrypt hashes preserved from legacy DB (Day 4 migration) — existing customers can log in unchanged
+
+---
+
+##### POST /v3/auth/register
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Auth/RegisterController.php`)
+
+**Request:**
+```typescript
+{
+  email: string,
+  phone: string,         // E.164 or local format; normalized server-side
+  password: string,      // min 8 chars (enforced; unlike login)
+  first_name?: string,
+  last_name?: string,
+  preferred_language?: 'en' | 'ar'
+}
+```
+
+**Response 201:**
+```typescript
+{
+  user: { /* UserSerializer::publicProfile, is_phone_verified: false */ },
+  // No tokens issued at registration. Client must:
+  // 1. Receive OTP via SMS (server sends via SendOtp internally)
+  // 2. Call /v3/auth/confirm with the OTP to activate
+  // 3. Then call /v3/auth/login to get tokens
+  otp_sent_to: string,           // masked phone (e.g. '+971****1234')
+  otp_verification_id: string    // opaque ID to pair with /confirm call
+}
+```
+
+**Error responses:**
+- `409 CONFLICT_EMAIL_TAKEN` — email already registered
+- `409 CONFLICT_PHONE_TAKEN` — phone already registered
+- `422 VALIDATION_FAILED` — invalid email format, weak password, invalid phone format
+
+**Side effects:**
+- Creates `users` row with `is_phone_verified = false`, `is_active = true`
+- Sends OTP via SMS provider
+- Logs OTP attempt for rate limiting
+
+---
+
+##### POST /v3/auth/validate-email
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Auth/ValidateEmailController.php`)
+
+**Purpose:** Pre-registration check — is this email available?
+
+**Request:** `{ email: string }`
+
+**Response 200:**
+```typescript
+{
+  email: string,         // normalized
+  is_available: boolean  // true if no user exists with this email
+}
+```
+
+**Error responses:**
+- `422 VALIDATION_FAILED` — malformed email
+
+**Notes:**
+- This is a precheck UX optimization. Registration still validates.
+- Rate limited (5/min per IP) to prevent enumeration
+
+---
+
+##### POST /v3/auth/validate-phone
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Auth/ValidatePhoneController.php`)
+
+Symmetric to `/validate-email`. Same shape with `phone` field.
+
+---
+
+##### POST /v3/auth/send-otp
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Auth/SendOtpController.php`)
+
+**Request:**
+```typescript
+{
+  destination: string,                          // phone or email
+  channel: 'sms' | 'email',
+  purpose: 'register' | 'login' | 'reset' | 'verify'
+}
+```
+
+**Response 200:**
+```typescript
+{
+  verification_id: string,    // opaque; pair with /confirm
+  expires_at: string,          // ISO-8601, typically +5min
+  masked_destination: string   // '+971****1234' or 'a***@example.com'
+}
+```
+
+**Error responses:**
+- `429 OTP_RATE_LIMITED` — per-destination hourly cap exceeded (details: `retry_after_seconds`)
+- `422 VALIDATION_FAILED` — invalid destination/channel/purpose
+- `502 OTP_PROVIDER_ERROR` — SMS gateway failure
+
+**Migration note:**
+- Replaces mobile's `sendOTP` (`customer/sendOTP`) AND `sendOOTP` (`users/sendOTP`)
+- Per 0e.1 dedup: ONE v3 endpoint serves both legacy paths
+
+---
+
+##### POST /v3/auth/confirm
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Auth/ConfirmController.php`)
+
+**Purpose:** Submit OTP to complete registration or verification.
+
+**Request:**
+```typescript
+{
+  verification_id: string,
+  code: string         // 4-6 digit OTP
+}
+```
+
+**Response 200:**
+```typescript
+{
+  user: { /* UserSerializer::publicProfile, now is_phone_verified: true */ },
+  access_token: string,                  // issued post-confirmation
+  access_token_expires_at: string,
+  refresh_token: string,
+  refresh_token_expires_at: string
+}
+```
+
+**Error responses:**
+- `400 OTP_VERIFICATION_FAILED` — collapses wrong-code/expired/already-consumed
+- `429 OTP_RATE_LIMITED` — too many attempts
+
+**Idempotency:** Repeated calls with same `verification_id` after success return cached response (within 5 min). Repeated failures count against rate limit.
+
+---
+
+##### POST /v3/auth/reset
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Auth/ResetController.php`)
+
+**Purpose:** Step 1 of password reset — request a reset OTP.
+
+**Request:**
+```typescript
+{
+  destination: string,       // email OR phone
+  channel: 'sms' | 'email'
+}
+```
+
+**Response 200:** Same shape as `/send-otp` (verification_id + expires_at + masked_destination).
+
+**Notes:**
+- Always returns 200 even if email/phone unknown (prevents enumeration)
+- Rate limited same as `/send-otp`
+- This is the UNIFIED reset endpoint serving BOTH legacy `users/reset` (portal) and `users/resetMobile` (mobile). The `channel` param replaces the URL-encoded distinction.
+
+---
+
+##### POST /v3/auth/reset/confirm
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Auth/ResetConfirmController.php`)
+
+**Purpose:** Step 2 — submit OTP + new password.
+
+**Request:**
+```typescript
+{
+  verification_id: string,
+  code: string,
+  new_password: string    // min 8 chars
+}
+```
+
+**Response 200:**
+```typescript
+{
+  success: true,
+  user: { /* UserSerializer::publicProfile */ },
+  // Tokens NOT auto-issued; user must log in with new password
+}
+```
+
+**Error responses:**
+- `400 OTP_VERIFICATION_FAILED`
+- `422 VALIDATION_FAILED` — weak password
+- `429 OTP_RATE_LIMITED`
+
+**Side effects:**
+- Updates `user.password_hash` with new bcrypt
+- Updates `user.password_changed_at`
+- Revokes ALL existing refresh tokens for this user (security: logout everywhere)
+
+---
+
+##### POST /v3/auth/refresh
+
+**Auth:** public (refresh token in body, not header)
+**Status:** ✅ EXISTS (`Auth/RefreshController.php`)
+
+**Request:** `{ refresh_token: string }`
+
+**Response 200:** Same shape as login response (new access + new refresh, ROTATION).
+
+**Error responses:**
+- `401 AUTH_REFRESH_TOKEN_INVALID` — token unknown, revoked, or expired
+
+**Side effects:**
+- Marks old refresh token as revoked
+- Issues new refresh token (rotation prevents replay attacks)
+
+---
+
+##### POST /v3/auth/logout
+
+**Auth:** customer/vendor/admin (any authenticated user)
+**Status:** ✅ EXISTS (`Auth/LogoutController.php`)
+
+**Request:** `{ refresh_token?: string }` (optional; revokes specified token if provided, otherwise revokes the current session's token)
+
+**Response 204** — no body
+
+**Side effects:**
+- Marks the refresh token as revoked
+- Access token continues to work until its 30-min TTL expires (stateless JWT; not server-validated until refresh)
+
+---
+
+##### POST /v3/auth/logout-all
+
+**Auth:** authenticated
+**Status:** ✅ EXISTS (`Auth/LogoutAllController.php`)
+
+**Request:** empty body
+
+**Response 204**
+
+**Side effects:**
+- Revokes ALL refresh tokens for the authenticated user (logout all devices)
+
+---
+
+##### GET /v3/auth/me
+
+**Auth:** authenticated
+**Status:** ✅ EXISTS (`Auth/MeController.php`)
+
+Returns the authenticated user's profile. Same payload as `GET /v3/me/profile`. The two endpoints coexist:
+- `/v3/auth/me` — "who am I" (used in routing/onboarding logic)
+- `/v3/me/profile` — "show me my profile" (used by the profile page)
+
+#### 5.2.2 Identity / profile contracts (4 ops)
+
+---
+
+##### GET /v3/me/profile
+
+**Auth:** customer (any authenticated user)
+**Status:** ✅ EXISTS (`Profile/GetProfileController.php`)
+
+**Response 200:**
+```typescript
+{
+  user: {
+    id: number,
+    email: string,
+    phone: string | null,
+    first_name: string | null,
+    last_name: string | null,
+    is_phone_verified: boolean,
+    is_email_verified: boolean,
+    preferred_language: 'en' | 'ar',
+    roles: string[],
+    created_at: string,            // ISO-8601 UTC
+    updated_at: string
+  }
+}
+```
+
+**Replaces:**
+- Mobile's `readProfile` (`customer/settings/read-profile`)
+- Portal's `getUserProfile` (`utility/shared/user`)
+
+---
+
+##### PATCH /v3/me/profile
+
+**Auth:** customer
+**Status:** ✅ EXISTS (`Profile/UpdateProfileController.php`)
+**Method semantics:** JSON Merge Patch (RFC 7396). Only provided fields are updated. Empty body returns 200 no-op.
+
+**Request:** (all fields optional)
+```typescript
+{
+  first_name?: string | null,    // null clears
+  last_name?: string | null,
+  preferred_language?: 'en' | 'ar',
+  // Note: email and phone are NOT here — those require verification flows
+}
+```
+
+**Response 200:** Same shape as GET profile.
+
+**Notes:**
+- Email change requires `POST /v3/auth/send-otp` flow + verify before update (NOT covered in this endpoint — covered in M3.1.1 if customers can change email)
+- Phone change same as email
+
+**Replaces:**
+- Mobile's `updateProfile` (`customer/settings/update-profile`)
+- Portal's `updateUserProfile` (`vendors/settings/update-user-basic`)
+
+---
+
+##### PATCH /v3/me/password ⚠️ NEW (to build in M3.1.1)
+
+**Auth:** customer
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Request:**
+```typescript
+{
+  current_password: string,    // required: re-auth check
+  new_password: string         // min 8 chars
+}
+```
+
+**Response 204**
+
+**Error responses:**
+- `401 AUTH_INVALID_CREDENTIALS` — current_password didn't match
+- `422 VALIDATION_FAILED` — weak new password
+- `409 CONFLICT_SAME_PASSWORD` — new equals current (optional check; M4 polish)
+
+**Side effects:**
+- Updates `user.password_hash`
+- Updates `user.password_changed_at`
+- Does NOT revoke other sessions (current session continues to work; user explicitly chose to change password while logged in — if they want to logout others, they can call `/logout-all` separately)
+
+**Replaces:**
+- Portal's `updateUserPassword` (`utility/shared/change-user-password`)
+- Mobile currently has no equivalent (mobile users use the reset flow instead)
+
+---
+
+##### PATCH /v3/me/location ⚠️ NEW (to build in M3.1.1)
+
+**Auth:** customer
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Purpose:** Mobile first-launch geolocation capture. Stores city/country for delivery cost estimates + content localization.
+
+**Request:**
+```typescript
+{
+  latitude?: number,        // decimal degrees, -90 to 90
+  longitude?: number,       // decimal degrees, -180 to 180
+  city?: string,            // optional manual override
+  country_code?: string,    // ISO-3166 alpha-2, e.g. 'AE'
+  permission_granted?: boolean  // false if user denied browser/native location permission
+}
+```
+
+**Response 200:**
+```typescript
+{
+  user: { /* full profile with resolved city/country fields populated */ }
+}
+```
+
+**Notes:**
+- If both lat/lng provided, server reverse-geocodes to city/country (or accepts client-provided city)
+- If `permission_granted: false`, server stores that signal so the app doesn't re-prompt
+- This is the only PATCH on /v3/me that takes a body of mostly-optional fields and stores them in a separate `user_locations` table (not on `users` row)
+
+**Replaces:**
+- Mobile's `UpdateLocation` (`customer/settings/update-location`)
+
+#### 5.2.3 Address book contracts (6 ops)
+
+All ✅ EXISTS in v3.
+
+---
+
+##### GET /v3/me/addresses
+
+**Auth:** customer
+**Status:** ✅ EXISTS (`Address/ListAddressesController.php`)
+
+**Response 200 (paginated for safety, though most users have ≤ 5):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      label: string,           // 'Home', 'Office', etc.
+      first_name: string,
+      last_name: string,
+      phone: string,
+      country_code: string,    // 'AE'
+      city: string,
+      area: string,            // neighborhood
+      street: string,
+      building: string,
+      apartment: string | null,
+      landmark: string | null,
+      is_default: boolean,
+      created_at: string,
+      updated_at: string
+    }
+  ],
+  meta: { /* standard pagination */ }
+}
+```
+
+---
+
+##### POST /v3/me/addresses
+
+**Auth:** customer
+**Status:** ✅ EXISTS
+
+**Request:**
+```typescript
+{
+  label: string,
+  first_name: string,
+  last_name: string,
+  phone: string,
+  country_code: string,
+  city: string,
+  area: string,
+  street: string,
+  building: string,
+  apartment?: string | null,
+  landmark?: string | null,
+  is_default?: boolean   // if true, demotes any other default
+}
+```
+
+**Response 201:** Created address shape (single, not paginated).
+
+---
+
+##### GET /v3/me/addresses/:id
+
+**Auth:** customer
+**Status:** ✅ EXISTS
+
+**Response 200:** Single address object.
+
+**Error responses:**
+- `404 NOT_FOUND` — address doesn't exist OR belongs to different user (collapsed for privacy)
+
+---
+
+##### PUT /v3/me/addresses/:id
+
+**Auth:** customer
+**Status:** ✅ EXISTS
+
+**Request:** Full address replacement (PUT semantics, not partial). Same shape as POST request.
+
+**Response 200:** Updated address.
+
+**Notes:** Uses PUT (full replacement) intentionally — addresses are small enough that partial updates aren't worth the schema complexity. If a field is missing in the body, it's treated as null.
+
+---
+
+##### DELETE /v3/me/addresses/:id
+
+**Auth:** customer
+**Status:** ✅ EXISTS
+
+**Response 204**
+
+**Error responses:**
+- `404 NOT_FOUND`
+- `409 ADDRESS_IN_USE` — if the address is referenced by an active order (M3.1.6 enforcement)
+
+---
+
+##### PATCH /v3/me/addresses/:id/default
+
+**Auth:** customer
+**Status:** ✅ EXISTS (`Address/SetDefaultAddressController.php`)
+
+**Request:** empty body (the URL itself signals the operation)
+
+**Response 200:** Address with `is_default: true`. Side effect: any other default is demoted.
+
+#### 5.2.4 Billing address contracts (2 ops) ⚠️ NEW
+
+These are distinct from the shipping address book — billing is the address tied to payment methods + invoicing. Per Day 9 audit, mobile has `updateBilling` that hits a different legacy URL than the addresses endpoint.
+
+**Design decision:** Billing is a SINGLE record per user (not a list like shipping addresses). One billing address, possibly null if never set.
+
+---
+
+##### GET /v3/me/billing-address ⚠️ NEW (to build in M3.1.1 OR M3.1.6)
+
+**Auth:** customer
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Response 200:**
+```typescript
+{
+  data: {
+    first_name: string,
+    last_name: string,
+    company_name: string | null,
+    tax_id: string | null,           // VAT TRN for UAE
+    phone: string,
+    email: string,
+    country_code: string,
+    city: string,
+    area: string,
+    street: string,
+    building: string,
+    apartment: string | null,
+    postal_code: string | null,
+    created_at: string,
+    updated_at: string
+  } | null    // null if never set
+}
+```
+
+---
+
+##### PATCH /v3/me/billing-address ⚠️ NEW
+
+**Auth:** customer
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Method semantics:** PATCH (Merge Patch). If the user has no billing record, this creates one. If they do, partial fields update.
+
+**Request:** Same shape as GET response (all fields optional for PATCH).
+
+**Response 200:** Full billing object.
+
+**Replaces:** Mobile's `updateBilling` (`customer/settings/billing/update-billing`).
+
+#### 5.2.5 Body measurements contracts (5 ops)
+
+All ✅ EXISTS in v3.
+
+---
+
+##### GET /v3/me/measurements
+
+**Auth:** customer
+**Status:** ✅ EXISTS (`Measurement/ListMeasurementsController.php`)
+
+**Purpose:** List all measurement sets the user has saved (default + per-category).
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      category_id: number | null,      // null = default set; integer = category-specific
+      category_slug: string | null,
+      fields: {
+        // dynamic keys; depends on what fields were captured
+        bust?: number | null,           // cm
+        waist?: number | null,
+        hips?: number | null,
+        shoulder?: number | null,
+        sleeve_length?: number | null,
+        arm_length?: number | null,
+        torso_length?: number | null,
+        // etc; whatever the user's UI captured
+      },
+      updated_at: string
+    }
+  ]
+}
+```
+
+---
+
+##### GET /v3/me/measurements/default
+
+**Auth:** customer
+**Status:** ✅ EXISTS
+
+Returns the default (non-category-specific) measurement set. Same shape as a single item from list, or 404 if not yet set.
+
+---
+
+##### GET /v3/me/measurements/category/:id
+
+**Auth:** customer
+**Status:** ✅ EXISTS
+
+Returns the measurement set for a specific category. 404 if not yet set for that category.
+
+---
+
+##### PUT /v3/me/measurements/default
+##### PUT /v3/me/measurements/category/:id
+
+**Auth:** customer
+**Status:** ✅ EXISTS (`Measurement/UpsertMeasurementsController.php`)
+
+**Method semantics:** PUT — upsert. Creates if missing, replaces if present.
+
+**Request:**
+```typescript
+{
+  fields: {
+    bust?: number | null,
+    waist?: number | null,
+    // ... whatever fields the UI is collecting
+  }
+}
+```
+
+**Response 200:** Full measurement set.
+
+---
+
+##### DELETE /v3/me/measurements/default
+##### DELETE /v3/me/measurements/category/:id
+
+**Auth:** customer
+**Status:** ✅ EXISTS (`Measurement/DeleteMeasurementsController.php`)
+
+**Response 204**
+
+#### 5.2.6 User reviews contracts (3 ops) ⚠️ ALL NEW
+
+---
+
+##### GET /v3/me/reviews ⚠️ NEW (to build in M3.1.9)
+
+**Auth:** customer
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Purpose:** List reviews the user has authored.
+
+**Response 200 (paginated):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      product: {
+        slug: string,
+        name: string,
+        image_url: string | null,
+        vendor_name: string
+      },
+      rating: number,           // 1-5
+      title: string | null,
+      body: string,
+      helpful_count: number,
+      created_at: string,
+      updated_at: string
+    }
+  ],
+  meta: { /* standard pagination */ }
+}
+```
+
+**Replaces:** Mobile's `readReviews` (`customer/settings/read-reviews`).
+
+---
+
+##### DELETE /v3/me/reviews/:id ⚠️ NEW (to build in M3.1.9)
+
+**Auth:** customer
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Response 204**
+
+**Error responses:**
+- `404 NOT_FOUND` — review doesn't exist OR belongs to different user (collapsed)
+- `403 FORBIDDEN` — only the author can delete (admin uses different endpoint)
+
+**Replaces:** Mobile's `deleteReview` (`customer/settings/delete-review`).
+
+---
+
+##### GET /v3/me/store/reviews ⚠️ NEW (to build in M3.1.10)
+
+**Auth:** vendor (requires `vendor` role)
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Purpose:** Vendor's self-view of reviews on THEIR products.
+
+**Response 200 (paginated):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      product: {
+        slug: string,
+        name: string,
+        image_url: string | null
+      },
+      reviewer: {
+        first_name: string,
+        last_name_initial: string   // 'J.' not 'Jones' for privacy
+      },
+      rating: number,
+      title: string | null,
+      body: string,
+      helpful_count: number,
+      vendor_response: string | null,    // if vendor has replied
+      vendor_responded_at: string | null,
+      created_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Replaces:** Mobile's `storeReviews` (`customer/settings/store-reviews`).
+
+#### 5.2.7 0e.2 Summary
+
+**26 operations specified.** Distribution:
+
+| Section | Ops | v3 exists | v3 to BUILD |
+|---|---|---|---|
+| Auth + session | 12 | 12 | 0 |
+| Identity / profile | 4 | 2 | 2 (password, location) |
+| Address book | 6 | 6 | 0 |
+| Billing address | 2 | 0 | 2 |
+| Body measurements | 5* | 5 | 0 |
+| User reviews | 3 | 0 | 3 |
+| **Total** | **32** | **25** | **7** |
+
+\* Body measurements counted 5 ops not 7 here (consolidating PUT/DELETE pairs for default + category as 4 logical endpoints with 2 URL forms each, plus list). 0d's count of 5 was correct in spirit.
+
+**Real op count is 26-32 depending on how PUT/DELETE pairs are counted.** Either way, **25 are already implemented in v3.**
+
+**M3 timeline impact:**
+- Original M3.1.1 ("v3 auth endpoint build, 5-7 days") is effectively done already
+- Revised M3.1.1: audit existing v3 auth contracts + document for mobile adapter (2-3 days)
+- The 7 net-new endpoints distribute across M3.1.1 (password, location, billing), M3.1.9 (user reviews), M3.1.10 (vendor reviews)
+
+**Savings to M3 timeline: 2-3 weeks** from this sub-phase's reality check.
+
+#### 5.2.8 Decisions locked in 0e.2
+
+- `/v3/auth/*` for unauthenticated and stateless ops (login, register, OTP, reset, refresh, logout)
+- `/v3/me/*` for authenticated user-scoped reads/writes (profile, addresses, measurements, reviews)
+- `/v3/me/store/*` for vendor-scoped subset under `/me/*` (when user has vendor role)
+- Email and phone are NOT changeable via `PATCH /v3/me/profile` — require explicit OTP-protected flows (M4)
+- Address book is a LIST (multiple shipping addresses); billing is a SINGLETON (one billing record)
+- Body measurements have BOTH `/default` and `/category/:id` variants — same controllers, route segment differentiates
+- All `/v3/me/*` routes attach `AuthMiddleware` at the group level (not per-route)
+- Reviews delete: only authors can delete their own; admins use different endpoint (M3.3 admin scope)
+- Vendor self-view of reviews uses `last_name_initial` for privacy (reviewers see anonymized last name)
+
