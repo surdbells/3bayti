@@ -4,6 +4,7 @@
 **Status:** ✅ APPROVED — as of May 13, 2026 (Sodiq, "approved as-is")
 **Created:** Day 8+ of M2 rollout, May 14, 2026
 **Approved:** May 13, 2026 — execution begins with M3.1.0
+**Revised:** May 13, 2026 — post-M3.1.0 reality audit (see §10 Revision Notes)
 **Target completion:** TBD (Q2 deferred decision — see §0)
 
 ---
@@ -316,27 +317,41 @@ Each phase is approval-gated. We don't start phase N+1 until phase N is verified
 - Doc reviewed + approved by Sodiq before any code starts in M3.1.1+
 - Every legacy endpoint accounted for (in v3, deferred to M4, or explicit "won't migrate")
 
-#### M3.1.1 — v3 Auth Endpoint Build
+#### M3.1.1 — v3 Auth Endpoint Build (much smaller post-M3.1.0 reality check)
 
-**Duration:** 5-7 days
-**Output:** 6 new v3 auth endpoints
+**Duration:** 2-3 days (was 5-7 days; revised per M3.1.0e.2 reality audit)
+**Output:** 3 net-new v3 endpoints + audit + adapter prep
 
-**Endpoints to build:**
+**ORIGINAL plan:** Build 6 missing v3 auth endpoints.
 
-- `POST /v3/auth/send-otp` — replaces `customer/sendOTP` + `users/sendOTP` (dedup'd) — supports email OR phone destination
-- `POST /v3/auth/validate-otp` — replaces `customer/validateOTP`
-- `POST /v3/auth/validate-email` — replaces `users/validate-email` (email verification)
-- `POST /v3/auth/confirm-account` — replaces `users/confirm` (post-OTP account activation)
-- `POST /v3/auth/forgot-password-mobile` — replaces `users/resetMobile` (mobile-flow specific?)  TO VERIFY in audit
-- `POST /v3/auth/reset-password-otp` — replaces `users/sendOTP` used for password reset (mobile flow)
+**REVISED post-M3.1.0e.2:** v3 already has 19 of 26 endpoints in the auth + identity + account scope implemented. The original "5-7 days build" was based on incomplete audit. Reality:
+
+- ✅ **EXISTS in v3** (no work needed; documented in 0e.2 §5.2.1-5.2.5):
+  - `POST /v3/auth/login`, `/register`, `/validate-email`, `/validate-phone`, `/send-otp`, `/confirm`, `/reset`, `/reset/confirm`, `/refresh`, `/logout`, `/logout-all`
+  - `GET /v3/auth/me`
+  - `GET/PATCH /v3/me/profile`
+  - Full `/v3/me/addresses` CRUD (6 endpoints)
+  - `/v3/me/measurements` (default + per-category, 5 endpoint variants)
+
+- ❌ **GENUINELY MISSING** (the 3 endpoints to build in M3.1.1):
+  - `PATCH /v3/me/password` — change password while authenticated
+  - `GET /v3/me/billing-address` — billing distinct from shipping
+  - `PATCH /v3/me/billing-address` — update billing
+  - `PATCH /v3/me/location` — mobile first-launch geolocation
+
+That's 4 endpoints, not 6. Plus the original 5-7 day estimate assumed building from scratch; reality is 3-4 days of work since most patterns can be copied from existing `apps/api/src/Http/Controllers/{Auth,Profile,Address}/` controllers.
 
 **Acceptance:**
-- All 6 endpoints have controller + Doctrine implementation
+- 4 new endpoints have controller + Doctrine implementation
 - Unit tests for happy path + 3 error cases each
-- ENDPOINT_ROUTING entries added with `target: 'old'` (no flip yet)
+- ENDPOINT_ROUTING entries added (most exist; new ones for password + billing-address + location)
 - v3 API CI passes
-- Shape parity with legacy verified via curl side-by-side
-- Documented in api-contracts package
+- Documented in 0e.2 contracts (specs already done)
+
+**Remaining auth/identity/account ops** (3 deferred to later phases):
+- `GET /v3/me/reviews` → M3.1.9 (with the rest of reviews surface)
+- `DELETE /v3/me/reviews/:id` → M3.1.9
+- `GET /v3/me/store/reviews` → M3.1.10 (vendor scope)
 
 #### M3.1.2 — Mobile Adapter Layer (MobileNetworkAdapter)
 
@@ -631,68 +646,72 @@ M2 Day 5 flipped web's catalog reads to v3. M3.2 finishes the job.
 
 ### 3.1 Web's remaining surface
 
-Audit needed in M3.2.0 (part of the M3.1.0 cross-app inventory).
+**⚠️ MAJOR REVISION POST-M3.1.0c:** The original web estimates assumed apps/web had checkout/cart/orders features that just needed migration. M3.1.0c audit revealed:
 
-Probable scope:
-- Auth (login/register/reset) — partial overlap with mobile work
-- Cart, checkout, orders — overlap with mobile M3.1.6/M3.1.7
-- Account management (addresses, profile, wishlist)
-- Designer routes (Day 5 followup; v3 needs /vendors/:slug pages on the web side)
+**apps/web has NO customer-account features today.** The feature tree is:
+- `catalog/` (product browsing)
+- `categories/` (category browsing)
+- `home/` (landing page)
+- `dev-components/` (dev sandbox)
 
-Most of M3.2 reuses v3 endpoints already built in M3.1. So it's mostly:
-- Refactor apps/web to use RoutedHttpClient (where it doesn't already)
-- Add Noon payment SDK integration to web checkout
-- Build /designer/* routes
-- Restore /designer/* URLs to sitemap.xml
+That's it. There is NO implementation for: cart, checkout, orders, account, wishlist, login UI, designer/vendor pages, address book, review submission.
 
-### 3.2 Web phases
+**This means M3.2.x is mostly GREENFIELD UI BUILD, not migration.** Backend complexity is low (most v3 endpoints will be done in M3.1.x). The work is in Angular components, forms, validation, error handling, RTL/i18n, design polish.
+
+### 3.2 Web phases (REVISED)
 
 #### M3.2.0 — Audit (part of M3.1.0)
 
-Covered in M3.1.0.
+Covered in M3.1.0. Output: `docs/plans/m3-endpoint-inventory.md` (7,447 lines).
 
-#### M3.2.1 — Web Auth Flip (Phase 2 + Reset Flows)
+#### M3.2.1 — Web Auth UI Build + Flip
 
-**Duration:** 2-3 days
+**Duration:** 5-7 days (was 2-3 days)
+**Output:** Login/register/reset UI + flow integration
 
-Web's login + register were partially flipped in M2 Day 5. Reset flows and OTP flows weren't. Build on M3.1.1's v3 auth endpoints.
+**Why expanded:** Web doesn't have an auth UI today. Building forms + validation + error handling + auth state management before any "flip" is possible.
 
-#### M3.2.2 — Web Cart + Checkout + Orders Flip
+#### M3.2.2 — Web Cart + Checkout + Orders Build
 
-**Duration:** 3-4 weeks (with shadow mode)
+**Duration:** 6-8 weeks (was 3-4 weeks)
+**Output:** Full cart, checkout, order history flows on web
 
-Same shadow-mode discipline as mobile. Cart/checkout/orders are the highest-risk web flows because they touch payment.
+**Why expanded:** Greenfield UI build for cart-icon-in-header, cart page, multi-step checkout, order history page, order detail page. Plus shadow-mode discipline per C7 once UI is wired.
 
 #### M3.2.3 — Web Noon Payment Integration
 
-**Duration:** 7-10 days
+**Duration:** 7-10 days (unchanged)
 
-Mobile used Capacitor InAppBrowser for Noon's hosted checkout page. Web uses... well, Noon offers a hosted page (window.location redirect) or an embedded SDK. Hosted page is simpler — go with that for M3, defer embedded SDK to M4 if performance matters.
+Mobile used Capacitor InAppBrowser for Noon's hosted checkout page. Web uses Noon's hosted page (window.location redirect). Hosted page is simpler — go with that for M3, defer embedded SDK to M4.
 
 #### M3.2.4 — Web Designer Routes
 
-**Duration:** 3-4 days
+**Duration:** 3-5 days (was 3-4 days)
+**Output:** `/designer` index + `/designer/:slug` detail Angular routes
 
-Build `/designer` and `/designer/:slug` Angular routes. Restore vendor entries to sitemap.xml. This depends on M3.1.10's v3 vendor endpoints.
+Restore vendor entries to sitemap.xml. Depends on M3.1.10's v3 vendor endpoints.
 
-#### M3.2.5 — Web Account Management Flip
+#### M3.2.5 — Web Account Management Build
 
-**Duration:** 5-7 days
+**Duration:** 2-3 weeks (was 5-7 days)
+**Output:** Profile, addresses, wishlist, measurements UI on web
 
-Profile, addresses, wishlist on web. Reuses v3 endpoints from M3.1.10's account work.
+**Why expanded:** Building Angular forms + state management for each account feature. Endpoints already exist (from M3.1.x); UI does not.
 
-### 3.3 Web phase summary
+### 3.3 Web phase summary (REVISED)
 
 ```
 M3.2.0  Audit (part of M3.1.0)            covered
-M3.2.1  Web auth flip phase 2             2-3d
-M3.2.2  Web cart/checkout/orders flip     3-4 WEEKS
-M3.2.3  Web Noon payment                  7-10d
-M3.2.4  Web designer routes               3-4d
-M3.2.5  Web account management            5-7d
+M3.2.1  Web auth UI build + flip          5-7d    (was 2-3d)
+M3.2.2  Web cart/checkout/orders build    6-8 WEEKS (was 3-4 weeks)
+M3.2.3  Web Noon payment                  7-10d   (unchanged)
+M3.2.4  Web designer routes               3-5d    (was 3-4d)
+M3.2.5  Web account management build      2-3 WEEKS (was 5-7d)
 
-TOTAL: ~5-7 weeks (much of it parallel to M3.1 because shared v3 endpoints)
+TOTAL: ~11-15 weeks (was 5-7 weeks)
 ```
+
+**Net change: +4-8 weeks added to M3.2.** This is the biggest single scope adjustment surfaced by M3.1.0.
 
 ---
 
@@ -830,6 +849,13 @@ Risks ranked by severity × likelihood.
 | R8 | **Noon API changes / deprecates during M3** | Low | Use a stable Noon API version; subscribe to Noon's developer announcements. |
 | R9 | **Doctrine ORM bug like Day 4's microsecond issue surfaces deeper in M3** | Medium | Increased ORM testing. Acceptance criteria includes a representative load test for each new endpoint. |
 | R10 | **Customer reports a bug we can't diagnose because logs don't capture enough context** | Medium | Every endpoint flip phase includes logging review. Add request IDs, user IDs, trace IDs to logs. |
+| R11 | **Stock race during checkout — two customers buy the last unit simultaneously** | High (added M3.1.0e.4) | Optimistic stock check at write time; admin alerted to oversold cases for manual resolution. |
+| R12 | **Idempotency-Key conflicts — same key, different body** | High (added M3.1.0e.4) | 422 with `details.idempotency_conflict: true`; client must regenerate key. |
+| R13 | **Pending payment timeout — order created but customer abandons Noon page** | Medium (added M3.1.0e.4) | 30-min `payment_expires_at`; cron auto-cancels expired orders + releases stock reservations. |
+| R14 | **Amount tampering in webhook — attacker forges webhook claiming smaller paid amount** | Medium (added M3.1.0e.4) | HMAC signature + webhook amount must match order total exactly; log loudly on mismatch. |
+| R15 | **Currency mismatch — defensive (all our orders are AED)** | Low (added M3.1.0e.4) | Assert in PaymentService.initiate. |
+| R16 | **0e.7 admin operations missing audit detail for sensitive ops** | Medium (added M3.1.0e.7) | Every admin write generates `admin_audit_logs` entry; sensitive ops REQUIRE `reason` field. Documented in 0e.7 §5.7.2. |
+| R17 | **`logistics` and `plurals` endpoint semantics unclear from legacy** | Medium (added M3.1.0e.7) | Flagged as ⚠️ NEEDS LEGACY VERIFICATION. Inspect legacy controllers in M3.3.1 kickoff before designing. |
 
 ---
 
@@ -837,15 +863,26 @@ Risks ranked by severity × likelihood.
 
 This is "whatever it takes — quality over speed" so timelines are estimates, not commitments.
 
-```
-M3.1 (Mobile):  ~16-22 weeks  (the long one — biggest surface)
-M3.2 (Web):     ~5-7 weeks    (shorter because much reuses M3.1 v3 work)
-M3.3 (Portal):  ~9-11 weeks   (admin endpoint build is the slow part)
+**REVISED post-M3.1.0** (May 13, 2026):
 
-Total elapsed: ~30-40 weeks of solo work (some overlap because cross-app v3 endpoints serve multiple apps)
+```
+M3.1 (Mobile):  ~14-20 weeks  (compressed 2-3 weeks; auth + catalog mostly done in v3)
+M3.2 (Web):     ~11-15 weeks  (EXPANDED from 5-7; web is greenfield UI build)
+M3.3 (Portal):  ~14-18 weeks  (expanded from 9-11; admin surface ~38 net-new endpoints not ~30)
+
+Total elapsed: ~40-50 weeks (was 30-40)
 ```
 
-8-10 months realistic. If progress reveals faster pace, the phases compress naturally. If slower, the conservative C5 mandate (quality over speed) is the right anchor.
+**Net change:** +10 weeks added to total M3 elapsed estimate.
+
+Drivers:
+- M3.2 (web) expanded most: web has NO customer-account features today (greenfield UI build, not migration)
+- M3.3 (portal) expanded: admin surface is 38 net-new endpoints (was estimated ~30)
+- M3.1 (mobile) compressed: most auth + catalog already exists in v3 (reality check from 0e.2 + 0e.3)
+
+**10-12 months realistic.** If progress reveals faster pace, the phases compress naturally. If slower, the conservative C5 mandate (quality over speed) is the right anchor.
+
+Net endpoints to build (refined from 0e contracts): **~128 v3 endpoints** distributed across M3.1.1 through M3.3.5.
 
 ---
 
@@ -915,3 +952,79 @@ These factual discoveries shaped the plan and are recorded for posterity:
 9. **36 conflict-renamed users from M2 Day 4 migration.** Their auth flows must continue to work; v3 auth must support the suffixed-email lookup. Captured as M4 deferral.
 
 10. **The legacy backend is also under Sodiq's control.** Means we can coordinate schema changes if needed, but should NOT change legacy schema during M3 to keep migrations re-runnable.
+
+### Discoveries added in M3.1.0 (May 13, 2026)
+
+11. **Mobile has 74 USED endpoints, not 105.** Day 9 audit (M3.1.0a). 28 of the 101 endpoint constants in `apps/mobile/src/app/global-component.ts` are dead code — declared but no caller.
+
+12. **13 mobile vendor-side endpoints have a missing-baseURL BUG.** All 13 are also unused (declared `'vendor/...'` without `GlobalComponent.baseURL +` prefix). Latent bug; never manifested.
+
+13. **Portal has 86 USED endpoints, not 97.** Cleaner than mobile (only 10 dead). Three-namespace structure (`admin/*`, `vendors/*`, `users/*`, `utility/*`) is intentional.
+
+14. **Web has NO customer-account features today.** M3.1.0c discovered apps/web only has catalog browsing built. Cart, checkout, orders, account, wishlist, login UI all need GREENFIELD BUILD — not migration. This is the single biggest M3 scope adjustment.
+
+15. **7 ENDPOINT_ROUTING entries had wrong `oldPath` values.** Scaffolding bugs from M2 Day 5 where paths were guessed without auditing legacy. All 7 fixed in M3.1.0f.
+
+16. **156 unique business operations across all 3 apps (after dedup).** Refined from M3.1.0d. Of these: ~32 already exist in v3, ~128 net new to build in M3.
+
+17. **v3 has FAR MORE auth + account implemented than 0d realized.** M3.1.0e.2 audit found 19 of 26 auth/identity/account endpoints already exist. M3.1.1 phase shrinks from 5-7 days to 2-3 days as result. Cumulative savings to M3: ~2-3 weeks.
+
+18. **Cart/checkout/orders/payment is 100% greenfield in v3.** No controllers exist. M3.1.6 + M3.1.8 are the heaviest implementation phases.
+
+19. **Mobile's `IncreaseItem` + `DecreaseItem` collapse to one v3 endpoint.** Example of multiple dedup wins in M3.1.0d. Similar wins: `sendOTP` + `sendOOTP`, `readStoreMeasurement` ≡ portal's `readMeasurement`, 4 portal order-filter endpoints → 1 with `?status=`.
+
+20. **Noon webhook implementation is critical infrastructure.** Legacy flow relies on client-initiated finalize (fragile — loses payment confirmations on client crash). M3.1.8 adds server-side webhook handler with HMAC-SHA256 signature verification, idempotency, and daily reconciliation cron.
+
+21. **5 admin endpoint contracts flagged for legacy verification.** M3.1.0e.7 surfaced `logistics`, `plurals`, refund partials, soft/hard delete semantics, and commission change in-flight handling as needing inspection before implementation.
+
+22. **Pre-existing tech debt: 7 `implicitly has any` errors in apps/web.** Surfaced during M3.1.0f local type-check. Errors exist on `main` from May 4-5 commits. CI somehow passes (discrepancy between local + CI tsconfig resolution worth investigating separately).
+
+---
+
+## 10. Revision notes (post-M3.1.0)
+
+Documented changes from original plan (committed `3bba380`) → revised plan (this commit).
+
+### 10.1 What triggered this revision
+
+M3.1.0 (cross-app endpoint audit + deduplication) ran for ~12 sub-phases and surfaced multiple realities that changed the plan's estimates and assumptions. The original plan was based on pre-audit guesses; M3.1.0 produced data.
+
+Full detail in `docs/plans/m3-endpoint-inventory.md` (7,447 lines).
+
+### 10.2 Changes applied in this revision
+
+| Section | Original | Revised | Driver |
+|---|---|---|---|
+| §2 Mobile M3.1.1 | "5-7 days, 6 endpoints" | "2-3 days, 3 endpoints" | 0e.2 reality audit |
+| §3 Web M3.2.x | "5-7 weeks total" | "11-15 weeks total" | 0c web-is-greenfield discovery |
+| §6 Risk register | R1-R10 | R1-R17 (added 7) | 0e.4 payment risks + 0e.7 admin |
+| §7 Timeline | "30-40 weeks, 8-10 months" | "40-50 weeks, 10-12 months" | Cumulative |
+| §3.1 Web's remaining surface | Speculative | Reality-grounded | 0c audit |
+| Appendix A | 10 facts | 22 facts | M3.1.0 outputs |
+
+### 10.3 What did NOT change
+
+- §0.1 Constraints (C1-C12) — all still hold
+- §0.2 Non-goals — unchanged
+- §1 Migration discipline — playbook unchanged
+- §4 Portal phases — minor timing changes embedded but not structurally revised
+- §5 Cross-cutting work — concepts unchanged
+- §8 M4 deferrals — unchanged
+- §9 Approval gates — unchanged (this is a revision OF an approved plan, not a re-approval)
+
+### 10.4 What this revision does NOT include (deferred)
+
+These deserve dedicated future commits:
+
+1. **Detailed M3.3 portal phase revision** — admin surface grew from ~30 to 38 endpoints; M3.3.1+M3.3.2 endpoint-build phases should be re-scoped accordingly. Lighter revision than web; deferring to its own commit.
+2. **M3.1.x sub-phase reordering** — Some phases could shuffle now that more is known. Example: M3.1.8 (Noon payment) might split into infra (PaymentGatewayInterface + tables) and adapter (NoonAdapter + webhook). Deferring; will be decided at M3.1.6 kickoff.
+3. **Acceptance criteria refinement per phase** — Each phase has acceptance criteria. With contracts now designed (0e.X), these can be more specific. Deferring per-phase.
+4. **M3.1.0f tech debt** — 7 implicit-any errors in apps/web flagged in fact #22. Needs its own fix commit; not M3 plan scope.
+
+### 10.5 Approval status
+
+This revision **inherits** the May 13, 2026 plan approval. Sodiq does not need to re-approve unless the timeline expansion (30-40 → 40-50 weeks) is unacceptable.
+
+If Sodiq wishes to reject the revision: revert to commit `5d9bf97` (the original APPROVED state). If accepted: this commit becomes the new approved plan.
+
+**No phase work has started yet beyond M3.1.0 (audit + design). M3.1.1 implementation begins after this revision lands.**
