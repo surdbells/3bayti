@@ -152,7 +152,7 @@ jobs:
           fi
           echo "✓ Category-detail prerendered ($(wc -c < $DET) bytes, $NPRODUCTS products)"
 
-          PDP=dist/3bayti-web/browser/product/la26-2637/index.html
+          PDP=dist/3bayti-web/browser/product/la27-2637/index.html
           if [ ! -f "$PDP" ]; then
             echo "ERROR: $PDP not found — /product/:slug prerender failed"
             echo "       Check that /v2/products was reachable during build."
@@ -164,7 +164,7 @@ jobs:
           fi
           PDP_IMAGES=$(grep -oE 'src="https://api\.3bayti\.ae/cdn-cgi/image[^"]+' "$PDP" | wc -l)
           if [ "$PDP_IMAGES" -lt 1 ]; then
-            echo "ERROR: no product images rendered on /product/la26-2637"
+            echo "ERROR: no product images rendered on /product/la27-2637"
             exit 1
           fi
           echo "✓ PDP prerendered ($(wc -c < $PDP) bytes, $PDP_IMAGES image elements)"
@@ -305,10 +305,10 @@ jobs:
             echo ""
             echo "[$LABEL] Test 2: Prerendered top-200 PDP (served by ASSETS)"
             local PDP_BODY PDP_STATUS
-            PDP_BODY=$(curl -fsS --max-time 30 "$BASE/product/la26-2637")
-            PDP_STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/product/la26-2637")
+            PDP_BODY=$(curl -fsS --max-time 30 "$BASE/product/la27-2637")
+            PDP_STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/product/la27-2637")
             if [ "$PDP_STATUS" != "200" ]; then
-              echo "ERROR [$LABEL]: /product/la26-2637 returned $PDP_STATUS"
+              echo "ERROR [$LABEL]: /product/la27-2637 returned $PDP_STATUS"
               exit 1
             fi
             if ! echo "$PDP_BODY" | grep -qi "Laduna"; then
