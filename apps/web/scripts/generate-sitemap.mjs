@@ -164,19 +164,34 @@ async function main() {
         priority: '0.7',
       });
     }
-    for (const vendor of apiData.vendors || []) {
-      entries.push({
-        loc: `${SITE_URL}/designer/${vendor.slug}`,
-        lastmod: vendor.last_modified,
-        changefreq: 'weekly',
-        priority: '0.6',
-      });
-    }
+    /*
+     * Vendor (designer) URLs deliberately NOT included in sitemap.
+     *
+     * Day 7 audit found 104 /designer/* URLs in the sitemap pointing
+     * at routes that apps/web doesn't implement yet — /designer and
+     * /designer/:slug return 404. Search engines crawling sitemap.xml
+     * would have hit those 404s and downgraded the site's trust score.
+     *
+     * When the designer routes are built (Phase 2 / M3), restore
+     * vendor entries here. Pattern would be:
+     *
+     *   for (const vendor of apiData.vendors || []) {
+     *     entries.push({
+     *       loc: `${SITE_URL}/designer/${vendor.slug}`,
+     *       lastmod: vendor.last_modified,
+     *       changefreq: 'weekly',
+     *       priority: '0.6',
+     *     });
+     *   }
+     *
+     * For now, the vendors array from /sitemap-data is consumed only
+     * for the log line below (count visibility), not for output.
+     */
     console.log(
       `[sitemap] ${entries.length} URLs total `
       + `(${apiData.categories?.length || 0} categories, `
       + `${apiData.products?.length || 0} products, `
-      + `${apiData.vendors?.length || 0} vendors)`
+      + `${apiData.vendors?.length || 0} vendors fetched but EXCLUDED from sitemap — see comment above)`
     );
   } else {
     console.log(`[sitemap] static-only mode: ${entries.length} URLs`);
