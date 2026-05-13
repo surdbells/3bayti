@@ -13,7 +13,23 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
  * the prerender phase.
  */
 
-const API_BASE = process.env['API_BASE_URL'] || 'https://api.3bayti.ae/v2';
+/**
+ * API base for build-time slug discovery.
+ *
+ * As of Day 5 of the 10-day rollout (M2.2.5), this flips from
+ * legacy v2 to v3. The v3 backend has feature parity for slug
+ * enumeration:
+ *
+ *   GET /v3/categories          -> { data: [{slug, ...}] }
+ *   GET /v3/products?sort=newest -> { data: [{slug, ...}], meta }
+ *
+ * Both shape-identical to v2's responses for these fields. If v3
+ * is unreachable at build time (DNS issue, etc.) the env-var
+ * override below lets us pin back to v2 without a code change:
+ *
+ *   API_BASE_URL=https://api.3bayti.ae/v2 pnpm --filter @3bayti/web build
+ */
+const API_BASE = process.env['API_BASE_URL'] || 'https://api-v3.3bayti.ae/v3';
 
 /**
  * How many product PDP pages to prerender at build time.

@@ -131,43 +131,72 @@ jobs:
           fi
           echo "✓ Categories page prerendered ($(wc -c < $CAT) bytes)"
 
-          DET=dist/3bayti-web/browser/category/abayas-1/index.html
-          if [ ! -f "$DET" ]; then
-            echo "ERROR: $DET not found — /category/:slug prerender failed"
-            echo "       Check that /v2/categories was reachable during build."
+          # Pick a category-detail prerender output dynamically. Hard-
+          # coding a slug ('abayas-1' for v2, 'abayas' for v3) breaks
+          # whenever the backend's slug shape changes (which is exactly
+          # what Day 5's v3 flip did). Listing the directory and picking
+          # the first slug works regardless of backend.
+          CAT_DIR=dist/3bayti-web/browser/category
+          if [ ! -d "$CAT_DIR" ]; then
+            echo "ERROR: $CAT_DIR not found — /category/:slug prerender phase didn't run"
             exit 1
           fi
-          if ! grep -q "abayas" "$DET" -i; then
-            echo "ERROR: category-detail page missing expected content"
+          # First subdirectory (not 'index.html') is a prerendered slug.
+          DET_SLUG=$(ls "$CAT_DIR" | grep -v '^index\.html$' | head -1)
+          if [ -z "$DET_SLUG" ]; then
+            echo "ERROR: no category-detail prerenders in $CAT_DIR"
+            echo "       Check the build-time category fetch in app.routes.server.ts"
+            exit 1
+          fi
+          DET=$CAT_DIR/$DET_SLUG/index.html
+          if [ ! -f "$DET" ]; then
+            echo "ERROR: $DET not found (picked slug '$DET_SLUG' but no index.html)"
             exit 1
           fi
           if ! grep -q '"@type":"ItemList"' "$DET"; then
-            echo "ERROR: ItemList JSON-LD missing from category-detail prerender"
+            echo "ERROR: ItemList JSON-LD missing from category-detail prerender ($DET_SLUG)"
             exit 1
           fi
           NPRODUCTS=$(grep -oE 'class="product-card__name"' "$DET" | wc -l)
           if [ "$NPRODUCTS" -lt 1 ]; then
-            echo "ERROR: no product cards rendered on /category/abayas-1"
+            echo "ERROR: no product cards rendered on /category/$DET_SLUG"
             exit 1
           fi
-          echo "✓ Category-detail prerendered ($(wc -c < $DET) bytes, $NPRODUCTS products)"
+          echo "✓ Category-detail prerendered ($DET_SLUG, $(wc -c < $DET) bytes, $NPRODUCTS products)"
 
-          PDP=dist/3bayti-web/browser/product/la27-2637/index.html
+          # Pick a PDP prerender output dynamically. Same rationale.
+          PDP_DIR=dist/3bayti-web/browser/product
+          if [ ! -d "$PDP_DIR" ]; then
+            echo "ERROR: $PDP_DIR not found — /product/:slug prerender phase didn't run"
+            exit 1
+          fi
+          PDP_SLUG=$(ls "$PDP_DIR" | grep -v '^index\.html$' | head -1)
+          if [ -z "$PDP_SLUG" ]; then
+            echo "ERROR: no product prerenders in $PDP_DIR"
+            echo "       Check the build-time product fetch in app.routes.server.ts"
+            exit 1
+          fi
+          PDP=$PDP_DIR/$PDP_SLUG/index.html
           if [ ! -f "$PDP" ]; then
-            echo "ERROR: $PDP not found — /product/:slug prerender failed"
-            echo "       Check that /v2/products was reachable during build."
+            echo "ERROR: $PDP not found (picked slug '$PDP_SLUG' but no index.html)"
             exit 1
           fi
-          if ! grep -qi "Laduna" "$PDP"; then
-            echo "ERROR: PDP missing vendor name 'Laduna'"
+          # Generic PDP markers (don't pin to a specific vendor name).
+          if ! grep -q '"@type":"Product"' "$PDP"; then
+            echo "ERROR: Product JSON-LD missing from PDP prerender ($PDP_SLUG)"
             exit 1
           fi
-          PDP_IMAGES=$(grep -oE 'src="https://api\.3bayti\.ae/cdn-cgi/image[^"]+' "$PDP" | wc -l)
+          # Product images come from api.3bayti.ae/cdn-cgi/image OR
+          # api.3bayti.ae/vendors/... — accept either.
+          PDP_IMAGES=$(grep -oE 'src="https://api\.3bayti\.ae/[^"]+' "$PDP" | wc -l)
           if [ "$PDP_IMAGES" -lt 1 ]; then
-            echo "ERROR: no product images rendered on /product/la27-2637"
+            echo "ERROR: no product images rendered on /product/$PDP_SLUG"
             exit 1
           fi
-          echo "✓ PDP prerendered ($(wc -c < $PDP) bytes, $PDP_IMAGES image elements)"
+          echo "✓ PDP prerendered ($PDP_SLUG, $(wc -c < $PDP) bytes, $PDP_IMAGES image elements)"
+          # Export the slugs so the smoke-test job downstream can re-use them.
+          echo "$DET_SLUG" > /tmp/verified-category-slug.txt
+          echo "$PDP_SLUG" > /tmp/verified-product-slug.txt
 
       - name: Verify sitemap + robots generated
         working-directory: apps/web
@@ -346,19 +375,28 @@ jobs:
             echo "✓ [$LABEL] home: 200 OK, $HOME_SLIDES carousel slide markers, footer present"
 
             echo ""
-            echo "[$LABEL] Test 2: Prerendered top-200 PDP (served by ASSETS)"
-            local PDP_BODY PDP_STATUS
-            PDP_BODY=$(curl -fsS --max-time 30 "$BASE/product/la27-2637")
-            PDP_STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/product/la27-2637")
+            echo "[$LABEL] Test 2: Prerendered PDP (served by ASSETS)"
+            # Pick the first prerendered PDP slug dynamically — see
+            # build job's SSR verify step for the rationale (slug
+            # shapes change between v2 and v3, so hardcoding breaks).
+            local PDP_SLUG PDP_BODY PDP_STATUS
+            PDP_SLUG=$(ls dist/3bayti-web/browser/product/ | grep -v '^index\.html$' | head -1)
+            if [ -z "$PDP_SLUG" ]; then
+              echo "ERROR [$LABEL]: no prerendered PDP slugs found in dist/"
+              exit 1
+            fi
+            PDP_BODY=$(curl -fsS --max-time 30 "$BASE/product/$PDP_SLUG")
+            PDP_STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/product/$PDP_SLUG")
             if [ "$PDP_STATUS" != "200" ]; then
-              echo "ERROR [$LABEL]: /product/la27-2637 returned $PDP_STATUS"
+              echo "ERROR [$LABEL]: /product/$PDP_SLUG returned $PDP_STATUS"
               exit 1
             fi
-            if ! echo "$PDP_BODY" | grep -qi "Laduna"; then
-              echo "ERROR [$LABEL]: prerendered PDP does not contain vendor 'Laduna'"
+            # Generic PDP marker (don't pin to a specific vendor).
+            if ! echo "$PDP_BODY" | grep -q '"@type":"Product"'; then
+              echo "ERROR [$LABEL]: prerendered PDP missing Product JSON-LD ($PDP_SLUG)"
               exit 1
             fi
-            echo "✓ [$LABEL] prerendered PDP: 200 OK, vendor name present"
+            echo "✓ [$LABEL] prerendered PDP ($PDP_SLUG): 200 OK, Product JSON-LD present"
 
             echo ""
             echo "[$LABEL] Test 3: Long-tail PDP (RUNTIME SSR via Worker)"
