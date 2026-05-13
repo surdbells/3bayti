@@ -1,8 +1,9 @@
 # M3 Plan — Complete v3 API Migration + Noon Payment Modernization
 
 **Author:** Sodiq's pair (Claude) on behalf of Sodiq Bello
-**Status:** DRAFT — awaiting approval before any phase begins
+**Status:** ✅ APPROVED — as of May 13, 2026 (Sodiq, "approved as-is")
 **Created:** Day 8+ of M2 rollout, May 14, 2026
+**Approved:** May 13, 2026 — execution begins with M3.1.0
 **Target completion:** TBD (Q2 deferred decision — see §0)
 
 ---
@@ -871,21 +872,23 @@ These are NOT M3. Capturing them so they're not forgotten when M3 wraps:
 Before any M3 code starts, this plan needs Sodiq's approval on:
 
 ```
-[ ] Constraints (§0.1) accurately captured
-[ ] Non-goals (§0.2) acceptable
-[ ] Migration discipline (§1) is the playbook
-[ ] Mobile phase plan (§2) covers everything mobile needs
-[ ] Web phase plan (§3) covers everything web needs
-[ ] Portal phase plan (§4) covers everything portal needs
-[ ] Risk register (§6) honest about risk shape
-[ ] Timeline (§7) acceptable
-[ ] M4 deferrals (§8) explicit
+[x] Constraints (§0.1) accurately captured
+[x] Non-goals (§0.2) acceptable
+[x] Migration discipline (§1) is the playbook
+[x] Mobile phase plan (§2) covers everything mobile needs
+[x] Web phase plan (§3) covers everything web needs
+[x] Portal phase plan (§4) covers everything portal needs
+[x] Risk register (§6) honest about risk shape
+[x] Timeline (§7) acceptable
+[x] M4 deferrals (§8) explicit
 ```
 
-Once approved:
-- M3.1.0 (cross-app endpoint audit) is the first phase.
-- Each subsequent phase requires its own approval gate before starting.
-- Per-phase commits, same cadence as M2 Days 5-7.
+✅ All approval gates ticked on May 13, 2026 by Sodiq Bello.
+   Next: M3.1.0 (cross-app endpoint audit + deduplication) starts.
+
+Per-phase approval still required: each phase below M3.1.0 needs its
+own approval gate before starting. Per-phase commits, same cadence as
+M2 Days 5-7.
 
 ---
 
