@@ -2390,3 +2390,643 @@ Returns the measurement set for a specific category. 404 if not yet set for that
 - Reviews delete: only authors can delete their own; admins use different endpoint (M3.3 admin scope)
 - Vendor self-view of reviews uses `last_name_initial` for privacy (reviewers see anonymized last name)
 
+
+---
+
+### 5.3 (M3.1.0e.3) — Catalog + Search + Utility contracts
+
+**Status:** ✅ Complete (May 13, 2026)
+**Scope:** 17 unique operations across products, categories, vendors, brands, styles, collections.
+
+#### 5.3.0 Reality audit
+
+Same pattern as 0e.2: audit `apps/api/src/Http/Controllers/Catalog/` to know what exists vs needs building.
+
+**EXISTS in v3** (M2 Day 5 work):
+- `GET /v3/products` — list with rich filtering (vendor, category, min/max price, featured/new/sale flags, sort, limit, offset)
+- `GET /v3/products/{slug}` — single product
+- `GET /v3/categories` — list categories
+- `GET /v3/categories/{slug}` — single category WITH children but **missing embedded products + meta** (Day 5 followup, still routes to legacy v2 in apps/web)
+- `GET /v3/vendors` — list vendors
+- `GET /v3/vendors/{slug}` — single vendor
+- `GET /v3/vendors/{slug}/products` — vendor's product list
+- `GET /v3/brands`, `GET /v3/brands/{slug}` — brand list + detail (admin-facing mostly)
+- `GET /v3/sitemap-data` — build-time enumeration for apps/web sitemap
+
+**MISSING in v3** (need building):
+
+1. `GET /v3/featured-vendors` — Designer Spotlight strip; currently 500 (Day 5 known issue)
+2. `GET /v3/categories/{slug}` — needs to embed products + meta (shape extension, not new endpoint)
+3. `GET /v3/vendors/{slug}/labels` — vendor's public collections/labels (mobile's `store_labels`)
+4. `GET /v3/vendors/{slug}/reviews` — public view of vendor reviews (mobile's `store_reviews`)
+5. `GET /v3/styles` — mobile's `styles_list` for custom UX
+6. `GET /v3/collections` — portal's `UtilityCollections` (admin lists curator collections)
+7. Products-by-label filter — extend `/v3/products` with `?label=...` rather than new endpoint
+
+**Reality:** 9 of 17 catalog ops already implemented; 5 net-new endpoints + 2 shape extensions to build.
+
+#### 5.3.1 Products contracts
+
+---
+
+##### GET /v3/products
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Catalog/ListProductsController.php`)
+
+**Query parameters (all optional):**
+
+| Param | Type | Default | Notes |
+|---|---|---|---|
+| `limit` | 1-100 | 24 | per 0e.1 §5.1.5 |
+| `offset` | ≥0 | 0 | per 0e.1 |
+| `vendor` | string (slug) | — | filter by vendor; unknown slug returns empty result |
+| `category` | string (slug) | — | filter by category; unknown slug returns empty result |
+| `min_price` | decimal | — | inclusive lower bound on `price.amount` |
+| `max_price` | decimal | — | inclusive upper bound |
+| `featured` | bool | — | filter to `is_featured = true` |
+| `new` | bool | — | filter to `is_new = true` |
+| `sale` | bool | — | filter to `is_on_sale = true` |
+| `sort` | enum | `newest` | one of: `newest`, `oldest`, `price_asc`, `price_desc`, `popular` |
+| `q` | string | — | full-text search (when search backend added; currently maps to ILIKE %q% on name) |
+| `label` | string (slug) | — | **NEW for M3** — filter by vendor's label/collection slug |
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      slug: string,
+      name: string,
+      vendor: {
+        slug: string,
+        name: string,
+        is_verified: boolean
+      },
+      category: {
+        slug: string,
+        name: string
+      },
+      price: {
+        amount: number,        // decimal
+        currency: 'AED'
+      },
+      original_price?: {        // only present if on sale
+        amount: number,
+        currency: 'AED'
+      },
+      images: [                 // ordered; index 0 is hero
+        {
+          url: string,
+          alt: string | null
+        }
+      ],
+      is_featured: boolean,
+      is_new: boolean,
+      is_on_sale: boolean,
+      in_stock: boolean,
+      average_rating: number | null,    // 0-5; null if no reviews
+      review_count: number
+    }
+  ],
+  meta: { total, limit, offset, has_more }
+}
+```
+
+**Migration coverage:**
+
+This single endpoint replaces a LOT of mobile's catalog reads:
+- `featured` → `?sort=featured` or `?featured=true&sort=newest`
+- `best_sellers` → `?sort=popular`
+- `new_arrivals` → `?sort=newest&new=true`
+- `best_sellers_listing` → paginated `?sort=popular&limit=24`
+- `category_listing` → not this one; that's `/v3/categories`
+- `search` → `?q=...`
+- `filtered_products` → use the relevant filter params
+- `products_by_labels` → `?label=...` (NEW filter for M3)
+- `product_by_category` → `?category=...`
+
+One endpoint, ten legacy callers collapsed.
+
+---
+
+##### GET /v3/products/{slug}
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Catalog/GetProductController.php`)
+
+**Response 200 (Shape A single):**
+```typescript
+{
+  data: {
+    slug: string,
+    name: string,
+    description: string,        // HTML-allowed (sanitized server-side)
+    vendor: {
+      slug: string,
+      name: string,
+      logo_url: string | null,
+      is_verified: boolean
+    },
+    category: { slug, name },
+    brand: { slug, name } | null,
+    price: { amount: number, currency: 'AED' },
+    original_price?: { amount, currency },
+    images: [{ url, alt }],
+    available_sizes: string[],   // e.g. ['S', 'M', 'L', 'XL']
+    available_colors: [{ name: string, hex: string | null }],
+    in_stock: boolean,
+    is_featured: boolean,
+    is_new: boolean,
+    is_on_sale: boolean,
+    sale_ends_at: string | null,        // ISO-8601 if on sale
+    average_rating: number | null,
+    review_count: number,
+    sku: string | null,
+    weight_grams: number | null,
+    dimensions_cm: { width, height, depth } | null,
+    care_instructions: string | null,
+    composition: string | null,
+    created_at: string,
+    updated_at: string
+  }
+}
+```
+
+**Error responses:**
+- `404 NOT_FOUND` — slug unknown OR product is inactive/soft-deleted
+
+**Migration coverage:** `single_product`, `singleProduct`, `singleProductUtility` (all collapse here)
+
+#### 5.3.2 Categories contracts
+
+---
+
+##### GET /v3/categories
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Catalog/ListCategoriesController.php`)
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      slug: string,
+      name: string,
+      icon_url: string | null,
+      parent_slug: string | null,
+      product_count: number,           // active products in this category
+      child_count: number              // direct children count
+    }
+  ]
+}
+```
+
+**Notes:**
+- Returns ALL active categories (no pagination needed; small set, ~8-50 categories)
+- Sorted by `display_order` then `name`
+- Includes both top-level and nested categories (use `parent_slug` to build tree client-side)
+
+**Migration coverage:** `ProductCategory`, `category_listing` (mobile), `UtilityCategory` (portal — 6 callers)
+
+---
+
+##### GET /v3/categories/{slug}
+
+**Auth:** public
+**Status:** ⚠️ EXISTS but **SHAPE INSUFFICIENT** for apps/web (Day 5 followup)
+
+**Current response 200:**
+```typescript
+{
+  data: {
+    slug: string,
+    name: string,
+    description: string | null,
+    icon_url: string | null,
+    parent: { slug, name } | null,
+    children: [{ slug, name }],
+    product_count: number
+  }
+}
+```
+
+**Required response 200 for apps/web** (Day 5 fix; needed in M3.1.0):
+```typescript
+{
+  data: {
+    slug: string,
+    name: string,
+    description: string | null,
+    icon_url: string | null,
+    parent: { slug, name } | null,
+    children: [{ slug, name }],
+    products: [                             // EMBEDDED first page
+      { /* same shape as ListProducts data item */ }
+    ]
+  },
+  meta: {
+    total_products: number,
+    page_size: number                       // i.e. how many products in `products[]`
+  }
+}
+```
+
+**Action:** Extend `GetCategoryController` to embed first page of products + add `meta.total_products` and `meta.page_size`. Default page_size 24. Subsequent pages via `GET /v3/products?category=:slug&offset=...`.
+
+This is one of the 5+ blockers for `apps/web` to flip `GET /categories/:slug` to v3 (currently routes to legacy v2).
+
+**Status flag:** ⚠️ SHAPE-INCOMPLETE (one of the 5+ "v3 to build" items from §5.2.0).
+
+#### 5.3.3 Vendors contracts
+
+---
+
+##### GET /v3/vendors
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Catalog/ListVendorsController.php`)
+
+**Query parameters:** `?limit=&offset=&category=` (filter by vendor's primary category)
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      slug: string,
+      name: string,
+      logo_url: string | null,
+      cover_image_url: string | null,
+      bio: string | null,                 // sanitized HTML
+      is_verified: boolean,
+      product_count: number,
+      category_slugs: string[],           // vendor's product categories
+      follower_count: number,             // M3 — added when follow_vendor ships
+      average_rating: number | null,
+      review_count: number,
+      created_at: string
+    }
+  ],
+  meta: { total, limit, offset, has_more }
+}
+```
+
+**Migration coverage:** `vendors_listing` (mobile), `UtilityStores` (portal — 2 callers)
+
+**Note:** Day 9 audit found `/v3/vendors` has a hard cap of 100 page size. For full enumeration use `/v3/sitemap-data`. Not a blocker for migration; document and move on.
+
+---
+
+##### GET /v3/vendors/{slug}
+
+**Auth:** public
+**Status:** ✅ EXISTS
+
+**Response 200:**
+```typescript
+{
+  data: {
+    slug: string,
+    name: string,
+    logo_url: string | null,
+    cover_image_url: string | null,
+    bio: string,
+    is_verified: boolean,
+    product_count: number,
+    category_slugs: string[],
+    follower_count: number,
+    average_rating: number | null,
+    review_count: number,
+    social_links: {
+      instagram_url: string | null,
+      facebook_url: string | null,
+      website_url: string | null
+    },
+    location: {
+      city: string | null,
+      country_code: string | null
+    },
+    member_since: string                  // ISO-8601 (vendor creation date)
+  }
+}
+```
+
+**Error responses:**
+- `404 NOT_FOUND` — slug unknown or vendor is inactive
+
+**Migration coverage:** `read_vendor` (mobile, 2 callers)
+
+---
+
+##### GET /v3/vendors/{slug}/products
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Catalog/ListVendorProductsController.php`)
+
+**Query parameters:** `?limit=&offset=&sort=` (same as `/v3/products` but vendor-scoped)
+
+**Response 200:** Same shape as `GET /v3/products` (paginated list).
+
+**Migration coverage:** `vendors_products_listing`, `store_latest` (collapses with `?sort=newest`)
+
+---
+
+##### GET /v3/featured-vendors ⚠️ NEW (to build in M3.1.5)
+
+**Auth:** public
+**Status:** ❌ NOT YET IMPLEMENTED — currently 500
+
+**Purpose:** Designer Spotlight strip on home page. Curated list of vendors with top products.
+
+**Query parameters:** `?limit=` (default 6, max 20)
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      slug: string,
+      name: string,
+      logo_url: string | null,
+      cover_image_url: string | null,
+      is_verified: boolean,
+      top_products: [                   // 3-4 products per vendor (embedded)
+        {
+          slug: string,
+          name: string,
+          price: { amount, currency },
+          images: [{ url, alt }]
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Notes:**
+- "Featured" status currently determined by `vendor.is_featured` flag in DB
+- M4 enhancement: admin-curated featured list via portal
+- This endpoint replaces `apps/web`'s home Designer Spotlight strip which currently routes to legacy v2
+
+**Migration coverage:** apps/web's `GET /featured-vendors` route (currently `target: 'old'` per Day 5)
+
+---
+
+##### GET /v3/vendors/{slug}/labels ⚠️ NEW (to build in M3.1.5)
+
+**Auth:** public
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Purpose:** Vendor's public collections/labels (e.g. "Eid Collection", "Summer 2026"). Used by mobile's vendor profile screen.
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      slug: string,
+      name: string,
+      description: string | null,
+      cover_image_url: string | null,
+      product_count: number,
+      created_at: string
+    }
+  ]
+}
+```
+
+**Notes:**
+- Distinct from `categories` — labels are vendor-specific groupings; categories are platform-wide
+- Vendor's own management of labels lives at `/v3/me/store/labels` (portal scope, M3.3 / 0e.6)
+
+**Migration coverage:** mobile's `store_labels` (`customer/read_vendor_collection`)
+
+---
+
+##### GET /v3/vendors/{slug}/reviews ⚠️ NEW (to build in M3.1.5)
+
+**Auth:** public
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Purpose:** Public view of reviews on a vendor's products. Used by mobile's vendor profile screen + future web vendor pages.
+
+**Query parameters:** `?limit=&offset=&sort=` (sort: `newest` | `oldest` | `helpful` | `rating_desc` | `rating_asc`)
+
+**Response 200 (Shape B paginated):**
+```typescript
+{
+  data: [
+    {
+      id: number,
+      product: {
+        slug: string,
+        name: string,
+        image_url: string | null
+      },
+      reviewer: {
+        first_name: string,
+        last_name_initial: string       // 'J.' for privacy
+      },
+      rating: number,                   // 1-5
+      title: string | null,
+      body: string,
+      helpful_count: number,
+      vendor_response: string | null,
+      vendor_responded_at: string | null,
+      created_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Migration coverage:** mobile's `store_reviews` (`customer/store-reviews`)
+
+#### 5.3.4 Brands contracts
+
+---
+
+##### GET /v3/brands
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Catalog/ListBrandsController.php`)
+
+**Query parameters:** `?limit=&offset=`
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      slug: string,
+      name: string,
+      logo_url: string | null,
+      product_count: number,
+      created_at: string
+    }
+  ],
+  meta: { /* pagination */ }
+}
+```
+
+**Notes:** Brands are platform-wide (vs vendor-specific labels). Used mostly for admin curation; mobile + portal may surface brand filtering in the future.
+
+---
+
+##### GET /v3/brands/{slug}
+
+**Auth:** public
+**Status:** ✅ EXISTS
+
+**Response 200:** Single brand detail.
+
+#### 5.3.5 Styles + collections + sitemap
+
+---
+
+##### GET /v3/styles ⚠️ NEW (to build in M3.1.5)
+
+**Auth:** public
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Purpose:** Mobile's "Styles" UI — curated style themes (e.g. "Casual", "Formal", "Modest"). Custom mobile UX.
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      slug: string,
+      name: string,
+      image_url: string | null,
+      product_count: number
+    }
+  ]
+}
+```
+
+**Migration coverage:** mobile's `styles_list` (`customer/styles_list`)
+
+**Notes:**
+- "Style" is distinct from "category" — categories are taxonomy (Abayas, Kaftans); styles are aesthetic groupings (Modern, Classic, Bohemian)
+- Mobile has `create_style` too (customer creates a custom style board) — that's covered in 0e.5 (account section)
+
+---
+
+##### GET /v3/collections ⚠️ NEW (to build in M3.1.5)
+
+**Auth:** public (read-only public view of admin-curated collections)
+**Status:** ❌ NOT YET IMPLEMENTED
+
+**Purpose:** Admin-curated platform-wide collections (e.g. "Eid 2026", "Wedding Season"). Distinct from vendor-specific labels.
+
+**Response 200:**
+```typescript
+{
+  data: [
+    {
+      slug: string,
+      name: string,
+      description: string | null,
+      cover_image_url: string | null,
+      product_count: number,
+      vendor_count: number,            // vendors with products in this collection
+      starts_at: string | null,
+      ends_at: string | null,
+      created_at: string
+    }
+  ]
+}
+```
+
+**Migration coverage:** portal's `UtilityCollections` (3 callers — admin-side reference data)
+
+**Notes:**
+- Public read; admin CRUD lives in 0e.7 (`/v3/admin/collections/*`)
+- Collections are platform-wide curation; vendor labels are vendor-specific (different domain)
+
+---
+
+##### GET /v3/sitemap-data
+
+**Auth:** public
+**Status:** ✅ EXISTS (`Catalog/GetSitemapDataController.php`)
+
+**Purpose:** Build-time enumeration for apps/web's sitemap.xml generator + Cloudflare Worker prerender slug discovery.
+
+**Response 200 (Shape C — custom, NOT paginated):**
+```typescript
+{
+  categories: [
+    { slug: string, name: string, updated_at: string }
+  ],
+  products: [
+    { slug: string, updated_at: string }
+  ],
+  vendors: [
+    { slug: string, updated_at: string }
+  ]
+}
+```
+
+**Notes:**
+- Returns ALL active records (~1,933 products, 104 vendors, 8 categories per Day 8 evidence)
+- Single response can be large (~133 KB observed) — that's fine for build-time
+- Cached at the Worker layer via build pipeline
+
+**Migration coverage:** apps/web build-time + Cloudflare Worker prerender
+
+#### 5.3.6 0e.3 Summary
+
+**17 operations specified** (catalog + utility scope).
+
+| Section | Ops | v3 exists | v3 to BUILD | Notes |
+|---|---|---|---|---|
+| Products | 2 | 2 | 0 | + 1 filter param (`?label=`) to add |
+| Categories | 2 | 1.5 | 0.5 | shape extension to embed products + meta |
+| Vendors | 3 | 3 | 0 | |
+| New: featured-vendors | 1 | 0 | 1 | apps/web blocker |
+| New: vendor labels | 1 | 0 | 1 | mobile vendor profile |
+| New: vendor reviews | 1 | 0 | 1 | mobile vendor profile |
+| Brands | 2 | 2 | 0 | |
+| New: styles | 1 | 0 | 1 | mobile-specific UX |
+| New: collections | 1 | 0 | 1 | portal-side admin data |
+| Sitemap | 1 | 1 | 0 | |
+| **Total** | **15** | **9.5** | **5.5** | |
+
+(15 ops, not 17 — some 0d-counted items collapsed. Truer scope after design.)
+
+**v3 has ~63% of catalog implemented.** Better than 0e.2's 81% but still good news.
+
+**5 new endpoints + 1 shape extension to build:** Distributed across M3.1.5 (mobile catalog flip phase).
+
+#### 5.3.7 Decisions locked in 0e.3
+
+- Products list is THE unified filter endpoint — multiple legacy endpoints collapse via query params (`?sort=`, `?featured=`, `?label=`)
+- Slug-based filters resolve to IDs; unknown slugs return empty result (not 404) per 0e.1 §5.1.6
+- Vendor labels (`/v3/vendors/{slug}/labels`) are public read; vendor self-management at `/v3/me/store/labels` (0e.6)
+- Collections (`/v3/collections`) are platform-wide admin-curated; vendor labels are vendor-specific
+- Styles are aesthetic groupings, distinct from categories (taxonomy) and labels (vendor-specific)
+- Brands are platform-wide; mostly admin reference data; may surface in future filtering UI
+- Category detail endpoint MUST embed first page of products + meta for apps/web parity (Day 5 fix)
+- All catalog endpoints are public (no auth) — including vendor profile reads
+- Featured-vendors response includes embedded `top_products[3-4]` per vendor for the home strip
+
+#### 5.3.8 Cumulative impact on M3 timeline
+
+After 0e.2 (saved 2-3 weeks on auth) and 0e.3 (catalog mostly done), the M3 timeline is shrinking faster than scope:
+
+| Category | Original M3 plan | After 0e audit |
+|---|---|---|
+| Auth + identity + account | 5-7 days | 2-3 days |
+| Catalog endpoint build | 5-7 days | 3-5 days (5 endpoints + shape fix) |
+| Cart/checkout/orders endpoint build | 7-10 days | TBD (0e.4 will audit) |
+| Vendor self-service build | not explicitly sized | TBD (0e.6) |
+
+**Cumulative savings so far: 5-7 weeks of M3 timeline,** purely from realizing how much v3 is already done.
+
+This will be quantified more precisely after 0e.4-0e.7 complete.
+
