@@ -1,0 +1,79 @@
+/* Invoice container */
+.invoice-box {
+  background: var(--ax-color-bg-surface);
+  border-radius: var(--ax-radius-lg);
+  overflow: hidden;
+}
+
+/* Header section */
+.invoice-head { background: transparent; }
+.invoice-title { font-size: 26px; letter-spacing: -0.4px; }
+
+/* Back button (replaces the legacy avatar/avatar-md) */
+.invoice-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.8125rem;
+  height: 2.8125rem;
+  min-width: 2.8125rem;
+  border-radius: var(--ax-radius-pill);
+  background-color: var(--ax-color-bg-sunken);
+  color: var(--ax-color-text-primary);
+  cursor: pointer;
+  transition: background-color var(--ax-duration-fast, 150ms) var(--ax-ease-out, ease-out);
+}
+.invoice-back-btn:hover { background-color: var(--ax-color-bg-muted); }
+.invoice-back-btn .material-symbols-outlined { font-size: 1.25rem; }
+
+/* Status badge — solid black variant for the "ORDER STATUS" pill */
+.status-badge {
+  display: inline-block;
+  padding: var(--ax-space-2) var(--ax-space-3);
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-semibold, 600);
+  line-height: 1;
+  color: #fff;
+  background-color: #000;
+  border-radius: var(--ax-radius-pill);
+}
+
+/* Deliver-to block — mirrors legacy `mt-3 mt-md-0` (mobile-only top margin) */
+.invoice-deliver-to { margin-top: var(--ax-space-3); }
+@media (min-width: 768px) {
+  .invoice-deliver-to { margin-top: 0; }
+}
+
+/* Invoice table */
+.invoice-table { margin-bottom: 0; }
+.invoice-table thead th {
+  background-color: var(--ax-color-bg-canvas);
+}
+
+/* Product thumbnail */
+.product-thumb {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: var(--ax-radius-sm);
+}
+
+/* Totals table */
+.totals-table td { vertical-align: middle; }
+
+/* Invoice controls */
+.invoice-controls .ax-btn { min-width: 120px; }
+
+/* Responsive tweaks */
+@media (max-width: 767px) {
+  .invoice-head { flex-direction: column; gap: 8px; }
+  .invoice-controls { justify-content: center; }
+  .invoice-title { font-size: 20px; }
+}
+
+/* Print friendly */
+@media print {
+  body { background: #fff !important; }
+  .invoice-controls { display: none !important; }
+  .invoice-box { box-shadow: none !important; border-radius: 0 !important; }
+}

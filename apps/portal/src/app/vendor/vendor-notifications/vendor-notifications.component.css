@@ -1,0 +1,9 @@
+/* Row dividers for the preferences list — keeps HTML tidy without
+   bolting these rules into the global design system. */
+.ax-notification-row {
+  padding: var(--ax-space-4) var(--ax-space-5);
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+}
+.ax-notification-row:last-child {
+  border-bottom: 0;
+}

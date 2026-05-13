@@ -1,0 +1,94 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <!-- Page header -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <span class="ax-page-header-eyebrow">Fulfilment</span>
+        <h1 class="ax-page-title">Delivery list</h1>
+        <p *ngIf="orders && orders.length > 0" class="ax-page-subtitle">
+          {{ orders.length }} order{{ orders.length !== 1 ? 's' : '' }} ready for dispatch.
+        </p>
+      </div>
+    </header>
+
+    <!-- Loading -->
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading delivery list"></span>
+    </div>
+
+    <!-- Table -->
+    <section
+      *ngIf="!ui_controls.no_orders && !ui_controls.is_loading"
+      class="ax-card ax-p-0">
+      <div class="ax-table-wrapper">
+        <table class="ax-table ax-table-hover">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Product</th>
+              <th style="text-align: center;">Qty</th>
+              <th>Customer</th>
+              <th style="text-align: right;">Price</th>
+              <th>Status</th>
+              <th style="width: 5rem;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let a_orders of orders; let i = index">
+              <td>
+                <span class="ax-text-2xs ax-text-tertiary">{{ a_orders.created }}</span>
+              </td>
+              <td>
+                <span class="ax-font-medium ax-text-primary">{{ a_orders.product }}</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="ax-numeric">{{ a_orders.quantity }}</span>
+              </td>
+              <td>
+                <span class="ax-text-sm ax-text-secondary">{{ a_orders.name }}</span>
+              </td>
+              <td style="text-align: right;">
+                <span class="ax-font-semibold ax-numeric">{{ a_orders.total_price }}</span>
+              </td>
+              <td>
+                <span [ngClass]="statusBadgeClass(a_orders.status)">{{ a_orders.status }}</span>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-ghost ax-btn-sm"
+                  (click)="open_order(a_orders.id, a_orders.product)"
+                  aria-label="View order">
+                  <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                  View
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Empty state -->
+    <section *ngIf="ui_controls.no_orders && !ui_controls.is_loading" class="ax-page-section">
+      <div class="ax-card ax-p-8 ax-text-center">
+        <span
+          class="material-symbols-outlined"
+          style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
+          aria-hidden="true">local_shipping</span>
+        <h3 class="ax-h4 ax-m-0 ax-mt-3">No orders ready for delivery</h3>
+        <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+          Orders will appear here once they've been packed and are ready to hand off to the courier.
+        </p>
+      </div>
+    </section>
+  </div>
+</app-vendor-shell>

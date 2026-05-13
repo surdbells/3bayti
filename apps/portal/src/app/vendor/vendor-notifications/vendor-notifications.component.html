@@ -1,0 +1,238 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <!-- Page header -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <span class="ax-page-header-eyebrow">Account</span>
+        <h1 class="ax-page-title">{{ 'notifications_title' | translate }}</h1>
+        <p class="ax-page-subtitle">{{ 'notifications_subtext' | translate }}</p>
+      </div>
+
+      <div class="ax-flex ax-gap-2 ax-items-center">
+        <button
+          type="button"
+          class="ax-btn ax-btn-primary"
+          (click)="save_change()"
+          [disabled]="ui_controls.is_saving || ui_controls.is_loading">
+          <span *ngIf="ui_controls.is_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+          <span *ngIf="!ui_controls.is_saving" class="material-symbols-outlined" aria-hidden="true">save</span>
+          {{ 'save_changes' | translate }}
+        </button>
+      </div>
+    </header>
+
+    <!-- Loading -->
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading preferences"></span>
+    </div>
+
+    <!-- Preferences list -->
+    <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+      <div class="ax-card ax-p-0" style="max-width: 56rem;">
+        <div class="ax-p-5" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+          <h3 class="ax-h5 ax-m-0">{{ 'notifications_heading' | translate }}</h3>
+        </div>
+
+        <ul style="list-style: none; margin: 0; padding: 0;">
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_new_order_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_new_order_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_order_received"
+                  (change)="store_single.store_notify_order_received = !store_single.store_notify_order_received"
+                  name="store_notify_order_received" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_order_cancelled_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_order_cancelled_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_order_cancelled"
+                  (change)="store_single.store_notify_order_cancelled = !store_single.store_notify_order_cancelled"
+                  name="store_notify_order_cancelled" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_custom_order_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_custom_order_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_custom_order"
+                  (change)="store_single.store_notify_custom_order = !store_single.store_notify_custom_order"
+                  name="store_notify_custom_order" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_refund_initiated_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_refund_initiated_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_order_return_refund_initiated"
+                  (change)="store_single.store_notify_order_return_refund_initiated = !store_single.store_notify_order_return_refund_initiated"
+                  name="store_notify_order_return_refund_initiated" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_listing_status_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_listing_status_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_product_listing_approved_rejected"
+                  (change)="store_single.store_notify_product_listing_approved_rejected = !store_single.store_notify_product_listing_approved_rejected"
+                  name="store_notify_product_listing_approved_rejected" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_payment_scheduled_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_payment_scheduled_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_payment_scheduled"
+                  (change)="store_single.store_notify_payment_scheduled = !store_single.store_notify_payment_scheduled"
+                  name="store_notify_payment_scheduled" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_payment_completed_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_payment_completed_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_payment_completed"
+                  (change)="store_single.store_notify_payment_completed = !store_single.store_notify_payment_completed"
+                  name="store_notify_payment_completed" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_new_review_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_new_review_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_negative_review"
+                  (change)="store_single.store_notify_negative_review = !store_single.store_notify_negative_review"
+                  name="store_notify_negative_review" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_weekly_summary_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_weekly_summary_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_weekly_performance"
+                  (change)="store_single.store_notify_weekly_performance = !store_single.store_notify_weekly_performance"
+                  name="store_notify_weekly_performance" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">{{ 'notif_monthly_summary_title' | translate }}</div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_monthly_summary_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_monthly_performance"
+                  (change)="store_single.store_notify_monthly_performance = !store_single.store_notify_monthly_performance"
+                  name="store_notify_monthly_performance" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+
+          <li class="ax-notification-row" style="border-bottom: 0;">
+            <div class="ax-flex ax-items-start ax-justify-between ax-gap-4">
+              <div style="flex: 1; min-width: 0;">
+                <div class="ax-font-medium ax-text-primary">
+                  {{ 'notif_low_engagement_title' | translate }}
+                  <span class="ax-badge ax-badge-info ax-ml-2" style="font-size: 0.65rem;">A.I</span>
+                </div>
+                <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ 'notif_low_engagement_body' | translate }}</div>
+              </div>
+              <label class="ax-switch" style="flex-shrink: 0;">
+                <input
+                  type="checkbox"
+                  [checked]="store_single.store_notify_low_engagement"
+                  (change)="store_single.store_notify_low_engagement = !store_single.store_notify_low_engagement"
+                  name="store_notify_low_engagement" />
+                <span class="ax-switch-track"></span>
+              </label>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</app-vendor-shell>

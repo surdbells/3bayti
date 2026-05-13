@@ -1,0 +1,247 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <!-- Page header -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <span class="ax-page-header-eyebrow">Store settings</span>
+        <h1 class="ax-page-title">{{ 'measurements_title' | translate }}</h1>
+        <p class="ax-page-subtitle">
+          Size guides in cm — help customers pick with confidence.
+        </p>
+      </div>
+    </header>
+
+    <!-- Create form + list (not when editing) -->
+    @if (!ui_controls.editing) {
+      <!-- Create form card -->
+      <section class="ax-page-section">
+        <div class="ax-card ax-p-5" style="max-width: 56rem;">
+          <h3 class="ax-h5 ax-m-0 ax-mb-4">{{ 'store_measurement_guide' | translate }}</h3>
+
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-4">
+            <div class="ax-form-field">
+              <label class="ax-label" for="size">{{ 'select_size' | translate }}</label>
+              <select id="size" name="size" class="ax-select" [(ngModel)]="create.size">
+                <option value="" disabled selected>{{ 'select_size' | translate }}</option>
+                <option value="XS">XS</option>
+                <option value="S">{{ 'size_s' | translate }}</option>
+                <option value="M">{{ 'size_m' | translate }}</option>
+                <option value="L">{{ 'size_l' | translate }}</option>
+                <option value="XL">{{ 'size_xl' | translate }}</option>
+                <option value="XXL">{{ 'size_xxl' | translate }}</option>
+                <option value="XXXL">{{ 'size_xxxl' | translate }}</option>
+                <option *ngFor="let n of [50,51,52,53,54,55,56,57,58,59,60,61,62,63,64]" [value]="n">{{ n }}</option>
+              </select>
+            </div>
+
+            <div class="ax-form-field" style="display: flex; align-items: flex-end;">
+              <button
+                type="button"
+                class="ax-btn ax-btn-primary"
+                style="width: 100%;"
+                (click)="create_measurements()"
+                [disabled]="ui_controls.is_creating">
+                <span *ngIf="ui_controls.is_creating" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                <span *ngIf="!ui_controls.is_creating" class="material-symbols-outlined" aria-hidden="true">save</span>
+                {{ 'save_measurement' | translate }}
+              </button>
+            </div>
+          </div>
+
+          <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-3">
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_bust' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="create.bust" [step]="0.1" [min]="1" name="bust" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_waist' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="create.waist" [step]="0.1" [min]="1" name="waist" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_hip' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="create.hip" [step]="0.1" [min]="1" name="hip" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_length' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="create.length" [step]="0.1" [min]="1" name="length" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_neck' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="create.neck" [step]="0.1" [min]="1" name="neck" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_arm' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="create.arm" [step]="0.1" [min]="1" name="arm" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_armhole' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="create.armhole" [step]="0.1" [min]="1" name="armhole" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_shoulder' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="create.shoulder" [step]="0.1" [min]="1" name="shoulder" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- List (when not empty) -->
+      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+        <span class="ax-spinner ax-spinner-lg" aria-label="Loading measurements"></span>
+      </div>
+
+      <section
+        *ngIf="!ui_controls.is_empty && !ui_controls.is_loading"
+        class="ax-page-section">
+        <div class="ax-card ax-p-0" style="max-width: 56rem;">
+          <div class="ax-table-wrapper">
+            <table class="ax-table ax-table-hover">
+              <thead>
+                <tr>
+                  <th>{{ 'table_size' | translate }}</th>
+                  <th style="text-align: right;">{{ 'table_bust' | translate }}</th>
+                  <th style="text-align: right;">{{ 'table_waist' | translate }}</th>
+                  <th style="text-align: right;">{{ 'table_hip' | translate }}</th>
+                  <th style="text-align: right;">{{ 'table_length' | translate }}</th>
+                  <th style="text-align: right;">{{ 'table_neck' | translate }}</th>
+                  <th style="text-align: right;">{{ 'table_arm' | translate }}</th>
+                  <th style="text-align: right;">{{ 'table_armhole' | translate }}</th>
+                  <th style="text-align: right;">{{ 'table_shoulder' | translate }}</th>
+                  <th style="text-align: right; width: 9rem;">{{ 'table_actions' | translate }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (m of measurements; track m.measurement) {
+                  <tr>
+                    <td>
+                      <span class="ax-badge ax-badge-brand">{{ m.size }}</span>
+                    </td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ m.bust }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ m.waist }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ m.hip }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ m.length }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ m.neck }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ m.arm }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ m.armhole }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ m.shoulder }}</span></td>
+                    <td style="text-align: right;">
+                      <div class="ax-flex ax-gap-1" style="justify-content: flex-end;">
+                        <button
+                          type="button"
+                          class="ax-btn ax-btn-ghost ax-btn-sm"
+                          (click)="edit_measurement(m.size, m.measurement, m.bust, m.waist, m.hip, m.length, m.neck, m.arm, m.armhole, m.shoulder)"
+                          aria-label="Edit measurement">
+                          <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          class="ax-btn ax-btn-ghost ax-btn-sm"
+                          style="color: var(--ax-color-text-danger);"
+                          (click)="start_delete_measurement(m.measurement)"
+                          aria-label="Delete measurement">
+                          <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- Empty state -->
+      <section
+        *ngIf="ui_controls.is_empty && !ui_controls.is_loading"
+        class="ax-page-section">
+        <div class="ax-card ax-p-8 ax-text-center" style="max-width: 56rem;">
+          <span
+            class="material-symbols-outlined"
+            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
+            aria-hidden="true">straighten</span>
+          <h3 class="ax-h4 ax-m-0 ax-mt-3">{{ 'no_measurements_found' | translate }}</h3>
+          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+            Add your first size entry using the form above. You can add one size at a time.
+          </p>
+        </div>
+      </section>
+    }
+
+    <!-- Edit mode -->
+    @if (ui_controls.editing) {
+      <section class="ax-page-section">
+        <div class="ax-card ax-p-5" style="max-width: 56rem;">
+          <div class="ax-flex ax-items-center ax-justify-between ax-mb-4">
+            <div>
+              <h3 class="ax-h5 ax-m-0">Editing size</h3>
+              <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mt-1">
+                <span class="ax-badge ax-badge-brand">{{ update.size }}</span>
+              </p>
+            </div>
+            <div class="ax-flex ax-gap-2">
+              <button
+                type="button"
+                class="ax-btn ax-btn-outline ax-btn-sm"
+                (click)="cancel_edit()">
+                {{ 'cancel' | translate }}
+              </button>
+              <button
+                type="button"
+                class="ax-btn ax-btn-primary ax-btn-sm"
+                (click)="update_measurements()"
+                [disabled]="ui_controls.is_updating">
+                <span *ngIf="ui_controls.is_updating" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                <span *ngIf="!ui_controls.is_updating" class="material-symbols-outlined" aria-hidden="true">save</span>
+                {{ 'save' | translate }}
+              </button>
+            </div>
+          </div>
+
+          <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-3">
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_bust' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="update.bust" [step]="0.1" [min]="1" name="edit_bust" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_waist' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="update.waist" [step]="0.1" [min]="1" name="edit_waist" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_hip' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="update.hip" [step]="0.1" [min]="1" name="edit_hip" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_length' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="update.length" [step]="0.1" [min]="1" name="edit_length" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_neck' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="update.neck" [step]="0.1" [min]="1" name="edit_neck" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_arm' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="update.arm" [step]="0.1" [min]="1" name="edit_arm" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_armhole' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="update.armhole" [step]="0.1" [min]="1" name="edit_armhole" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label">{{ 'label_shoulder' | translate }}</label>
+              <input type="number" class="ax-input" [(ngModel)]="update.shoulder" [step]="0.1" [min]="1" name="edit_shoulder" />
+            </div>
+          </div>
+        </div>
+      </section>
+    }
+  </div>
+</app-vendor-shell>

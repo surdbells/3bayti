@@ -1,0 +1,34 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <!-- Page header -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <span class="ax-page-header-eyebrow">Communications</span>
+        <h1 class="ax-page-title">Messages</h1>
+        <p class="ax-page-subtitle">Direct conversations with your customers will appear here.</p>
+      </div>
+    </header>
+
+    <!-- Empty state -->
+    <section class="ax-page-section">
+      <div class="ax-card ax-p-8 ax-text-center">
+        <span
+          class="material-symbols-outlined"
+          style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
+          aria-hidden="true">forum</span>
+        <h3 class="ax-h4 ax-m-0 ax-mt-3">No messages yet</h3>
+        <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+          Customer messages, order questions, and custom-order requests will appear here when they reach out.
+        </p>
+      </div>
+    </section>
+  </div>
+</app-vendor-shell>

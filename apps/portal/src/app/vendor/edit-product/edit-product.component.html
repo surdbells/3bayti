@@ -1,0 +1,481 @@
+<ng-container *ngIf="user_session.is_vendor; else adminShell">
+  <app-vendor-shell>
+    <ng-container *ngTemplateOutlet="pageContent"></ng-container>
+  </app-vendor-shell>
+</ng-container>
+
+<ng-template #adminShell>
+  <app-admin-shell>
+    <ng-container *ngTemplateOutlet="pageContent"></ng-container>
+  </app-admin-shell>
+</ng-template>
+
+<ng-template #pageContent>
+  <div class="ax-container">
+    <!-- Page header -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back to products
+        </button>
+        <span class="ax-page-header-eyebrow">Catalog</span>
+        <h1 class="ax-page-title">Edit product</h1>
+        <p *ngIf="update.name" class="ax-page-subtitle">{{ update.name }}</p>
+      </div>
+
+      <div class="ax-flex ax-gap-2 ax-items-center">
+        <button
+          type="button"
+          class="ax-btn ax-btn-primary"
+          (click)="startUpdate()"
+          [disabled]="ui.loading">
+          <span *ngIf="ui.loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+          <span *ngIf="!ui.loading" class="material-symbols-outlined" aria-hidden="true">save</span>
+          Save changes
+        </button>
+      </div>
+    </header>
+
+    <!-- Page loading -->
+    <div *ngIf="ui.page_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading product"></span>
+    </div>
+
+    <!-- Form grid -->
+    <div *ngIf="!ui.page_loading" class="ax-grid ax-grid-cols-1 ax-lg-grid-cols-3 ax-gap-5">
+
+      <!-- ═══════ LEFT COLUMN: Main form (spans 2) ═══════ -->
+      <form method="post" style="grid-column: span 2;" class="ax-flex ax-flex-col ax-gap-4">
+
+        <!-- Card: name, description, gallery -->
+        <section class="ax-card ax-p-5">
+          <h3 class="ax-h5 ax-m-0 ax-mb-4">Product details</h3>
+
+          <div class="ax-form-field ax-mb-4">
+            <label class="ax-label ax-label-required" for="name">Name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              class="ax-input"
+              [(ngModel)]="update.name"
+              [maxlength]="100"
+              placeholder="Product name" />
+            <span class="ax-hint">Up to 100 characters.</span>
+          </div>
+
+          <div class="ax-form-field ax-mb-4">
+            <label class="ax-label ax-label-required">Description</label>
+            <app-ax-rich-editor
+              name="description"
+              [(ngModel)]="update.description"
+              placeholder="Detailed description: fabric type, care instructions, style details, delivery time, etc."
+              minHeight="250px">
+            </app-ax-rich-editor>
+          </div>
+
+          <!-- Gallery -->
+          <div class="ax-form-field">
+            <label class="ax-label">Product gallery</label>
+            <span class="ax-hint ax-mb-2">
+              {{ totalGalleryImages }} / {{ MAX_GALLERY_IMAGES }} images
+              <ng-container *ngIf="remainingSlots > 0">· {{ remainingSlots }} slot{{ remainingSlots !== 1 ? 's' : '' }} remaining</ng-container>
+            </span>
+
+            <!-- Existing server images -->
+            <div *ngIf="existingImages.length > 0" class="ax-grid ax-grid-cols-3 ax-md-grid-cols-5 ax-gap-3 ax-mb-3">
+              <div
+                *ngFor="let img of existingImages; let i = index"
+                class="ax-position-relative"
+                style="position: relative;">
+                <img
+                  [src]="getImageUrl(img)"
+                  alt=""
+                  style="width: 100%; aspect-ratio: 1 / 1; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle); display: block;" />
+                <button
+                  type="button"
+                  (click)="removeExistingImage(i)"
+                  aria-label="Remove image"
+                  style="position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: rgba(28, 25, 22, 0.75); color: white; border: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer;">
+                  <span class="material-symbols-outlined" style="font-size: 14px;" aria-hidden="true">close</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- New uploads -->
+            <app-ax-file-upload
+              *ngIf="remainingSlots > 0"
+              [(ngModel)]="galleryFiles"
+              [ngModelOptions]="{ standalone: true }"
+              (filesChange)="onGalleryChange($event)"
+              [multiple]="true"
+              [maxFiles]="remainingSlots"
+              [maxSizeMb]="10"
+              accept="image/*"
+              hint="PNG, JPG, or WEBP up to 10 MB each">
+            </app-ax-file-upload>
+
+            <div *ngIf="remainingSlots === 0 && existingImages.length > 0" class="ax-p-3 ax-text-xs ax-text-secondary" style="background-color: var(--ax-color-bg-canvas); border-radius: var(--ax-radius-md); border-left: 3px solid var(--ax-color-bg-brand);">
+              Maximum of {{ MAX_GALLERY_IMAGES }} gallery images reached. Remove an image to add new ones.
+            </div>
+          </div>
+        </section>
+
+        <!-- Card: pricing -->
+        <section class="ax-card ax-p-5">
+          <h3 class="ax-h5 ax-m-0 ax-mb-4">Pricing &amp; inventory</h3>
+
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-4">
+            <div class="ax-form-field">
+              <label class="ax-label ax-label-required" for="price">Price</label>
+              <div class="ax-input-group">
+                <span class="ax-input-group-prefix" style="font-weight: 500; color: var(--ax-color-text-secondary);">AED</span>
+                <input
+                  id="price"
+                  name="price"
+                  type="number"
+                  class="ax-input"
+                  [(ngModel)]="update.price"
+                  [min]="0.1"
+                  [step]="0.5" />
+              </div>
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label" for="cost_per_item">Cost per item</label>
+              <div class="ax-input-group">
+                <span class="ax-input-group-prefix" style="font-weight: 500; color: var(--ax-color-text-secondary);">AED</span>
+                <input
+                  id="cost_per_item"
+                  name="cost_per_item"
+                  type="number"
+                  class="ax-input"
+                  [(ngModel)]="update.cost_per_item"
+                  [max]="update.price"
+                  [step]="0.5" />
+              </div>
+              <span class="ax-hint">Customers won't see this.</span>
+            </div>
+          </div>
+
+          <div class="ax-flex ax-flex-col ax-gap-2 ax-mb-4">
+            <label class="ax-check">
+              <input
+                type="checkbox"
+                [checked]="update.with_storehouse_management"
+                (change)="update.with_storehouse_management = !update.with_storehouse_management"
+                name="with_storehouse_management" />
+              <span class="ax-check-box"></span>
+              <span class="ax-check-label">With storehouse management</span>
+            </label>
+            <label class="ax-check">
+              <input
+                type="checkbox"
+                [checked]="update.is_featured"
+                (change)="update.is_featured = !update.is_featured"
+                name="is_featured" />
+              <span class="ax-check-box"></span>
+              <span class="ax-check-label">Feature product</span>
+            </label>
+            <label class="ax-check">
+              <input
+                type="checkbox"
+                [checked]="update.allow_checkout_when_out_of_stock"
+                (change)="update.allow_checkout_when_out_of_stock = !update.allow_checkout_when_out_of_stock"
+                name="allow_checkout_when_out_of_stock" />
+              <span class="ax-check-box"></span>
+              <span class="ax-check-label">Allow checkout when out of stock</span>
+            </label>
+          </div>
+
+          @if (showSizing) {
+            <div class="ax-flex ax-flex-col ax-gap-3 ax-mb-4">
+              <label class="ax-check">
+                <input
+                  type="checkbox"
+                  [checked]="update.require_extra_msmt"
+                  (change)="update.require_extra_msmt = !update.require_extra_msmt"
+                  name="require_extra_msmt" />
+                <span class="ax-check-box"></span>
+                <span class="ax-check-label">Requires extra measurement</span>
+              </label>
+              <div *ngIf="update.require_extra_msmt" class="ax-form-field">
+                <label class="ax-label" for="extra_msmt">Extra measurement details</label>
+                <textarea
+                  id="extra_msmt"
+                  name="extra_msmt"
+                  class="ax-textarea"
+                  placeholder="E.g. neck, wrist measurements"
+                  [maxlength]="200"
+                  [(ngModel)]="update.extra_msmt"
+                  rows="3"></textarea>
+              </div>
+            </div>
+          }
+
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-4 ax-mb-4">
+            <div class="ax-form-field">
+              <label class="ax-label">Stock status</label>
+              <div class="ax-flex ax-flex-col ax-gap-2">
+                <label class="ax-radio">
+                  <input type="radio" name="stock_status" value="in_stock" [(ngModel)]="update.stock_status" />
+                  <span class="ax-radio-dot"></span>
+                  <span class="ax-radio-label">In stock</span>
+                </label>
+                <label class="ax-radio">
+                  <input type="radio" name="stock_status" value="out_of_stock" [(ngModel)]="update.stock_status" />
+                  <span class="ax-radio-dot"></span>
+                  <span class="ax-radio-label">Out of stock</span>
+                </label>
+                <label class="ax-radio">
+                  <input type="radio" name="stock_status" value="on_backorder" [(ngModel)]="update.stock_status" />
+                  <span class="ax-radio-dot"></span>
+                  <span class="ax-radio-label">On backorder</span>
+                </label>
+              </div>
+            </div>
+            <div *ngIf="update.stock_status !== 'out_of_stock'" class="ax-form-field">
+              <label class="ax-label" for="quantity">Quantity</label>
+              <input
+                id="quantity"
+                name="quantity"
+                type="number"
+                class="ax-input"
+                [(ngModel)]="update.quantity"
+                [step]="1"
+                [min]="0" />
+            </div>
+          </div>
+
+          <div class="ax-form-field ax-mb-3">
+            <label class="ax-label ax-label-required" for="delivery_time">Delivery time</label>
+            <select
+              id="delivery_time"
+              name="delivery_time"
+              class="ax-select"
+              [(ngModel)]="update.delivery_time">
+              <option value="" selected disabled>Select delivery time</option>
+              <option value="1-3">1 – 3 days</option>
+              <option value="4-7">4 – 7 days</option>
+              <option value="14-21">14 – 21 days</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+
+          <div *ngIf="update.delivery_time === 'custom'" class="ax-form-field ax-mb-3">
+            <label class="ax-label">Custom delivery time</label>
+            <div class="ax-input-group">
+              <input
+                type="text"
+                name="custom_delivery_time"
+                class="ax-input"
+                [(ngModel)]="update.custom_delivery_time"
+                placeholder="20 - 30" />
+              <span class="ax-input-group-suffix" style="color: var(--ax-color-text-secondary);">days</span>
+            </div>
+          </div>
+
+          <div class="ax-form-field">
+            <label class="ax-label" for="delivery_notes">Delivery notes (optional)</label>
+            <textarea
+              id="delivery_notes"
+              name="delivery_notes"
+              class="ax-textarea"
+              rows="3"
+              [(ngModel)]="update.delivery_note"
+              placeholder='E.g. "Only available in UAE" or "Custom sizes take an extra 3 days."'></textarea>
+          </div>
+        </section>
+
+        <!-- Card: order limits -->
+        <section class="ax-card ax-p-5">
+          <h3 class="ax-h5 ax-m-0 ax-mb-4">Order quantity limits</h3>
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
+            <div class="ax-form-field">
+              <label class="ax-label" for="minimum_order_quantity">Minimum order quantity</label>
+              <input
+                id="minimum_order_quantity"
+                name="minimum_order_quantity"
+                type="number"
+                class="ax-input"
+                [(ngModel)]="update.minimum_order_quantity"
+                [min]="1" />
+              <span class="ax-hint">Minimum quantity to place an order. 0 = no limit.</span>
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label" for="maximum_order_quantity">Maximum order quantity</label>
+              <input
+                id="maximum_order_quantity"
+                name="maximum_order_quantity"
+                type="number"
+                class="ax-input"
+                [(ngModel)]="update.maximum_order_quantity"
+                [min]="update.minimum_order_quantity" />
+              <span class="ax-hint">Maximum quantity to place an order. 0 = no limit.</span>
+            </div>
+          </div>
+        </section>
+      </form>
+
+      <!-- ═══════ RIGHT COLUMN: Sidebar ═══════ -->
+      <aside class="ax-flex ax-flex-col ax-gap-4">
+        <app-ax-accordion [defaultOpenIndex]="0" [multi]="true">
+
+          <!-- Category (required) -->
+          <app-ax-accordion-item title="Category *">
+            <div class="ax-flex ax-flex-col ax-gap-2">
+              <label *ngFor="let c of category" class="ax-radio">
+                <input
+                  type="radio"
+                  name="category"
+                  [value]="c.id"
+                  [(ngModel)]="update.category" />
+                <span class="ax-radio-dot"></span>
+                <span class="ax-radio-label">{{ c.name }}</span>
+              </label>
+            </div>
+          </app-ax-accordion-item>
+
+          <!-- Featured image (required) -->
+          <app-ax-accordion-item title="Featured image *">
+            <div class="ax-flex ax-flex-col ax-gap-3">
+              <img
+                [src]="getImageUrl(update.image_1)"
+                alt="Featured preview"
+                style="width: 100%; height: 220px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+              <app-ax-file-upload
+                [(ngModel)]="featuredFiles"
+                [ngModelOptions]="{ standalone: true }"
+                (filesChange)="onFeaturedChange($event)"
+                [multiple]="false"
+                [maxFiles]="1"
+                [maxSizeMb]="10"
+                accept="image/*"
+                hint="Upload a new image to replace the current one.">
+              </app-ax-file-upload>
+            </div>
+          </app-ax-accordion-item>
+
+          <!-- Collections -->
+          <app-ax-accordion-item title="Collections">
+            <app-ax-multiselect
+              [options]="collectionOptions"
+              [(ngModel)]="selectedCollectionIds"
+              [ngModelOptions]="{ standalone: true }"
+              placeholder="Select collections"
+              searchPlaceholder="Search collections"
+              [chipLimit]="3">
+            </app-ax-multiselect>
+          </app-ax-accordion-item>
+
+          <!-- Labels -->
+          <app-ax-accordion-item title="Labels">
+            <div class="ax-flex ax-flex-col ax-gap-3">
+              <div class="ax-input-group">
+                <input
+                  type="text"
+                  name="new_label"
+                  class="ax-input ax-input-sm"
+                  [(ngModel)]="vendor_label_create.label"
+                  placeholder="New label name" />
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-sm ax-btn-outline"
+                  (click)="createVendorLabel()"
+                  [disabled]="ui.creating_label"
+                  style="border-top-left-radius: 0; border-bottom-left-radius: 0;">
+                  <span *ngIf="ui.creating_label" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                  <span *ngIf="!ui.creating_label">Add</span>
+                </button>
+              </div>
+              <div class="ax-flex ax-flex-col ax-gap-2">
+                <label *ngFor="let l of labels" class="ax-radio">
+                  <input
+                    type="radio"
+                    name="label"
+                    [value]="l.id"
+                    [(ngModel)]="update.label" />
+                  <span class="ax-radio-dot"></span>
+                  <span class="ax-radio-label">{{ l.label }}</span>
+                </label>
+              </div>
+            </div>
+          </app-ax-accordion-item>
+
+          <!-- Sizing (conditional on category) -->
+          @if (showSizing) {
+            <app-ax-accordion-item title="Sizing options *">
+              <div class="ax-grid ax-grid-cols-3 ax-gap-2">
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_xs"  (change)="update.size_xs  = !update.size_xs"  /><span class="ax-check-box"></span><span class="ax-check-label">XS</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_s"   (change)="update.size_s   = !update.size_s"   /><span class="ax-check-box"></span><span class="ax-check-label">S</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_m"   (change)="update.size_m   = !update.size_m"   /><span class="ax-check-box"></span><span class="ax-check-label">M</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_l"   (change)="update.size_l   = !update.size_l"   /><span class="ax-check-box"></span><span class="ax-check-label">L</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_xl"  (change)="update.size_xl  = !update.size_xl"  /><span class="ax-check-box"></span><span class="ax-check-label">XL</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_xxl" (change)="update.size_xxl = !update.size_xxl" /><span class="ax-check-box"></span><span class="ax-check-label">XXL</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_50"  (change)="update.size_50  = !update.size_50"  /><span class="ax-check-box"></span><span class="ax-check-label">50</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_51"  (change)="update.size_51  = !update.size_51"  /><span class="ax-check-box"></span><span class="ax-check-label">51</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_52"  (change)="update.size_52  = !update.size_52"  /><span class="ax-check-box"></span><span class="ax-check-label">52</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_53"  (change)="update.size_53  = !update.size_53"  /><span class="ax-check-box"></span><span class="ax-check-label">53</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_54"  (change)="update.size_54  = !update.size_54"  /><span class="ax-check-box"></span><span class="ax-check-label">54</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_55"  (change)="update.size_55  = !update.size_55"  /><span class="ax-check-box"></span><span class="ax-check-label">55</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_56"  (change)="update.size_56  = !update.size_56"  /><span class="ax-check-box"></span><span class="ax-check-label">56</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_57"  (change)="update.size_57  = !update.size_57"  /><span class="ax-check-box"></span><span class="ax-check-label">57</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_58"  (change)="update.size_58  = !update.size_58"  /><span class="ax-check-box"></span><span class="ax-check-label">58</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_59"  (change)="update.size_59  = !update.size_59"  /><span class="ax-check-box"></span><span class="ax-check-label">59</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_60"  (change)="update.size_60  = !update.size_60"  /><span class="ax-check-box"></span><span class="ax-check-label">60</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_61"  (change)="update.size_61  = !update.size_61"  /><span class="ax-check-box"></span><span class="ax-check-label">61</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_62"  (change)="update.size_62  = !update.size_62"  /><span class="ax-check-box"></span><span class="ax-check-label">62</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_63"  (change)="update.size_63  = !update.size_63"  /><span class="ax-check-box"></span><span class="ax-check-label">63</span></label>
+                <label class="ax-check"><input type="checkbox" [checked]="update.size_64"  (change)="update.size_64  = !update.size_64"  /><span class="ax-check-box"></span><span class="ax-check-label">64</span></label>
+                <label class="ax-check" style="grid-column: span 2;"><input type="checkbox" [checked]="update.size_custom" (change)="update.size_custom = !update.size_custom" /><span class="ax-check-box"></span><span class="ax-check-label">Custom</span></label>
+              </div>
+            </app-ax-accordion-item>
+          }
+
+          <!-- Colors -->
+          <app-ax-accordion-item title="Colour options">
+            <div class="color-switch-list">
+              <div class="color-row" *ngFor="let c of colorOptions; trackBy: trackById">
+                <input
+                  type="checkbox"
+                  class="sr-only"
+                  [id]="'color-' + c.id"
+                  role="switch"
+                  [checked]="isSelected(c.id)"
+                  [attr.aria-checked]="isSelected(c.id)"
+                  [attr.aria-label]="c.text"
+                  (change)="toggle(c.id, $any($event.target).checked)" />
+                <label class="color-switch" [for]="'color-' + c.id">
+                  <span
+                    class="swatch"
+                    [style.background]="c.hex"
+                    [class.swatch-border]="needsBorder(c.hex)"
+                    [title]="c.text"></span>
+                  <span class="name">{{ c.text }}</span>
+                  <span class="switch" [class.on]="isSelected(c.id)">
+                    <span class="thumb"></span>
+                  </span>
+                </label>
+              </div>
+            </div>
+          </app-ax-accordion-item>
+        </app-ax-accordion>
+
+        <!-- Sticky save bar (mobile) -->
+        <div class="ax-flex ax-gap-2 ax-lg-hidden">
+          <button
+            type="button"
+            class="ax-btn ax-btn-primary"
+            (click)="startUpdate()"
+            [disabled]="ui.loading"
+            style="flex: 1;">
+            Save changes
+          </button>
+        </div>
+      </aside>
+    </div>  </div>
+</ng-template>

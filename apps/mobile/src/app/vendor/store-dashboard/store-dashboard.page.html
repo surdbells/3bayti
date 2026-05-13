@@ -1,0 +1,168 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'store_dashboard' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openSettings()" class="m7-header-action" aria-label="Settings">
+        <ax-icon name="settings" />
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-content">
+  <!-- Pull to Refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Store Header Card -->
+  <div class="store-header-card">
+    @if(isLoading){
+      <div class="store-info skeleton">
+        <div class="store-logo skeleton-box"></div>
+        <div class="store-details">
+          <div class="skeleton-text name-sk"></div>
+          <div class="skeleton-text status-sk"></div>
+        </div>
+      </div>
+    } @else {
+      <div class="store-info">
+        <div class="store-logo">
+          @if(storeData?.logo){
+            <img [src]="storeData?.logo" [alt]="storeData?.name" (error)="onLogoError($event)">
+          } @else {
+            <div class="logo-placeholder">
+              <ax-icon name="store"></ax-icon>
+            </div>
+          }
+        </div>
+        <div class="store-details">
+          <h1 class="store-name">{{ storeData?.name || ('my_store' | translate) }}</h1>
+          <div class="store-status" [class.active]="storeData?.is_active" [class.inactive]="!storeData?.is_active">
+            <span class="status-dot"></span>
+            <span>{{ storeData?.is_active ? ('store_active' | translate) : ('store_inactive' | translate) }}</span>
+          </div>
+          @if(storeData?.rating){
+            <div class="store-rating">
+              <ax-icon name="star"></ax-icon>
+              <span>{{ storeData?.rating | number:'1.1-1' }}</span>
+              <span class="rating-count">({{ storeData?.review_count || 0 }})</span>
+            </div>
+          }
+        </div>
+        <button type="button" class="edit-store-btn" (click)="editStoreProfile()" aria-label="Edit">
+          <ax-icon name="pencil"></ax-icon>
+        </button>
+      </div>
+    }
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="stats-grid">
+    @if(isLoading){
+      @for(i of [1,2,3,4]; track i){
+        <div class="stat-card skeleton">
+          <div class="skeleton-text icon-sk"></div>
+          <div class="skeleton-text value-sk"></div>
+          <div class="skeleton-text label-sk"></div>
+        </div>
+      }
+    } @else {
+      <button type="button" class="stat-card" (click)="navigateTo('/vendor-orders')">
+        <div class="stat-icon stat-icon--orders">
+          <ax-icon name="shopping-bag"></ax-icon>
+        </div>
+        <span class="stat-value">{{ stats.pending_orders }}</span>
+        <span class="stat-label">{{ 'pending_orders' | translate }}</span>
+      </button>
+
+      <button type="button" class="stat-card" (click)="navigateTo('/vendor-chat-list')">
+        <div class="stat-icon stat-icon--messages">
+          <ax-icon name="message-circle"></ax-icon>
+          @if(stats.unread_messages > 0){
+            <span class="stat-badge">{{ stats.unread_messages > 99 ? '99+' : stats.unread_messages }}</span>
+          }
+        </div>
+        <span class="stat-value">{{ stats.unread_messages }}</span>
+        <span class="stat-label">{{ 'unread_messages' | translate }}</span>
+      </button>
+
+      <button type="button" class="stat-card" (click)="navigateTo('/vendor-products')">
+        <div class="stat-icon stat-icon--products">
+          <ax-icon name="package"></ax-icon>
+        </div>
+        <span class="stat-value">{{ stats.total_products }}</span>
+        <span class="stat-label">{{ 'products' | translate }}</span>
+      </button>
+
+      <button type="button" class="stat-card" (click)="navigateTo('/vendor-earnings')">
+        <div class="stat-icon stat-icon--earnings">
+          <ax-icon name="banknote"></ax-icon>
+        </div>
+        <span class="stat-value">Ð{{ stats.monthly_earnings | number:'1.0-0' }}</span>
+        <span class="stat-label">{{ 'this_month' | translate }}</span>
+      </button>
+    }
+  </div>
+
+  <!-- Main Actions -->
+  <div class="section">
+    <h2 class="section-title">{{ 'quick_actions' | translate }}</h2>
+
+    <div class="action-grid">
+      <!-- Messages / Chat -->
+      <button type="button" class="action-card action-card--highlight" (click)="navigateTo('/vendor-chat-list')">
+        <div class="action-icon">
+          <ax-icon name="message-circle"></ax-icon>
+          @if(stats.unread_messages > 0){
+            <span class="action-badge">{{ stats.unread_messages }}</span>
+          }
+        </div>
+        <div class="action-content">
+          <h3>{{ 'customer_messages' | translate }}</h3>
+          <p>{{ 'chat_with_customers' | translate }}</p>
+        </div>
+        <ax-icon name="chevron-right" class="action-arrow"></ax-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Help & Support -->
+  <div class="section last-section">
+    <h2 class="section-title">{{ 'help_support' | translate }}</h2>
+
+    <div class="menu-list">
+      <!-- Contact Support -->
+      <button type="button" class="menu-item" (click)="contactSupport()">
+        <div class="menu-icon menu-icon--support">
+          <ax-icon name="headphones"></ax-icon>
+        </div>
+        <div class="menu-content">
+          <h3>{{ 'contact_support' | translate }}</h3>
+          <p>{{ 'get_help' | translate }}</p>
+        </div>
+        <ax-icon name="chevron-right" class="menu-arrow"></ax-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Store Toggle -->
+  <div class="store-toggle-section">
+    <div class="toggle-card" [class.inactive]="!storeData?.is_active">
+      <div class="toggle-info">
+        <h3>{{ 'store_visibility' | translate }}</h3>
+        <p>{{ storeData?.is_active ? ('store_visible_to_customers' | translate) : ('store_hidden' | translate) }}</p>
+      </div>
+      <ion-toggle
+        [checked]="storeData?.is_active"
+        (ionChange)="toggleStoreStatus($event)"
+        [disabled]="isTogglingStatus">
+      </ion-toggle>
+    </div>
+  </div>
+</ion-content>

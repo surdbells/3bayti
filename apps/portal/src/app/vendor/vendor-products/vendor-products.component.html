@@ -1,0 +1,523 @@
+<ng-container *ngIf="user_session.is_vendor; else adminShell">
+  <app-vendor-shell>
+    <ng-container *ngTemplateOutlet="pageContent"></ng-container>
+  </app-vendor-shell>
+</ng-container>
+
+<ng-template #adminShell>
+  <app-admin-shell>
+    <ng-container *ngTemplateOutlet="pageContent"></ng-container>
+  </app-admin-shell>
+</ng-template>
+
+<ng-template #pageContent>
+  <div class="ax-container">
+    <!-- Page header -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <span class="ax-page-header-eyebrow">Catalog</span>
+        <h1 class="ax-page-title">Products</h1>
+        <p *ngIf="pagination.total > 0" class="ax-page-subtitle">
+          {{ pagination.total }} product{{ pagination.total !== 1 ? 's' : '' }} in your storefront
+        </p>
+      </div>
+
+      <div class="ax-flex ax-gap-2 ax-items-center ax-flex-wrap">
+        <!-- View toggle -->
+        <div class="ax-btn-group" role="group" aria-label="View mode">
+          <button
+            type="button"
+            (click)="switchList()"
+            class="ax-btn ax-btn-sm"
+            [class.ax-btn-primary]="ui.list_view"
+            [class.ax-btn-outline]="!ui.list_view"
+            aria-label="List view">
+            <span class="material-symbols-outlined" aria-hidden="true">list</span>
+          </button>
+          <button
+            type="button"
+            (click)="switchGrid()"
+            class="ax-btn ax-btn-sm"
+            [class.ax-btn-primary]="ui.grid_view"
+            [class.ax-btn-outline]="!ui.grid_view"
+            aria-label="Grid view">
+            <span class="material-symbols-outlined" aria-hidden="true">grid_view</span>
+          </button>
+        </div>
+
+        <!-- Filter toggle with badge -->
+        <button
+          type="button"
+          (click)="toggleFilters()"
+          class="ax-btn ax-btn-sm ax-btn-outline"
+          [class.ax-btn-primary]="ui.filters_open">
+          <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+          Filters
+          <span *ngIf="activeFilterCount > 0" class="ax-badge ax-badge-danger ax-ml-1">{{ activeFilterCount }}</span>
+        </button>
+
+        <!-- Add product -->
+        <a *ngIf="user_session.is_vendor" routerLink="/create-product" class="ax-btn ax-btn-primary ax-btn-sm">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          New product
+        </a>
+      </div>
+    </header>
+
+    <!-- Search bar -->
+    <div class="ax-page-section">
+      <div class="ax-input-group">
+        <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">search</span>
+        <input
+          type="text"
+          class="ax-input"
+          placeholder="Search products by name…"
+          [(ngModel)]="filters.search"
+          (ngModelChange)="onSearchInput()"
+          name="search" />
+        <button
+          *ngIf="filters.search"
+          type="button"
+          class="ax-input-group-suffix ax-input-group-action"
+          (click)="filters.search = ''; onSearchInput()"
+          aria-label="Clear search">
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filters panel -->
+    <div *ngIf="ui.filters_open" class="ax-page-section">
+      <div class="ax-card ax-p-5">
+        <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-4 ax-gap-3">
+          <div class="ax-form-field">
+            <label class="ax-label">Status</label>
+            <select class="ax-select" [(ngModel)]="filters.status" name="filter_status">
+              <option value="">All statuses</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+            </select>
+          </div>
+          <div class="ax-form-field">
+            <label class="ax-label">Stock</label>
+            <select class="ax-select" [(ngModel)]="filters.stock_status" name="filter_stock">
+              <option value="">All stock</option>
+              <option value="in_stock">In stock</option>
+              <option value="out_of_stock">Out of stock</option>
+              <option value="on_backorder">On backorder</option>
+            </select>
+          </div>
+          <div class="ax-form-field">
+            <label class="ax-label">Category</label>
+            <select class="ax-select" [(ngModel)]="filters.category_id" name="filter_category">
+              <option [ngValue]="null">All categories</option>
+              <option *ngFor="let cat of categories" [ngValue]="cat.id">{{ cat.name }}</option>
+            </select>
+          </div>
+          <div class="ax-form-field">
+            <label class="ax-label">Price range</label>
+            <select
+              class="ax-select"
+              [(ngModel)]="price_preset"
+              (ngModelChange)="onPricePresetChange()"
+              name="filter_price_preset">
+              <option value="">Any price</option>
+              <option value="under_100">Under AED 100</option>
+              <option value="100_300">AED 100 – 300</option>
+              <option value="300_500">AED 300 – 500</option>
+              <option value="500_plus">AED 500+</option>
+              <option value="custom">Custom</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Custom price range -->
+        <div *ngIf="price_preset === 'custom'" class="ax-grid ax-grid-cols-2 ax-gap-3 ax-mt-3">
+          <div class="ax-form-field">
+            <label class="ax-label">Min (AED)</label>
+            <input
+              type="number"
+              class="ax-input"
+              placeholder="0"
+              [(ngModel)]="filters.price_min"
+              name="filter_price_min"
+              [min]="0" />
+          </div>
+          <div class="ax-form-field">
+            <label class="ax-label">Max (AED)</label>
+            <input
+              type="number"
+              class="ax-input"
+              placeholder="No limit"
+              [(ngModel)]="filters.price_max"
+              name="filter_price_max"
+              [min]="0" />
+          </div>
+        </div>
+
+        <div class="ax-flex ax-gap-2 ax-mt-4 ax-justify-end">
+          <button
+            *ngIf="hasActiveFilters"
+            type="button"
+            class="ax-btn ax-btn-ghost"
+            (click)="clearFilters()">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_list_off</span>
+            Clear filters
+          </button>
+          <button type="button" class="ax-btn ax-btn-primary" (click)="applyFilters()">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_list</span>
+            Apply filters
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading / deleting -->
+    <div *ngIf="ui.loading || ui.deleting" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading products"></span>
+    </div>
+
+    <!-- LIST VIEW -->
+    <section *ngIf="ui.list_view && !ui.no_products && !ui.loading && !ui.deleting" class="ax-card ax-p-0">
+      <div class="ax-table-wrapper">
+        <table class="ax-table ax-table-hover">
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th style="text-align: right;">Price</th>
+              <th style="text-align: center;">Qty</th>
+              <th>Stock</th>
+              <th style="width: 3rem;"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of products; trackBy: trackById">
+              <td>
+                <div class="ax-flex ax-items-center ax-gap-3">
+                  <img
+                    [src]="p.image"
+                    alt=""
+                    loading="lazy"
+                    style="width: 44px; height: 44px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle); flex-shrink: 0;" />
+                  <div style="min-width: 0;">
+                    <div class="ax-font-medium ax-text-primary ax-truncate" style="max-width: 220px;">{{ p.name }}</div>
+                    <div *ngIf="p.store_name" class="ax-text-2xs ax-text-tertiary">{{ p.store_name }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="ax-text-sm ax-text-secondary">{{ p.category }}</span></td>
+              <td>
+                <span [ngClass]="getStatusBadgeClass(p.status)">{{ p.status }}</span>
+              </td>
+              <td style="text-align: right;">
+                <span class="ax-font-semibold ax-numeric">{{ p.price_formatted }}</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="ax-numeric">{{ p.quantity }}</span>
+              </td>
+              <td>
+                <span [ngClass]="getStockBadgeClass(p.stock_status)">
+                  {{ getStockLabel(p.stock_status) }}
+                </span>
+              </td>
+              <td>
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-ghost ax-btn-sm"
+                  [axDropdown]="rowMenu"
+                  axDropdownAlign="end"
+                  aria-label="Product actions">
+                  <span class="material-symbols-outlined" aria-hidden="true">more_vert</span>
+                </button>
+
+                <ng-template #rowMenu>
+                  <button
+                    type="button"
+                    class="ax-dropdown-item"
+                    axDropdownItem
+                    (click)="preview(p.id)">
+                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                    Preview
+                  </button>
+                  <button
+                    type="button"
+                    class="ax-dropdown-item"
+                    axDropdownItem
+                    (click)="editProduct(p.id)">
+                    <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    class="ax-dropdown-item"
+                    axDropdownItem
+                    (click)="productSales(p.id, p.name)">
+                    <span class="material-symbols-outlined" aria-hidden="true">bar_chart</span>
+                    Sales
+                  </button>
+                  <div class="ax-dropdown-divider"></div>
+                  <button
+                    type="button"
+                    class="ax-dropdown-item ax-dropdown-item-danger"
+                    axDropdownItem
+                    (click)="startDelete(p.id, p.name)">
+                    <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                    Delete
+                  </button>
+                </ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- GRID VIEW -->
+    <section *ngIf="ui.grid_view && !ui.no_products && !ui.loading && !ui.deleting" class="ax-page-section">
+      <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-3 ax-lg-grid-cols-4 ax-gap-4">
+        <article
+          *ngFor="let p of products; trackBy: trackById"
+          class="ax-card ax-p-0"
+          style="overflow: hidden; display: flex; flex-direction: column;">
+          <div style="position: relative;">
+            <img
+              [src]="p.image"
+              [alt]="p.name"
+              loading="lazy"
+              style="width: 100%; height: 200px; object-fit: cover; object-position: top center; display: block;" />
+            <span
+              [ngClass]="getStatusBadgeClass(p.status)"
+              style="position: absolute; top: 0.5rem; right: 0.5rem;">
+              {{ p.status }}
+            </span>
+          </div>
+          <div class="ax-p-4 ax-flex ax-flex-col" style="flex: 1;">
+            <h6 class="ax-h6 ax-m-0 ax-mb-1 ax-truncate">{{ p.name }}</h6>
+            <div class="ax-text-2xs ax-text-tertiary ax-mb-3">{{ p.category }}</div>
+            <div class="ax-flex ax-items-center ax-justify-between ax-mt-auto">
+              <div class="ax-font-semibold ax-text-primary">{{ p.price_formatted }}</div>
+              <span [ngClass]="getStockBadgeClass(p.stock_status)">
+                {{ getStockLabel(p.stock_status) }}
+              </span>
+            </div>
+          </div>
+          <div class="ax-px-4 ax-py-3 ax-flex ax-items-center ax-justify-between" style="border-top: 1px solid var(--ax-color-border-subtle); background-color: var(--ax-color-bg-canvas);">
+            <div class="ax-flex ax-gap-1">
+              <button
+                type="button"
+                class="ax-btn ax-btn-ghost ax-btn-sm"
+                (click)="preview(p.id)"
+                aria-label="Preview">
+                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+              </button>
+              <button
+                type="button"
+                class="ax-btn ax-btn-ghost ax-btn-sm"
+                (click)="editProduct(p.id)"
+                aria-label="Edit">
+                <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+              </button>
+              <button
+                type="button"
+                class="ax-btn ax-btn-ghost ax-btn-sm"
+                (click)="startDelete(p.id, p.name)"
+                aria-label="Delete"
+                style="color: var(--ax-color-text-danger);">
+                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+              </button>
+            </div>
+            <span class="ax-text-2xs ax-text-tertiary">Qty: {{ p.quantity }}</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- Pagination -->
+    <div *ngIf="!ui.loading && !ui.no_products && pagination.total_pages > 0" class="ax-page-section">
+      <app-ax-pagination
+        [totalCount]="pagination.total"
+        [pageSize]="pagination.per_page"
+        [pageIndex]="pagination.page - 1"
+        [pageSizeOptions]="per_page_options"
+        (pageIndexChange)="goToPage($event + 1)"
+        (pageSizeChange)="onPageSizeChange($event)">
+      </app-ax-pagination>
+    </div>
+
+    <!-- Empty state -->
+    <section *ngIf="ui.no_products && !ui.loading" class="ax-page-section">
+      <div class="ax-card ax-p-0">
+        <!-- No filters: first-time empty -->
+        <div *ngIf="!hasActiveFilters" class="ax-p-8 ax-text-center">
+          <span class="material-symbols-outlined" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true">inventory_2</span>
+          <h3 class="ax-h4 ax-m-0 ax-mt-3">No products yet</h3>
+          <p class="ax-text-secondary ax-mt-2">Add your first product to open your storefront.</p>
+          <a routerLink="/create-product" class="ax-btn ax-btn-primary ax-mt-4">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            Add first product
+          </a>
+          <div class="ax-text-xs ax-text-tertiary ax-mt-5" style="border-top: 1px solid var(--ax-color-border-subtle); padding-top: var(--ax-space-3); max-width: 24rem; margin-left: auto; margin-right: auto;">
+            Tip: clear photos and short, benefit-led titles help you convert faster.
+          </div>
+        </div>
+
+        <!-- Active filters: no matches -->
+        <div *ngIf="hasActiveFilters" class="ax-p-8 ax-text-center">
+          <span class="material-symbols-outlined" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true">search_off</span>
+          <h3 class="ax-h4 ax-m-0 ax-mt-3">No matching products</h3>
+          <p class="ax-text-secondary ax-mt-2">Try adjusting your search or filter criteria.</p>
+          <button type="button" class="ax-btn ax-btn-outline ax-mt-4" (click)="clearFilters()">
+            <span class="material-symbols-outlined" aria-hidden="true">filter_list_off</span>
+            Clear filters
+          </button>
+        </div>
+      </div>
+    </section>  </div>
+</ng-template>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<!--  PREVIEW DRAWER — Mobile App Preview                            -->
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<div
+  *ngIf="open()"
+  (click)="closePreview()"
+  style="position: fixed; inset: 0; background-color: rgba(28, 25, 22, 0.5); z-index: 1000; display: flex; justify-content: flex-end;">
+  <aside
+    class="ax-drawer ax-drawer-right"
+    (click)="$event.stopPropagation()"
+    role="dialog"
+    aria-label="Product preview"
+    style="width: min(32rem, 100vw);">
+    <header class="ax-drawer-header">
+      <div class="ax-drawer-header-content">
+        <h2 class="ax-drawer-title">Mobile preview</h2>
+        <p class="ax-drawer-subtitle">How this product appears in the shopper app</p>
+      </div>
+      <button type="button" class="ax-drawer-close" (click)="closePreview()" aria-label="Close preview">
+        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      </button>
+    </header>
+
+    <div class="ax-drawer-body">
+      <!-- Loading -->
+      <div *ngIf="!ui.loaded_preview" class="ax-flex ax-justify-center ax-py-8">
+        <span class="ax-spinner ax-spinner-lg" aria-label="Loading preview"></span>
+      </div>
+
+      <!-- Phone frame - preserved from legacy with original .phone-* classes -->
+      <div *ngIf="ui.loaded_preview" class="phone-frame mx-auto">
+        <div class="phone-screen">
+          <div class="phone-status-bar">
+            <span class="ax-text-sm">1:37</span>
+            <div class="ax-flex ax-gap-1 ax-items-center">
+              <span class="material-symbols-outlined" style="font-size: 14px;">signal_cellular_alt</span>
+              <span class="material-symbols-outlined" style="font-size: 14px;">wifi</span>
+              <span class="material-symbols-outlined" style="font-size: 14px;">battery_5_bar</span>
+            </div>
+          </div>
+
+          <div class="phone-app-header">
+            <span class="phone-back-btn">
+              <span class="material-symbols-outlined">arrow_back</span>
+            </span>
+            <div class="ax-flex ax-gap-3">
+              <span class="material-symbols-outlined">favorite_border</span>
+              <span class="material-symbols-outlined">shopping_cart</span>
+            </div>
+          </div>
+
+          <div class="phone-image-section">
+            <img [src]="getImageUrl(previewImages[previewImageIndex])" alt="" class="phone-product-image" />
+            <button
+              *ngIf="previewImageIndex > 0"
+              type="button"
+              class="phone-img-nav phone-img-nav-prev"
+              (click)="prevImage()"
+              aria-label="Previous image">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <button
+              *ngIf="previewImageIndex < previewImages.length - 1"
+              type="button"
+              class="phone-img-nav phone-img-nav-next"
+              (click)="nextImage()"
+              aria-label="Next image">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
+
+          <div class="phone-dots">
+            <span
+              *ngFor="let img of previewImages; let i = index"
+              class="phone-dot"
+              [class.phone-dot-active]="i === previewImageIndex"
+              (click)="selectImage(i)"></span>
+          </div>
+
+          <div class="phone-content">
+            <div class="ax-flex ax-justify-between ax-items-start ax-mb-2">
+              <div>
+                <div class="phone-category">{{ single_product.category_name || 'PRODUCT' }}</div>
+                <div class="phone-product-name">{{ single_product.name }}</div>
+              </div>
+              <div class="phone-qty-control">
+                <span class="phone-qty-btn">−</span>
+                <span class="phone-qty-val">1</span>
+                <span class="phone-qty-btn">+</span>
+              </div>
+            </div>
+
+            <div class="phone-description" [innerHTML]="single_product.description"></div>
+
+            <div *ngIf="previewDeliveryTime" class="phone-delivery-badge">
+              <span class="material-symbols-outlined" style="font-size: 16px;">local_shipping</span>
+              Delivery Time: {{ previewDeliveryTime }}
+            </div>
+
+            <div *ngIf="previewColors.length > 0" class="ax-mt-3">
+              <div class="phone-section-label">Color</div>
+              <div class="phone-color-chips">
+                <div *ngFor="let c of previewColors" class="phone-color-chip">
+                  <span
+                    class="phone-color-swatch"
+                    [style.backgroundColor]="c.hex"
+                    [class.phone-color-swatch-border]="needsBorder(c.hex)"></span>
+                  <span class="phone-color-name">{{ c.id }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div *ngIf="previewSizes.length > 0" class="ax-mt-3">
+              <div class="phone-section-label">Size</div>
+              <div class="phone-size-chips">
+                <span *ngFor="let s of previewSizes" class="phone-size-chip">{{ s }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="single_product.delivery_note" class="ax-mt-3">
+              <div class="phone-section-label">Note</div>
+              <div class="phone-note-box">{{ single_product.delivery_note }}</div>
+            </div>
+          </div>
+
+          <div class="phone-bottom-bar">
+            <div>
+              <div class="phone-total-label">Total</div>
+              <div class="phone-total-price">{{ formatCurrency(single_product.price, 'en', 'AED ') }}</div>
+            </div>
+            <div class="phone-add-to-cart">
+              <span class="material-symbols-outlined ax-mr-1" style="font-size: 18px;">shopping_cart</span>
+              Add to Cart
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+</div>

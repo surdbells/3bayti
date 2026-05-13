@@ -1,0 +1,97 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <!-- Page header -->
+    <div class="ax-flex ax-items-center ax-gap-3 ax-mb-7">
+      <div (click)="goBack()" role="button" class="invoice-back-btn">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </div>
+      <h1 class="ax-text-2xl ax-mb-0 ax-flex-auto">{{ single.product }}</h1>
+    </div>
+
+    <!-- Page content -->
+    <div class="invoice-wrap">
+      <div *ngIf="!ui_controls.is_loading" id="invoiceToPrint" class="invoice-box ax-bg-surface ax-shadow-sm ax-rounded ax-overflow-hidden">
+        <!-- Header -->
+        <div class="invoice-head ax-flex ax-justify-between ax-items-start ax-px-4 ax-py-3 ax-border-b">
+          <div>
+            <div class="ax-text-sm ax-text-secondary">
+              <div class="ax-mb-2"><strong>ORDER NO:</strong> {{data.order_ref || data.order}}</div>
+              <div class="ax-mb-2"><strong>MERCHANT REF:</strong> {{data.merchantReference}}</div>
+              <div class="ax-mb-2"><strong>ORDER STATUS:</strong>
+                <span class="status-badge ax-mx-3">
+                  {{data.status}}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Addresses -->
+        <div class="ax-px-4 ax-py-3">
+          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
+            <div>
+              <h6 class="ax-mb-2">Pick up</h6>
+              <div class="ax-font-semibold"><strong>STORE NAME:</strong> {{user_session.store_name}}</div>
+              <div class="ax-font-semibold ax-text-secondary"><strong>EMAIL:</strong>{{user_session.store_email}}</div>
+              <div class="ax-font-semibold ax-text-secondary"><strong>PHONE:</strong> {{user_session.store_phone}}</div>
+              <div class="ax-font-semibold ax-text-secondary"><strong>ADDRESS:</strong> {{user_session.store_address}}</div>
+            </div>
+
+            <div class="invoice-deliver-to ax-md-text-right">
+              <h6 class="ax-mb-2">Deliver To</h6>
+              <div class="ax-font-semibold">{{data.delivery_name}}</div>
+              <div class="ax-text-sm ax-text-secondary">
+                {{data.delivery_street_address}}, {{data.villa_number}}
+                <br> {{data.delivery_area}}, {{data.delivery_city}}
+                <br> Phone: {{data.delivery_phone}} • Email: {{data.delivery_email}}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <hr class="ax-mx-4 ax-my-0">
+
+        <!-- Items table -->
+        <div class="ax-px-4 ax-py-3">
+          <div class="ax-overflow-x-auto">
+            <table class="ax-table invoice-table">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Size</th>
+                  <th>Color</th>
+                  <th class="ax-text-center" style="width:90px">Qty</th>
+                  <th class="ax-text-right" style="width:120px">Price</th>
+                  <th class="ax-text-right" style="width:120px">Total</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <td>
+                    <div class="ax-font-semibold">{{data.name}}</div>
+                    <div *ngIf="data.note" class="ax-mt-2">
+                      <span class="ax-badge ax-badge-neutral">Note</span>
+                      <div class="ax-text-sm ax-mt-1">{{data.note}}</div>
+                    </div>
+                  </td>
+                  <td class="ax-uppercase">{{data.size || '—'}}</td>
+                  <td class="ax-uppercase">{{data.color || '—'}}</td>
+                  <td class="ax-text-center">{{data.quantity}}</td>
+                  <td class="ax-text-right">{{data.price}}</td>
+                  <td class="ax-text-right ax-font-semibold">{{data.total}}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="invoice-foot ax-px-4 ax-py-3 ax-border-t ax-text-sm ax-text-secondary ax-flex ax-justify-between">
+          <div> {{data.cart_code}} </div>
+        </div>
+      </div>
+      <span class="ax-spinner" *ngIf="ui_controls.is_loading"></span>
+    </div>
+  </div>
+</app-vendor-shell>

@@ -1,0 +1,181 @@
+<app-vendor-shell>
+  <div class="ax-container">
+
+    <!-- Page header with greeting + refresh -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">{{ 'dashboard' | translate }}</span>
+        <h1 class="ax-page-title">
+          {{ 'hello' | translate:{ name: user_session.first_name } }}
+        </h1>
+        <p class="ax-page-subtitle">{{ 'welcome_message' | translate }}</p>
+      </div>
+      <div class="ax-page-header-actions">
+        <button type="button" class="ax-btn ax-btn-outline" (click)="get_dashboard()" aria-label="Refresh dashboard">
+          <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <!-- Loading state -->
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span>
+    </div>
+
+    <!-- Stat cards -->
+    <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+      <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-4">
+        <a routerLink="/products" class="ax-stat-card ax-stat-card-brand" style="text-decoration: none;">
+          <div class="ax-stat-card-header">
+            <span class="ax-stat-card-label">{{ 'dashboard_products' | translate }}</span>
+            <span class="ax-stat-card-icon">
+              <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+            </span>
+          </div>
+          <div class="ax-stat-card-value">{{ total_products }}</div>
+        </a>
+
+        <a routerLink="/orders" class="ax-stat-card" style="text-decoration: none;">
+          <div class="ax-stat-card-header">
+            <span class="ax-stat-card-label">{{ 'dashboard_orders' | translate }}</span>
+            <span class="ax-stat-card-icon">
+              <span class="material-symbols-outlined" aria-hidden="true">shopping_bag</span>
+            </span>
+          </div>
+          <div class="ax-stat-card-value">{{ total_orders }}</div>
+        </a>
+
+        <a routerLink="/returns" class="ax-stat-card" style="text-decoration: none;">
+          <div class="ax-stat-card-header">
+            <span class="ax-stat-card-label">{{ 'sold' | translate }}</span>
+            <span class="ax-stat-card-icon">
+              <span class="material-symbols-outlined" aria-hidden="true">payments</span>
+            </span>
+          </div>
+          <div class="ax-stat-card-value">{{ products_sold }}</div>
+        </a>
+      </div>
+    </section>
+
+    <!-- Sales performance chart -->
+    <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+      <div class="ax-card ax-p-0">
+        <div class="ax-px-5 ax-py-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+          <div class="ax-flex ax-items-center ax-justify-between">
+            <div>
+              <h3 class="ax-h5 ax-m-0">{{ 'sales_performance' | translate }}</h3>
+              <p class="ax-text-xs ax-text-tertiary ax-m-0 ax-mt-1">Products sold vs. total orders by month</p>
+            </div>
+          </div>
+        </div>
+        <div class="ax-p-4">
+          <div #chart>
+            <apx-chart
+              [series]="chartOptions.series || []"
+              [chart]="chartOptions.chart!"
+              [dataLabels]="chartOptions.dataLabels || {}"
+              [plotOptions]="chartOptions.plotOptions ?? {}"
+              [yaxis]="chartOptions.yaxis || {}"
+              [legend]="chartOptions.legend!"
+              [fill]="chartOptions.fill || {}"
+              [stroke]="chartOptions.stroke!"
+              [tooltip]="chartOptions.tooltip!"
+              [xaxis]="chartOptions.xaxis!">
+            </apx-chart>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Coupons overview widget (vendors only) -->
+    <section *ngIf="!ui_controls.is_loading && user_session.is_vendor" class="ax-page-section">
+      <app-coupon-widget></app-coupon-widget>
+    </section>
+
+    <!-- Recent orders -->
+    <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+      <!-- Has recent orders: table -->
+      <div *ngIf="!ui_controls.no_recent" class="ax-card ax-p-0">
+        <div class="ax-px-5 ax-py-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+          <div class="ax-flex ax-items-center ax-justify-between">
+            <div>
+              <h3 class="ax-h5 ax-m-0">{{ 'recent_orders' | translate }}</h3>
+              <p class="ax-text-xs ax-text-tertiary ax-m-0 ax-mt-1">Latest orders on your storefront</p>
+            </div>
+            <a routerLink="/orders" class="ax-btn ax-btn-outline ax-btn-sm">
+              {{ 'browse_all' | translate }}
+              <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+            </a>
+          </div>
+        </div>
+
+        <app-ax-table
+          [data]="recent || []"
+          [interactive]="false"
+          [responsive]="true"
+          trackBy="order_ref">
+          <app-ax-column key="order_ref" [label]="'table_order' | translate" sortable>
+            <ng-template axCell let-row>
+              <span class="ax-font-medium ax-text-primary">{{ row.order_ref }}</span>
+            </ng-template>
+          </app-ax-column>
+
+          <app-ax-column key="added" [label]="'table_date' | translate" sortable>
+            <ng-template axCell let-row>
+              <span class="ax-text-secondary">{{ row.added }}</span>
+            </ng-template>
+          </app-ax-column>
+
+          <app-ax-column key="customer_name" [label]="'table_customer' | translate" sortable>
+            <ng-template axCell let-row>
+              <div class="ax-flex ax-items-center ax-gap-2">
+                <span class="ax-avatar ax-avatar-xs">{{ row.customer_name?.charAt(0) || '?' }}</span>
+                <span>{{ row.customer_name }}</span>
+              </div>
+            </ng-template>
+          </app-ax-column>
+
+          <app-ax-column key="product_name" [label]="'product' | translate">
+            <ng-template axCell let-row>
+              <span class="ax-text-primary">{{ row.product_name }}</span>
+            </ng-template>
+          </app-ax-column>
+
+          <app-ax-column key="quantity" [label]="'quantity' | translate" align="right">
+            <ng-template axCell let-row>
+              <span class="ax-numeric">{{ row.quantity }}</span>
+            </ng-template>
+          </app-ax-column>
+
+          <app-ax-column key="total_price" [label]="'table_total' | translate" sortable align="right">
+            <ng-template axCell let-row>
+              <span class="ax-font-semibold ax-numeric">{{ row.total_price }}</span>
+            </ng-template>
+          </app-ax-column>
+
+          <app-ax-column key="status" [label]="'table_status' | translate">
+            <ng-template axCell let-row>
+              <span *ngIf="row.status == 'Accepted'" class="ax-badge ax-badge-success">
+                {{ 'status_accepted' | translate }}
+              </span>
+            </ng-template>
+          </app-ax-column>
+        </app-ax-table>
+      </div>
+
+      <!-- No recent orders: empty state -->
+      <div *ngIf="ui_controls.no_recent" class="ax-card ax-p-0">
+        <app-ax-empty-state
+          icon="shopping_bag"
+          [title]="'off_to_a_fresh_start_title' | translate"
+          [description]="'off_to_a_fresh_start_body' | translate">
+          <a routerLink="/create-product" class="ax-btn ax-btn-primary">
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            {{ 'create_product' | translate }}
+          </a>
+        </app-ax-empty-state>
+      </div>
+    </section>
+  </div>
+</app-vendor-shell>

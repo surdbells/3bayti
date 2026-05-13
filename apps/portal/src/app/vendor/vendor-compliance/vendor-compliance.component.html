@@ -1,0 +1,140 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <!-- Page header -->
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          Back
+        </button>
+        <span class="ax-page-header-eyebrow">Account</span>
+        <h1 class="ax-page-title">{{ 'compliance_title' | translate }}</h1>
+      </div>
+    </header>
+
+    <!-- Loading -->
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading compliance documents"></span>
+    </div>
+
+    <!-- Content -->
+    <div *ngIf="!ui_controls.is_loading" style="max-width: 56rem;">
+
+      <!-- Instructions -->
+      <section class="ax-page-section">
+        <div class="ax-card ax-p-5">
+          <h3 class="ax-h5 ax-m-0 ax-mb-1">{{ 'vendor_compliance_instruction_title' | translate }}</h3>
+          <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-4">{{ 'vendor_compliance_instruction_body' | translate }}</p>
+
+          <app-ax-accordion [multi]="true">
+            <app-ax-accordion-item [title]="'step_upload_both_sides' | translate">
+              <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-2">{{ 'step_upload_both_sides_desc_intro' | translate }}</p>
+              <ul style="list-style: disc; padding-left: 1.25rem; margin: 0; color: var(--ax-color-text-secondary); font-size: 0.875rem;">
+                <li>{{ 'step_upload_front' | translate }}</li>
+                <li>{{ 'step_upload_back' | translate }}</li>
+              </ul>
+            </app-ax-accordion-item>
+
+            <app-ax-accordion-item [title]="'step_image_quality_title' | translate">
+              <ul style="list-style: disc; padding-left: 1.25rem; margin: 0; color: var(--ax-color-text-secondary); font-size: 0.875rem;">
+                <li>{{ 'step_image_quality_clear' | translate }}</li>
+                <li>{{ 'step_image_quality_corners' | translate }}</li>
+                <li>{{ 'step_image_quality_no_glare' | translate }}</li>
+              </ul>
+            </app-ax-accordion-item>
+
+            <app-ax-accordion-item [title]="'step_file_format_title' | translate">
+              <p class="ax-text-sm ax-text-secondary ax-m-0 ax-mb-2">{{ 'step_file_format_intro' | translate }}</p>
+              <div class="ax-flex ax-flex-wrap ax-gap-2 ax-mb-2">
+                <span class="ax-badge ax-badge-neutral">{{ 'format_jpeg' | translate }}</span>
+                <span class="ax-badge ax-badge-neutral">{{ 'format_png' | translate }}</span>
+              </div>
+              <p class="ax-text-sm ax-text-secondary ax-m-0">{{ 'step_file_format_size' | translate }}</p>
+            </app-ax-accordion-item>
+
+            <app-ax-accordion-item [title]="'step_data_accuracy_title' | translate">
+              <ul style="list-style: disc; padding-left: 1.25rem; margin: 0; color: var(--ax-color-text-secondary); font-size: 0.875rem;">
+                <li>{{ 'step_data_accuracy_valid' | translate }}</li>
+                <li>{{ 'step_data_accuracy_match' | translate }}</li>
+              </ul>
+            </app-ax-accordion-item>
+
+            <app-ax-accordion-item [title]="'step_confidentiality_title' | translate">
+              <p class="ax-text-sm ax-text-secondary ax-m-0">{{ 'step_confidentiality_body' | translate }}</p>
+            </app-ax-accordion-item>
+          </app-ax-accordion>
+        </div>
+      </section>
+
+      <!-- Upload cards -->
+      <section class="ax-page-section">
+        <h3 class="ax-h5 ax-m-0 ax-mb-3">{{ 'vendor_compliance_upload_title' | translate }}</h3>
+
+        <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-4">
+          <!-- Front of ID -->
+          <div class="ax-card ax-p-4">
+            <div class="ax-font-medium ax-text-primary ax-mb-3">{{ 'upload_front_title' | translate }}</div>
+            <img
+              [src]="compliance.front"
+              [alt]="'upload_front_alt' | translate"
+              style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle); margin-bottom: var(--ax-space-3);" />
+            <input
+              type="file"
+              class="ax-input"
+              accept="image/*"
+              (change)="select_front($event)"
+              id="uploadFront" />
+          </div>
+
+          <!-- Back of ID -->
+          <div class="ax-card ax-p-4">
+            <div class="ax-font-medium ax-text-primary ax-mb-3">{{ 'upload_back_title' | translate }}</div>
+            <img
+              [src]="compliance.back"
+              [alt]="'upload_back_alt' | translate"
+              style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle); margin-bottom: var(--ax-space-3);" />
+            <input
+              type="file"
+              class="ax-input"
+              accept="image/*"
+              (change)="select_back($event)"
+              id="uploadBack" />
+          </div>
+
+          <!-- License document -->
+          <div class="ax-card ax-p-4">
+            <div class="ax-font-medium ax-text-primary ax-mb-3">{{ 'upload_license_title' | translate }}</div>
+            <img
+              [src]="compliance.license_doc"
+              [alt]="'upload_license_alt' | translate"
+              style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle); margin-bottom: var(--ax-space-3);" />
+            <input
+              type="file"
+              class="ax-input"
+              accept="image/*"
+              (change)="select_license_doc($event)"
+              id="uploadLicense" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Submit -->
+      <section class="ax-page-section">
+        <button
+          type="button"
+          class="ax-btn ax-btn-primary"
+          style="width: 100%; padding-top: 0.75rem; padding-bottom: 0.75rem;"
+          (click)="upload_id()"
+          [disabled]="ui_controls.is_submitting">
+          <span *ngIf="ui_controls.is_submitting" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+          <span *ngIf="!ui_controls.is_submitting" class="material-symbols-outlined" aria-hidden="true">verified</span>
+          {{ 'submit' | translate }}
+        </button>
+      </section>
+    </div>
+  </div>
+</app-vendor-shell>
