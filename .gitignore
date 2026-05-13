@@ -2,8 +2,14 @@
 node_modules/
 **/node_modules/
 .pnpm-store/
-vendor/
-**/vendor/
+# Composer's dependency dir for apps/api (PHP). Originally written as
+# 'vendor/' and '**/vendor/' which was too broad — it also matched
+# apps/mobile/src/app/vendor/ and apps/portal/src/app/vendor/, which
+# are SOURCE directories containing real components, not PHP deps.
+# Result: those source files were silently excluded from git for
+# weeks before Day 6's CI revealed the issue.
+# Now scoped to apps/api/vendor/ only.
+apps/api/vendor/
 
 # Build artifacts
 dist/
