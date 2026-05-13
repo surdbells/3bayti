@@ -242,16 +242,59 @@ jobs:
           fi
           echo "✓ Build artifact extracted, Worker bundle present"
 
+      - name: Setup pnpm
+        # Re-install pnpm for the deploy job since artifact-only doesn't
+        # carry it through. The wrangler-action would have used npm,
+        # but npm doesn't understand workspace:* protocol entries in
+        # apps/web/package.json (introduced when @3bayti/api-client was
+        # added as a workspace dep on Day 5). So we use pnpm directly.
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install workspace dependencies
+        # We need wrangler (declared in apps/web devDependencies) plus
+        # the workspace packages it transitively touches. Frozen
+        # lockfile keeps things fast + reproducible.
+        run: pnpm install --frozen-lockfile
+
       - name: Deploy to Cloudflare Workers
         id: deploy
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          wranglerVersion: '4'
-          workingDirectory: apps/web
-          command: deploy
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+        # Run wrangler directly via pnpm. Captures the deployment URL
+        # the same way cloudflare/wrangler-action@v3 did — wrangler
+        # prints "Deployed ... to <url>" on success; we parse it and
+        # expose via $GITHUB_OUTPUT for downstream steps.
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        working-directory: apps/web
+        run: |
+          set -eo pipefail
+          # Capture wrangler output so we can parse the deployment URL.
+          DEPLOY_OUTPUT=$(pnpm exec wrangler deploy 2>&1 | tee /dev/stderr)
+
+          # wrangler prints lines like:
+          #   Published 3bayti-web (1.23 sec)
+          #     https://3bayti-web.<account>.workers.dev
+          # OR for custom-domain Workers:
+          #   Current Version ID: ...
+          #   Deployed 3bayti-web triggers (1.23 sec)
+          #     https://staging.3bayti.ae
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" \
+            | grep -oE 'https://[a-zA-Z0-9.-]+\.(workers\.dev|3bayti\.ae)[^ ]*' \
+            | head -1)
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "WARNING: could not parse deployment URL from wrangler output"
+            DEPLOY_URL="https://3bayti-web.workers.dev"  # best-guess fallback
+          fi
+          echo "Deployment URL: $DEPLOY_URL"
+          echo "deployment-url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
 
       - name: Print deployment URL
         env:
