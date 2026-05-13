@@ -86,8 +86,22 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/categories',
     shape: 'v3-envelope',
   },
+  // Category-detail stays on legacy v2 until v3 reaches feature
+  // parity. v3's /v3/categories/:slug returns only the category
+  // metadata (id, slug, name, description, image_url, children) —
+  // it does NOT return the embedded products list or the
+  // total_products/page_size meta that apps/web's category-detail
+  // page needs. v2's /v2/categories/:slug returns both, so we route
+  // this one endpoint back to legacy.
+  //
+  // To flip to 'new', v3 needs to either:
+  //   - Augment /v3/categories/:slug to include products + meta
+  //     (matches v2 shape), or
+  //   - Have apps/web fetch products separately via
+  //     /v3/products?category_slug=:slug and merge client-side.
+  // Tracked as Day-5-followup; not blocking the demo.
   'GET /categories/:slug': {
-    target: 'new',
+    target: 'old',
     oldPath: '/v2/categories/:slug',
     newPath: '/v3/categories/:slug',
     shape: 'v3-envelope',

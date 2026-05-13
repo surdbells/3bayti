@@ -14,22 +14,42 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
  */
 
 /**
- * API base for build-time slug discovery.
+ * API bases for build-time slug discovery.
  *
- * As of Day 5 of the 10-day rollout (M2.2.5), this flips from
- * legacy v2 to v3. The v3 backend has feature parity for slug
- * enumeration:
+ * These MUST match the endpoint each page fetches from at runtime,
+ * otherwise the prerender will list slugs the component can't find:
  *
- *   GET /v3/categories          -> { data: [{slug, ...}] }
- *   GET /v3/products?sort=newest -> { data: [{slug, ...}], meta }
+ *   /category/:slug -> RoutedHttpClient('GET /categories/:slug')
+ *      -> currently target='old' (legacy v2 has embedded products
+ *      list + meta that v3 doesn't yet), so v2 slug shape needed
+ *      ('abayas-1' not 'abayas')
  *
- * Both shape-identical to v2's responses for these fields. If v3
- * is unreachable at build time (DNS issue, etc.) the env-var
- * override below lets us pin back to v2 without a code change:
+ *   /product/:slug  -> RoutedHttpClient('GET /products/:slug')
+ *      -> target='new' (full parity), so v3 slug shape needed
+ *      ('la27' not 'la27-2637')
  *
- *   API_BASE_URL=https://api.3bayti.ae/v2 pnpm --filter @3bayti/web build
+ * If we ever flip /categories/:slug to v3, change CATEGORY_API_BASE
+ * to v3 too. Same idea in reverse for products.
+ *
+ * Env-var overrides (rarely needed):
+ *   CATEGORY_API_BASE_URL — pin a different host for category fetch
+ *   PRODUCT_API_BASE_URL  — pin a different host for product fetch
+ *   API_BASE_URL          — legacy single-override; if set, used as
+ *                           fallback for BOTH if the specific override
+ *                           isn't set
  */
-const API_BASE = process.env['API_BASE_URL'] || 'https://api-v3.3bayti.ae/v3';
+const LEGACY_API_BASE_URL = 'https://api.3bayti.ae/v2';
+const V3_API_BASE_URL = 'https://api-v3.3bayti.ae/v3';
+
+const CATEGORY_API_BASE =
+  process.env['CATEGORY_API_BASE_URL'] ||
+  process.env['API_BASE_URL'] ||
+  LEGACY_API_BASE_URL;
+
+const PRODUCT_API_BASE =
+  process.env['PRODUCT_API_BASE_URL'] ||
+  process.env['API_BASE_URL'] ||
+  V3_API_BASE_URL;
 
 /**
  * How many product PDP pages to prerender at build time.
@@ -60,7 +80,7 @@ const PRODUCT_PRERENDER_CAP = 200;
  */
 async function fetchCategorySlugs(): Promise<string[]> {
   try {
-    const res = await fetch(`${API_BASE}/categories`);
+    const res = await fetch(`${CATEGORY_API_BASE}/categories`);
     if (!res.ok) {
       console.warn(`[SSR] /categories returned ${res.status}; skipping category-detail prerender`);
       return [];
@@ -95,7 +115,7 @@ async function fetchRecentProductSlugs(limit: number): Promise<string[]> {
   try {
     for (let offset = 0; offset < limit; offset += PAGE_SIZE) {
       const pageLimit = Math.min(PAGE_SIZE, limit - offset);
-      const url = `${API_BASE}/products?limit=${pageLimit}&offset=${offset}&sort=newest`;
+      const url = `${PRODUCT_API_BASE}/products?limit=${pageLimit}&offset=${offset}&sort=newest`;
       const res = await fetch(url);
       if (!res.ok) {
         console.warn(`[SSR] /products returned ${res.status} at offset=${offset}; stopping`);

@@ -14,9 +14,15 @@
  * automatically after `ng build`.
  *
  * Environment:
- *   API_BASE_URL    — optional, defaults to https://api.3bayti.ae/v2
- *   SITE_URL        — optional, defaults to https://staging.3bayti.ae
- *   OUTPUT_DIR      — optional, defaults to dist/3bayti-web/browser
+ *   CATEGORY_API_BASE_URL — categories slug source. Default: v2 (legacy)
+ *                           because category-detail still routes there
+ *                           per ENDPOINT_ROUTING.
+ *   PRODUCT_API_BASE_URL  — products slug source. Default: v3.
+ *   VENDOR_API_BASE_URL   — vendors slug source. Default: v3.
+ *   API_BASE_URL          — legacy single-base fallback if specific
+ *                           overrides above aren't set.
+ *   SITE_URL              — optional, defaults to https://staging.3bayti.ae
+ *   OUTPUT_DIR            — optional, defaults to dist/3bayti-web/browser
  */
 
 import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
@@ -25,7 +31,30 @@ import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const API_BASE = process.env.API_BASE_URL || 'https://api.3bayti.ae/v2';
+/**
+ * Two API bases for split sitemap fetch — see apps/web/src/app/
+ * app.routes.server.ts for the rationale. In short:
+ *
+ *   /category/:slug -> served from legacy v2 at runtime (target='old'
+ *     in ENDPOINT_ROUTING), so sitemap must list v2 slug shapes.
+ *   /product/:slug  -> served from v3 at runtime (target='new'), so
+ *     sitemap must list v3 slug shapes.
+ *
+ * If routing decisions flip, update these to match — sitemap entries
+ * MUST match the URLs the SSR pass actually prerenders, otherwise
+ * search engines see 200s in the sitemap but get 404s on visit.
+ *
+ * Env var precedence (rarely needed):
+ *   {CATEGORY,PRODUCT,VENDOR}_API_BASE_URL specific override
+ *   API_BASE_URL                            legacy single-override
+ */
+const LEGACY_API_BASE_URL = 'https://api.3bayti.ae/v2';
+const V3_API_BASE_URL     = 'https://api-v3.3bayti.ae/v3';
+
+const CATEGORY_API_BASE = process.env.CATEGORY_API_BASE_URL || process.env.API_BASE_URL || LEGACY_API_BASE_URL;
+const PRODUCT_API_BASE  = process.env.PRODUCT_API_BASE_URL  || process.env.API_BASE_URL || V3_API_BASE_URL;
+// Vendors still served by v3 (target='new' for both list + detail).
+const VENDOR_API_BASE   = process.env.VENDOR_API_BASE_URL   || process.env.API_BASE_URL || V3_API_BASE_URL;
 const SITE_URL = process.env.SITE_URL || 'https://staging.3bayti.ae';
 const OUT_DIR  = process.env.OUTPUT_DIR || join(__dirname, '..', 'dist', '3bayti-web', 'browser');
 
@@ -35,19 +64,47 @@ const STATIC_PAGES = [
   // Phase 2 will add /designers, /about, /contact, /faq, /sizing-guide, etc.
 ];
 
-async function fetchSitemapData() {
-  const url = `${API_BASE}/sitemap-data`;
+async function fetchSitemapDataFrom(baseUrl) {
+  const url = `${baseUrl}/sitemap-data`;
   try {
     const res = await fetch(url, { headers: { Accept: 'application/json' } });
     if (!res.ok) {
-      console.warn(`[sitemap] API responded ${res.status} — using static fallback`);
+      console.warn(`[sitemap] ${url} responded ${res.status}`);
       return null;
     }
     return await res.json();
   } catch (err) {
-    console.warn(`[sitemap] API unreachable (${err.message}) — using static fallback`);
+    console.warn(`[sitemap] ${url} unreachable (${err.message})`);
     return null;
   }
+}
+
+/**
+ * Fetch sitemap data from each resource's authoritative backend
+ * (per ENDPOINT_ROUTING). Returns a merged result with only the
+ * resource types each base is responsible for.
+ *
+ * If all bases are the same URL we only do one network call —
+ * common case in production where everything's on one backend.
+ */
+async function fetchSitemapData() {
+  const distinctBases = new Set([CATEGORY_API_BASE, PRODUCT_API_BASE, VENDOR_API_BASE]);
+  const cache = new Map();
+  for (const base of distinctBases) {
+    cache.set(base, await fetchSitemapDataFrom(base));
+  }
+  const categorySrc = cache.get(CATEGORY_API_BASE);
+  const productSrc  = cache.get(PRODUCT_API_BASE);
+  const vendorSrc   = cache.get(VENDOR_API_BASE);
+
+  if (!categorySrc && !productSrc && !vendorSrc) {
+    return null;  // All bases unreachable — caller falls back.
+  }
+  return {
+    categories: categorySrc?.categories || [],
+    products:   productSrc?.products    || [],
+    vendors:    vendorSrc?.vendors      || [],
+  };
 }
 
 function xmlEscape(s) {
