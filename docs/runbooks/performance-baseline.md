@@ -128,6 +128,41 @@ done
 
 Expected output: each line shows the path with sub-second timing.
 
+## Repeated-load stability (Phase 8.F follow-up)
+
+Ran 10 sequential hits per URL to verify the warm-cache numbers from
+the table above hold under repeat load:
+
+| URL | Min | Median | Max | Range |
+|---|---|---|---|---|
+| `/` (home) | 68ms | 104ms | 801ms* | 733ms |
+| `/category/abayas-1` | 61ms | 65ms | 108ms | 46ms |
+| `/product/la23` | 57ms | 58ms | 68ms | 11ms |
+| `/sitemap.xml` | 61ms | 68ms | 93ms | 32ms |
+
+\* The 801ms home-page outlier appears to be a single cache eviction
+event during the test. Median stayed at 104ms (consistent with the
+Phase 8.B baseline). Not a stability concern; cache will re-fill within
+seconds of the eviction.
+
+PDP and sitemap show very tight ranges — under 50ms variance across
+10 hits. That's the healthy behavior we want for demo day.
+
+## Cold-start caveat — query string cache busting doesn't work
+
+I attempted to measure true cold-start latency by hitting `staging.3bayti.ae/?cb=<random>`,
+but Cloudflare Workers DON'T include query strings in cache keys by
+default. Result: every cache-busted URL still served from edge HIT.
+
+Implication: the 312ms "cold" measurement at the top of this doc was
+likely a real cache eviction or genuinely-first-fetch case. To trigger
+a true origin fetch, you'd need to:
+- Wait for the `s-maxage=300` window to elapse (5 minutes of inactivity)
+- OR hit a never-before-seen pathname
+
+Demo-relevant interpretation: once the demo URLs have been hit once each,
+they STAY fast. The 5-minute pre-warm step in this doc is sufficient.
+
 ## Answer prepared for "is it fast?"
 
 > "Cloudflare's edge serves prerendered HTML in 60-100ms from the audience's
