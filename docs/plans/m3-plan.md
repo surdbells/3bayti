@@ -436,21 +436,29 @@ export class MobileNetworkAdapter {
 
 #### M3.1.4 — Mobile Auth Flip (Phase 2: OTP + Reset Flows + **Register** — scope expanded from M3.1.3)
 
-**Duration:** 5-7 days (revised from 3-4d to absorb the register flip work descoped from M3.1.3)
-**Output:** OTP send/validate + password reset + register routed through v3
+**Status:** ✅ COMPLETED May 14, 2026 (register flip + reset refactor + refresh-token rotation; commits `a05965d` → `151e6f8` → `a7dc94f` → `af4ae01` → `0a4158e` → closure; see `docs/runbooks/m3/m3.1.4-completion.md` and device-test gate at `docs/runbooks/m3/m3.1.4-device-test-checklist.md`).
+**Duration (estimate):** 5-7 days (revised from 3-4d to absorb the register flip work descoped from M3.1.3)
+**Duration (actual):** ~6-8d effective scope (Phase 0 reconnaissance discovered the routing table audit + adapter v3-direct extension + full register/reset UX restructure work). Same-day commit cycle on May 14.
+**Output:** OTP send/validate + password reset + register routed through v3, plus 401-driven refresh-token rotation in the adapter.
 
-Now covers (per the M3.1.3 completion runbook's "Known issues" section):
-- POST `/users/register` flip — needs request-shape translation (`countryCode "+971"` → `country_code "AE"`, drop `confirm_password` and `accepted_terms`)
-- Flow decision for post-register auto-signin: keep legacy custom OTP path (α), migrate to v3's `/auth/send-otp` + `/auth/confirm` (β), or stagger (γ). Documented options in `m3.1.3-completion.md`.
-- POST `/users/sendOTP` → `/v3/auth/send-otp`
-- POST `/users/validateOTP` → `/v3/auth/confirm`
-- POST `/users/forgotPassword` → `/v3/auth/forgot-password`
-- POST `/users/resetPassword` → `/v3/auth/reset-password`
-- Refresh-token rotation handler (consumes the `refresh_token` field already stored by M3.1.3's login flip)
+Decision β (full v3 OTP consolidation + MessageCentral cleanup) was selected. Two MC dead-code blocks removed (~110 lines from register, ~120 lines from reset). UX restructured to v3's identifier-first 2-stage flow on both pages (legacy phone-OTP-first ordering was structurally incompatible with v3's email-as-canonical-identifier design).
 
-Original notes still apply:
-- OTP flows interact with the user's phone (SMS) or email — must verify the underlying SMS provider integration in v3 works (likely same Twilio / similar)
-- Password reset has a token-exchange flow — ensure tokens issued by v3 can't be confused with legacy tokens
+Shipped:
+- ✅ POST `/users/register` flip — request-shape translation (`countryCode "+971"` → `country_code "AE"`, drop `confirm_password` and `accepted_terms`) in `register-request.transform.ts`; full Stage 1 → Stage 2 UX restructure in `register.page.ts/.html`
+- ✅ Post-register auto-signin via `/v3/auth/confirm` (β decision); response shape reuses M3.1.3 `transformV3LoginResponse`
+- ✅ POST `/users/sendOTP` (MessageCentral) → POST `/v3/auth/send-otp` (resend in register Stage 2)
+- ✅ POST `/users/validateOTP` (MessageCentral) → POST `/v3/auth/confirm`
+- ✅ POST `/users/forgotPassword` → POST `/v3/auth/reset` (key renamed from `forgot-password`)
+- ✅ POST `/users/resetPassword` → POST `/v3/auth/reset/confirm` (key renamed from `reset-password`)
+- ✅ Refresh-token rotation handler — aggressive (any 401 from Bearer-authed v3 call triggers refresh + retry) + single-flight (`shareReplay(1)` lock; concurrent 401s share one refresh call)
+- ✅ Routing table audit — 5 incorrect `newPath` values corrected, 5 v3-only entries added (M3.1.4a)
+- ✅ Adapter `post_v3` / `get_v3` v3-direct entry points added (M3.1.4b) — unblocks call sites for v3-only endpoints (no legacy URL precursor)
+
+Known issues carried into M3.1.5+ (see M3.1.4 completion runbook "Known issues" section):
+- Call-site 401-session-expired redirect behaviour not wired (adapter clears Preferences but caller decides what to do)
+- Logout flow not wired (`/v3/auth/logout`, `/v3/auth/logout-all` in routing table but no consumer)
+- Refresh-on-v3-direct path deferred (no current consumer)
+- M3.1.3 billing-fields gap classification still pending (gated on M3.1.3 device test)
 
 #### M3.1.5 — Mobile Catalog Reads Flip
 
@@ -635,7 +643,7 @@ M3.1.0  Endpoint audit + dedup           3-5d
 M3.1.1  v3 auth endpoint build           5-7d
 M3.1.2  Mobile adapter layer             3-5d
 M3.1.3  Mobile auth flip phase 1 (login)  2-3d  [✅ DONE — login only]
-M3.1.4  Mobile auth flip phase 2 (OTP+rst+register) 5-7d
+M3.1.4  Mobile auth flip phase 2 (OTP+rst+register+refresh) 5-7d  [✅ DONE]
 M3.1.5  Mobile catalog flip              5-7d
 M3.1.6  v3 cart/checkout/orders build    7-10d
 M3.1.7  Mobile cart/checkout/orders flip 4-6 WEEKS
