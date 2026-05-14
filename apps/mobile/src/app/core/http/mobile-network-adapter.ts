@@ -236,6 +236,50 @@ export class MobileNetworkAdapter {
     return this.route('GET', null, legacyUrl);
   }
 
+  /**
+   * Call a v3 endpoint directly by routeKey, without any legacy-URL
+   * lookup. Use this for v3-only endpoints (those with `oldPath: ''`
+   * in ENDPOINT_ROUTING) — they have no legacy URL to resolve FROM,
+   * so post_request / get_request can't route them.
+   *
+   * Why this is separate from post_request
+   * ======================================
+   * post_request takes a legacy URL and translates legacy-shaped body
+   * (`{id, token, ...rest}`) into v3 shape. For v3-native call sites:
+   *   - There's no legacy URL.
+   *   - The body is already v3-shaped.
+   *   - The token (if needed) is supplied explicitly via opts.authToken.
+   *
+   * So this method does:
+   *   - Look up cfg by routeKey (instead of by legacy URL)
+   *   - Build the URL with optional path params
+   *   - Forward body unchanged (no shape translation)
+   *   - Attach Authorization header IFF opts.authToken provided
+   *   - Same envelope wrap and error translation as the legacy path
+   *
+   * @param routeKey - routing table key (e.g. 'POST /auth/confirm')
+   * @param body - v3-shaped request body (forwarded unchanged)
+   * @param opts.authToken - optional Bearer token for authenticated calls
+   * @param opts.pathParams - optional path parameter substitutions
+   */
+  post_v3(
+    routeKey: string,
+    body: unknown,
+    opts?: { authToken?: string; pathParams?: Record<string, string> },
+  ): Observable<unknown> {
+    return this.callV3Direct('POST', routeKey, body, opts);
+  }
+
+  /**
+   * GET a v3 endpoint directly by routeKey. See post_v3 docblock.
+   */
+  get_v3(
+    routeKey: string,
+    opts?: { authToken?: string; pathParams?: Record<string, string> },
+  ): Observable<unknown> {
+    return this.callV3Direct('GET', routeKey, null, opts);
+  }
+
   /* ------ Internals ----------------------------------------------- */
 
   /**
@@ -311,6 +355,77 @@ export class MobileNetworkAdapter {
             ? this.http.put<unknown>(url, translatedBody, { headers, responseType: 'json' })
             : method === 'PATCH'
               ? this.http.patch<unknown>(url, translatedBody, { headers, responseType: 'json' })
+              : this.http.delete<unknown>(url, { headers, responseType: 'json' });
+
+    return obs.pipe(
+      map((v3Response) => toLegacyEnvelope(v3Response)),
+      catchError((err: HttpErrorResponse) => this.translateError(err)),
+    );
+  }
+
+  /**
+   * Issue a v3-direct request — sibling to callV3 but with simpler
+   * input semantics: no legacy body translation; explicit auth token;
+   * optional path params.
+   *
+   * Used by post_v3 / get_v3 for v3-native call sites (register OTP
+   * confirm, password reset, refresh-token, logout, etc.). See the
+   * post_v3 docblock for design rationale.
+   */
+  private callV3Direct(
+    method: HttpMethod,
+    routeKey: string,
+    body: unknown,
+    opts?: { authToken?: string; pathParams?: Record<string, string> },
+  ): Observable<unknown> {
+    let cfg: EndpointConfig;
+    try {
+      cfg = resolveConfig(routeKey);
+    } catch {
+      // Unknown route key — return an error envelope through the
+      // success channel so call sites can detect via response_code.
+      // This shouldn't happen if callers use string literals matching
+      // ENDPOINT_ROUTING; it's defensive against typos.
+      return of({
+        response_code: 500,
+        status: 'error',
+        message: `Unknown route key: ${routeKey}`,
+        error_code: 'ROUTE_NOT_FOUND',
+        data: null,
+      });
+    }
+
+    if (cfg.target !== 'new') {
+      // The routing table says this route is legacy. v3-direct can't
+      // serve a legacy-targeted route — that's what post_request /
+      // get_request are for. Surface as an error envelope.
+      return of({
+        response_code: 500,
+        status: 'error',
+        message: `Route ${routeKey} has target=${cfg.target}; cannot use v3-direct`,
+        error_code: 'ROUTE_NOT_NEW',
+        data: null,
+      });
+    }
+
+    const url = resolveUrl(
+      routeKey,
+      { old: GlobalComponent.baseURL, new: this.v3BaseUrl },
+      opts?.pathParams,
+    );
+
+    const authHeader = opts?.authToken ? `Bearer ${opts.authToken}` : null;
+    const headers = this.buildHeaders(authHeader);
+
+    const obs =
+      method === 'GET'
+        ? this.http.get<unknown>(url, { headers, responseType: 'json' })
+        : method === 'POST'
+          ? this.http.post<unknown>(url, body, { headers, responseType: 'json' })
+          : method === 'PUT'
+            ? this.http.put<unknown>(url, body, { headers, responseType: 'json' })
+            : method === 'PATCH'
+              ? this.http.patch<unknown>(url, body, { headers, responseType: 'json' })
               : this.http.delete<unknown>(url, { headers, responseType: 'json' });
 
     return obs.pipe(
