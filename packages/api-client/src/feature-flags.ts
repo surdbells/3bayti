@@ -148,16 +148,43 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
 
   // ---- Auth (M1 shipped - all on v3) ----
+  //
+  // M3.1.4 audit: this section had 5 entries whose `newPath` did not
+  // match the actual v3 routes wired in apps/api/config/routes.php
+  // ($app->group('/v3/auth', ...)). The entries were wired in M2 Day 5
+  // against anticipated names; M1 shipped with different final names.
+  //
+  // M3.1.4 corrections (matched against routes.php):
+  //   verify-phone     -> validate-phone (the v3 route is /v3/auth/validate-phone)
+  //   forgot-password  -> renamed key to /auth/reset; v3 is /v3/auth/reset
+  //   reset-password   -> renamed key to /auth/reset/confirm; v3 is /v3/auth/reset/confirm
+  // M3.1.4 additions (no precedent; v3-only or no legacy 1:1):
+  //   send-otp         -> /v3/auth/send-otp (re-send registration OTP)
+  //   confirm          -> /v3/auth/confirm (validate registration OTP, returns tokens)
+  //
+  // For send-otp / confirm / reset / reset/confirm / refresh / logout,
+  // `oldPath: ''` is used because there's either no 1:1 legacy
+  // equivalent or the legacy flow is multi-step / multi-endpoint and
+  // can't be mapped through the URL-resolver. Mobile call sites use
+  // the adapter's v3-direct methods (post_v3 / get_v3) to invoke these
+  // by routeKey rather than by legacy URL — see MobileNetworkAdapter
+  // (M3.1.2 + M3.1.4 extensions).
   'POST /auth/register': {
     target: 'new',
     oldPath: '/users/register',
     newPath: '/v3/auth/register',
     shape: 'v3-envelope',
   },
-  'POST /auth/verify-phone': {
+  'POST /auth/validate-phone': {
     target: 'new',
     oldPath: '/users/verifyPhone',
-    newPath: '/v3/auth/verify-phone',
+    newPath: '/v3/auth/validate-phone',
+    shape: 'v3-envelope',
+  },
+  'POST /auth/validate-email': {
+    target: 'new',
+    oldPath: '/users/validate-email',
+    newPath: '/v3/auth/validate-email',
     shape: 'v3-envelope',
   },
   'POST /auth/login': {
@@ -166,28 +193,52 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/auth/login',
     shape: 'v3-envelope',
   },
+  'POST /auth/send-otp': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/send-otp',
+    shape: 'v3-envelope',
+  },
+  'POST /auth/confirm': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/confirm',
+    shape: 'v3-envelope',
+  },
   'POST /auth/refresh': {
     target: 'new',
-    oldPath: '/users/refresh',
+    oldPath: '',
     newPath: '/v3/auth/refresh',
     shape: 'v3-envelope',
   },
   'POST /auth/logout': {
     target: 'new',
-    oldPath: '/users/logout',
+    oldPath: '',
     newPath: '/v3/auth/logout',
     shape: 'v3-envelope',
   },
-  'POST /auth/forgot-password': {
+  'POST /auth/logout-all': {
     target: 'new',
-    oldPath: '/users/forgotPassword',
-    newPath: '/v3/auth/forgot-password',
+    oldPath: '',
+    newPath: '/v3/auth/logout-all',
     shape: 'v3-envelope',
   },
-  'POST /auth/reset-password': {
+  'GET /auth/me': {
     target: 'new',
-    oldPath: '/users/resetPassword',
-    newPath: '/v3/auth/reset-password',
+    oldPath: '',
+    newPath: '/v3/auth/me',
+    shape: 'v3-envelope',
+  },
+  'POST /auth/reset': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/reset',
+    shape: 'v3-envelope',
+  },
+  'POST /auth/reset/confirm': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/reset/confirm',
     shape: 'v3-envelope',
   },
 
