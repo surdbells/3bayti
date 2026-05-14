@@ -172,6 +172,36 @@ class Product
     #[ORM\Column(name: 'label_id', type: 'integer', nullable: true)]
     private ?int $labelId = null;
 
+    // ---- search (M3.1.5.5a) ----
+
+    /**
+     * PostgreSQL-managed tsvector for fulltext search.
+     *
+     * The DB column is GENERATED ALWAYS AS STORED — Postgres
+     * recomputes it on every INSERT/UPDATE from `name` and
+     * `description`. The application never writes to it.
+     *
+     * insertable: false / updatable: false reflects that contract.
+     * Doctrine reads the column on entity hydration (so it CAN be
+     * referenced by DQL — see TsMatchFunction + TsRankFunction in
+     * `src/Doctrine/DqlFunction/`) but never includes it in INSERT
+     * or UPDATE statements, leaving the DB free to compute it.
+     *
+     * Stored as `string` from Doctrine's perspective because there's
+     * no native `tsvector` type in DBAL. Treating as opaque text is
+     * fine — application code never inspects the value, only the
+     * DQL functions pass it to the PG operators.
+     *
+     * Nullable in the entity even though the DB column is NOT NULL,
+     * because the column was added AFTER initial product creation
+     * (the migration is forward-only; the GENERATED ALWAYS clause
+     * computes a value immediately on every existing row, but
+     * Doctrine sees an unhydrated entity as having null until
+     * the SELECT fires).
+     */
+    #[ORM\Column(name: 'search_tsv', type: 'string', nullable: true, insertable: false, updatable: false)]
+    private ?string $searchTsv = null;
+
     // ---- timestamps ----
 
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]

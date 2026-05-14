@@ -101,6 +101,15 @@ final class ListProductsController
             'isNew' => $this->parseBool($query['new'] ?? null),
             'isSale' => $this->parseBool($query['sale'] ?? null),
             'sort' => $this->parseSort($query['sort'] ?? null),
+            // M3.1.5.5d — fulltext search via PostgreSQL tsvector.
+            // When `q` is present and non-empty, the repository adds
+            // a TSMATCH WHERE clause against the products.search_tsv
+            // generated column. See ProductRepository::findActivePaginated
+            // docblock for details.
+            //
+            // Trim input and treat all-whitespace as absent so we don't
+            // pollute query logs with junk searches.
+            'searchQuery' => $this->parseSearchQuery($query['q'] ?? null),
             'limit' => $limit,
             'offset' => $offset,
         ];
@@ -216,7 +225,38 @@ final class ListProductsController
 
     private function parseSort(?string $value): string
     {
-        $valid = ['newest', 'oldest', 'price_asc', 'price_desc'];
+        // 'relevance' is only meaningful when a search query is
+        // present. The repository's findActivePaginated method
+        // falls back to 'newest' if 'relevance' is supplied without
+        // a search query, so we accept the value here unconditionally
+        // and let the domain layer enforce the dependency.
+        $valid = ['newest', 'oldest', 'price_asc', 'price_desc', 'relevance'];
         return in_array($value, $valid, true) ? $value : 'newest';
+    }
+
+    /**
+     * Normalise the `q` query param.
+     *
+     * Returns null for absent, empty, or whitespace-only input so the
+     * repository's hasSearch check can skip the TSMATCH clause.
+     *
+     * Trims to 200 chars defensively — websearch_to_tsquery handles
+     * arbitrary punctuation gracefully but very long inputs would
+     * waste time tokenising. 200 chars covers any reasonable user
+     * query and protects against accidental URL bombing.
+     */
+    private function parseSearchQuery(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+        $trimmed = trim($value);
+        if ($trimmed === '') {
+            return null;
+        }
+        if (strlen($trimmed) > 200) {
+            $trimmed = substr($trimmed, 0, 200);
+        }
+        return $trimmed;
     }
 }

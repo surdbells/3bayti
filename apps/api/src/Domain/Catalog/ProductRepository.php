@@ -50,15 +50,34 @@ class ProductRepository extends EntityRepository
      * @param array{
      *     vendorId?: int|null,
      *     categoryId?: int|null,
+     *     labelId?: int|null,
      *     minPrice?: string|null,
      *     maxPrice?: string|null,
      *     isFeatured?: bool|null,
      *     isNew?: bool|null,
      *     isSale?: bool|null,
      *     sort?: string,
+     *     searchQuery?: string|null,
      *     limit?: int,
      *     offset?: int,
      * } $filters
+     *
+     * Search semantics
+     * ================
+     * When `searchQuery` is a non-empty string, the query gains a
+     * TSMATCH(p.searchTsv, :q) = TRUE clause that uses PostgreSQL's
+     * `<col> @@ websearch_to_tsquery('english', :q)` operator.
+     * `websearch_to_tsquery` is the user-input-friendly variant that
+     * gracefully handles quoted phrases, OR/AND/NOT operators, and
+     * arbitrary punctuation without throwing.
+     *
+     * When `sort` is 'relevance' AND a search query is supplied, the
+     * primary ORDER BY becomes TSRANK(p.searchTsv, :q) DESC. The id
+     * tie-break still applies.
+     *
+     * If 'relevance' is passed without a search query, falls back to
+     * 'newest' (the no-search default) — ranking against no query
+     * would produce zero values for all rows.
      *
      * @return array{items: list<Product>, total: int}
      */
@@ -72,6 +91,12 @@ class ProductRepository extends EntityRepository
         }
         if (!empty($filters['categoryId'])) {
             $qb->andWhere('p.category = :categoryId')->setParameter('categoryId', $filters['categoryId']);
+        }
+        if (!empty($filters['labelId'])) {
+            // labelId is the v3 internal id; the controller resolves
+            // any legacy_label_id input via VendorLabelRepository
+            // before passing through.
+            $qb->andWhere('p.labelId = :labelId')->setParameter('labelId', $filters['labelId']);
         }
         if (!empty($filters['minPrice'])) {
             $qb->andWhere('p.price >= :minPrice')->setParameter('minPrice', $filters['minPrice']);
@@ -89,6 +114,13 @@ class ProductRepository extends EntityRepository
             $qb->andWhere('p.isSale = TRUE');
         }
 
+        $searchQuery = $filters['searchQuery'] ?? null;
+        $hasSearch = is_string($searchQuery) && trim($searchQuery) !== '';
+        if ($hasSearch) {
+            $qb->andWhere('TSMATCH(p.searchTsv, :searchQuery) = TRUE')
+               ->setParameter('searchQuery', trim((string) $searchQuery));
+        }
+
         // Total count for pagination (before limit/offset).
         $countQb = clone $qb;
         $countQb->select('COUNT(p.id)');
@@ -96,11 +128,18 @@ class ProductRepository extends EntityRepository
 
         // Sort handling
         $sort = $filters['sort'] ?? 'newest';
+        // 'relevance' is only meaningful with a search query; fall
+        // back to 'newest' otherwise so the result isn't a meaningless
+        // "rank against nothing" sort.
+        if ($sort === 'relevance' && !$hasSearch) {
+            $sort = 'newest';
+        }
         match ($sort) {
             'price_asc' => $qb->orderBy('p.price', 'ASC'),
             'price_desc' => $qb->orderBy('p.price', 'DESC'),
             'oldest' => $qb->orderBy('p.createdAt', 'ASC'),
             'newest' => $qb->orderBy('p.createdAt', 'DESC'),
+            'relevance' => $qb->orderBy('TSRANK(p.searchTsv, :searchQuery)', 'DESC'),
             default => $qb->orderBy('p.createdAt', 'DESC'),
         };
 

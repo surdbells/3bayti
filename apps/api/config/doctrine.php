@@ -84,6 +84,32 @@ return [
         // `#[Column(name: '...')]` attribute.
         $config->setNamingStrategy(new \Doctrine\ORM\Mapping\UnderscoreNamingStrategy(CASE_LOWER));
 
+        // Custom DQL functions for PostgreSQL fulltext search (M3.1.5.5d).
+        //
+        // TSMATCH(tsvector, text) → BOOLEAN — wraps `<col> @@ websearch_
+        //   to_tsquery('english', :q)`. Used in WHERE clauses.
+        // TSRANK(tsvector, text) → FLOAT — wraps `ts_rank(<col>, websearch_
+        //   to_tsquery('english', :q))`. Used in ORDER BY clauses.
+        //
+        // These functions are PostgreSQL-specific; running the
+        // application against a different RDBMS would require either
+        // alternative DQL functions or guarding all callers behind a
+        // platform check. Locked: PostgreSQL is and will remain the
+        // production DB.
+        //
+        // String function for TSMATCH (returns the @@ expression which
+        // is a boolean — DQL has no boolean function category, so we
+        // wrap as string and compare to TRUE/FALSE at the call site).
+        $config->addCustomStringFunction(
+            'TSMATCH',
+            \Bayti\Api\Doctrine\DqlFunction\TsMatchFunction::class
+        );
+        // Numeric function for TSRANK (returns float).
+        $config->addCustomNumericFunction(
+            'TSRANK',
+            \Bayti\Api\Doctrine\DqlFunction\TsRankFunction::class
+        );
+
         return $config;
     },
 
