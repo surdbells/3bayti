@@ -68,29 +68,28 @@ final class ListProductsController
         $limit = max(1, min(100, (int) ($query['limit'] ?? 24)));
         $offset = max(0, (int) ($query['offset'] ?? 0));
 
-        // ---- resolve slug filters to ids ----
-        $vendorId = null;
-        if (!empty($query['vendor'])) {
-            /** @var VendorRepository $vendorRepo */
-            $vendorRepo = $this->em->getRepository(Vendor::class);
-            $vendor = $vendorRepo->findBySlug((string) $query['vendor']);
-            if ($vendor === null) {
-                // Unknown vendor slug → empty result set (not 404; "no
-                // products from this vendor" is a valid empty list).
-                return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
-            }
-            $vendorId = $vendor->getId();
+        // ---- resolve slug or legacy-id filters to internal ids ----
+        //
+        // M3.1.5 introduced the legacy-id variants for mobile compat
+        // during the strangler-fig migration. Mobile passes integer
+        // ids it learned from the legacy backend; web passes slugs.
+        //
+        // Precedence: if BOTH `vendor` (slug) and `vendor_id` (legacy)
+        // are provided, the slug wins. The slug is the canonical
+        // identifier going forward, so callers that send both are
+        // probably mid-migration and we should reward the new form.
+        // Same rule for `category` / `category_id`.
+        //
+        // Unknown id/slug → empty result set (not 404; "no products
+        // from this vendor/category" is a valid empty list).
+        $vendorId = $this->resolveVendorId($query);
+        if ($vendorId === self::FILTER_NOT_FOUND) {
+            return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
         }
 
-        $categoryId = null;
-        if (!empty($query['category'])) {
-            /** @var CategoryRepository $categoryRepo */
-            $categoryRepo = $this->em->getRepository(Category::class);
-            $category = $categoryRepo->findBySlug((string) $query['category']);
-            if ($category === null) {
-                return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
-            }
-            $categoryId = $category->getId();
+        $categoryId = $this->resolveCategoryId($query);
+        if ($categoryId === self::FILTER_NOT_FOUND) {
+            return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
         }
 
         $filters = [
@@ -116,6 +115,84 @@ final class ListProductsController
             $limit,
             $offset,
         ));
+    }
+
+    /**
+     * Sentinel for the resolveVendorId / resolveCategoryId helpers:
+     * "the caller passed an identifier but no entity matches it".
+     *
+     * Distinct from null, which means "no filter was passed at all".
+     * Distinct from a valid int id, which means "filter matched".
+     */
+    private const FILTER_NOT_FOUND = -1;
+
+    /**
+     * Resolve the vendor filter from the query string.
+     *
+     * Returns:
+     *   - int $id if the filter matched a vendor (active or not — the
+     *     domain layer filters inactive separately)
+     *   - null if no vendor filter was supplied
+     *   - FILTER_NOT_FOUND if a filter was supplied but didn't match
+     *
+     * @param array<string, mixed> $query
+     */
+    private function resolveVendorId(array $query): int|null
+    {
+        // Slug wins if both forms are present.
+        if (!empty($query['vendor'])) {
+            /** @var VendorRepository $vendorRepo */
+            $vendorRepo = $this->em->getRepository(Vendor::class);
+            $vendor = $vendorRepo->findBySlug((string) $query['vendor']);
+            return $vendor === null ? self::FILTER_NOT_FOUND : $vendor->getId();
+        }
+
+        if (!empty($query['vendor_id'])) {
+            $rawId = (string) $query['vendor_id'];
+            if (!ctype_digit($rawId)) {
+                // Non-numeric vendor_id is treated as a not-found
+                // filter rather than 400. Mobile only sends ints; if
+                // a malformed value appears, returning empty is safer
+                // than failing a whole product list call.
+                return self::FILTER_NOT_FOUND;
+            }
+            /** @var VendorRepository $vendorRepo */
+            $vendorRepo = $this->em->getRepository(Vendor::class);
+            $vendor = $vendorRepo->findByLegacyId((int) $rawId);
+            return $vendor === null ? self::FILTER_NOT_FOUND : $vendor->getId();
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve the category filter from the query string. Same semantics
+     * as resolveVendorId — slug wins over legacy id, sentinel for the
+     * not-found case.
+     *
+     * @param array<string, mixed> $query
+     */
+    private function resolveCategoryId(array $query): int|null
+    {
+        if (!empty($query['category'])) {
+            /** @var CategoryRepository $categoryRepo */
+            $categoryRepo = $this->em->getRepository(Category::class);
+            $category = $categoryRepo->findBySlug((string) $query['category']);
+            return $category === null ? self::FILTER_NOT_FOUND : $category->getId();
+        }
+
+        if (!empty($query['category_id'])) {
+            $rawId = (string) $query['category_id'];
+            if (!ctype_digit($rawId)) {
+                return self::FILTER_NOT_FOUND;
+            }
+            /** @var CategoryRepository $categoryRepo */
+            $categoryRepo = $this->em->getRepository(Category::class);
+            $category = $categoryRepo->findByLegacyId((int) $rawId);
+            return $category === null ? self::FILTER_NOT_FOUND : $category->getId();
+        }
+
+        return null;
     }
 
     private function parsePrice(?string $value): ?string

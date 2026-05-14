@@ -23,6 +23,24 @@ class CategoryRepository extends EntityRepository
         return $this->findOneBy(['slug' => $slug]);
     }
 
+    /**
+     * Look up a category by its legacy WordPress/CodeIgniter id.
+     *
+     * Same rationale as VendorRepository::findByLegacyId — serves the
+     * M3.1.5 mobile flip where mobile sends `category: 5` (legacy id)
+     * and we resolve it server-side rather than forcing a mobile-side
+     * slug-cache. Removable once mobile is rebuilt against slug
+     * semantics (M3.1.10+).
+     *
+     * Returns null if no category has that legacy id. Inactive
+     * categories are returned by this method — the controller layer
+     * decides whether to expose them.
+     */
+    public function findByLegacyId(int $legacyId): ?Category
+    {
+        return $this->findOneBy(['legacyCategoryId' => $legacyId]);
+    }
+
     public function slugExists(string $slug, ?int $excludeId = null): bool
     {
         $qb = $this->createQueryBuilder('c')

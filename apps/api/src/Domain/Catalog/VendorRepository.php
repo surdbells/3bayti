@@ -24,6 +24,31 @@ class VendorRepository extends EntityRepository
     }
 
     /**
+     * Look up a vendor by its legacy WordPress/CodeIgniter id.
+     *
+     * Why this exists
+     * ===============
+     * v3 uses slugs as the public identifier for vendors. The mobile
+     * app (M3.1.5 era) was built against the legacy backend, which
+     * identified vendors by integer ids (the original DB primary key
+     * from the legacy WP/CI schema). The migration script preserved
+     * those ids in the `legacy_vendor_id` column on the vendors table.
+     *
+     * This method serves the M3.1.5 mobile flip — mobile sends
+     * `store_id: 42` (a legacy id) and we resolve it to the v3 vendor.
+     * Once mobile is rebuilt against v3 slug semantics (M3.1.10+), this
+     * method can be removed and the by-legacy-id controllers retired.
+     *
+     * Returns null if no vendor has that legacy id. Inactive vendors
+     * are returned by this method — the controller layer decides
+     * whether to expose them.
+     */
+    public function findByLegacyId(int $legacyId): ?Vendor
+    {
+        return $this->findOneBy(['legacyVendorId' => $legacyId]);
+    }
+
+    /**
      * Slug is taken if a vendor (including soft-deleted) holds it.
      * Soft-deleted vendors still own their slug so we don't recycle
      * URLs unpredictably.

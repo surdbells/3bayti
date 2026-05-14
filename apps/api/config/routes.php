@@ -166,6 +166,18 @@ return function (App $app): void {
     $app->get('/v3/products/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetProductController::class);
     $app->get('/v3/vendors/{slug}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class);
 
+    // M3.1.5a — by-legacy-id variants for mobile compatibility during
+    // the strangler-fig flip. These resolve legacy WordPress/CodeIgniter
+    // ids to v3 entities; same response shape as the slug variants.
+    // Retired when mobile rebuilds against slug semantics (M3.1.10+).
+    //
+    // The `by-legacy-id` path segment is distinctive enough not to
+    // collide with real slugs, and the segment counts differ from the
+    // slug routes (3 vs 2 segments after /v3/) so Slim ordering is moot.
+    $app->get('/v3/products/by-legacy-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetProductByLegacyIdController::class);
+    $app->get('/v3/vendors/by-legacy-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetVendorByLegacyIdController::class);
+    $app->get('/v3/vendors/by-legacy-id/{id}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsByLegacyIdController::class);
+
     // M2.2 — Sitemap data for apps/web build-time generator
     $app->get('/v3/sitemap-data', \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class);
 
