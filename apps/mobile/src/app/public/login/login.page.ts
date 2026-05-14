@@ -10,7 +10,8 @@ import { Subscription } from 'rxjs';
 
 import { FormsModule } from '@angular/forms';
 import {Router} from "@angular/router";
-import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import {transformV3LoginResponse} from "./login-response.transform";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {GlobalComponent} from "../../global-component";
 import {BlockerService} from "../../blocker.service";
@@ -42,7 +43,7 @@ export class LoginPage implements OnInit, OnDestroy {
       private platform: Platform,
       private router: Router,
       private blocker: BlockerService,
-      private networkService: NetworkService,
+      private networkAdapter: MobileNetworkAdapter,
       private toast: AxNotificationService,
       private i18n: I18nService
     ) {
@@ -116,13 +117,20 @@ export class LoginPage implements OnInit, OnDestroy {
         Preferences.remove({key: 'keep_session'});
       }
       this.ui_controls.login_loading = true;
-      this.networkService.post_request(this.login, GlobalComponent.UserLogin)
+      this.networkAdapter.post_request(this.login, GlobalComponent.UserLogin)
         .subscribe(({
-          next: (response) => {
+          next: (response: any) => {
             if (response.response_code === 200 && response.status === "success") {
+              // Transform v3 login response shape -> legacy single_user
+              // shape before storage. See login-response.transform.ts
+              // for the field mapping and the rationale for each field.
+              // Falls back to storing response.data as-is if the
+              // transform doesn't recognize the shape (preserves
+              // today's behaviour for any unexpected payload).
+              const userToStore = transformV3LoginResponse(response.data) ?? response.data;
               Preferences.set({
                 key: 'user',
-                value: JSON.stringify(response.data)
+                value: JSON.stringify(userToStore)
               });
               this.ui_controls.login_loading = false;
               this.router.navigate(['/account'], { replaceUrl: true });
