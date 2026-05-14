@@ -96,6 +96,25 @@ try {
     echo "----- step {$stepNum}: reviews -----\n";
     $results['reviews'] = $steps->migrateReviews();
 
+    // M3.1.5.5c — vendor_labels + styles
+    //
+    // These come AFTER products because vendor_labels needs the
+    // products.label_id FK validated against existing products,
+    // and migrateVendorLabels remaps products.label_id values from
+    // legacy to v3 ids as part of its transaction.
+    //
+    // Both methods are defensive — if the legacy table isn't found,
+    // they log-and-skip rather than failing. Operator can extend the
+    // candidate name list in MigrationSteps if the legacy tables
+    // use names not in the default probe list.
+    $stepNum++;
+    echo "----- step {$stepNum}: vendor_labels -----\n";
+    $results['vendor_labels'] = $steps->migrateVendorLabels();
+
+    $stepNum++;
+    echo "----- step {$stepNum}: styles -----\n";
+    $results['styles'] = $steps->migrateStyles();
+
     $elapsed = microtime(true) - $start;
 
     // ---------- final summary ----------
@@ -112,12 +131,23 @@ try {
         );
     }
 
-    printf("  %-12s  %-9s  %-9s  %-9s\n", 'Phase', 'Processed', 'Skipped', 'Errors');
-    printf("  %-12s  %-9s  %-9s  %-9s\n",
-        '------------', '---------', '---------', '---------');
+    printf("  %-15s  %-9s  %-9s  %-9s\n", 'Phase', 'Processed', 'Skipped', 'Errors');
+    printf("  %-15s  %-9s  %-9s  %-9s\n",
+        '---------------', '---------', '---------', '---------');
     foreach (['categories', 'users', 'vendors', 'products', 'reviews'] as $phase) {
         $r = $results[$phase];
-        printf("  %-12s  %9d  %9d  %9d\n", $phase, $r['migrated'], $r['skipped'], $r['errors']);
+        printf("  %-15s  %9d  %9d  %9d\n", $phase, $r['migrated'], $r['skipped'], $r['errors']);
+    }
+    // M3.1.5.5c phases — print only if they ran (status field
+    // distinguishes 'completed' vs 'skipped_no_legacy_table' etc).
+    foreach (['vendor_labels', 'styles'] as $phase) {
+        $r = $results[$phase];
+        $status = $r['status'] ?? 'completed';
+        if ($status === 'completed') {
+            printf("  %-15s  %9d  %9d  %9d\n", $phase, $r['migrated'], $r['skipped'], $r['errors']);
+        } else {
+            printf("  %-15s  %s\n", $phase, $status);
+        }
     }
     echo "\n";
 
@@ -133,11 +163,15 @@ try {
     $vnd  = (int) $conn->fetchOne("SELECT COUNT(*) FROM vendors WHERE legacy_vendor_id IS NOT NULL");
     $prd  = (int) $conn->fetchOne("SELECT COUNT(*) FROM products WHERE legacy_product_id IS NOT NULL AND status='active'");
     $rev  = (int) $conn->fetchOne("SELECT COUNT(*) FROM product_reviews WHERE legacy_review_id IS NOT NULL");
+    $lbl  = (int) $conn->fetchOne("SELECT COUNT(*) FROM vendor_labels WHERE legacy_label_id IS NOT NULL");
+    $sty  = (int) $conn->fetchOne("SELECT COUNT(*) FROM styles WHERE legacy_style_id IS NOT NULL");
     echo "    categories:        {$cats}\n";
     echo "    users (legacy):    {$usr}\n";
     echo "    vendors (legacy):  {$vnd}\n";
     echo "    products active:   {$prd}\n";
     echo "    reviews:           {$rev}\n";
+    echo "    vendor_labels:     {$lbl}\n";
+    echo "    styles:            {$sty}\n";
 
     exit(0);
 } catch (\Throwable $e) {

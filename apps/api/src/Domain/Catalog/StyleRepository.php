@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\Catalog;
 
-use Doctrine\DBAL\Connection;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityRepository;
 
 /**
@@ -125,7 +124,7 @@ class StyleRepository extends EntityRepository
         $rows = $conn->fetchAllAssociative(
             $sql,
             [$styleIds],
-            [Connection::PARAM_INT_ARRAY],
+            [ArrayParameterType::INTEGER],
         );
 
         $byStyleId = [];

@@ -407,7 +407,7 @@ final class MigrationSteps
                         continue;
                     }
 
-                    $set[] = 'updated_at = date_trunc('second', NOW())';
+                    $set[] = "updated_at = date_trunc('second', NOW())";
                     $sql = 'UPDATE users SET ' . implode(', ', $set) . ' WHERE legacy_user_id = :legacy_id';
                     try {
                         $this->conn->executeStatement($sql, $params);
@@ -1185,5 +1185,403 @@ final class MigrationSteps
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * @return array{migrated: int, skipped: int, errors: int, status: string}
+     */
+    public function migrateVendorLabels(): array
+    {
+        echo "===== migrate-vendor-labels =====\n";
+
+        // The legacy schema for labels is not fully understood from
+        // the v3 codebase alone — Phase 0 reconnaissance in M3.1.5.5
+        // couldn't identify the exact legacy table name. Probe two
+        // candidates that match the legacy naming convention; skip
+        // gracefully if neither exists.
+        //
+        // CANDIDATE 1: `labels` — singular-table convention used by
+        //   the legacy `category` table (already migrated). Most
+        //   likely match.
+        // CANDIDATE 2: `vendor_collections` — alternative based on
+        //   the legacy endpoint name (read_vendor_collection).
+        //
+        // Operator can extend this list by editing the array if
+        // their legacy schema uses a different name. Once production
+        // run identifies the actual table, this can be simplified
+        // to a single hard-coded name.
+        $candidates = ['labels', 'vendor_collections'];
+        $sourceTable = null;
+        foreach ($candidates as $name) {
+            if ($this->legacy->tableExists($name)) {
+                $sourceTable = $name;
+                break;
+            }
+        }
+
+        if ($sourceTable === null) {
+            echo "  Legacy labels table not found (probed: " . implode(', ', $candidates) . ").\n";
+            echo "  Skipping vendor_labels migration. Edit migrateVendorLabels()\n";
+            echo "  candidates array if the legacy table has a different name.\n\n";
+            return [
+                'migrated' => 0,
+                'skipped' => 0,
+                'errors' => 0,
+                'status' => 'skipped_no_legacy_table',
+            ];
+        }
+
+        // Column probe — different legacy schemas may have used
+        // `id` vs `label_id` for the PK, `vendor_id` vs `store_id`
+        // for the vendor FK, etc. Use the columns we find.
+        $idCol = $this->legacy->columnExists($sourceTable, 'label_id') ? 'label_id'
+            : ($this->legacy->columnExists($sourceTable, 'id') ? 'id' : null);
+        $nameCol = $this->legacy->columnExists($sourceTable, 'label_name') ? 'label_name'
+            : ($this->legacy->columnExists($sourceTable, 'name') ? 'name' : null);
+        $vendorCol = $this->legacy->columnExists($sourceTable, 'store_id') ? 'store_id'
+            : ($this->legacy->columnExists($sourceTable, 'vendor_id') ? 'vendor_id' : null);
+
+        if ($idCol === null || $nameCol === null || $vendorCol === null) {
+            echo "  Legacy table '{$sourceTable}' has unexpected column shape.\n";
+            echo "  Expected id-like, name-like, vendor-like columns; got:\n";
+            echo "    id=" . ($idCol ?? '(missing)') . " name=" . ($nameCol ?? '(missing)')
+                . " vendor=" . ($vendorCol ?? '(missing)') . "\n\n";
+            return [
+                'migrated' => 0,
+                'skipped' => 0,
+                'errors' => 0,
+                'status' => 'skipped_unexpected_columns',
+            ];
+        }
+
+        $rows = $this->legacy->fetchAll(
+            "SELECT {$idCol} AS lid, {$nameCol} AS lname, {$vendorCol} AS lvendor "
+            . "FROM `{$sourceTable}` ORDER BY {$idCol}"
+        );
+        echo "  Found " . count($rows) . " legacy labels in '{$sourceTable}'.\n\n";
+
+        // Reserve already-present slugs so we don't collide. Note:
+        // slugs are per-vendor-unique, not globally, so the slugger's
+        // global reservation is over-strict here. For M3.1.5.5
+        // pragmatism, accept the over-strict behaviour — slug
+        // collisions across vendors are rare and the slugger appends
+        // a numeric suffix when needed.
+        foreach ($this->conn->fetchAllAssociative('SELECT slug FROM vendor_labels') as $row) {
+            $this->slugger->reserve($row['slug']);
+        }
+
+        $migrated = 0;
+        $skipped = 0;
+        $errors = 0;
+
+        $this->conn->beginTransaction();
+        try {
+            foreach ($rows as $row) {
+                $legacyId = (int) $row['lid'];
+                $name = trim((string) $row['lname']);
+                $legacyVendorId = (int) $row['lvendor'];
+
+                if ($name === '') {
+                    $this->log->error('vendor_labels', $legacyId, 'Empty name — skipping');
+                    $skipped++;
+                    continue;
+                }
+
+                // Resolve the legacy vendor id to the v3 vendor.
+                $v3VendorId = $this->conn->fetchOne(
+                    'SELECT id FROM vendors WHERE legacy_vendor_id = ?',
+                    [$legacyVendorId]
+                );
+
+                if ($v3VendorId === false || $v3VendorId === null) {
+                    $this->log->error(
+                        'vendor_labels',
+                        $legacyId,
+                        "Orphan: legacy vendor {$legacyVendorId} not found in v3"
+                    );
+                    $skipped++;
+                    continue;
+                }
+                $v3VendorId = (int) $v3VendorId;
+
+                $existing = $this->conn->fetchAssociative(
+                    'SELECT id, slug, name FROM vendor_labels WHERE legacy_label_id = ?',
+                    [$legacyId]
+                );
+
+                if ($existing === false) {
+                    $slug = $this->slugger->make($name, fallback: 'label-' . $legacyId);
+                    if ($slug === null) {
+                        $this->log->error('vendor_labels', $legacyId, "Slug generation failed for '{$name}'");
+                        $errors++;
+                        continue;
+                    }
+
+                    $this->conn->executeStatement(
+                        "INSERT INTO vendor_labels
+                            (legacy_label_id, vendor_id, slug, name, display_order,
+                             is_active, created_at, updated_at)
+                         VALUES
+                            (:legacy_id, :vendor_id, :slug, :name, NULL, TRUE,
+                             date_trunc('second', NOW()), date_trunc('second', NOW()))",
+                        [
+                            'legacy_id' => $legacyId,
+                            'vendor_id' => $v3VendorId,
+                            'slug' => $slug,
+                            'name' => $name,
+                        ]
+                    );
+
+                    $this->log->info('vendor_labels', $legacyId, "INSERT as '{$slug}' ({$name})");
+                    $migrated++;
+                } else {
+                    if ($existing['name'] !== $name) {
+                        $this->conn->executeStatement(
+                            "UPDATE vendor_labels
+                             SET name = :name, updated_at = date_trunc('second', NOW())
+                             WHERE legacy_label_id = :legacy_id",
+                            ['legacy_id' => $legacyId, 'name' => $name]
+                        );
+                        $this->log->info(
+                            'vendor_labels',
+                            $legacyId,
+                            "UPDATE name (slug stable: '{$existing['slug']}')",
+                            ['name' => ['from' => $existing['name'], 'to' => $name]]
+                        );
+                        $migrated++;
+                    }
+                }
+            }
+
+            // Now that vendor_labels are populated and products.label_id
+            // values that reference legacy ids need to be re-mapped to
+            // v3 ids. Run the remap in the same transaction so a
+            // failure rolls back both.
+            //
+            // Strategy: UPDATE products SET label_id = (SELECT id FROM
+            // vendor_labels WHERE legacy_label_id = products.label_id).
+            // products.label_id values that don't match any
+            // vendor_labels.legacy_label_id get NULLed (orphan
+            // cleanup; same semantic as ON DELETE SET NULL).
+            $remapped = (int) $this->conn->executeStatement(
+                "UPDATE products
+                 SET label_id = vl.id
+                 FROM vendor_labels vl
+                 WHERE products.label_id IS NOT NULL
+                   AND products.label_id = vl.legacy_label_id"
+            );
+            echo "  Remapped {$remapped} products.label_id from legacy → v3 ids.\n";
+
+            $orphans = (int) $this->conn->executeStatement(
+                "UPDATE products
+                 SET label_id = NULL
+                 WHERE label_id IS NOT NULL
+                   AND NOT EXISTS (
+                     SELECT 1 FROM vendor_labels vl WHERE vl.id = products.label_id
+                   )"
+            );
+            if ($orphans > 0) {
+                echo "  Nulled {$orphans} orphan products.label_id (legacy ids with no v3 label).\n";
+            }
+
+            // Validate the FK now that data is consistent.
+            $this->conn->executeStatement('ALTER TABLE products VALIDATE CONSTRAINT fk_products_label');
+            echo "  Validated fk_products_label.\n";
+
+            $this->conn->executeStatement(
+                "SELECT setval('vendor_labels_id_seq', COALESCE((SELECT MAX(id) FROM vendor_labels), 0) + 1, false)"
+            );
+
+            $this->conn->commit();
+        } catch (\Throwable $e) {
+            $this->conn->rollBack();
+            throw $e;
+        }
+
+        echo "  migrated={$migrated} skipped={$skipped} errors={$errors}\n\n";
+        return [
+            'migrated' => $migrated,
+            'skipped' => $skipped,
+            'errors' => $errors,
+            'status' => 'completed',
+        ];
+    }
+
+    /**
+     * @return array{migrated: int, skipped: int, errors: int, status: string}
+     */
+    public function migrateStyles(): array
+    {
+        echo "===== migrate-styles =====\n";
+
+        // Same defensive probe pattern as migrateVendorLabels: the
+        // exact legacy schema for styles isn't fully understood.
+        // Candidates based on naming conventions visible in the
+        // legacy codebase:
+        //   CANDIDATE 1: `styles` — most likely.
+        //   CANDIDATE 2: `stylist` — alternative based on mobile
+        //                folder name (customer/styles/).
+        $candidates = ['styles', 'stylist'];
+        $sourceTable = null;
+        foreach ($candidates as $name) {
+            if ($this->legacy->tableExists($name)) {
+                $sourceTable = $name;
+                break;
+            }
+        }
+
+        if ($sourceTable === null) {
+            echo "  Legacy styles table not found (probed: " . implode(', ', $candidates) . ").\n";
+            echo "  Skipping styles migration. Edit migrateStyles() candidates\n";
+            echo "  array if the legacy table has a different name.\n\n";
+            return [
+                'migrated' => 0,
+                'skipped' => 0,
+                'errors' => 0,
+                'status' => 'skipped_no_legacy_table',
+            ];
+        }
+
+        // Column probe.
+        $idCol = $this->legacy->columnExists($sourceTable, 'id') ? 'id'
+            : ($this->legacy->columnExists($sourceTable, 'style_id') ? 'style_id' : null);
+        $nameCol = $this->legacy->columnExists($sourceTable, 'style_name') ? 'style_name'
+            : ($this->legacy->columnExists($sourceTable, 'name') ? 'name' : null);
+        $typeCol = $this->legacy->columnExists($sourceTable, 'type') ? 'type' : null;
+        // total_price is optional; if absent, default to 0.
+        $totalPriceCol = $this->legacy->columnExists($sourceTable, 'total_price') ? 'total_price' : null;
+        // cover_image_url field name varies legacy/v3.
+        $coverCol = $this->legacy->columnExists($sourceTable, 'cover_image') ? 'cover_image'
+            : ($this->legacy->columnExists($sourceTable, 'image') ? 'image' : null);
+
+        if ($idCol === null || $nameCol === null) {
+            echo "  Legacy table '{$sourceTable}' missing required id/name columns.\n";
+            echo "    id={$idCol} name={$nameCol}\n\n";
+            return [
+                'migrated' => 0,
+                'skipped' => 0,
+                'errors' => 0,
+                'status' => 'skipped_unexpected_columns',
+            ];
+        }
+
+        $selectCols = "{$idCol} AS lid, {$nameCol} AS lname";
+        if ($typeCol !== null) {
+            $selectCols .= ", {$typeCol} AS ltype";
+        }
+        if ($totalPriceCol !== null) {
+            $selectCols .= ", {$totalPriceCol} AS ltotal";
+        }
+        if ($coverCol !== null) {
+            $selectCols .= ", {$coverCol} AS lcover";
+        }
+
+        $rows = $this->legacy->fetchAll(
+            "SELECT {$selectCols} FROM `{$sourceTable}` ORDER BY {$idCol}"
+        );
+        echo "  Found " . count($rows) . " legacy styles in '{$sourceTable}'.\n\n";
+
+        foreach ($this->conn->fetchAllAssociative('SELECT slug FROM styles') as $row) {
+            $this->slugger->reserve($row['slug']);
+        }
+
+        $migrated = 0;
+        $skipped = 0;
+        $errors = 0;
+
+        $this->conn->beginTransaction();
+        try {
+            foreach ($rows as $row) {
+                $legacyId = (int) $row['lid'];
+                $name = trim((string) $row['lname']);
+                $legacyType = isset($row['ltype']) ? (string) $row['ltype'] : 'community';
+                $totalPrice = isset($row['ltotal']) ? (string) $row['ltotal'] : '0.00';
+                $cover = isset($row['lcover']) ? trim((string) $row['lcover']) : '';
+
+                if ($name === '') {
+                    $this->log->error('styles', $legacyId, 'Empty name — skipping');
+                    $skipped++;
+                    continue;
+                }
+
+                // Map legacy string type to v3 smallint enum.
+                // Default to community for unknown values; log as info.
+                $styleType = strtolower(trim($legacyType)) === 'editorial' ? 2 : 1;
+
+                $existing = $this->conn->fetchAssociative(
+                    'SELECT id, slug, name FROM styles WHERE legacy_style_id = ?',
+                    [$legacyId]
+                );
+
+                if ($existing === false) {
+                    $slug = $this->slugger->make($name, fallback: 'style-' . $legacyId);
+                    if ($slug === null) {
+                        $this->log->error('styles', $legacyId, "Slug generation failed for '{$name}'");
+                        $errors++;
+                        continue;
+                    }
+
+                    $this->conn->executeStatement(
+                        "INSERT INTO styles
+                            (legacy_style_id, slug, name, description, cover_image_url,
+                             style_type, total_price, is_active, display_order,
+                             created_at, updated_at)
+                         VALUES
+                            (:legacy_id, :slug, :name, NULL, :cover, :type, :price,
+                             TRUE, NULL,
+                             date_trunc('second', NOW()), date_trunc('second', NOW()))",
+                        [
+                            'legacy_id' => $legacyId,
+                            'slug' => $slug,
+                            'name' => $name,
+                            'cover' => $cover !== '' ? $cover : null,
+                            'type' => $styleType,
+                            'price' => $totalPrice,
+                        ]
+                    );
+
+                    $this->log->info('styles', $legacyId, "INSERT as '{$slug}' ({$name}, type={$styleType})");
+                    $migrated++;
+                } else {
+                    if ($existing['name'] !== $name) {
+                        $this->conn->executeStatement(
+                            "UPDATE styles
+                             SET name = :name, updated_at = date_trunc('second', NOW())
+                             WHERE legacy_style_id = :legacy_id",
+                            ['legacy_id' => $legacyId, 'name' => $name]
+                        );
+                        $this->log->info(
+                            'styles',
+                            $legacyId,
+                            "UPDATE name (slug stable: '{$existing['slug']}')",
+                            ['name' => ['from' => $existing['name'], 'to' => $name]]
+                        );
+                        $migrated++;
+                    }
+                }
+            }
+
+            $this->conn->executeStatement(
+                "SELECT setval('styles_id_seq', COALESCE((SELECT MAX(id) FROM styles), 0) + 1, false)"
+            );
+
+            $this->conn->commit();
+        } catch (\Throwable $e) {
+            $this->conn->rollBack();
+            throw $e;
+        }
+
+        echo "  migrated={$migrated} skipped={$skipped} errors={$errors}\n";
+        echo "  Note: style_products join rows NOT migrated by this method —\n";
+        echo "  the legacy schema for product membership is not yet known.\n";
+        echo "  Run a separate migrate-style-products step once the join\n";
+        echo "  table shape is identified (legacy candidate: 'stylist_products').\n\n";
+
+        return [
+            'migrated' => $migrated,
+            'skipped' => $skipped,
+            'errors' => $errors,
+            'status' => 'completed',
+        ];
     }
 }
