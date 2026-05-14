@@ -21,7 +21,8 @@ import {
 
 import { GlobalComponent } from '../../global-component';
 import { NetworkService } from '../../service/network.service';
-import { resolveRouteKey, type HttpMethod } from './url-route-resolver';
+import { resolveRouteKey, resolveRouteKeyAnyMethod, type HttpMethod } from './url-route-resolver';
+import { CATALOG_REQUEST_TRANSFORMS, asRecord, type BodyToRouteArgs } from './transforms/catalog-request.transforms';
 
 /**
  * Extract auth credentials from a legacy request body.
@@ -327,6 +328,19 @@ export class MobileNetworkAdapter {
   /**
    * Core routing decision. Returns an Observable wrapped in the legacy
    * envelope so call sites don't need to care which backend served them.
+   *
+   * Three paths:
+   *   1. Exact match (URL + method in ENDPOINT_ROUTING for the caller's
+   *      verb): route to v3 if target === 'new', else legacy. Same
+   *      behaviour as M3.1.4.
+   *   2. Cross-verb match (URL is in routing table but for a different
+   *      method, AND we have a registered request transform for that
+   *      routeKey): convert the body to path/query params and issue
+   *      the request with the routing entry's method. This is the
+   *      M3.1.5b POST->GET conversion path — mobile call sites are
+   *      POST-with-body by legacy convention, but v3 catalog reads
+   *      are GET-with-query.
+   *   3. No match: fall through to legacy unchanged.
    */
   private route(
     method: HttpMethod,
@@ -335,37 +349,133 @@ export class MobileNetworkAdapter {
   ): Observable<unknown> {
     const routeKey = resolveRouteKey(legacyUrl, method, GlobalComponent.baseURL);
 
-    // Unrouted URL → straight to legacy. Most current mobile calls
-    // land here (only a subset of endpoints are in ENDPOINT_ROUTING).
-    if (routeKey === null) {
-      return method === 'POST'
-        ? this.legacyNetwork.post_request(body, legacyUrl)
-        : this.legacyNetwork.get_request(legacyUrl);
+    // Path 1 — exact method match in routing table.
+    if (routeKey !== null) {
+      let cfg: EndpointConfig;
+      try {
+        cfg = resolveConfig(routeKey);
+      } catch {
+        // resolveConfig throws on missing key. Shouldn't happen because
+        // the resolver only returns keys it found in ENDPOINT_ROUTING.
+        // Defensive fall-back to legacy.
+        return method === 'POST'
+          ? this.legacyNetwork.post_request(body, legacyUrl)
+          : this.legacyNetwork.get_request(legacyUrl);
+      }
+
+      if (cfg.target === 'old') {
+        // Routing entry says use legacy. Honour it.
+        return method === 'POST'
+          ? this.legacyNetwork.post_request(body, legacyUrl)
+          : this.legacyNetwork.get_request(legacyUrl);
+      }
+
+      // target === 'new' — route to v3.
+      return this.callV3(method, routeKey, cfg, body);
     }
 
-    // Routed URL — but look up the config to see if target is 'old'
-    // (forced legacy) or 'new' (route to v3).
+    // Path 2 — cross-verb match. The exact-method lookup failed; check
+    // if the URL is in the routing table under a different method that
+    // we know how to convert to.
+    //
+    // Currently the only conversion direction we support is mobile's
+    // POST-with-body -> v3's GET-with-query. M3.1.5c populates
+    // CATALOG_REQUEST_TRANSFORMS with the per-endpoint extractors.
+    if (method === 'POST') {
+      const converted = this.tryConvertPostToGet(body, legacyUrl);
+      if (converted !== null) {
+        return converted;
+      }
+    }
+
+    // Path 3 — unrouted URL OR unconverted method mismatch. Fall
+    // through to legacy. Most current mobile calls land here (only a
+    // subset of endpoints are in ENDPOINT_ROUTING).
+    return method === 'POST'
+      ? this.legacyNetwork.post_request(body, legacyUrl)
+      : this.legacyNetwork.get_request(legacyUrl);
+  }
+
+  /**
+   * Attempt to convert a POST-with-body call into a v3 GET-with-query.
+   *
+   * Returns the Observable for the converted request if all four
+   * conditions are met:
+   *   1. The URL exists in the routing table under SOME method (any)
+   *   2. That method-map has a GET entry (the only conversion direction
+   *      we currently support)
+   *   3. The GET entry's target === 'new' (no point converting to hit
+   *      legacy via v3)
+   *   4. We have a registered request transform for that routeKey in
+   *      CATALOG_REQUEST_TRANSFORMS — without one, body-to-query
+   *      conversion would be a guess
+   *
+   * Returns null if any condition fails (caller falls through to legacy).
+   */
+  private tryConvertPostToGet(
+    body: unknown,
+    legacyUrl: string,
+  ): Observable<unknown> | null {
+    const methodMap = resolveRouteKeyAnyMethod(legacyUrl, GlobalComponent.baseURL);
+    if (methodMap === undefined) return null;
+
+    const getRouteKey = methodMap.GET;
+    if (getRouteKey === undefined) return null;
+
     let cfg: EndpointConfig;
     try {
-      cfg = resolveConfig(routeKey);
+      cfg = resolveConfig(getRouteKey);
     } catch {
-      // resolveConfig throws on missing key. Shouldn't happen because
-      // the resolver only returns keys it found in ENDPOINT_ROUTING.
-      // Defensive fall-back to legacy.
-      return method === 'POST'
-        ? this.legacyNetwork.post_request(body, legacyUrl)
-        : this.legacyNetwork.get_request(legacyUrl);
+      return null;
+    }
+    if (cfg.target !== 'new') return null;
+
+    const transform: BodyToRouteArgs | undefined = CATALOG_REQUEST_TRANSFORMS[getRouteKey];
+    if (transform === undefined) return null;
+
+    const { pathParams, queryParams } = transform(asRecord(body));
+
+    const url = this.buildV3UrlWithQuery(getRouteKey, pathParams, queryParams);
+
+    // No body for a GET; no auth token for anonymous catalog reads.
+    // If a future converted endpoint needs auth, the transform can
+    // return an auth-header indicator and we extend this signature.
+    return this.withRefreshRetry(null, (currentAuthHeader) =>
+      this.executeHttpRequest('GET', url, null, currentAuthHeader),
+    );
+  }
+
+  /**
+   * Build a v3 URL with both path-param substitution and query string.
+   *
+   * resolveUrl handles path params (`:foo` -> pathParams.foo). Query
+   * string is appended here from queryParams (preserving stable
+   * insertion order, which matters for log readability and caching).
+   *
+   * Boolean values are stringified to "true"/"false" — matches v3's
+   * parseBool which accepts those tokens. Numbers stringify naturally.
+   */
+  private buildV3UrlWithQuery(
+    routeKey: string,
+    pathParams: Record<string, string> | undefined,
+    queryParams: Record<string, string | number | boolean> | undefined,
+  ): string {
+    const baseUrl = resolveUrl(
+      routeKey,
+      { old: GlobalComponent.baseURL, new: this.v3BaseUrl },
+      pathParams,
+    );
+
+    if (queryParams === undefined || Object.keys(queryParams).length === 0) {
+      return baseUrl;
     }
 
-    if (cfg.target === 'old') {
-      // Routing entry says use legacy. Honour it.
-      return method === 'POST'
-        ? this.legacyNetwork.post_request(body, legacyUrl)
-        : this.legacyNetwork.get_request(legacyUrl);
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(queryParams)) {
+      params.append(key, String(value));
     }
-
-    // target === 'new' — route to v3.
-    return this.callV3(method, routeKey, cfg, body);
+    const separator = baseUrl.includes('?') ? '&' : '?';
+    return `${baseUrl}${separator}${params.toString()}`;
   }
 
   /**

@@ -169,6 +169,55 @@ export function resolveRouteKey(
 }
 
 /**
+ * Resolve a legacy URL to its full method-map in ENDPOINT_ROUTING,
+ * regardless of HTTP method.
+ *
+ * Why this exists alongside resolveRouteKey
+ * ==========================================
+ * `resolveRouteKey(url, method)` returns null when the URL is in the
+ * routing table but for a different method than the caller used. This
+ * is the right default — if web hits `GET /products` and the legacy
+ * URL is wired for `POST /old/products`, we don't want to silently
+ * route it.
+ *
+ * But mobile is POST-everywhere by legacy convention, while v3's
+ * catalog endpoints are GET. M3.1.5b introduces POST->GET conversion
+ * in the adapter: mobile calls `post_request(body, 'customer/x')`,
+ * the adapter detects the routing entry says `GET /products`, and
+ * issues a GET with query-string-converted body.
+ *
+ * For that detection, the adapter needs to know "is this URL in the
+ * routing table at ANY method?" — and if so, which routeKey. This
+ * function gives it that without breaking the existing strict-match
+ * semantics of resolveRouteKey.
+ *
+ * Returns a method-map { GET?: routeKey, POST?: routeKey, ... } or
+ * undefined if the URL isn't in the routing table at all.
+ *
+ * Caller responsibility: the adapter only acts on the result if it
+ * also has a registered request transform for the resolved routeKey
+ * (without one, body-to-query conversion would be a guess).
+ */
+export function resolveRouteKeyAnyMethod(
+  legacyUrl: string,
+  baseUrl: string,
+): Readonly<MethodMap> | undefined {
+  const baseNormalised = stripTrailingSlash(baseUrl);
+  if (!legacyUrl.startsWith(baseNormalised)) {
+    return undefined;
+  }
+  let path = legacyUrl.slice(baseNormalised.length);
+  path = stripLeadingSlash(path);
+
+  const queryIdx = path.indexOf('?');
+  if (queryIdx >= 0) {
+    path = path.slice(0, queryIdx);
+  }
+
+  return URL_TO_ROUTE_KEY.get(path);
+}
+
+/**
  * Test-only export. Internal callers should use `resolveRouteKey`.
  * Exposed so a future Jasmine spec can assert the index is built
  * correctly without re-implementing the build logic.
