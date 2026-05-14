@@ -8,71 +8,60 @@
           <p class="subtitle ion-text-center">{{ 'subtitle' | translate }}</p>
         </div>
 
-        @if(!ui_controls.loading && !ui_controls.otpValidated && !ui_controls.otpSent){
+        @if(!ui_controls.loading && ui_controls.stage === 1){
           <ion-row>
             <ion-col>
               <ax-text-field
-                [label]="'phone_number' | translate"
-                type="tel"
-                inputmode="numeric"
-                [maxlength]="10"
+                [label]="'email_Address' | translate"
+                type="email"
                 [required]="true"
-                [placeholder]="'enter_phone' | translate"
-                [(ngModel)]="reset_p.phone"
-                name="phone">
+                [placeholder]="'e_email_Address' | translate"
+                autocomplete="email"
+                [(ngModel)]="reset_p.email"
+                name="email">
               </ax-text-field>
             </ion-col>
           </ion-row>
           <ion-row>
             <ion-col>
-              <ion-button (click)="send_otp()" expand="block" class="ion-margin-vertical" type="button">
+              <ion-button (click)="send_reset_otp()" expand="block" class="ion-margin-vertical" type="button">
                 {{ 'request_otp' | translate }}
               </ion-button>
             </ion-col>
           </ion-row>
         }
 
-        @if(!ui_controls.loading && !ui_controls.otpValidated && ui_controls.otpSent){
+        @if(!ui_controls.loading && ui_controls.stage === 2){
+          <ion-row class="ion-padding-bottom">
+            <ion-col>
+              <ion-text>
+                {{ 'otp_sent_to_email' | translate }} {{ reset_p.email }}
+              </ion-text>
+            </ion-col>
+          </ion-row>
           <ion-row class="ion-padding-bottom">
             <ion-col class="ion-no-padding">
               <ax-text-field
                 [label]="'otp' | translate"
                 type="text"
-                [(ngModel)]="validateOtp.code"
+                inputmode="numeric"
+                [required]="true"
+                autocomplete="one-time-code"
+                [(ngModel)]="reset_p.code"
                 name="input_otp">
               </ax-text-field>
             </ion-col>
           </ion-row>
-          <ion-button (click)="validate_otp()" expand="block" class="ion-margin-vertical" type="button">
-            {{ 'validate' | translate }}
-          </ion-button>
-          <ion-row class="ion-padding-top">
-            <ion-col>
-              <ion-text> {{ 'error_dnd' | translate }} </ion-text>
-              <ion-text> {{ 'error_dnd_more' | translate }} </ion-text>
-            </ion-col>
-          </ion-row>
-          <ion-row class="ion-padding-top">
-            <ion-col>
-              @if(this.showResendToken){
-                <ion-button (click)="send_otp()" expand="block" size="small" class="ion-margin-vertical" type="button">
-                  {{ 'resend_otp' | translate }}
-                </ion-button>
-              }
-            </ion-col>
-          </ion-row>
-        }
-
-        @if(!ui_controls.loading && ui_controls.otpValidated && ui_controls.otpSent){
           <ion-row>
             <ion-col class="ion-no-padding">
               <ax-text-field
                 class="ion-margin-bottom"
-                [label]="'password' | translate"
+                [label]="'new_password' | translate"
                 type="password"
                 [required]="true"
-                [(ngModel)]="reset_p.password"
-                name="password">
+                autocomplete="new-password"
+                [(ngModel)]="reset_p.new_password"
+                name="new_password">
               </ax-text-field>
             </ion-col>
           </ion-row>
@@ -83,16 +72,33 @@
                 [label]="'confirm_password' | translate"
                 type="password"
                 [required]="true"
+                autocomplete="new-password"
                 [(ngModel)]="reset_p.confirm_password"
                 name="confirm_password">
               </ax-text-field>
             </ion-col>
           </ion-row>
-          @if (ui_controls.otpValidated) {
-            <ion-button (click)="reset_password()" expand="block" class="ion-margin-vertical" type="button">
-              {{ 'reset_button' | translate }}
-            </ion-button>
-          }
+          <ion-button (click)="reset_password()" expand="block" class="ion-margin-vertical" type="button">
+            {{ 'reset_button' | translate }}
+          </ion-button>
+          <ion-row class="ion-padding-top">
+            <ion-col>
+              <ion-text> {{ 'error_dnd' | translate }} </ion-text>
+              <ion-text> {{ 'error_dnd_more' | translate }} </ion-text>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-padding-top">
+            <ion-col>
+              <ion-button (click)="back_to_email()" expand="block" size="small" class="ion-margin-vertical" type="button" fill="outline">
+                {{ 'change_email' | translate }}
+              </ion-button>
+            </ion-col>
+            <ion-col>
+              <ion-button (click)="resend_otp()" expand="block" size="small" class="ion-margin-vertical" type="button" fill="outline">
+                {{ 'resend_otp' | translate }}
+              </ion-button>
+            </ion-col>
+          </ion-row>
         }
 
         @if(!ui_controls.loading){
