@@ -27,6 +27,7 @@ use Bayti\Api\Http\Controllers\Measurement\DeleteMeasurementsController;
 use Bayti\Api\Http\Controllers\Measurement\GetMeasurementsController;
 use Bayti\Api\Http\Controllers\Measurement\ListMeasurementsController;
 use Bayti\Api\Http\Controllers\Measurement\UpsertMeasurementsController;
+use Bayti\Api\Http\Controllers\Profile\ChangePasswordController;
 use Bayti\Api\Http\Controllers\Profile\GetProfileController;
 use Bayti\Api\Http\Controllers\Profile\UpdateLocationController;
 use Bayti\Api\Http\Controllers\Profile\UpdateProfileController;
@@ -124,6 +125,12 @@ return function (App $app): void {
         // Backed by the user_locations table (Version20260514000001).
         // Single row per user; PATCH creates if missing, updates otherwise.
         $group->patch('/location', UpdateLocationController::class);
+
+        // M3.1.1f — change password (authenticated, re-auth via current_password).
+        // Mirrors /v3/auth/reset/confirm's session-handling pattern:
+        // revokes all refresh tokens + issues a fresh pair on success.
+        // See ChangePasswordController docblock for the full rationale.
+        $group->patch('/password', ChangePasswordController::class);
 
         // M1.7.3 — body measurements (default + per-category sets)
         // Path-segment design: /default for the catch-all, /category/{id}
