@@ -10,6 +10,7 @@ use Bayti\Api\Domain\User\Measurement;
 use Bayti\Api\Domain\User\OtpAttempt;
 use Bayti\Api\Domain\User\RefreshToken;
 use Bayti\Api\Domain\User\User;
+use Bayti\Api\Domain\User\UserLocation;
 use DateTimeImmutable;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -31,6 +32,7 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(Measurement::class)]
 #[CoversClass(RefreshToken::class)]
 #[CoversClass(OtpAttempt::class)]
+#[CoversClass(UserLocation::class)]
 final class UserEntityTest extends TestCase
 {
     // -------------------------------------------------------------------
@@ -423,6 +425,129 @@ final class UserEntityTest extends TestCase
 
         self::assertSame(['arm' => 62.0, 'bust' => 92.0], $m->getValues());
         self::assertSame('updated', $m->getNotes());
+    }
+
+    // -------------------------------------------------------------------
+    // UserLocation
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function userLocationConstructorDefaultsAreSafe(): void
+    {
+        $user = $this->makeUser();
+        $loc = new UserLocation($user);
+
+        // Everything optional defaults to null/false. permission_granted
+        // is the only non-null default, and it starts false — the client
+        // must explicitly grant.
+        self::assertSame($user, $loc->getUser());
+        self::assertNull($loc->getLatitude());
+        self::assertNull($loc->getLongitude());
+        self::assertNull($loc->getCity());
+        self::assertNull($loc->getCountryCode());
+        self::assertFalse($loc->isPermissionGranted());
+        self::assertNull($loc->getLastCapturedAt());
+    }
+
+    #[Test]
+    public function userLocationUpdateSetsCoordinatesAndBumpsCaptureTimestamp(): void
+    {
+        $user = $this->makeUser();
+        $loc = new UserLocation($user);
+
+        $loc->update(latitude: 25.276987, longitude: 55.296249);
+
+        // DECIMAL columns come back as strings via Doctrine. We
+        // format-on-write to ensure consistent 6-decimal precision.
+        self::assertSame('25.276987', $loc->getLatitude());
+        self::assertSame('55.296249', $loc->getLongitude());
+        // lastCapturedAt should be set when fresh coordinates arrive.
+        self::assertNotNull($loc->getLastCapturedAt());
+    }
+
+    #[Test]
+    public function userLocationUpdateUppercasesCountryCode(): void
+    {
+        $user = $this->makeUser();
+        $loc = new UserLocation($user);
+
+        $loc->update(countryCode: 'ae');
+
+        // ISO 3166-1 alpha-2 should always be uppercase per convention.
+        self::assertSame('AE', $loc->getCountryCode());
+    }
+
+    #[Test]
+    public function userLocationUpdateTrimsAndAcceptsCity(): void
+    {
+        $user = $this->makeUser();
+        $loc = new UserLocation($user);
+
+        $loc->update(city: '  Dubai  ');
+
+        self::assertSame('Dubai', $loc->getCity());
+    }
+
+    #[Test]
+    public function userLocationUpdateWithEmptyStringClearsFields(): void
+    {
+        $user = $this->makeUser();
+        $loc = new UserLocation($user);
+        $loc->update(city: 'Dubai', countryCode: 'AE');
+
+        // Empty string clears (convention used elsewhere in entities).
+        $loc->update(city: '', countryCode: '');
+
+        self::assertNull($loc->getCity());
+        self::assertNull($loc->getCountryCode());
+    }
+
+    #[Test]
+    public function userLocationUpdateWithNullLeavesFieldUnchanged(): void
+    {
+        $user = $this->makeUser();
+        $loc = new UserLocation($user);
+        $loc->update(city: 'Dubai', countryCode: 'AE', permissionGranted: true);
+
+        // Passing null for unrelated fields shouldn't touch them.
+        $loc->update(city: null, countryCode: null);
+
+        self::assertSame('Dubai', $loc->getCity());
+        self::assertSame('AE', $loc->getCountryCode());
+        self::assertTrue($loc->isPermissionGranted());
+    }
+
+    #[Test]
+    public function userLocationUpdateAcceptsPermissionDenial(): void
+    {
+        $user = $this->makeUser();
+        $loc = new UserLocation($user);
+
+        // User denies the OS permission. Important to record so the
+        // app doesn't re-prompt. No coordinates expected.
+        $loc->update(permissionGranted: false);
+
+        self::assertFalse($loc->isPermissionGranted());
+        self::assertNull($loc->getLatitude());
+        self::assertNull($loc->getLongitude());
+        // lastCapturedAt stays null — no coordinates were captured.
+        self::assertNull($loc->getLastCapturedAt());
+    }
+
+    #[Test]
+    public function userLocationUpdateIgnoresPartialCoordinates(): void
+    {
+        $user = $this->makeUser();
+        $loc = new UserLocation($user);
+
+        // Pass only latitude — should be ignored (paired field).
+        // The controller should reject this at validation, but the
+        // entity defensively treats partial coords as "neither".
+        $loc->update(latitude: 25.0);
+
+        self::assertNull($loc->getLatitude());
+        self::assertNull($loc->getLongitude());
+        self::assertNull($loc->getLastCapturedAt());
     }
 
     // -------------------------------------------------------------------
