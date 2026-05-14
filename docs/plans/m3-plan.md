@@ -462,17 +462,37 @@ Known issues carried into M3.1.5+ (see M3.1.4 completion runbook "Known issues" 
 
 #### M3.1.5 — Mobile Catalog Reads Flip
 
-**Duration:** 5-7 days
-**Output:** All 20 catalog read endpoints on v3
+**Status:** ✅ COMPLETED May 14, 2026 (10 of 16 endpoints flipped to v3; 6 unflippable deferred — need v3 backend builds). Commits `753f74b` → `236ed99` → `df8208e` → `e8af608` → `8bdd4fc` → `0341a41` → completion runbook (THIS). See `docs/runbooks/m3/m3.1.5-completion.md` for full closeout and `docs/runbooks/m3/m3.1.5-device-test-checklist.md` for the production-stability gate.
 
-**Phased within itself:**
-- Day 1-2: Sample 3 catalog endpoints, run shape diff, document deltas
-- Day 3-4: Add ENDPOINT_ROUTING entries for all 20, with mobile-specific shape translators in MobileNetworkAdapter where needed
-- Day 5: Flip 5 lowest-risk endpoints (ProductCategory, category_listing, search) target='new'
-- Day 6: Flip 5 more (new_arrivals, best_sellers, featured, styles_list, store_latest)
-- Day 7: Flip the rest
+**Duration:** 1 day (continuous; same day as M3.1.1–M3.1.4)
+**Output:** 10 mobile catalog read endpoints on v3 via per-routeKey request + response transforms
 
-**Risk:** Mobile may rely on legacy-specific response fields that v3 doesn't include. The MobileNetworkAdapter's `translateResponse` function handles this; deltas documented in commit messages.
+**Phased within itself (as shipped):**
+- **M3.1.5a** (`753f74b`) — v3 backend by-legacy-id catalog routes (3 new controllers + ListProducts extension + repo helpers + 4 test files; 19 tests / 64 assertions; full suite 318/318)
+- **M3.1.5b** (`236ed99`) — Adapter POST→GET conversion machinery (`tryConvertPostToGet`, `resolveRouteKeyAnyMethod`, `buildV3UrlWithQuery`)
+- **M3.1.5c** (`df8208e`) — 10 routing entries (target='old' initially) + 10 per-endpoint request transforms + spec file with 29 assertions
+- **M3.1.5d** (`e8af608`) — 3 response shape transforms (list, detail, vendor) + 10-entry registry; adapter `envelopeAndTransform` helper + routeKey threading; spec file with 35 assertions
+- **M3.1.5e** (`8bdd4fc`) — Flip phase 1: 4 anonymous-read endpoints (`new_arrivals`, `new_arrivals_listing`, `featured`, `explore_listing`)
+- **M3.1.5f** (`0341a41`) — Flip phase 2: 6 id-routed endpoints (`category_listing`, `single_product`, `singleProductUtility`, `vendors_products_listing`, `read_vendor`, `store_latest`)
+- **M3.1.5g** — Closure (completion runbook + device-test checklist + plan markers — this commit)
+
+**10 endpoints flipped to v3:**
+- `new_arrivals`, `new_arrivals_listing`, `featured`, `explore_listing`, `category_listing` → `GET /v3/products` (with per-endpoint query transforms)
+- `single_product`, `singleProductUtility` → `GET /v3/products/by-legacy-id/:id`
+- `vendors_products_listing`, `store_latest` → `GET /v3/vendors/by-legacy-id/:id/products`
+- `read_vendor` → `GET /v3/vendors/by-legacy-id/:id`
+
+**6 endpoints deferred (no v3 equivalent yet; need v3 backend builds):**
+- `search` (no v3 fulltext search), `best_sellers`, `best_sellers_listing` (no v3 sort=best_selling), `products_by_labels`, `store_labels` (no v3 collections), `styles_list` (no v3 Styles)
+
+**Known limitations carried into M4 hardening** (each emits a safe default; classify severity during device test):
+- Product detail page: `store` always 0, `category_id`/`category_name` always 0/'', `delivery_time` + `extra_msmt` family always blank (v3 entity has the data, serializer doesn't surface it), `size_normal` always false
+- Vendor storefront: `tagline` always '' (legacy-only), `following` always false (user-relational; needs separate authenticated call)
+- 6 unflippable endpoints stay on legacy until a future phase
+- Pre-existing `phpstan` parse error in `MigrationSteps.php:410` (unrelated to M3.1.5)
+- Mobile CI runs type-check + build only (pre-existing from M3.1.2)
+
+**Strangler-fig isolation preserved:** cart, search, profile, addresses, and the 6 deferred endpoints continue on legacy unchanged. Verified via section I of the device-test checklist.
 
 #### M3.1.6 — v3 Cart/Checkout/Orders Endpoint Build
 
@@ -644,7 +664,7 @@ M3.1.1  v3 auth endpoint build           5-7d
 M3.1.2  Mobile adapter layer             3-5d
 M3.1.3  Mobile auth flip phase 1 (login)  2-3d  [✅ DONE — login only]
 M3.1.4  Mobile auth flip phase 2 (OTP+rst+register+refresh) 5-7d  [✅ DONE]
-M3.1.5  Mobile catalog flip              5-7d
+M3.1.5  Mobile catalog flip              5-7d  [✅ DONE — 10 endpoints flipped; 6 deferred]
 M3.1.6  v3 cart/checkout/orders build    7-10d
 M3.1.7  Mobile cart/checkout/orders flip 4-6 WEEKS
 M3.1.8  Noon payment modernization       10-14d
