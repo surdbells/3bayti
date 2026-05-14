@@ -204,12 +204,77 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/profile',
     shape: 'v3-envelope',
   },
-  'PUT /me/password': {
+  // M3.1.1f — change password (authenticated, current_password required).
+  //
+  // Method changed from PUT to PATCH to match the v3 controller's actual
+  // registration in apps/api/config/routes.php. Previous PUT entry was
+  // pre-implementation scaffolding from M2 Day 5.
+  //
+  // oldPath is empty: legacy mobile did not have an authenticated
+  // change-password UI flow (legacy customers had only the password
+  // reset flow via OTP). The /utility/shared/change-user-password
+  // path from the original scaffolding is an ADMIN-side endpoint,
+  // not customer self-service — not the right legacy mapping. v3
+  // serves a new capability for customer self-service rotation.
+  //
+  // Response shape: v3-envelope. Note that the v3 response includes
+  // a fresh access_token + refresh_token pair (revoke-all + reissue
+  // pattern, mirroring /v3/auth/reset/confirm). Consumers must
+  // store the new tokens AND treat any cached tokens elsewhere as
+  // invalidated.
+  'PATCH /me/password': {
     target: 'new',
-    oldPath: '/utility/shared/change-user-password',
+    oldPath: '',
     newPath: '/v3/me/password',
     shape: 'v3-envelope',
   },
+
+  // M3.1.1c — billing address (singleton convenience accessor).
+  //
+  // Backed by the same `addresses` table as /me/addresses but exposes
+  // only the user's default-billing row (see
+  // docs/runbooks/m3/m3.1.1b-billing-address-decision.md).
+  //
+  // GET returns { address: ... | null }. PATCH is an UPSERT (creates
+  // if no billing address exists; updates otherwise). This is a
+  // deviation from the 0e.2 contract's 404-when-not-set plan,
+  // documented in the controller. Legacy parity: mobile's
+  // updateBilling is also upsert.
+  'GET /me/billing-address': {
+    target: 'new',
+    oldPath: '/customer/settings/billing/read-billings',
+    newPath: '/v3/me/billing-address',
+    shape: 'v3-envelope',
+  },
+  'PATCH /me/billing-address': {
+    target: 'new',
+    oldPath: '/customer/settings/billing/update-billing',
+    newPath: '/v3/me/billing-address',
+    shape: 'v3-envelope',
+  },
+
+  // M3.1.1e — current location (upsert).
+  //
+  // Backed by user_locations (Version20260514000001). One row per
+  // user enforced by UNIQUE index. PATCH creates if missing, updates
+  // otherwise. See controller docblock for the structured-vs-string
+  // schema rationale.
+  //
+  // The legacy endpoint (customer/settings/update-location) stored
+  // only a free-form text label in users.location. v3 stores
+  // structured lat/lng + city + country_code + permission flag.
+  // Legacy data is NOT backfilled — UserLocation rows are lazy-
+  // created on first PATCH after the v3 endpoint lands.
+  //
+  // Response shape: { location: ... } (deviation from 0e.2's
+  // { user: ... }; documented in controller).
+  'PATCH /me/location': {
+    target: 'new',
+    oldPath: '/customer/settings/update-location',
+    newPath: '/v3/me/location',
+    shape: 'v3-envelope',
+  },
+
   'GET /me/addresses': {
     target: 'new',
     oldPath: '/users/addresses',
