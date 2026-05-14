@@ -184,6 +184,10 @@ return function (App $app): void {
     $app->get('/v3/vendors/{slug}/labels', \Bayti\Api\Http\Controllers\Catalog\ListVendorLabelsController::class);
     $app->get('/v3/vendors/by-legacy-id/{id}/labels', \Bayti\Api\Http\Controllers\Catalog\ListVendorLabelsByLegacyIdController::class);
 
+    // M3.1.5.5f — Styles (curated outfits, community + editorial).
+    // Read-only in this phase; admin/future-admin-UI manages writes.
+    $app->get('/v3/styles', \Bayti\Api\Http\Controllers\Catalog\ListStylesController::class);
+
     // M2.2 — Sitemap data for apps/web build-time generator
     $app->get('/v3/sitemap-data', \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class);
 
