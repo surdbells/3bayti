@@ -28,6 +28,7 @@ use Bayti\Api\Http\Controllers\Measurement\GetMeasurementsController;
 use Bayti\Api\Http\Controllers\Measurement\ListMeasurementsController;
 use Bayti\Api\Http\Controllers\Measurement\UpsertMeasurementsController;
 use Bayti\Api\Http\Controllers\Profile\GetProfileController;
+use Bayti\Api\Http\Controllers\Profile\UpdateLocationController;
 use Bayti\Api\Http\Controllers\Profile\UpdateProfileController;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Slim\App;
@@ -118,6 +119,11 @@ return function (App $app): void {
         // docs/runbooks/m3/m3.1.1b-billing-address-decision.md.
         $group->get('/billing-address', GetBillingAddressController::class);
         $group->patch('/billing-address', UpsertBillingAddressController::class);
+
+        // M3.1.1e — current location (upsert).
+        // Backed by the user_locations table (Version20260514000001).
+        // Single row per user; PATCH creates if missing, updates otherwise.
+        $group->patch('/location', UpdateLocationController::class);
 
         // M1.7.3 — body measurements (default + per-category sets)
         // Path-segment design: /default for the catch-all, /category/{id}
