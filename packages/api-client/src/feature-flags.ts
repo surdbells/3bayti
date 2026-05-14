@@ -177,25 +177,25 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   //
   // Endpoints with active mobile consumers (10 total):
   'GET /mobile/new-arrivals': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/new_arrivals',
     newPath: '/v3/products',
     shape: 'v3-envelope',
   },
   'GET /mobile/new-arrivals-listing': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/new_arrivals_listing',
     newPath: '/v3/products',
     shape: 'v3-envelope',
   },
   'GET /mobile/featured': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/featured',
     newPath: '/v3/products',
     shape: 'v3-envelope',
   },
   'GET /mobile/explore-listing': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/explore_listing',
     newPath: '/v3/products',
     shape: 'v3-envelope',
