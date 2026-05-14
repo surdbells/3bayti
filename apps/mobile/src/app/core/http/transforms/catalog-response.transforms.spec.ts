@@ -2,6 +2,9 @@ import {
   transformProductListResponse,
   transformProductDetailResponse,
   transformVendorResponse,
+  // M3.1.5.5 additions:
+  transformVendorLabelsResponse,
+  transformStylesListResponse,
   CATALOG_RESPONSE_TRANSFORMS,
 } from './catalog-response.transforms';
 
@@ -278,9 +281,117 @@ describe('transformVendorResponse', () => {
   });
 });
 
+describe('transformVendorLabelsResponse', () => {
+  it('maps v3 labels list to legacy categories array shape', () => {
+    const result = transformVendorLabelsResponse([
+      { id: 1, slug: 'eid-collection', name: 'Eid Collection', display_order: 1 },
+      { id: 2, slug: 'new-in', name: 'New In', display_order: null },
+    ]) as Record<string, unknown>[];
+
+    expect(result).toHaveSize(2);
+    expect(result[0]['id']).toBe(1);
+    expect(result[0]['name']).toBe('Eid Collection');
+    expect(result[0]['slug']).toBe('eid-collection');
+    expect(result[0]['display_order']).toBe(1);
+    expect(result[1]['display_order']).toBeNull();
+  });
+
+  it('returns empty array for non-array input', () => {
+    expect(transformVendorLabelsResponse(null)).toEqual([]);
+    expect(transformVendorLabelsResponse({})).toEqual([]);
+    expect(transformVendorLabelsResponse('garbage')).toEqual([]);
+  });
+
+  it('handles missing fields with safe defaults', () => {
+    const result = transformVendorLabelsResponse([
+      {}, // empty record
+      { id: 'not-a-number', name: null }, // wrong types
+    ]) as Record<string, unknown>[];
+    expect(result[0]['id']).toBe(0); // asNumber default
+    expect(result[0]['name']).toBe(''); // asString default
+    expect(result[1]['id']).toBe(0); // 'not-a-number' fails asNumber
+    expect(result[1]['name']).toBe(''); // null fails asString
+  });
+
+  it('preserves display_order null vs zero distinction', () => {
+    const result = transformVendorLabelsResponse([
+      { id: 1, slug: 's', name: 'A', display_order: 0 },
+      { id: 2, slug: 't', name: 'B', display_order: null },
+    ]) as Record<string, unknown>[];
+    expect(result[0]['display_order']).toBe(0);
+    expect(result[1]['display_order']).toBeNull();
+  });
+});
+
+describe('transformStylesListResponse', () => {
+  it('maps v3 styles list to legacy shape with style_name + products[].image', () => {
+    const result = transformStylesListResponse([
+      {
+        id: 11,
+        slug: 'eid-look',
+        name: 'Eid Look',
+        description: 'Festive style',
+        cover_image_url: 'https://cdn/cover.jpg',
+        style_type: 'community',
+        total_price: '799.00',
+        products: [
+          { id: 100, slug: 'p100', name: 'P100', primary_image_url: 'https://cdn/p100.jpg', price: '199.00', display_order: 0 },
+          { id: 101, slug: 'p101', name: 'P101', primary_image_url: 'https://cdn/p101.jpg', price: '299.00', display_order: 1 },
+        ],
+      },
+    ]) as Record<string, unknown>[];
+
+    expect(result).toHaveSize(1);
+    const s = result[0];
+    // Primary legacy bindings:
+    expect(s['id']).toBe(11);
+    expect(s['style_name']).toBe('Eid Look');
+    expect(s['total_price']).toBe('799.00');
+    // Products embed
+    const products = s['products'] as Record<string, unknown>[];
+    expect(products).toHaveSize(2);
+    expect(products[0]['image']).toBe('https://cdn/p100.jpg');
+    expect(products[1]['image']).toBe('https://cdn/p101.jpg');
+    // Pass-through fields
+    expect(s['slug']).toBe('eid-look');
+    expect(s['style_type']).toBe('community');
+    expect(s['cover_image_url']).toBe('https://cdn/cover.jpg');
+  });
+
+  it('returns empty array for non-array input', () => {
+    expect(transformStylesListResponse(null)).toEqual([]);
+    expect(transformStylesListResponse({})).toEqual([]);
+  });
+
+  it('emits empty products array when v3 products is missing', () => {
+    const result = transformStylesListResponse([
+      { id: 1, slug: 's', name: 'N', total_price: '0.00' },
+    ]) as Record<string, unknown>[];
+    expect(result[0]['products']).toEqual([]);
+  });
+
+  it('emits empty products array when v3 products is not an array', () => {
+    const result = transformStylesListResponse([
+      { id: 1, slug: 's', name: 'N', total_price: '0.00', products: 'garbage' },
+    ]) as Record<string, unknown>[];
+    expect(result[0]['products']).toEqual([]);
+  });
+
+  it('handles a product entry without primary_image_url (defensive)', () => {
+    const result = transformStylesListResponse([
+      {
+        id: 1, slug: 's', name: 'N', total_price: '0.00',
+        products: [{ id: 100 }], // no primary_image_url
+      },
+    ]) as Record<string, unknown>[];
+    const products = result[0]['products'] as Record<string, unknown>[];
+    expect(products[0]['image']).toBe(''); // asString default
+  });
+});
+
 describe('CATALOG_RESPONSE_TRANSFORMS registry', () => {
-  it('contains exactly 10 entries (one per mobile catalog endpoint)', () => {
-    expect(Object.keys(CATALOG_RESPONSE_TRANSFORMS).length).toBe(10);
+  it('contains exactly 14 entries (10 from M3.1.5, +4 from M3.1.5.5)', () => {
+    expect(Object.keys(CATALOG_RESPONSE_TRANSFORMS).length).toBe(14);
   });
 
   it('every entry is callable and safely handles minimal input', () => {
@@ -305,6 +416,9 @@ describe('CATALOG_RESPONSE_TRANSFORMS registry', () => {
       'GET /mobile/category-listing',
       'GET /mobile/vendors-products',
       'GET /mobile/store-latest',
+      // M3.1.5.5 — search + products-by-labels reuse the list mapper:
+      'GET /mobile/search',
+      'GET /mobile/products-by-labels',
     ];
     for (const key of listEndpoints) {
       expect(CATALOG_RESPONSE_TRANSFORMS[key]).toBe(transformProductListResponse);
@@ -318,5 +432,13 @@ describe('CATALOG_RESPONSE_TRANSFORMS registry', () => {
 
   it('vendor endpoint uses transformVendorResponse', () => {
     expect(CATALOG_RESPONSE_TRANSFORMS['GET /mobile/read-vendor']).toBe(transformVendorResponse);
+  });
+
+  it('labels endpoint uses transformVendorLabelsResponse', () => {
+    expect(CATALOG_RESPONSE_TRANSFORMS['GET /mobile/store-labels']).toBe(transformVendorLabelsResponse);
+  });
+
+  it('styles endpoint uses transformStylesListResponse', () => {
+    expect(CATALOG_RESPONSE_TRANSFORMS['GET /mobile/styles-list']).toBe(transformStylesListResponse);
   });
 });

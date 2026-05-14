@@ -340,6 +340,115 @@ export function transformStoreLatestRequest(body: unknown): {
 }
 
 /* ============================================================== *
+ * M3.1.5.5 — Transforms for the deferred catalog endpoints
+ * ============================================================== */
+
+/**
+ * Product search. Legacy body:
+ *   { id, token, search: "<query>" }
+ *
+ * `search` → v3 query param `q`. The v3 endpoint also accepts
+ * `sort=relevance` to rank by ts_rank; we don't force it here
+ * because mobile's search.page doesn't expose a sort control. The
+ * v3 default is 'newest' which matches the legacy semantic (returns
+ * matching products without rank ordering).
+ *
+ * Drops: id, token (legacy auth).
+ *
+ * Empty `search` strings get forwarded to v3 as `q=`; the v3
+ * controller's parseSearchQuery treats empty as "no search", which
+ * effectively makes this a normal product listing — matches the
+ * legacy behaviour where customer/search with an empty query
+ * returned everything.
+ */
+export function transformSearchRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  const raw = b['search'];
+  const search = typeof raw === 'string' ? raw : '';
+  return {
+    queryParams: { q: search },
+  };
+}
+
+/**
+ * Per-vendor labels listing. Legacy body:
+ *   { id, token, label, store_id, store_name }
+ *
+ * `store_id` → path param. `label`, `store_name` are display-only at
+ * the call site (vendors.page uses them as static UI hints); they
+ * don't need to be forwarded to v3.
+ *
+ * Drops: id, token (legacy auth); label, store_name (display-only).
+ */
+export function transformStoreLabelsRequest(body: unknown): {
+  pathParams: Record<string, string>;
+} {
+  const b = asRecord(body);
+  return {
+    pathParams: { id: pickIdAsString(b, 'store_id') },
+  };
+}
+
+/**
+ * Products filtered by a vendor label. Legacy body:
+ *   { id, token, label: <legacy_label_id>, store_id, store_name }
+ *
+ * Both `label` and `store_id` matter: a label is per-vendor, so the
+ * v3 endpoint needs both ids to surface only that vendor's products
+ * under that label.
+ *
+ *   label → query param `label_id` (resolved to v3 internal id by
+ *           the ListProductsController.resolveLabelId helper)
+ *   store_id → query param `vendor_id` (resolved by resolveVendorId)
+ *
+ * Drops: id, token, store_name.
+ */
+export function transformProductsByLabelsRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  const query: Record<string, string | number | boolean> = {};
+
+  const labelId = pickIntOrDefault(b, 'label', 0);
+  if (labelId !== 0) {
+    query['label_id'] = labelId;
+  }
+  const vendorId = pickIntOrDefault(b, 'store_id', 0);
+  if (vendorId !== 0) {
+    query['vendor_id'] = vendorId;
+  }
+
+  return { queryParams: query };
+}
+
+/**
+ * Styles listing. Legacy body:
+ *   { id, token, type: "community" | "editorial", limit, offset }
+ *
+ * Pass through `type`, `limit`, `offset` as query params; drop the
+ * auth pair. v3's ListStylesController has default type=community
+ * when absent and clamps limit/offset.
+ */
+export function transformStylesListRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  const query: Record<string, string | number | boolean> = {
+    limit: pickIntOrDefault(b, 'limit', 10),
+    offset: pickIntOrDefault(b, 'offset', 0),
+  };
+
+  const typeRaw = b['type'];
+  if (typeof typeRaw === 'string' && typeRaw.trim() !== '') {
+    query['type'] = typeRaw.trim();
+  }
+
+  return { queryParams: query };
+}
+
+/* ============================================================== *
  * Registry — keyed by routeKey, matching ENDPOINT_ROUTING keys
  * ============================================================== */
 
@@ -354,6 +463,11 @@ export const CATALOG_REQUEST_TRANSFORMS: Record<string, BodyToRouteArgs> = {
   'GET /mobile/vendors-products': transformVendorsProductsListingRequest,
   'GET /mobile/read-vendor': transformReadVendorRequest,
   'GET /mobile/store-latest': transformStoreLatestRequest,
+  // M3.1.5.5 catalog additions:
+  'GET /mobile/search': transformSearchRequest,
+  'GET /mobile/store-labels': transformStoreLabelsRequest,
+  'GET /mobile/products-by-labels': transformProductsByLabelsRequest,
+  'GET /mobile/styles-list': transformStylesListRequest,
 };
 
 /* ============================================================== *

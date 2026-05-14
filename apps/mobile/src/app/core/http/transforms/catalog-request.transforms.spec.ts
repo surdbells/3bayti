@@ -9,6 +9,11 @@ import {
   transformVendorsProductsListingRequest,
   transformReadVendorRequest,
   transformStoreLatestRequest,
+  // M3.1.5.5 additions:
+  transformSearchRequest,
+  transformStoreLabelsRequest,
+  transformProductsByLabelsRequest,
+  transformStylesListRequest,
   asRecord,
   stripLegacyAuthFields,
   CATALOG_REQUEST_TRANSFORMS,
@@ -214,9 +219,109 @@ describe('transformStoreLatestRequest', () => {
   });
 });
 
+describe('transformSearchRequest', () => {
+  it('forwards the search string as query param q', () => {
+    const result = transformSearchRequest({
+      id: 1, token: 'TKT', search: 'silk abaya',
+    });
+    expect(result.queryParams['q']).toBe('silk abaya');
+  });
+
+  it('forwards empty string as q (v3 treats empty as no search)', () => {
+    const result = transformSearchRequest({ id: 0, token: '', search: '' });
+    expect(result.queryParams['q']).toBe('');
+  });
+
+  it('falls back to empty string when search is missing', () => {
+    const result = transformSearchRequest({ id: 0, token: '' });
+    expect(result.queryParams['q']).toBe('');
+  });
+
+  it('falls back to empty string when search is non-string', () => {
+    // Defensive — guards against accidental numeric/null inputs.
+    const result = transformSearchRequest({ id: 0, token: '', search: 42 });
+    expect(result.queryParams['q']).toBe('');
+  });
+});
+
+describe('transformStoreLabelsRequest', () => {
+  it('moves store_id into pathParams.id, drops label/store_name', () => {
+    const result = transformStoreLabelsRequest({
+      id: 0, token: 'TKT', label: 4, store_id: 7, store_name: 'Almas',
+    });
+    expect(result.pathParams['id']).toBe('7');
+    expect(Object.keys(result.pathParams)).toEqual(['id']);
+  });
+});
+
+describe('transformProductsByLabelsRequest', () => {
+  it('maps label to label_id and store_id to vendor_id as query params', () => {
+    const result = transformProductsByLabelsRequest({
+      id: 0, token: '', label: 5, store_id: 7, store_name: 'Almas',
+    });
+    expect(result.queryParams['label_id']).toBe(5);
+    expect(result.queryParams['vendor_id']).toBe(7);
+  });
+
+  it('omits label_id when label is 0', () => {
+    const result = transformProductsByLabelsRequest({
+      id: 0, token: '', label: 0, store_id: 7,
+    });
+    expect(result.queryParams['vendor_id']).toBe(7);
+    expect(result.queryParams['label_id']).toBeUndefined();
+  });
+
+  it('omits vendor_id when store_id is 0', () => {
+    const result = transformProductsByLabelsRequest({
+      id: 0, token: '', label: 5, store_id: 0,
+    });
+    expect(result.queryParams['label_id']).toBe(5);
+    expect(result.queryParams['vendor_id']).toBeUndefined();
+  });
+
+  it('returns empty queryParams when both label and store_id are 0', () => {
+    const result = transformProductsByLabelsRequest({
+      id: 0, token: '', label: 0, store_id: 0,
+    });
+    expect(Object.keys(result.queryParams)).toEqual([]);
+  });
+});
+
+describe('transformStylesListRequest', () => {
+  it('forwards type + limit + offset as query params', () => {
+    const result = transformStylesListRequest({
+      id: 0, token: '', type: 'community', limit: 10, offset: 0,
+    });
+    expect(result.queryParams['type']).toBe('community');
+    expect(result.queryParams['limit']).toBe(10);
+    expect(result.queryParams['offset']).toBe(0);
+  });
+
+  it('uses default limit/offset when missing', () => {
+    const result = transformStylesListRequest({
+      id: 0, token: '', type: 'editorial',
+    });
+    expect(result.queryParams['limit']).toBe(10);
+    expect(result.queryParams['offset']).toBe(0);
+    expect(result.queryParams['type']).toBe('editorial');
+  });
+
+  it('trims whitespace around type', () => {
+    const result = transformStylesListRequest({ type: '  community  ' });
+    expect(result.queryParams['type']).toBe('community');
+  });
+
+  it('omits type when missing or empty-string (v3 defaults to community)', () => {
+    const result = transformStylesListRequest({});
+    expect(result.queryParams['type']).toBeUndefined();
+    expect(result.queryParams['limit']).toBe(10);
+    expect(result.queryParams['offset']).toBe(0);
+  });
+});
+
 describe('CATALOG_REQUEST_TRANSFORMS registry', () => {
-  it('contains exactly 10 entries (one per active mobile catalog endpoint)', () => {
-    expect(Object.keys(CATALOG_REQUEST_TRANSFORMS).length).toBe(10);
+  it('contains exactly 14 entries (10 from M3.1.5, +4 from M3.1.5.5)', () => {
+    expect(Object.keys(CATALOG_REQUEST_TRANSFORMS).length).toBe(14);
   });
   it('every entry is a callable function', () => {
     for (const [key, fn] of Object.entries(CATALOG_REQUEST_TRANSFORMS)) {

@@ -175,7 +175,8 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // continues to hit legacy; these entries exist so the resolver
   // recognises the URLs.
   //
-  // Endpoints with active mobile consumers (10 total):
+  // Endpoints with active mobile consumers (14 total — 10 flipped
+  // in M3.1.5, plus 4 added in M3.1.5.5 initially target='old'):
   'GET /mobile/new-arrivals': {
     target: 'new',
     oldPath: '/customer/new_arrivals',
@@ -238,6 +239,36 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new',
     oldPath: '/customer/store_latest',
     newPath: '/v3/vendors/by-legacy-id/:id/products',
+    shape: 'v3-envelope',
+  },
+
+  // M3.1.5.5 — Catalog endpoints deferred from M3.1.5 because v3
+  // didn't yet have the corresponding backends. M3.1.5.5a-f built
+  // them; these 4 entries flip target='old' → 'new' in M3.1.5.5h
+  // after device test. best_sellers + best_sellers_listing remain
+  // deferred to post-M3.1.6 (need order_items schema).
+  'GET /mobile/search': {
+    target: 'old',
+    oldPath: '/customer/search',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/store-labels': {
+    target: 'old',
+    oldPath: '/customer/read_vendor_collection',
+    newPath: '/v3/vendors/by-legacy-id/:id/labels',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/products-by-labels': {
+    target: 'old',
+    oldPath: '/customer/products_by_labels',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/styles-list': {
+    target: 'old',
+    oldPath: '/customer/styles_list',
+    newPath: '/v3/styles',
     shape: 'v3-envelope',
   },
 

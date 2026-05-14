@@ -82,6 +82,21 @@ function asNumber(v: unknown, fallback = 0): number {
 }
 
 /**
+ * Like asNumber but preserves null/missing — used for fields where
+ * "no value" is semantically distinct from "zero" (e.g. label_id
+ * NULL means "product has no label"; label_id 0 isn't a valid id).
+ */
+function asNumberOrNull(v: unknown): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return null;
+}
+
+/**
  * Extract a flat price number from v3's `{amount, currency}` shape.
  * v3 always returns price as an object; this function handles the rare
  * case where data is malformed (returns 0 rather than throwing).
@@ -260,6 +275,12 @@ function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
     // Pass-through fields that are useful and unambiguous:
     slug: asString(item['slug']),
     in_stock: item['in_stock'] === true,
+    // M3.1.5.5 — vendors.page filters products by tapped label via
+    // `@if(category.id === product.collection)`. The v3 list shape
+    // surfaces label_id under products_by_labels (added in M3.1.5.5g
+    // to ProductSerializer.listShape); map it to legacy field name
+    // `collection`. Null when the product has no label assigned.
+    collection: asNumberOrNull(item['label_id']),
   };
 }
 
@@ -410,6 +431,102 @@ export function transformVendorResponse(data: unknown): unknown {
 }
 
 /* ============================================================== *
+ * M3.1.5.5 — List shape for vendor labels + styles
+ * ============================================================== */
+
+/**
+ * v3 vendor-labels list -> legacy `categories` array shape used by
+ * vendors.page. Mobile binds:
+ *   `category.id` — number, matched against `product.collection`
+ *                   in the products-by-labels filter
+ *   `category.name` — display name
+ *
+ * v3 emits {id, slug, name, display_order}. We forward `id` (forced
+ * to number) and `name`; slug + display_order pass through for any
+ * future caller but the current consumer only needs id + name.
+ *
+ * Returns empty array if data isn't an array (defensive).
+ */
+export function transformVendorLabelsResponse(data: unknown): unknown {
+  if (!Array.isArray(data)) return [];
+  return data.map(legacyCategoryFromV3Label);
+}
+
+function legacyCategoryFromV3Label(item: unknown): Record<string, unknown> {
+  if (!isRecord(item)) return {};
+  return {
+    // Primary bindings (vendors.page HTML):
+    id: asNumber(item['id']),
+    name: asString(item['name']),
+    // Pass-through for slug-aware future callers:
+    slug: asString(item['slug']),
+    display_order: asNumberOrNull(item['display_order']),
+  };
+}
+
+/**
+ * v3 styles list -> legacy styles array shape used by styles.page.
+ * Mobile binds:
+ *   `style.id` — number
+ *   `style.style_name` — display name (note the underscore — legacy
+ *                        field, not `name`)
+ *   `style.total_price` — string from v3 DECIMAL
+ *   `style.products[0..2].image` — image URL strings
+ *
+ * v3 emits {id, slug, name, description, cover_image_url,
+ *           style_type, total_price, products: [{id, slug, name,
+ *           primary_image_url, price, display_order}, ...]}.
+ *
+ * Mapping:
+ *   name → style_name (legacy field name)
+ *   products[].primary_image_url → products[].image (legacy field)
+ *   total_price passes through as-is (string DECIMAL from v3)
+ *
+ * Slug + description + cover_image_url + style_type pass through for
+ * any future caller; mobile's current HTML doesn't bind them but
+ * forwarding them is harmless and future-friendly.
+ *
+ * Returns empty array if data isn't an array (defensive).
+ */
+export function transformStylesListResponse(data: unknown): unknown {
+  if (!Array.isArray(data)) return [];
+  return data.map(legacyStyleFromV3Style);
+}
+
+function legacyStyleFromV3Style(item: unknown): Record<string, unknown> {
+  if (!isRecord(item)) return {};
+  const products = Array.isArray(item['products'])
+    ? item['products'].map(legacyStyleProductFromV3Product)
+    : [];
+  return {
+    // Primary bindings (styles.page HTML):
+    id: asNumber(item['id']),
+    style_name: asString(item['name']),
+    total_price: asString(item['total_price']),
+    products,
+    // Pass-through:
+    slug: asString(item['slug']),
+    description: asString(item['description']),
+    cover_image_url: asString(item['cover_image_url']),
+    style_type: asString(item['style_type']),
+  };
+}
+
+function legacyStyleProductFromV3Product(item: unknown): Record<string, unknown> {
+  if (!isRecord(item)) return { image: '' };
+  return {
+    // Primary binding (styles.page HTML reads style.products[N].image):
+    image: asString(item['primary_image_url']),
+    // Pass-through for any caller that wants to navigate to the
+    // product detail page from a style:
+    id: asNumber(item['id']),
+    slug: asString(item['slug']),
+    name: asString(item['name']),
+    price: asString(item['price']),
+  };
+}
+
+/* ============================================================== *
  * Registry — keyed by routeKey
  * ============================================================== */
 
@@ -429,4 +546,10 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
 
   // Vendor-shape endpoints
   'GET /mobile/read-vendor': transformVendorResponse,
+
+  // M3.1.5.5 catalog additions:
+  'GET /mobile/search': transformProductListResponse,            // products list
+  'GET /mobile/products-by-labels': transformProductListResponse, // products list
+  'GET /mobile/store-labels': transformVendorLabelsResponse,      // labels list
+  'GET /mobile/styles-list': transformStylesListResponse,         // styles list
 };

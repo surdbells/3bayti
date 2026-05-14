@@ -76,6 +76,14 @@ final class ProductSerializer
             'in_stock' => $p->getStockQuantity() > 0 || $p->getAllowOversell(),
             'is_new' => $p->isNew(),
             'is_bestseller' => false, // computed later via order joins (M3)
+            // M3.1.5.5 — surface label_id + collection_id on list shape.
+            // Mobile's vendors.page renders products grouped by label
+            // (`@if(category.id === product.collection)`); the response
+            // transform maps label_id → legacy field name `collection`.
+            // collection_id is included for symmetry; it's currently
+            // unused by mobile but documented as the canonical field.
+            'label_id' => $p->getLabelId(),
+            'collection_id' => $p->getCollectionId(),
         ];
     }
 
