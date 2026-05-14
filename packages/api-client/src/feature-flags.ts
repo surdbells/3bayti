@@ -147,6 +147,100 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'raw',
   },
 
+  // ---- Mobile catalog reads (M3.1.5 — held at 'old' until c/d ship) ----
+  //
+  // Mobile's catalog call sites are POST-with-body by legacy convention,
+  // but v3's catalog endpoints are GET-with-query. The MobileNetworkAdapter
+  // handles the verb conversion (see tryConvertPostToGet in
+  // mobile-network-adapter.ts); these routing entries provide the
+  // URL->newPath mapping the adapter needs.
+  //
+  // Per-entry transforms live in
+  // apps/mobile/src/app/core/http/transforms/catalog-request.transforms.ts.
+  // The adapter looks up the transform by routeKey before issuing the
+  // converted call.
+  //
+  // Note the `GET` method on these keys — mobile call sites actually
+  // invoke POST, but the routeKey reflects what the request WILL be
+  // after conversion. The adapter's verb-mismatch path is what makes
+  // this work; see route() path 2.
+  //
+  // The `/mobile/*` routeKey prefix is purely a naming convention to
+  // separate these entries from the web-side `/v2/*` catalog entries
+  // above. Both can coexist in the routing table because oldPaths are
+  // distinct (`/customer/*` vs `/v2/*`).
+  //
+  // Target stays 'old' until M3.1.5e flips the anonymous reads and
+  // M3.1.5f flips the id-routed reads. Until then mobile traffic
+  // continues to hit legacy; these entries exist so the resolver
+  // recognises the URLs.
+  //
+  // Endpoints with active mobile consumers (10 total):
+  'GET /mobile/new-arrivals': {
+    target: 'old',
+    oldPath: '/customer/new_arrivals',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/new-arrivals-listing': {
+    target: 'old',
+    oldPath: '/customer/new_arrivals_listing',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/featured': {
+    target: 'old',
+    oldPath: '/customer/featured',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/explore-listing': {
+    target: 'old',
+    oldPath: '/customer/explore_listing',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/category-listing': {
+    target: 'old',
+    oldPath: '/customer/category_listing',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/single-product': {
+    target: 'old',
+    oldPath: '/customer/single_product',
+    newPath: '/v3/products/by-legacy-id/:id',
+    shape: 'v3-envelope',
+  },
+  // utility/singleProduct is a separate legacy URL but resolves to the
+  // same v3 endpoint. Distinct routeKey + entry so the resolver can
+  // map the URL; the request transform is identical (same body shape
+  // {product: <id>}) so M3.1.5c reuses the same extractor function.
+  'GET /mobile/single-product-utility': {
+    target: 'old',
+    oldPath: '/utility/singleProduct',
+    newPath: '/v3/products/by-legacy-id/:id',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/vendors-products': {
+    target: 'old',
+    oldPath: '/customer/vendors_products',
+    newPath: '/v3/vendors/by-legacy-id/:id/products',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/read-vendor': {
+    target: 'old',
+    oldPath: '/customer/read-vendor',
+    newPath: '/v3/vendors/by-legacy-id/:id',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/store-latest': {
+    target: 'old',
+    oldPath: '/customer/store_latest',
+    newPath: '/v3/vendors/by-legacy-id/:id/products',
+    shape: 'v3-envelope',
+  },
+
   // ---- Auth (M1 shipped - all on v3) ----
   //
   // M3.1.4 audit: this section had 5 entries whose `newPath` did not

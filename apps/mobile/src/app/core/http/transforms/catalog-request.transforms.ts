@@ -36,7 +36,12 @@
  * `get_v3(routeKey, opts)` directly and these transforms can be
  * deleted in one cleanup commit.
  *
- * M3.1.5b ships the type + empty registry; M3.1.5c populates entries.
+ * Naming convention
+ * =================
+ * Each transform is `transform<Endpoint>Request` where Endpoint matches
+ * the mobile constant in GlobalComponent (e.g. `transformNewArrivalsRequest`,
+ * `transformSingleProductRequest`). This makes grep'ing from call site
+ * to transform trivial.
  */
 
 /**
@@ -59,38 +64,9 @@ export type BodyToRouteArgs = (body: unknown) => {
   queryParams?: Record<string, string | number | boolean>;
 };
 
-/**
- * Registry keyed by routeKey (matches `ENDPOINT_ROUTING` keys in
- * `@3bayti/api-client`'s `feature-flags.ts`). The adapter looks up by
- * routeKey when converting POST -> GET.
- *
- * Empty in M3.1.5b — actual transforms land in M3.1.5c alongside the
- * mobile-specific routing entries that point at v3 catalog endpoints.
- */
-export const CATALOG_REQUEST_TRANSFORMS: Record<string, BodyToRouteArgs> = {};
-
-/**
- * Helper used by individual transforms: strip the legacy auth fields
- * (`id`, `token`) from a record, returning a copy without them.
- *
- * Why this is generic enough to live here
- * ========================================
- * Every legacy catalog call site sends `{id, token, ...rest}` where
- * id/token are the legacy user-session identifiers. None of v3's
- * catalog read endpoints are authenticated (they're public catalog
- * surfaces), so id/token contribute nothing useful and would pollute
- * the query string if forwarded. Every transform in this file will
- * drop them, so the operation lives here as a shared utility rather
- * than being repeated per-transform.
- */
-export function stripLegacyAuthFields(body: Record<string, unknown>): Record<string, unknown> {
-  const { id, token, ...rest } = body;
-  // Underscore-prefix tells the linter the values are intentionally
-  // unused; the destructuring itself does the work of removing them.
-  void id;
-  void token;
-  return rest;
-}
+/* ============================================================== *
+ * Shared utilities
+ * ============================================================== */
 
 /**
  * Coerce an `unknown` to a Record<string, unknown> usable by transforms.
@@ -109,4 +85,292 @@ export function asRecord(body: unknown): Record<string, unknown> {
   if (typeof body !== 'object') return {};
   if (Array.isArray(body)) return {};
   return body as Record<string, unknown>;
+}
+
+/**
+ * Extract a numeric field from a legacy body for use as a path param.
+ *
+ * Mobile bodies sometimes have the field as `number`, sometimes as a
+ * stringified number (depending on which call site populated it).
+ * Returns the value as a string suitable for URL path substitution.
+ * Returns "0" if the field is missing or unparseable — the v3
+ * controller will then 404 on the legacy-id lookup, which is the same
+ * behaviour as a real "not found" lookup, so we degrade gracefully.
+ */
+function pickIdAsString(body: Record<string, unknown>, key: string): string {
+  const v = body[key];
+  if (typeof v === 'number' && Number.isFinite(v)) return String(v);
+  if (typeof v === 'string' && v.trim() !== '') return v.trim();
+  return '0';
+}
+
+/**
+ * Pick a numeric field for use as a query value, coercing to number.
+ * Returns the default if missing/unparseable.
+ */
+function pickIntOrDefault(body: Record<string, unknown>, key: string, defaultValue: number): number {
+  const v = body[key];
+  if (typeof v === 'number' && Number.isFinite(v)) return v;
+  if (typeof v === 'string' && v.trim() !== '') {
+    const n = Number(v);
+    if (Number.isFinite(n)) return n;
+  }
+  return defaultValue;
+}
+
+/* ============================================================== *
+ * Strip-only transforms (no entity filter, just paging/sort hints)
+ * ============================================================== */
+
+/**
+ * Home strip: "newest products, top N". Legacy body is just
+ * `{id, token}` — no pagination params, no filters. v3 needs an
+ * explicit sort + limit for it to behave like a strip.
+ *
+ * limit=10 matches the home-page strip's UX (~5-10 cards visible). The
+ * legacy backend's default count is unknown but the strip renders
+ * however many items come back, so 10 is a safe upper bound that
+ * shouldn't crowd the UI or starve it.
+ */
+export function transformNewArrivalsRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  void asRecord(body); // body has only id/token; both dropped
+  return {
+    queryParams: {
+      sort: 'newest',
+      limit: 10,
+    },
+  };
+}
+
+/**
+ * Paginated "new arrivals" listing. Legacy body adds limit, offset,
+ * and a maxPrice ceiling. Forward all three to v3.
+ *
+ * maxPrice = 20000 AED is the legacy default the page hard-codes —
+ * effectively "no upper bound" for normal use. We pass it through as
+ * v3's max_price query param so the legacy-shipped value continues to
+ * have no observable effect.
+ */
+export function transformNewArrivalsListingRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  const query: Record<string, string | number | boolean> = {
+    sort: 'newest',
+    limit: pickIntOrDefault(b, 'limit', 10),
+    offset: pickIntOrDefault(b, 'offset', 0),
+  };
+  if (b['maxPrice'] !== undefined) {
+    query['max_price'] = pickIntOrDefault(b, 'maxPrice', 20000);
+  }
+  return { queryParams: query };
+}
+
+/**
+ * Featured products strip. Legacy body: `{id, token, limit, offset}`.
+ */
+export function transformFeaturedRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  return {
+    queryParams: {
+      featured: true,
+      limit: pickIntOrDefault(b, 'limit', 5),
+      offset: pickIntOrDefault(b, 'offset', 0),
+    },
+  };
+}
+
+/**
+ * Explore feed (vertical scroll). Legacy body: `{id, token, limit, offset}`.
+ *
+ * No filters, no sort — v3 defaults to sort=newest which is acceptable
+ * for the feed (Phase 0 noted the ordering may differ slightly from
+ * legacy's curated/random order; flagged in the device-test checklist).
+ */
+export function transformExploreListingRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  return {
+    queryParams: {
+      limit: pickIntOrDefault(b, 'limit', 10),
+      offset: pickIntOrDefault(b, 'offset', 0),
+    },
+  };
+}
+
+/* ============================================================== *
+ * Transforms that resolve a legacy category id to v3 category_id
+ * ============================================================== */
+
+/**
+ * Category-filtered product listing. Legacy body:
+ *   { id, token, category: <legacy_category_id>, name, limit, offset, maxPrice }
+ *
+ * `name` is the human-readable category name — display-only metadata
+ * the legacy backend ignored. Dropped.
+ *
+ * `category: 0` is the special "no filter / all products" signal — when
+ * we see that, we OMIT the category_id query param entirely (v3 returns
+ * the full unfiltered list).
+ */
+export function transformCategoryListingRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  const query: Record<string, string | number | boolean> = {
+    limit: pickIntOrDefault(b, 'limit', 10),
+    offset: pickIntOrDefault(b, 'offset', 0),
+  };
+
+  const categoryId = pickIntOrDefault(b, 'category', 0);
+  if (categoryId !== 0) {
+    query['category_id'] = categoryId;
+  }
+
+  if (b['maxPrice'] !== undefined) {
+    query['max_price'] = pickIntOrDefault(b, 'maxPrice', 20000);
+  }
+
+  return { queryParams: query };
+}
+
+/* ============================================================== *
+ * Path-param transforms (entity id moves into URL, not query)
+ * ============================================================== */
+
+/**
+ * Single product detail. Legacy body: `{id, token, product, product_name}`.
+ *
+ * - `product` is the legacy product id; goes into the URL path
+ * - `product_name` is display-only metadata from the calling page;
+ *   dropped (v3 returns the canonical name anyway)
+ */
+export function transformSingleProductRequest(body: unknown): {
+  pathParams: Record<string, string>;
+} {
+  const b = asRecord(body);
+  return {
+    pathParams: { id: pickIdAsString(b, 'product') },
+  };
+}
+
+/**
+ * Single product via the utility endpoint. Legacy body is just
+ * `{product}` (no auth pair — utility endpoints are anonymous-by-design
+ * on the legacy backend). Same shape as the customer variant from v3's
+ * perspective: just need the product id.
+ */
+export function transformSingleProductUtilityRequest(body: unknown): {
+  pathParams: Record<string, string>;
+} {
+  const b = asRecord(body);
+  return {
+    pathParams: { id: pickIdAsString(b, 'product') },
+  };
+}
+
+/**
+ * Vendor's products listing. Legacy body: `{id, token, storeId}`.
+ *
+ * `storeId` is camelCase (one legacy call site's quirk); maps to the
+ * `{id}` path param in `/v3/vendors/by-legacy-id/{id}/products`.
+ */
+export function transformVendorsProductsListingRequest(body: unknown): {
+  pathParams: Record<string, string>;
+  queryParams?: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  const result: {
+    pathParams: Record<string, string>;
+    queryParams?: Record<string, string | number | boolean>;
+  } = {
+    pathParams: { id: pickIdAsString(b, 'storeId') },
+  };
+
+  // If the call site sends limit/offset (some do, some don't), forward.
+  if (b['limit'] !== undefined || b['offset'] !== undefined) {
+    result.queryParams = {
+      limit: pickIntOrDefault(b, 'limit', 24),
+      offset: pickIntOrDefault(b, 'offset', 0),
+    };
+  }
+  return result;
+}
+
+/**
+ * Read vendor (storefront header). Legacy body: `{id, token, store_id}`.
+ *
+ * `store_id` is snake_case here (different from `storeId` above —
+ * legacy inconsistency). Maps to the `{id}` path param in
+ * `/v3/vendors/by-legacy-id/{id}`.
+ */
+export function transformReadVendorRequest(body: unknown): {
+  pathParams: Record<string, string>;
+} {
+  const b = asRecord(body);
+  return {
+    pathParams: { id: pickIdAsString(b, 'store_id') },
+  };
+}
+
+/**
+ * Vendor's latest products. Legacy body:
+ *   { id, token, label, store_id, store_name }
+ *
+ * `store_id` -> path param. The v3 endpoint hardcodes sort=newest
+ * (matches the legacy semantics), so we don't need to pass it.
+ *
+ * Drops: id, token (legacy auth pair); label, store_name (display-only).
+ * The label is hardcoded `4` at the call site — Phase 0 noted this
+ * suggests a half-built filter feature; v3 has no equivalent so we
+ * silently ignore it.
+ */
+export function transformStoreLatestRequest(body: unknown): {
+  pathParams: Record<string, string>;
+} {
+  const b = asRecord(body);
+  return {
+    pathParams: { id: pickIdAsString(b, 'store_id') },
+  };
+}
+
+/* ============================================================== *
+ * Registry — keyed by routeKey, matching ENDPOINT_ROUTING keys
+ * ============================================================== */
+
+export const CATALOG_REQUEST_TRANSFORMS: Record<string, BodyToRouteArgs> = {
+  'GET /mobile/new-arrivals': transformNewArrivalsRequest,
+  'GET /mobile/new-arrivals-listing': transformNewArrivalsListingRequest,
+  'GET /mobile/featured': transformFeaturedRequest,
+  'GET /mobile/explore-listing': transformExploreListingRequest,
+  'GET /mobile/category-listing': transformCategoryListingRequest,
+  'GET /mobile/single-product': transformSingleProductRequest,
+  'GET /mobile/single-product-utility': transformSingleProductUtilityRequest,
+  'GET /mobile/vendors-products': transformVendorsProductsListingRequest,
+  'GET /mobile/read-vendor': transformReadVendorRequest,
+  'GET /mobile/store-latest': transformStoreLatestRequest,
+};
+
+/* ============================================================== *
+ * Legacy-shared helper retained for callers that may need it
+ * ============================================================== */
+
+/**
+ * Strip the legacy auth fields (`id`, `token`) from a record. Kept as
+ * an export for transforms that need to pass-through arbitrary
+ * additional body keys as query params while dropping the auth pair.
+ * Currently unused (each transform whitelists what it forwards) but
+ * preserved for future endpoints that may need a "forward everything
+ * except auth" pattern.
+ */
+export function stripLegacyAuthFields(body: Record<string, unknown>): Record<string, unknown> {
+  const { id, token, ...rest } = body;
+  void id;
+  void token;
+  return rest;
 }
