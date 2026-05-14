@@ -20,6 +20,9 @@ importers:
 
   apps/mobile:
     dependencies:
+      '@3bayti/api-client':
+        specifier: workspace:*
+        version: link:../../packages/api-client
       '@angular/animations':
         specifier: ^21.1.0
         version: 21.2.12(@angular/core@21.2.11(@angular/compiler@21.2.11)(rxjs@7.8.2)(zone.js@0.15.1))
