@@ -356,6 +356,7 @@ That's 4 endpoints, not 6. Plus the original 5-7 day estimate assumed building f
 
 #### M3.1.2 — Mobile Adapter Layer (MobileNetworkAdapter)
 
+**Status:** ✅ COMPLETED May 14, 2026 (commits `e5219e9` → `b46b899`; see `docs/runbooks/m3/m3.1.2-completion.md`)
 **Duration:** 3-5 days
 **Output:** A new service `apps/mobile/src/app/core/http/mobile-network-adapter.ts` that wraps RoutedHttpClient with mobile-specific concerns
 
