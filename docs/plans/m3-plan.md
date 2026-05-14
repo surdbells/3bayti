@@ -489,10 +489,57 @@ Known issues carried into M3.1.5+ (see M3.1.4 completion runbook "Known issues" 
 - Product detail page: `store` always 0, `category_id`/`category_name` always 0/'', `delivery_time` + `extra_msmt` family always blank (v3 entity has the data, serializer doesn't surface it), `size_normal` always false
 - Vendor storefront: `tagline` always '' (legacy-only), `following` always false (user-relational; needs separate authenticated call)
 - 6 unflippable endpoints stay on legacy until a future phase
-- Pre-existing `phpstan` parse error in `MigrationSteps.php:410` (unrelated to M3.1.5)
+- ~~Pre-existing `phpstan` parse error in `MigrationSteps.php:410`~~ — Fixed in M3.1.5.5c (`7ce60e2`) as drive-by; phpstan now analyses the API codebase fully
 - Mobile CI runs type-check + build only (pre-existing from M3.1.2)
 
 **Strangler-fig isolation preserved:** cart, search, profile, addresses, and the 6 deferred endpoints continue on legacy unchanged. Verified via section I of the device-test checklist.
+
+#### M3.1.5.5 — v3 Backend Build for Deferred Mobile Catalog Endpoints (Stream A)
+
+**Duration:** Same day as M3.1.5 closure (continuous; 8 commits)
+**Output:** v3 backends for 4 of the 6 deferred endpoints + flip; closure runbook + device-test checklist
+**Slot:** Between M3.1.5 and M3.1.6 (`5.5` rather than `6` because M3.1.6 was already scoped as Cart/Checkout/Orders)
+
+**Sub-phases:**
+
+- **M3.1.5.5a** (`ecc8654`) — Schema: `products.search_tsv` generated tsvector column + GIN index; `vendor_labels` table + FK from `products.label_id` (NOT VALID; validated in c); `styles` + `style_products` tables
+- **M3.1.5.5b** (`d0316fb`) — `VendorLabel` + `Style` Doctrine entities + repositories (with NULLS-LAST ordering, bulk product load via raw SQL to honour join-table display_order)
+- **M3.1.5.5c** (`7ce60e2`) — Legacy data migration steps (`migrateVendorLabels`, `migrateStyles`) with defensive INFORMATION_SCHEMA probing; `LegacyDb` helpers (`tableExists`, `columnExists`); orchestrator wiring; drive-by fixes for line-410 parse error in `MigrationSteps.php` (was blocking phpstan codebase-wide) and DBAL 4.x `Connection::PARAM_INT_ARRAY` → `ArrayParameterType::INTEGER`
+- **M3.1.5.5d** (`db1e7c7`) — PostgreSQL fulltext search via custom DQL functions (`TSMATCH`, `TSRANK`); `ListProductsController` accepts `q=` + `sort=relevance` + `label_id=`; uses `websearch_to_tsquery` for user-input tolerance; 8 new tests
+- **M3.1.5.5e** (`ccaf2a1`) — Labels controllers (`ListVendorLabelsController` slug + `ListVendorLabelsByLegacyIdController`); `VendorLabelSerializer`; `resolveLabelId` helper in `ListProductsController` (slug-wins precedence); 13 new tests
+- **M3.1.5.5f** (`1a440c8`) — Styles controller (`ListStylesController` with bulk product load avoiding N+1); `StyleSerializer.listShape` reverses smallint enum to string label on egress; 7 new tests
+- **M3.1.5.5g** (`f2ccf1b`) — 4 mobile feature-flag entries (initially `target='old'`); 4 new request transforms + 2 new response transforms + `legacyProductCardFromV3List` extended with `label_id → collection` passthrough; `asNumberOrNull` helper; `ProductSerializer.listShape` additive `label_id` + `collection_id`; 30 new spec test cases
+- **M3.1.5.5h-1** (`0ebe29c`) — Flip 4 entries `target='old'` → `'new'`
+- **M3.1.5.5h-2** — Closure (completion runbook + device-test checklist + plan markers — this commit)
+
+**4 endpoints flipped to v3:**
+- `search` → `GET /v3/products?q=…`
+- `store_labels` → `GET /v3/vendors/by-legacy-id/:id/labels`
+- `products_by_labels` → `GET /v3/products?label_id=…&vendor_id=…`
+- `styles_list` → `GET /v3/styles?type=…`
+
+**2 endpoints STILL deferred (post-M3.1.6 dependency):**
+- `best_sellers`, `best_sellers_listing` — both need the `order_items` schema that M3.1.6 builds. Resume once M3.1.6 ships order data.
+
+**Known limitations carried into device test + M4 hardening:**
+- Search covers `name + description` only — vendor name NOT in the tsvector (generated columns can't reference other tables; follow-up via trigger or denormalised cache column)
+- Search locale is `'english'` only — multilingual needs per-row config (M4+)
+- `style_products` data migration NOT included — legacy join-table schema unknown; method logs follow-up note pointing at candidate `stylist_products`
+- Single-label-per-product (`products.label_id` is single int) — multi-label would need a new join table
+- Styles are read-only; admin/future-admin-UI manages writes
+
+**Drive-by improvements landed in this phase:**
+- Line-410 parse error in `MigrationSteps.php` fixed — was causing malformed SQL in `migrateUsers` UPDATE path AND blocking phpstan analysis codebase-wide. Now phpstan finds 51 type-level findings across older code (none in M3.1.5.5 code) — a backlog item for future hardening.
+- DBAL 4.x constant rename caught + fixed before any runtime hit.
+
+**Tests + quality gates:**
+- apps/api phpunit: 318 → 346 (+28 tests / +120 assertions)
+- api phpstan: zero errors on all M3.1.5.5 files
+- api-client TS: clean
+- mobile TS (touched files): clean; 9 pre-existing errors elsewhere unchanged
+- mobile dev build: ~21s, no new warnings
+
+**Strangler-fig isolation preserved:** cart, checkout, orders, profile writes, settings, reviews, wishlist, follows all continue on legacy. Per-endpoint rollback supported.
 
 #### M3.1.6 — v3 Cart/Checkout/Orders Endpoint Build
 
