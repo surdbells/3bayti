@@ -23,6 +23,7 @@ import { GlobalComponent } from '../../global-component';
 import { NetworkService } from '../../service/network.service';
 import { resolveRouteKey, resolveRouteKeyAnyMethod, type HttpMethod } from './url-route-resolver';
 import { CATALOG_REQUEST_TRANSFORMS, asRecord, type BodyToRouteArgs } from './transforms/catalog-request.transforms';
+import { CATALOG_RESPONSE_TRANSFORMS, type ResponseTransform } from './transforms/catalog-response.transforms';
 
 /**
  * Extract auth credentials from a legacy request body.
@@ -440,8 +441,18 @@ export class MobileNetworkAdapter {
     // No body for a GET; no auth token for anonymous catalog reads.
     // If a future converted endpoint needs auth, the transform can
     // return an auth-header indicator and we extend this signature.
-    return this.withRefreshRetry(null, (currentAuthHeader) =>
-      this.executeHttpRequest('GET', url, null, currentAuthHeader),
+    //
+    // Pass the routeKey through to withRefreshRetry so the response
+    // transform (CATALOG_RESPONSE_TRANSFORMS[getRouteKey]) runs over
+    // the v3 data field before it reaches the call site. Without
+    // this, mobile pages would see v3-shaped fields (`primary_image:
+    // {url, alt}`) where they expect legacy-shaped ones (`image_1`
+    // as a flat URL string).
+    return this.withRefreshRetry(
+      null,
+      (currentAuthHeader) =>
+        this.executeHttpRequest('GET', url, null, currentAuthHeader),
+      getRouteKey,
     );
   }
 
@@ -509,8 +520,11 @@ export class MobileNetworkAdapter {
 
     const { translatedBody, authHeader } = translateRequestBody(body);
 
-    return this.withRefreshRetry(authHeader, (currentAuthHeader) =>
-      this.executeHttpRequest(method, url, translatedBody, currentAuthHeader),
+    return this.withRefreshRetry(
+      authHeader,
+      (currentAuthHeader) =>
+        this.executeHttpRequest(method, url, translatedBody, currentAuthHeader),
+      routeKey,
     );
   }
 
@@ -575,13 +589,15 @@ export class MobileNetworkAdapter {
     // endpoints: they have no Authorization header to refresh.
     if (routeKey === 'POST /auth/refresh' || authHeader === null) {
       return this.executeHttpRequest(method, url, body, authHeader).pipe(
-        map((v3Response) => toLegacyEnvelope(v3Response)),
+        map((v3Response) => this.envelopeAndTransform(v3Response, routeKey)),
         catchError((err: HttpErrorResponse) => this.translateError(err)),
       );
     }
 
-    return this.withRefreshRetry(authHeader, (currentAuthHeader) =>
-      this.executeHttpRequest(method, url, body, currentAuthHeader),
+    return this.withRefreshRetry(
+      authHeader,
+      (currentAuthHeader) => this.executeHttpRequest(method, url, body, currentAuthHeader),
+      routeKey,
     );
   }
 
@@ -630,13 +646,21 @@ export class MobileNetworkAdapter {
    * The `execute` callback takes a fresh authHeader each time because
    * after refresh succeeds, the original request must be retried with
    * the new token — not the stale one that just failed.
+   *
+   * The optional `routeKey` enables response shape transformation.
+   * When provided AND CATALOG_RESPONSE_TRANSFORMS has an entry for it,
+   * the legacy envelope's `data` field is transformed v3-shape →
+   * legacy-shape before being surfaced to the caller. Without a
+   * routeKey, the v3 data passes through unchanged (current behaviour
+   * for auth endpoints which don't use the transform registry).
    */
   private withRefreshRetry(
     initialAuthHeader: string | null,
     execute: (authHeader: string | null) => Observable<unknown>,
+    routeKey?: string,
   ): Observable<unknown> {
     return execute(initialAuthHeader).pipe(
-      map((v3Response) => toLegacyEnvelope(v3Response)),
+      map((v3Response) => this.envelopeAndTransform(v3Response, routeKey)),
       catchError((err: HttpErrorResponse) => {
         // Not a 401, or anonymous call with no refresh path: existing
         // behaviour.
@@ -655,7 +679,7 @@ export class MobileNetworkAdapter {
             // second failure, do NOT refresh again — that'd loop on
             // a 401 the new token can't fix.
             return execute(`Bearer ${newToken}`).pipe(
-              map((v3Response) => toLegacyEnvelope(v3Response)),
+              map((v3Response) => this.envelopeAndTransform(v3Response, routeKey)),
               catchError((retryErr: HttpErrorResponse) => this.translateError(retryErr)),
             );
           }),
@@ -805,6 +829,54 @@ export class MobileNetworkAdapter {
     }
 
     await Preferences.set({ key: 'user', value: JSON.stringify(newBlob) });
+  }
+
+  /**
+   * Apply legacy-envelope wrapping AND (optionally) per-routeKey
+   * response shape transformation.
+   *
+   * Three behaviours depending on inputs:
+   *
+   *   1. No routeKey OR routeKey has no registered transform:
+   *      Returns the envelope unchanged. Same as the legacy
+   *      toLegacyEnvelope behaviour — used for auth and any other
+   *      endpoint that doesn't need shape mapping.
+   *
+   *   2. routeKey has a registered transform AND the envelope's data
+   *      is present:
+   *      Applies the transform to the data field. The transform
+   *      receives the unwrapped v3 data shape and returns the legacy
+   *      shape; the result replaces `envelope.data`. The rest of the
+   *      envelope (response_code, status, message) is untouched.
+   *
+   *   3. routeKey has a registered transform BUT data is null/missing:
+   *      Returns the envelope unchanged (transform doesn't run).
+   *      Defensive — a v3 response without a `data` field is anomalous
+   *      and we'd rather surface that to the caller than synthesise.
+   *
+   * Why a helper instead of inlining: there are four sites that wrap
+   * the v3 response in a legacy envelope (withRefreshRetry initial +
+   * retry, callV3Direct recursion-guard paths). Inlining would put the
+   * transform-lookup duplication in all four; one helper keeps the
+   * logic in one place.
+   */
+  private envelopeAndTransform(
+    v3Response: unknown,
+    routeKey: string | undefined,
+  ): { response_code: number; status: 'success'; message: ''; data: unknown } {
+    const envelope = toLegacyEnvelope(v3Response);
+
+    if (routeKey === undefined) return envelope;
+
+    const transform: ResponseTransform | undefined = CATALOG_RESPONSE_TRANSFORMS[routeKey];
+    if (transform === undefined) return envelope;
+
+    if (envelope.data === null || envelope.data === undefined) return envelope;
+
+    return {
+      ...envelope,
+      data: transform(envelope.data),
+    };
   }
 
   /**
