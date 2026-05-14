@@ -18,9 +18,11 @@ use Bayti\Api\Http\Controllers\HealthController;
 use Bayti\Api\Http\Controllers\Address\CreateAddressController;
 use Bayti\Api\Http\Controllers\Address\DeleteAddressController;
 use Bayti\Api\Http\Controllers\Address\GetAddressController;
+use Bayti\Api\Http\Controllers\Address\GetBillingAddressController;
 use Bayti\Api\Http\Controllers\Address\ListAddressesController;
 use Bayti\Api\Http\Controllers\Address\SetDefaultAddressController;
 use Bayti\Api\Http\Controllers\Address\UpdateAddressController;
+use Bayti\Api\Http\Controllers\Address\UpsertBillingAddressController;
 use Bayti\Api\Http\Controllers\Measurement\DeleteMeasurementsController;
 use Bayti\Api\Http\Controllers\Measurement\GetMeasurementsController;
 use Bayti\Api\Http\Controllers\Measurement\ListMeasurementsController;
@@ -109,6 +111,13 @@ return function (App $app): void {
         $group->put('/addresses/{id}', UpdateAddressController::class);
         $group->delete('/addresses/{id}', DeleteAddressController::class);
         $group->patch('/addresses/{id}/default', SetDefaultAddressController::class);
+
+        // M3.1.1c — billing address (singleton convenience accessor).
+        // Distinct from /addresses; backed by the same `addresses` table
+        // but exposes only the user's default-billing row. See ADR at
+        // docs/runbooks/m3/m3.1.1b-billing-address-decision.md.
+        $group->get('/billing-address', GetBillingAddressController::class);
+        $group->patch('/billing-address', UpsertBillingAddressController::class);
 
         // M1.7.3 — body measurements (default + per-category sets)
         // Path-segment design: /default for the catch-all, /category/{id}
