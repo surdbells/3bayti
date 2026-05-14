@@ -201,13 +201,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'v3-envelope',
   },
   'GET /mobile/category-listing': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/category_listing',
     newPath: '/v3/products',
     shape: 'v3-envelope',
   },
   'GET /mobile/single-product': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/single_product',
     newPath: '/v3/products/by-legacy-id/:id',
     shape: 'v3-envelope',
@@ -217,25 +217,25 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // map the URL; the request transform is identical (same body shape
   // {product: <id>}) so M3.1.5c reuses the same extractor function.
   'GET /mobile/single-product-utility': {
-    target: 'old',
+    target: 'new',
     oldPath: '/utility/singleProduct',
     newPath: '/v3/products/by-legacy-id/:id',
     shape: 'v3-envelope',
   },
   'GET /mobile/vendors-products': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/vendors_products',
     newPath: '/v3/vendors/by-legacy-id/:id/products',
     shape: 'v3-envelope',
   },
   'GET /mobile/read-vendor': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/read-vendor',
     newPath: '/v3/vendors/by-legacy-id/:id',
     shape: 'v3-envelope',
   },
   'GET /mobile/store-latest': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/store_latest',
     newPath: '/v3/vendors/by-legacy-id/:id/products',
     shape: 'v3-envelope',
