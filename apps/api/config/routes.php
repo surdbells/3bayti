@@ -178,6 +178,12 @@ return function (App $app): void {
     $app->get('/v3/vendors/by-legacy-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetVendorByLegacyIdController::class);
     $app->get('/v3/vendors/by-legacy-id/{id}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsByLegacyIdController::class);
 
+    // M3.1.5.5e — Vendor labels (per-vendor merchandising collections).
+    // Slug variant for web/canonical use; by-legacy-id variant for
+    // mobile compat.
+    $app->get('/v3/vendors/{slug}/labels', \Bayti\Api\Http\Controllers\Catalog\ListVendorLabelsController::class);
+    $app->get('/v3/vendors/by-legacy-id/{id}/labels', \Bayti\Api\Http\Controllers\Catalog\ListVendorLabelsByLegacyIdController::class);
+
     // M2.2 — Sitemap data for apps/web build-time generator
     $app->get('/v3/sitemap-data', \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class);
 

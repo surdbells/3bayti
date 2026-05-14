@@ -9,6 +9,8 @@ use Bayti\Api\Domain\Catalog\CategoryRepository;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
+use Bayti\Api\Domain\Catalog\VendorLabel;
+use Bayti\Api\Domain\Catalog\VendorLabelRepository;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
@@ -92,9 +94,15 @@ final class ListProductsController
             return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
         }
 
+        $labelId = $this->resolveLabelId($query);
+        if ($labelId === self::FILTER_NOT_FOUND) {
+            return $this->ok(PaginatedEnvelope::build([], 0, $limit, $offset));
+        }
+
         $filters = [
             'vendorId' => $vendorId,
             'categoryId' => $categoryId,
+            'labelId' => $labelId,
             'minPrice' => $this->parsePrice($query['min_price'] ?? null),
             'maxPrice' => $this->parsePrice($query['max_price'] ?? null),
             'isFeatured' => $this->parseBool($query['featured'] ?? null),
@@ -199,6 +207,54 @@ final class ListProductsController
             $categoryRepo = $this->em->getRepository(Category::class);
             $category = $categoryRepo->findByLegacyId((int) $rawId);
             return $category === null ? self::FILTER_NOT_FOUND : $category->getId();
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve the label filter from the query string (M3.1.5.5e).
+     *
+     * Labels are per-vendor; the URL design pairs them with a vendor
+     * context (?vendor=foo&label=eid-collection). Standalone label
+     * lookup (no vendor context) still works — slug is unique per
+     * vendor, so the same slug across two vendors WOULD ambiguate.
+     * Locked: standalone label slug uses findActiveBySlug which
+     * scopes to vendor; if no vendor was provided, we fall back to
+     * a global lookup (returns first match) and document the edge.
+     *
+     * Mobile sends `label_id: <legacy_int>` (per the vendors.page
+     * rqst_param body); the legacy variant resolves to v3 via
+     * VendorLabelRepository::findActiveByLegacyId.
+     *
+     * Same precedence as the vendor/category resolvers — slug wins
+     * over legacy id when both are present.
+     *
+     * @param array<string, mixed> $query
+     */
+    private function resolveLabelId(array $query): int|null
+    {
+        if (!empty($query['label'])) {
+            /** @var VendorLabelRepository $labelRepo */
+            $labelRepo = $this->em->getRepository(VendorLabel::class);
+            // findOneBy + slug+isActive (no vendor scope) — see
+            // method docblock for the edge-case discussion.
+            $label = $labelRepo->findOneBy([
+                'slug' => (string) $query['label'],
+                'isActive' => true,
+            ]);
+            return $label === null ? self::FILTER_NOT_FOUND : $label->getId();
+        }
+
+        if (!empty($query['label_id'])) {
+            $rawId = (string) $query['label_id'];
+            if (!ctype_digit($rawId)) {
+                return self::FILTER_NOT_FOUND;
+            }
+            /** @var VendorLabelRepository $labelRepo */
+            $labelRepo = $this->em->getRepository(VendorLabel::class);
+            $label = $labelRepo->findActiveByLegacyId((int) $rawId);
+            return $label === null ? self::FILTER_NOT_FOUND : $label->getId();
         }
 
         return null;
