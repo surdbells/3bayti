@@ -213,6 +213,8 @@ final class AuditEmitter
                 => $this->snapshotAddress($subject),
             $subject instanceof \Bayti\Api\Domain\User\Measurement
                 => $this->snapshotMeasurement($subject),
+            $subject instanceof \Bayti\Api\Domain\User\UserLocation
+                => $this->snapshotUserLocation($subject),
             $subject instanceof \Bayti\Api\Domain\Catalog\Brand
                 => $this->snapshotBrand($subject),
             $subject instanceof \Bayti\Api\Domain\Catalog\Vendor
@@ -423,6 +425,33 @@ final class AuditEmitter
             'category_id' => $m->getCategoryId(),
             'values' => $m->getValues(),
             'notes' => $m->getNotes(),
+        ];
+    }
+
+    /**
+     * UserLocation snapshot.
+     *
+     * Includes the user-id for context — useful when auditing "who
+     * shared their location" patterns. Excludes raw timestamps
+     * (they change on every UPDATE by definition and aren't
+     * interesting in a diff).
+     *
+     * Latitude/longitude are stored as DECIMAL (PHP string) in the
+     * entity. Cast to string here to keep the audit changes map
+     * consistent across snapshot calls — passing the entity's
+     * already-string value through unchanged.
+     *
+     * @return array<string, mixed>
+     */
+    private function snapshotUserLocation(\Bayti\Api\Domain\User\UserLocation $l): array
+    {
+        return [
+            'latitude' => $l->getLatitude(),
+            'longitude' => $l->getLongitude(),
+            'city' => $l->getCity(),
+            'country_code' => $l->getCountryCode(),
+            'permission_granted' => $l->isPermissionGranted(),
+            'last_captured_at' => $l->getLastCapturedAt()?->format(\DateTimeInterface::ATOM),
         ];
     }
 
