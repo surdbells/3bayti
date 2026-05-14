@@ -319,6 +319,7 @@ Each phase is approval-gated. We don't start phase N+1 until phase N is verified
 
 #### M3.1.1 — v3 Auth Endpoint Build (much smaller post-M3.1.0 reality check)
 
+**Status:** ✅ COMPLETED May 14, 2026 (commits `d31f464` → `83646c3`; see `docs/runbooks/m3/m3.1.1-completion.md`)
 **Duration:** 2-3 days (was 5-7 days; revised per M3.1.0e.2 reality audit)
 **Output:** 3 net-new v3 endpoints + audit + adapter prep
 

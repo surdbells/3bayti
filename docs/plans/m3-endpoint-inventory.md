@@ -1945,69 +1945,103 @@ Returns the authenticated user's profile. Same payload as `GET /v3/me/profile`. 
 
 ---
 
-##### PATCH /v3/me/password ⚠️ NEW (to build in M3.1.1)
+##### PATCH /v3/me/password ✅ SHIPPED (M3.1.1f, commit `a36d355`)
 
 **Auth:** customer
-**Status:** ❌ NOT YET IMPLEMENTED
+**Status:** ✅ IMPLEMENTED (`apps/api/src/Http/Controllers/Profile/ChangePasswordController.php`)
 
 **Request:**
 ```typescript
 {
   current_password: string,    // required: re-auth check
-  new_password: string         // min 8 chars
+  new_password: string         // min 8 chars, max 200; must differ from current
 }
 ```
 
-**Response 204**
+**Response 200** (deviation from original spec — see reconciliation note below):
+```typescript
+{
+  access_token: string,
+  access_token_expires_at: string,    // ISO-8601
+  refresh_token: string,
+  refresh_token_expires_at: string,   // ISO-8601
+  user: { /* UserSerializer::publicProfile */ }
+}
+```
 
 **Error responses:**
 - `401 AUTH_INVALID_CREDENTIALS` — current_password didn't match
-- `422 VALIDATION_FAILED` — weak new password
-- `409 CONFLICT_SAME_PASSWORD` — new equals current (optional check; M4 polish)
+- `422 VALIDATION_FAILED` — weak new password OR new == current (field-level error on `new_password`)
 
 **Side effects:**
 - Updates `user.password_hash`
-- Updates `user.password_changed_at`
-- Does NOT revoke other sessions (current session continues to work; user explicitly chose to change password while logged in — if they want to logout others, they can call `/logout-all` separately)
+- Updates `user.password_changed_at` (via `User::setPasswordHash`)
+- Revokes ALL refresh tokens for the user (with reason `password_changed`)
+- Issues a fresh access + refresh token pair for the requesting session
+- Emits audit row (`updated` event on User subject; never logs hashes)
+
+**Reconciliation (M3.1.1h):** Original spec said 204 No Content + "Does NOT revoke other sessions". Implementation revised based on a security review:
+
+The original spec assumed changing the hash didn't affect other sessions. In reality, `AuthMiddleware` does a `pwd_changed_at` staleness check on every request, which invalidates ALL existing access tokens (this session + others) on their next request after the password changes. So "204 + no reissue" would have kicked the user out inconsistently.
+
+Mirroring `/v3/auth/reset/confirm`'s pattern gives consistent UX (user stays logged in here, kicked out elsewhere) and consistent security posture (account-takeover defense via session revocation).
 
 **Replaces:**
-- Portal's `updateUserPassword` (`utility/shared/change-user-password`)
-- Mobile currently has no equivalent (mobile users use the reset flow instead)
+- Portal's `updateUserPassword` (`utility/shared/change-user-password`) — distinct admin-side endpoint, not migrated
+- Mobile currently has no equivalent (mobile users use the reset flow); v3 adds new capability
 
 ---
 
-##### PATCH /v3/me/location ⚠️ NEW (to build in M3.1.1)
+##### PATCH /v3/me/location ✅ SHIPPED (M3.1.1e, commit `70c7f18`)
 
 **Auth:** customer
-**Status:** ❌ NOT YET IMPLEMENTED
+**Status:** ✅ IMPLEMENTED (`apps/api/src/Http/Controllers/Profile/UpdateLocationController.php`)
 
 **Purpose:** Mobile first-launch geolocation capture. Stores city/country for delivery cost estimates + content localization.
 
 **Request:**
 ```typescript
 {
-  latitude?: number,        // decimal degrees, -90 to 90
-  longitude?: number,       // decimal degrees, -180 to 180
-  city?: string,            // optional manual override
-  country_code?: string,    // ISO-3166 alpha-2, e.g. 'AE'
-  permission_granted?: boolean  // false if user denied browser/native location permission
+  latitude?: number,        // decimal degrees, -90 to 90; must pair with longitude
+  longitude?: number,       // decimal degrees, -180 to 180; must pair with latitude
+  city?: string,            // optional manual override; '' clears
+  country_code?: string,    // ISO-3166 alpha-2, e.g. 'AE'; case-insensitive; '' clears
+  permission_granted?: boolean  // false if user denied native location permission
 }
 ```
 
-**Response 200:**
+**Response 200** (deviation from original spec — see reconciliation note below):
 ```typescript
 {
-  user: { /* full profile with resolved city/country fields populated */ }
+  location: {
+    latitude: number | null,         // decimal degrees, 6-decimal precision
+    longitude: number | null,
+    city: string | null,
+    country_code: string | null,     // always uppercase, 2 letters
+    permission_granted: boolean,
+    last_captured_at: string | null, // ISO-8601; bumps only when fresh coords arrive
+    updated_at: string               // ISO-8601
+  }
 }
 ```
 
+**Storage:**
+- Single row per user in `user_locations` table (M3.1.1d, `Version20260514000001`)
+- Enforced via UNIQUE index on `user_id`
+- `User.country_code` (nationality) is separate from `UserLocation.country_code` (current location); a UAE-resident traveling to Saudi can have `User.country_code='AE'` with `UserLocation.country_code='SA'`
+
 **Notes:**
-- If both lat/lng provided, server reverse-geocodes to city/country (or accepts client-provided city)
+- If both lat/lng provided, server stores them; reverse-geocoding to populate city/country is M4 work
 - If `permission_granted: false`, server stores that signal so the app doesn't re-prompt
-- This is the only PATCH on /v3/me that takes a body of mostly-optional fields and stores them in a separate `user_locations` table (not on `users` row)
+- Empty body is valid and returns current state (no-op PATCH)
+- Audit row emitted only when before-state differs from after-state (no-op PATCHes don't pollute audit log)
+
+**Reconciliation (M3.1.1h):** Original spec said response shape `{ user: <full profile> }`. Implementation revised to `{ location: ... }` because:
+
+`UserSerializer::publicProfile` does not include location fields (verified in M3.1.1a audit). Wrapping the location response in `user` would have either been misleading (location values not present in user shape) or forced changes to `UserSerializer`. Returning `{ location: ... }` is honest — this endpoint mutates `UserLocation`, not `User`. Clients wanting profile+location can make two requests; in practice the use case is just storing the capture.
 
 **Replaces:**
-- Mobile's `UpdateLocation` (`customer/settings/update-location`)
+- Mobile's `UpdateLocation` (`customer/settings/update-location`) — legacy stored a single free-form text field in `users.location`; v3 stores structured fields. Legacy data is NOT backfilled.
 
 #### 5.2.3 Address book contracts (6 ops)
 
@@ -2130,46 +2164,79 @@ These are distinct from the shipping address book — billing is the address tie
 
 ---
 
-##### GET /v3/me/billing-address ⚠️ NEW (to build in M3.1.1 OR M3.1.6)
+##### GET /v3/me/billing-address ✅ SHIPPED (M3.1.1c, commit `547e1df`)
 
 **Auth:** customer
-**Status:** ❌ NOT YET IMPLEMENTED
+**Status:** ✅ IMPLEMENTED (`apps/api/src/Http/Controllers/Address/GetBillingAddressController.php`)
 
-**Response 200:**
+**Response 200** (deviation from original spec — see reconciliation note below):
 ```typescript
 {
-  data: {
-    first_name: string,
-    last_name: string,
-    company_name: string | null,
-    tax_id: string | null,           // VAT TRN for UAE
-    phone: string,
-    email: string,
-    country_code: string,
-    city: string,
-    area: string,
-    street: string,
-    building: string,
-    apartment: string | null,
-    postal_code: string | null,
-    created_at: string,
-    updated_at: string
-  } | null    // null if never set
+  data: {                              // standard Shape A envelope; inner key is 'address'
+    address: {
+      id: number,
+      label: string | null,
+      recipient_name: string,
+      recipient_phone: string,
+      emirate: string,
+      area: string,
+      street_address: string | null,
+      building_details: string | null,
+      postal_code: string | null,
+      country: string,                   // ISO alpha-2, defaults 'AE'
+      is_default: boolean,               // true iff both shipping AND billing defaults
+      is_default_shipping: boolean,
+      is_default_billing: boolean        // always true for this endpoint's response
+    } | null                             // null if user has no billing address set
+  }
 }
 ```
 
+**Reconciliation (M3.1.1h):** Original spec proposed fields like `first_name`, `last_name`, `company_name`, `tax_id`, `phone`, `email`, `city`, `street`, `building`, `apartment`. Implementation uses the shape of the existing `addresses` table (`recipient_name`, `recipient_phone`, `emirate`, `area`, `street_address`, `building_details`, `postal_code`).
+
+The 1b ADR chose to back this endpoint on the existing `addresses` table (already has `is_default_billing` column + `AddressRepository::findDefaultBillingForUser`) rather than introducing a new `billing_addresses` table. That decision implicitly committed to the existing address shape. Future M4+ work to add B2B fields (tax_id, company_name) would extend the addresses schema rather than introducing a new table.
+
+**Returns null when no billing address set** — not 404 — because "not set" is a valid state for new users. The companion PATCH endpoint upserts; clients never have to handle a 404 → 200 transition mid-flow.
+
 ---
 
-##### PATCH /v3/me/billing-address ⚠️ NEW
+##### PATCH /v3/me/billing-address ✅ SHIPPED (M3.1.1c, commit `547e1df`)
 
 **Auth:** customer
-**Status:** ❌ NOT YET IMPLEMENTED
+**Status:** ✅ IMPLEMENTED (`apps/api/src/Http/Controllers/Address/UpsertBillingAddressController.php`)
 
-**Method semantics:** PATCH (Merge Patch). If the user has no billing record, this creates one. If they do, partial fields update.
+**Method semantics:** UPSERT (deviation from spec — see reconciliation note below). If the user has no billing record, this creates one with `is_default_billing=true`. If they do, the fields are updated in place. The `is_default_billing` flag is never demoted by this endpoint.
 
-**Request:** Same shape as GET response (all fields optional for PATCH).
+**Request** (all required fields must be present; same validation as `POST /v3/me/addresses`):
+```typescript
+{
+  recipient_name: string,           // REQUIRED, max 200 chars
+  recipient_phone: string,          // REQUIRED, E.164 format (+countrycode...)
+  emirate: string,                  // REQUIRED, max 50 chars
+  area: string,                     // REQUIRED, max 100 chars
+  street_address?: string | null,
+  building_details?: string | null,
+  postal_code?: string | null,
+  label?: string | null
+}
+```
 
-**Response 200:** Full billing object.
+**Response 200** — same shape as `GET /v3/me/billing-address` (returns the upserted address).
+
+**Side effects:**
+- Creates new `addresses` row if none exists with `is_default_billing=true`
+- If creating the user's very FIRST address ever, also sets `is_default_shipping=true` (UX safeguard; matches `CreateAddressController` behavior)
+- 50-address-per-user cap enforced; 422 if exceeded
+
+**Reconciliation (M3.1.1h):** Original 1b ADR proposed returning 404 `BILLING_ADDRESS_NOT_SET` for PATCH when no billing address exists. Implementation revised to UPSERT because:
+
+1. Legacy mobile's `updateBilling` is also upsert — first call creates, subsequent calls update
+2. 404 from PATCH would force clients to handle "first call vs subsequent calls" differently (brittle UX)
+3. Upsert is REST-idiomatic for PATCH on a singleton resource (`/me/preferences`-style)
+
+The ADR file (`docs/runbooks/m3/m3.1.1b-billing-address-decision.md`) was amended in M3.1.1h to reflect this revised approach.
+
+**Note on field shape:** Request/response fields use the existing addresses table shape (`recipient_name`, `recipient_phone`, etc.), not the original spec's `first_name`/`last_name`/`company_name`/`tax_id` shape. See GET reconciliation above for rationale.
 
 **Replaces:** Mobile's `updateBilling` (`customer/settings/billing/update-billing`).
 
