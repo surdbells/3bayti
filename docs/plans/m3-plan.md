@@ -406,8 +406,9 @@ export class MobileNetworkAdapter {
 - Adapter has feature parity with NetworkService for the 6 auth endpoints from M3.1.1
 - Call sites NOT YET MIGRATED (still inject NetworkService)
 
-#### M3.1.3 — Mobile Auth Flip (Phase 1: Login + Register)
+#### M3.1.3 — Mobile Auth Flip (Phase 1: Login)
 
+**Status:** ✅ COMPLETED May 14, 2026 (login only; commits `e27e1db` → `3f25be2` → completion runbook; see `docs/runbooks/m3/m3.1.3-completion.md`). **Register flip descoped to M3.1.4** due to three blockers found in Phase 1 reconnaissance: field-name/format mismatch (`countryCode "+971"` vs `country_code "AE"`), flow divergence (v3 register requires OTP confirmation before login, blocking the legacy auto-signin pattern), and 201 vs 200 response code mismatch.
 **Duration:** 2-3 days
 **Output:** mobile login + register routed through v3
 
@@ -433,14 +434,21 @@ export class MobileNetworkAdapter {
 
 **Rollback:** revert the routed.post call in login.page.ts back to networkService.post_request. ~5 min.
 
-#### M3.1.4 — Mobile Auth Flip (Phase 2: OTP + Reset Flows)
+#### M3.1.4 — Mobile Auth Flip (Phase 2: OTP + Reset Flows + **Register** — scope expanded from M3.1.3)
 
-**Duration:** 3-4 days
-**Output:** OTP send/validate + password reset routed through v3
+**Duration:** 5-7 days (revised from 3-4d to absorb the register flip work descoped from M3.1.3)
+**Output:** OTP send/validate + password reset + register routed through v3
 
-Same shape as M3.1.3 but for the 6 new v3 auth endpoints from M3.1.1.
+Now covers (per the M3.1.3 completion runbook's "Known issues" section):
+- POST `/users/register` flip — needs request-shape translation (`countryCode "+971"` → `country_code "AE"`, drop `confirm_password` and `accepted_terms`)
+- Flow decision for post-register auto-signin: keep legacy custom OTP path (α), migrate to v3's `/auth/send-otp` + `/auth/confirm` (β), or stagger (γ). Documented options in `m3.1.3-completion.md`.
+- POST `/users/sendOTP` → `/v3/auth/send-otp`
+- POST `/users/validateOTP` → `/v3/auth/confirm`
+- POST `/users/forgotPassword` → `/v3/auth/forgot-password`
+- POST `/users/resetPassword` → `/v3/auth/reset-password`
+- Refresh-token rotation handler (consumes the `refresh_token` field already stored by M3.1.3's login flip)
 
-Additional considerations:
+Original notes still apply:
 - OTP flows interact with the user's phone (SMS) or email — must verify the underlying SMS provider integration in v3 works (likely same Twilio / similar)
 - Password reset has a token-exchange flow — ensure tokens issued by v3 can't be confused with legacy tokens
 
@@ -626,8 +634,8 @@ Plan a buffer of 2 weeks for store reviews + potential rejections (privacy polic
 M3.1.0  Endpoint audit + dedup           3-5d
 M3.1.1  v3 auth endpoint build           5-7d
 M3.1.2  Mobile adapter layer             3-5d
-M3.1.3  Mobile auth flip phase 1         2-3d
-M3.1.4  Mobile auth flip phase 2         3-4d
+M3.1.3  Mobile auth flip phase 1 (login)  2-3d  [✅ DONE — login only]
+M3.1.4  Mobile auth flip phase 2 (OTP+rst+register) 5-7d
 M3.1.5  Mobile catalog flip              5-7d
 M3.1.6  v3 cart/checkout/orders build    7-10d
 M3.1.7  Mobile cart/checkout/orders flip 4-6 WEEKS
