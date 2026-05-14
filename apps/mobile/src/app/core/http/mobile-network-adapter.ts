@@ -13,6 +13,110 @@ import { NetworkService } from '../../service/network.service';
 import { resolveRouteKey, type HttpMethod } from './url-route-resolver';
 
 /**
+ * Extract auth credentials from a legacy request body.
+ *
+ * Exported (not class-private) so it can be unit-tested without
+ * standing up TestBed + HttpClient mocking. The adapter calls it
+ * internally.
+ *
+ * Legacy bodies look like:
+ *   { id: 42, token: "abc...", ...rest }      // authenticated
+ *   { id: 0, token: "", ...rest }              // unauthenticated
+ *
+ * Returns:
+ *   - translatedBody: input minus `id` and `token`
+ *   - authHeader: 'Bearer <token>' or null
+ *
+ * Defensive about non-object bodies: if body isn't a plain object,
+ * forward unchanged with no auth header.
+ */
+export function translateRequestBody(body: unknown): {
+  translatedBody: unknown;
+  authHeader: string | null;
+} {
+  if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
+    return { translatedBody: body, authHeader: null };
+  }
+
+  // Treat as a plain string-keyed object. Defensive copy so we don't
+  // mutate the caller's reference.
+  const src = body as Record<string, unknown>;
+  const out: Record<string, unknown> = {};
+  let token: string | null = null;
+
+  for (const key of Object.keys(src)) {
+    if (key === 'token') {
+      const v = src['token'];
+      if (typeof v === 'string' && v.length > 0) {
+        token = v;
+      }
+      // Drop `token` regardless — v3 doesn't accept it in body.
+    } else if (key === 'id') {
+      // Drop `id` — v3 derives user from JWT, not from body.
+      // Note: if a future v3 endpoint legitimately needs an `id`
+      // in the body (e.g. resource id for a write), it must use
+      // a more specific field name (e.g. `address_id`) or appear
+      // as a path parameter.
+    } else {
+      out[key] = src[key];
+    }
+  }
+
+  return {
+    translatedBody: out,
+    authHeader: token !== null ? `Bearer ${token}` : null,
+  };
+}
+
+/**
+ * Wrap a v3 response in the legacy envelope shape.
+ *
+ * Exported for unit testability — see translateRequestBody.
+ *
+ * v3 typically returns `{data: ...}` or `{data: [...], meta: {...}}`
+ * or sometimes custom shapes (e.g. the auth login response with token
+ * pair). We forward the inner shape as the legacy `data` field.
+ *
+ * Special cases handled:
+ *   - v3 already returns `{data: ...}`: forward `data` as-is
+ *   - v3 returns a custom shape (no `data` wrapper, e.g. login
+ *     response with `access_token`, `refresh_token`, `user` at top
+ *     level): forward the whole object as `data`
+ *
+ * Legacy mobile call sites typically do:
+ *   if (response.response_code === 200) { use response.data; }
+ * So the only fields they read are `response_code`, `status`, and
+ * `data`. We populate all three; `message` is empty for success.
+ */
+export function toLegacyEnvelope(v3Response: unknown): {
+  response_code: number;
+  status: 'success';
+  message: '';
+  data: unknown;
+} {
+  // Heuristic: if v3Response is an object with a `data` key, unwrap.
+  // Otherwise pass the whole thing as `data`.
+  let data: unknown;
+  if (
+    v3Response !== null &&
+    typeof v3Response === 'object' &&
+    !Array.isArray(v3Response) &&
+    'data' in (v3Response as Record<string, unknown>)
+  ) {
+    data = (v3Response as Record<string, unknown>)['data'];
+  } else {
+    data = v3Response;
+  }
+
+  return {
+    response_code: 200,
+    status: 'success',
+    message: '',
+    data,
+  };
+}
+
+/**
  * MobileNetworkAdapter — drop-in replacement for NetworkService that
  * routes through @3bayti/api-client's ENDPOINT_ROUTING when possible.
  *
@@ -195,7 +299,7 @@ export class MobileNetworkAdapter {
                   // — see class docblock (M3.1.3+ extension)
     );
 
-    const { translatedBody, authHeader } = this.translateRequestBody(body);
+    const { translatedBody, authHeader } = translateRequestBody(body);
     const headers = this.buildHeaders(authHeader);
 
     const obs =
@@ -210,61 +314,9 @@ export class MobileNetworkAdapter {
               : this.http.delete<unknown>(url, { headers, responseType: 'json' });
 
     return obs.pipe(
-      map((v3Response) => this.toLegacyEnvelope(v3Response)),
+      map((v3Response) => toLegacyEnvelope(v3Response)),
       catchError((err: HttpErrorResponse) => this.translateError(err)),
     );
-  }
-
-  /**
-   * Extract auth credentials from a legacy request body.
-   *
-   * Legacy bodies look like:
-   *   { id: 42, token: "abc...", ...rest }      // authenticated
-   *   { id: 0, token: "", ...rest }              // unauthenticated
-   *
-   * Returns:
-   *   - translatedBody: input minus `id` and `token`
-   *   - authHeader: 'Bearer <token>' or null
-   *
-   * Defensive about non-object bodies: if body isn't a plain object,
-   * forward unchanged with no auth header.
-   */
-  private translateRequestBody(body: unknown): {
-    translatedBody: unknown;
-    authHeader: string | null;
-  } {
-    if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
-      return { translatedBody: body, authHeader: null };
-    }
-
-    // Treat as a plain string-keyed object. Defensive copy so we don't
-    // mutate the caller's reference.
-    const src = body as Record<string, unknown>;
-    const out: Record<string, unknown> = {};
-    let token: string | null = null;
-
-    for (const key of Object.keys(src)) {
-      if (key === 'token') {
-        const v = src['token'];
-        if (typeof v === 'string' && v.length > 0) {
-          token = v;
-        }
-        // Drop `token` regardless — v3 doesn't accept it in body.
-      } else if (key === 'id') {
-        // Drop `id` — v3 derives user from JWT, not from body.
-        // Note: if a future v3 endpoint legitimately needs an `id`
-        // in the body (e.g. resource id for a write), it must use
-        // a more specific field name (e.g. `address_id`) or appear
-        // as a path parameter.
-      } else {
-        out[key] = src[key];
-      }
-    }
-
-    return {
-      translatedBody: out,
-      authHeader: token !== null ? `Bearer ${token}` : null,
-    };
   }
 
   /**
@@ -279,47 +331,6 @@ export class MobileNetworkAdapter {
       h = h.set('Authorization', authHeader);
     }
     return h;
-  }
-
-  /**
-   * Wrap a v3 response in the legacy envelope shape that mobile call
-   * sites expect. v3 typically returns `{data: ...}` or
-   * `{data: [...], meta: {...}}` or sometimes custom shapes (e.g. the
-   * auth login response with token pair). We forward the inner shape
-   * as the legacy `data` field.
-   *
-   * Special cases handled:
-   *   - v3 already returns `{data: ...}`: forward `data` as-is
-   *   - v3 returns a custom shape (no `data` wrapper, e.g. login
-   *     response with `access_token`, `refresh_token`, `user` at top
-   *     level): forward the whole object as `data`
-   *
-   * Legacy mobile call sites typically do:
-   *   if (response.response_code === 200) { use response.data; }
-   * So the only fields they read are `response_code`, `status`, and
-   * `data`. We populate all three; `message` is empty for success.
-   */
-  private toLegacyEnvelope(v3Response: unknown): unknown {
-    // Heuristic: if v3Response is an object with a `data` key, unwrap.
-    // Otherwise pass the whole thing as `data`.
-    let data: unknown;
-    if (
-      v3Response !== null &&
-      typeof v3Response === 'object' &&
-      !Array.isArray(v3Response) &&
-      'data' in (v3Response as Record<string, unknown>)
-    ) {
-      data = (v3Response as Record<string, unknown>)['data'];
-    } else {
-      data = v3Response;
-    }
-
-    return {
-      response_code: 200,
-      status: 'success',
-      message: '',
-      data,
-    };
   }
 
   /**
