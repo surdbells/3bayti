@@ -106,6 +106,7 @@ final class InitiateCheckoutController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly PaymentGatewayInterface $gateway,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -291,6 +292,10 @@ final class InitiateCheckoutController
             'order_reference' => $orderReference,
             'provider_order_ref' => $initiation->providerOrderRef,
         ]);
+
+        // M3.1.7-H — notify customer + vendors that the order is in flight.
+        // Fire-and-forget: notification failure must not abort checkout.
+        $this->notifications->orderPlaced($order);
 
         return $this->ok([
             'checkout_url' => $initiation->checkoutUrl,

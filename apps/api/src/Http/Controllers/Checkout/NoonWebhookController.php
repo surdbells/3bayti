@@ -70,6 +70,7 @@ final class NoonWebhookController
         private readonly EntityManagerInterface $em,
         private readonly PaymentGatewayInterface $gateway,
         private readonly NoonWebhookSignatureVerifier $signatureVerifier,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -165,12 +166,25 @@ final class NoonWebhookController
         // strings, update DISPUTE_EVENT_TYPES below.
         // ------------------------------------------------------------------
         if ($this->isDisputeEvent($eventType)) {
-            $this->persistDispute(
+            $dispute = $this->persistDispute(
                 eventType: $eventType ?? 'UNKNOWN_DISPUTE',
                 providerOrderRef: $providerOrderRef,
                 order: $order,
                 payload: $payload,
             );
+            // M3.1.7-H — notify admins. Only fires on FIRST sight of a
+            // given dispute id (persistDispute returns null on
+            // idempotent re-delivery). $order may be null for orphan
+            // disputes; OrderNotificationService::disputeOpened
+            // requires an Order, so we skip in that case.
+            if ($dispute !== null && $order !== null) {
+                $this->notifications->disputeOpened($order, [
+                    'event_type' => $eventType ?? 'UNKNOWN_DISPUTE',
+                    'amount' => $dispute->getAmount(),
+                    'currency' => $dispute->getCurrency(),
+                    'reason' => $dispute->getReason(),
+                ]);
+            }
         }
 
         if ($order === null) {
@@ -203,10 +217,19 @@ final class NoonWebhookController
         }
 
         // Apply state transition based on Noon's authoritative response.
-        $this->applyAuthoritativeStatus($order, $authoritative);
+        $transition = $this->applyAuthoritativeStatus($order, $authoritative);
 
         $event->markProcessed();
         $this->em->flush();
+
+        // M3.1.7-H — fire lifecycle notifications AFTER the flush so
+        // we never email about state that isn't committed. Idempotent
+        // re-deliveries find $transition='' and skip notifying.
+        if ($transition === 'paid') {
+            $this->notifications->orderPaid($order);
+        } elseif ($transition === 'failed') {
+            $this->notifications->orderPaymentFailed($order);
+        }
 
         return $this->ok([
             'status' => 'processed',
@@ -343,34 +366,52 @@ final class NoonWebhookController
         return null;
     }
 
-    private function applyAuthoritativeStatus(Order $order, OrderStatusResponse $status): void
+    /**
+     * Return values:
+     *   'paid'   — order just transitioned to paid (newly)
+     *   'failed' — order just transitioned to failed (newly)
+     *   ''       — no transition (already paid, already terminal, or non-terminal)
+     */
+    private function applyAuthoritativeStatus(Order $order, OrderStatusResponse $status): string
     {
         if (!$status->terminal) {
             // Still in flight — nothing to do at this point. The next
             // webhook or the polling endpoint will pick up the change.
-            return;
+            return '';
         }
 
         if ($status->paid) {
+            $previous = $order->getStatus();
             // markPaid() is idempotent — safe to call even if already
             // marked paid. Don't double-stamp.
             $order->markPaid();
-        } else {
-            // Terminal but not paid: FAILED / EXPIRED / CANCELLED
-            // → mark Order as failed unless already terminal.
-            if (!$order->isTerminal()) {
-                try {
-                    $order->markFailed();
-                } catch (\DomainException $e) {
-                    // Race: another instance already moved it terminal.
-                    // Safe to ignore.
-                    $this->logger->info('noon.webhook: order already terminal', [
-                        'order_id' => $order->getId(),
-                        'current_status' => $order->getStatus(),
-                    ]);
-                }
+            // Only notify on the FIRST paid transition; idempotent
+            // re-deliveries find the order already paid.
+            return $previous === Order::STATUS_PAID
+                || $previous === Order::STATUS_FULFILLING
+                || $previous === Order::STATUS_SHIPPED
+                || $previous === Order::STATUS_DELIVERED
+                ? ''
+                : 'paid';
+        }
+
+        // Terminal but not paid: FAILED / EXPIRED / CANCELLED
+        // → mark Order as failed unless already terminal.
+        if (!$order->isTerminal()) {
+            try {
+                $previous = $order->getStatus();
+                $order->markFailed();
+                return $previous === Order::STATUS_FAILED ? '' : 'failed';
+            } catch (\DomainException $e) {
+                // Race: another instance already moved it terminal.
+                // Safe to ignore.
+                $this->logger->info('noon.webhook: order already terminal', [
+                    'order_id' => $order->getId(),
+                    'current_status' => $order->getStatus(),
+                ]);
             }
         }
+        return '';
     }
 
     /**
@@ -407,12 +448,18 @@ final class NoonWebhookController
      *
      * @param array<string, mixed> $payload
      */
+    /**
+     * Return value: the newly-created dispute, or NULL if the event
+     * was a duplicate (idempotent re-delivery; no notification fires).
+     *
+     * @param array<string, mixed> $payload Full webhook payload
+     */
     private function persistDispute(
         string $eventType,
         ?string $providerOrderRef,
         ?Order $order,
         array $payload,
-    ): void {
+    ): ?OrderDispute {
         $providerDisputeId = $this->extractProviderDisputeId($payload);
 
         /** @var OrderDisputeRepository $disputes */
@@ -427,7 +474,7 @@ final class NoonWebhookController
                     'provider_dispute_id' => $providerDisputeId,
                     'event_type' => $eventType,
                 ]);
-                return;
+                return null;
             }
         }
 
@@ -454,6 +501,8 @@ final class NoonWebhookController
             'amount' => $amount,
             'provider_dispute_id' => $providerDisputeId,
         ]);
+
+        return $dispute;
     }
 
     /**

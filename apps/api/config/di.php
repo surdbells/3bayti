@@ -166,6 +166,76 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Dispute\GetDisputeController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Dispute\ResolveDisputeController::class => \DI\autowire(),
 
+    // M3.1.7-H — Email notifications (mailer + template renderer + orchestrator)
+    //
+    // MailerInterface binding selects the implementation based on
+    // environment:
+    //   - APP_ENV=prod AND ZEPTOMAIL_API_TOKEN set → ZeptoMailHttpMailer
+    //   - otherwise                                → NullMailer (logs only)
+    //
+    // Production deployment MUST set ZEPTOMAIL_API_TOKEN (and the
+    // related FROM_* vars) or the factory throws on container
+    // resolution. This prevents accidentally silently dropping mail
+    // in production.
+    \Bayti\Api\Notification\MailerInterface::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Notification\MailerInterface {
+        $env = $_ENV['APP_ENV'] ?? 'dev';
+        $token = $_ENV['ZEPTOMAIL_API_TOKEN'] ?? '';
+        $fromEmail = $_ENV['ZEPTOMAIL_FROM_EMAIL'] ?? 'noreply@3bayti.ae';
+        $fromName = $_ENV['ZEPTOMAIL_FROM_NAME'] ?? '3bayti';
+        $override = $_ENV['MAIL_PROVIDER'] ?? null;
+
+        $useZeptoMail = ($env === 'prod' && $token !== '')
+            || $override === 'zeptomail';
+
+        if (!$useZeptoMail) {
+            return new \Bayti\Api\Notification\NullMailer(
+                $c->get(\Psr\Log\LoggerInterface::class),
+            );
+        }
+
+        if ($token === '') {
+            throw new \RuntimeException(
+                'ZeptoMailHttpMailer requires ZEPTOMAIL_API_TOKEN. ' .
+                'Either set it, or unset MAIL_PROVIDER and APP_ENV to use NullMailer.',
+            );
+        }
+
+        return new \Bayti\Api\Notification\ZeptoMailHttpMailer(
+            apiToken: $token,
+            fromEmail: $fromEmail,
+            fromName: $fromName,
+            httpClient: null, // adapter constructs its own with timeout
+            logger: $c->get(\Psr\Log\LoggerInterface::class),
+        );
+    },
+
+    \Bayti\Api\Notification\OrderEmailTemplateRenderer::class => \DI\autowire(),
+
+    // OrderNotificationService: parse admin recipient list from env.
+    // Comma-separated emails; empty list disables admin notifications.
+    \Bayti\Api\Notification\OrderNotificationService::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Notification\OrderNotificationService {
+        $raw = $_ENV['ADMIN_NOTIFICATION_EMAILS'] ?? '';
+        $recipients = [];
+        if ($raw !== '') {
+            foreach (explode(',', $raw) as $email) {
+                $email = trim($email);
+                if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $recipients[] = $email;
+                }
+            }
+        }
+        return new \Bayti\Api\Notification\OrderNotificationService(
+            mailer: $c->get(\Bayti\Api\Notification\MailerInterface::class),
+            renderer: $c->get(\Bayti\Api\Notification\OrderEmailTemplateRenderer::class),
+            adminRecipients: $recipients,
+            logger: $c->get(\Psr\Log\LoggerInterface::class),
+        );
+    },
+
     // M3.1.7-D — Admin order surface controllers
     \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class => \DI\autowire(),

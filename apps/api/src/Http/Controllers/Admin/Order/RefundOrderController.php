@@ -64,6 +64,7 @@ final class RefundOrderController
         private readonly OrderSerializer $serializer,
         private readonly AuditEmitter $audit,
         private readonly PaymentGatewayInterface $gateway,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -274,6 +275,13 @@ final class RefundOrderController
             'amount' => $amount,
             'is_full_refund' => $isFullRefund,
             'actor_user_id' => $user->getId(),
+        ]);
+
+        // M3.1.7-H — notify customer of the refund. Fire-and-forget;
+        // email failure must not block the response or the audit row.
+        $this->notifications->orderRefunded($order, [
+            'refund_amount' => $amount,
+            'is_full_refund' => $isFullRefund,
         ]);
 
         return $this->ok([

@@ -61,6 +61,7 @@ final class TransitionVendorOrderItemController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly OrderSerializer $serializer,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -176,6 +177,15 @@ final class TransitionVendorOrderItemController
             'order_status_after_rollup' => $order->getStatus(),
             'vendor_note' => $input->note,
         ]);
+
+        // M3.1.7-H — notify customer of shipping/delivery milestones.
+        // Per-item notifications: customer wants to know as each piece
+        // moves, not just when the whole order completes.
+        if ($newStatus === OrderItem::ITEM_STATUS_SHIPPED) {
+            $this->notifications->itemShipped($order, $item);
+        } elseif ($newStatus === OrderItem::ITEM_STATUS_DELIVERED) {
+            $this->notifications->itemDelivered($order, $item);
+        }
 
         // Return the updated order, filtered to vendor's items.
         $shape = $this->serializer->detailShape($order);

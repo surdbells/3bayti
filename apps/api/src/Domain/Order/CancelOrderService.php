@@ -57,6 +57,7 @@ final class CancelOrderService
         private readonly EntityManagerInterface $em,
         private readonly PaymentGatewayInterface $gateway,
         private readonly AuditEmitter $audit,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -146,6 +147,13 @@ final class CancelOrderService
                 'previous_status' => $currentStatus,
                 'actor_user_id' => $actor->getId(),
                 'auto_refund' => false,
+            ]);
+
+            // M3.1.7-H — notify customer + vendors. Fire-and-forget.
+            $this->notifications->orderCancelled($order, [
+                'refund_issued' => false,
+                'refund_amount' => null,
+                'reason' => $reason,
             ]);
 
             return new CancelOrderResult(
@@ -284,6 +292,14 @@ final class CancelOrderService
             'actor_user_id' => $actor->getId(),
             'auto_refund' => $refundIssued,
             'refund_amount' => $refundAmount,
+        ]);
+
+        // M3.1.7-H — notify customer + vendors of the cancellation.
+        // Customer gets refund details if applicable. Fire-and-forget.
+        $this->notifications->orderCancelled($order, [
+            'refund_issued' => $refundIssued,
+            'refund_amount' => $refundAmount,
+            'reason' => $reason,
         ]);
 
         return new CancelOrderResult(
