@@ -376,21 +376,65 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.checkout.deliveryConfiguration.receipt.toRecipients.push(this.single_user.email);
 
     this.ui_controls.checking_out = true;
-    const returnUrlPrefix = 'https://api.3bayti.ae/customer/complete';
+    // Two return-URL prefixes during the M3.1.6 strangler-fig window:
+    //   Legacy:  https://api.3bayti.ae/customer/complete?orderId=&...
+    //   v3:      https://api.3bayti.ae/v3/checkout/return/{order_reference}
+    //
+    // We check both. Whichever matches first determines the
+    // post-redirect handling: legacy passes query params to /process;
+    // v3 passes only order_reference to /process which then polls.
+    const legacyReturnPrefix = 'https://api.3bayti.ae/customer/complete';
+    const v3ReturnPrefix = 'https://api.3bayti.ae/v3/checkout/return/';
     let listenerHandle: any = null;
     let processed = false; // ensure we only handle the redirect once
     this.networkService.post_request(this.checkout, GlobalComponent.initiatePayment)
       .subscribe({
         next: (response) => {
           this.ui_controls.checking_out = false;
-          if (response.resultCode != 0) {
-            this.error_notification(response.message);
+
+          // Detect response shape (dual-shape strangler-fig support):
+          //   v3 (post-transform): response.response_code === 200,
+          //                        response.data = { url, order_reference, order_id, ... }
+          //   Legacy (raw Noon):   response.resultCode === 0,
+          //                        response.result.checkoutData.postUrl
+          const isV3Shape =
+            response.response_code === 200 &&
+            response.data &&
+            typeof response.data === 'object' &&
+            typeof response.data.url === 'string' &&
+            response.data.url.length > 0;
+
+          const isLegacyShape =
+            response.resultCode === 0 &&
+            response.result &&
+            response.result.checkoutData &&
+            typeof response.result.checkoutData.postUrl === 'string';
+
+          if (!isV3Shape && !isLegacyShape) {
+            // Either an error (resultCode != 0) or an unexpected shape.
+            const errMsg =
+              typeof response.message === 'string' && response.message.length > 0
+                ? response.message
+                : this.i18n.t('text_something_went_wrong');
+            this.error_notification(errMsg);
             return;
           }
+
+          // Extract the webview URL + v3-specific order_reference.
+          const webviewUrl = isV3Shape
+            ? response.data.url
+            : response.result.checkoutData.postUrl;
+          const v3OrderReference = isV3Shape
+            ? (typeof response.data.order_reference === 'string'
+                ? response.data.order_reference
+                : '')
+            : '';
+
           this.checkout_ready = response;
-          console.log('checkout_ready', this.checkout_ready);
+          console.log('checkout_ready', this.checkout_ready, { isV3Shape });
+
           InAppBrowser.openWebView({
-            url: this.checkout_ready.result.checkoutData.postUrl,
+            url: webviewUrl,
             title: 'Checkout'
           })
             .then(openRes => {
@@ -404,13 +448,39 @@ export class CheckoutPage implements OnInit, OnDestroy {
               if (processed) return;              // already handled once
               if (!info || !info.url) return;    // defensive
               const urlStr: string = info.url;
-              if (!urlStr.startsWith(returnUrlPrefix)) return;
-              const params = new URL(urlStr).searchParams;
-              const orderId = params.get('orderId');
-              const merchantReference = params.get('merchantReference');
-              const paymentType = params.get('paymentType');
+
+              // Match against EITHER prefix; payment provider may redirect
+              // to whichever URL was configured server-side (legacy
+              // backend → legacy return; v3 backend → v3 return).
+              const matchesLegacy = urlStr.startsWith(legacyReturnPrefix);
+              const matchesV3 = urlStr.startsWith(v3ReturnPrefix);
+              if (!matchesLegacy && !matchesV3) return;
+
               const deliveryFee = Number(this.bill.delivery) || 0;
-              console.log('Captured redirect:', { orderId, merchantReference, paymentType });
+              let orderId: string | null = null;
+              let merchantReference: string | null = null;
+              let paymentType: string | null = null;
+              let orderReference: string = v3OrderReference;
+
+              if (matchesLegacy) {
+                // Legacy: orderId/merchantReference/paymentType in query
+                const params = new URL(urlStr).searchParams;
+                orderId = params.get('orderId');
+                merchantReference = params.get('merchantReference');
+                paymentType = params.get('paymentType');
+              } else {
+                // v3: order_reference is in the URL path
+                // (https://api.3bayti.ae/v3/checkout/return/{ref})
+                const refFromUrl = urlStr.substring(v3ReturnPrefix.length).split(/[?#/]/)[0];
+                if (refFromUrl) {
+                  orderReference = refFromUrl;
+                }
+              }
+
+              console.log('Captured redirect:', {
+                shape: matchesV3 ? 'v3' : 'legacy',
+                orderId, merchantReference, paymentType, orderReference,
+              });
               processed = true; // prevent re-entry
               try {
                 if (listenerHandle) {
@@ -433,7 +503,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
                 } catch (e) {
                   console.warn('Error closing webview', e);
                 } finally {
-                  this.open_processing(orderId, merchantReference, paymentType, deliveryFee);
+                  this.open_processing(
+                    orderId, merchantReference, paymentType, deliveryFee,
+                    orderReference,
+                  );
                 }
               };
               closeWebview();
@@ -495,10 +568,23 @@ export class CheckoutPage implements OnInit, OnDestroy {
       position: 'top-center'
     });
   }
-  open_processing(orderId: any, merchantReference: any, paymentType: any, deliveryFee: number) {
+  open_processing(
+    orderId: any,
+    merchantReference: any,
+    paymentType: any,
+    deliveryFee: number,
+    orderReference: string = '',
+  ) {
     this.router.navigate(
       ['/', 'process'],
-      { queryParams: { orderId, merchantReference, paymentType, deliveryFee } }
+      {
+        queryParams: {
+          orderId, merchantReference, paymentType, deliveryFee,
+          // v3 only: presence of orderReference triggers polling mode
+          // in process.page (else falls back to legacy finalizePayment).
+          orderReference,
+        }
+      }
     );
   }
   toggleAccordion = () => {

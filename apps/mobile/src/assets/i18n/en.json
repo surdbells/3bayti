@@ -345,6 +345,7 @@
   "already_in_cart": "Already in cart — View",
   "text_added_to_cart": "Added to cart",
   "text_something_went_wrong": "Something went wrong. Please try again.",
+  "text_payment_processing_check_later": "Your payment is still processing. We'll update your order shortly.",
   "popular_stores": "Trending stores",
   "featured_store": "Featured store",
   "review_info": "Confirm delivery info before checkout.",

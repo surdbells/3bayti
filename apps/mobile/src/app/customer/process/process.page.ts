@@ -14,6 +14,8 @@ import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
 import {TranslatePipe} from "../../translate.pipe";
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { CheckoutStatusPollService, type PollOutcome } from '../../core/services/checkout-status-poll.service';
+import { I18nService } from '../../i18n.service';
 
 @Component({
   selector: 'app-process',
@@ -24,6 +26,7 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 export class ProcessPage implements OnInit {
   isOnline = true;
   private sub: Subscription;
+  private orderReference: string = '';
   constructor(
     private net: ConnectionService,
     private platform: Platform,
@@ -31,7 +34,9 @@ export class ProcessPage implements OnInit {
     private blocker: BlockerService,
     private route: ActivatedRoute,
     private networkService: NetworkService,
-    private toast: AxNotificationService
+    private toast: AxNotificationService,
+    private pollService: CheckoutStatusPollService,
+    private i18n: I18nService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -41,6 +46,9 @@ export class ProcessPage implements OnInit {
     this.rqst_param.merchantReference = this.route.snapshot.queryParamMap.get('merchantReference') || '';
     this.rqst_param.paymentType = this.route.snapshot.queryParamMap.get('paymentType') || '';
     this.rqst_param.delivery_fee = Number(this.route.snapshot.queryParamMap.get('deliveryFee') || 0);
+    // v3-only: presence of orderReference triggers polling instead of
+    // the legacy finalizePayment call.
+    this.orderReference = this.route.snapshot.queryParamMap.get('orderReference') || '';
     this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
     this.getObject();
 
@@ -113,6 +121,50 @@ export class ProcessPage implements OnInit {
   }
 finalize() {
       this.ui_controls.confirming_transaction = true;
+
+      // v3 path: orderReference is set when checkout.page detected the
+      // v3 return URL (path-based). Poll the status endpoint instead
+      // of calling the legacy finalizePayment.
+      if (this.orderReference) {
+        this.pollService.pollUntilTerminal(this.orderReference).subscribe({
+          next: (outcome: PollOutcome) => {
+            this.ui_controls.confirming_transaction = false;
+            switch (outcome.kind) {
+              case 'paid':
+                this.router.navigate(['/success'], { replaceUrl: true });
+                break;
+              case 'failed':
+                this.router.navigate(['/failed'], { replaceUrl: true });
+                break;
+              case 'timeout':
+                // The order may still complete via a delayed webhook.
+                // Navigate to my-orders so the user can see the order
+                // and check back; their order is real even if not yet
+                // confirmed. Reset the blocker so they can interact.
+                this.toast.info(
+                  this.i18n.t('text_payment_processing_check_later'),
+                );
+                this.router.navigate(['/my-orders'], { replaceUrl: true });
+                break;
+              case 'error':
+              default:
+                this.router.navigate(['/failed'], { replaceUrl: true });
+                break;
+            }
+          },
+          error: (err) => {
+            // Should not happen (the service catches its own errors),
+            // but defensive: treat as failed.
+            console.error('[ProcessPage] poll subscribe error', err);
+            this.ui_controls.confirming_transaction = false;
+            this.router.navigate(['/failed'], { replaceUrl: true });
+          },
+        });
+        return;
+      }
+
+      // Legacy path: finalizePayment endpoint with orderId/merchantReference
+      // from the customer/complete?... return URL.
       this.networkService.post_request(this.rqst_param, GlobalComponent.finalizePayment)
         .subscribe(({
           next: (response) => {
