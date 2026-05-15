@@ -28,6 +28,7 @@ import {GlobalComponent} from "../../global-component";
 import {Preferences} from "@capacitor/preferences";
 import {ActionSheetController} from "@ionic/angular";
 import {Labels} from "../../class/labels";
+import { LocalCartService, type LocalCartItem } from '../../core/services/local-cart.service';
 import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -76,7 +77,8 @@ export class CartPage implements OnInit, OnDestroy {
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
     private toast: AxNotificationService,
-    private i18n: I18nService
+    private i18n: I18nService,
+    private localCart: LocalCartService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -169,11 +171,19 @@ export class CartPage implements OnInit, OnDestroy {
   ngOnInit() {
     this.getObject();
   }
+  // Track whether we're in guest mode (no auth). Used to route
+  // cart operations to LocalCartService instead of NetworkService.
+  isGuest = false;
+
   async getObject() {
     const ret: any = await Preferences.get({ key: 'user' });
     if (ret.value == null){
-      this.router.navigate(['/', 'login']);
+      // M3.1.6i.2-E: guest mode — show device-local cart instead of
+      // redirecting to /login. Encourages adds-to-cart before sign-up.
+      this.isGuest = true;
+      this.load_cart();
     }else{
+      this.isGuest = false;
       this.single_user = JSON.parse(ret.value);
       this.request.id = this.single_user.id
       this.request.token = this.single_user.token
@@ -193,6 +203,13 @@ export class CartPage implements OnInit, OnDestroy {
     this.carts = [];
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
+
+    // Guest path: read from IndexedDB, bypass network entirely.
+    if (this.isGuest) {
+      this.loadGuestCart();
+      return;
+    }
+
     this.request.id = this.single_user.id;
     this.networkService.post_request(this.request, GlobalComponent.customerCart)
       .subscribe(({
@@ -240,7 +257,68 @@ export class CartPage implements OnInit, OnDestroy {
         }
       }))
   }
+  // M3.1.6i.2-E: load + map the device-local guest cart into the
+  // same `this.carts` + `this.bill` shape the template binds to.
+  // Map LocalCartItem -> the cart-item shape mobile expects: legacy
+  // 'item' field for delete/inc/dec uses 'localId' for guests,
+  // plain 'id' for authed users.
+  private async loadGuestCart(): Promise<void> {
+    try {
+      const items = await this.localCart.list();
+      const subtotal = await this.localCart.subtotal();
+      const count = await this.localCart.count();
+
+      this.carts = items.map((it) => ({
+        // For guest carts, the line key is localId; the cart.page
+        // template references item.id for inc/dec/delete bindings,
+        // so expose localId under id too.
+        id: it.localId ?? 0,
+        product_id: it.product_id,
+        product_name: it.product_name,
+        product_image: it.product_image,
+        vendor_id: it.vendor_id,
+        store: it.vendor_id,
+        vendor_name: it.vendor_name,
+        quantity: it.quantity,
+        price: it.unit_price,
+        unit_price: it.unit_price,
+        size: it.size,
+        color: it.color,
+        is_custom: it.is_custom,
+        measurement: it.measurement,
+        extra_measurement: it.extra_measurement,
+        note: it.note,
+        in_stock: true,
+        // Computed line_total — local cart doesn't store it
+        line_total: (parseFloat(it.unit_price || '0') * (it.quantity || 0)).toFixed(2),
+      })) as unknown as Cart[];
+
+      this.bill = {
+        ...this.bill,
+        count,
+        subtotal,
+      };
+
+      Preferences.set({key: 'count', value: String(count)});
+      this.ui_controls.is_loading = false;
+      this.ui_controls.is_empty = this.carts.length === 0;
+    } catch (err) {
+      console.warn('[Cart] guest cart load failed', err);
+      this.ui_controls.is_loading = false;
+      this.ui_controls.is_empty = true;
+    }
+  }
+
   removeItem(item: number) {
+    // Guest path
+    if (this.isGuest) {
+      this.localCart.remove(item).then(() => {
+        this.success_notification(this.i18n.t('text_item_removed'));
+        this.load_cart();
+      }).catch((err) => console.warn('[Cart] guest remove failed', err));
+      return;
+    }
+
     this.remove.item = item;
     this.networkService.post_request(this.remove, GlobalComponent.RemoveCartItem)
       .subscribe(({
@@ -253,8 +331,17 @@ export class CartPage implements OnInit, OnDestroy {
       }))
   }
   IncreaseItem(item: number, quantity: number) {
+    const newQty = quantity + 1;
+
+    if (this.isGuest) {
+      this.localCart.updateQuantity(item, newQty).then(() => {
+        this.load_cart();
+      }).catch((err) => console.warn('[Cart] guest increase failed', err));
+      return;
+    }
+
     this.increase.item = item;
-    this.increase.quantity = quantity+1;
+    this.increase.quantity = newQty;
     this.networkService.post_request(this.increase, GlobalComponent.IncreaseItem)
       .subscribe(({
         next: (response) => {
@@ -265,8 +352,19 @@ export class CartPage implements OnInit, OnDestroy {
       }))
   }
   DecreaseItem(item: number, quantity: number) {
+    const newQty = quantity - 1;
+
+    if (this.isGuest) {
+      // LocalCartService.updateQuantity treats qty<=0 as remove,
+      // matching the user intent on the last decrement.
+      this.localCart.updateQuantity(item, newQty).then(() => {
+        this.load_cart();
+      }).catch((err) => console.warn('[Cart] guest decrease failed', err));
+      return;
+    }
+
     this.decrease.item = item;
-    this.decrease.quantity = quantity - 1;
+    this.decrease.quantity = newQty;
     this.networkService.post_request(this.decrease, GlobalComponent.DecreaseItem)
       .subscribe(({
         next: (response) => {

@@ -346,6 +346,8 @@
   "text_added_to_cart": "Added to cart",
   "text_something_went_wrong": "Something went wrong. Please try again.",
   "text_payment_processing_check_later": "Your payment is still processing. We'll update your order shortly.",
+  "text_cart_merge_skipped_some": "Some items from your cart are no longer available and have been removed.",
+  "text_item_removed": "Item removed from cart",
   "popular_stores": "Trending stores",
   "featured_store": "Featured store",
   "review_info": "Confirm delivery info before checkout.",

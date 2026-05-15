@@ -17,6 +17,7 @@ import {GlobalComponent} from "../../global-component";
 import {BlockerService} from "../../blocker.service";
 import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
+import { CartMergeService } from '../../core/services/cart-merge.service';
 
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
@@ -45,7 +46,8 @@ export class LoginPage implements OnInit, OnDestroy {
       private blocker: BlockerService,
       private networkAdapter: MobileNetworkAdapter,
       private toast: AxNotificationService,
-      private i18n: I18nService
+      private i18n: I18nService,
+      private cartMerge: CartMergeService,
     ) {
       this.net.setReachabilityCheck(true);
       this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -132,6 +134,38 @@ export class LoginPage implements OnInit, OnDestroy {
                 key: 'user',
                 value: JSON.stringify(userToStore)
               });
+
+              // M3.1.6i.2-E: merge the device-local guest cart into
+              // the server-side cart, then navigate. Safe to call when
+              // local is empty (returns { attempted: false } and
+              // proceeds to navigate). On merge failure, the local
+              // cart is preserved so the user can retry; we still
+              // navigate so login isn't blocked by a network blip.
+              const authBody = {
+                id: typeof (userToStore as any)?.id === 'number'
+                  ? (userToStore as any).id
+                  : 0,
+                token: typeof (userToStore as any)?.token === 'string'
+                  ? (userToStore as any).token
+                  : '',
+              };
+              this.cartMerge.mergeIfAny(authBody).then((result) => {
+                if (result.attempted && !result.success) {
+                  console.warn('[Login] cart merge failed (non-fatal)', result.error);
+                }
+                if (result.attempted && result.success && result.skipped.length > 0) {
+                  // One-line toast: 'Some items in your cart are no
+                  // longer available'. Non-blocking — user is already
+                  // navigated to /account.
+                  this.toast.info(this.i18n.t('text_cart_merge_skipped_some'));
+                }
+              }).catch((err) => {
+                // Belt and braces — mergeIfAny is designed to never
+                // throw (it captures into result.error), but just in
+                // case, swallow and log.
+                console.warn('[Login] cart merge threw (non-fatal)', err);
+              });
+
               this.ui_controls.login_loading = false;
               this.router.navigate(['/account'], { replaceUrl: true });
               this.blocker.block({ disableSwipe: true, disableHardwareBack: true });

@@ -32,6 +32,7 @@ import { Preferences } from "@capacitor/preferences";
 import { SizeChipsComponent } from "../../size-chips/size-chips.component";
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from "../../translate.pipe";
+import { LocalCartService, type LocalCartItem } from '../../core/services/local-cart.service';
 import { Products } from "../../class/products";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -156,7 +157,8 @@ export class ProductPage implements OnInit, OnDestroy {
     private networkService: NetworkService,
     private toast: AxNotificationService,
     private cdr: ChangeDetectorRef,
-    private i18n: I18nService
+    private i18n: I18nService,
+    private localCart: LocalCartService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -490,11 +492,21 @@ export class ProductPage implements OnInit, OnDestroy {
     this.load_cart();
   }
 
+  // Track guest mode. When true, addToCart writes to LocalCartService
+  // instead of POSTing /customer/addToCart. Guest users can browse,
+  // see prices, and add to cart without signing up.
+  isGuest = false;
+
   async getObject() {
     const ret: any = await Preferences.get({ key: 'user' });
     if (ret.value == null) {
-      this.router.navigate(['/', 'login']);
+      // M3.1.6i.2-E: guest mode — show the product, allow adding to
+      // local cart. Authenticated-only features (measurement save,
+      // wishlist add) remain gated.
+      this.isGuest = true;
+      this.get_single();
     } else {
+      this.isGuest = false;
       this.single_user = JSON.parse(ret.value);
       this.rqst_param.id = this.single_user.id;
       this.rqst_param.token = this.single_user.token;
@@ -652,6 +664,44 @@ export class ProductPage implements OnInit, OnDestroy {
 
     this.ui_controls.is_adding_to_cart = true;
     this.cdr.markForCheck();
+
+    // M3.1.6i.2-E: guest path — write to IndexedDB, no network.
+    if (this.isGuest) {
+      const localItem: LocalCartItem = {
+        product_id: this.add_cart.product_id,
+        quantity: this.add_cart.quantity,
+        size: this.add_cart.size || '',
+        color: this.add_cart.color || '',
+        is_custom: this.add_cart.is_custom === true,
+        measurement: this.add_cart.measurement || '',
+        extra_measurement: this.add_cart.extra_measurement || '',
+        note: this.add_cart.note || '',
+        // Display fields snapshotted at add time. v3 will re-derive
+        // from product_id on merge; these are local-UI-only.
+        product_name: this.single.name || '',
+        product_image: this.single.image_1 || '',
+        unit_price: String(this.single.price || '0'),
+        vendor_id: typeof this.single.store === 'string'
+          ? parseInt(this.single.store, 10) || 0
+          : (this.single.store || 0),
+        vendor_name: this.single.store_name || '',
+      };
+
+      this.localCart.add(localItem)
+        .then(() => {
+          this.success_notification(this.i18n.t('text_added_to_cart'));
+          this.ui_controls.is_adding_to_cart = false;
+          this.user_cart();
+          this.cdr.markForCheck();
+        })
+        .catch((err) => {
+          console.warn('[Product] guest add failed', err);
+          this.error_notification(this.i18n.t('text_something_went_wrong'));
+          this.ui_controls.is_adding_to_cart = false;
+          this.cdr.markForCheck();
+        });
+      return;
+    }
 
     this.networkService.post_request(this.add_cart, GlobalComponent.addToCart)
       .subscribe({

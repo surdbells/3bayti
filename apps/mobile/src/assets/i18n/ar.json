@@ -342,6 +342,8 @@
   "text_added_to_cart": "تمت الإضافة إلى السلة",
   "text_something_went_wrong": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
   "text_payment_processing_check_later": "لا تزال عملية الدفع قيد المعالجة. سنقوم بتحديث طلبك قريبًا.",
+  "text_cart_merge_skipped_some": "بعض العناصر من سلتك لم تعد متاحة وتمت إزالتها.",
+  "text_item_removed": "تمت إزالة العنصر من السلة",
   "popular_stores": "المتجر الرائج",
   "featured_store": "متجر مميز",
   "review_info": "قم بتأكيد معلومات التوصيل قبل إتمام الشراء.",
