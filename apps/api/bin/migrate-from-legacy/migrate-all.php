@@ -38,6 +38,7 @@ use Bayti\Api\Migration\Slugger;
 use Doctrine\ORM\EntityManagerInterface;
 
 $wipeSeed = in_array('--wipe-seed', $argv, true);
+$includeOrders = in_array('--include-orders', $argv, true);
 
 echo "============================================================\n";
 echo " 3bayti legacy data migration\n";
@@ -114,6 +115,32 @@ try {
     $stepNum++;
     echo "----- step {$stepNum}: styles -----\n";
     $results['styles'] = $steps->migrateStyles();
+
+    // ---------- M3.1.6h: order migration (opt-in) ----------
+    // Off by default because the legacy schema isn't fully verified;
+    // operator must explicitly opt in with --include-orders after
+    // reviewing the candidate table/column lists in migrateOrders /
+    // migrateOrderItems / migrateOrderAddresses.
+    //
+    // Carts are NOT migrated (transient state — active legacy carts
+    // are lost on cutover; users re-add items in v3). Documented in
+    // the M3.1.6 plan as an explicit decision.
+    if ($includeOrders) {
+        $stepNum++;
+        echo "----- step {$stepNum}: orders (M3.1.6h, opt-in) -----\n";
+        $results['orders'] = $steps->migrateOrders();
+
+        $stepNum++;
+        echo "----- step {$stepNum}: order_items (M3.1.6h, opt-in) -----\n";
+        $results['order_items'] = $steps->migrateOrderItems();
+
+        $stepNum++;
+        echo "----- step {$stepNum}: order_addresses (M3.1.6h, opt-in) -----\n";
+        $results['order_addresses'] = $steps->migrateOrderAddresses();
+    } else {
+        echo "----- skip: orders/order_items/order_addresses (pass --include-orders to run) -----\n";
+        echo "       Review docs/runbooks/m3/m3.1.6h-order-migration.md before enabling.\n\n";
+    }
 
     $elapsed = microtime(true) - $start;
 
