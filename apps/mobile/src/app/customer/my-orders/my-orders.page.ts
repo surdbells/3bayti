@@ -19,6 +19,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {ActivatedRoute, Router} from "@angular/router";
 import {ActionSheetController, InfiniteScrollCustomEvent} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -27,8 +28,21 @@ import {Products} from "../../class/products";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
-type OrderStatus = 'processing' | 'shipping' | 'delivered';
-type FilterStatus = 'all' | OrderStatus;
+// M3.1.7-I: widen OrderStatus to include v3 backend's full enum so
+// the cancel button can show conditionally on pending_payment. The
+// FilterStatus chips still reflect the customer-friendly subset.
+type OrderStatus =
+  | 'pending_payment'
+  | 'paid'
+  | 'processing'
+  | 'fulfilling'
+  | 'shipping'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled'
+  | 'refunded'
+  | 'failed';
+type FilterStatus = 'all' | 'processing' | 'shipping' | 'delivered';
 interface OrderItem {
   product_id: number;
   store: number;
@@ -85,6 +99,7 @@ export class MyOrdersPage implements OnInit {
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
     private toast: AxNotificationService,
+    private mobileAdapter: MobileNetworkAdapter,
   ) {}
   ui_controls = {
     is_empty: false,
@@ -211,5 +226,76 @@ export class MyOrdersPage implements OnInit {
       ['/', 'vendor-reviews'],
       { queryParams: { id, name } }
     );
+  }
+
+  // ===================================================================
+  // M3.1.7-F/I — Customer self-serve order cancellation
+  // ===================================================================
+  // Only orders in 'pending_payment' can be cancelled by the customer
+  // themselves (paid orders require admin / support contact). The
+  // template shows the button conditionally; this method runs the
+  // confirmation + API call.
+  //
+  // On success:
+  //   - Backend marks the order CANCELLED + audits the override
+  //   - We update the local order's status optimistically so the UI
+  //     reflects the change without a re-fetch round-trip
+  //   - Toast confirms the cancellation
+  //
+  // On failure (network / 422 cancellation_not_allowed / 502 gateway):
+  //   - Toast surfaces the message
+  //   - Local order stays in its original state
+  // ===================================================================
+  canCancel(order: Order): boolean {
+    return order.status === 'pending_payment';
+  }
+
+  async confirmCancel(order: Order) {
+    const sheet = await this.actionSheetCtrl.create({
+      header: 'Cancel this order?',
+      subHeader: 'You have not been charged for pending orders.',
+      buttons: [
+        {
+          text: 'Yes, cancel order',
+          role: 'destructive',
+          handler: () => {
+            this.executeCancel(order);
+            return true;
+          },
+        },
+        {
+          text: 'Keep order',
+          role: 'cancel',
+        },
+      ],
+    });
+    await sheet.present();
+  }
+
+  private executeCancel(order: Order) {
+    this.mobileAdapter
+      .post_v3('POST /orders/:id/cancel', { reason: 'customer self-serve' }, {
+        authToken: this.single_user.token,
+        pathParams: { id: String(order.id) },
+      })
+      .subscribe({
+        next: (response: any) => {
+          if (response.response_code === 200 && response.status === 'success') {
+            // Optimistic local update + success toast.
+            order.status = 'cancelled';
+            const wasIdempotent = response.data?.cancellation?.was_already_cancelled === true;
+            this.toast.success(
+              wasIdempotent
+                ? 'This order was already cancelled.'
+                : 'Order cancelled.',
+            );
+          } else {
+            this.toast.error(response.message || 'Unable to cancel order.');
+          }
+        },
+        error: () => {
+          this.toast.error('Network error. Please try again.');
+        },
+      });
   }
 }

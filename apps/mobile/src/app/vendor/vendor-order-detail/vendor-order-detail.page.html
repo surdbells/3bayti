@@ -1,0 +1,118 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_vendor_order_detail' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg ion-padding">
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  @if (order) {
+    <!-- Order summary -->
+    <ion-card class="order-summary-card">
+      <div class="summary-header">
+        <h2 class="summary-ref">{{ order.order_reference }}</h2>
+        <span class="status-pill" [ngClass]="'status-pill--' + order.status">
+          {{ order.status | uppercase }}
+        </span>
+      </div>
+      <div class="summary-meta">
+        <span class="summary-date">{{ order.date | date:'MMM d, y, h:mm a' }}</span>
+        <strong class="summary-total">{{ order.total }} {{ order.currency }}</strong>
+      </div>
+    </ion-card>
+
+    <h3 class="section-heading">{{ 'heading_your_items' | translate }}</h3>
+
+    @for (item of order.items; track item.id) {
+      <ion-card class="item-card">
+        <div class="item-row">
+          <div class="item-image-wrapper">
+            <img loading="lazy" [src]="item.product_image" alt="{{ item.product_name }}" class="item-image" />
+            <span class="item-status-pill" [ngClass]="'item-status-pill--' + item.item_status">
+              {{ item.item_status | uppercase }}
+            </span>
+          </div>
+          <div class="item-info">
+            <h4 class="item-name">{{ item.product_name }}</h4>
+            <p class="item-meta">{{ 'label_qty' | translate }}: {{ item.quantity }}</p>
+            <p class="item-price">{{ item.unit_price }} {{ order.currency }}</p>
+          </div>
+        </div>
+
+        <!-- State-machine action buttons (legal transitions only) -->
+        <div class="item-actions">
+          @if (canAccept(item)) {
+            <ion-button
+              size="small"
+              fill="solid"
+              color="success"
+              [disabled]="ui_controls.is_transitioning"
+              (click)="confirmTransition(item, 'accepted', 'button_accept_item' | translate)"
+            >
+              {{ 'button_accept_item' | translate }}
+            </ion-button>
+          }
+          @if (canReject(item)) {
+            <ion-button
+              size="small"
+              fill="outline"
+              color="danger"
+              [disabled]="ui_controls.is_transitioning"
+              (click)="confirmTransition(item, 'rejected', 'button_reject_item' | translate)"
+            >
+              {{ 'button_reject_item' | translate }}
+            </ion-button>
+          }
+          @if (canMarkPreparing(item)) {
+            <ion-button
+              size="small"
+              fill="solid"
+              [disabled]="ui_controls.is_transitioning"
+              (click)="confirmTransition(item, 'preparing', 'button_mark_preparing' | translate)"
+            >
+              {{ 'button_mark_preparing' | translate }}
+            </ion-button>
+          }
+          @if (canMarkShipped(item)) {
+            <ion-button
+              size="small"
+              fill="solid"
+              [disabled]="ui_controls.is_transitioning"
+              (click)="confirmTransition(item, 'shipped', 'button_mark_shipped' | translate)"
+            >
+              {{ 'button_mark_shipped' | translate }}
+            </ion-button>
+          }
+          @if (canMarkDelivered(item)) {
+            <ion-button
+              size="small"
+              fill="solid"
+              [disabled]="ui_controls.is_transitioning"
+              (click)="confirmTransition(item, 'delivered', 'button_mark_delivered' | translate)"
+            >
+              {{ 'button_mark_delivered' | translate }}
+            </ion-button>
+          }
+        </div>
+      </ion-card>
+    }
+
+    @if (order.items.length === 0) {
+      <div class="empty-state">
+        <h3>{{ 'heading_no_items' | translate }}</h3>
+      </div>
+    }
+  }
+</ion-content>
+
+<app-tab-bar></app-tab-bar>

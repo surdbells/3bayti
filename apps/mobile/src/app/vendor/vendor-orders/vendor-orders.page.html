@@ -5,12 +5,26 @@
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
-    <ion-title class="m7-title">{{ 'title_my_orders' | translate }}</ion-title>
+    <ion-title class="m7-title">{{ 'title_vendor_orders' | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content fullscreen="true" class="page-bg ion-padding">
-  @if (ui_controls.is_loading){
+  <!-- Status filter chips -->
+  <div class="status-filter horizontal-scroll">
+    @for (s of statuses; track s) {
+      <button
+        class="status-chip"
+        [class.status-chip--active]="selectedStatus === s"
+        (click)="selectStatus(s)"
+        type="button"
+      >
+        {{ ('vendor_status_' + s) | translate }}
+      </button>
+    }
+  </div>
+
+  @if (ui_controls.is_loading && orders.length === 0){
     <div class="loader-row">
       <ax-loader></ax-loader>
     </div>
@@ -21,7 +35,7 @@
       <div class="empty-icon-wrap">
         <ax-icon name="shopping-cart" />
       </div>
-      <h2>{{ 'heading_no_orders' | translate }}</h2>
+      <h2>{{ 'heading_no_vendor_orders' | translate }}</h2>
     </div>
   } @else {
     @for (order of orders; track order.id; let i = $index) {
@@ -29,52 +43,56 @@
         <!-- Order Header -->
         <div class="order-header">
           <div class="order-info">
-            <h4 class="order-id">{{ order.id }}</h4>
+            <h4 class="order-id">{{ order.order_reference }}</h4>
             <span class="order-date">{{ order.date | date:'MMM d, y' }}</span>
           </div>
           <span class="status-pill" [ngClass]="'status-pill--' + order.status">{{ order.status | uppercase }}</span>
         </div>
 
+        <!-- Item count summary line -->
+        <div class="item-count">
+          {{ order.items.length }} {{ (order.items.length === 1 ? 'label_item' : 'label_items') | translate }}
+        </div>
+
         <!-- Collapsible items section -->
         @if (order.showItems) {
-          <div class="items-list horizontal-scroll">
-            @for (item of order.items; track item) {
-              <div (click)="open_vendor(item.store, item.product_name)" class="product-card">
+          <div class="items-list">
+            @for (item of order.items; track item.id) {
+              <div class="product-card">
                 <div class="product-image-wrapper">
                   <img loading="lazy" [src]="item.product_image" alt="{{ item.product_name }}" class="product-image" />
-                  <span class="item-status-pill" [ngClass]="'item-status-pill--' + item.status">{{ item.status | uppercase }}</span>
+                  <span class="item-status-pill" [ngClass]="'item-status-pill--' + item.item_status">{{ item.item_status | uppercase }}</span>
                 </div>
                 <h5 class="product-name">{{ item.product_name }}</h5>
                 <p class="qty">{{ 'label_qty' | translate }}: {{ item.quantity }}</p>
-                <p class="price">Ð{{ item.price }}</p>
+                <p class="price">{{ item.unit_price }} {{ order.currency }}</p>
               </div>
             }
           </div>
         }
 
-        <!-- Footer with toggle -->
+        <!-- Footer -->
         <div class="order-footer">
           <div class="total">
             <span class="total-label">{{ 'label_total' | translate }}</span>
-            <strong class="total-amount">Ð{{ order.total }}</strong>
+            <strong class="total-amount">{{ order.total }} {{ order.currency }}</strong>
           </div>
           <div class="actions">
             <ion-button size="small" fill="outline" class="toggle-btn" (click)="toggleItems(i)">
               {{ order.showItems ? ('button_hide_items' | translate) : ('button_view_items' | translate) }}
               <ax-icon [name]="order.showItems ? 'chevron-up' : 'chevron-down'" slot="end"></ax-icon>
             </ion-button>
-            @if (canCancel(order)) {
-              <ion-button size="small" fill="outline" color="danger" class="cancel-btn" (click)="confirmCancel(order)">
-                {{ 'button_cancel_order' | translate }}
-              </ion-button>
-            }
+            <ion-button size="small" fill="solid" class="manage-btn" (click)="openDetail(order)">
+              {{ 'button_manage_order' | translate }}
+              <ax-icon name="chevron-right" slot="end"></ax-icon>
+            </ion-button>
           </div>
         </div>
       </ion-card>
     }
   }
 
-  @if(!ui_controls.is_empty){
+  @if(!ui_controls.is_empty && ui_controls.has_more){
     <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)">
       <ion-infinite-scroll-content [loadingText]="'please_wait' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
     </ion-infinite-scroll>

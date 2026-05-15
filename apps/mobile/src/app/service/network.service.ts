@@ -37,4 +37,8 @@ export class NetworkService {
   get_request(endpoint: string) {
     return this.http.get<any>(`${endpoint}`).pipe(catchError(this.error));
   }
+  // M3.1.7-I: PATCH for vendor line-item state transitions
+  patch_request(data: any, endpoint: string): Observable<any> {
+    return this.http.patch(`${endpoint}`, data).pipe(catchError(this.error));
+  }
 }

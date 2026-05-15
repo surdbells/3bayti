@@ -115,6 +115,18 @@
     <h2 class="section-title">{{ 'quick_actions' | translate }}</h2>
 
     <div class="action-grid">
+      <!-- Manage Orders (M3.1.7-I) -->
+      <button type="button" class="action-card action-card--highlight" (click)="navigateTo('/vendor-orders')">
+        <div class="action-icon">
+          <ax-icon name="shopping-cart"></ax-icon>
+        </div>
+        <div class="action-content">
+          <h3>{{ 'manage_orders' | translate }}</h3>
+          <p>{{ 'view_and_fulfill_orders' | translate }}</p>
+        </div>
+        <ax-icon name="chevron-right" class="action-arrow"></ax-icon>
+      </button>
+
       <!-- Messages / Chat -->
       <button type="button" class="action-card action-card--highlight" (click)="navigateTo('/vendor-chat-list')">
         <div class="action-icon">

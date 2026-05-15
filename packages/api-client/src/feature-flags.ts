@@ -674,6 +674,32 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/orders/:id',
     shape: 'v2',
   },
+  // M3.1.7-F — customer self-serve cancel (pending_payment only)
+  'POST /orders/:id/cancel': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/orders/:id/cancel',
+    shape: 'v3-envelope',
+  },
+  // M3.1.7-C — vendor order surface (mobile reads in Phase I)
+  'GET /vendor/orders': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/vendor/orders',
+    shape: 'v3-envelope',
+  },
+  'GET /vendor/orders/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/vendor/orders/:id',
+    shape: 'v3-envelope',
+  },
+  'PATCH /vendor/orders/:orderId/items/:itemId/status': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/vendor/orders/:orderId/items/:itemId/status',
+    shape: 'v3-envelope',
+  },
   // Noon webhook receiver — server-to-server, NEVER called by mobile.
   // Listed here for routing-table completeness only; mobile clients
   // never resolve this key. Adapter would refuse to call it

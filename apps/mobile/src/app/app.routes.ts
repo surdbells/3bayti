@@ -161,5 +161,15 @@ export const routes: Routes = [
     path: 'store-dashboard',
     loadComponent: () => import('./vendor/store-dashboard/store-dashboard.page').then(m => m.StoreDashboardPage),
     title: 'Store Dashboard'
+  }, {
+    // M3.1.7-I — vendor orders list
+    path: 'vendor-orders',
+    loadComponent: () => import('./vendor/vendor-orders/vendor-orders.page').then(m => m.VendorOrdersPage),
+    title: 'Vendor Orders'
+  }, {
+    // M3.1.7-I — vendor order detail (item-level transitions)
+    path: 'vendor-orders/:id',
+    loadComponent: () => import('./vendor/vendor-order-detail/vendor-order-detail.page').then(m => m.VendorOrderDetailPage),
+    title: 'Order Detail'
   },...CHAT_ROUTES
 ];

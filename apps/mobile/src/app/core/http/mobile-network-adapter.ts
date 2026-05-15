@@ -316,7 +316,11 @@ export class MobileNetworkAdapter {
   post_v3(
     routeKey: string,
     body: unknown,
-    opts?: { authToken?: string; pathParams?: Record<string, string> },
+    opts?: {
+      authToken?: string;
+      pathParams?: Record<string, string>;
+      queryParams?: Record<string, string | number | boolean>;
+    },
   ): Observable<unknown> {
     return this.callV3Direct('POST', routeKey, body, opts);
   }
@@ -326,9 +330,30 @@ export class MobileNetworkAdapter {
    */
   get_v3(
     routeKey: string,
-    opts?: { authToken?: string; pathParams?: Record<string, string> },
+    opts?: {
+      authToken?: string;
+      pathParams?: Record<string, string>;
+      queryParams?: Record<string, string | number | boolean>;
+    },
   ): Observable<unknown> {
     return this.callV3Direct('GET', routeKey, null, opts);
+  }
+
+  /**
+   * PATCH a v3 endpoint directly by routeKey. Added M3.1.7-I for
+   * vendor item-status transitions and similar mutating endpoints
+   * that don't have a legacy POST counterpart.
+   */
+  patch_v3(
+    routeKey: string,
+    body: unknown,
+    opts?: {
+      authToken?: string;
+      pathParams?: Record<string, string>;
+      queryParams?: Record<string, string | number | boolean>;
+    },
+  ): Observable<unknown> {
+    return this.callV3Direct('PATCH', routeKey, body, opts);
   }
 
   /* ------ Internals ----------------------------------------------- */
@@ -595,7 +620,11 @@ export class MobileNetworkAdapter {
     method: HttpMethod,
     routeKey: string,
     body: unknown,
-    opts?: { authToken?: string; pathParams?: Record<string, string> },
+    opts?: {
+      authToken?: string;
+      pathParams?: Record<string, string>;
+      queryParams?: Record<string, string | number | boolean>;
+    },
   ): Observable<unknown> {
     let cfg: EndpointConfig;
     try {
@@ -627,11 +656,16 @@ export class MobileNetworkAdapter {
       });
     }
 
-    const url = resolveUrl(
-      routeKey,
-      { old: GlobalComponent.baseURL, new: this.v3BaseUrl },
-      opts?.pathParams,
-    );
+    // M3.1.7-I — build URL with both path-params and optional query string.
+    // Reuses buildV3UrlWithQuery so query strings are stable + URL-encoded
+    // identically to the POST-to-GET conversion path.
+    const url = opts?.queryParams && Object.keys(opts.queryParams).length > 0
+      ? this.buildV3UrlWithQuery(routeKey, opts?.pathParams, opts.queryParams)
+      : resolveUrl(
+          routeKey,
+          { old: GlobalComponent.baseURL, new: this.v3BaseUrl },
+          opts?.pathParams,
+        );
 
     const authHeader = opts?.authToken ? `Bearer ${opts.authToken}` : null;
 
