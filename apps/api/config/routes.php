@@ -173,6 +173,8 @@ return function (App $app): void {
     $app->group('/v3/orders', function (RouteCollectorProxy $group): void {
         $group->get('', \Bayti\Api\Http\Controllers\Order\ListOrdersController::class);
         $group->get('/{id}', \Bayti\Api\Http\Controllers\Order\GetOrderController::class);
+        // M3.1.7-F — customer self-serve cancel (pending_payment only)
+        $group->post('/{id:[0-9]+}/cancel', \Bayti\Api\Http\Controllers\Order\CancelOrderController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
@@ -299,6 +301,10 @@ return function (App $app): void {
         // Refund (M3.1.7-E)
         $group->post('/orders/{id:[0-9]+}/refund',
             \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class);
+
+        // Cancel (M3.1.7-F)
+        $group->post('/orders/{id:[0-9]+}/cancel',
+            \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class);
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);

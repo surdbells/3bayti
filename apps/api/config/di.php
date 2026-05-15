@@ -155,6 +155,11 @@ return [
     \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController::class => \DI\autowire(),
 
+    // M3.1.7-F — Cancel order service + admin/customer controllers
+    \Bayti\Api\Domain\Order\CancelOrderService::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Order\CancelOrderController::class => \DI\autowire(),
+
     // M3.1.7-D — Admin order surface controllers
     \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class => \DI\autowire(),
