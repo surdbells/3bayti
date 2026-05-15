@@ -541,7 +541,86 @@ Known issues carried into M3.1.5+ (see M3.1.4 completion runbook "Known issues" 
 
 **Strangler-fig isolation preserved:** cart, checkout, orders, profile writes, settings, reviews, wishlist, follows all continue on legacy. Per-endpoint rollback supported.
 
-#### M3.1.6 — v3 Cart/Checkout/Orders Endpoint Build
+#### M3.1.6 — v3 Cart/Checkout/Orders/Noon Build (SHIPPED, scope-revised at j-phase)
+
+**Status:** ✅ Backend half complete + production-ready; mobile rewrite split out as M3.1.6i.2.
+
+**Duration:** Across two extended-chat sessions (~10 commits f540ade..28cb6c4)
+**Output:** Full v3 backend for cart/orders/checkout including Noon hosted-checkout integration + retrieve-order-before-acting safety pattern; routing-table corrections; legacy-data-migration scaffold + runbook.
+
+**Scope revision (recorded for posterity):**
+The original M3.1.6 plan budgeted j-phase as "flip target='old' → 'new'" with M3.1.6i as "12 routing entries + 6 transform files + sign-in flow rewrite". On contact with the existing mobile codebase, three architectural pieces emerged that warrant their own sub-phase:
+1. `MobileNetworkAdapter::callV3()` doesn't support path-param-from-body extraction (mobile cart pages put item id in body, not URL)
+2. Checkout flow is structurally different — legacy reads URL params on webview return; v3 polls a status endpoint
+3. Cart merge on sign-in is a new operation, not a transform
+
+The j-phase flip therefore blocks on a new sub-phase M3.1.6i.2 (mobile call-site rewrite). The backend is done and the routing table is corrected; the flip happens when M3.1.6i.2 ships.
+
+**Sub-phases:**
+
+- **M3.1.6a** (`f540ade`) — Schema migration: 7 tables (`carts`, `cart_items`, `orders`, `order_items`, `order_addresses`, `payment_transactions`, `payment_webhook_events`); 3 new Noon env vars in `.env.example` (NOON_APP_IDENTIFIER, NOON_APP_KEY, NOON_WEBHOOK_SECRET); String DECIMAL throughout for money.
+- **M3.1.6b** (`c2649ee`) — Domain entities + repositories (11 files): Cart/CartItem with variant-aware `findEquivalentItem`; Order with idempotent `markPaid`/`markFailed`; OrderItem with vendor snapshot; OrderAddress; PaymentTransaction with idempotency_key; PaymentWebhookEvent.
+- **M3.1.6c** (`fbb19cb`) — `PaymentGatewayInterface` (Q9=A, subsumes original M3.1.8) + `NoonPaymentGateway` Guzzle adapter against api.noonpayments.com; 7 exception kinds; `NoonWebhookSignatureVerifier` interface + `LoggingOnlyVerifier` (M3.1.6 default) + `HmacSha256SignatureVerifier` (scaffolded for M3.1.7); 27 tests (17 gateway + 10 signature).
+- **M3.1.6d** (`358d7de`) — Cart controllers (5 endpoints: GET /v3/cart, POST /v3/cart/items, PATCH /v3/cart/items/{id}, DELETE /v3/cart/items/{id}, POST /v3/cart/merge); `CartSerializer`; cap at 999 per line; variant-aware merge via `Cart::findEquivalentItem`; 22 tests / 105 assertions. Established two architectural patterns for the remaining sub-phases: (1) controllers inject `EntityManagerInterface` and access repos via `$em->getRepository(X::class)` (PHP-DI can't autowire `EntityRepository` subclasses), (2) Slim's RequestResponse strategy passes `(Request, Response, args)` for route-param controllers.
+- **M3.1.6e** (`b75d335`) — Order controllers (2 endpoints: GET /v3/orders + GET /v3/orders/{id}); `OrderSerializer` with `store` alias for vendor_id (mobile compat); pagination metadata; cross-tenant 404; 8 tests / 44 assertions.
+- **M3.1.6f1** (`efcff2c`) — InitiateCheckoutController; converts active cart → pending_payment Order; server-side ref generation `V3-{epoch_ms}-{4hex}`; idempotent on (user_id, cart_id, cart_updated_at) so double-tap returns same checkout URL; server-derived totals (client can't pass a fake total); address snapshotting; Noon round-trip OUTSIDE the DB transaction; added `PAYMENT_PROVIDER_ERROR` + `BUSINESS_RULE_VIOLATION` error codes + `HttpException::businessRuleViolation()` factory; 7 tests / 40 assertions.
+- **M3.1.6f2** (`38c3855`) — `NoonWebhookController` (unauthenticated; retrieve-order-before-acting safety pattern; idempotency via `noon:<eventId>` or `noon:body:<sha256>`; always 200 OK on receipt except 401 for sig fail; defensive against transient/non-paid/already-terminal cases) + `GetCheckoutStatusController` (reads ONLY v3 local state — NEVER polls Noon directly per recon-confirmed rate-limit ban risk; lookup by order_reference; cross-tenant 404); 13 tests / 50 assertions.
+- **M3.1.6g** (`59f77e4`) — Closed as duplicate of M3.1.1c. The billing-address endpoints (GET/PATCH `/v3/me/billing-address`) already shipped in M3.1.1c and `InitiateCheckoutController` already integrates against `AddressRepository`; the M3.1.6 plan's budget for this sub-phase reflected incomplete awareness of M3.1.1c's scope. Closure runbook documents this + edge cases out of scope for v3 (multi-shipping-per-order, ad-hoc inline address entry).
+- **M3.1.6h** (`95e044c`) — Legacy data migration scaffold (`migrateOrders`, `migrateOrderItems`, `migrateOrderAddresses`) using the established defensive-INFORMATION_SCHEMA-probing pattern from M3.1.5.5c; `--include-orders` opt-in flag on `migrate-all.php`; operator runbook covering pre-flight checks (table/column probes, status mapping, order-reference synthesis), idempotency, rollback, verification queries. Carts deliberately NOT migrated (transient state; documented decision).
+- **M3.1.6i** (`28cb6c4`) — Routing table corrections (scope-reduced from original plan): 4 corrections of prematurely-flipped entries that would have 404'd (`PUT /cart/items/:id` → `PATCH`; `POST /checkout` → `POST /checkout/initiate`; flipped `cart/items/:id` and `orders/:id` back to `target='old'` pending mobile rewrite) + 3 additions (`POST /cart/merge`, `GET /checkout/status/:order_reference`, `POST /payment/webhook/noon` — last is informational; mobile never calls). Runbook documents the scope reduction + the deferred work that becomes M3.1.6i.2.
+- **M3.1.6i.2 (new sub-phase)** — Mobile call-site rewrite: adapter path-param-from-body extension; cart/order/checkout transforms; checkout-flow rewrite (poll status endpoint instead of read URL params); cart merge on sign-in. Has its own plan and budget; not started.
+- **M3.1.6j1** — **Blocked on M3.1.6i.2.** Will flip 9 entries (7 from M3.1.6i + `GET /cart` + `POST /cart/items`) `target='old'` → `'new'` en bloc when M3.1.6i.2 ships.
+- **M3.1.6j2** — Closure runbook + device-test checklist + Noon API reference + plan markers (this commit, alongside M3.1.6i).
+
+**10 v3 endpoints shipped (backend; reachable at api-v3.3bayti.ae):**
+- `GET /v3/cart`
+- `POST /v3/cart/items`
+- `PATCH /v3/cart/items/{id}`
+- `DELETE /v3/cart/items/{id}`
+- `POST /v3/cart/merge`
+- `GET /v3/orders?limit&offset`
+- `GET /v3/orders/{id}`
+- `POST /v3/checkout/initiate`
+- `GET /v3/checkout/status/{order_reference}`
+- `POST /v3/payment/webhook/noon` (unauthenticated; signature verification deferred to M3.1.7)
+
+Plus 2 already-existing from M3.1.1c (still on v3):
+- `GET /v3/me/billing-address`
+- `PATCH /v3/me/billing-address`
+
+**Locked decisions executed:**
+- **Q6=C** Full surface (customer + vendor + refunds + cancellations + dispute flow): M3.1.6 ships customer; vendor + refunds + cancellations + admin + real webhook signature verification all explicitly deferred to M3.1.7.
+- **Q7=B** Server-side for logged-in + device-local for guests + merge-on-sign-in: `POST /v3/cart/merge` shipped; mobile sign-in flow integration deferred to M3.1.6i.2.
+- **Q8=A** Direct replacement, NO shadow mode: load-bearing safety is the retrieve-order-before-acting pattern + webhook idempotency + UNIQUE constraints, NOT shadow comparisons.
+- **Q9=A** v3 talks to Noon directly (subsumes original M3.1.8; absorbs Pluggable Gateway from C11): `PaymentGatewayInterface` + `NoonPaymentGateway` shipped.
+
+**Key architectural pieces worth carrying forward:**
+- **Retrieve-order-before-acting** as load-bearing safety: even with no signature verification, a spoofed webhook cannot make us mark an order paid — the controller calls Noon's GET_ORDER server-to-server (authenticated with our merchant credentials) to confirm the true state. Endorsed by Noon's own docs.
+- **Mobile NEVER polls Noon directly**: rate-limit ban risk. `GetCheckoutStatusController` reads ONLY v3 local state; the webhook receiver is the only place we call retrieveOrder (and only once per state-change).
+- **Server-side server-derived everything at checkout**: order_reference, totals, unit_prices (snapshotted), addresses. Client cannot pass a fake total.
+- **Idempotency at every layer**: webhook (event_id or body-hash), checkout-initiate (user+cart+cart_ts), markPaid (idempotent on Order entity).
+
+**Known limitations carried into M3.1.7 / M3.1.6i.2:**
+- Real HMAC signature verification not yet bound to DI — needs empirical sandbox capture to confirm Noon's algorithm (M3.1.7 ships this).
+- No reconciliation cron for stuck `pending_payment` orders — M3.1.7.
+- Vendor + admin endpoints (refund / cancel / dispute) — M3.1.7.
+- Mobile call sites still on legacy — M3.1.6i.2 (adapter extension + transforms + flow rewrite).
+- `best_sellers` + `best_sellers_listing` (deferred from M3.1.5.5) — now unblocked; order_items table exists. Can be picked up any time.
+
+**Tests + quality gates:**
+- apps/api phpunit: 346 → 423 (+77 tests / +239 assertions)
+- api phpstan: zero errors on all M3.1.6 files (5 pre-existing src/Migration findings from before M3.1.5 unchanged)
+- api-client TS: clean
+- mobile TS: unchanged (no mobile code touched yet)
+
+**Pending operator actions before M3.1.6i.2 / M3.1.6j1:**
+- Obtain Noon merchant portal credentials (NOON_BUSINESS_IDENTIFIER, NOON_APP_IDENTIFIER, NOON_APP_KEY, NOON_WEBHOOK_SECRET); test card numbers from docs.noonpayments.com/test/cards
+- Email Noon support to enable uniqueness of merchant order reference field
+- Verify legacy order schema matches the M3.1.6h probe candidates before running `--include-orders`
+
+**Strangler-fig isolation preserved:** mobile traffic still on legacy for cart/orders/checkout. Per-endpoint rollback supported. Backend correctness verified via tests, not production traffic.
+
+#### M3.1.6 — v3 Cart/Checkout/Orders Endpoint Build (original plan — SUPERSEDED by ↑)
 
 **Duration:** 7-10 days
 **Output:** ~10 new v3 endpoints + shadow mode infrastructure
