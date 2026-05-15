@@ -134,6 +134,44 @@ class OrderRepository extends EntityRepository
     }
 
     /**
+     * Find orders stuck in pending_payment past the given cutoff,
+     * up to a limit. Used by the M3.1.7-B reconciliation cron.
+     *
+     * The query is intentionally narrow:
+     *   - status = 'pending_payment' (we only want truly-stuck orders;
+     *     a paid order needs no reconciliation)
+     *   - created_at < cutoff (we want orders old enough that the
+     *     webhook delivery window should have passed)
+     *   - ordered by created_at ASC (oldest first; reconcile the
+     *     most-painful-to-the-customer ones first)
+     *
+     * Returns Order entities with their PaymentTransaction relation
+     * NOT eagerly loaded — the caller fetches the transaction's
+     * provider_order_ref on-demand to keep this query lean even when
+     * the table has many pending rows.
+     *
+     * @param int $batchLimit max rows to return (caller caps cron load)
+     * @return list<Order>
+     */
+    public function findStuckPendingPayment(\DateTimeImmutable $cutoff, int $batchLimit): array
+    {
+        $batchLimit = max(1, min($batchLimit, 500));
+
+        $result = $this->createQueryBuilder('o')
+            ->where('o.status = :status')
+            ->andWhere('o.createdAt < :cutoff')
+            ->setParameter('status', Order::STATUS_PENDING_PAYMENT)
+            ->setParameter('cutoff', $cutoff)
+            ->orderBy('o.createdAt', 'ASC')
+            ->setMaxResults($batchLimit)
+            ->getQuery()
+            ->getResult();
+
+        /** @var list<Order> $result */
+        return $result;
+    }
+
+    /**
      * Persist an order with its items and addresses as one unit.
      */
     public function saveWithEverything(Order $order): void

@@ -21,6 +21,8 @@ declare(strict_types=1);
  */
 
 use Bayti\Api\Bootstrap;
+use Bayti\Api\Console\ReconcilePendingOrdersCommand;
+use Bayti\Api\Payment\PaymentGatewayInterface;
 use Doctrine\DBAL\Tools\Console\ConsoleRunner as DbalConsoleRunner;
 use Doctrine\DBAL\Tools\Console\Command\RunSqlCommand;
 use Doctrine\Migrations\Configuration\Migration\PhpFile;
@@ -30,6 +32,7 @@ use Doctrine\Migrations\Tools\Console\Command;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Tools\Console\ConsoleRunner;
 use Doctrine\ORM\Tools\Console\EntityManagerProvider\SingleManagerProvider;
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Console\Application;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -79,5 +82,30 @@ $cli->addCommands([
     new Command\SyncMetadataCommand($migrationsFactory),
     new Command\RollupCommand($migrationsFactory),
 ]);
+
+// M3.1.7-B — Application commands. Pull collaborators from the
+// container at registration time. The PaymentGateway resolution
+// requires NOON_* env vars; if those are missing (fresh dev
+// sandbox, CI migration runs, etc.) we still want `bin/console
+// list`, `migrations:*`, and `doctrine:*` to work. So we attempt
+// eager resolution and skip registering the reconciliation
+// command if the gateway can't be built. Operators running the
+// reconciliation cron on production will have the env vars set;
+// developers running migrations locally don't need this command.
+/** @var LoggerInterface $logger */
+$logger = $container->get(LoggerInterface::class);
+
+try {
+    /** @var PaymentGatewayInterface $gateway */
+    $gateway = $container->get(PaymentGatewayInterface::class);
+    $cli->add(new ReconcilePendingOrdersCommand($em, $gateway, $logger));
+} catch (\Throwable $e) {
+    // Log the reason — visible if anyone runs `bin/console
+    // orders:reconcile-pending` and gets a "command not found"
+    // error. Easier diagnosis than silent omission.
+    $logger->info('reconcile command not registered: payment gateway unavailable', [
+        'reason' => $e->getMessage(),
+    ]);
+}
 
 $cli->run();
