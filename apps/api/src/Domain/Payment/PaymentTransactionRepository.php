@@ -85,4 +85,44 @@ class PaymentTransactionRepository extends EntityRepository
         $em->persist($transaction);
         $em->flush();
     }
+
+    /**
+     * Sum the amount of all successful REFUND transactions for an
+     * order. Used by M3.1.7-E to validate that a new refund request
+     * + existing refunds <= original paid amount.
+     *
+     * Returns a decimal string ('0.00' if no refunds yet). Uses
+     * string arithmetic (bcadd) to avoid float drift on decimal
+     * amounts.
+     *
+     * A 'successful' refund is one whose status indicates the gateway
+     * accepted it. Noon returns 'Refunded' or 'PartiallyRefunded';
+     * we accept anything except 'Failed' / 'Rejected' (gateway-
+     * specific) so we don't accidentally double-refund when a
+     * pending row exists.
+     */
+    public function sumRefundsForOrder(Order $order): string
+    {
+        $rows = $this->createQueryBuilder('t')
+            ->select('t.amount, t.status')
+            ->where('t.order = :order')
+            ->andWhere('t.operation = :op')
+            ->setParameter('order', $order)
+            ->setParameter('op', PaymentTransaction::OPERATION_REFUND)
+            ->getQuery()
+            ->getScalarResult();
+
+        $sum = '0.00';
+        foreach ($rows as $row) {
+            $status = strtolower((string) ($row['status'] ?? ''));
+            // Skip explicit failures; everything else (including
+            // pending Refund-Requested rows) counts to prevent
+            // double-issuing in race conditions.
+            if (str_contains($status, 'fail') || str_contains($status, 'reject')) {
+                continue;
+            }
+            $sum = bcadd($sum, (string) $row['amount'], 2);
+        }
+        return $sum;
+    }
 }

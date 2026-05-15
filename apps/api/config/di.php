@@ -161,6 +161,9 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class => \DI\autowire(),
 
+    // M3.1.7-E — Refund flow (full + partial)
+    \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class => \DI\autowire(),
+
     // M2.1 — RequestIdMiddleware (added earlier in M1.6.2.B but
     // listed here for discoverability).
     \Bayti\Api\Http\Middleware\RequestIdMiddleware::class => \DI\autowire(),

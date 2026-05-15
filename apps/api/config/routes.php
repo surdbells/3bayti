@@ -295,6 +295,10 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class);
         $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
             \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class);
+
+        // Refund (M3.1.7-E)
+        $group->post('/orders/{id:[0-9]+}/refund',
+            \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class);
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);
