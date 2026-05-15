@@ -305,6 +305,11 @@ return function (App $app): void {
         // Cancel (M3.1.7-F)
         $group->post('/orders/{id:[0-9]+}/cancel',
             \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class);
+
+        // Disputes (M3.1.7-G)
+        $group->get('/disputes', \Bayti\Api\Http\Controllers\Admin\Dispute\ListDisputesController::class);
+        $group->get('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\GetDisputeController::class);
+        $group->patch('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\ResolveDisputeController::class);
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);

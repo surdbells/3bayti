@@ -160,6 +160,12 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Order\CancelOrderController::class => \DI\autowire(),
 
+    // M3.1.7-G — Dispute persistence + admin endpoints
+    \Bayti\Api\Http\Serializers\DisputeSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Dispute\ListDisputesController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Dispute\GetDisputeController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Dispute\ResolveDisputeController::class => \DI\autowire(),
+
     // M3.1.7-D — Admin order surface controllers
     \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class => \DI\autowire(),

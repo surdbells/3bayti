@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Checkout;
 
 use Bayti\Api\Domain\Order\Order;
+use Bayti\Api\Domain\Order\OrderDispute;
+use Bayti\Api\Domain\Order\OrderDisputeRepository;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\Payment\PaymentTransaction;
 use Bayti\Api\Domain\Payment\PaymentTransactionRepository;
@@ -143,6 +145,33 @@ final class NoonWebhookController
         );
 
         $events->save($event);
+
+        // ------------------------------------------------------------------
+        // DISPUTE DETECTION (M3.1.7-G)
+        //
+        // If the event looks like a chargeback/dispute, persist an
+        // OrderDispute row. We do this BEFORE the order-null early-exit
+        // so orphan disputes (event references an unknown provider
+        // order ref) are still captured for manual operator review.
+        //
+        // Idempotency: indexed UNIQUE on provider_dispute_id. Webhook
+        // retries find the existing row and no-op.
+        //
+        // NOTE: The exact eventType strings Noon emits for disputes
+        // are NOT empirically confirmed at M3.1.7-G ship time. We
+        // detect on the patterns currently documented in Noon's API
+        // contract (CHARGEBACK_OPENED, DISPUTE_OPENED, CHARGEBACK_RECEIVED).
+        // If sandbox or production observation reveals different
+        // strings, update DISPUTE_EVENT_TYPES below.
+        // ------------------------------------------------------------------
+        if ($this->isDisputeEvent($eventType)) {
+            $this->persistDispute(
+                eventType: $eventType ?? 'UNKNOWN_DISPUTE',
+                providerOrderRef: $providerOrderRef,
+                order: $order,
+                payload: $payload,
+            );
+        }
 
         if ($order === null) {
             $this->logger->warning('noon.webhook: no matching order', [
@@ -342,5 +371,187 @@ final class NoonWebhookController
                 }
             }
         }
+    }
+
+    /**
+     * Noon eventType strings that correspond to dispute/chargeback
+     * lifecycle events. The exact strings here are PLACEHOLDERS based
+     * on Noon's API contract documentation; empirical sandbox observation
+     * may reveal different values that should be merged in.
+     *
+     * Updating this list:
+     *   1. Observe a real dispute event in sandbox or production
+     *   2. Capture the actual eventType from payment_webhook_events.payload
+     *   3. Add the new value to this array
+     *   4. Backfill any existing order_disputes rows if needed
+     */
+    private const DISPUTE_EVENT_TYPES = [
+        'CHARGEBACK_OPENED',
+        'CHARGEBACK_RECEIVED',
+        'DISPUTE_OPENED',
+        'DISPUTE_RECEIVED',
+    ];
+
+    private function isDisputeEvent(?string $eventType): bool
+    {
+        if ($eventType === null || $eventType === '') {
+            return false;
+        }
+        return in_array($eventType, self::DISPUTE_EVENT_TYPES, true);
+    }
+
+    /**
+     * Persist (or idempotently update) an OrderDispute row from a
+     * webhook dispute event. Looks up by provider_dispute_id; creates
+     * a new row if none exists.
+     *
+     * @param array<string, mixed> $payload
+     */
+    private function persistDispute(
+        string $eventType,
+        ?string $providerOrderRef,
+        ?Order $order,
+        array $payload,
+    ): void {
+        $providerDisputeId = $this->extractProviderDisputeId($payload);
+
+        /** @var OrderDisputeRepository $disputes */
+        $disputes = $this->em->getRepository(OrderDispute::class);
+
+        // Idempotency: re-delivered webhook with same dispute id → no-op.
+        if ($providerDisputeId !== null) {
+            $existing = $disputes->findByProviderDisputeId($providerDisputeId);
+            if ($existing !== null) {
+                $this->logger->info('noon.webhook: dispute already persisted', [
+                    'dispute_id' => $existing->getId(),
+                    'provider_dispute_id' => $providerDisputeId,
+                    'event_type' => $eventType,
+                ]);
+                return;
+            }
+        }
+
+        $amount = $this->extractDisputeAmount($payload);
+        $currency = $this->extractDisputeCurrency($payload);
+        $reason = $this->extractDisputeReason($payload);
+
+        $dispute = new OrderDispute(
+            providerOrderRef: $providerOrderRef ?? '(unknown)',
+            eventType: $eventType,
+            rawEvent: $payload,
+            order: $order,
+            providerDisputeId: $providerDisputeId,
+            amount: $amount,
+            currency: $currency,
+            reason: $reason,
+        );
+        $disputes->save($dispute);
+
+        $this->logger->info('noon.webhook: dispute persisted', [
+            'dispute_id' => $dispute->getId(),
+            'order_id' => $order?->getId(),
+            'event_type' => $eventType,
+            'amount' => $amount,
+            'provider_dispute_id' => $providerDisputeId,
+        ]);
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function extractProviderDisputeId(array $payload): ?string
+    {
+        // Common Noon payload shapes for dispute id:
+        //   payload.disputeId / payload.dispute_id
+        //   payload.order.disputeId
+        //   payload.dispute.id
+        $candidates = [
+            $payload['disputeId'] ?? null,
+            $payload['dispute_id'] ?? null,
+        ];
+        $order = $payload['order'] ?? null;
+        if (is_array($order)) {
+            $candidates[] = $order['disputeId'] ?? null;
+        }
+        $dispute = $payload['dispute'] ?? null;
+        if (is_array($dispute)) {
+            $candidates[] = $dispute['id'] ?? null;
+        }
+
+        foreach ($candidates as $c) {
+            if (is_string($c) && $c !== '') {
+                return substr($c, 0, 128); // truncate to column length
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function extractDisputeAmount(array $payload): ?string
+    {
+        // Payload shapes:
+        //   payload.dispute.amount
+        //   payload.order.amount.value
+        //   payload.amount
+        $dispute = $payload['dispute'] ?? null;
+        if (is_array($dispute)) {
+            $a = $dispute['amount'] ?? null;
+            if (is_numeric($a)) {
+                return bcadd((string) $a, '0.00', 2);
+            }
+        }
+        $order = $payload['order'] ?? null;
+        if (is_array($order)) {
+            $amt = $order['amount'] ?? null;
+            if (is_array($amt) && isset($amt['value']) && is_numeric($amt['value'])) {
+                return bcadd((string) $amt['value'], '0.00', 2);
+            }
+        }
+        if (isset($payload['amount']) && is_numeric($payload['amount'])) {
+            return bcadd((string) $payload['amount'], '0.00', 2);
+        }
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function extractDisputeCurrency(array $payload): ?string
+    {
+        $order = $payload['order'] ?? null;
+        if (is_array($order)) {
+            $amt = $order['amount'] ?? null;
+            if (is_array($amt) && isset($amt['currency']) && is_string($amt['currency'])) {
+                return substr($amt['currency'], 0, 3);
+            }
+            if (isset($order['currency']) && is_string($order['currency'])) {
+                return substr($order['currency'], 0, 3);
+            }
+        }
+        $dispute = $payload['dispute'] ?? null;
+        if (is_array($dispute) && isset($dispute['currency']) && is_string($dispute['currency'])) {
+            return substr($dispute['currency'], 0, 3);
+        }
+        return null;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     */
+    private function extractDisputeReason(array $payload): ?string
+    {
+        $dispute = $payload['dispute'] ?? null;
+        if (is_array($dispute)) {
+            $r = $dispute['reason'] ?? ($dispute['description'] ?? null);
+            if (is_string($r) && $r !== '') {
+                return $r;
+            }
+        }
+        if (isset($payload['reason']) && is_string($payload['reason'])) {
+            return $payload['reason'];
+        }
+        return null;
     }
 }
