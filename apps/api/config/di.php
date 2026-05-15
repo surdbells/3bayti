@@ -465,12 +465,10 @@ return [
     // NoonPaymentGateway; future providers swap in here without
     // touching controller code.
     //
-    // NoonWebhookSignatureVerifier is bound to LoggingOnlyVerifier
-    // in M3.1.6. M3.1.7 will:
-    //   1. Capture real sandbox webhooks
-    //   2. Brute-force the algorithm from logged body/signature pairs
-    //   3. Switch this binding to HmacSha256SignatureVerifier (or a
-    //      different verifier if the algorithm turns out non-HMAC).
+    // NoonWebhookSignatureVerifier is config-flag gated (M3.1.7-A):
+    //   NOON_VERIFY_SIGNATURE=true  → HmacSha256SignatureVerifier
+    //   NOON_VERIFY_SIGNATURE=false → LoggingOnlyVerifier (default;
+    //                                 logs pairs for empirical capture)
     \Bayti\Api\Payment\PaymentGatewayInterface::class => static function (
         ContainerInterface $c
     ): \Bayti\Api\Payment\PaymentGatewayInterface {
@@ -526,10 +524,36 @@ return [
     \Bayti\Api\Payment\Noon\NoonWebhookSignatureVerifier::class => static function (
         ContainerInterface $c
     ): \Bayti\Api\Payment\Noon\NoonWebhookSignatureVerifier {
-        // M3.1.6: logging-only. The retrieve-order-before-acting
-        // pattern in NoonWebhookController is the load-bearing
-        // safety mechanism (Noon-recommended per their own docs).
-        // M3.1.7 swaps this binding after empirical algorithm capture.
+        // M3.1.7-A: config-flag gated. NOON_VERIFY_SIGNATURE controls
+        // which verifier is bound:
+        //
+        //   'true' / '1'  → HmacSha256SignatureVerifier (real crypto check)
+        //   'false' / '0' → LoggingOnlyVerifier (M3.1.6 default; logs
+        //                   pairs for empirical algorithm capture)
+        //   unset / other → LoggingOnlyVerifier (safe default until
+        //                   operator captures real sandbox webhook
+        //                   pairs and confirms HMAC-SHA256 is correct)
+        //
+        // The retrieve-order-before-acting pattern in NoonWebhookController
+        // remains the load-bearing safety mechanism regardless of which
+        // verifier is bound — even with LoggingOnlyVerifier accepting
+        // everything, a spoofed webhook cannot make us mark an order
+        // paid because Noon's GET_ORDER is the source of truth.
+        //
+        // Roll-out plan:
+        //   1. Operator deploys M3.1.7 with NOON_VERIFY_SIGNATURE=false
+        //   2. LoggingOnlyVerifier logs body+sig SHA-256 pairs from
+        //      real sandbox traffic over a few days
+        //   3. Operator confirms HMAC-SHA256 by computing
+        //      hash_hmac('sha256', $body, $secret) against captured
+        //      pairs OR identifies a different algorithm + ships a
+        //      new verifier class
+        //   4. Operator flips NOON_VERIFY_SIGNATURE=true; signature
+        //      checking is now enforced
+        //
+        // If the algorithm turns out non-HMAC-SHA256, swap the verifier
+        // class in the `true` branch — interface contract is unchanged.
+
         $logger = new \Psr\Log\NullLogger();
         try {
             /** @var \Psr\Log\LoggerInterface $logger */
@@ -537,7 +561,29 @@ return [
         } catch (\Throwable) {
             // Continue with NullLogger
         }
-        return new \Bayti\Api\Payment\Noon\LoggingOnlyVerifier($logger);
+
+        $verifyFlag = strtolower(trim((string) ($_ENV['NOON_VERIFY_SIGNATURE'] ?? '')));
+        $verifyEnabled = $verifyFlag === 'true' || $verifyFlag === '1';
+
+        if (!$verifyEnabled) {
+            return new \Bayti\Api\Payment\Noon\LoggingOnlyVerifier($logger);
+        }
+
+        // Real signature verification path.
+        $secret = (string) ($_ENV['NOON_WEBHOOK_SECRET'] ?? '');
+        if ($secret === '') {
+            // Don't silently degrade — operators who flip the flag
+            // expect verification. Failing fast surfaces the missing
+            // env var clearly rather than letting webhooks be accepted
+            // unchecked.
+            throw new \RuntimeException(
+                'NOON_VERIFY_SIGNATURE=true requires NOON_WEBHOOK_SECRET to be set. '
+                . 'Either provide the secret from Noon merchant portal or set '
+                . 'NOON_VERIFY_SIGNATURE=false to use LoggingOnlyVerifier.'
+            );
+        }
+
+        return new \Bayti\Api\Payment\Noon\HmacSha256SignatureVerifier($secret);
     },
 
     // Doctrine repositories are accessed via EntityManager::getRepository();
