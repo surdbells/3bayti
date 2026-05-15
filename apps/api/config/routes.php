@@ -291,6 +291,21 @@ return function (App $app): void {
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);
 
+    // -----------------------------------------------------------------
+    // Vendor surface (M3.1.7-C)
+    // -----------------------------------------------------------------
+    // Vendors see their own orders + advance line items through the
+    // fulfilment lifecycle (accepted → preparing → shipped → delivered).
+    // Cross-vendor isolation enforced at the repository layer.
+    $app->group('/v3/vendor', function (RouteCollectorProxy $group): void {
+        $group->get('/orders', \Bayti\Api\Http\Controllers\Vendor\Order\ListVendorOrdersController::class);
+        $group->get('/orders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController::class);
+        $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
+            \Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController::class);
+    })
+        ->add(\Bayti\Api\Http\Middleware\VendorAuthMiddleware::class)
+        ->add(AuthMiddleware::class);
+
     // Future route groups land below as M2+ phases ship:
     //   /v3/products/*       (M2.2+)
     //   /v3/cart/*           (M3)

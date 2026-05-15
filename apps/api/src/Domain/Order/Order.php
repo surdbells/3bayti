@@ -306,6 +306,101 @@ class Order
     }
 
     /**
+     * Recompute order-level status from item-level statuses. Called
+     * by vendor + admin transition controllers after they advance an
+     * individual item. Order rolls up as follows:
+     *
+     *   - All items DELIVERED  → order DELIVERED (terminal-ish)
+     *   - All items SHIPPED or later (delivered/returned/refunded)
+     *     → order SHIPPED
+     *   - Any item ACCEPTED, PREPARING, SHIPPED, DELIVERED, RETURNED
+     *     or REFUNDED while at least one item still active → FULFILLING
+     *
+     *   - Order in PENDING_PAYMENT, FAILED, CANCELLED, REFUNDED is
+     *     left untouched (terminal or pre-fulfilment states; vendor
+     *     item transitions don't apply).
+     *
+     * Designed to be safe to call repeatedly — same item-state input
+     * always produces the same order-state output.
+     *
+     * NOTE: this method does NOT advance the order beyond DELIVERED
+     * into REFUNDED; that's a separate flow (Phase E refund handler
+     * sets the order to REFUNDED explicitly).
+     */
+    public function recomputeStatusFromItems(): void
+    {
+        // Only recompute for orders that have entered fulfilment.
+        // Pre-fulfilment (pending_payment, paid not-yet-fulfilling)
+        // and post-fulfilment terminal states aren't affected by
+        // vendor item-level transitions.
+        if (
+            $this->status === self::STATUS_PENDING_PAYMENT
+            || $this->status === self::STATUS_CANCELLED
+            || $this->status === self::STATUS_REFUNDED
+            || $this->status === self::STATUS_FAILED
+        ) {
+            return;
+        }
+
+        $items = $this->items->toArray();
+        if ($items === []) {
+            return;
+        }
+
+        $allDelivered = true;
+        $allShippedOrLater = true;
+        $anyActive = false;
+
+        foreach ($items as $item) {
+            /** @var OrderItem $item */
+            $s = $item->getItemStatus();
+
+            if ($s !== OrderItem::ITEM_STATUS_DELIVERED) {
+                $allDelivered = false;
+            }
+            // "Shipped or later" = shipped, delivered, returned, refunded.
+            // Pre-shipped items (pending, accepted, preparing) break this.
+            $shippedOrLater = in_array($s, [
+                OrderItem::ITEM_STATUS_SHIPPED,
+                OrderItem::ITEM_STATUS_DELIVERED,
+                OrderItem::ITEM_STATUS_RETURNED,
+                OrderItem::ITEM_STATUS_REFUNDED,
+            ], true);
+            if (!$shippedOrLater) {
+                $allShippedOrLater = false;
+            }
+
+            // An item is "active" (driving fulfilment) if it's past
+            // PENDING and not rejected/cancelled.
+            $active = in_array($s, [
+                OrderItem::ITEM_STATUS_ACCEPTED,
+                OrderItem::ITEM_STATUS_PREPARING,
+                OrderItem::ITEM_STATUS_SHIPPED,
+                OrderItem::ITEM_STATUS_DELIVERED,
+                OrderItem::ITEM_STATUS_RETURNED,
+                OrderItem::ITEM_STATUS_REFUNDED,
+            ], true);
+            if ($active) {
+                $anyActive = true;
+            }
+        }
+
+        $newStatus = null;
+        if ($allDelivered) {
+            $newStatus = self::STATUS_DELIVERED;
+        } elseif ($allShippedOrLater) {
+            $newStatus = self::STATUS_SHIPPED;
+        } elseif ($anyActive) {
+            $newStatus = self::STATUS_FULFILLING;
+        }
+
+        if ($newStatus !== null && $newStatus !== $this->status) {
+            $this->status = $newStatus;
+            $this->touchUpdatedAt();
+        }
+    }
+
+    /**
      * Add an OrderItem to the order. Updates subtotal + total to
      * stay consistent. Caller is responsible for snapshotting
      * product_name, product_image, etc. before construction.

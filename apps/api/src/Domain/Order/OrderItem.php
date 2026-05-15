@@ -251,9 +251,25 @@ class OrderItem
 
     /**
      * Vendor-side state transition. Validates the move is legal in
-     * the lifecycle. Used by M3.1.7 vendor controllers.
+     * the lifecycle. Used by M3.1.7 vendor + admin controllers.
+     *
+     * Allowed transitions:
+     *   pending    → accepted | rejected | cancelled
+     *   accepted   → preparing | cancelled
+     *   preparing  → shipped | cancelled
+     *   shipped    → delivered | returned
+     *   delivered  → returned (post-delivery returns flow)
+     *   rejected   → (terminal)
+     *   cancelled  → refunded (when refund processes)
+     *   returned   → refunded
+     *   refunded   → (terminal)
+     *
+     * Same-state transitions (e.g. preparing → preparing) are no-ops
+     * rather than errors — idempotent for retries and dual-tap UI.
+     *
+     * @param bool $adminOverride When true, skip transition validation but keep enum validation. Used by admin controllers that need to force a status for safety overrides (e.g. unstick a stuck order). Caller must audit the override.
      */
-    public function setItemStatus(string $newStatus): void
+    public function setItemStatus(string $newStatus, bool $adminOverride = false): void
     {
         $allowed = [
             self::ITEM_STATUS_PENDING,
@@ -269,7 +285,67 @@ class OrderItem
         if (!in_array($newStatus, $allowed, true)) {
             throw new \InvalidArgumentException("Unknown OrderItem status: '{$newStatus}'");
         }
+
+        // Same-state is idempotent no-op
+        if ($newStatus === $this->itemStatus) {
+            return;
+        }
+
+        if (!$adminOverride) {
+            $legalTransitions = self::legalTransitions();
+            $allowedFromHere = $legalTransitions[$this->itemStatus] ?? [];
+            if (!in_array($newStatus, $allowedFromHere, true)) {
+                throw new \InvalidArgumentException(sprintf(
+                    "Illegal item status transition: '%s' → '%s'. Allowed: [%s]",
+                    $this->itemStatus,
+                    $newStatus,
+                    implode(', ', $allowedFromHere),
+                ));
+            }
+        }
+
         $this->itemStatus = $newStatus;
         $this->touchUpdatedAt();
+    }
+
+    /**
+     * Legal transition map. Public+static for controller pre-validation
+     * (so we can return a 422 with the allowed list instead of letting
+     * the entity throw a 500).
+     *
+     * @return array<string, list<string>>
+     */
+    public static function legalTransitions(): array
+    {
+        return [
+            self::ITEM_STATUS_PENDING => [
+                self::ITEM_STATUS_ACCEPTED,
+                self::ITEM_STATUS_REJECTED,
+                self::ITEM_STATUS_CANCELLED,
+            ],
+            self::ITEM_STATUS_ACCEPTED => [
+                self::ITEM_STATUS_PREPARING,
+                self::ITEM_STATUS_CANCELLED,
+            ],
+            self::ITEM_STATUS_PREPARING => [
+                self::ITEM_STATUS_SHIPPED,
+                self::ITEM_STATUS_CANCELLED,
+            ],
+            self::ITEM_STATUS_SHIPPED => [
+                self::ITEM_STATUS_DELIVERED,
+                self::ITEM_STATUS_RETURNED,
+            ],
+            self::ITEM_STATUS_DELIVERED => [
+                self::ITEM_STATUS_RETURNED,
+            ],
+            self::ITEM_STATUS_REJECTED => [],
+            self::ITEM_STATUS_CANCELLED => [
+                self::ITEM_STATUS_REFUNDED,
+            ],
+            self::ITEM_STATUS_RETURNED => [
+                self::ITEM_STATUS_REFUNDED,
+            ],
+            self::ITEM_STATUS_REFUNDED => [],
+        ];
     }
 }

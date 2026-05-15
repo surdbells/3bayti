@@ -148,6 +148,12 @@ return [
     // M2.1 — AdminAuthMiddleware. Takes ResponseFactory + Logger;
     // both autowire-resolvable.
     \Bayti\Api\Http\Middleware\AdminAuthMiddleware::class => \DI\autowire(),
+    \Bayti\Api\Http\Middleware\VendorAuthMiddleware::class => \DI\autowire(),
+
+    // M3.1.7-C — Vendor order surface controllers
+    \Bayti\Api\Http\Controllers\Vendor\Order\ListVendorOrdersController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController::class => \DI\autowire(),
 
     // M2.1 — RequestIdMiddleware (added earlier in M1.6.2.B but
     // listed here for discoverability).

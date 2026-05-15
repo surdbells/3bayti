@@ -186,4 +186,137 @@ class OrderRepository extends EntityRepository
         }
         $em->flush();
     }
+
+    /**
+     * Paginated list of orders that have AT LEAST ONE item belonging
+     * to any of the given vendor ids. Most recent first.
+     *
+     * Used by GET /v3/vendor/orders. Vendor scope is enforced HERE
+     * at fetch time, NOT in the controller, so even if controller
+     * code drifts, the vendor isolation invariant holds.
+     *
+     * Items from OTHER vendors are NOT filtered out at this stage
+     * (we return the whole Order entity); the controller's response
+     * serializer is responsible for filtering. This split keeps the
+     * domain query simple and lets a multi-vendor order be returned
+     * even if only one of its items belongs to the requesting vendor.
+     *
+     * @param list<int> $vendorIds   Empty array → empty result
+     * @param ?string $statusFilter  Restrict to a specific Order.status
+     *                               value. Null = no status filter.
+     * @return array{0: list<Order>, 1: int} Tuple of [orders, total_count].
+     */
+    public function paginatedForVendorIds(
+        array $vendorIds,
+        int $limit,
+        int $offset,
+        ?string $statusFilter = null,
+    ): array {
+        if ($vendorIds === []) {
+            return [[], 0];
+        }
+        $limit = max(1, min($limit, 100));
+        $offset = max(0, $offset);
+
+        // Count distinct orders that have items in the vendor set.
+        // DISTINCT against the join multiplication.
+        $totalQb = $this->createQueryBuilder('o')
+            ->select('COUNT(DISTINCT o.id)')
+            ->innerJoin('o.items', 'i')
+            ->where('i.vendor IN (:vendors)')
+            ->setParameter('vendors', $vendorIds);
+        if ($statusFilter !== null) {
+            $totalQb->andWhere('o.status = :status')
+                ->setParameter('status', $statusFilter);
+        }
+        $total = (int) $totalQb->getQuery()->getSingleScalarResult();
+
+        if ($total === 0) {
+            return [[], 0];
+        }
+
+        // Page of distinct order ids first — paginate against orders only.
+        $idQb = $this->createQueryBuilder('o')
+            ->select('DISTINCT o.id, o.createdAt')
+            ->innerJoin('o.items', 'i')
+            ->where('i.vendor IN (:vendors)')
+            ->setParameter('vendors', $vendorIds)
+            ->orderBy('o.createdAt', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset);
+        if ($statusFilter !== null) {
+            $idQb->andWhere('o.status = :status')
+                ->setParameter('status', $statusFilter);
+        }
+        $idRows = $idQb->getQuery()->getScalarResult();
+        $ids = array_map(static fn (array $r): int => (int) $r['id'], $idRows);
+        if ($ids === []) {
+            return [[], $total];
+        }
+
+        // Hydrate the orders with all their items (incl. items from OTHER
+        // vendors — the controller filters those out at serialisation).
+        $orders = $this->createQueryBuilder('o')
+            ->select('o', 'i')
+            ->leftJoin('o.items', 'i')
+            ->where('o.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('o.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        /** @var list<Order> $orders */
+        return [$orders, $total];
+    }
+
+    /**
+     * Find a single order by id, gated on the requesting vendor having
+     * at least one item in it.
+     *
+     * Returns NULL if the order doesn't exist OR if it exists but
+     * contains no items from the given vendor set. Callers MUST treat
+     * a null result as 404 (not 403) to avoid leaking the existence
+     * of orders the caller can't see.
+     *
+     * Returns the full Order with all items (incl. other vendors').
+     * Controller serializer filters to caller's items.
+     *
+     * @param list<int> $vendorIds
+     */
+    public function findForVendorIds(int $orderId, array $vendorIds): ?Order
+    {
+        if ($vendorIds === []) {
+            return null;
+        }
+
+        // Single query: order id matches AND it has at least one item
+        // in the vendor set. The leftJoin on items is so hydration
+        // returns the full collection (we then re-fetch separately for
+        // simplicity).
+        $hasItem = (int) $this->createQueryBuilder('o')
+            ->select('COUNT(i.id)')
+            ->innerJoin('o.items', 'i')
+            ->where('o.id = :oid')
+            ->andWhere('i.vendor IN (:vendors)')
+            ->setParameter('oid', $orderId)
+            ->setParameter('vendors', $vendorIds)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        if ($hasItem === 0) {
+            return null;
+        }
+
+        $result = $this->createQueryBuilder('o')
+            ->select('o', 'i', 'a')
+            ->leftJoin('o.items', 'i')
+            ->leftJoin('o.addresses', 'a')
+            ->where('o.id = :oid')
+            ->setParameter('oid', $orderId)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        /** @var Order|null $result */
+        return $result;
+    }
 }

@@ -24,6 +24,29 @@ class VendorRepository extends EntityRepository
     }
 
     /**
+     * Returns the Vendor entity ids owned by the given User (the
+     * User must have is_vendor=true). Used by M3.1.7-C vendor
+     * controllers to scope queries to the requesting user's stores.
+     *
+     * A vendor user MAY own multiple Vendor entities (e.g. running
+     * multiple storefronts under one operator). We return all ids
+     * and let the caller filter.
+     *
+     * @return list<int>
+     */
+    public function findIdsByOwnerUser(\Bayti\Api\Domain\User\User $user): array
+    {
+        $rows = $this->createQueryBuilder('v')
+            ->select('v.id')
+            ->where('v.ownerUser = :user')
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getScalarResult();
+
+        return array_map(static fn (array $r): int => (int) $r['id'], $rows);
+    }
+
+    /**
      * Look up a vendor by its legacy WordPress/CodeIgniter id.
      *
      * Why this exists
