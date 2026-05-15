@@ -42,6 +42,7 @@
         "ext-fileinfo": "*",
         "ext-json": "*",
         "ext-redis": "*",
+        "ext-bcmath": "*",
 
         "sentry/sentry": "^4.0"
     },
