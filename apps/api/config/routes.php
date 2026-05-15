@@ -164,6 +164,18 @@ return function (App $app): void {
     })->add(AuthMiddleware::class);
 
     // ===================================================================
+    // M3.1.6e — Orders (authenticated read-only customer view)
+    // ===================================================================
+    //
+    // Replaces legacy /customer/read-orders, /customer/read_orders_listing,
+    // /customer/read-order-details. Vendor-side + admin endpoints come
+    // in M3.1.7.
+    $app->group('/v3/orders', function (RouteCollectorProxy $group): void {
+        $group->get('', \Bayti\Api\Http\Controllers\Order\ListOrdersController::class);
+        $group->get('/{id}', \Bayti\Api\Http\Controllers\Order\GetOrderController::class);
+    })->add(AuthMiddleware::class);
+
+    // ===================================================================
     // M2.1 — Catalog: public read endpoints (no auth required)
     // ===================================================================
 
