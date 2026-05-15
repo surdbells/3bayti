@@ -176,23 +176,43 @@ return function (App $app): void {
     })->add(AuthMiddleware::class);
 
     // ===================================================================
-    // M3.1.6f1 — Checkout (initiate against Noon)
+    // M3.1.6f1+f2 — Checkout (initiate against Noon + status polling)
     // ===================================================================
     //
-    // POST /v3/checkout/initiate
-    //   Converts active cart → pending_payment Order, calls Noon
-    //   INITIATE, returns hosted checkout URL for the mobile webview.
-    //   Idempotent on (user, cart_id, cart_updated_at) — a double-tap
-    //   returns the same URL rather than double-charging.
+    // POST /v3/checkout/initiate       — auth required (M3.1.6f1)
+    // GET  /v3/checkout/status/{ref}   — auth required (M3.1.6f2)
     //
-    // Webhook + status endpoints come in M3.1.6f2 (NoonWebhookController
-    // + GetCheckoutStatusController).
+    // The webhook receiver below is OUTSIDE this group — Noon doesn't
+    // have one of our user tokens.
     $app->group('/v3/checkout', function (RouteCollectorProxy $group): void {
         $group->post(
             '/initiate',
             \Bayti\Api\Http\Controllers\Checkout\InitiateCheckoutController::class,
         );
+        $group->get(
+            '/status/{order_reference}',
+            \Bayti\Api\Http\Controllers\Checkout\GetCheckoutStatusController::class,
+        );
     })->add(AuthMiddleware::class);
+
+    // M3.1.6f2 — Noon webhook receiver.
+    //
+    // INTENTIONALLY UNAUTHENTICATED — Noon does NOT have one of our
+    // JWTs. Authentication is via:
+    //   1. Signature header (M3.1.6: logged + accepted;
+    //      M3.1.7: strict HMAC verification)
+    //   2. RETRIEVE-ORDER-BEFORE-ACTING — the load-bearing safety
+    //      mechanism. Even with no signature verification, a spoofed
+    //      webhook cannot make us mark an order paid because the
+    //      controller calls gateway.retrieveOrder server-to-server
+    //      (authenticated with OUR merchant credentials) to confirm
+    //      the true state with Noon directly.
+    //
+    // NEVER add AuthMiddleware to this route.
+    $app->post(
+        '/v3/payment/webhook/noon',
+        \Bayti\Api\Http\Controllers\Checkout\NoonWebhookController::class,
+    );
 
     // ===================================================================
     // M2.1 — Catalog: public read endpoints (no auth required)
