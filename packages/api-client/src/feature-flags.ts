@@ -13,7 +13,10 @@
  *   Catalog reads  -> 'new' (M2.1 + M2.2 shipped; data migrated Day 4)
  *   Auth           -> 'new' (M1 shipped)
  *   Account        -> 'new' (M1.7 shipped)
- *   Cart / order   -> 'old' (legacy; M3 work)
+ *   Cart / order   -> v3 backend READY (M3.1.6 shipped); entries
+ *                     remain 'old' until mobile call-site rewrite
+ *                     (M3.1.6i.2 / M3.1.7), then flipped en bloc
+ *                     in M3.1.6j1
  *   Wishlist       -> 'old' (M3+)
  *   Chat / tickets -> 'old' (M4)
  *   Admin          -> 'new' for catalog (M2.1.A), 'old' for users/orders/payments
@@ -578,7 +581,23 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'raw',
   },
 
-  // ---- Cart, checkout, orders (LEGACY - M3 work flips these) ----
+  // ---- Cart, checkout, orders (M3.1.6 backend shipped; target='old' until mobile rewrite) ----
+  //
+  // All entries are target='old' as of M3.1.6i. The v3 backend is
+  // ready (commits f540ade..95e044c) but mobile call sites still
+  // POST legacy-shaped bodies. M3.1.6i.2 / M3.1.7 will:
+  //   1. Extend the adapter with path-param-from-body support
+  //      (needed for /cart/items/:id which currently receives the
+  //      item id in the body, not the URL)
+  //   2. Add request + response transforms for these endpoints
+  //   3. Rewrite call sites in cart.page / product.page /
+  //      checkout.page / my-orders.page to drive the new transforms
+  //   4. Then flip target='old' -> 'new' (M3.1.6j1)
+  //
+  // Until then, leaving these on legacy is the correct strangler-fig
+  // posture: no mobile code is depending on the v3 endpoints yet,
+  // so the v3 backend's correctness is verified by tests, not by
+  // production traffic.
   'GET /cart': {
     target: 'old',
     oldPath: '/customer/read-cart',
@@ -591,23 +610,52 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/cart/items',
     shape: 'v2',
   },
-  'PUT /cart/items/:id': {
-    target: 'new',
-    oldPath: '',
+  // M3.1.6d backend uses PATCH (absolute qty, idempotent) — replaces
+  // legacy's POST /customer/IncreaseItem + /customer/decreaseItem
+  // delta endpoints. The previous PUT mapping here was inconsistent
+  // with the v3 backend; corrected to PATCH and flipped back to 'old'
+  // pending mobile call-site rewrite.
+  'PATCH /cart/items/:id': {
+    target: 'old',
+    oldPath: '/customer/IncreaseItem',
     newPath: '/v3/cart/items/:id',
-    shape: 'v3-envelope',
+    shape: 'v2',
   },
   'DELETE /cart/items/:id': {
-    target: 'new',
-    oldPath: '',
+    target: 'old',
+    oldPath: '/customer/removeFromCart',
     newPath: '/v3/cart/items/:id',
+    shape: 'v2',
+  },
+  // M3.1.6d: new endpoint for guest-cart merge on sign-in (Q7=B).
+  // No legacy equivalent — first-class v3 capability. Stays target='old'
+  // until M3.1.6j1 because the post-login flow that calls this hasn't
+  // been wired yet on mobile.
+  'POST /cart/merge': {
+    target: 'old',
+    oldPath: '',
+    newPath: '/v3/cart/merge',
     shape: 'v3-envelope',
   },
-  'POST /checkout': {
+  // M3.1.6f1 backend uses POST /v3/checkout/initiate (more specific
+  // than the previous /v3/checkout entry). Corrected; flipped back to
+  // 'old' pending mobile rewrite.
+  'POST /checkout/initiate': {
     target: 'old',
     oldPath: '/customer/payment/initiate_payment',
-    newPath: '/v3/checkout',
+    newPath: '/v3/checkout/initiate',
     shape: 'v2',
+  },
+  // M3.1.6f2: status polling. Mobile webview lands on Noon's redirect
+  // URL after hosted checkout; the path-based return URL gives mobile
+  // the order_reference; mobile then polls this endpoint until
+  // status.terminal === true. Reads ONLY v3's local Order state — does
+  // NOT call Noon's GET_ORDER (rate-limit ban risk per recon).
+  'GET /checkout/status/:order_reference': {
+    target: 'old',
+    oldPath: '',
+    newPath: '/v3/checkout/status/:order_reference',
+    shape: 'v3-envelope',
   },
   'GET /orders': {
     target: 'old',
@@ -616,9 +664,21 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'v2',
   },
   'GET /orders/:id': {
-    target: 'new',
-    oldPath: '',
+    target: 'old',
+    oldPath: '/customer/read-order-details',
     newPath: '/v3/orders/:id',
+    shape: 'v2',
+  },
+  // Noon webhook receiver — server-to-server, NEVER called by mobile.
+  // Listed here for routing-table completeness only; mobile clients
+  // never resolve this key. Adapter would refuse to call it
+  // (target='old' but oldPath is empty, would fall through to legacy
+  // and 404 there). The endpoint exists at api-v3.3bayti.ae/v3/payment
+  // /webhook/noon for Noon's direct POSTs.
+  'POST /payment/webhook/noon': {
+    target: 'old',
+    oldPath: '',
+    newPath: '/v3/payment/webhook/noon',
     shape: 'v3-envelope',
   },
 
