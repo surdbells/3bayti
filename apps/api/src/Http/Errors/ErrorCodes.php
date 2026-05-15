@@ -105,4 +105,14 @@ final class ErrorCodes
 
     /** Catch-all for unexpected failures (uncaught exception → 500). */
     public const INTERNAL_ERROR = 'INTERNAL_ERROR';
+
+    // -------------------------------------------------------------------
+    // PAYMENT — checkout + refund + cancel
+    // -------------------------------------------------------------------
+
+    /** Payment provider (Noon, etc.) failed; HTTP 502. Retry-safe. */
+    public const PAYMENT_PROVIDER_ERROR = 'PAYMENT_PROVIDER_ERROR';
+
+    /** Business rule violated, e.g. cart empty at checkout; HTTP 422. */
+    public const BUSINESS_RULE_VIOLATION = 'BUSINESS_RULE_VIOLATION';
 }

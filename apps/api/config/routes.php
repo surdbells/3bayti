@@ -176,6 +176,25 @@ return function (App $app): void {
     })->add(AuthMiddleware::class);
 
     // ===================================================================
+    // M3.1.6f1 — Checkout (initiate against Noon)
+    // ===================================================================
+    //
+    // POST /v3/checkout/initiate
+    //   Converts active cart → pending_payment Order, calls Noon
+    //   INITIATE, returns hosted checkout URL for the mobile webview.
+    //   Idempotent on (user, cart_id, cart_updated_at) — a double-tap
+    //   returns the same URL rather than double-charging.
+    //
+    // Webhook + status endpoints come in M3.1.6f2 (NoonWebhookController
+    // + GetCheckoutStatusController).
+    $app->group('/v3/checkout', function (RouteCollectorProxy $group): void {
+        $group->post(
+            '/initiate',
+            \Bayti\Api\Http\Controllers\Checkout\InitiateCheckoutController::class,
+        );
+    })->add(AuthMiddleware::class);
+
+    // ===================================================================
     // M2.1 — Catalog: public read endpoints (no auth required)
     // ===================================================================
 

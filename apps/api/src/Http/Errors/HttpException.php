@@ -121,4 +121,18 @@ final class HttpException extends \RuntimeException
     ): self {
         return new self(502, $errorCode, $message);
     }
+
+    /**
+     * 422 Unprocessable — body validation passed, but a business
+     * rule says no (e.g. cart-empty at checkout, can't refund a
+     * cancelled order). Different from validation(): the input
+     * is *shape*-valid but the *state* makes the request
+     * impossible.
+     */
+    public static function businessRuleViolation(
+        string $errorCode = ErrorCodes::BUSINESS_RULE_VIOLATION,
+        string $message = 'This operation is not permitted in the current state.',
+    ): self {
+        return new self(422, $errorCode, $message);
+    }
 }
