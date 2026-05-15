@@ -24,6 +24,11 @@ import { NetworkService } from '../../service/network.service';
 import { resolveRouteKey, resolveRouteKeyAnyMethod, type HttpMethod } from './url-route-resolver';
 import { CATALOG_REQUEST_TRANSFORMS, asRecord, type BodyToRouteArgs } from './transforms/catalog-request.transforms';
 import { CATALOG_RESPONSE_TRANSFORMS, type ResponseTransform } from './transforms/catalog-response.transforms';
+import {
+  MUTATION_REQUEST_TRANSFORMS,
+  type MutationBodyToRequest,
+  type MutationTransformOutput,
+} from './transforms/mutation-request.transforms';
 
 /**
  * Extract auth credentials from a legacy request body.
@@ -511,19 +516,43 @@ export class MobileNetworkAdapter {
     cfg: EndpointConfig,
     body: unknown,
   ): Observable<unknown> {
+    // Strip id/token from body and extract auth header. ALWAYS runs;
+    // every v3 endpoint expects the JWT in a header, never in the body.
+    const { translatedBody, authHeader } = translateRequestBody(body);
+
+    // M3.1.6i.2: consult MUTATION_REQUEST_TRANSFORMS for endpoints that
+    // need body reshape and/or path-param extraction (e.g. cart-item
+    // mutations where the item id needs to move from body to URL path).
+    //
+    // Absent transform = pass translated body through unchanged. This
+    // preserves backwards compatibility — endpoints whose v3 shape
+    // matches the legacy shape work without registering a transform.
+    const mutationTransform: MutationBodyToRequest | undefined =
+      MUTATION_REQUEST_TRANSFORMS[routeKey];
+
+    let pathParams: Record<string, string> | undefined;
+    let finalBody: unknown = translatedBody;
+
+    if (mutationTransform !== undefined) {
+      // Pass the ORIGINAL body to the transform, not translatedBody.
+      // Some transforms inspect keys that translateRequestBody strips
+      // (it shouldn't — translateRequestBody only strips id/token —
+      // but defensive: transforms get the full picture).
+      const out: MutationTransformOutput = mutationTransform(body);
+      pathParams = out.pathParams;
+      finalBody = out.body; // null is intentional for DELETE-style endpoints
+    }
+
     const url = resolveUrl(
       routeKey,
       { old: GlobalComponent.baseURL, new: this.v3BaseUrl },
-      undefined, // path params: not yet supported via this entry point
-                  // — see class docblock (M3.1.3+ extension)
+      pathParams,
     );
-
-    const { translatedBody, authHeader } = translateRequestBody(body);
 
     return this.withRefreshRetry(
       authHeader,
       (currentAuthHeader) =>
-        this.executeHttpRequest(method, url, translatedBody, currentAuthHeader),
+        this.executeHttpRequest(method, url, finalBody, currentAuthHeader),
       routeKey,
     );
   }
