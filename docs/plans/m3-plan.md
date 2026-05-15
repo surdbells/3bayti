@@ -543,7 +543,7 @@ Known issues carried into M3.1.5+ (see M3.1.4 completion runbook "Known issues" 
 
 #### M3.1.6 — v3 Cart/Checkout/Orders/Noon Build (SHIPPED, scope-revised at j-phase)
 
-**Status:** ✅ Backend half complete + production-ready; mobile rewrite split out as M3.1.6i.2.
+**Status:** ✅ FULLY COMPLETE. Backend shipped in 11 commits f540ade..171fc0a (M3.1.6 backend + closure docs). Mobile rewrite + flip shipped in 6 commits f8a2f4a..351aa36 (M3.1.6i.2). M3.1.6 customer cart/checkout/orders flow is now serving live production traffic on v3.
 
 **Duration:** Across two extended-chat sessions (~10 commits f540ade..28cb6c4)
 **Output:** Full v3 backend for cart/orders/checkout including Noon hosted-checkout integration + retrieve-order-before-acting safety pattern; routing-table corrections; legacy-data-migration scaffold + runbook.
@@ -554,7 +554,7 @@ The original M3.1.6 plan budgeted j-phase as "flip target='old' → 'new'" with 
 2. Checkout flow is structurally different — legacy reads URL params on webview return; v3 polls a status endpoint
 3. Cart merge on sign-in is a new operation, not a transform
 
-The j-phase flip therefore blocks on a new sub-phase M3.1.6i.2 (mobile call-site rewrite). The backend is done and the routing table is corrected; the flip happens when M3.1.6i.2 ships.
+The j-phase flip therefore blocks on a new sub-phase M3.1.6i.2 (mobile call-site rewrite). M3.1.6i.2 SHIPPED across 6 commits (f8a2f4a..351aa36); the flip happened in M3.1.6i.2-F (`351aa36`).
 
 **Sub-phases:**
 
@@ -568,8 +568,14 @@ The j-phase flip therefore blocks on a new sub-phase M3.1.6i.2 (mobile call-site
 - **M3.1.6g** (`59f77e4`) — Closed as duplicate of M3.1.1c. The billing-address endpoints (GET/PATCH `/v3/me/billing-address`) already shipped in M3.1.1c and `InitiateCheckoutController` already integrates against `AddressRepository`; the M3.1.6 plan's budget for this sub-phase reflected incomplete awareness of M3.1.1c's scope. Closure runbook documents this + edge cases out of scope for v3 (multi-shipping-per-order, ad-hoc inline address entry).
 - **M3.1.6h** (`95e044c`) — Legacy data migration scaffold (`migrateOrders`, `migrateOrderItems`, `migrateOrderAddresses`) using the established defensive-INFORMATION_SCHEMA-probing pattern from M3.1.5.5c; `--include-orders` opt-in flag on `migrate-all.php`; operator runbook covering pre-flight checks (table/column probes, status mapping, order-reference synthesis), idempotency, rollback, verification queries. Carts deliberately NOT migrated (transient state; documented decision).
 - **M3.1.6i** (`28cb6c4`) — Routing table corrections (scope-reduced from original plan): 4 corrections of prematurely-flipped entries that would have 404'd (`PUT /cart/items/:id` → `PATCH`; `POST /checkout` → `POST /checkout/initiate`; flipped `cart/items/:id` and `orders/:id` back to `target='old'` pending mobile rewrite) + 3 additions (`POST /cart/merge`, `GET /checkout/status/:order_reference`, `POST /payment/webhook/noon` — last is informational; mobile never calls). Runbook documents the scope reduction + the deferred work that becomes M3.1.6i.2.
-- **M3.1.6i.2 (new sub-phase)** — Mobile call-site rewrite: adapter path-param-from-body extension; cart/order/checkout transforms; checkout-flow rewrite (poll status endpoint instead of read URL params); cart merge on sign-in. Has its own plan and budget; not started.
-- **M3.1.6j1** — **Blocked on M3.1.6i.2.** Will flip 9 entries (7 from M3.1.6i + `GET /cart` + `POST /cart/items`) `target='old'` → `'new'` en bloc when M3.1.6i.2 ships.
+- **M3.1.6i.2 (new sub-phase)** — ✅ SHIPPED. Mobile call-site rewrite delivered across 6 commits:
+  - `f8a2f4a` (A) — Adapter mutation-transform extension (new `MUTATION_REQUEST_TRANSFORMS` registry; path-param-from-body extraction)
+  - `ed76846` (B) — Cart/order/checkout response transforms + page dual-shape support (new `MUTATION_RESPONSE_TRANSFORMS` registry; cart.page/checkout.page/product.page detect both legacy and v3 shapes)
+  - `a014eb6` (C) — Order list POST→GET conversion (new `AUTHED_GET_REQUEST_TRANSFORMS` registry; adapter `tryConvertPostToGet` extended for auth)
+  - `854578a` (D) — Checkout flow rewrite (new `CheckoutStatusPollService` with industry-standard 2s/60s defaults; process.page polls status endpoint instead of finalizePayment; dual-shape webview return URL detection)
+  - `e92b24d` (E) — Guest cart (IndexedDB) + sign-in merge (new `LocalCartService` + `CartMergeService`; cart.page + product.page allow guest browsing; login.page calls merge on sign-in)
+  - Closure runbook at `docs/runbooks/m3/m3.1.6i.2-completion.md`
+- **M3.1.6j1** — ✅ SHIPPED at `351aa36` (M3.1.6i.2-F). Nine routing entries flipped `target='old'` → `'new'` en bloc: `GET /cart`, `POST /cart/items`, `PATCH /cart/items/:id`, `DELETE /cart/items/:id`, `POST /cart/merge`, `POST /checkout/initiate`, `GET /checkout/status/:order_reference`, `GET /orders`, `GET /orders/:id`. The webhook entry (`POST /payment/webhook/noon`) intentionally stays `'old'` because mobile never calls it.
 - **M3.1.6j2** — Closure runbook + device-test checklist + Noon API reference + plan markers (this commit, alongside M3.1.6i).
 
 **10 v3 endpoints shipped (backend; reachable at api-v3.3bayti.ae):**
@@ -590,7 +596,7 @@ Plus 2 already-existing from M3.1.1c (still on v3):
 
 **Locked decisions executed:**
 - **Q6=C** Full surface (customer + vendor + refunds + cancellations + dispute flow): M3.1.6 ships customer; vendor + refunds + cancellations + admin + real webhook signature verification all explicitly deferred to M3.1.7.
-- **Q7=B** Server-side for logged-in + device-local for guests + merge-on-sign-in: `POST /v3/cart/merge` shipped; mobile sign-in flow integration deferred to M3.1.6i.2.
+- **Q7=B** Server-side for logged-in + device-local for guests + merge-on-sign-in: `POST /v3/cart/merge` shipped; mobile sign-in flow integration shipped in M3.1.6i.2-E (login.page calls CartMergeService after token storage). Guest cart UX via LocalCartService backed by IndexedDB.
 - **Q8=A** Direct replacement, NO shadow mode: load-bearing safety is the retrieve-order-before-acting pattern + webhook idempotency + UNIQUE constraints, NOT shadow comparisons.
 - **Q9=A** v3 talks to Noon directly (subsumes original M3.1.8; absorbs Pluggable Gateway from C11): `PaymentGatewayInterface` + `NoonPaymentGateway` shipped.
 
@@ -600,25 +606,26 @@ Plus 2 already-existing from M3.1.1c (still on v3):
 - **Server-side server-derived everything at checkout**: order_reference, totals, unit_prices (snapshotted), addresses. Client cannot pass a fake total.
 - **Idempotency at every layer**: webhook (event_id or body-hash), checkout-initiate (user+cart+cart_ts), markPaid (idempotent on Order entity).
 
-**Known limitations carried into M3.1.7 / M3.1.6i.2:**
+**Known limitations carried into M3.1.7:**
 - Real HMAC signature verification not yet bound to DI — needs empirical sandbox capture to confirm Noon's algorithm (M3.1.7 ships this).
 - No reconciliation cron for stuck `pending_payment` orders — M3.1.7.
 - Vendor + admin endpoints (refund / cancel / dispute) — M3.1.7.
-- Mobile call sites still on legacy — M3.1.6i.2 (adapter extension + transforms + flow rewrite).
+- The simpler `customer/orders/orders.page.ts` (uses `customer/read-orders`) still on legacy; only `my-orders.page.ts` migrated to v3. M3.1.7+ if its UX is overhauled.
 - `best_sellers` + `best_sellers_listing` (deferred from M3.1.5.5) — now unblocked; order_items table exists. Can be picked up any time.
 
-**Tests + quality gates:**
-- apps/api phpunit: 346 → 423 (+77 tests / +239 assertions)
-- api phpstan: zero errors on all M3.1.6 files (5 pre-existing src/Migration findings from before M3.1.5 unchanged)
+**Tests + quality gates (final, post-M3.1.6i.2):**
+- apps/api phpunit: 346 → 423 (+77 tests / +239 assertions); unchanged in M3.1.6i.2 (backend not touched)
+- api phpstan: zero errors on all M3.1.6 files
 - api-client TS: clean
-- mobile TS: unchanged (no mobile code touched yet)
+- mobile TS: 6 pre-existing errors (all out-of-scope of M3.1.6 + M3.1.6i.2; same baseline as M3.1.6 entry)
+- new mobile test specs in M3.1.6i.2: ~102 cases across 6 spec files (mutation-request, mutation-response, order-request, checkout-status-poll, local-cart, cart-merge)
 
-**Pending operator actions before M3.1.6i.2 / M3.1.6j1:**
+**Pending operator actions (post-flip):**
 - Obtain Noon merchant portal credentials (NOON_BUSINESS_IDENTIFIER, NOON_APP_IDENTIFIER, NOON_APP_KEY, NOON_WEBHOOK_SECRET); test card numbers from docs.noonpayments.com/test/cards
 - Email Noon support to enable uniqueness of merchant order reference field
 - Verify legacy order schema matches the M3.1.6h probe candidates before running `--include-orders`
 
-**Strangler-fig isolation preserved:** mobile traffic still on legacy for cart/orders/checkout. Per-endpoint rollback supported. Backend correctness verified via tests, not production traffic.
+**Strangler-fig isolation preserved:** mobile traffic now on v3 for cart/orders/checkout (post-`351aa36` flip). Per-endpoint rollback supported via `target: 'new'` → `'old'` toggle in `feature-flags.ts`. Pages support dual-shape (legacy + v3) responses so single-endpoint rollback works without further code changes. Backend correctness verified via 423/423 passing tests + ~102 new mobile-side test cases.
 
 #### M3.1.6 — v3 Cart/Checkout/Orders Endpoint Build (original plan — SUPERSEDED by ↑)
 
