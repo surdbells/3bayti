@@ -454,6 +454,90 @@ return [
     \Bayti\Api\Http\Controllers\Auth\LogoutController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\LogoutAllController::class => \DI\autowire(),
 
+    // -------------------------------------------------------------------
+    // M3.1.6c — Payment gateway (Q9=A: v3 talks to Noon directly)
+    // -------------------------------------------------------------------
+    //
+    // PaymentGatewayInterface is the only contract callers depend on
+    // (C11 pluggable gateway architecture). Currently bound to
+    // NoonPaymentGateway; future providers swap in here without
+    // touching controller code.
+    //
+    // NoonWebhookSignatureVerifier is bound to LoggingOnlyVerifier
+    // in M3.1.6. M3.1.7 will:
+    //   1. Capture real sandbox webhooks
+    //   2. Brute-force the algorithm from logged body/signature pairs
+    //   3. Switch this binding to HmacSha256SignatureVerifier (or a
+    //      different verifier if the algorithm turns out non-HMAC).
+    \Bayti\Api\Payment\PaymentGatewayInterface::class => static function (
+        ContainerInterface $c
+    ): \Bayti\Api\Payment\PaymentGatewayInterface {
+        $baseUrl = $_ENV['NOON_API_BASE'] ?? '';
+        $businessId = $_ENV['NOON_BUSINESS_IDENTIFIER'] ?? '';
+        $appId = $_ENV['NOON_APP_IDENTIFIER'] ?? '';
+        // NOON_APP_KEY is the new env var; NOON_API_KEY is the
+        // deprecated alias. Adapter checks APP_KEY first; falls
+        // back with a deprecation log line.
+        $appKey = $_ENV['NOON_APP_KEY'] ?? '';
+
+        $logger = new \Psr\Log\NullLogger();
+        try {
+            /** @var \Psr\Log\LoggerInterface $logger */
+            $logger = $c->get(\Psr\Log\LoggerInterface::class);
+        } catch (\Throwable) {
+            // Fall back to null logger; payment requests still work
+            // but auth/timeout failures aren't recorded externally.
+        }
+
+        if ($appKey === '' && ($_ENV['NOON_API_KEY'] ?? '') !== '') {
+            $appKey = $_ENV['NOON_API_KEY'];
+            $logger->warning(
+                'NOON_API_KEY is deprecated; rename to NOON_APP_KEY in your environment '
+                . '(NoonPaymentGateway will stop reading the legacy name in M4).'
+            );
+        }
+
+        if ($baseUrl === '' || $businessId === '' || $appId === '' || $appKey === '') {
+            throw new \RuntimeException(
+                'NoonPaymentGateway requires env vars: NOON_API_BASE, '
+                . 'NOON_BUSINESS_IDENTIFIER, NOON_APP_IDENTIFIER, NOON_APP_KEY. '
+                . 'See apps/api/.env.example for the format.'
+            );
+        }
+
+        $http = new GuzzleClient([
+            // base_uri unused — adapter passes absolute URL per call
+            'timeout' => 15,
+            'connect_timeout' => 5,
+        ]);
+
+        return new \Bayti\Api\Payment\Noon\NoonPaymentGateway(
+            http: $http,
+            baseUrl: $baseUrl,
+            businessIdentifier: $businessId,
+            appIdentifier: $appId,
+            appKey: $appKey,
+            logger: $logger,
+        );
+    },
+
+    \Bayti\Api\Payment\Noon\NoonWebhookSignatureVerifier::class => static function (
+        ContainerInterface $c
+    ): \Bayti\Api\Payment\Noon\NoonWebhookSignatureVerifier {
+        // M3.1.6: logging-only. The retrieve-order-before-acting
+        // pattern in NoonWebhookController is the load-bearing
+        // safety mechanism (Noon-recommended per their own docs).
+        // M3.1.7 swaps this binding after empirical algorithm capture.
+        $logger = new \Psr\Log\NullLogger();
+        try {
+            /** @var \Psr\Log\LoggerInterface $logger */
+            $logger = $c->get(\Psr\Log\LoggerInterface::class);
+        } catch (\Throwable) {
+            // Continue with NullLogger
+        }
+        return new \Bayti\Api\Payment\Noon\LoggingOnlyVerifier($logger);
+    },
+
     // Doctrine repositories are accessed via EntityManager::getRepository();
     // no DI registrations needed.
 ];
