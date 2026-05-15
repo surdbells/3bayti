@@ -656,14 +656,33 @@ export class ProductPage implements OnInit, OnDestroy {
     this.networkService.post_request(this.add_cart, GlobalComponent.addToCart)
       .subscribe({
         next: (response) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.success_notification(response.message);
+          // Dual-shape support during M3.1.6 strangler-fig migration.
+          //   Legacy: response.response_code=200, response.status='success',
+          //           response.message=<localised success text>
+          //   v3:     response.response_code=200, response.status='success',
+          //           response.message='', response.data={success, count, cart}
+          const success =
+            response.response_code === 200 &&
+            (response.status === 'success' ||
+              (response.data && typeof response.data === 'object' && response.data.success === true));
+
+          if (success) {
+            // Legacy: use server-supplied message; v3: fall back to i18n.
+            const successText =
+              typeof response.message === 'string' && response.message.length > 0
+                ? response.message
+                : this.i18n.t('text_added_to_cart');
+            this.success_notification(successText);
             this.ui_controls.is_adding_to_cart = false;
             this.user_cart();
           } else {
             this.ui_controls.is_empty = true;
             this.ui_controls.is_adding_to_cart = false;
-            this.error_notification(response.message);
+            const errorText =
+              typeof response.message === 'string' && response.message.length > 0
+                ? response.message
+                : this.i18n.t('text_something_went_wrong');
+            this.error_notification(errorText);
           }
           this.cdr.markForCheck();
         },

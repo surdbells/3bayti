@@ -29,6 +29,7 @@ import {
   type MutationBodyToRequest,
   type MutationTransformOutput,
 } from './transforms/mutation-request.transforms';
+import { MUTATION_RESPONSE_TRANSFORMS } from './transforms/mutation-response.transforms';
 
 /**
  * Extract auth credentials from a legacy request body.
@@ -897,7 +898,12 @@ export class MobileNetworkAdapter {
 
     if (routeKey === undefined) return envelope;
 
-    const transform: ResponseTransform | undefined = CATALOG_RESPONSE_TRANSFORMS[routeKey];
+    // Look up the transform in either registry. Catalog has GET-read
+    // transforms; Mutation has cart/order/checkout transforms. Each
+    // routeKey appears in at most one registry, so an OR lookup is
+    // safe.
+    const transform: ResponseTransform | undefined =
+      CATALOG_RESPONSE_TRANSFORMS[routeKey] ?? MUTATION_RESPONSE_TRANSFORMS[routeKey];
     if (transform === undefined) return envelope;
 
     if (envelope.data === null || envelope.data === undefined) return envelope;

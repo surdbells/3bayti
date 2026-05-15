@@ -343,6 +343,8 @@
   "back_to_login": "Back to Login",
   "c_measure": "Confirm Measurement",
   "already_in_cart": "Already in cart — View",
+  "text_added_to_cart": "Added to cart",
+  "text_something_went_wrong": "Something went wrong. Please try again.",
   "popular_stores": "Trending stores",
   "featured_store": "Featured store",
   "review_info": "Confirm delivery info before checkout.",

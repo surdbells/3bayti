@@ -136,7 +136,17 @@ export class CartPage implements OnInit, OnDestroy {
     product_name: "",
     product_image: ""
   }
-  bill = {
+  bill: {
+    count: number;
+    discount: number | string;
+    delivery: number | string;
+    subtotal: number | string;
+    total: number | string;
+    f_discount: string;
+    f_delivery: string;
+    f_subtotal: string;
+    f_total: string;
+  } = {
     count: 0,
     discount: 0,
     delivery: 0,
@@ -188,10 +198,41 @@ export class CartPage implements OnInit, OnDestroy {
       .subscribe(({
         next: (response) => {
           if (response.response_code === 200) {
-            this.carts = response.data;
-            this.bill = response.message;
+            // Dual-shape support during M3.1.6 strangler-fig migration:
+            //   Legacy shape: response.data = items[], response.message = bill
+            //   v3 shape:     response.data = {items, bill, ...}, response.message = ''
+            // The adapter's MUTATION_RESPONSE_TRANSFORMS wraps v3 responses
+            // into the {items, bill} shape inside `data`. We detect which
+            // shape we got by checking if `data` is an array (legacy) or
+            // an object with `items` (v3).
+            const data = response.data;
+            if (Array.isArray(data)) {
+              // Legacy shape
+              this.carts = data;
+              this.bill = response.message;
+            } else if (data && typeof data === 'object' && Array.isArray(data.items)) {
+              // v3 shape (post-transform)
+              this.carts = data.items;
+              // Merge transform's {count, subtotal, currency} over the
+              // default bill so the strongly-typed shape remains intact.
+              // v3 doesn't compute delivery/discount/total breakdowns
+              // until checkout (they appear on the Order, not the Cart);
+              // keep defaults until checkout.page.ts populates them.
+              this.bill = {
+                ...this.bill,
+                count: typeof data.bill?.count === 'number' ? data.bill.count : 0,
+                subtotal: typeof data.bill?.subtotal === 'string'
+                  ? data.bill.subtotal
+                  : (data.bill?.subtotal ?? 0),
+              };
+            } else {
+              // Defensive fallback — empty cart
+              this.carts = [];
+              this.bill = { ...this.bill, count: 0, subtotal: 0 };
+            }
             Preferences.set({key: 'count', value: String(this.bill.count)});
             this.ui_controls.is_loading = false;
+            this.ui_controls.is_empty = this.carts.length === 0;
           }else{
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = true;

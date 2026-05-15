@@ -339,6 +339,8 @@
   "back_to_login": "العودة لتسجيل الدخول",
   "c_measure": "تأكيد القياس",
   "already_in_cart": "العنصر موجود في السلة — عرض",
+  "text_added_to_cart": "تمت الإضافة إلى السلة",
+  "text_something_went_wrong": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
   "popular_stores": "المتجر الرائج",
   "featured_store": "متجر مميز",
   "review_info": "قم بتأكيد معلومات التوصيل قبل إتمام الشراء.",

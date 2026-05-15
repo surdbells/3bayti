@@ -207,7 +207,17 @@ export class CheckoutPage implements OnInit, OnDestroy {
     product_name: "",
     product_image: ""
   }
-  bill = {
+  bill: {
+    count: number;
+    discount: number | string;
+    delivery: number | string;
+    subtotal: number | string;
+    total: number | string;
+    f_discount: string;
+    f_delivery: string;
+    f_subtotal: string;
+    f_total: string;
+  } = {
     count: 0,
     discount: 0,
     delivery: 0,
@@ -227,7 +237,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
       name: "",
       channel: "web",
       category: "pay",
-      items: []
+      items: [] as any[]
     },
     shipping: {
       address: {
@@ -305,10 +315,34 @@ export class CheckoutPage implements OnInit, OnDestroy {
       .subscribe(({
         next: (response) => {
           if (response.response_code === 200) {
-            this.carts = response.data;
-            this.bill = response.message;
-            this.checkout.order.items = response.status;
+            // Dual-shape support during M3.1.6 strangler-fig migration.
+            // See cart.page.ts load_cart for the detailed explanation.
+            const data = response.data;
+            if (Array.isArray(data)) {
+              // Legacy shape
+              this.carts = data;
+              this.bill = response.message;
+              this.checkout.order.items = response.status;
+            } else if (data && typeof data === 'object' && Array.isArray(data.items)) {
+              // v3 shape (post-transform)
+              this.carts = data.items;
+              // Merge transform's {count, subtotal} over the default
+              // bill — v3 doesn't compute delivery/discount on the
+              // cart endpoint; those come from the checkout flow.
+              this.bill = {
+                ...this.bill,
+                count: typeof data.bill?.count === 'number' ? data.bill.count : 0,
+                subtotal: typeof data.bill?.subtotal === 'string'
+                  ? data.bill.subtotal
+                  : (data.bill?.subtotal ?? 0),
+              };
+              this.checkout.order.items = this.bill.count as any;
+            } else {
+              this.carts = [];
+              this.bill = { ...this.bill, count: 0, subtotal: 0 };
+            }
             this.ui_controls.is_loading = false;
+            this.ui_controls.is_empty = this.carts.length === 0;
           }else{
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = true;
@@ -323,7 +357,8 @@ export class CheckoutPage implements OnInit, OnDestroy {
       this.error_notification(this.i18n.t('text_confirm_delivery_info'))
       return;
     }
-    this.checkout.order.amount = this.bill.total;
+    // Bill total may be string (v3) or number (legacy). Coerce defensively.
+    this.checkout.order.amount = Number(this.bill.total) || 0;
     this.checkout.order.reference = GlobalComponent.generateTransactionReference();
     this.checkout.order.name = this.single_user.first_name + " " + this.single_user.last_name;
     this.checkout.shipping.address.street = this.single_user.billing_street;
@@ -374,7 +409,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
               const orderId = params.get('orderId');
               const merchantReference = params.get('merchantReference');
               const paymentType = params.get('paymentType');
-              const deliveryFee = this.bill.delivery;
+              const deliveryFee = Number(this.bill.delivery) || 0;
               console.log('Captured redirect:', { orderId, merchantReference, paymentType });
               processed = true; // prevent re-entry
               try {
