@@ -137,14 +137,28 @@ export class MyOrdersPage implements OnInit {
       .subscribe(({
         next: (response) => {
           if (response.response_code === 200 && response.status === "success") {
-            this.orders = response.data;
+            // Dual-shape support for M3.1.6 strangler-fig migration:
+            //   Legacy: response.data = orders[] (direct array)
+            //   v3 (post-transform): response.data = {orders, pagination}
+            this.orders = this.extractOrders(response.data);
             this.ui_controls.is_loading = false;
-          }else {
+            this.ui_controls.is_empty = this.orders.length === 0;
+          } else {
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = true;
           }
         }
       }))
+  }
+  // Extract orders array from either legacy (data=array) or v3
+  // (data={orders, pagination}) response shapes. Defensive against
+  // null/malformed inputs — returns [] rather than throwing.
+  private extractOrders(data: any): any[] {
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === 'object' && Array.isArray(data.orders)) {
+      return data.orders;
+    }
+    return [];
   }
   toggleItems(index: number) {
     this.orders[index].showItems = !this.orders[index].showItems;
@@ -173,7 +187,7 @@ export class MyOrdersPage implements OnInit {
       .subscribe(({
         next: (response) => {
           if (response.response_code === 200 && response.status === "success") {
-            this.orders.push(...response.data);
+            this.orders.push(...this.extractOrders(response.data));
           }else{
             this.ui_controls.is_empty = true;
           }

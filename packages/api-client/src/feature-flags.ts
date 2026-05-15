@@ -657,9 +657,21 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/checkout/status/:order_reference',
     shape: 'v3-envelope',
   },
+  // M3.1.6i.2-C: oldPath changed from '/customer/read-orders' to
+  // '/customer/read_orders_listing' to match what my-orders.page
+  // actually calls (the paginated infinite-scroll view, which is
+  // the one we want on v3 because it uses limit/offset that v3
+  // supports natively).
+  //
+  // The older 'customer/read-orders' endpoint is still used by
+  // customer/orders/orders.page.ts (a simpler list view); that
+  // page continues on legacy until a separate sub-phase migrates
+  // it. If it should also move to v3, add a sibling routing entry
+  // with a different routeKey (e.g. 'GET /orders/simple') so the
+  // index can disambiguate.
   'GET /orders': {
     target: 'old',
-    oldPath: '/customer/read-orders',
+    oldPath: '/customer/read_orders_listing',
     newPath: '/v3/orders',
     shape: 'v2',
   },

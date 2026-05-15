@@ -30,6 +30,7 @@ import {
   type MutationTransformOutput,
 } from './transforms/mutation-request.transforms';
 import { MUTATION_RESPONSE_TRANSFORMS } from './transforms/mutation-response.transforms';
+import { AUTHED_GET_REQUEST_TRANSFORMS } from './transforms/order-request.transforms';
 
 /**
  * Extract auth credentials from a legacy request body.
@@ -406,18 +407,25 @@ export class MobileNetworkAdapter {
   /**
    * Attempt to convert a POST-with-body call into a v3 GET-with-query.
    *
-   * Returns the Observable for the converted request if all four
-   * conditions are met:
+   * Returns the Observable for the converted request if all conditions
+   * are met:
    *   1. The URL exists in the routing table under SOME method (any)
    *   2. That method-map has a GET entry (the only conversion direction
    *      we currently support)
    *   3. The GET entry's target === 'new' (no point converting to hit
    *      legacy via v3)
    *   4. We have a registered request transform for that routeKey in
-   *      CATALOG_REQUEST_TRANSFORMS — without one, body-to-query
-   *      conversion would be a guess
+   *      EITHER:
+   *      - CATALOG_REQUEST_TRANSFORMS  (anonymous reads — no auth attached)
+   *      - AUTHED_GET_REQUEST_TRANSFORMS (authenticated reads — auth
+   *        header extracted from POST body via translateRequestBody)
    *
    * Returns null if any condition fails (caller falls through to legacy).
+   *
+   * Auth distinction: catalog endpoints (new-arrivals, featured, etc.)
+   * are anonymous; order endpoints (orders list) require the user's JWT.
+   * The two registries let us route the request to the right path
+   * with or without the Bearer token from the legacy body's `token`.
    */
   private tryConvertPostToGet(
     body: unknown,
@@ -437,23 +445,37 @@ export class MobileNetworkAdapter {
     }
     if (cfg.target !== 'new') return null;
 
-    const transform: BodyToRouteArgs | undefined = CATALOG_REQUEST_TRANSFORMS[getRouteKey];
-    if (transform === undefined) return null;
+    // Check both transform registries.
+    const catalogTransform: BodyToRouteArgs | undefined = CATALOG_REQUEST_TRANSFORMS[getRouteKey];
+    const authedTransform: BodyToRouteArgs | undefined = AUTHED_GET_REQUEST_TRANSFORMS[getRouteKey];
 
+    if (catalogTransform === undefined && authedTransform === undefined) return null;
+
+    // Authenticated branch: extract auth header from body via
+    // translateRequestBody (drops id/token, returns Bearer header).
+    if (authedTransform !== undefined) {
+      const { authHeader } = translateRequestBody(body);
+      const { pathParams, queryParams } = authedTransform(asRecord(body));
+      const url = this.buildV3UrlWithQuery(getRouteKey, pathParams, queryParams);
+
+      // Pass routeKey to withRefreshRetry so MUTATION_RESPONSE_TRANSFORMS
+      // applies (e.g. transformOrderListResponse adds the 'date' alias).
+      return this.withRefreshRetry(
+        authHeader,
+        (currentAuthHeader) =>
+          this.executeHttpRequest('GET', url, null, currentAuthHeader),
+        getRouteKey,
+      );
+    }
+
+    // Anonymous catalog branch (unchanged from M3.1.5).
+    // Type guard: we already ensured catalogTransform !== undefined
+    // by the early-return above. TypeScript needs a non-null assertion
+    // because the OR-undefined check on both was a disjunction.
+    const transform = catalogTransform!;
     const { pathParams, queryParams } = transform(asRecord(body));
-
     const url = this.buildV3UrlWithQuery(getRouteKey, pathParams, queryParams);
 
-    // No body for a GET; no auth token for anonymous catalog reads.
-    // If a future converted endpoint needs auth, the transform can
-    // return an auth-header indicator and we extend this signature.
-    //
-    // Pass the routeKey through to withRefreshRetry so the response
-    // transform (CATALOG_RESPONSE_TRANSFORMS[getRouteKey]) runs over
-    // the v3 data field before it reaches the call site. Without
-    // this, mobile pages would see v3-shaped fields (`primary_image:
-    // {url, alt}`) where they expect legacy-shaped ones (`image_1`
-    // as a flat URL string).
     return this.withRefreshRetry(
       null,
       (currentAuthHeader) =>
