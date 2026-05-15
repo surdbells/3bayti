@@ -155,6 +155,12 @@ return [
     \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController::class => \DI\autowire(),
 
+    // M3.1.7-D — Admin order surface controllers
+    \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class => \DI\autowire(),
+
     // M2.1 — RequestIdMiddleware (added earlier in M1.6.2.B but
     // listed here for discoverability).
     \Bayti\Api\Http\Middleware\RequestIdMiddleware::class => \DI\autowire(),

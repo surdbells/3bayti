@@ -188,6 +188,108 @@ class OrderRepository extends EntityRepository
     }
 
     /**
+     * Admin-scoped paginated order list. Supports cross-cutting
+     * filters that the customer + vendor surfaces don't expose:
+     *   - status: any of Order::STATUS_* values, or null for all
+     *   - userId: filter to a single customer
+     *   - vendorId: filter to orders containing at least one item
+     *     from a specific vendor
+     *
+     * Used by M3.1.7-D admin orders surface.
+     *
+     * @return array{0: list<Order>, 1: int}
+     */
+    public function paginatedForAdmin(
+        int $limit,
+        int $offset,
+        ?string $statusFilter = null,
+        ?int $userIdFilter = null,
+        ?int $vendorIdFilter = null,
+    ): array {
+        $limit = max(1, min($limit, 100));
+        $offset = max(0, $offset);
+
+        // Count query
+        $totalQb = $this->createQueryBuilder('o');
+        if ($vendorIdFilter !== null) {
+            $totalQb->select('COUNT(DISTINCT o.id)')
+                ->innerJoin('o.items', 'i')
+                ->where('i.vendor = :vendor')
+                ->setParameter('vendor', $vendorIdFilter);
+        } else {
+            $totalQb->select('COUNT(o.id)');
+        }
+        if ($statusFilter !== null) {
+            $totalQb->andWhere('o.status = :status')->setParameter('status', $statusFilter);
+        }
+        if ($userIdFilter !== null) {
+            $totalQb->andWhere('o.user = :user')->setParameter('user', $userIdFilter);
+        }
+        $total = (int) $totalQb->getQuery()->getSingleScalarResult();
+
+        if ($total === 0) {
+            return [[], 0];
+        }
+
+        // ID page
+        $idQb = $this->createQueryBuilder('o');
+        if ($vendorIdFilter !== null) {
+            $idQb->select('DISTINCT o.id, o.createdAt')
+                ->innerJoin('o.items', 'i')
+                ->where('i.vendor = :vendor')
+                ->setParameter('vendor', $vendorIdFilter);
+        } else {
+            $idQb->select('o.id');
+        }
+        if ($statusFilter !== null) {
+            $idQb->andWhere('o.status = :status')->setParameter('status', $statusFilter);
+        }
+        if ($userIdFilter !== null) {
+            $idQb->andWhere('o.user = :user')->setParameter('user', $userIdFilter);
+        }
+        $idQb->orderBy('o.createdAt', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset);
+
+        $idRows = $idQb->getQuery()->getScalarResult();
+        $ids = array_map(static fn (array $r): int => (int) $r['id'], $idRows);
+        if ($ids === []) {
+            return [[], $total];
+        }
+
+        $orders = $this->createQueryBuilder('o')
+            ->select('o', 'i')
+            ->leftJoin('o.items', 'i')
+            ->where('o.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('o.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        /** @var list<Order> $orders */
+        return [$orders, $total];
+    }
+
+    /**
+     * Find any order by id without scope restrictions. Admin-only
+     * use. Eagerly loads items + addresses.
+     */
+    public function findByIdForAdmin(int $orderId): ?Order
+    {
+        $result = $this->createQueryBuilder('o')
+            ->select('o', 'i', 'a')
+            ->leftJoin('o.items', 'i')
+            ->leftJoin('o.addresses', 'a')
+            ->where('o.id = :oid')
+            ->setParameter('oid', $orderId)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        /** @var Order|null $result */
+        return $result;
+    }
+
+    /**
      * Paginated list of orders that have AT LEAST ONE item belonging
      * to any of the given vendor ids. Most recent first.
      *

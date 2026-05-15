@@ -306,6 +306,36 @@ class Order
     }
 
     /**
+     * Admin-driven order status override. Bypasses normal state-
+     * machine validation — used by safety overrides (e.g. unsticking
+     * an order, manually marking failed). Caller MUST audit the
+     * override; this method does NOT itself record an audit row.
+     *
+     * Returns the previous status so caller can record before→after.
+     */
+    public function overrideStatus(string $newStatus): string
+    {
+        $previous = $this->status;
+        // Validate enum membership but skip transition validation.
+        $valid = [
+            self::STATUS_PENDING_PAYMENT,
+            self::STATUS_PAID,
+            self::STATUS_FULFILLING,
+            self::STATUS_SHIPPED,
+            self::STATUS_DELIVERED,
+            self::STATUS_CANCELLED,
+            self::STATUS_REFUNDED,
+            self::STATUS_FAILED,
+        ];
+        if (!in_array($newStatus, $valid, true)) {
+            throw new \InvalidArgumentException("Unknown Order status: '{$newStatus}'");
+        }
+        $this->status = $newStatus;
+        $this->touchUpdatedAt();
+        return $previous;
+    }
+
+    /**
      * Recompute order-level status from item-level statuses. Called
      * by vendor + admin transition controllers after they advance an
      * individual item. Order rolls up as follows:

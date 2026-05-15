@@ -287,6 +287,14 @@ return function (App $app): void {
         $group->post('/categories', \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class);
         $group->put('/categories/{id}', \Bayti\Api\Http\Controllers\Admin\Category\UpdateCategoryController::class);
         $group->delete('/categories/{id}', \Bayti\Api\Http\Controllers\Admin\Category\DeleteCategoryController::class);
+
+        // Admin orders surface (M3.1.7-D)
+        $group->get('/orders', \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class);
+        $group->get('/orders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class);
+        $group->patch('/orders/{id:[0-9]+}/status',
+            \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class);
+        $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
+            \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class);
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);

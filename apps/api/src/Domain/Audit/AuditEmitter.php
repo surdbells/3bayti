@@ -183,6 +183,66 @@ final class AuditEmitter
     }
 
     /**
+     * Record a 'viewed' event — used by M3.1.7-D admin endpoints to
+     * audit reads (Q5=A: ALL admin actions audited, including GETs).
+     *
+     * Changes payload typically contains:
+     *   - 'context'  → e.g. 'list', 'detail'
+     *   - 'filters'  → query params (limit/offset/status/etc.)
+     *
+     * Don't capture the full response body — that bloats the audit
+     * table. The subject_id + filters + actor are enough to
+     * reconstruct what the admin saw.
+     *
+     * @param array<string, mixed> $context
+     */
+    public function recordView(
+        ?ServerRequestInterface $request,
+        ?User $actor,
+        object $subject,
+        array $context = [],
+    ): void {
+        $this->record(
+            request: $request,
+            actor: $actor,
+            subject: $subject,
+            action: AuditLog::ACTION_VIEWED,
+            changes: $context,
+        );
+    }
+
+    /**
+     * Record an 'overridden' event — admin-driven state mutation
+     * that bypassed normal validation (e.g. forcing an order from
+     * pending_payment directly to refunded as a safety override).
+     *
+     * Changes payload should include:
+     *   - 'before' → state before the override
+     *   - 'after'  → state after
+     *   - 'reason' → admin-supplied rationale (free-text note)
+     *
+     * The reason captures the WHY in a way ACTION_UPDATED doesn't,
+     * so forensics can answer "why did admin X put order Y into
+     * state Z" not just "what changed."
+     *
+     * @param array<string, mixed> $changes
+     */
+    public function recordOverride(
+        ?ServerRequestInterface $request,
+        ?User $actor,
+        object $subject,
+        array $changes,
+    ): void {
+        $this->record(
+            request: $request,
+            actor: $actor,
+            subject: $subject,
+            action: AuditLog::ACTION_OVERRIDDEN,
+            changes: $changes,
+        );
+    }
+
+    /**
      * Take a snapshot of an entity's persistable state.
      *
      * Strategy: ask Doctrine's UnitOfWork for the original entity

@@ -45,12 +45,20 @@ final class AuditLog
     public const ACTION_UPDATED = 'updated';
     public const ACTION_DELETED = 'deleted';
     public const ACTION_DEFAULT = 'default';
+    // M3.1.7-D: admin endpoints log VIEWED for every GET (Q5=A:
+    // ALL admin actions audited including reads). OVERRIDDEN logs
+    // an admin-driven state mutation that bypassed normal
+    // transition validation.
+    public const ACTION_VIEWED = 'viewed';
+    public const ACTION_OVERRIDDEN = 'overridden';
 
     public const ALL_ACTIONS = [
         self::ACTION_CREATED,
         self::ACTION_UPDATED,
         self::ACTION_DELETED,
         self::ACTION_DEFAULT,
+        self::ACTION_VIEWED,
+        self::ACTION_OVERRIDDEN,
     ];
 
     #[ORM\Id]
