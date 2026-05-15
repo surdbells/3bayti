@@ -655,25 +655,69 @@ Plus 2 already-existing from M3.1.1c (still on v3):
 - Shadow infra deployed + smoke-tested
 - ENDPOINT_ROUTING entries added with `target: 'old' shadow: true` (shadow mode ON, traffic still legacy)
 
-#### M3.1.7 — Mobile Cart/Checkout/Orders Flip (with shadow mode)
+#### M3.1.7 — Vendor + Admin + Safety Hardening (✅ SHIPPED, scope-revised at planning kickoff)
 
-**Duration:** 4-6 weeks
-**Output:** mobile cart/checkout/orders fully on v3
+**Status:** ✅ Complete. See `docs/runbooks/m3/m3.1.7-completion.md` and `docs/runbooks/m3/m3.1.7-device-test-checklist.md`.
 
-Slow phase by design. Shadow mode requires 7-day clean windows per endpoint.
+**Final commit on `main`:** `9fa99f7` (M3.1.7-I)
+**Commit span:** `1fbf5f8` → `(this commit)` (10 commits)
 
-Sequence:
-- Day 1: Wire shadow mode into mobile call sites for the 10 endpoints
-- Days 2-8: Shadow window for `GET /v3/cart` (read-only, lowest risk)
-- Days 9-15: Shadow window for `POST /v3/cart/items` + `PATCH/DELETE` items
-- Days 16-22: Shadow for `POST /v3/checkout/initiate` (DRY RUN — no actual payment)
-- Days 23-29: Shadow for orders list/detail
-- Day 30: Off-hours cutover for cart reads
-- Day 31-37: Stability monitoring; if clean, cutover cart writes
-- Day 38-44: Cutover checkout initiate (THIS REQUIRES Noon production endpoint ready in v3, see M3.1.8)
-- Day 45+: Cutover orders
+**What shipped (10 phases A-J):**
 
-This is the slowest phase in M3. The conservative pacing is intentional.
+| Phase | Description | Commit |
+|---|---|---|
+| A | Webhook HMAC verifier (config-flag) | `1fbf5f8` |
+| B | Reconciliation cron (stuck pending_payment) | `86e0398` |
+| C | Vendor orders surface API | `6b2afa9` |
+| D | Admin orders surface + audit log (all actions) | `a950e2e` |
+| E | Refund flow (full + partial) | `0b00148` |
+| F | Cancellation flow (admin + customer) | `813fa24` |
+| G | Dispute persistence | `c7743a0` |
+| H | Email notifications | `9b91814` |
+| I | Mobile vendor pages + customer cancel | `9fa99f7` |
+| J | Closure docs | (this commit) |
+
+**Scope rationale (vs. original M3.1.7 plan above):**
+
+The original M3.1.7 stub was "Mobile Cart/Checkout/Orders Flip" — that work was already completed inside M3.1.6 (specifically M3.1.6i.2-F, commit `351aa36`, which flipped 9 routing entries from `target='old'` to `'new'`). With the mobile flip already done, M3.1.7 was repositioned as the **vendor + admin + safety hardening** milestone: building out the operator-facing surface (vendor self-service, admin oversight, refunds, cancellations, disputes), production-grade webhook signature verification, reconciliation reliability, and outbound email notifications.
+
+**Quality gate results:**
+- apps/api phpunit: 423 → 535 tests (+112 / +390 assertions)
+- apps/api phpstan: 60 errors (baseline preserved; zero regressions)
+- packages/api-client TS: clean
+- apps/mobile TS: 6 pre-existing baseline errors preserved
+
+**New tables:** 1 (`order_disputes`). New constants on existing `audit_log`: `ACTION_VIEWED`, `ACTION_OVERRIDDEN`.
+
+**Locked decisions carried through (10 Qs):**
+- Q2=B: webhook signature verifier behind config flag (`NOON_VERIFY_SIGNATURE`)
+- Q3=B: reconciliation cron at 5-minute cadence, 15-minute stuck threshold, 50-order batch
+- Q4=A: per-line-item state machine
+- Q5=A: ALL admin actions audited including reads (`ACTION_VIEWED`)
+- Q6=full+partial: refund flow supports both full and partial amounts
+- Q7: vendor mobile pages AND API (mobile via Phase I)
+- Q10: email notifications across full lifecycle to customer + vendor + admin
+
+**Production roll-out gates** (see `m3.1.7-device-test-checklist.md` for the full pre-flight):
+- Flip `NOON_VERIFY_SIGNATURE=true` only after sandbox empirical signature capture
+- Set `ZEPTOMAIL_API_TOKEN` + `ADMIN_NOTIFICATION_EMAILS` before relying on email notifications
+- Add `orders:reconcile-pending` to system cron at 5-minute cadence
+- Quarterly cleanup of `audit_log` rows with `action='viewed'` older than 365 days
+
+**Known limitations carried into post-M3.1.7:**
+- Dispute eventType strings (`CHARGEBACK_OPENED`, etc.) are placeholders pending empirical Noon sandbox observation
+- No `notification_log` persistence (structured logs only)
+- Email templates English-only (no Arabic)
+- Vendor lifecycle states (approved/suspended) not yet modelled on User entity — `VendorAuthMiddleware` gates on `is_vendor` boolean only
+- Customer-facing per-order detail page not built (my-orders shows inline)
+
+#### M3.1.7 (ORIGINAL) — Mobile Cart/Checkout/Orders Flip (SUPERSEDED — shipped inside M3.1.6i.2-F)
+
+**Status:** Subsumed into M3.1.6i.2 closure (`351aa36`).
+
+The original M3.1.7 plan below was preserved as historical context. The actual mobile flip happened earlier than expected — M3.1.6's strangler-fig migration delivered the dual-shape support that allowed flipping 9 cart/order/checkout routing entries en bloc in M3.1.6i.2-F, removing the need for a separate phase.
+
+
 
 #### M3.1.8 — Noon Payment Modernization
 
