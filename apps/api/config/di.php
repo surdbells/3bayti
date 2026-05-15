@@ -186,6 +186,7 @@ return [
 
     // M2.2 — Product endpoints (Day 2 of 10-day rollout)
     \Bayti\Api\Http\Serializers\ProductSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\CartSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\ListProductsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetProductController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class => \DI\autowire(),

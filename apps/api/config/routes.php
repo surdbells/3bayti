@@ -146,6 +146,24 @@ return function (App $app): void {
     })->add(AuthMiddleware::class);
 
     // ===================================================================
+    // M3.1.6d — Cart (authenticated; locked Q7=B server-side per user)
+    // ===================================================================
+    //
+    // Guests use device-local storage and call POST /v3/cart/merge
+    // after sign-in to migrate the device cart into the server. The
+    // /merge endpoint is in this group because it requires
+    // authentication — the guest cart payload is in the body, not
+    // identified by any guest token (no anonymous-session model
+    // per Q7=B).
+    $app->group('/v3/cart', function (RouteCollectorProxy $group): void {
+        $group->get('', \Bayti\Api\Http\Controllers\Cart\GetCartController::class);
+        $group->post('/items', \Bayti\Api\Http\Controllers\Cart\AddCartItemController::class);
+        $group->patch('/items/{id}', \Bayti\Api\Http\Controllers\Cart\UpdateCartItemController::class);
+        $group->delete('/items/{id}', \Bayti\Api\Http\Controllers\Cart\RemoveCartItemController::class);
+        $group->post('/merge', \Bayti\Api\Http\Controllers\Cart\MergeAnonCartController::class);
+    })->add(AuthMiddleware::class);
+
+    // ===================================================================
     // M2.1 — Catalog: public read endpoints (no auth required)
     // ===================================================================
 
