@@ -13,10 +13,10 @@
  *   Catalog reads  -> 'new' (M2.1 + M2.2 shipped; data migrated Day 4)
  *   Auth           -> 'new' (M1 shipped)
  *   Account        -> 'new' (M1.7 shipped)
- *   Cart / order   -> v3 backend READY (M3.1.6 shipped); entries
- *                     remain 'old' until mobile call-site rewrite
- *                     (M3.1.6i.2 / M3.1.7), then flipped en bloc
- *                     in M3.1.6j1
+ *   Cart / order   -> 'new' (M3.1.6 backend + M3.1.6i.2 mobile
+ *                     rewrite complete; flipped in M3.1.6i.2-F
+ *                     to route traffic to v3. Per-endpoint rollback
+ *                     remains via target: 'old')
  *   Wishlist       -> 'old' (M3+)
  *   Chat / tickets -> 'old' (M4)
  *   Admin          -> 'new' for catalog (M2.1.A), 'old' for users/orders/payments
@@ -581,31 +581,24 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'raw',
   },
 
-  // ---- Cart, checkout, orders (M3.1.6 backend shipped; target='old' until mobile rewrite) ----
+  // ---- Cart, checkout, orders (M3.1.6 backend + M3.1.6i.2 mobile, FLIPPED) ----
   //
-  // All entries are target='old' as of M3.1.6i. The v3 backend is
-  // ready (commits f540ade..95e044c) but mobile call sites still
-  // POST legacy-shaped bodies. M3.1.6i.2 / M3.1.7 will:
-  //   1. Extend the adapter with path-param-from-body support
-  //      (needed for /cart/items/:id which currently receives the
-  //      item id in the body, not the URL)
-  //   2. Add request + response transforms for these endpoints
-  //   3. Rewrite call sites in cart.page / product.page /
-  //      checkout.page / my-orders.page to drive the new transforms
-  //   4. Then flip target='old' -> 'new' (M3.1.6j1)
+  // All entries flipped target='old' -> 'new' in M3.1.6i.2-F after
+  // mobile call-site rewrite shipped. Mobile pages support dual-shape
+  // responses (legacy AND v3), so per-endpoint rollback to 'old'
+  // remains safe — flip any single line back to test against legacy
+  // if a regression appears.
   //
-  // Until then, leaving these on legacy is the correct strangler-fig
-  // posture: no mobile code is depending on the v3 endpoints yet,
-  // so the v3 backend's correctness is verified by tests, not by
-  // production traffic.
+  // Strangler-fig invariant preserved: each entry is independently
+  // rollback-able. No cross-endpoint coupling.
   'GET /cart': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/read-cart',
     newPath: '/v3/cart',
     shape: 'v2',
   },
   'POST /cart/items': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/addToCart',
     newPath: '/v3/cart/items',
     shape: 'v2',
@@ -616,13 +609,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // with the v3 backend; corrected to PATCH and flipped back to 'old'
   // pending mobile call-site rewrite.
   'PATCH /cart/items/:id': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/IncreaseItem',
     newPath: '/v3/cart/items/:id',
     shape: 'v2',
   },
   'DELETE /cart/items/:id': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/removeFromCart',
     newPath: '/v3/cart/items/:id',
     shape: 'v2',
@@ -632,7 +625,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // until M3.1.6j1 because the post-login flow that calls this hasn't
   // been wired yet on mobile.
   'POST /cart/merge': {
-    target: 'old',
+    target: 'new',
     oldPath: '',
     newPath: '/v3/cart/merge',
     shape: 'v3-envelope',
@@ -641,7 +634,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // than the previous /v3/checkout entry). Corrected; flipped back to
   // 'old' pending mobile rewrite.
   'POST /checkout/initiate': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/payment/initiate_payment',
     newPath: '/v3/checkout/initiate',
     shape: 'v2',
@@ -652,7 +645,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // status.terminal === true. Reads ONLY v3's local Order state — does
   // NOT call Noon's GET_ORDER (rate-limit ban risk per recon).
   'GET /checkout/status/:order_reference': {
-    target: 'old',
+    target: 'new',
     oldPath: '',
     newPath: '/v3/checkout/status/:order_reference',
     shape: 'v3-envelope',
@@ -670,13 +663,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // with a different routeKey (e.g. 'GET /orders/simple') so the
   // index can disambiguate.
   'GET /orders': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/read_orders_listing',
     newPath: '/v3/orders',
     shape: 'v2',
   },
   'GET /orders/:id': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/read-order-details',
     newPath: '/v3/orders/:id',
     shape: 'v2',
