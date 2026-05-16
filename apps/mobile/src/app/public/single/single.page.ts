@@ -23,6 +23,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {Platform} from "@ionic/angular";
 import {ActivatedRoute, Router} from "@angular/router";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {GlobalComponent} from "../../global-component";
 
@@ -60,6 +61,7 @@ export class SinglePage implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
   ) {
@@ -158,9 +160,11 @@ product = {
 }
   get_single() {
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.product, GlobalComponent.singleProductUtility)
+    // M3.2.X.1.5-A: 'GET /mobile/single-product-utility' flag (target='new'
+    // since M3.1.5).
+    this.networkAdapter.post_request(this.product, GlobalComponent.singleProductUtility)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.single = response.data;
             this.colors = response.data.colors.split(',');

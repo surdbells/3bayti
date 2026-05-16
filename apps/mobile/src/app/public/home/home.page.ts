@@ -171,9 +171,12 @@ export class HomePage implements OnInit, OnDestroy {
   get_new_arrivals() {
     this.ui_controls.is_loading = true;
     this.rqst_param_products_by_category.category = 0;
-    this.networkService.post_request(this.best_seller, GlobalComponent.new_arrivals)
+    // M3.2.X.1.5-A: route through MobileNetworkAdapter to consult
+    // 'GET /mobile/new-arrivals' feature flag (already target='new'
+    // since M3.1.5).
+    this.networkAdapter.post_request(this.best_seller, GlobalComponent.new_arrivals)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.new_arrivals = response.data;
             this.ui_controls.is_loading = false;
@@ -183,9 +186,10 @@ export class HomePage implements OnInit, OnDestroy {
   }
   get_featured_products() {
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.get_featured, GlobalComponent.featured)
+    // M3.2.X.1.5-A: 'GET /mobile/featured' flag (target='new' since M3.1.5).
+    this.networkAdapter.post_request(this.get_featured, GlobalComponent.featured)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           this.vendor_featured = response.data;
           this.meta = response.message;
           this.ui_controls.is_loading = false;
@@ -212,9 +216,9 @@ export class HomePage implements OnInit, OnDestroy {
   }
   getMoreItems() {
     this.get_featured.offset = this.get_featured.offset + this.get_featured.limit
-    this.networkService.post_request(this.get_featured, GlobalComponent.featured)
+    this.networkAdapter.post_request(this.get_featured, GlobalComponent.featured)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.vendor_featured.push(...response.data);
           }else{

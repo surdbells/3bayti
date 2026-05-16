@@ -335,9 +335,10 @@ export class AccountPage implements OnInit, OnDestroy {
     this.best_seller.id = this.single_user.id;
     this.best_seller.token = this.single_user.token;
     this.rqst_param_products_by_category.category = 0;
-    this.networkService.post_request(this.best_seller, GlobalComponent.new_arrivals)
+    // M3.2.X.1.5-A: 'GET /mobile/new-arrivals' flag (target='new' since M3.1.5).
+    this.networkAdapter.post_request(this.best_seller, GlobalComponent.new_arrivals)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.new_arrivals = response.data;
             this.ui_controls.is_loading = false;
@@ -350,9 +351,10 @@ export class AccountPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.get_featured.id = this.single_user.id;
     this.get_featured.token = this.single_user.token;
-    this.networkService.post_request(this.get_featured, GlobalComponent.featured)
+    // M3.2.X.1.5-A: 'GET /mobile/featured' flag (target='new' since M3.1.5).
+    this.networkAdapter.post_request(this.get_featured, GlobalComponent.featured)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           this.vendor_featured = response.data;
           this.meta = response.message;
           this.ui_controls.is_loading = false;
@@ -362,9 +364,11 @@ export class AccountPage implements OnInit, OnDestroy {
 
   get_label() {
     this.ui_controls.is_loading_category = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
+    // M3.2.X.1.5-A: wishlist label read — no v3 endpoint yet; adapter
+    // falls through to legacy NetworkService. Structural migration only.
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
             this.ui_controls.is_loading_category = false;
@@ -380,9 +384,11 @@ export class AccountPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading_category = true;
     this.addCloset.label_id = label;
     this.isWishOpen = false;
-    this.networkService.post_request(this.addCloset, GlobalComponent.addWishlist)
+    // M3.2.X.1.5-A: addWishlist mutation — POST to legacy via adapter
+    // fallthrough (no v3 wishlist endpoint yet).
+    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
             this.ui_controls.is_loading_category = false;
@@ -453,9 +459,11 @@ export class AccountPage implements OnInit, OnDestroy {
   load_cart() {
     this.rqst_param.id = this.single_user.id;
     this.rqst_param.token = this.single_user.token;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.customerCart)
+    // M3.2.X.1.5-A: 'GET /mobile/customer-cart' read; adapter routes
+    // per existing flag (target='new' for cart reads).
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.customerCart)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200) {
             this.bill = response.message;
             this.ui_controls.is_loading = false;
@@ -472,9 +480,9 @@ export class AccountPage implements OnInit, OnDestroy {
     this.get_featured.id = this.single_user.id;
     this.get_featured.token = this.single_user.token;
     this.get_featured.offset = this.get_featured.offset + this.get_featured.limit
-    this.networkService.post_request(this.get_featured, GlobalComponent.featured)
+    this.networkAdapter.post_request(this.get_featured, GlobalComponent.featured)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.vendor_featured.push(...response.data);
           }else{
