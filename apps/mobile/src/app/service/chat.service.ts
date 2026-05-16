@@ -16,6 +16,7 @@ import {
   UnreadCountResponse
 } from '../models/chat.models';
 import {NetworkService} from "../service/network.service";
+import {MobileNetworkAdapter} from "../core/http/mobile-network-adapter";
 
 @Injectable({
   providedIn: 'root'
@@ -27,28 +28,28 @@ export class ChatService {
   private promptCategories$ = new BehaviorSubject<PromptCategory[]>([]);
   private unreadCount$ = new BehaviorSubject<UnreadCountResponse>({ customer_unread: 0, vendor_unread: 0, total: 0 });
 
-  constructor(private networkService: NetworkService) {}
+  constructor(private networkService: NetworkService, private networkAdapter: MobileNetworkAdapter) {}
 
   // ========================================
   // Customer: Vendor Discovery
   // ========================================
 
   getVendorsWithOrders(userId: number, token: string): Observable<ChatVendor[]> {
-    return this.networkService.post_request(
+    return this.networkAdapter.post_request(
       { id: userId, token },
       GlobalComponent.chat_get_vendors
     ).pipe(
-      map(response => response.status === 'success' ? response.data : []),
+      map((response: any) => response.status === 'success' ? response.data : []),
       catchError(() => of([]))
     );
   }
 
   getVendorOrders(userId: number, token: string, vendorId: number): Observable<ChatOrdersResponse> {
-    return this.networkService.post_request(
+    return this.networkAdapter.post_request(
       { id: userId, token, vendor_id: vendorId },
       GlobalComponent.chat_get_vendor_orders
     ).pipe(
-      map(response => response.status === 'success' ? response.data : { orders: [], total_count: 0, skip_selection: false }),
+      map((response: any) => response.status === 'success' ? response.data : { orders: [], total_count: 0, skip_selection: false }),
       catchError(() => of({ orders: [], total_count: 0, skip_selection: false }))
     );
   }
@@ -58,17 +59,17 @@ export class ChatService {
   // ========================================
 
   getOrCreateConversation(userId: number, token: string, orderItemId: number): Observable<ConversationResponse> {
-    return this.networkService.post_request(
+    return this.networkAdapter.post_request(
       { id: userId, token, order_item_id: orderItemId },
       GlobalComponent.chat_get_conversation
     ).pipe(
-      tap(response => {
+      tap((response: any) => {
         if (response.status === 'success') {
           this.currentConversation$.next(response.data.conversation);
           this.orderContext$.next(response.data.order_context);
         }
       }),
-      map(response => {
+      map((response: any) => {
         if (response.status === 'success') return response.data;
         throw new Error(response.message || 'Failed to load conversation');
       })
@@ -76,11 +77,11 @@ export class ChatService {
   }
 
   getVendorConversations(userId: number, token: string, limit = 50, offset = 0): Observable<VendorConversationsResponse> {
-    return this.networkService.post_request(
+    return this.networkAdapter.post_request(
       { id: userId, token, limit, offset },
       GlobalComponent.chat_get_vendor_conversations
     ).pipe(
-      map(response => response.status === 'success' ? response.data : { conversations: [], total_unread: 0, has_more: false }),
+      map((response: any) => response.status === 'success' ? response.data : { conversations: [], total_unread: 0, has_more: false }),
       catchError(() => of({ conversations: [], total_unread: 0, has_more: false }))
     );
   }
@@ -93,8 +94,8 @@ export class ChatService {
     const params: any = { id: userId, token, conversation_id: conversationId, limit };
     if (beforeId) params.before_id = beforeId;
 
-    return this.networkService.post_request(params, GlobalComponent.chat_get_messages).pipe(
-      tap(response => {
+    return this.networkAdapter.post_request(params, GlobalComponent.chat_get_messages).pipe(
+      tap((response: any) => {
         if (response.status === 'success') {
           if (!beforeId) {
             this.messages$.next(response.data.messages);
@@ -104,7 +105,7 @@ export class ChatService {
           }
         }
       }),
-      map(response => response.status === 'success' ? response.data : { messages: [], has_more: false }),
+      map((response: any) => response.status === 'success' ? response.data : { messages: [], has_more: false }),
       catchError(() => of({ messages: [], has_more: false }))
     );
   }
@@ -119,14 +120,14 @@ export class ChatService {
     };
     if (promptId) params.prompt_id = promptId;
 
-    return this.networkService.post_request(params, GlobalComponent.chat_send_message).pipe(
-      tap(response => {
+    return this.networkAdapter.post_request(params, GlobalComponent.chat_send_message).pipe(
+      tap((response: any) => {
         if (response.status === 'success') {
           const current = this.messages$.value;
           this.messages$.next([...current, response.data.message]);
         }
       }),
-      map(response => {
+      map((response: any) => {
         if (response.status === 'success') return response.data;
         throw new Error(response.message || 'Failed to send message');
       })
@@ -145,14 +146,14 @@ export class ChatService {
     formData.append('conversation_id', conversationId.toString());
     formData.append('image', file);
 
-    return this.networkService.post_request(formData, GlobalComponent.chat_upload_image).pipe(
-      tap(response => {
+    return this.networkAdapter.post_request(formData, GlobalComponent.chat_upload_image).pipe(
+      tap((response: any) => {
         if (response.status === 'success') {
           const current = this.messages$.value;
           this.messages$.next([...current, response.data.message]);
         }
       }),
-      map(response => {
+      map((response: any) => {
         if (response.status === 'success') return response.data;
         throw new Error(response.message || 'Failed to upload image');
       })
@@ -165,11 +166,11 @@ export class ChatService {
 
   /** Marks all messages in conversation as read - call this when user opens a conversation */
   markAsRead(userId: number, token: string, conversationId: number): Observable<boolean> {
-    return this.networkService.post_request(
+    return this.networkAdapter.post_request(
       { id: userId, token, conversation_id: conversationId },
       GlobalComponent.chat_mark_read
     ).pipe(
-      map(response => response.status === 'success'),
+      map((response: any) => response.status === 'success'),
       catchError(() => of(false))
     );
   }
@@ -179,13 +180,13 @@ export class ChatService {
   // ========================================
 
   getPrompts(lang = 'en'): Observable<PromptCategory[]> {
-    return this.networkService.post_request({ lang }, GlobalComponent.chat_get_prompts).pipe(
-      tap(response => {
+    return this.networkAdapter.post_request({ lang }, GlobalComponent.chat_get_prompts).pipe(
+      tap((response: any) => {
         if (response.status === 'success') {
           this.promptCategories$.next(response.data);
         }
       }),
-      map(response => response.status === 'success' ? response.data : []),
+      map((response: any) => response.status === 'success' ? response.data : []),
       catchError(() => of([]))
     );
   }
@@ -196,16 +197,16 @@ export class ChatService {
 
   /** Get unread message counts - useful for displaying badges in tab bar or navigation */
   getUnreadCount(userId: number, token: string): Observable<UnreadCountResponse> {
-    return this.networkService.post_request(
+    return this.networkAdapter.post_request(
       { id: userId, token },
       GlobalComponent.chat_get_unread_count
     ).pipe(
-      tap(response => {
+      tap((response: any) => {
         if (response.status === 'success') {
           this.unreadCount$.next(response.data);
         }
       }),
-      map(response => response.status === 'success' ? response.data : { customer_unread: 0, vendor_unread: 0, total: 0 }),
+      map((response: any) => response.status === 'success' ? response.data : { customer_unread: 0, vendor_unread: 0, total: 0 }),
       catchError(() => of({ customer_unread: 0, vendor_unread: 0, total: 0 }))
     );
   }

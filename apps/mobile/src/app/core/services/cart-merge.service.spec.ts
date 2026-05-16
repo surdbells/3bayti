@@ -68,6 +68,7 @@ describe('CartMergeService.mergeIfAny', () => {
     net = new MockNetwork();
     service = new CartMergeService(
       net as unknown as NetworkService,
+      net as unknown as never, // MobileNetworkAdapter — same MockNetwork double works
       local as unknown as LocalCartService,
     );
   });

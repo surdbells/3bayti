@@ -28,6 +28,7 @@ import { GlobalComponent } from '../../global-component';
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from '../../translate.pipe';
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 export interface StoreData {
@@ -123,6 +124,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
 
   constructor(
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private router: Router,
     private nav: NavController,
     private alertCtrl: AlertController,
@@ -164,11 +166,11 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
     this.isLoading = true;
     this.cdr.markForCheck();
 
-    const sub = this.networkService.post_request(
+    const sub = this.networkAdapter.post_request(
       { id: this.userId, token: this.userToken },
       GlobalComponent.vendor_dashboard
     ).subscribe({
-      next: (response) => {
+      next: (response: any) => {
         if (response.status === 'success') {
           this.storeData = response.data.store;
           this.stats = {
@@ -238,7 +240,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
     this.isTogglingStatus = true;
     this.cdr.markForCheck();
 
-    const sub = this.networkService.post_request(
+    const sub = this.networkAdapter.post_request(
       {
         id: this.userId,
         token: this.userToken,
@@ -246,7 +248,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
       },
       GlobalComponent.vendor_toggle_status
     ).subscribe({
-      next: async (response) => {
+      next: async (response: any) => {
         if (response.status === 'success') {
           if (this.storeData) {
             this.storeData.is_active = isActive;

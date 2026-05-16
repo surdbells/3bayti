@@ -9,6 +9,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {ActivatedRoute, Router} from "@angular/router";
 import {BlockerService} from "../../blocker.service";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -34,6 +35,7 @@ export class ProcessPage implements OnInit {
     private blocker: BlockerService,
     private route: ActivatedRoute,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private pollService: CheckoutStatusPollService,
     private i18n: I18nService,
@@ -165,9 +167,9 @@ finalize() {
 
       // Legacy path: finalizePayment endpoint with orderId/merchantReference
       // from the customer/complete?... return URL.
-      this.networkService.post_request(this.rqst_param, GlobalComponent.finalizePayment)
+      this.networkAdapter.post_request(this.rqst_param, GlobalComponent.finalizePayment)
         .subscribe(({
-          next: (response) => {
+          next: (response: any) => {
             if (response.status === "SUCCESS") {
               this.ui_controls.confirming_transaction = false;
               this.router.navigate(['/success'], {replaceUrl: true});

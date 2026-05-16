@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 
 import { NetworkService } from '../../service/network.service';
+import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
 import { GlobalComponent } from '../../global-component';
 import { LocalCartService } from './local-cart.service';
 
@@ -63,6 +64,7 @@ export type MergeResult = {
 export class CartMergeService {
   constructor(
     private readonly networkService: NetworkService,
+    private readonly networkAdapter: MobileNetworkAdapter,
     private readonly localCart: LocalCartService,
   ) {}
 
@@ -118,7 +120,7 @@ export class CartMergeService {
       // post_request returns Observable<any>; firstValueFrom turns
       // it into a promise that resolves on the first emission.
       const response: any = await firstValueFrom(
-        this.networkService.post_request(body, mergeUrl),
+        this.networkAdapter.post_request(body, mergeUrl),
       );
 
       // Detect success across both shapes (defensive — Phase F flip
