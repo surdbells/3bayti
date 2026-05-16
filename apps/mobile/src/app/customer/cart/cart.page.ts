@@ -22,6 +22,7 @@ import {Subscription} from "rxjs";
 import {ConnectionService} from "../../service/connection.service";
 import {Router, RouterLink} from "@angular/router";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Cart} from "../../class/cart";
 import {GlobalComponent} from "../../global-component";
@@ -76,6 +77,7 @@ export class CartPage implements OnInit, OnDestroy {
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
     private localCart: LocalCartService,
@@ -211,9 +213,9 @@ export class CartPage implements OnInit, OnDestroy {
     }
 
     this.request.id = this.single_user.id;
-    this.networkService.post_request(this.request, GlobalComponent.customerCart)
+    this.networkAdapter.post_request(this.request, GlobalComponent.customerCart)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200) {
             // Dual-shape support during M3.1.6 strangler-fig migration:
             //   Legacy shape: response.data = items[], response.message = bill
@@ -320,9 +322,9 @@ export class CartPage implements OnInit, OnDestroy {
     }
 
     this.remove.item = item;
-    this.networkService.post_request(this.remove, GlobalComponent.RemoveCartItem)
+    this.networkAdapter.post_request(this.remove, GlobalComponent.RemoveCartItem)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
             this.load_cart();
@@ -342,9 +344,9 @@ export class CartPage implements OnInit, OnDestroy {
 
     this.increase.item = item;
     this.increase.quantity = newQty;
-    this.networkService.post_request(this.increase, GlobalComponent.IncreaseItem)
+    this.networkAdapter.post_request(this.increase, GlobalComponent.IncreaseItem)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.load_cart();
           }
@@ -365,9 +367,9 @@ export class CartPage implements OnInit, OnDestroy {
 
     this.decrease.item = item;
     this.decrease.quantity = newQty;
-    this.networkService.post_request(this.decrease, GlobalComponent.DecreaseItem)
+    this.networkAdapter.post_request(this.decrease, GlobalComponent.DecreaseItem)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.load_cart();
           }
@@ -410,9 +412,9 @@ export class CartPage implements OnInit, OnDestroy {
   }
   get_label() {
     this.ui_controls.is_loading_category = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
             this.ui_controls.is_loading_category = false;
@@ -424,9 +426,9 @@ export class CartPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading_category = true;
     this.addCloset.label_id = label;
     this.isWishOpen = false;
-    this.networkService.post_request(this.addCloset, GlobalComponent.addWishlist)
+    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
             this.ui_controls.is_loading_category = false;

@@ -20,6 +20,7 @@ import {
 import {ConnectionService} from "../../service/connection.service";
 import {Router, RouterLink} from "@angular/router";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 
 import {Preferences} from "@capacitor/preferences";
@@ -70,6 +71,7 @@ export class MeasurementsPage implements OnInit, OnDestroy {
     private platform: Platform,
     private router: Router,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
   ) {
@@ -149,9 +151,9 @@ export class MeasurementsPage implements OnInit, OnDestroy {
   }
   get_measurement() {
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readMeasurement)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readMeasurement)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.update.bust =  response.data[0].bust
             this.update.armhole = response.data[0].armhole
@@ -172,9 +174,9 @@ export class MeasurementsPage implements OnInit, OnDestroy {
       this.update.id = this.single_user.id;
       this.update.token = this.single_user.token;
       this.ui_controls.is_loading = true;
-      this.networkService.post_request(this.update, GlobalComponent.updateMeasurement)
+      this.networkAdapter.post_request(this.update, GlobalComponent.updateMeasurement)
         .subscribe(({
-          next: (response) => {
+          next: (response: any) => {
             if (response.response_code === 200 && response.status === "success") {
               this.success_notification(response.message);
               this.ui_controls.is_loading = false;

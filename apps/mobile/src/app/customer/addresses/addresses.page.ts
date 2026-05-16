@@ -15,6 +15,7 @@ import {Router, RouterLink} from "@angular/router";
 import {Subscription} from "rxjs";
 import {ConnectionService} from "../../service/connection.service";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -68,6 +69,7 @@ export class AddressesPage implements OnInit, OnDestroy {
     private platform: Platform,
     private router: Router,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
   ) {
@@ -148,9 +150,9 @@ export class AddressesPage implements OnInit, OnDestroy {
   }
   get_billing() {
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readBilling)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readBilling)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.update = response.data;
             this.ui_controls.is_loading = false;
@@ -210,9 +212,9 @@ export class AddressesPage implements OnInit, OnDestroy {
         return;
       }
       this.ui_controls.is_updating = true;
-      this.networkService.post_request(this.update, GlobalComponent.updateBilling, )
+      this.networkAdapter.post_request(this.update, GlobalComponent.updateBilling, )
         .subscribe(({
-          next: (response) => {
+          next: (response: any) => {
 
             if (response.response_code === 200 && response.status === "success") {
               this.ui_controls.is_updating = false;

@@ -27,6 +27,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {Router, RouterLink} from "@angular/router";
 import {ActionSheetController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -96,6 +97,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService
   ) {
@@ -311,9 +313,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
     this.request.id = this.single_user.id;
-    this.networkService.post_request(this.request, GlobalComponent.customerCart)
+    this.networkAdapter.post_request(this.request, GlobalComponent.customerCart)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200) {
             // Dual-shape support during M3.1.6 strangler-fig migration.
             // See cart.page.ts load_cart for the detailed explanation.
@@ -387,9 +389,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
     const v3ReturnPrefix = 'https://api.3bayti.ae/v3/checkout/return/';
     let listenerHandle: any = null;
     let processed = false; // ensure we only handle the redirect once
-    this.networkService.post_request(this.checkout, GlobalComponent.initiatePayment)
+    this.networkAdapter.post_request(this.checkout, GlobalComponent.initiatePayment)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           this.ui_controls.checking_out = false;
 
           // Detect response shape (dual-shape strangler-fig support):
@@ -599,9 +601,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   get_billing() {
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readBilling)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readBilling)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.update = response.data;
             this.ui_controls.is_loading = false;
@@ -768,9 +770,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
         return;
       }
       this.ui_controls.is_updating = true;
-      this.networkService.post_request(this.update, GlobalComponent.updateBilling, )
+      this.networkAdapter.post_request(this.update, GlobalComponent.updateBilling, )
         .subscribe(({
-          next: (response) => {
+          next: (response: any) => {
             if (response.response_code === 200 && response.status === "success") {
               this.ui_controls.is_updating = false;
               this.isConfirmBilling = true;
