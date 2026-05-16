@@ -192,6 +192,28 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/products',
     shape: 'v3-envelope',
   },
+  // M3.2.X.1-C — Best sellers. Initially target='old' for the 7-day
+  // shadow window (per locked Q-Shadow = A). Flips to 'new' in
+  // M3.2.X.1-C-FLIP after operator confirms clean delta logs.
+  //
+  // Both endpoints route to /v3/products with sort=best_seller per
+  // locked Q-Listing = B3 (single endpoint serves both call sites
+  // via different limit/offset).
+  //
+  // Backend (M3.2.X.1-A 86454d3): 'best_seller' = units sold in the
+  // last 30 days across paid/fulfilling/shipped/delivered orders.
+  'GET /mobile/best-sellers': {
+    target: 'old',
+    oldPath: '/customer/best_sellers',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
+  'GET /mobile/best-sellers-listing': {
+    target: 'old',
+    oldPath: '/customer/best_sellers_listing',
+    newPath: '/v3/products',
+    shape: 'v3-envelope',
+  },
   'GET /mobile/featured': {
     target: 'new',
     oldPath: '/customer/featured',

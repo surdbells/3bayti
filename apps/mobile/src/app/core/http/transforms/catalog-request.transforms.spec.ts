@@ -1,6 +1,9 @@
 import {
   transformNewArrivalsRequest,
   transformNewArrivalsListingRequest,
+  // M3.2.X.1-C additions:
+  transformBestSellersRequest,
+  transformBestSellersListingRequest,
   transformFeaturedRequest,
   transformExploreListingRequest,
   transformCategoryListingRequest,
@@ -97,6 +100,81 @@ describe('transformNewArrivalsListingRequest', () => {
       id: 1, token: 't', limit: 10, offset: 0,
     });
     expect(result.queryParams['max_price']).toBeUndefined();
+  });
+});
+
+describe('transformBestSellersRequest', () => {
+  // M3.2.X.1-C — strip variant for the account.page best-sellers
+  // horizontal scroll. Backend (M3.2.X.1-A 86454d3) defines
+  // 'best_seller' as units sold in the last 30 days across paid/
+  // fulfilling/shipped/delivered orders.
+  it('produces sort=best_seller with default limit', () => {
+    const result = transformBestSellersRequest({ id: 1, token: 'abc' });
+    expect(result.queryParams['sort']).toBe('best_seller');
+    expect(result.queryParams['limit']).toBe(10);
+  });
+  it('drops id and token from output', () => {
+    const result = transformBestSellersRequest({ id: 1, token: 'abc' });
+    expect(result.queryParams['id']).toBeUndefined();
+    expect(result.queryParams['token']).toBeUndefined();
+  });
+  it('tolerates non-object body (null)', () => {
+    const result = transformBestSellersRequest(null);
+    expect(result.queryParams['sort']).toBe('best_seller');
+    expect(result.queryParams['limit']).toBe(10);
+  });
+  it('tolerates non-object body (undefined)', () => {
+    const result = transformBestSellersRequest(undefined);
+    expect(result.queryParams['sort']).toBe('best_seller');
+    expect(result.queryParams['limit']).toBe(10);
+  });
+});
+
+describe('transformBestSellersListingRequest', () => {
+  // M3.2.X.1-C — paginated variant for the best-sellers.page full
+  // listing (infinite scroll + price filter). Per locked Q-Listing
+  // = B3, this hits the same /v3/products endpoint as the strip
+  // variant, just with caller-supplied limit/offset/maxPrice.
+  it('forwards limit + offset from the body', () => {
+    const result = transformBestSellersListingRequest({
+      id: 1, token: 't', limit: 20, offset: 40,
+    });
+    expect(result.queryParams['limit']).toBe(20);
+    expect(result.queryParams['offset']).toBe(40);
+    expect(result.queryParams['sort']).toBe('best_seller');
+  });
+  it('uses defaults when limit/offset are missing', () => {
+    const result = transformBestSellersListingRequest({ id: 1, token: 't' });
+    expect(result.queryParams['limit']).toBe(10);
+    expect(result.queryParams['offset']).toBe(0);
+  });
+  it('forwards maxPrice as max_price when present', () => {
+    const result = transformBestSellersListingRequest({
+      id: 1, token: 't', limit: 10, offset: 0, maxPrice: 5000,
+    });
+    expect(result.queryParams['max_price']).toBe(5000);
+  });
+  it('omits max_price when maxPrice is absent', () => {
+    const result = transformBestSellersListingRequest({
+      id: 1, token: 't', limit: 10, offset: 0,
+    });
+    expect(result.queryParams['max_price']).toBeUndefined();
+  });
+  it('coerces stringified numeric limit/offset', () => {
+    // Legacy bodies sometimes ship stringified numbers; pickIntOrDefault
+    // handles both. Same coverage pattern as new-arrivals-listing tests.
+    const result = transformBestSellersListingRequest({
+      id: 1, token: 't', limit: '15', offset: '30',
+    });
+    expect(result.queryParams['limit']).toBe(15);
+    expect(result.queryParams['offset']).toBe(30);
+  });
+  it('falls back to defaults on unparseable values', () => {
+    const result = transformBestSellersListingRequest({
+      id: 1, token: 't', limit: 'not-a-number', offset: null,
+    });
+    expect(result.queryParams['limit']).toBe(10);
+    expect(result.queryParams['offset']).toBe(0);
   });
 });
 

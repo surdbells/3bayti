@@ -26,6 +26,7 @@ import {
 import {Router} from "@angular/router";
 import {ActionSheetController, InfiniteScrollCustomEvent, Platform} from '@ionic/angular';
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { ConnectionService } from '../../service/connection.service';
 import {GlobalComponent} from "../../global-component";
@@ -123,6 +124,7 @@ export class AccountPage implements OnInit, OnDestroy {
     private blocker: BlockerService,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService
   ) {
@@ -310,9 +312,14 @@ export class AccountPage implements OnInit, OnDestroy {
     this.best_seller.id = this.single_user.id;
     this.best_seller.token = this.single_user.token;
     this.rqst_param_products_by_category.category = 0;
-    this.networkService.post_request(this.best_seller, GlobalComponent.best_sellers)
+    // M3.2.X.1-C: routes through MobileNetworkAdapter, which consults
+    // the 'GET /mobile/best-sellers' feature flag. Initially target='old'
+    // (shadow mode); flips to 'new' in M3.2.X.1-C-FLIP after 7-day clean
+    // shadow window. The post_request signature is drop-in compatible
+    // with NetworkService.post_request.
+    this.networkAdapter.post_request(this.best_seller, GlobalComponent.best_sellers)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.best_sellers = response.data;
             this.ui_controls.is_loading = false;

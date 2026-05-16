@@ -169,6 +169,53 @@ export function transformNewArrivalsListingRequest(body: unknown): {
 }
 
 /**
+ * Home strip: "best sellers, top N". Mirrors transformNewArrivalsRequest.
+ *
+ * Backend (M3.2.X.1-A) defines 'best_seller' as: products ranked by
+ * total units sold in the last 30 days across orders in status
+ * paid/fulfilling/shipped/delivered. Products with zero in-window
+ * sales still appear, ranked last, tie-broken by createdAt DESC
+ * then id DESC.
+ *
+ * limit=10 matches the account.page strip UX (5-10 cards visible).
+ */
+export function transformBestSellersRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  void asRecord(body); // body has only id/token; both dropped
+  return {
+    queryParams: {
+      sort: 'best_seller',
+      limit: 10,
+    },
+  };
+}
+
+/**
+ * Paginated best-sellers listing. Same shape as new-arrivals-listing.
+ *
+ * Per locked Q-Listing = B3 (M3.2.X.1 implementation plan §3),
+ * legacy 'best_sellers_listing' and 'best_sellers' both flow through
+ * the same v3 endpoint with different limit/offset. The naming
+ * preserves the legacy distinction at the mobile-side feature-flag
+ * key for routing, but the backend doesn't differentiate.
+ */
+export function transformBestSellersListingRequest(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  const query: Record<string, string | number | boolean> = {
+    sort: 'best_seller',
+    limit: pickIntOrDefault(b, 'limit', 10),
+    offset: pickIntOrDefault(b, 'offset', 0),
+  };
+  if (b['maxPrice'] !== undefined) {
+    query['max_price'] = pickIntOrDefault(b, 'maxPrice', 20000);
+  }
+  return { queryParams: query };
+}
+
+/**
  * Featured products strip. Legacy body: `{id, token, limit, offset}`.
  */
 export function transformFeaturedRequest(body: unknown): {
@@ -455,6 +502,9 @@ export function transformStylesListRequest(body: unknown): {
 export const CATALOG_REQUEST_TRANSFORMS: Record<string, BodyToRouteArgs> = {
   'GET /mobile/new-arrivals': transformNewArrivalsRequest,
   'GET /mobile/new-arrivals-listing': transformNewArrivalsListingRequest,
+  // M3.2.X.1-C — Best sellers (shadow mode initially)
+  'GET /mobile/best-sellers': transformBestSellersRequest,
+  'GET /mobile/best-sellers-listing': transformBestSellersListingRequest,
   'GET /mobile/featured': transformFeaturedRequest,
   'GET /mobile/explore-listing': transformExploreListingRequest,
   'GET /mobile/category-listing': transformCategoryListingRequest,
