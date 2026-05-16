@@ -21,6 +21,7 @@ import {Router, RouterLink} from "@angular/router";
 import {Subscription} from "rxjs";
 import {ConnectionService} from "../../service/connection.service";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {GlobalComponent} from "../../global-component";
 import {Cart} from "../../class/cart";
@@ -53,6 +54,7 @@ export class OrdersPage implements OnInit, OnDestroy {
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService
   ) {
     this.net.setReachabilityCheck(true);
@@ -158,9 +160,9 @@ export class OrdersPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
     this.request.id = this.single_user.id;
-    this.networkService.post_request(this.request, GlobalComponent.customerOrder)
+    this.networkAdapter.post_request(this.request, GlobalComponent.customerOrder)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200) {
             this.orders = response.data;
             this.ui_controls.is_loading = false;
@@ -174,9 +176,9 @@ export class OrdersPage implements OnInit, OnDestroy {
   load_order_details(product: number) {
     this.ui_controls.is_loading_details = true;
     this.request.product = product;
-    this.networkService.post_request(this.request, GlobalComponent.orderDetails)
+    this.networkAdapter.post_request(this.request, GlobalComponent.orderDetails)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200) {
             this.single_product = response.data;
             this.ui_controls.is_loading_details = false;

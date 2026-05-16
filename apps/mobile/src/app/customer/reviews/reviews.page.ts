@@ -17,6 +17,7 @@ import {Router, RouterLink} from "@angular/router";
 import {Subscription} from "rxjs";
 import {ConnectionService} from "../../service/connection.service";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -62,6 +63,7 @@ export class ReviewsPage implements OnInit, OnDestroy {
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
   ) {
@@ -138,9 +140,9 @@ export class ReviewsPage implements OnInit, OnDestroy {
 get_reviews() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readReviews)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readReviews)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.reviews = response.data;
             this.ui_controls.is_loading = false;
@@ -156,9 +158,9 @@ delete_reviews(review: number) {
       this.delete.id = this.single_user.id;
       this.delete.token = this.single_user.token;
       this.ui_controls.is_deleting = true;
-      this.networkService.post_request(this.delete, GlobalComponent.deleteReview, )
+      this.networkAdapter.post_request(this.delete, GlobalComponent.deleteReview, )
         .subscribe(({
-          next: (response) => {
+          next: (response: any) => {
             if (response.response_code === 200 && response.status === "success") {
               this.ui_controls.is_deleting = false;
               this.success_notification(response.message);

@@ -98,6 +98,7 @@ export class MyOrdersPage implements OnInit {
     private route: ActivatedRoute,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private mobileAdapter: MobileNetworkAdapter,
   ) {}
@@ -148,9 +149,9 @@ export class MyOrdersPage implements OnInit {
     this.ui_controls.is_empty = false;
     this.initial.limit = 10;
     this.initial.offset = 0;
-    this.networkService.post_request(this.initial, GlobalComponent.read_orders_listing)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.read_orders_listing)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             // Dual-shape support for M3.1.6 strangler-fig migration:
             //   Legacy: response.data = orders[] (direct array)
@@ -198,9 +199,9 @@ export class MyOrdersPage implements OnInit {
     this.initial.id = this.single_user.id;
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit
-    this.networkService.post_request(this.initial, GlobalComponent.read_orders_listing)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.read_orders_listing)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.orders.push(...this.extractOrders(response.data));
           }else{

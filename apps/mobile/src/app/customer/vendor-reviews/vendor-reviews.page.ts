@@ -27,6 +27,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {ActivatedRoute, Router} from "@angular/router";
 import {ActionSheetController, InfiniteScrollCustomEvent} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -91,6 +92,7 @@ export class VendorReviewsPage implements OnInit {
     private route: ActivatedRoute,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
   ) {}
   ui_controls = {
@@ -228,9 +230,9 @@ export class VendorReviewsPage implements OnInit {
     }
     this.ui_controls.is_creating = true;
     this.ui_controls.is_empty = true;
-    this.networkService.post_request(this.add_new_review, GlobalComponent.add_review)
+    this.networkAdapter.post_request(this.add_new_review, GlobalComponent.add_review)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
             this.ui_controls.is_creating = false;
@@ -247,9 +249,9 @@ export class VendorReviewsPage implements OnInit {
   }
   get_vendor() {
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.read_vendor)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.read_vendor)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.view_vendor = response.data;
             this.ui_controls.is_loading = false;
@@ -264,9 +266,9 @@ export class VendorReviewsPage implements OnInit {
     this.initial.id = this.single_user.id;
     this.initial.token = this.single_user.token;
     this.initial.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
-    this.networkService.post_request(this.initial, GlobalComponent.store_reviews)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.store_reviews)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.reviews = response.data;
             this.ui_controls.is_loading = false;
@@ -280,9 +282,9 @@ export class VendorReviewsPage implements OnInit {
     this.is_helpful.id =  this.single_user.id;
     this.is_helpful.token =  this.single_user.token;
     this.is_helpful.reviewId =  reviewId;
-    this.networkService.post_request(this.is_helpful, GlobalComponent.make_helpful)
+    this.networkAdapter.post_request(this.is_helpful, GlobalComponent.make_helpful)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
             this.get_reviews(false);
@@ -308,9 +310,9 @@ export class VendorReviewsPage implements OnInit {
     this.initial.token = this.single_user.token;
     this.initial.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
     this.initial.offset = this.initial.offset + this.initial.limit
-    this.networkService.post_request(this.initial, GlobalComponent.store_reviews)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.store_reviews)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.reviews.push(...response.data);
           }else{
