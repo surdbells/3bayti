@@ -166,4 +166,87 @@ class VendorRepository extends EntityRepository
             ->getQuery()
             ->getSingleScalarResult();
     }
+
+    /**
+     * Active + featured vendors with their aggregated rating stats.
+     *
+     * Returns a list of {vendor, rating, ratingCount} dicts where
+     *   - rating: float|null — average star of approved reviews
+     *     scoped to the vendor (NULL if vendor has zero approved
+     *     reviews; matches the apps/web `FeaturedVendor.rating`
+     *     contract semantics)
+     *   - ratingCount: int — number of approved reviews counted
+     *     in the aggregate
+     *
+     * Why a separate method (vs decorating findFeatured)
+     * ===================================================
+     * findFeatured() returns pure Vendor entities. Many call sites
+     * (admin listings, sitemap, etc.) don't care about rating data,
+     * and forcing a JOIN on every query would be wasteful.
+     *
+     * findFeaturedWithStats is the variant explicitly for the
+     * Designer Spotlight surface. Single query with LEFT JOIN +
+     * GROUP BY (no N+1) — at Spotlight scale (≤4 vendors per
+     * request) this is the right shape.
+     *
+     * SQL shape
+     * =========
+     * SELECT v, AVG(pr.star) AS rating, COUNT(pr.id) AS ratingCount
+     *   FROM Vendor v
+     *   LEFT JOIN ProductReview pr WITH pr.vendor = v
+     *       AND pr.status = 'approved'
+     *  WHERE v.isActive = true AND v.isFeatured = true
+     *  GROUP BY v.id
+     *  ORDER BY v.name ASC
+     *  LIMIT :limit
+     *
+     * `LEFT JOIN` so vendors with zero reviews still appear with
+     * NULL rating (matches apps/web's `rating: number | null` typing).
+     * `WITH` clause filters joined rows to approved reviews only;
+     * pending/rejected/spam reviews don't pollute the average.
+     *
+     * Q-Rating = A (locked in M3.2.X.2 plan): real-time aggregate.
+     * Spotlight is at most 4 vendors; cost is negligible.
+     * Denormalized columns deferred to M3.2.X.13 (vendor analytics).
+     *
+     * @return list<array{vendor: Vendor, rating: float|null, ratingCount: int}>
+     */
+    public function findFeaturedWithStats(int $limit = 4, int $offset = 0): array
+    {
+        $rows = $this->createQueryBuilder('v')
+            ->select('v', 'AVG(pr.star) AS rating', 'COUNT(pr.id) AS ratingCount')
+            ->leftJoin(
+                \Bayti\Api\Domain\Catalog\ProductReview::class,
+                'pr',
+                'WITH',
+                "pr.vendor = v AND pr.status = 'approved'"
+            )
+            ->where('v.isActive = true')
+            ->andWhere('v.isFeatured = true')
+            ->groupBy('v.id')
+            ->orderBy('v.name', 'ASC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+
+        // Doctrine returns mixed-array shape when SELECT mixes
+        // entities + scalars. Normalize into typed dicts so callers
+        // don't deal with the raw column-name conventions.
+        $out = [];
+        foreach ($rows as $row) {
+            // Row shape: [0 => Vendor entity, 'rating' => string|null, 'ratingCount' => string|int]
+            $vendor = $row[0];
+            $rating = $row['rating'] !== null ? (float) $row['rating'] : null;
+            $ratingCount = (int) $row['ratingCount'];
+
+            $out[] = [
+                'vendor' => $vendor,
+                'rating' => $rating,
+                'ratingCount' => $ratingCount,
+            ];
+        }
+
+        return $out;
+    }
 }
