@@ -20,6 +20,7 @@ import {ActionSheetController, InfiniteScrollCustomEvent, Platform} from "@ionic
 import {ConnectionService} from "../../service/connection.service";
 import {BlockerService} from "../../blocker.service";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {GlobalComponent} from "../../global-component";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -91,6 +92,7 @@ export class HomePage implements OnInit, OnDestroy {
     private blocker: BlockerService,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService
   ) {
@@ -150,9 +152,13 @@ export class HomePage implements OnInit, OnDestroy {
   get_best_sellers() {
     this.ui_controls.is_loading = true;
     this.rqst_param_products_by_category.category = 0;
-    this.networkService.post_request(this.best_seller, GlobalComponent.best_sellers)
+    // M3.2.X.1-C2: third best_sellers call site (missed in -C; home.page
+    // wasn't in the initial inspection of best_sellers usage).
+    // Same shadow → flip lifecycle as account.page::get_best_sellers
+    // and best-sellers.page methods.
+    this.networkAdapter.post_request(this.best_seller, GlobalComponent.best_sellers)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.best_sellers = response.data;
             this.ui_controls.is_loading = false;
