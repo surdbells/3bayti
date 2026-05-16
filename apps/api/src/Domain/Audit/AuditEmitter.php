@@ -554,6 +554,11 @@ final class AuditEmitter
             'commission_rate' => $v->getCommissionRate(),
             'is_active' => $v->isActive(),
             'is_verified' => $v->isVerified(),
+            // M3.2.X.2-D: Designer Spotlight curation flag. Surfaces
+            // in the audit log when admin toggles it, so we can trace
+            // "who featured this vendor on date X" via the audit
+            // history rather than relying on operator memory.
+            'is_featured' => $v->isFeatured(),
         ];
     }
 

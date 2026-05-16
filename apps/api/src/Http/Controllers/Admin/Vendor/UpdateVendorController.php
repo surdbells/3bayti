@@ -94,6 +94,13 @@ final class UpdateVendorController
         if ($input->is_verified !== null) {
             $vendor->setVerified($input->is_verified);
         }
+        if ($input->is_featured !== null) {
+            // M3.2.X.2-D: Designer Spotlight curation toggle.
+            // The audit snapshot before/after pair below captures
+            // this change automatically via AuditEmitter::snapshot
+            // (which reads all entity fields).
+            $vendor->setFeatured($input->is_featured);
+        }
 
         $this->em->flush();
 

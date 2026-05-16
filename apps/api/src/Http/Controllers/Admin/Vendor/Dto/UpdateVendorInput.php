@@ -50,6 +50,22 @@ final class UpdateVendorInput
     public readonly ?bool $is_active;
     public readonly ?bool $is_verified;
 
+    /**
+     * Designer Spotlight curation flag (M3.2.X.2-D).
+     *
+     * When true: vendor appears on /v3/featured-vendors (the apps/web
+     * home-page Designer Spotlight surface), provided is_active is
+     * also true.
+     *
+     * When false: vendor is hidden from the Spotlight surface but
+     * remains visible everywhere else (vendor listing, slug pages,
+     * product attribution).
+     *
+     * When null (omitted from request): no change. Existing flag
+     * value preserved. Matches the pattern of is_active / is_verified.
+     */
+    public readonly ?bool $is_featured;
+
     public function __construct(
         string $name = '',
         string $contact_email = '',
@@ -61,6 +77,7 @@ final class UpdateVendorInput
         ?float $commission_rate = null,
         ?bool $is_active = null,
         ?bool $is_verified = null,
+        ?bool $is_featured = null,
     ) {
         $this->name = trim($name);
         $this->contact_email = trim($contact_email);
@@ -75,5 +92,6 @@ final class UpdateVendorInput
         $this->commission_rate = $commission_rate;
         $this->is_active = $is_active;
         $this->is_verified = $is_verified;
+        $this->is_featured = $is_featured;
     }
 }
