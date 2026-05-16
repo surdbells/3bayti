@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { snapshot } from './utils/chromatic';
+import { expectNoA11yViolations } from './utils/a11y';
 
 /**
  * Product detail (`/product/:slug`) baseline e2e tests.
@@ -59,6 +60,9 @@ test.describe('Product detail', () => {
     expect(imgCount).toBeGreaterThanOrEqual(1);
 
     await snapshot(page, 'product-detail-default', info);
+
+    // M3.2.0-D: WCAG AA gate
+    await expectNoA11yViolations(page, info);
   });
 
   test('has page title matching product name pattern', async ({ page, baseURL }) => {

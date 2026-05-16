@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { snapshot } from './utils/chromatic';
+import { expectNoA11yViolations } from './utils/a11y';
 
 /**
  * Category detail (`/category/:slug`) baseline e2e tests.
@@ -52,6 +53,9 @@ test.describe('Category detail', () => {
     expect(count).toBeGreaterThanOrEqual(1);
 
     await snapshot(page, `category-detail-${slug}`, info);
+
+    // M3.2.0-D: WCAG AA gate
+    await expectNoA11yViolations(page, info);
   });
 
   test('has breadcrumb or category heading', async ({ page, baseURL }) => {

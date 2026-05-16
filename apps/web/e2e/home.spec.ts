@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { snapshot } from './utils/chromatic';
+import { expectNoA11yViolations } from './utils/a11y';
 
 /**
  * Home page (`/`) baseline e2e tests.
@@ -39,6 +40,10 @@ test.describe('Home page', () => {
 
     // Capture visual snapshot — fully rendered home page
     await snapshot(page, 'home-page-default', info);
+
+    // M3.2.0-D: enforce WCAG AA. Allowlist absorbs known violations
+    // pending remediation; new violations fail the test.
+    await expectNoA11yViolations(page, info);
   });
 
   test('has correct title and meta description', async ({ page }) => {

@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { snapshot } from './utils/chromatic';
+import { expectNoA11yViolations } from './utils/a11y';
 
 /**
  * Categories index (`/category`) baseline e2e tests.
@@ -19,6 +20,9 @@ test.describe('Categories index', () => {
     await expect(page.getByRole('heading', { name: /Shop by Category/i })).toBeVisible();
 
     await snapshot(page, 'categories-index', info);
+
+    // M3.2.0-D: WCAG AA gate
+    await expectNoA11yViolations(page, info);
   });
 
   test('has correct title', async ({ page }) => {
