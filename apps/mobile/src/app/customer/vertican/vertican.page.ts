@@ -23,6 +23,7 @@ import { Subscription } from "rxjs";
 import { ConnectionService } from "../../service/connection.service";
 import { Router } from "@angular/router";
 import { NetworkService } from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { Preferences } from "@capacitor/preferences";
 import { GlobalComponent } from "../../global-component";
@@ -87,6 +88,7 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private ngZone: NgZone
   ) {
@@ -362,9 +364,9 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.explore.token = this.single_user.token;
     this.explore.offset = 0;
 
-    this.networkService.post_request(this.explore, GlobalComponent.explore_listing)
+    this.networkAdapter.post_request(this.explore, GlobalComponent.explore_listing)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           console.log('[Vertican] Products:', response.data?.length);
           if (response.response_code === 200 && response.status === "success") {
             this.products = response.data;
@@ -404,7 +406,7 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.explore.token = this.single_user.token;
     this.explore.offset += this.explore.limit;
 
-    this.networkService.post_request(this.explore, GlobalComponent.explore_listing)
+    this.networkAdapter.post_request(this.explore, GlobalComponent.explore_listing)
       .subscribe({
         next: (response: any) => {
           if (response.response_code !== 200 || response.status !== 'success') {
@@ -433,9 +435,9 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
 
   get_label() {
     this.ui_controls.is_loading_category = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
             this.ui_controls.is_loading_category = false;
@@ -450,9 +452,9 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.addCloset.label_id = label;
     this.isWishOpen = false;
 
-    this.networkService.post_request(this.addCloset, GlobalComponent.addWishlist)
+    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
           }

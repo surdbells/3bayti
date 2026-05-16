@@ -18,6 +18,7 @@ import {Subscription} from "rxjs";
 import {ConnectionService} from "../../service/connection.service";
 import {Router, RouterLink} from "@angular/router";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -75,6 +76,7 @@ export class SearchPage implements OnInit, OnDestroy {
     private platform: Platform,
     private router: Router,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService
   ) {
     this.net.setReachabilityCheck(true);
@@ -156,9 +158,9 @@ export class SearchPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
     this.imageLoaded = {};
-    this.networkService.post_request(this.search, GlobalComponent.search)
+    this.networkAdapter.post_request(this.search, GlobalComponent.search)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.products = response.data;
             this.ui_controls.is_loading = false;
@@ -185,9 +187,9 @@ export class SearchPage implements OnInit, OnDestroy {
   }
   get_label() {
     this.ui_controls.is_loading_category = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
             this.ui_controls.is_loading_category = false;
@@ -199,9 +201,9 @@ export class SearchPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading_category = true;
     this.addCloset.label_id = label;
     this.isWishOpen = false;
-    this.networkService.post_request(this.addCloset, GlobalComponent.addWishlist)
+    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
             this.ui_controls.is_loading_category = false;

@@ -29,6 +29,7 @@ import { Subscription } from "rxjs";
 import { ConnectionService } from "../../service/connection.service";
 import { Router } from "@angular/router";
 import { NetworkService } from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { Preferences } from "@capacitor/preferences";
 import { GlobalComponent } from "../../global-component";
@@ -125,6 +126,7 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     private platform: Platform,
     private router: Router,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private cdr: ChangeDetectorRef
   ) {
@@ -200,9 +202,9 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    this.networkService.post_request(this.initial, GlobalComponent.new_arrivals_listing)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.new_arrivals_listing)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.new_arrivals = response.data;
           } else {
@@ -227,9 +229,9 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    this.networkService.post_request(this.initial, GlobalComponent.new_arrivals_listing)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.new_arrivals_listing)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.new_arrivals = response.data;
           } else {
@@ -251,9 +253,9 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    this.networkService.post_request(this.initial, GlobalComponent.new_arrivals_listing)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.new_arrivals_listing)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.new_arrivals.push(...response.data);
             this.cdr.markForCheck();
@@ -293,9 +295,9 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading_category = true;
     this.cdr.markForCheck();
 
-    this.networkService.post_request(this.initial, GlobalComponent.readWishlistLabel)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.readWishlistLabel)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
           }
@@ -315,9 +317,9 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.isWishOpen = false;
     this.cdr.markForCheck();
 
-    this.networkService.post_request(this.addCloset, GlobalComponent.addWishlist)
+    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
           }
