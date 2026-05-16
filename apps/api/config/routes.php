@@ -230,6 +230,7 @@ return function (App $app): void {
 
     // Vendors — public list + per-slug detail
     $app->get('/v3/vendors', \Bayti\Api\Http\Controllers\Catalog\ListVendorsController::class);
+    $app->get('/v3/featured-vendors', \Bayti\Api\Http\Controllers\Catalog\ListFeaturedVendorsController::class);
     $app->get('/v3/vendors/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class);
 
     // M2.2 — Products (Day 2 of 10-day rollout)

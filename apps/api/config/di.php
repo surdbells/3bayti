@@ -276,6 +276,7 @@ return [
     \Bayti\Api\Http\Controllers\Catalog\ListBrandsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetBrandController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\ListVendorsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\ListFeaturedVendorsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\ListCategoriesController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetCategoryController::class => \DI\autowire(),
