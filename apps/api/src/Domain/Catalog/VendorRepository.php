@@ -119,4 +119,51 @@ class VendorRepository extends EntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Active + featured vendors, ordered alphabetically by name.
+     *
+     * Powers the apps/web home-page Designer Spotlight surface.
+     * Strictly filters by BOTH is_active = true AND is_featured = true
+     * — a soft-deleted vendor that was previously flagged featured
+     * must NOT leak onto the public Spotlight.
+     *
+     * Q-Sort = A (locked in M3.2.X.2 plan): alphabetical name ASC.
+     * Deterministic, stable, reflects no implicit preference.
+     * Switching to featured_at-based ordering is a future-phase
+     * change requiring a `featured_at` column (cheap migration).
+     *
+     * Q-LimitClamp = A (locked): caller is expected to clamp the
+     * limit to [1..12] before invoking. This repository does not
+     * re-clamp — that's the controller's responsibility per layered
+     * input-validation discipline.
+     *
+     * @return Vendor[]
+     */
+    public function findFeatured(int $limit = 4, int $offset = 0): array
+    {
+        return $this->createQueryBuilder('v')
+            ->where('v.isActive = true')
+            ->andWhere('v.isFeatured = true')
+            ->orderBy('v.name', 'ASC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Total count of active + featured vendors. Used for the
+     * PaginatedEnvelope `total` field; cheap aggregate query that
+     * doesn't materialize the row data.
+     */
+    public function countFeatured(): int
+    {
+        return (int) $this->createQueryBuilder('v')
+            ->select('COUNT(v.id)')
+            ->where('v.isActive = true')
+            ->andWhere('v.isFeatured = true')
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }

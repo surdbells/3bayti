@@ -91,6 +91,22 @@ class Vendor
     private bool $isStoreApproved = false;
 
     /**
+     * Curation flag for the home-page Designer Spotlight surface
+     * (apps/web) and any other "featured vendors" UI. Admin-managed
+     * via PUT /v3/admin/vendors/{id} with `is_featured: true`.
+     *
+     * M3.2.X.2 introduced this column. Defaults to false; existing
+     * vendors retain the default until admin explicitly flags them.
+     *
+     * Filtering rule on the public endpoint:
+     *   is_active = true AND is_featured = true
+     * — a vendor flagged featured but later soft-deleted must NOT
+     * appear on the Spotlight surface.
+     */
+    #[ORM\Column(name: 'is_featured', type: 'boolean')]
+    private bool $isFeatured = false;
+
+    /**
      * Owner User — the user record with is_vendor=1 that owns this store.
      * Optional because: (a) old M2.1 vendors have no owner since they
      * predate this field; (b) admin-created vendors don't always have a
@@ -219,6 +235,9 @@ class Vendor
 
     public function isStoreApproved(): bool { return $this->isStoreApproved; }
     public function setStoreApproved(bool $approved): void { $this->isStoreApproved = $approved; }
+
+    public function isFeatured(): bool { return $this->isFeatured; }
+    public function setFeatured(bool $featured): void { $this->isFeatured = $featured; }
 
     public function getOwnerUser(): ?\Bayti\Api\Domain\User\User { return $this->ownerUser; }
     public function setOwnerUser(?\Bayti\Api\Domain\User\User $user): void { $this->ownerUser = $user; }
