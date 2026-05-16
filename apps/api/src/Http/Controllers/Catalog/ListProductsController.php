@@ -29,7 +29,7 @@ use Psr\Http\Message\ServerRequestInterface;
  *   ?category=abayas                (category slug)
  *   ?min_price=50&max_price=500     (decimal AED)
  *   ?featured=true&new=true&sale=true
- *   ?sort=newest|oldest|price_asc|price_desc
+ *   ?sort=newest|oldest|price_asc|price_desc|relevance|best_seller
  *   ?limit=24&offset=0
  *
  * Returns: { data: Product[], meta: PaginationMeta }
@@ -286,7 +286,12 @@ final class ListProductsController
         // falls back to 'newest' if 'relevance' is supplied without
         // a search query, so we accept the value here unconditionally
         // and let the domain layer enforce the dependency.
-        $valid = ['newest', 'oldest', 'price_asc', 'price_desc', 'relevance'];
+        //
+        // 'best_seller' (M3.2.X.1) ranks by units sold in the last
+        // 30 days across paid/fulfilling/shipped/delivered orders.
+        // See ProductRepository::findActivePaginated for the
+        // aggregation strategy.
+        $valid = ['newest', 'oldest', 'price_asc', 'price_desc', 'relevance', 'best_seller'];
         return in_array($value, $valid, true) ? $value : 'newest';
     }
 
