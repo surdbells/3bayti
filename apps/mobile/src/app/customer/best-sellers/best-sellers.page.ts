@@ -301,9 +301,9 @@ export class BestSellersPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading_category = true;
     this.cdr.markForCheck();
 
-    this.networkService.post_request(this.initial, GlobalComponent.readWishlistLabel)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.readWishlistLabel)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
           }
@@ -323,9 +323,9 @@ export class BestSellersPage implements OnInit, OnDestroy {
     this.isWishOpen = false;
     this.cdr.markForCheck();
 
-    this.networkService.post_request(this.addCloset, GlobalComponent.addWishlist)
+    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
           }

@@ -13,6 +13,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {ActivatedRoute, Router} from "@angular/router";
 import {ActionSheetController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {GlobalComponent} from "../../global-component";
 import {Labels} from "../../class/labels";
@@ -57,6 +58,7 @@ export class VendorsPage implements OnInit {
     private route: ActivatedRoute,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
   ) {}
   ui_controls = {
@@ -165,9 +167,9 @@ goToReviews(id: number, name: string) {
   get_latest() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.store_latest)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.store_latest)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.latest = response.data;
             this.ui_controls.is_loading = false;
@@ -180,9 +182,9 @@ goToReviews(id: number, name: string) {
       }))
   }
   get_vendor() {
-    this.networkService.post_request(this.rqst_param, GlobalComponent.read_vendor)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.read_vendor)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.view_vendor = response.data;
           }
@@ -190,9 +192,9 @@ goToReviews(id: number, name: string) {
       }))
   }
   user_follow_vendor() {
-    this.networkService.post_request(this.rqst_param, GlobalComponent.follow_vendor)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.follow_vendor)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
             this.get_vendor();
@@ -203,9 +205,9 @@ goToReviews(id: number, name: string) {
       }))
   }
   user_unfollow_vendor() {
-    this.networkService.post_request(this.rqst_param, GlobalComponent.unfollow_vendor)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.unfollow_vendor)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
             this.get_vendor();
@@ -218,9 +220,9 @@ goToReviews(id: number, name: string) {
   get_product_by_label() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.products_by_labels)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.products_by_labels)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.products = response.data;
             this.ui_controls.is_loading = false;
@@ -234,9 +236,9 @@ goToReviews(id: number, name: string) {
   get_label() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.store_labels)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.store_labels)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
             this.ui_controls.is_loading = false;

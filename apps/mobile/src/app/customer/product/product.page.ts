@@ -26,6 +26,7 @@ import { Subscription } from "rxjs";
 import { Platform } from "@ionic/angular";
 import { ConnectionService } from "../../service/connection.service";
 import { NetworkService } from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { GlobalComponent } from "../../global-component";
 import { Preferences } from "@capacitor/preferences";
@@ -155,6 +156,7 @@ export class ProductPage implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private cdr: ChangeDetectorRef,
     private i18n: I18nService,
@@ -525,9 +527,9 @@ export class ProductPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.cdr.markForCheck();
 
-    this.networkService.post_request(this.rqst_param, GlobalComponent.single_product)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.single_product)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.single = response.data;
             // Parse colors and normalize them
@@ -587,9 +589,9 @@ export class ProductPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading_measurement = true;
     this.cdr.markForCheck();
 
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readMeasurement)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readMeasurement)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.update.bust = response.data[0].bust;
             this.update.armhole = response.data[0].armhole;
@@ -612,9 +614,9 @@ export class ProductPage implements OnInit, OnDestroy {
   }
 
   get_store_measurement() {
-    this.networkService.post_request(this.store_m, GlobalComponent.readStoreMeasurement)
+    this.networkAdapter.post_request(this.store_m, GlobalComponent.readStoreMeasurement)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.store_measurement = response.data;
             this.cdr.markForCheck();
@@ -626,9 +628,9 @@ export class ProductPage implements OnInit, OnDestroy {
   load_cart() {
     this.rqst_param.id = this.single_user.id;
     this.rqst_param.token = this.single_user.token;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.customerCart)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.customerCart)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200) {
             this.bill = response.message;
             this.product = response.data;
@@ -703,9 +705,9 @@ export class ProductPage implements OnInit, OnDestroy {
       return;
     }
 
-    this.networkService.post_request(this.add_cart, GlobalComponent.addToCart)
+    this.networkAdapter.post_request(this.add_cart, GlobalComponent.addToCart)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           // Dual-shape support during M3.1.6 strangler-fig migration.
           //   Legacy: response.response_code=200, response.status='success',
           //           response.message=<localised success text>
@@ -756,9 +758,9 @@ export class ProductPage implements OnInit, OnDestroy {
       this.ui_controls.is_loading_measurement = true;
       this.cdr.markForCheck();
 
-      this.networkService.post_request(this.update, GlobalComponent.updateMeasurement)
+      this.networkAdapter.post_request(this.update, GlobalComponent.updateMeasurement)
         .subscribe({
-          next: (response) => {
+          next: (response: any) => {
             if (response.response_code === 200 && response.status === "success") {
               this.success_notification(this.i18n.t('text_measurement_confirmed'));
               this.ui_controls.is_loading_measurement = false;
