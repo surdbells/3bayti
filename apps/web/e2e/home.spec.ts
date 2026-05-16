@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { snapshot } from './utils/chromatic';
 
 /**
  * Home page (`/`) baseline e2e tests.
@@ -18,10 +19,13 @@ import { test, expect } from '@playwright/test';
  * Abayas, Kaftans...") used to be the marker but was removed when the
  * home transitioned to a carousel-only hero. BEM markers are
  * structural and don't change when copy is edited.
+ *
+ * M3.2.0-C: Chromatic visual snapshots captured at logical
+ * checkpoints. No-op when running outside the chromatic CLI.
  */
 
 test.describe('Home page', () => {
-  test('loads with hero carousel and global app shell', async ({ page }) => {
+  test('loads with hero carousel and global app shell', async ({ page }, info) => {
     await page.goto('/');
 
     // Global app shell — footer brand name proves the shell rendered.
@@ -32,6 +36,9 @@ test.describe('Home page', () => {
     await expect(slides.first()).toBeVisible();
     const slideCount = await slides.count();
     expect(slideCount).toBeGreaterThanOrEqual(1);
+
+    // Capture visual snapshot — fully rendered home page
+    await snapshot(page, 'home-page-default', info);
   });
 
   test('has correct title and meta description', async ({ page }) => {

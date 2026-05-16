@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { snapshot } from './utils/chromatic';
 
 /**
  * Product detail (`/product/:slug`) baseline e2e tests.
@@ -6,6 +7,8 @@ import { test, expect } from '@playwright/test';
  * Two prerendered product slugs exist; the rest are runtime-SSR'd
  * via the Cloudflare Worker. Both paths must render Product JSON-LD,
  * a name, price, and at least one image.
+ *
+ * M3.2.0-C: Chromatic snapshot of the populated PDP.
  */
 
 async function pickProductSlug(baseURL: string): Promise<string> {
@@ -39,7 +42,7 @@ test.describe('Product detail', () => {
     expect(hasProduct).toBe(true);
   });
 
-  test('displays product name, price, image', async ({ page, baseURL }) => {
+  test('displays product name, price, image', async ({ page, baseURL }, info) => {
     const slug = await pickProductSlug(baseURL!);
     await page.goto(`/product/${slug}`);
     await page.waitForLoadState('networkidle');
@@ -54,6 +57,8 @@ test.describe('Product detail', () => {
     const productImages = page.locator('img[src*="api.3bayti.ae"]');
     const imgCount = await productImages.count();
     expect(imgCount).toBeGreaterThanOrEqual(1);
+
+    await snapshot(page, 'product-detail-default', info);
   });
 
   test('has page title matching product name pattern', async ({ page, baseURL }) => {

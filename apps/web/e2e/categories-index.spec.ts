@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { snapshot } from './utils/chromatic';
 
 /**
  * Categories index (`/category`) baseline e2e tests.
@@ -6,14 +7,18 @@ import { test, expect } from '@playwright/test';
  * Server-rendered listing of all top-level categories with
  * TransferState hydration. Build-time verification asserts the
  * page renders with "Shop by Category" heading.
+ *
+ * M3.2.0-C: Chromatic snapshot at the end of the primary load test.
  */
 
 test.describe('Categories index', () => {
-  test('loads and displays category grid', async ({ page }) => {
+  test('loads and displays category grid', async ({ page }, info) => {
     await page.goto('/category');
 
     // The heading is asserted server-side in web.yml smoke tests.
     await expect(page.getByRole('heading', { name: /Shop by Category/i })).toBeVisible();
+
+    await snapshot(page, 'categories-index', info);
   });
 
   test('has correct title', async ({ page }) => {

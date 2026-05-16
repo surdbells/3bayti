@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { snapshot } from './utils/chromatic';
 
 /**
  * Category detail (`/category/:slug`) baseline e2e tests.
@@ -7,6 +8,8 @@ import { test, expect } from '@playwright/test';
  * shape depends on the backend (v2 used `abayas-1`, v3 uses `abayas`).
  * Per web.yml's "Verify SSR output" step we dynamically pick a slug
  * from the sitemap rather than hardcoding.
+ *
+ * M3.2.0-C: Chromatic snapshot captures the populated product grid.
  */
 
 async function pickCategorySlug(baseURL: string): Promise<string> {
@@ -24,7 +27,7 @@ async function pickCategorySlug(baseURL: string): Promise<string> {
 }
 
 test.describe('Category detail', () => {
-  test('loads with product grid and JSON-LD', async ({ page, baseURL }) => {
+  test('loads with product grid and JSON-LD', async ({ page, baseURL }, info) => {
     const slug = await pickCategorySlug(baseURL!);
     await page.goto(`/category/${slug}`);
     await page.waitForLoadState('networkidle');
@@ -47,6 +50,8 @@ test.describe('Category detail', () => {
     const productCards = page.locator('.product-card__name');
     const count = await productCards.count();
     expect(count).toBeGreaterThanOrEqual(1);
+
+    await snapshot(page, `category-detail-${slug}`, info);
   });
 
   test('has breadcrumb or category heading', async ({ page, baseURL }) => {

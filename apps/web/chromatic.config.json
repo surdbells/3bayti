@@ -1,0 +1,43 @@
+{
+  "$schema": "https://www.chromatic.com/config-file.schema.json",
+  "projectId": "TBD-set-via-chromatic-init-when-token-added",
+
+  "//": [
+    "M3.2.0-C Chromatic configuration for apps/web.",
+    "",
+    "Locked decision Q1 = C: Code lands with continue-on-error in CI",
+    "until operator adds CHROMATIC_PROJECT_TOKEN to GitHub secrets.",
+    "",
+    "Operator setup (when convenient):",
+    "  1. Sign up at chromatic.com (free tier, GitHub OAuth)",
+    "  2. Connect surdbells/3bayti repo",
+    "  3. Copy project token from Manage → Configure",
+    "  4. Add CHROMATIC_PROJECT_TOKEN to GitHub repo secrets",
+    "  5. Run 'pnpm --filter @3bayti/web chromatic' locally once to",
+    "     establish baseline (uses local token via .env, see runbook)",
+    "",
+    "After setup completes, remove continue-on-error from web.yml.",
+    "",
+    "Field reference: https://www.chromatic.com/docs/config-file"
+  ],
+
+  "onlyChanged": true,
+
+  "externals": [
+    "**/*.svg",
+    "**/*.png",
+    "**/*.jpg",
+    "**/*.jpeg",
+    "**/*.webp",
+    "**/*.gif",
+    "**/*.ico"
+  ],
+
+  "skip": "dependabot/**",
+
+  "autoAcceptChanges": "main",
+
+  "exitZeroOnChanges": true,
+
+  "playwright": true
+}
