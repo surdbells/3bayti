@@ -19,6 +19,7 @@ import { Router } from "@angular/router";
 import { Subscription } from "rxjs";
 import { ConnectionService } from "../../service/connection.service";
 import { NetworkService } from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { Preferences } from "@capacitor/preferences";
 import { GlobalComponent } from "../../global-component";
@@ -80,6 +81,7 @@ export class StylesPage implements OnInit, OnDestroy {
     private platform: Platform,
     private net: ConnectionService,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private cdr: ChangeDetectorRef
   ) {
@@ -186,9 +188,9 @@ export class StylesPage implements OnInit, OnDestroy {
     this.ui_controls.is_empty = false;
     this.cdr.markForCheck();
 
-    this.networkService.post_request(this.initial, GlobalComponent.styles_list)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.styles_list)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.styles = response.data;
             this.ui_controls.is_empty = this.styles.length === 0;
@@ -212,9 +214,9 @@ export class StylesPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    this.networkService.post_request(this.initial, GlobalComponent.styles_list)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.styles_list)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.styles.push(...response.data);
             this.cdr.markForCheck();

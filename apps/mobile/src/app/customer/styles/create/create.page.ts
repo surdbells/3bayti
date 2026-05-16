@@ -7,6 +7,7 @@ import {ConnectionService} from "../../../service/connection.service";
 import {BlockerService} from "../../../blocker.service";
 import {InfiniteScrollCustomEvent} from "@ionic/angular";
 import {NetworkService} from "../../../service/network.service";
+import {MobileNetworkAdapter} from "../../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../../shared/ax-mobile/notification';
 import {
   IonAccordion,
@@ -132,6 +133,7 @@ export class CreatePage {
     private net: ConnectionService,
     private blocker: BlockerService,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
@@ -192,9 +194,9 @@ export class CreatePage {
   }
   get_vendors() {
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.initial, GlobalComponent.vendors_listing)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.vendors_listing)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.stores = response.data;
             this.ui_controls.is_loading = false;
@@ -210,9 +212,9 @@ export class CreatePage {
     this.product_handler.token = this.single_user.token;
     this.product_handler.storeId = storeId;
 
-    this.networkService.post_request(this.product_handler, GlobalComponent.vendors_products_listing)
+    this.networkAdapter.post_request(this.product_handler, GlobalComponent.vendors_products_listing)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.products = response.data;
             this.ui_controls.is_loading = false;
@@ -232,9 +234,9 @@ export class CreatePage {
     this.ui_controls.is_creating = true;
     this.create_style.id = this.single_user.id;
     this.create_style.token = this.single_user.token;
-    this.networkService.post_request(this.create_style, GlobalComponent.create_style)
+    this.networkAdapter.post_request(this.create_style, GlobalComponent.create_style)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.products = response.data;
             this.ui_controls.is_creating = false;
@@ -286,9 +288,9 @@ export class CreatePage {
     this.initial.id = this.single_user.id;
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit
-    this.networkService.post_request(this.initial, GlobalComponent.vendors_listing)
+    this.networkAdapter.post_request(this.initial, GlobalComponent.vendors_listing)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.stores.push(...response.data);
           }else{

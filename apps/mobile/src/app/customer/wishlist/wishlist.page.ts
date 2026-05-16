@@ -18,6 +18,7 @@ import {Subscription} from "rxjs";
 import {ConnectionService} from "../../service/connection.service";
 import {Router, RouterLink} from "@angular/router";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {ActionSheetController} from "@ionic/angular";
 import {Preferences} from "@capacitor/preferences";
@@ -73,6 +74,7 @@ export class WishlistPage implements OnInit, OnDestroy {
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
   ) {
@@ -155,9 +157,9 @@ export class WishlistPage implements OnInit, OnDestroy {
     }
     this.ui_controls.is_empty = false;
     this.ui_controls.is_creating = true;
-    this.networkService.post_request(this.add_label, GlobalComponent.addWishlistLabel)
+    this.networkAdapter.post_request(this.add_label, GlobalComponent.addWishlistLabel)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.add_label.label_name = "";
             this.cancel();
@@ -189,9 +191,9 @@ export class WishlistPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.wishlists = [];
     this.imageLoaded = {};
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readWishlist)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readWishlist)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.wishlists = response.data;
             this.ui_controls.is_loading = false;
@@ -205,9 +207,9 @@ export class WishlistPage implements OnInit, OnDestroy {
   get_label() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
             this.ui_controls.is_loading = false;
