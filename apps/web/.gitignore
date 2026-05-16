@@ -45,3 +45,9 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Playwright e2e (M3.2.0-A)
+/playwright-report
+/test-results
+/blob-report
+.playwright
