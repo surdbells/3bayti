@@ -83,6 +83,59 @@ jobs:
         # caches it; on CI we don't have a cache, but it's still fast.
         run: pnpm --filter @3bayti/web type-check
 
+      # ====================================================================
+      # M3.2.0 Quality Gates — added in M3.2.0-F
+      # ====================================================================
+      # These run AFTER type-check (cheap) but BEFORE the full Angular
+      # production build (expensive). If a regression surfaces in
+      # Playwright, we save 6+ minutes vs running the full build first.
+      #
+      # Per locked decisions:
+      #   Q1 = C: Chromatic step uses continue-on-error until operator
+      #           setup completes (CHROMATIC_PROJECT_TOKEN in secrets)
+      #   Q3 = A: Mobile Playwright runs with continue-on-error initially
+      # ====================================================================
+
+      - name: Install Playwright browsers
+        # Cached via actions/setup-node 'cache: pnpm', but the browser
+        # binaries themselves need explicit install. --with-deps installs
+        # system libraries on Ubuntu. Chromium-only per locked Q4 = A.
+        run: pnpm --filter @3bayti/web exec playwright install --with-deps chromium
+
+      - name: Run Playwright e2e tests (apps/web)
+        # webServer auto-starts `pnpm dev` on :4200. axe-core a11y gate
+        # runs inside each primary load test (utils/a11y.ts).
+        env:
+          CI: 'true'
+          PLAYWRIGHT_BASE_URL: 'http://localhost:4200'
+        run: pnpm --filter @3bayti/web test:e2e
+
+      - name: Upload Playwright report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7
+          if-no-files-found: warn
+
+      - name: Build Storybook (packages/shared-ui)
+        # Static output consumed by Chromatic for component-level
+        # visual diffs alongside page-level snapshots.
+        run: pnpm --filter @3bayti/shared-ui build-storybook
+
+      - name: Publish to Chromatic
+        # M3.2.0-C: per locked Q1 = C, this runs with continue-on-error
+        # until CHROMATIC_PROJECT_TOKEN is configured in repo secrets.
+        # After operator setup completes, remove continue-on-error and
+        # the conditional check around projectToken.
+        if: github.event_name == 'pull_request' && env.CHROMATIC_PROJECT_TOKEN != ''
+        continue-on-error: true
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+        working-directory: apps/web
+        run: pnpm chromatic
+
       - name: Build production bundle
         run: pnpm --filter @3bayti/web build
 

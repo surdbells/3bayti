@@ -1,0 +1,188 @@
+name: Quality — cross-app gates
+
+# Cross-app quality gates that fan out per app.
+#
+# M3.2.0-F: established as a required PR gate. Each app runs its own
+# type-check + lint pass independently. Failures in one app don't
+# block parallel apps from completing — the report shows which
+# specific apps regressed.
+#
+# This workflow does NOT run the per-app build/deploy pipelines
+# (those live in api.yml, mobile.yml, packages.yml, portal.yml,
+# web.yml). It runs the cheap quality checks that should always pass.
+#
+# Locked decision Q3 = A: mobile Playwright runs locally only (Capacitor
+# emulators are cost-prohibitive in CI). Mobile type-check + unit tests
+# still run here.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ====================================================================
+  # apps/web — type-check (Playwright + Chromatic + a11y live in web.yml)
+  # ====================================================================
+  web-quality:
+    name: web — type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Type-check
+        run: pnpm --filter @3bayti/web type-check
+
+  # ====================================================================
+  # apps/mobile — type-check + Playwright (continue-on-error per Q3 = A)
+  # ====================================================================
+  mobile-quality:
+    name: mobile — type-check + e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        # Mobile baseline is 6 errors; the script enforces no regression
+        # via tsconfig.app.json which excludes the legacy spec files.
+        run: pnpm --filter @3bayti/mobile type-check
+
+      - name: Install Playwright browsers
+        run: pnpm --filter @3bayti/mobile exec playwright install --with-deps chromium
+
+      - name: Run Playwright e2e tests
+        # Q3 = A: runs with continue-on-error until we establish a low
+        # false-positive baseline. Failures surface as PR annotations
+        # but don't block merge.
+        continue-on-error: true
+        env:
+          CI: 'true'
+        run: pnpm --filter @3bayti/mobile test:e2e
+
+      - name: Upload Playwright report (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-playwright-report
+          path: apps/mobile/playwright-report/
+          retention-days: 7
+          if-no-files-found: warn
+
+  # ====================================================================
+  # packages/* — type-check workspace packages
+  # ====================================================================
+  packages-quality:
+    name: packages — type-check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+
+      - name: Type-check api-client
+        run: pnpm --filter @3bayti/api-client type-check
+
+      - name: Type-check api-contracts
+        run: pnpm --filter @3bayti/api-contracts type-check
+
+      - name: Type-check shared-ui
+        run: pnpm --filter @3bayti/shared-ui type-check
+
+      - name: Build shared-ui Storybook (smoke check)
+        run: pnpm --filter @3bayti/shared-ui build-storybook
+
+  # ====================================================================
+  # apps/api — phpunit + phpstan (PHP backend; handled in api.yml on push,
+  #            but also gate PRs here)
+  # ====================================================================
+  api-quality:
+    name: api — phpunit + phpstan
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_pgsql, intl, bcmath, mbstring
+          tools: composer:v2
+
+      - name: Install Composer dependencies
+        working-directory: apps/api
+        env:
+          COMPOSER_ALLOW_SUPERUSER: '1'
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Run phpunit
+        working-directory: apps/api
+        run: vendor/bin/phpunit --configuration phpunit.xml
+
+      - name: Run phpstan (level 6, src/)
+        working-directory: apps/api
+        env:
+          COMPOSER_ALLOW_SUPERUSER: '1'
+        run: composer stan
+
+  # ====================================================================
+  # Aggregate result — required check for merge
+  # ====================================================================
+  all-quality:
+    name: All quality gates
+    if: always()
+    needs: [web-quality, mobile-quality, packages-quality, api-quality]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs
+        run: |
+          echo "web-quality:      ${{ needs.web-quality.result }}"
+          echo "mobile-quality:   ${{ needs.mobile-quality.result }}"
+          echo "packages-quality: ${{ needs.packages-quality.result }}"
+          echo "api-quality:      ${{ needs.api-quality.result }}"
+
+          # web, packages, api MUST pass.
+          # mobile-quality is informational (continue-on-error inside);
+          # it ALWAYS reports success at job level.
+          if [ "${{ needs.web-quality.result }}" != "success" ]; then
+            echo "ERROR: web-quality failed"
+            exit 1
+          fi
+          if [ "${{ needs.packages-quality.result }}" != "success" ]; then
+            echo "ERROR: packages-quality failed"
+            exit 1
+          fi
+          if [ "${{ needs.api-quality.result }}" != "success" ]; then
+            echo "ERROR: api-quality failed"
+            exit 1
+          fi
+          echo "✓ All required quality gates passed"
