@@ -127,20 +127,22 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/vendors/:slug/products',
     shape: 'v3-envelope',
   },
-  // Designer Spotlight strip on the home page. The legacy endpoint
-  // returns vendors WITH their nested products array (a custom shape
-  // for that one UI strip). v3 has no equivalent yet — the
-  // Designer Spotlight curation rules + embedded-products feature
-  // need to land in v3 before we can flip this to 'new'.
-  // Tracked as a Day-5-followup; until then this stays on legacy v2
-  // and the strangler-fig pattern handles the cohabitation.
+  // Designer Spotlight strip on the home page. M3.2.X.2 shipped
+  // the v3 endpoint (POST /v3/featured-vendors with the embedded-
+  // products + rating aggregate shape that matches apps/web's
+  // FeaturedVendor interface). Flipped target='old' → 'new' as the
+  // final sub-phase (M3.2.X.2-E).
+  //
+  // The legacy /v2/featured-vendors was returning 500 in production;
+  // the v3 endpoint replaces it with a clean shape and admin-managed
+  // curation via is_featured on the Vendor entity.
   'GET /featured-vendors': {
-    target: 'old',
+    target: 'new',
     oldPath: '/v2/featured-vendors',
     newPath: '/v3/featured-vendors',
-    // v2 happens to use the same `{data:[...]}` shape as v3 for this
+    // Both v2 and v3 use the same `{data:[...]}` shape for this
     // endpoint (no top-level response_code/status wrapper), so
-    // 'v3-envelope' is correct here even though we're hitting legacy.
+    // 'v3-envelope' is correct on either path.
     shape: 'v3-envelope',
   },
   'GET /sitemap-data': {

@@ -26,11 +26,10 @@ import type { FeaturedVendor } from '../catalog/designer-card';
  * Routing
  * -------
  * All four endpoints go through RoutedHttpClient + ENDPOINT_ROUTING:
- *   - GET /products     -> v3 (api-v3.3bayti.ae/v3/products)
- *   - GET /featured-vendors -> legacy v2 (api.3bayti.ae/v2/featured-
- *     vendors). v3 doesn't have a 'featured' curation yet; this
- *     endpoint stays on legacy until M3 or a dedicated v3 endpoint
- *     lands. Tracked as Day-5-followup.
+ *   - GET /products          -> v3 (api-v3.3bayti.ae/v3/products)
+ *   - GET /featured-vendors  -> v3 (api-v3.3bayti.ae/v3/featured-vendors)
+ *     (was on legacy v2 until M3.2.X.2; flipped to v3 once the
+ *     curation endpoint shipped with the embedded-products shape.)
  *
  * Failure mode:
  *   Each method returns an Observable that emits an empty array on
@@ -99,9 +98,15 @@ export class HomeDataService {
   }
 
   /**
-   * Featured vendors — currently still on legacy /v2/featured-vendors
-   * (see top-of-file rationale). Each vendor comes with up to 4
-   * embedded product thumbnails for the Designer Spotlight section.
+   * Featured vendors — now on /v3/featured-vendors per M3.2.X.2.
+   * Each vendor comes with up to 4 embedded product thumbnails for
+   * the Designer Spotlight section. Backend computes rating aggregate
+   * + alphabetical-by-name ordering.
+   *
+   * Curation: admin flags vendors via PUT /v3/admin/vendors/{id}
+   * with { is_featured: true }. Empty curation returns 200 with
+   * `data: []` (apps/web's catchError handles this by hiding the
+   * strip silently).
    */
   featuredVendors$(): Observable<FeaturedVendor[]> {
     return this.cached(this.KEY_FEATURED_VEND, () =>
