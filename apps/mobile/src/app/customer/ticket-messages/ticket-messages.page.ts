@@ -15,6 +15,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {ActivatedRoute, Router, RouterLink} from "@angular/router";
 import {ActionSheetController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -46,6 +47,7 @@ export class TicketMessagesPage implements OnInit, OnDestroy {
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
   ) {
     this.net.setReachabilityCheck(true);
@@ -116,9 +118,9 @@ export class TicketMessagesPage implements OnInit, OnDestroy {
     if (show_loading){
       this.ui_controls.is_loading = true;
     }
-    this.networkService.post_request(this.request, GlobalComponent.readTicketMessages)
+    this.networkAdapter.post_request(this.request, GlobalComponent.readTicketMessages)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.messages =  response.data;
             this.ui_controls.is_loading = false;
@@ -137,9 +139,9 @@ export class TicketMessagesPage implements OnInit, OnDestroy {
       return;
     }
     this.ui_controls.sending = true;
-    this.networkService.post_request(this.message, GlobalComponent.sendTicketMessage)
+    this.networkAdapter.post_request(this.message, GlobalComponent.sendTicketMessage)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.message.message = "";
             this.ui_controls.sending = false;

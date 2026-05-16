@@ -15,6 +15,7 @@ import {
 } from "@ionic/angular/standalone";
 import {ConnectionService} from "../../service/connection.service";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Subscription} from "rxjs";
 import {GlobalComponent} from "../../global-component";
@@ -63,6 +64,7 @@ export class TicketListPage implements OnInit {
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private fb: FormBuilder
   ) {
@@ -110,9 +112,9 @@ export class TicketListPage implements OnInit {
   get_tickets() {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
-    this.networkService.post_request(this.user_tickets, GlobalComponent.readTicket)
+    this.networkAdapter.post_request(this.user_tickets, GlobalComponent.readTicket)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.tickets =  response.data;
             this.ui_controls.is_loading = false;

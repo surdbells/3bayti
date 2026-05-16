@@ -19,6 +19,7 @@ import {Router, RouterLink} from "@angular/router";
 import {Subscription} from "rxjs";
 import {ConnectionService} from "../../service/connection.service";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {ActionSheetController} from "@ionic/angular";
 import {Preferences} from "@capacitor/preferences";
@@ -70,6 +71,7 @@ export class MessagesPage implements OnInit, OnDestroy {
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
   ) {
     this.net.setReachabilityCheck(true);
@@ -134,9 +136,9 @@ export class MessagesPage implements OnInit, OnDestroy {
   }
   get_conversations() {
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readMessages)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readMessages)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.stores =  response.data;
             this.ui_controls.is_loading = false;

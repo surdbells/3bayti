@@ -18,6 +18,7 @@ import { Subscription } from 'rxjs';
 
 import { ConnectionService } from '../../service/connection.service';
 import { NetworkService } from '../../service/network.service';
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import { GlobalComponent } from '../../global-component';
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from '../../translate.pipe';
@@ -95,6 +96,7 @@ export class SettingsPage implements OnInit, OnDestroy {
     private actionSheetCtrl: ActionSheetController,
     private net: ConnectionService,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService
   ) {
@@ -243,9 +245,9 @@ export class SettingsPage implements OnInit, OnDestroy {
 
     this.ui_controls.updating_location = true;
 
-    this.networkService.post_request(this.u_location, GlobalComponent.UpdateLocation)
+    this.networkAdapter.post_request(this.u_location, GlobalComponent.UpdateLocation)
       .subscribe({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === 'success') {
             this.single_user.location = this.u_location.location;
             Preferences.set({

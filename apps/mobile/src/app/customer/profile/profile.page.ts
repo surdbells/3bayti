@@ -17,6 +17,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {Router, RouterLink} from "@angular/router";
 import {ActionSheetController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
+import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -70,6 +71,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     private router: Router,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
+    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
   ) {
@@ -165,9 +167,9 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
   get_profile() {
     this.ui_controls.is_loading = true;
-    this.networkService.post_request(this.rqst_param, GlobalComponent.readProfile)
+    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readProfile)
       .subscribe(({
-        next: (response) => {
+        next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.update = response.data;
             this.ui_controls.is_loading = false;
@@ -196,9 +198,9 @@ export class ProfilePage implements OnInit, OnDestroy {
         return;
       }
       this.ui_controls.is_updating = true;
-      this.networkService.post_request(this.update, GlobalComponent.updateProfile)
+      this.networkAdapter.post_request(this.update, GlobalComponent.updateProfile)
         .subscribe(({
-          next: (response) => {
+          next: (response: any) => {
 
             if (response.response_code === 200 && response.status === "success") {
               this.ui_controls.is_updating = false;
