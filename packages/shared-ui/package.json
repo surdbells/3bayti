@@ -18,7 +18,9 @@
   ],
   "scripts": {
     "type-check": "tsc --noEmit",
-    "lint": "echo 'lint not configured (M0.4)'"
+    "lint": "echo 'lint not configured (M0.4)'",
+    "storybook": "storybook dev -p 6006 --no-open",
+    "build-storybook": "storybook build -o storybook-static"
   },
   "publishConfig": {
     "access": "restricted"
@@ -28,6 +30,13 @@
   },
   "devDependencies": {
     "@3bayti/tsconfig": "workspace:*",
-    "typescript": "5.9.2"
+    "@storybook/addon-a11y": "8.4.7",
+    "@storybook/addon-essentials": "8.4.7",
+    "@storybook/html": "8.4.7",
+    "@storybook/html-vite": "8.4.7",
+    "@storybook/test": "8.4.7",
+    "storybook": "8.4.7",
+    "typescript": "5.9.2",
+    "vite": "5.4.11"
   }
 }

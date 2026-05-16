@@ -1,0 +1,10 @@
+# Storybook outputs (M3.2.0-E)
+/storybook-static
+.cache
+
+# Build outputs
+/dist
+/out-tsc
+
+# Node
+/node_modules
