@@ -98,9 +98,9 @@ final class OrderEmailTemplateRendererLocaleTest extends TestCase
     #[Test]
     public function arabicLocaleRoutesAllCustomerTemplatesToArabicMethods(): void
     {
-        // The Arabic stub methods produce minimal Arabic output via
-        // arabicStub(). Their subjects are known Arabic strings;
-        // verify each customer template produces the expected subject.
+        // The Arabic templates each produce a subject containing a
+        // characteristic Arabic phrase; verify each customer template
+        // routes correctly by checking for that phrase in the subject.
         $order = $this->makeOrder('V3-AR-CUST');
         $extra = [
             'item_name' => 'Test',
@@ -108,20 +108,20 @@ final class OrderEmailTemplateRendererLocaleTest extends TestCase
             'refund_amount' => '0.00',
         ];
 
-        $expectedSubjects = [
+        $expectedSubjectFragments = [
             [EmailTemplate::ORDER_PLACED_CUSTOMER, 'تم استلام طلبك'],
             [EmailTemplate::ORDER_PAID_CUSTOMER, 'تأكيد الدفع'],
-            [EmailTemplate::ORDER_PAYMENT_FAILED_CUSTOMER, 'فشل الدفع'],
+            [EmailTemplate::ORDER_PAYMENT_FAILED_CUSTOMER, 'تعذّر إتمام الدفع'],
             [EmailTemplate::ORDER_SHIPPED_CUSTOMER, 'تم شحن طلبك'],
             [EmailTemplate::ORDER_DELIVERED_CUSTOMER, 'تم تسليم طلبك'],
             [EmailTemplate::ORDER_CANCELLED_CUSTOMER, 'تم إلغاء طلبك'],
-            [EmailTemplate::ORDER_REFUNDED_CUSTOMER, 'تم استرداد المبلغ'],
+            [EmailTemplate::ORDER_REFUNDED_CUSTOMER, 'إصدار استرداد'],
         ];
 
-        foreach ($expectedSubjects as [$template, $expectedSubject]) {
+        foreach ($expectedSubjectFragments as [$template, $expectedFragment]) {
             $rendered = $this->renderer->render($template, $order, $extra, 'ar');
-            self::assertSame(
-                $expectedSubject,
+            self::assertStringContainsString(
+                $expectedFragment,
                 $rendered->subject,
                 "Arabic dispatch broken for {$template->value}",
             );

@@ -65,8 +65,8 @@ final class OrderNotificationServiceLocaleTest extends TestCase
         $customerEmail = $this->findSentTo('customer@example.com');
         self::assertNotNull($customerEmail);
 
-        // Subject is the Arabic stub subject for ORDER_PLACED_CUSTOMER
-        self::assertSame('تم استلام طلبك', $customerEmail['subject']);
+        // Subject contains the Arabic phrase for ORDER_PLACED_CUSTOMER
+        self::assertStringContainsString('تم استلام طلبك', $customerEmail['subject']);
         // HTML body has Arabic wrapper
         self::assertStringContainsString('<html lang="ar" dir="rtl">', $customerEmail['html_body']);
     }

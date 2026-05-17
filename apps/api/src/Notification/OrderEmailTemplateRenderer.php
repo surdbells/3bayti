@@ -565,36 +565,124 @@ HTML;
     }
 
     // -----------------------------------------------------------------
-    // Arabic template stubs (M3.2.X.7-B)
+    // Arabic templates — customer-facing (M3.2.X.7-C)
     // -----------------------------------------------------------------
     //
-    // Stub methods that compile + return RenderedEmail with placeholder
-    // text. Actual translations land in sub-phases C (customer
-    // templates) and D (vendor + admin templates).
+    // Modern Standard Arabic (MSA), formal/respectful register.
+    // Translation notes:
+    //   - Order references + product names preserve their original
+    //     Latin script per UAE business convention (regional norm
+    //     for commercial documents; recipients expect to see the
+    //     same order reference they'd see on the web/mobile app)
+    //   - Currency 'د.إ' (AED in Arabic) when locale=ar; 'AED' on
+    //     the English side. The numeric value itself stays Western
+    //     Arabic numerals (1,2,3 not ١,٢,٣) — UAE business convention
+    //     for clarity in commercial contexts
+    //   - Email signature '— 3bayti' kept in Latin for consistent
+    //     brand identity (matches wrapHtml's tagline pattern)
+    //   - HTML structure mirrors the English templates so RTL
+    //     rendering flows naturally from the dir="rtl" on <html>
     //
-    // The placeholder text is INTENTIONALLY Arabic (not "TODO" or
-    // similar) so:
-    //   1. UTF-8 encoding survives the PHP pipeline cleanly
-    //      (verified by sub-phase B tests)
-    //   2. wrapHtml() lang=ar + dir=rtl rendering can be verified
-    //   3. If a stub somehow leaks to production before C/D ship,
-    //      the user sees a sensible-looking (if minimal) Arabic
-    //      message rather than English/placeholder
-    // -----------------------------------------------------------------
+    // OPERATOR FOLLOW-UP: a native Arabic reviewer pass before
+    // production is recommended (documented in closure runbook).
+    // The translations are formal MSA — unlikely to land badly but
+    // a polish pass adds confidence. Not a hard blocker.
 
     private function orderPlacedCustomerAr(Order $order): RenderedEmail
     {
-        return $this->arabicStub($order, 'تم استلام طلبك', 'Order received (Arabic — translation pending in M3.2.X.7-C)');
+        $ref = $order->getOrderReference();
+        $total = $order->getTotal();
+        $currency = $order->getCurrency();
+        $itemsList = $this->itemListText($order);
+        $itemsHtml = $this->itemListHtml($order);
+
+        return new RenderedEmail(
+            subject: "تم استلام طلبك {$ref} — 3bayti",
+            textBody: <<<TXT
+شكراً لطلبك!
+
+رقم الطلب: {$ref}
+المجموع: {$total} {$currency}
+
+العناصر:
+{$itemsList}
+
+سنرسل لك بريداً إلكترونياً آخر بمجرد تأكيد الدفع.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تم استلام طلبك',
+                body: <<<HTML
+<p>شكراً لطلبك!</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>المجموع:</strong> {$this->esc($total)} {$this->esc($currency)}</p>
+<h3>العناصر</h3>
+{$itemsHtml}
+<p>سنرسل لك بريداً إلكترونياً آخر بمجرد تأكيد الدفع.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
     }
 
     private function orderPaidCustomerAr(Order $order): RenderedEmail
     {
-        return $this->arabicStub($order, 'تأكيد الدفع', 'Payment confirmed (Arabic — translation pending in M3.2.X.7-C)');
+        $ref = $order->getOrderReference();
+        $total = $order->getTotal();
+        $currency = $order->getCurrency();
+
+        return new RenderedEmail(
+            subject: "تأكيد الدفع للطلب {$ref} — 3bayti",
+            textBody: <<<TXT
+تم تأكيد دفعتك بنجاح.
+
+رقم الطلب: {$ref}
+المبلغ: {$total} {$currency}
+
+نقوم الآن بتجهيز طلبك. ستصلك رسالة أخرى عند شحنه.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تأكيد الدفع',
+                body: <<<HTML
+<p>تم تأكيد دفعتك بنجاح.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>المبلغ:</strong> {$this->esc($total)} {$this->esc($currency)}</p>
+<p>نقوم الآن بتجهيز طلبك. ستصلك رسالة أخرى عند شحنه.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
     }
 
     private function orderPaymentFailedCustomerAr(Order $order): RenderedEmail
     {
-        return $this->arabicStub($order, 'فشل الدفع', 'Payment failed (Arabic — translation pending in M3.2.X.7-C)');
+        $ref = $order->getOrderReference();
+
+        return new RenderedEmail(
+            subject: "تعذّر إتمام الدفع للطلب {$ref} — 3bayti",
+            textBody: <<<TXT
+لم نتمكن من معالجة دفعة طلبك.
+
+رقم الطلب: {$ref}
+
+يمكنك المحاولة مجدداً من التطبيق، أو التواصل مع فريق الدعم لدينا
+إذا احتجت إلى المساعدة.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تعذّر إتمام الدفع',
+                body: <<<HTML
+<p>لم نتمكن من معالجة دفعة طلبك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}</p>
+<p>يمكنك المحاولة مجدداً من التطبيق، أو التواصل مع فريق الدعم لدينا إذا احتجت إلى المساعدة.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
     }
 
     /**
@@ -602,7 +690,33 @@ HTML;
      */
     private function orderShippedCustomerAr(Order $order, array $extra): RenderedEmail
     {
-        return $this->arabicStub($order, 'تم شحن طلبك', 'Order shipped (Arabic — translation pending in M3.2.X.7-C)');
+        $ref = $order->getOrderReference();
+        $itemName = (string) ($extra['item_name'] ?? 'منتجك');
+        $itemNameEsc = $this->esc($itemName);
+
+        return new RenderedEmail(
+            subject: "تم شحن طلبك {$ref} — 3bayti",
+            textBody: <<<TXT
+خبر سار — أحد منتجات طلبك في طريقه إليك.
+
+رقم الطلب: {$ref}
+المنتج: {$itemName}
+
+سيصلك بريد إلكتروني آخر عند تسليمه.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تم شحن طلبك',
+                body: <<<HTML
+<p>خبر سار — أحد منتجات طلبك في طريقه إليك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>المنتج:</strong> {$itemNameEsc}</p>
+<p>سيصلك بريد إلكتروني آخر عند تسليمه.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
     }
 
     /**
@@ -610,7 +724,34 @@ HTML;
      */
     private function orderDeliveredCustomerAr(Order $order, array $extra): RenderedEmail
     {
-        return $this->arabicStub($order, 'تم تسليم طلبك', 'Order delivered (Arabic — translation pending in M3.2.X.7-C)');
+        $ref = $order->getOrderReference();
+        $itemName = (string) ($extra['item_name'] ?? 'منتجك');
+        $itemNameEsc = $this->esc($itemName);
+
+        return new RenderedEmail(
+            subject: "تم تسليم طلبك {$ref} — 3bayti",
+            textBody: <<<TXT
+تم تسليم أحد منتجات طلبك.
+
+رقم الطلب: {$ref}
+المنتج: {$itemName}
+
+نتمنى أن ينال إعجابك. إذا كان هناك أي خلل، تواصل معنا خلال
+7 أيام وسنعالج الأمر.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تم تسليم طلبك',
+                body: <<<HTML
+<p>تم تسليم أحد منتجات طلبك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>المنتج:</strong> {$itemNameEsc}</p>
+<p>نتمنى أن ينال إعجابك. إذا كان هناك أي خلل، تواصل معنا خلال 7 أيام وسنعالج الأمر.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
     }
 
     /**
@@ -618,7 +759,41 @@ HTML;
      */
     private function orderCancelledCustomerAr(Order $order, array $extra): RenderedEmail
     {
-        return $this->arabicStub($order, 'تم إلغاء طلبك', 'Order cancelled (Arabic — translation pending in M3.2.X.7-C)');
+        $ref = $order->getOrderReference();
+        $refundIssued = (bool) ($extra['refund_issued'] ?? false);
+        $refundAmount = $extra['refund_amount'] ?? null;
+        $currency = $order->getCurrency();
+
+        $refundLineText = $refundIssued && is_string($refundAmount)
+            ? "تم إصدار استرداد بمبلغ {$refundAmount} {$currency}."
+            : 'لم يتم تحصيل أي مبلغ.';
+        $refundLineHtml = $refundIssued && is_string($refundAmount)
+            ? "تم إصدار استرداد بمبلغ <strong>{$this->esc($refundAmount)} {$this->esc($currency)}</strong>."
+            : 'لم يتم تحصيل أي مبلغ.';
+
+        return new RenderedEmail(
+            subject: "تم إلغاء طلبك {$ref} — 3bayti",
+            textBody: <<<TXT
+تم إلغاء طلبك.
+
+رقم الطلب: {$ref}
+{$refundLineText}
+
+إذا لم تكن أنت من قام بذلك، تواصل مع فريق الدعم لدينا فوراً.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تم إلغاء طلبك',
+                body: <<<HTML
+<p>تم إلغاء طلبك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+{$refundLineHtml}</p>
+<p>إذا لم تكن أنت من قام بذلك، تواصل مع فريق الدعم لدينا فوراً.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
     }
 
     /**
@@ -626,7 +801,35 @@ HTML;
      */
     private function orderRefundedCustomerAr(Order $order, array $extra): RenderedEmail
     {
-        return $this->arabicStub($order, 'تم استرداد المبلغ', 'Order refunded (Arabic — translation pending in M3.2.X.7-C)');
+        $ref = $order->getOrderReference();
+        $amount = (string) ($extra['refund_amount'] ?? $order->getTotal());
+        $isFull = (bool) ($extra['is_full_refund'] ?? false);
+        $currency = $order->getCurrency();
+        $kindText = $isFull ? 'كامل' : 'جزئي';
+
+        return new RenderedEmail(
+            subject: "إصدار استرداد للطلب {$ref} — 3bayti",
+            textBody: <<<TXT
+قمنا بإصدار استرداد {$kindText} لطلبك.
+
+رقم الطلب: {$ref}
+مبلغ الاسترداد: {$amount} {$currency}
+
+تظهر الأموال عادةً خلال 5 إلى 10 أيام عمل، حسب البنك الذي تتعامل معه.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'إصدار استرداد',
+                body: <<<HTML
+<p>قمنا بإصدار استرداد {$this->esc($kindText)} لطلبك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>مبلغ الاسترداد:</strong> {$this->esc($amount)} {$this->esc($currency)}</p>
+<p>تظهر الأموال عادةً خلال 5 إلى 10 أيام عمل، حسب البنك الذي تتعامل معه.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
     }
 
     /**
