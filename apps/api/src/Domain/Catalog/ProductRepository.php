@@ -202,4 +202,42 @@ class ProductRepository extends EntityRepository
 
         return ['items' => $items, 'total' => $total];
     }
+
+    /**
+     * Raw product count for a category — NO isActive filter, NO
+     * status filter, NO vendor approval filter. Just `WHERE category = :id`.
+     *
+     * Used by GET /v3/categories/:slug (M3.2.X.3-C) to populate
+     * the `product_count` field on the CategoryDetail response.
+     *
+     * Apps/web distinguishes two counts semantically:
+     *   - product_count (this method):
+     *     Raw join count. Informational; reflects total category
+     *     associations regardless of vendor/product status.
+     *   - meta.total_products (findActivePaginated total):
+     *     Filtered count. What apps/web displays to users — only
+     *     active products from active vendors.
+     *
+     * Why a separate method
+     * =====================
+     * findActivePaginated includes the isActive filter inherently;
+     * removing it would force a `$filters['includeInactive']` flag
+     * that complicates every other call site. A purpose-built
+     * count-only method is cleaner.
+     *
+     * Performance
+     * ===========
+     * COUNT-only query — no row materialization. Cheap even for
+     * categories with thousands of products. Single integer
+     * round-trip.
+     */
+    public function countByCategoryRaw(int $categoryId): int
+    {
+        return (int) $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->where('p.category = :categoryId')
+            ->setParameter('categoryId', $categoryId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
 }
