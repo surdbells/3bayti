@@ -90,6 +90,12 @@ final class OrderNotificationService
         private readonly array $adminRecipients = [],
         private readonly LoggerInterface $logger = new NullLogger(),
         private readonly ?EntityManagerInterface $em = null,
+        // M3.2.X.7-B: locale routing. Optional with null default
+        // for backwards compatibility — existing callers/tests that
+        // don't pass a resolver preserve current English-only
+        // behavior (resolver missing → render() uses its default
+        // locale='en' parameter).
+        private readonly ?LocaleResolver $localeResolver = null,
     ) {
     }
 
@@ -307,8 +313,18 @@ final class OrderNotificationService
         Order $order,
         array $extra = [],
     ): void {
+        // M3.2.X.7-B: Resolve recipient's preferred locale before
+        // rendering. If no resolver injected (legacy DI / test setup
+        // without locale awareness), defaults to English via the
+        // renderer's default parameter.
+        $locale = $this->localeResolver?->resolveForRecipient(
+            recipientEmail: $to,
+            order: $order,
+            adminRecipients: $this->adminRecipients,
+        ) ?? \Bayti\Api\Domain\User\User::LOCALE_EN;
+
         try {
-            $rendered = $this->renderer->render($template, $order, $extra);
+            $rendered = $this->renderer->render($template, $order, $extra, $locale);
             $this->mailer->send(
                 to: $to,
                 subject: $rendered->subject,
@@ -318,6 +334,7 @@ final class OrderNotificationService
                     'template' => $template->value,
                     'order_id' => $order->getId(),
                     'order_reference' => $order->getOrderReference(),
+                    'locale' => $locale,
                 ],
             );
             $this->persistSent($order, $template, $to);

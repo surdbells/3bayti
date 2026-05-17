@@ -6,6 +6,7 @@ namespace Bayti\Api\Notification;
 
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
+use Bayti\Api\Domain\User\User;
 
 /**
  * Renders email templates for order lifecycle events.
@@ -33,11 +34,29 @@ use Bayti\Api\Domain\Order\OrderItem;
  * that strip HTML. Generated alongside HTML — both bodies are
  * always non-empty.
  *
- * Localization
- * ============
- * Templates are English-only in M3.1.7. Arabic and other locales
- * deferred to a future I18n phase. The strings here are the
- * source of truth pending that work.
+ * Localization (M3.2.X.7)
+ * ========================
+ * render() accepts a $locale parameter (default 'en' for
+ * backwards compatibility). The match expression delegates to
+ * either *En() or *Ar() private methods based on locale.
+ *
+ * Template method naming convention:
+ *   orderPlacedCustomerEn()  → English version
+ *   orderPlacedCustomerAr()  → Arabic version
+ *
+ * Arabic methods land in sub-phases C + D with actual translations;
+ * stubs exist now (in this sub-phase B) so the match expression
+ * compiles + tests cover the dispatch logic before translation
+ * content lands.
+ *
+ * wrapHtml() also takes a locale; emits correct lang= and dir=
+ * attributes on the wrapping <html> element so email clients
+ * render Arabic in RTL.
+ *
+ * Admin templates (DISPUTE_OPENED_ADMIN) are LOCKED to English
+ * regardless of locale parameter — admin emails are always
+ * English per Q-VendorAdminLocale = A locked. The match
+ * expression enforces this by always calling the English variant.
  */
 final class OrderEmailTemplateRenderer
 {
@@ -46,23 +65,52 @@ final class OrderEmailTemplateRenderer
      *
      * @param array<string, mixed> $extra Optional template-specific
      *        context (e.g. refund amount, cancellation reason).
+     * @param string $locale One of User::SUPPORTED_LOCALES.
+     *        Defaults to 'en' for backwards compatibility with
+     *        existing callers that don't pass it. M3.2.X.7-B
+     *        adds locale-aware dispatch; existing English-only
+     *        behavior preserved when locale='en' or omitted.
      */
     public function render(
         EmailTemplate $template,
         Order $order,
         array $extra = [],
+        string $locale = User::LOCALE_EN,
     ): RenderedEmail {
+        $isArabic = ($locale === User::LOCALE_AR);
+
         return match ($template) {
-            EmailTemplate::ORDER_PLACED_CUSTOMER => $this->orderPlacedCustomer($order),
-            EmailTemplate::ORDER_PAID_CUSTOMER => $this->orderPaidCustomer($order),
-            EmailTemplate::ORDER_PAYMENT_FAILED_CUSTOMER => $this->orderPaymentFailedCustomer($order),
-            EmailTemplate::ORDER_SHIPPED_CUSTOMER => $this->orderShippedCustomer($order, $extra),
-            EmailTemplate::ORDER_DELIVERED_CUSTOMER => $this->orderDeliveredCustomer($order, $extra),
-            EmailTemplate::ORDER_CANCELLED_CUSTOMER => $this->orderCancelledCustomer($order, $extra),
-            EmailTemplate::ORDER_REFUNDED_CUSTOMER => $this->orderRefundedCustomer($order, $extra),
-            EmailTemplate::ORDER_PLACED_VENDOR => $this->orderPlacedVendor($order, $extra),
-            EmailTemplate::ORDER_CANCELLED_VENDOR => $this->orderCancelledVendor($order, $extra),
-            EmailTemplate::DISPUTE_OPENED_ADMIN => $this->disputeOpenedAdmin($order, $extra),
+            EmailTemplate::ORDER_PLACED_CUSTOMER => $isArabic
+                ? $this->orderPlacedCustomerAr($order)
+                : $this->orderPlacedCustomerEn($order),
+            EmailTemplate::ORDER_PAID_CUSTOMER => $isArabic
+                ? $this->orderPaidCustomerAr($order)
+                : $this->orderPaidCustomerEn($order),
+            EmailTemplate::ORDER_PAYMENT_FAILED_CUSTOMER => $isArabic
+                ? $this->orderPaymentFailedCustomerAr($order)
+                : $this->orderPaymentFailedCustomerEn($order),
+            EmailTemplate::ORDER_SHIPPED_CUSTOMER => $isArabic
+                ? $this->orderShippedCustomerAr($order, $extra)
+                : $this->orderShippedCustomerEn($order, $extra),
+            EmailTemplate::ORDER_DELIVERED_CUSTOMER => $isArabic
+                ? $this->orderDeliveredCustomerAr($order, $extra)
+                : $this->orderDeliveredCustomerEn($order, $extra),
+            EmailTemplate::ORDER_CANCELLED_CUSTOMER => $isArabic
+                ? $this->orderCancelledCustomerAr($order, $extra)
+                : $this->orderCancelledCustomerEn($order, $extra),
+            EmailTemplate::ORDER_REFUNDED_CUSTOMER => $isArabic
+                ? $this->orderRefundedCustomerAr($order, $extra)
+                : $this->orderRefundedCustomerEn($order, $extra),
+            EmailTemplate::ORDER_PLACED_VENDOR => $isArabic
+                ? $this->orderPlacedVendorAr($order, $extra)
+                : $this->orderPlacedVendorEn($order, $extra),
+            EmailTemplate::ORDER_CANCELLED_VENDOR => $isArabic
+                ? $this->orderCancelledVendorAr($order, $extra)
+                : $this->orderCancelledVendorEn($order, $extra),
+            // Admin emails are ALWAYS English regardless of locale
+            // (Q-VendorAdminLocale = A locked). The locale parameter
+            // is intentionally ignored here.
+            EmailTemplate::DISPUTE_OPENED_ADMIN => $this->disputeOpenedAdminEn($order, $extra),
         };
     }
 
@@ -70,7 +118,7 @@ final class OrderEmailTemplateRenderer
     // Customer templates
     // -----------------------------------------------------------------
 
-    private function orderPlacedCustomer(Order $order): RenderedEmail
+    private function orderPlacedCustomerEn(Order $order): RenderedEmail
     {
         $ref = $order->getOrderReference();
         $total = $order->getTotal();
@@ -107,7 +155,7 @@ HTML,
         );
     }
 
-    private function orderPaidCustomer(Order $order): RenderedEmail
+    private function orderPaidCustomerEn(Order $order): RenderedEmail
     {
         $ref = $order->getOrderReference();
         $total = $order->getTotal();
@@ -137,7 +185,7 @@ HTML,
         );
     }
 
-    private function orderPaymentFailedCustomer(Order $order): RenderedEmail
+    private function orderPaymentFailedCustomerEn(Order $order): RenderedEmail
     {
         $ref = $order->getOrderReference();
 
@@ -167,7 +215,7 @@ HTML,
     /**
      * @param array<string, mixed> $extra
      */
-    private function orderShippedCustomer(Order $order, array $extra): RenderedEmail
+    private function orderShippedCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
         $itemName = (string) ($extra['item_name'] ?? 'Your item');
@@ -200,7 +248,7 @@ HTML,
     /**
      * @param array<string, mixed> $extra
      */
-    private function orderDeliveredCustomer(Order $order, array $extra): RenderedEmail
+    private function orderDeliveredCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
         $itemName = (string) ($extra['item_name'] ?? 'Your item');
@@ -234,7 +282,7 @@ HTML,
     /**
      * @param array<string, mixed> $extra
      */
-    private function orderCancelledCustomer(Order $order, array $extra): RenderedEmail
+    private function orderCancelledCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
         $refundIssued = (bool) ($extra['refund_issued'] ?? false);
@@ -275,7 +323,7 @@ HTML,
     /**
      * @param array<string, mixed> $extra
      */
-    private function orderRefundedCustomer(Order $order, array $extra): RenderedEmail
+    private function orderRefundedCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
         $amount = (string) ($extra['refund_amount'] ?? $order->getTotal());
@@ -315,7 +363,7 @@ HTML,
     /**
      * @param array<string, mixed> $extra
      */
-    private function orderPlacedVendor(Order $order, array $extra): RenderedEmail
+    private function orderPlacedVendorEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
         $vendorItems = $extra['vendor_items'] ?? [];
@@ -359,7 +407,7 @@ HTML,
     /**
      * @param array<string, mixed> $extra
      */
-    private function orderCancelledVendor(Order $order, array $extra): RenderedEmail
+    private function orderCancelledVendorEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
         $reason = (string) ($extra['reason'] ?? '');
@@ -398,7 +446,7 @@ HTML,
     /**
      * @param array<string, mixed> $extra
      */
-    private function disputeOpenedAdmin(Order $order, array $extra): RenderedEmail
+    private function disputeOpenedAdminEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
         $amount = (string) ($extra['amount'] ?? $order->getTotal());
@@ -472,12 +520,28 @@ HTML,
      * header + footer. Keeps templates focused on content, not
      * markup boilerplate.
      */
-    private function wrapHtml(string $title, string $body): string
+    /**
+     * Wrap a body in the standard 3bayti email HTML scaffold.
+     *
+     * Emits proper lang= and dir= attributes on the wrapping <html>
+     * element so email clients render Arabic in RTL (right-to-left).
+     * Without these, Outlook and some webmail clients render Arabic
+     * left-to-right which is visually broken.
+     *
+     * The brand name "3bayti" stays in Latin script (consistent
+     * brand identity); the locale-specific tagline localizes.
+     */
+    private function wrapHtml(string $title, string $body, string $locale = User::LOCALE_EN): string
     {
         $titleEsc = $this->esc($title);
+        $dir = ($locale === User::LOCALE_AR) ? 'rtl' : 'ltr';
+        $tagline = ($locale === User::LOCALE_AR)
+            ? '3bayti — السوق الإلكتروني المتميز في الإمارات'
+            : '3bayti — premium UAE marketplace';
+        $taglineEsc = $this->esc($tagline);
         return <<<HTML
 <!DOCTYPE html>
-<html>
+<html lang="{$locale}" dir="{$dir}">
 <head>
 <meta charset="utf-8">
 <title>{$titleEsc}</title>
@@ -489,7 +553,7 @@ HTML,
   <h1 style="font-size: 20px; margin-top: 0;">{$titleEsc}</h1>
   {$body}
   <hr style="border: none; border-top: 1px solid #e5e5e7; margin-top: 32px;">
-  <p style="font-size: 12px; color: #8e8e93;">3bayti — premium UAE marketplace</p>
+  <p style="font-size: 12px; color: #8e8e93;">{$taglineEsc}</p>
 </body>
 </html>
 HTML;
@@ -498,5 +562,108 @@ HTML;
     private function esc(string $s): string
     {
         return htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    }
+
+    // -----------------------------------------------------------------
+    // Arabic template stubs (M3.2.X.7-B)
+    // -----------------------------------------------------------------
+    //
+    // Stub methods that compile + return RenderedEmail with placeholder
+    // text. Actual translations land in sub-phases C (customer
+    // templates) and D (vendor + admin templates).
+    //
+    // The placeholder text is INTENTIONALLY Arabic (not "TODO" or
+    // similar) so:
+    //   1. UTF-8 encoding survives the PHP pipeline cleanly
+    //      (verified by sub-phase B tests)
+    //   2. wrapHtml() lang=ar + dir=rtl rendering can be verified
+    //   3. If a stub somehow leaks to production before C/D ship,
+    //      the user sees a sensible-looking (if minimal) Arabic
+    //      message rather than English/placeholder
+    // -----------------------------------------------------------------
+
+    private function orderPlacedCustomerAr(Order $order): RenderedEmail
+    {
+        return $this->arabicStub($order, 'تم استلام طلبك', 'Order received (Arabic — translation pending in M3.2.X.7-C)');
+    }
+
+    private function orderPaidCustomerAr(Order $order): RenderedEmail
+    {
+        return $this->arabicStub($order, 'تأكيد الدفع', 'Payment confirmed (Arabic — translation pending in M3.2.X.7-C)');
+    }
+
+    private function orderPaymentFailedCustomerAr(Order $order): RenderedEmail
+    {
+        return $this->arabicStub($order, 'فشل الدفع', 'Payment failed (Arabic — translation pending in M3.2.X.7-C)');
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function orderShippedCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        return $this->arabicStub($order, 'تم شحن طلبك', 'Order shipped (Arabic — translation pending in M3.2.X.7-C)');
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function orderDeliveredCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        return $this->arabicStub($order, 'تم تسليم طلبك', 'Order delivered (Arabic — translation pending in M3.2.X.7-C)');
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function orderCancelledCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        return $this->arabicStub($order, 'تم إلغاء طلبك', 'Order cancelled (Arabic — translation pending in M3.2.X.7-C)');
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function orderRefundedCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        return $this->arabicStub($order, 'تم استرداد المبلغ', 'Order refunded (Arabic — translation pending in M3.2.X.7-C)');
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function orderPlacedVendorAr(Order $order, array $extra): RenderedEmail
+    {
+        return $this->arabicStub($order, 'طلب جديد', 'New order (Arabic — translation pending in M3.2.X.7-D)');
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function orderCancelledVendorAr(Order $order, array $extra): RenderedEmail
+    {
+        return $this->arabicStub($order, 'تم إلغاء الطلب', 'Order cancelled (Arabic — translation pending in M3.2.X.7-D)');
+    }
+
+    /**
+     * Shared stub builder. Returns a minimal Arabic email with
+     * RTL-correct HTML wrapper. Replaced per-template with full
+     * translations in sub-phases C + D.
+     */
+    private function arabicStub(Order $order, string $subject, string $bodyText): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $textBody = "{$bodyText}\n\nرقم الطلب: {$ref}\n\n— 3bayti";
+        $body = "<p>{$this->esc($bodyText)}</p>"
+            . "<p><strong>رقم الطلب:</strong> {$this->esc($ref)}</p>";
+        return new RenderedEmail(
+            subject: $subject,
+            textBody: $textBody,
+            htmlBody: $this->wrapHtml(
+                title: $subject,
+                body: $body,
+                locale: User::LOCALE_AR,
+            ),
+        );
     }
 }

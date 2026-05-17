@@ -217,7 +217,10 @@ final class OrderEmailTemplateRendererTest extends TestCase
             self::assertNotEmpty($rendered->subject, "subject empty for {$template->value}");
             self::assertNotEmpty($rendered->textBody, "textBody empty for {$template->value}");
             self::assertNotEmpty($rendered->htmlBody, "htmlBody empty for {$template->value}");
-            self::assertStringContainsString('<html>', $rendered->htmlBody);
+            // M3.2.X.7-B: wrapHtml now emits <html lang="en" dir="ltr">
+            // (or rtl for ar locale). Match the opening tag prefix
+            // rather than the bare <html> form.
+            self::assertStringContainsString('<html lang=', $rendered->htmlBody);
         }
     }
 

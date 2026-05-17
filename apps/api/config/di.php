@@ -217,6 +217,10 @@ return [
 
     \Bayti\Api\Notification\OrderEmailTemplateRenderer::class => \DI\autowire(),
 
+    // M3.2.X.7-A — LocaleResolver autowired for OrderNotificationService.
+    // Service object with no dependencies; safe to autowire.
+    \Bayti\Api\Notification\LocaleResolver::class => \DI\autowire(),
+
     // OrderNotificationService: parse admin recipient list from env.
     // Comma-separated emails; empty list disables admin notifications.
     \Bayti\Api\Notification\OrderNotificationService::class => static function (
@@ -245,6 +249,12 @@ return [
             // OrderNotificationService class docblock for full
             // rationale.
             em: $c->get(\Doctrine\ORM\EntityManagerInterface::class),
+            // M3.2.X.7-B: locale routing. Resolver looks up the
+            // recipient's preferred locale (customer / vendor / admin)
+            // and tells the renderer which language to render in.
+            // Falls back to English for unknown recipients per
+            // Q-FallbackBehavior = A.
+            localeResolver: $c->get(\Bayti\Api\Notification\LocaleResolver::class),
         );
     },
 
