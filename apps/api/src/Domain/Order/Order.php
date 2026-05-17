@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Domain\Order;
 
 use Bayti\Api\Domain\Common\Timestamps;
+use Bayti\Api\Domain\Promo\PromoRedemption;
 use Bayti\Api\Domain\User\User;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -127,6 +128,31 @@ class Order
      */
     #[ORM\OneToMany(targetEntity: OrderAddress::class, mappedBy: 'order', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $addresses;
+
+    /**
+     * The promo redemption applied to this order, if any (M3.2.X.8).
+     *
+     * Nullable: orders without a promo code applied have NULL here.
+     * The DB-level UNIQUE constraint on promo_redemptions.order_id
+     * makes this effectively a 0..1 → 1 relationship from the
+     * PromoRedemption side; from Order's perspective it's a simple
+     * nullable association.
+     *
+     * The `discount` column on this entity holds the snapshotted money
+     * amount; the redemption row holds the WHY (which code, which type,
+     * which value). Keeping the discount column independent of the
+     * redemption row means deleting a redemption (admin override) does
+     * NOT zero out the order's discount — that's a deliberate decision
+     * tied to FK ON DELETE SET NULL on this column.
+     *
+     * Not persisted via cascade: the resolver in M3.2.X.8-D persists
+     * the redemption explicitly inside the checkout EM transaction
+     * BEFORE assigning it here, so Doctrine sees an already-managed
+     * entity when this setter runs.
+     */
+    #[ORM\ManyToOne(targetEntity: PromoRedemption::class)]
+    #[ORM\JoinColumn(name: 'promo_redemption_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?PromoRedemption $promoRedemption = null;
 
     public function __construct(
         User $user,
@@ -478,6 +504,32 @@ class Order
         $this->assertMoneyNonNeg($discount, 'discount');
         $this->discount = $discount;
         $this->recomputeTotals();
+    }
+
+    // -----------------------------------------------------------------
+    // Promo redemption association (M3.2.X.8)
+    // -----------------------------------------------------------------
+
+    public function getPromoRedemption(): ?PromoRedemption
+    {
+        return $this->promoRedemption;
+    }
+
+    /**
+     * Attach a promo redemption to this order. Called by
+     * InitiateCheckoutController inside the checkout EM transaction
+     * AFTER the redemption row has been persisted (so Doctrine has a
+     * managed entity to reference).
+     *
+     * Does NOT touch the discount column — the caller is expected to
+     * call setDiscount($redemption->getDiscountAmount()) separately
+     * since the redemption amount and the order discount, while
+     * usually equal, are logically distinct (the order discount could
+     * in principle combine other lines in a future engine).
+     */
+    public function setPromoRedemption(?PromoRedemption $redemption): void
+    {
+        $this->promoRedemption = $redemption;
     }
 
     private function recomputeTotals(): void
