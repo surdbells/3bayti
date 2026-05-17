@@ -233,6 +233,14 @@ return [
             renderer: $c->get(\Bayti\Api\Notification\OrderEmailTemplateRenderer::class),
             adminRecipients: $recipients,
             logger: $c->get(\Psr\Log\LoggerInterface::class),
+            // M3.2.X.4-B: notification_logs persistence. EM passed
+            // directly so the NotificationLogRepository is resolved
+            // LAZILY per safePersist() call rather than eagerly at
+            // service construction time. Avoids eager Doctrine
+            // metadata loading that breaks test mocks; see
+            // OrderNotificationService class docblock for full
+            // rationale.
+            em: $c->get(\Doctrine\ORM\EntityManagerInterface::class),
         );
     },
 

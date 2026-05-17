@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace Bayti\Api\Notification;
 
 use Bayti\Api\Domain\Catalog\Vendor;
+use Bayti\Api\Domain\Notification\NotificationLog;
+use Bayti\Api\Domain\Notification\NotificationLogRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
@@ -28,19 +31,54 @@ use Psr\Log\NullLogger;
  *             list of addresses. Empty list ⇒ no admin emails sent
  *             (degrades cleanly in dev/test).
  *
+ * Observability — notification_logs persistence (M3.2.X.4)
+ * =========================================================
+ * Every safeSend() call writes exactly one NotificationLog row
+ * regardless of outcome:
+ *   - status='sent'    when mailer->send() returns
+ *   - status='failed'  when MailerException or generic \Throwable caught
+ *   - status='skipped' when a guard short-circuits before sending
+ *                       (no_email, contact_email_unset,
+ *                        no_admin_recipients)
+ *
+ * Log persistence is wrapped in its own try/catch — if writing the
+ * audit row itself fails, we log to PSR-3 and continue. The
+ * notification log MUST NEVER block the primary action (the email
+ * send + the controller response).
+ *
+ * Why EntityManager instead of NotificationLogRepository directly
+ * ===============================================================
+ * Construction-time `$em->getRepository(NotificationLog::class)`
+ * eagerly triggers Doctrine metadata loading, which in test setups
+ * with mocked EM may not have the entity registered. Holding the
+ * EM and resolving the repository LAZILY inside safePersist() means:
+ *   - Test mocks just need to wire NotificationLog into their
+ *     willReturnMap when they care about persistence
+ *   - Tests that don't care work unchanged (mock returns null →
+ *     persistence becomes a no-op)
+ *   - Production behavior is unchanged — single getRepository call
+ *     per send attempt, fully cached after the first lookup
+ *
  * Idempotency
  * ===========
  * Notifications are fire-and-forget; callers should ensure they
  * call notification methods only once per legitimate transition.
- * We do NOT track "already sent" state — duplicate calls cause
- * duplicate emails. Acceptable trade-off vs. introducing a
- * notification_log table for M3.1.7.
- *
- * Future: add notification_log if we get reports of duplicate
- * emails from genuine retries.
+ * The notification_logs table now records duplicates but does NOT
+ * deduplicate — adding an idempotency key is a future phase if
+ * genuine duplicate-send incidents surface.
  */
 final class OrderNotificationService
 {
+    /**
+     * Short reason codes used in the error_message column of
+     * status='skipped' NotificationLog rows. Stable taxonomy so
+     * admin queries can filter / group by these values.
+     */
+    private const SKIP_REASON_CUSTOMER_NO_EMAIL = 'no_email';
+    private const SKIP_REASON_VENDOR_CONTACT_EMAIL_UNSET = 'contact_email_unset';
+    private const SKIP_REASON_VENDOR_NO_EMAIL = 'no_email';
+    private const SKIP_REASON_NO_ADMIN_RECIPIENTS = 'no_admin_recipients';
+
     /**
      * @param list<string> $adminRecipients Email addresses of admin/ops
      *        people to copy on critical events (disputes, etc.). Empty
@@ -51,6 +89,7 @@ final class OrderNotificationService
         private readonly OrderEmailTemplateRenderer $renderer,
         private readonly array $adminRecipients = [],
         private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly ?EntityManagerInterface $em = null,
     ) {
     }
 
@@ -157,6 +196,12 @@ final class OrderNotificationService
             $this->logger->info('notification.dispute.no_admin_recipients_configured', [
                 'order_id' => $order->getId(),
             ]);
+            $this->persistSkipped(
+                $order,
+                EmailTemplate::DISPUTE_OPENED_ADMIN,
+                '',
+                self::SKIP_REASON_NO_ADMIN_RECIPIENTS,
+            );
             return;
         }
         foreach ($this->adminRecipients as $adminEmail) {
@@ -184,6 +229,7 @@ final class OrderNotificationService
                 'order_id' => $order->getId(),
                 'template' => $template->value,
             ]);
+            $this->persistSkipped($order, $template, '', self::SKIP_REASON_CUSTOMER_NO_EMAIL);
             return;
         }
         $this->safeSend($email, $template, $order, $extra);
@@ -223,6 +269,12 @@ final class OrderNotificationService
                     'vendor_id' => $vendor->getId(),
                     'template' => $template->value,
                 ]);
+                $this->persistSkipped(
+                    $order,
+                    $template,
+                    '',
+                    self::SKIP_REASON_VENDOR_CONTACT_EMAIL_UNSET,
+                );
                 continue;
             }
             if ($email === '') {
@@ -231,6 +283,12 @@ final class OrderNotificationService
                     'vendor_id' => $vendor->getId(),
                     'template' => $template->value,
                 ]);
+                $this->persistSkipped(
+                    $order,
+                    $template,
+                    '',
+                    self::SKIP_REASON_VENDOR_NO_EMAIL,
+                );
                 continue;
             }
             $vendorExtra = array_merge($extra, ['vendor_items' => $group['items']]);
@@ -262,6 +320,7 @@ final class OrderNotificationService
                     'order_reference' => $order->getOrderReference(),
                 ],
             );
+            $this->persistSent($order, $template, $to);
         } catch (MailerException $e) {
             // Per the interface contract: log + continue. Email
             // failures must NEVER bubble up to abort the primary
@@ -273,6 +332,7 @@ final class OrderNotificationService
                 'kind' => $e->kind,
                 'error' => $e->getMessage(),
             ]);
+            $this->persistFailed($order, $template, $to, $e->kind, $e->getMessage());
         } catch (\Throwable $e) {
             // Defensive: any other exception (template rendering bug,
             // null deref, etc.) must also not block the caller.
@@ -280,6 +340,105 @@ final class OrderNotificationService
                 'to' => $to,
                 'template' => $template->value,
                 'order_id' => $order->getId(),
+                'error' => $e->getMessage(),
+                'class' => $e::class,
+            ]);
+            $this->persistFailed($order, $template, $to, $e::class, $e->getMessage());
+        }
+    }
+
+    // -----------------------------------------------------------------
+    // notification_logs persistence (M3.2.X.4-B)
+    // -----------------------------------------------------------------
+    //
+    // All three persist* helpers wrap the repository save() call in a
+    // try/catch. If logging the log itself fails, we record that to
+    // PSR-3 and continue — the notification log is a secondary
+    // concern; it must NEVER block the primary action (the email send
+    // succeeded; the controller response must proceed).
+    //
+    // The $logRepository nullable means tests + dev environments can
+    // construct the service without wiring a repository (NullLogger
+    // pattern). When null, persistence is a no-op.
+    // -----------------------------------------------------------------
+
+    private function persistSent(Order $order, EmailTemplate $template, string $recipient): void
+    {
+        $this->safePersist(NotificationLog::sent(
+            orderId: $order->getId(),
+            template: $template->value,
+            recipient: $recipient,
+        ));
+    }
+
+    private function persistFailed(
+        Order $order,
+        EmailTemplate $template,
+        string $recipient,
+        string $errorKind,
+        string $errorMessage,
+    ): void {
+        $this->safePersist(NotificationLog::failed(
+            orderId: $order->getId(),
+            template: $template->value,
+            recipient: $recipient,
+            errorKind: $errorKind,
+            errorMessage: $errorMessage,
+        ));
+    }
+
+    private function persistSkipped(
+        Order $order,
+        EmailTemplate $template,
+        string $recipient,
+        string $reason,
+    ): void {
+        $this->safePersist(NotificationLog::skipped(
+            orderId: $order->getId(),
+            template: $template->value,
+            recipient: $recipient,
+            reason: $reason,
+        ));
+    }
+
+    /**
+     * Persist a NotificationLog row, catching repository failures so
+     * they never propagate to the caller. The notification log must
+     * never block the primary action.
+     *
+     * Repository resolution is LAZY (per request) — see the class
+     * docblock for the rationale. In test environments where the EM
+     * mock doesn't return a NotificationLogRepository for the entity,
+     * the repository lookup returns null and persistence becomes a
+     * no-op without raising.
+     */
+    private function safePersist(NotificationLog $log): void
+    {
+        if ($this->em === null) {
+            return;
+        }
+        try {
+            $repo = $this->em->getRepository(NotificationLog::class);
+            if (!$repo instanceof NotificationLogRepository) {
+                // Test EM mocks may return null or the base
+                // EntityRepository for unmapped classes. Treat this
+                // as 'no persistence configured' rather than failing.
+                return;
+            }
+            $repo->save($log);
+        } catch (\Throwable $e) {
+            // The audit-of-the-audit. PSR-3 captures the persistence
+            // failure for ops while we continue. Two ways this can
+            // matter in practice: (a) database connection issues that
+            // would also affect the primary action's persistence
+            // (we'll see those failures in the primary action anyway),
+            // (b) schema drift / constraint violations (rare; surface
+            // here for triage).
+            $this->logger->error('notification.log_persist_failed', [
+                'template' => $log->getTemplate(),
+                'recipient' => $log->getRecipient(),
+                'order_id' => $log->getOrderId(),
+                'status' => $log->getStatus(),
                 'error' => $e->getMessage(),
                 'class' => $e::class,
             ]);
