@@ -67,6 +67,14 @@ class Vendor
         self::STATUS_SUSPENDED,
     ];
 
+    /**
+     * Supported locales for vendor email notifications (M3.2.X.7).
+     * Mirrors User::SUPPORTED_LOCALES; we reference these via the
+     * User class constants throughout (DRY) but redeclare on Vendor
+     * for clarity when working with Vendor entities directly.
+     */
+    public const SUPPORTED_LOCALES = \Bayti\Api\Domain\User\User::SUPPORTED_LOCALES;
+
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
@@ -202,6 +210,22 @@ class Vendor
 
     #[ORM\Column(name: 'legal_name', type: 'string', length: 255, nullable: true)]
     private ?string $legalName = null;
+
+    /**
+     * Vendor's preferred locale for email notifications (M3.2.X.7).
+     *
+     * - `en` → English (current default, also used when null)
+     * - `ar` → Arabic
+     * - null → no preference; falls back to English per
+     *          Q-FallbackBehavior = A locked
+     *
+     * Distinct from the OWNER user's preferredLocale — a single
+     * vendor may have multiple staff members receiving notifications,
+     * and the locale should match the business's preference rather
+     * than any one staff member's. Q-VendorAdminLocale = A locked.
+     */
+    #[ORM\Column(name: 'preferred_locale', type: 'string', length: 8, nullable: true)]
+    private ?string $preferredLocale = null;
 
     #[ORM\Column(name: 'store_email', type: 'string', length: 255, nullable: true)]
     private ?string $storeEmail = null;
@@ -450,6 +474,35 @@ class Vendor
 
     public function getLegalName(): ?string { return $this->legalName; }
     public function setLegalName(?string $name): void { $this->legalName = $name; }
+
+    // -----------------------------------------------------------------
+    // Preferred locale (M3.2.X.7)
+    // -----------------------------------------------------------------
+
+    public function getPreferredLocale(): ?string
+    {
+        return $this->preferredLocale;
+    }
+
+    /**
+     * Set the vendor's preferred locale for email notifications.
+     *
+     * Pass null to clear the preference (falls back to English at
+     * send time per Q-FallbackBehavior = A).
+     *
+     * @throws \InvalidArgumentException if $locale is non-null and
+     *         not in self::SUPPORTED_LOCALES
+     */
+    public function setPreferredLocale(?string $locale): void
+    {
+        if ($locale !== null && !in_array($locale, self::SUPPORTED_LOCALES, true)) {
+            throw new \InvalidArgumentException(
+                "Invalid locale '{$locale}'. Supported: "
+                . implode(', ', self::SUPPORTED_LOCALES),
+            );
+        }
+        $this->preferredLocale = $locale;
+    }
 
     public function getStoreEmail(): ?string { return $this->storeEmail; }
     public function setStoreEmail(?string $email): void { $this->storeEmail = $email; }
