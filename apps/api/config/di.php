@@ -155,6 +155,10 @@ return [
     \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController::class => \DI\autowire(),
 
+    // M3.2.X.6-D — Vendor self-serve onboarding controllers
+    \Bayti\Api\Http\Controllers\Vendor\Onboarding\SubmitOnboardingController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Onboarding\GetOnboardingStatusController::class => \DI\autowire(),
+
     // M3.1.7-F — Cancel order service + admin/customer controllers
     \Bayti\Api\Domain\Order\CancelOrderService::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class => \DI\autowire(),

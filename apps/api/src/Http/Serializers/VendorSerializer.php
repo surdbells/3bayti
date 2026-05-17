@@ -64,6 +64,66 @@ final class VendorSerializer
     }
 
     /**
+     * Vendor self-serve onboarding shape (M3.2.X.6-D).
+     *
+     * Used by:
+     *   - POST /v3/vendor/onboarding/submit (creation response)
+     *   - GET /v3/vendor/onboarding/status  (read response)
+     *
+     * Returns vendor info as the vendor user sees it — their own
+     * stores, with status visibility so they understand whether
+     * they're still pending or have been approved/suspended. Omits
+     * admin-only fields (commission_rate, legacy_vendor_id) that
+     * the vendor user has no business reason to see.
+     *
+     * Does NOT include contact_email/contact_phone of the store
+     * because the vendor user already knows those — they submitted
+     * them. The shape is informational, not a re-render of submitted
+     * data.
+     *
+     * @return array<string, mixed>
+     */
+    public function onboardingShape(Vendor $v): array
+    {
+        return [
+            'id' => $v->getId(),
+            'slug' => $v->getSlug(),
+            'name' => $v->getName(),
+            'description' => $v->getDescription(),
+            'logo_url' => $v->getLogoUrl(),
+            'cover_image_url' => $v->getCoverImageUrl(),
+            'legal_name' => $v->getLegalName(),
+            // Lifecycle status — the key visibility the vendor user
+            // needs from this shape. status_reason surfaces admin
+            // notes (e.g. "Need to clarify product authenticity"
+            // during pending review, or "Quality complaints from
+            // 5 customers" if suspended) so vendors understand the
+            // state of their store.
+            'status' => $v->getStatus(),
+            'status_changed_at' => $v->getStatusChangedAt()?->format(DateTimeInterface::ATOM),
+            'status_reason' => $v->getStatusReason(),
+            'created_at' => $v->getCreatedAt()->format(DateTimeInterface::ATOM),
+            'updated_at' => $v->getUpdatedAt()->format(DateTimeInterface::ATOM),
+        ];
+    }
+
+    /**
+     * Many-onboarding-shape helper for the status endpoint where the
+     * user may own multiple stores at varying lifecycle states.
+     *
+     * @param iterable<Vendor> $vendors
+     * @return list<array<string, mixed>>
+     */
+    public function onboardingShapeMany(iterable $vendors): array
+    {
+        $out = [];
+        foreach ($vendors as $v) {
+            $out[] = $this->onboardingShape($v);
+        }
+        return $out;
+    }
+
+    /**
      * Featured-vendor card shape for the apps/web Designer Spotlight.
      *
      * Matches the FeaturedVendor + FeaturedVendorProduct interfaces

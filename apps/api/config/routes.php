@@ -344,6 +344,32 @@ return function (App $app): void {
         ->add(\Bayti\Api\Http\Middleware\VendorAuthMiddleware::class)
         ->add(AuthMiddleware::class);
 
+    // M3.2.X.6-D — Vendor self-serve onboarding endpoints.
+    //
+    // SEPARATE route group with AuthMiddleware ONLY (no
+    // VendorAuthMiddleware). Per Option I locked in the M3.2.X.6
+    // plan: these endpoints intentionally allow pending/suspended
+    // vendors through:
+    //
+    //   - POST /v3/vendor/onboarding/submit creates the vendor for
+    //     a user who is NOT yet a vendor (any authenticated user
+    //     can submit).
+    //   - GET /v3/vendor/onboarding/status lets a vendor user check
+    //     their pending status — the lifecycle gate would block
+    //     them from this if it ran here.
+    //
+    // The submit controller flips is_vendor=true; the status
+    // controller has its own inline is_vendor check to filter
+    // non-vendor users while leaving pending+suspended users
+    // through.
+    $app->group('/v3/vendor/onboarding', function (RouteCollectorProxy $group): void {
+        $group->post('/submit',
+            \Bayti\Api\Http\Controllers\Vendor\Onboarding\SubmitOnboardingController::class);
+        $group->get('/status',
+            \Bayti\Api\Http\Controllers\Vendor\Onboarding\GetOnboardingStatusController::class);
+    })
+        ->add(AuthMiddleware::class);
+
     // Future route groups land below as M2+ phases ship:
     //   /v3/products/*       (M2.2+)
     //   /v3/cart/*           (M3)
