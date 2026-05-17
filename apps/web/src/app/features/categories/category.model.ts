@@ -21,7 +21,7 @@ export interface Category {
 }
 
 /**
- * CategoryDetail — matches the GET /v2/categories/:slug response shape.
+ * CategoryDetail — matches the GET /v3/categories/:slug response shape.
  *
  * Extends Category with the embedded first-page list of products that the
  * detail endpoint returns alongside the category metadata. This means

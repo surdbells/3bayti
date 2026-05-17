@@ -34,13 +34,18 @@ import type { CategoryDetail, CategoryDetailMeta } from './category.model';
  *
  * Server-rendered landing page for each category (Abayas, Kaftans, etc.).
  * Pulls category metadata + first 20 products from a single API call to
- * `/v2/categories/:slug` and embeds the full result in the prerendered
+ * `/v3/categories/:slug` and embeds the full result in the prerendered
  * HTML via TransferState. Crawlers see all 20 products as <a> tags
  * pointing to /product/:slug — exactly the SEO surface this site exists
  * to provide.
  *
+ * Routing: was on legacy /v2/categories/:slug until M3.2.X.3, when the
+ * v3 endpoint was augmented to match the v2 wire contract (embedded
+ * products + total_products/page_size meta envelope). Now routes
+ * through RoutedHttpClient → /v3/categories/:slug.
+ *
  * Why a single API call instead of two:
- *   The /v2/categories/:slug endpoint returns metadata + an embedded
+ *   The /v3/categories/:slug endpoint returns metadata + an embedded
  *   products array (page 1, 20 items). Older approaches would fetch
  *   metadata then separately fetch /products?category=:slug — two
  *   round trips. The combined endpoint cuts that in half.
@@ -227,11 +232,13 @@ export class CategoryDetailComponent {
     /* normaliseResponse returns NormalisedResponse<CategoryDetail> with
        meta typed as PaginationMeta. The actual wire shape from
        /v3/categories/:slug has meta: { total_products, page_size }
-       instead — endpoint-specific shape. The runtime payload is
-       correct; we cast to CategoryDetailEnvelope so the component's
-       computed signals get the right type. If v3 ever changes the
-       meta shape, this cast surfaces the drift via a runtime
-       failure in the components that read `.meta.total_products`. */
+       per the apps/web CategoryDetailMeta interface — endpoint-
+       specific shape. M3.2.X.3 augmented the v3 endpoint to emit
+       this shape exactly. The runtime payload is correct; we cast
+       to CategoryDetailEnvelope so the component's computed signals
+       get the right type. Removing this cast requires typing
+       RoutedHttpClient.get to carry the per-endpoint meta variant —
+       M3.2.Z typed-envelope refactor scope. */
     return this.routed.get<CategoryDetail>('GET /categories/:slug', { params: { slug } }).pipe(
       map((env) => env as unknown as CategoryDetailEnvelope),
       tap((envelope) => {
@@ -264,7 +271,7 @@ export class CategoryDetailComponent {
   }
 }
 
-/** Local type for the full envelope (data + meta) returned by /v2/categories/:slug. */
+/** Local type for the full envelope (data + meta) returned by /v3/categories/:slug. */
 interface CategoryDetailEnvelope {
   data: CategoryDetail;
   meta: CategoryDetailMeta;

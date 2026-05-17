@@ -89,22 +89,18 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/categories',
     shape: 'v3-envelope',
   },
-  // Category-detail stays on legacy v2 until v3 reaches feature
-  // parity. v3's /v3/categories/:slug returns only the category
-  // metadata (id, slug, name, description, image_url, children) —
-  // it does NOT return the embedded products list or the
-  // total_products/page_size meta that apps/web's category-detail
-  // page needs. v2's /v2/categories/:slug returns both, so we route
-  // this one endpoint back to legacy.
-  //
-  // To flip to 'new', v3 needs to either:
-  //   - Augment /v3/categories/:slug to include products + meta
-  //     (matches v2 shape), or
-  //   - Have apps/web fetch products separately via
-  //     /v3/products?category_slug=:slug and merge client-side.
-  // Tracked as Day-5-followup; not blocking the demo.
+  // Category detail with embedded products + meta. M3.2.X.3 augmented
+  // the v3 endpoint to match the legacy v2 shape exactly:
+  //   - data: CategoryDetail (publicShape ∪ {image, icon_name,
+  //     product_count, children, products[20]})
+  //   - meta: { total_products, page_size }
+  // Apps/web's `as unknown as CategoryDetailEnvelope` cast on the
+  // RoutedHttpClient return is now safe at runtime (still kept
+  // because RoutedHttpClient.get's typed shape doesn't carry the
+  // CategoryDetailMeta variant — typed-envelope refactor is M3.2.Z
+  // scope).
   'GET /categories/:slug': {
-    target: 'old',
+    target: 'new',
     oldPath: '/v2/categories/:slug',
     newPath: '/v3/categories/:slug',
     shape: 'v3-envelope',
