@@ -573,6 +573,11 @@ final class AuditEmitter
             'status' => $v->getStatus(),
             'status_changed_at' => $v->getStatusChangedAt()?->format(\DateTimeInterface::ATOM),
             'status_reason' => $v->getStatusReason(),
+            // M3.2.X.7-D: Vendor email locale preference. Captured in
+            // snapshots so admin changes to locale routing surface in
+            // the audit log diff (operator forensics: "who set this
+            // vendor to Arabic when?").
+            'preferred_locale' => $v->getPreferredLocale(),
         ];
     }
 

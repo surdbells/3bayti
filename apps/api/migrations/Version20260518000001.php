@@ -8,63 +8,70 @@ use Doctrine\DBAL\Schema\Schema;
 use Doctrine\Migrations\AbstractMigration;
 
 /**
- * M3.2.X.7-A — Add preferred_locale columns to users + vendors.
+ * M3.2.X.7-A — Add preferred_locale column to vendors.
  *
  * Background
  * ==========
- * Adds per-user and per-vendor preferred locale storage for the
- * email notification system. Routes between English and Arabic
- * email templates based on the recipient's stored preference.
+ * Email notification routing needs to know the recipient's preferred
+ * language. For customers, the EXISTING users.locale column (added in
+ * M1.7.0; docblocked as "Used to: Localise transactional emails (M3)")
+ * is the source of truth — no new field needed.
+ *
+ * Vendors, however, have NO existing locale column. This migration
+ * adds vendors.preferred_locale to close that gap. Distinct from
+ * the vendor owner's User.locale because:
+ *
+ *   - A vendor business may want Arabic email confirmations even if
+ *     the staff member who owns the account reads English (or vice
+ *     versa)
+ *   - The Vendor entity is shared across multiple staff users in
+ *     larger businesses; using one staff member's locale to drive
+ *     all vendor notifications would be wrong
  *
  * Schema additions
  * ================
  *
- *   users.preferred_locale VARCHAR(8) NULL
- *     User's preferred locale. 'en' / 'ar' / NULL.
- *     NULL = no preference; falls back to English (Q-FallbackBehavior
- *     = A locked in M3.2.X.7 plan).
- *
  *   vendors.preferred_locale VARCHAR(8) NULL
- *     Vendor's preferred locale for vendor-facing emails. Same
- *     value taxonomy as users.preferred_locale; same fallback
- *     semantics. Distinct from User.preferred_locale because a
- *     vendor business may want Arabic email confirmations even if
- *     individual staff members read English.
+ *     Vendor's preferred locale for vendor-facing emails. 'en' / 'ar'
+ *     / NULL. NULL = no preference; falls back to English at send
+ *     time per Q-FallbackBehavior = A locked.
+ *
+ * What this migration is NOT doing
+ * --------------------------------
+ * Originally this migration also added users.preferred_locale, but
+ * pre-flight in sub-phase D surfaced the existing users.locale field
+ * already serves this purpose. Adding a second locale field on User
+ * would have been architectural duplication. The migration was
+ * refactored mid-flight (Q-Unification path locked) to keep only
+ * the vendor side. The users.locale field remains the source of
+ * truth for customer email locale.
  *
  * Backfill
  * ========
- * NO BACKFILL. Existing users and vendors get NULL → fall back to
- * English at send time, preserving current behavior. Explicit
- * opt-in for Arabic via the PATCH /v3/me/profile or PUT
- * /v3/admin/{users,vendors}/{id} endpoints (added in M3.2.X.7-D).
+ * NO BACKFILL. Existing vendors get NULL → fall back to English at
+ * send time, preserving current behavior. Explicit opt-in for Arabic
+ * via the PUT /v3/admin/vendors/{id} endpoint (M3.2.X.7-D scope).
  *
- * Constraints
- * ===========
- * CHECK constraints on both columns enforce the valid locale set
- * at the DB level. Defense in depth — application code already
- * validates via User/Vendor entity setters and SUPPORTED_LOCALES
- * arrays, but the DB constraint catches direct SQL writes.
- *
- * Indexes
- * =======
- * No new indexes. The preferred_locale columns are read alongside
- * the recipient lookup (by email or by vendor id), and the
- * existing primary key + email indexes already cover those access
- * patterns. Adding a separate index on preferred_locale alone
- * would be unused.
+ * Constraint
+ * ==========
+ * CHECK constraint on the column enforces the valid locale set at
+ * the DB level. Defense in depth — application code already
+ * validates via Vendor::SUPPORTED_LOCALES + the setter, but the
+ * DB constraint catches direct SQL writes.
  *
  * Rollback safety
  * ---------------
- * down() drops both columns + their CHECK constraints. The locale
+ * down() drops the column + its CHECK constraint. The locale
  * routing in OrderNotificationService falls back to English when
  * the column is absent (via the resolver's defensive null handling),
- * so rolling back gracefully degrades to the pre-phase behavior.
+ * so rolling back gracefully degrades to the pre-phase behavior
+ * (vendor emails always English).
  */
 final class Version20260518000001 extends AbstractMigration
 {
     public function getDescription(): string
     {
-        return 'M3.2.X.7-A — Add preferred_locale columns to users and vendors for email locale routing.';
+        return 'M3.2.X.7-A — Add preferred_locale column to vendors for email locale routing.';
     }
 
     public function up(Schema $schema): void
@@ -73,17 +80,6 @@ final class Version20260518000001 extends AbstractMigration
             !$this->connection->getDatabasePlatform() instanceof \Doctrine\DBAL\Platforms\PostgreSQLPlatform,
             'This migration only supports PostgreSQL.'
         );
-
-        // users.preferred_locale
-        $this->addSql(<<<'SQL'
-            ALTER TABLE users
-                ADD COLUMN preferred_locale VARCHAR(8) NULL
-        SQL);
-        $this->addSql(<<<'SQL'
-            ALTER TABLE users
-                ADD CONSTRAINT chk_users_preferred_locale
-                CHECK (preferred_locale IS NULL OR preferred_locale IN ('en', 'ar'))
-        SQL);
 
         // vendors.preferred_locale
         $this->addSql(<<<'SQL'
@@ -98,14 +94,15 @@ final class Version20260518000001 extends AbstractMigration
 
         // No backfill — NULL is the intended initial state for all
         // existing rows per Q-FallbackBehavior = A locked.
+        //
+        // Customer-side locale routing reuses the existing
+        // users.locale column (M1.7.0) — see migration docblock
+        // "What this migration is NOT doing" for rationale.
     }
 
     public function down(Schema $schema): void
     {
-        // Drop constraints first, then columns
         $this->addSql('ALTER TABLE vendors DROP CONSTRAINT IF EXISTS chk_vendors_preferred_locale');
         $this->addSql('ALTER TABLE vendors DROP COLUMN IF EXISTS preferred_locale');
-        $this->addSql('ALTER TABLE users DROP CONSTRAINT IF EXISTS chk_users_preferred_locale');
-        $this->addSql('ALTER TABLE users DROP COLUMN IF EXISTS preferred_locale');
     }
 }

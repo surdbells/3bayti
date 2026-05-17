@@ -135,10 +135,10 @@ final class OrderEmailTemplateRendererLocaleTest extends TestCase
         $extra = ['vendor_items' => ['Test']];
 
         $placed = $this->renderer->render(EmailTemplate::ORDER_PLACED_VENDOR, $order, $extra, 'ar');
-        self::assertSame('طلب جديد', $placed->subject);
+        self::assertStringContainsString('طلب جديد', $placed->subject);
 
         $cancelled = $this->renderer->render(EmailTemplate::ORDER_CANCELLED_VENDOR, $order, $extra, 'ar');
-        self::assertSame('تم إلغاء الطلب', $cancelled->subject);
+        self::assertStringContainsString('تم إلغاء الطلب', $cancelled->subject);
     }
 
     #[Test]

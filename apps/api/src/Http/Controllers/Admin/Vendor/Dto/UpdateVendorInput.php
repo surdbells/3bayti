@@ -66,6 +66,28 @@ final class UpdateVendorInput
      */
     public readonly ?bool $is_featured;
 
+    /**
+     * Vendor's preferred locale for email notifications (M3.2.X.7-D).
+     *
+     * - 'en' / 'ar' / null
+     * - null means no preference; falls back to English at send time
+     *
+     * Q-VendorAdminLocale = A locked: vendor businesses opt in
+     * independently of their owner user's locale because:
+     *   - A vendor business may be Arabic-first even if individual
+     *     staff members prefer English (or vice versa)
+     *   - The Vendor entity is shared across multiple staff users in
+     *     larger businesses
+     *
+     * Setting null clears the preference (falls back to English).
+     * Field omitted from request → no change to existing value.
+     */
+    #[Assert\Choice(
+        choices: ['en', 'ar'],
+        message: 'preferred_locale must be one of: en, ar.',
+    )]
+    public readonly ?string $preferred_locale;
+
     public function __construct(
         string $name = '',
         string $contact_email = '',
@@ -78,6 +100,7 @@ final class UpdateVendorInput
         ?bool $is_active = null,
         ?bool $is_verified = null,
         ?bool $is_featured = null,
+        ?string $preferred_locale = null,
     ) {
         $this->name = trim($name);
         $this->contact_email = trim($contact_email);
@@ -93,5 +116,6 @@ final class UpdateVendorInput
         $this->is_active = $is_active;
         $this->is_verified = $is_verified;
         $this->is_featured = $is_featured;
+        $this->preferred_locale = $preferred_locale !== null ? trim($preferred_locale) : null;
     }
 }

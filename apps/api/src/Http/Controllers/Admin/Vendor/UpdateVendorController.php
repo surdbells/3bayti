@@ -101,6 +101,13 @@ final class UpdateVendorController
             // (which reads all entity fields).
             $vendor->setFeatured($input->is_featured);
         }
+        if ($input->preferred_locale !== null) {
+            // M3.2.X.7-D: Vendor email locale preference. The entity
+            // setter validates against Vendor::SUPPORTED_LOCALES;
+            // DTO validation already constrained to en/ar so this
+            // should never throw, but kept for defense in depth.
+            $vendor->setPreferredLocale($input->preferred_locale);
+        }
 
         $this->em->flush();
 

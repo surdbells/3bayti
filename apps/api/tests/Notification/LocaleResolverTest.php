@@ -15,15 +15,19 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Coverage for LocaleResolver (M3.2.X.7-A).
+ * Coverage for LocaleResolver (M3.2.X.7-A, refactored in -D for
+ * Q-Unification: customer side reads existing User.locale field
+ * with normalization to short tag; vendor side reads new
+ * Vendor.preferredLocale field).
  *
  * Locks the 4-branch decision tree (§2 of M3.2.X.7 plan):
- *   1. Customer email match → User.preferredLocale
- *   2. Vendor email match → Vendor.preferredLocale
+ *   1. Customer email match → normalize(User.locale)
+ *   2. Vendor email match → Vendor.preferredLocale (or default)
  *   3. Admin recipient match → always en
  *   4. Default → en
  *
- * Each branch tested in isolation + cross-cutting fallback behavior.
+ * Each branch tested in isolation + normalization edge cases +
+ * cross-cutting fallback behavior.
  */
 #[CoversClass(LocaleResolver::class)]
 final class LocaleResolverTest extends TestCase
@@ -42,14 +46,64 @@ final class LocaleResolverTest extends TestCase
     }
 
     // -----------------------------------------------------------------
-    // Branch 1: Customer email match
+    // normalizeToShortTag — direct unit coverage
     // -----------------------------------------------------------------
 
     #[Test]
-    public function customerWithExplicitArabicPreferenceGetsArabic(): void
+    public function normalizeShortTagPassesThroughSupportedShortTags(): void
+    {
+        self::assertSame('en', LocaleResolver::normalizeToShortTag('en'));
+        self::assertSame('ar', LocaleResolver::normalizeToShortTag('ar'));
+    }
+
+    #[Test]
+    public function normalizeShortTagStripsRegionFromBcp47(): void
+    {
+        // Region-tagged locales are common in User.locale due to
+        // M1.7.0's docblock noting 'en', 'ar', 'en-AE', 'ar-AE' as
+        // valid. Strip region to get the renderer's expected form.
+        self::assertSame('en', LocaleResolver::normalizeToShortTag('en-AE'));
+        self::assertSame('ar', LocaleResolver::normalizeToShortTag('ar-AE'));
+        self::assertSame('en', LocaleResolver::normalizeToShortTag('en-US'));
+        self::assertSame('ar', LocaleResolver::normalizeToShortTag('ar-SA'));
+    }
+
+    #[Test]
+    public function normalizeShortTagHandlesCaseInsensitively(): void
+    {
+        // Defensive: BCP-47 is case-insensitive for the primary
+        // subtag. Some external sources may pass 'EN' or 'En'.
+        self::assertSame('en', LocaleResolver::normalizeToShortTag('EN'));
+        self::assertSame('ar', LocaleResolver::normalizeToShortTag('Ar'));
+        self::assertSame('en', LocaleResolver::normalizeToShortTag('EN-AE'));
+    }
+
+    #[Test]
+    public function normalizeShortTagFailsSafeOnUnsupportedLanguage(): void
+    {
+        // Unsupported language → fall back to English (not throw).
+        // Catches misconfigured users without breaking the email send.
+        self::assertSame('en', LocaleResolver::normalizeToShortTag('fr'));
+        self::assertSame('en', LocaleResolver::normalizeToShortTag('hi'));
+        self::assertSame('en', LocaleResolver::normalizeToShortTag('ur-PK'));
+    }
+
+    #[Test]
+    public function normalizeShortTagFailsSafeOnEmptyOrNull(): void
+    {
+        self::assertSame('en', LocaleResolver::normalizeToShortTag(''));
+        self::assertSame('en', LocaleResolver::normalizeToShortTag(null));
+    }
+
+    // -----------------------------------------------------------------
+    // Branch 1: Customer email match (reads User.locale)
+    // -----------------------------------------------------------------
+
+    #[Test]
+    public function customerWithArabicLocaleGetsArabic(): void
     {
         $order = $this->makeOrder(customerEmail: 'alice@example.com');
-        $order->getUser()->setPreferredLocale('ar');
+        $order->getUser()->setLocale('ar');
 
         $locale = $this->resolver->resolveForRecipient(
             recipientEmail: 'alice@example.com',
@@ -60,10 +114,26 @@ final class LocaleResolverTest extends TestCase
     }
 
     #[Test]
-    public function customerWithExplicitEnglishPreferenceGetsEnglish(): void
+    public function customerWithArabicRegionTaggedLocaleGetsArabic(): void
+    {
+        // Existing users may have 'ar-AE' in their locale field
+        // (M1.7.0 allowed it). The resolver strips the region.
+        $order = $this->makeOrder(customerEmail: 'alice@example.com');
+        $order->getUser()->setLocale('ar-AE');
+
+        $locale = $this->resolver->resolveForRecipient(
+            recipientEmail: 'alice@example.com',
+            order: $order,
+        );
+
+        self::assertSame('ar', $locale);
+    }
+
+    #[Test]
+    public function customerWithEnglishLocaleGetsEnglish(): void
     {
         $order = $this->makeOrder(customerEmail: 'alice@example.com');
-        $order->getUser()->setPreferredLocale('en');
+        $order->getUser()->setLocale('en');
 
         $locale = $this->resolver->resolveForRecipient(
             recipientEmail: 'alice@example.com',
@@ -74,11 +144,13 @@ final class LocaleResolverTest extends TestCase
     }
 
     #[Test]
-    public function customerWithNullPreferenceFallsBackToEnglish(): void
+    public function customerWithDefaultEnLocaleGetsEnglish(): void
     {
-        // Q-FallbackBehavior = A locked: null preference → English
+        // User created without explicit locale gets User.locale='en'
+        // by constructor default (M1.7.0 ORM column DEFAULT 'en').
         $order = $this->makeOrder(customerEmail: 'alice@example.com');
-        // No setPreferredLocale call; stays null
+        // No setLocale call; field default = 'en'
+        self::assertSame('en', $order->getUser()->getLocale());
 
         $locale = $this->resolver->resolveForRecipient(
             recipientEmail: 'alice@example.com',
@@ -89,7 +161,7 @@ final class LocaleResolverTest extends TestCase
     }
 
     // -----------------------------------------------------------------
-    // Branch 2: Vendor email match
+    // Branch 2: Vendor email match (reads Vendor.preferredLocale)
     // -----------------------------------------------------------------
 
     #[Test]
@@ -159,8 +231,8 @@ final class LocaleResolverTest extends TestCase
         // Q-VendorAdminLocale = A locked: admin emails always English
         // regardless of any other preference state.
         $order = $this->makeOrder(customerEmail: 'alice@example.com');
-        // Customer prefers Arabic — but admin is the recipient, not customer
-        $order->getUser()->setPreferredLocale('ar');
+        // Customer prefers Arabic — but admin is the recipient
+        $order->getUser()->setLocale('ar');
 
         $locale = $this->resolver->resolveForRecipient(
             recipientEmail: 'ops@3bayti.ae',
@@ -194,7 +266,7 @@ final class LocaleResolverTest extends TestCase
     public function unknownRecipientGetsEnglish(): void
     {
         $order = $this->makeOrder(customerEmail: 'alice@example.com');
-        $order->getUser()->setPreferredLocale('ar');
+        $order->getUser()->setLocale('ar');
 
         // Recipient not in customer, vendor, or admin lists
         $locale = $this->resolver->resolveForRecipient(
@@ -232,7 +304,7 @@ final class LocaleResolverTest extends TestCase
         // Edge case: customer and vendor have the same email address.
         // The customer branch fires first by §2 decision tree order.
         $order = $this->makeOrder(customerEmail: 'shared@example.com');
-        $order->getUser()->setPreferredLocale('en');
+        $order->getUser()->setLocale('en');
 
         $vendor = $this->makeVendor(id: 5, email: 'shared@example.com');
         $vendor->setPreferredLocale('ar');
@@ -271,6 +343,7 @@ final class LocaleResolverTest extends TestCase
         $user = (new \ReflectionClass(User::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($user, 'id', 42);
         $this->setEntityProp($user, 'email', '');
+        $this->setEntityProp($user, 'locale', 'en');
         $order = new Order(user: $user, orderReference: 'V3-TEST-EMPTY', subtotal: '99.00');
         $this->setEntityId($order, 100);
         return $order;

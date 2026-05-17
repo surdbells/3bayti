@@ -57,6 +57,9 @@ final class VendorSerializer
             'status' => $v->getStatus(),
             'status_changed_at' => $v->getStatusChangedAt()?->format(DateTimeInterface::ATOM),
             'status_reason' => $v->getStatusReason(),
+            // M3.2.X.7-D: Vendor email locale preference. null means
+            // no preference (falls back to English at send time).
+            'preferred_locale' => $v->getPreferredLocale(),
             'legacy_vendor_id' => $v->getLegacyVendorId(),
             'created_at' => $v->getCreatedAt()->format(DateTimeInterface::ATOM),
             'updated_at' => $v->getUpdatedAt()->format(DateTimeInterface::ATOM),

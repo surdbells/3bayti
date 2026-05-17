@@ -317,23 +317,6 @@ class User
     private ?string $lastLoginIp = null;
 
     /**
-     * User's preferred locale for email notifications (M3.2.X.7).
-     *
-     * - `en` → English (current default, also used when null)
-     * - `ar` → Arabic
-     * - null → no preference; falls back to English per
-     *          Q-FallbackBehavior = A locked
-     *
-     * Read at notification SEND time, not snapshotted per-order.
-     * A user who changes en→ar between two lifecycle events will
-     * get the first email in English and the second in Arabic.
-     * Acceptable behavior; per-order locale snapshot is over-
-     * engineering for the current product needs.
-     */
-    #[ORM\Column(name: 'preferred_locale', type: 'string', length: 8, nullable: true)]
-    private ?string $preferredLocale = null;
-
-    /**
      * Soft delete. Null = active or inactive (see is_active);
      * non-null = deleted, queries should hide unless explicitly asked.
      */
@@ -534,35 +517,6 @@ class User
         if ($finance  !== null) { $this->isFinance  = $finance; }
         if ($support  !== null) { $this->isSupport  = $support; }
         if ($subAdmin !== null) { $this->isSubAdmin = $subAdmin; }
-    }
-
-    // -----------------------------------------------------------------
-    // Preferred locale (M3.2.X.7)
-    // -----------------------------------------------------------------
-
-    public function getPreferredLocale(): ?string
-    {
-        return $this->preferredLocale;
-    }
-
-    /**
-     * Set the user's preferred locale for email notifications.
-     *
-     * Pass null to clear the preference (falls back to English at
-     * send time per Q-FallbackBehavior = A).
-     *
-     * @throws \InvalidArgumentException if $locale is non-null and
-     *         not in self::SUPPORTED_LOCALES
-     */
-    public function setPreferredLocale(?string $locale): void
-    {
-        if ($locale !== null && !in_array($locale, self::SUPPORTED_LOCALES, true)) {
-            throw new \InvalidArgumentException(
-                "Invalid locale '{$locale}'. Supported: "
-                . implode(', ', self::SUPPORTED_LOCALES),
-            );
-        }
-        $this->preferredLocale = $locale;
     }
 
     public function setStoreState(?bool $approved = null, ?bool $active = null): void

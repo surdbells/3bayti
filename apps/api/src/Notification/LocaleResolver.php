@@ -11,42 +11,62 @@ use Bayti\Api\Domain\User\User;
  * Locale resolver for email notifications (M3.2.X.7).
  *
  * Maps a recipient email address back to a User/Vendor/admin
- * context and returns the appropriate locale string for the
- * OrderEmailTemplateRenderer.
+ * context and returns the appropriate short locale tag ('en' or
+ * 'ar') for the OrderEmailTemplateRenderer.
  *
- * Decision tree (Q-FallbackBehavior + Q-VendorAdminLocale = A locked)
- * ===================================================================
+ * Source of truth per recipient kind (Q-Unification locked in -D)
+ * ================================================================
  *
- *   1. If recipient matches Order.user.email (the customer's email)
- *      → return Order.user.preferredLocale (or DEFAULT_LOCALE if null)
+ *   Customer recipient: read User.locale (existing M1.7.0 field;
+ *                       BCP-47, may include region like 'en-AE').
+ *                       Normalized to short tag via
+ *                       normalizeToShortTag().
  *
- *   2. If recipient matches any Vendor.contact_email in the order's
- *      items (vendor-facing emails)
- *      → return that Vendor.preferredLocale (or DEFAULT_LOCALE if null)
+ *   Vendor recipient:   read Vendor.preferredLocale (added in
+ *                       M3.2.X.7-A migration). Already in short-tag
+ *                       form because the entity setter validates
+ *                       against SUPPORTED_LOCALES.
  *
- *   3. If recipient matches any of the configured admin recipient
- *      email addresses
- *      → always return DEFAULT_LOCALE (admin emails are always
- *        English; Q-VendorAdminLocale = A locked)
+ *   Admin recipient:    always DEFAULT_LOCALE ('en'). Per
+ *                       Q-VendorAdminLocale = A locked.
  *
- *   4. Otherwise (unknown recipient, e.g. operator-CC'd email,
- *      legacy recipients)
- *      → return DEFAULT_LOCALE (fail safe to English)
+ *   Unknown recipient:  DEFAULT_LOCALE ('en'). Fail safe.
+ *
+ * Why customer uses User.locale (not a new preferred_locale field)
+ * -----------------------------------------------------------------
+ * User.locale has existed since M1.7.0 with explicit docblock intent
+ * "Used to: Localise transactional emails (M3)". The original
+ * M3.2.X.7 plan's pre-flight inspection missed this and proposed
+ * adding a second preferred_locale field. Sub-phase D's pre-flight
+ * caught the duplication and the architectural decision was made to
+ * unify on the existing field (Q-Unification path).
+ *
+ * Why vendor uses a new preferred_locale field (not Vendor.locale)
+ * -----------------------------------------------------------------
+ * Vendor has NO existing locale field. Added in M3.2.X.7-A migration.
+ *
+ * Normalization
+ * =============
+ * User.locale is BCP-47 and may include region variants ('en-AE',
+ * 'ar-AE'). The renderer only handles short tags ('en', 'ar'). The
+ * normalizeToShortTag() helper:
+ *
+ *   'en'    → 'en'
+ *   'en-AE' → 'en'
+ *   'ar'    → 'ar'
+ *   'ar-AE' → 'ar'
+ *   'fr'    → 'en' (unsupported language; fail safe)
+ *   ''      → 'en' (empty; fail safe)
+ *
+ * Region tags are stripped because there's no per-region content to
+ * localize (Q-LocaleValues = A locked).
  *
  * Why not snapshot the locale per order
  * =====================================
  * Locale is resolved at SEND time, not at order placement time.
  * Rationale: customers may change preferences between lifecycle
- * events (e.g. order placed in English, customer switches to
- * Arabic, then ships → wants Arabic). Acceptable behavior;
- * snapshotting per order is over-engineering for current needs.
- *
- * Why an explicit service vs inline logic
- * ========================================
- * The decision tree has 4 branches with distinct semantics; a
- * tested unit covers each branch independently. Inline logic in
- * OrderNotificationService would muddy the responsibility boundary
- * + make the routing harder to reason about and modify.
+ * events. Acceptable behavior; snapshotting per order is over-
+ * engineering for current needs.
  */
 final class LocaleResolver
 {
@@ -99,7 +119,11 @@ final class LocaleResolver
 
     /**
      * Check if the recipient is the order's customer; return their
-     * preferred locale if so.
+     * normalized short locale tag if so.
+     *
+     * Reads the EXISTING User.locale field (BCP-47, M1.7.0) rather
+     * than a M3.2.X.7-specific field. See class docblock for
+     * unification rationale.
      */
     private function resolveForCustomer(string $recipientEmail, Order $order): ?string
     {
@@ -107,18 +131,22 @@ final class LocaleResolver
         if ($customer->getEmail() === '' || $customer->getEmail() !== $recipientEmail) {
             return null;
         }
-        return $customer->getPreferredLocale() ?? self::DEFAULT_LOCALE;
+        return self::normalizeToShortTag($customer->getLocale());
     }
 
     /**
      * Check if the recipient matches any vendor's contact_email in
-     * the order's items; return that vendor's preferred locale if so.
+     * the order's items; return that vendor's short locale tag if so.
      *
      * Multi-vendor orders may have multiple distinct vendors, but
      * only ONE of them will match the recipient (the email goes to
      * a single vendor at a time). The first matching vendor wins
      * by iteration order — this is deterministic because OrderItem
      * preserves insertion order.
+     *
+     * Reads the NEW Vendor.preferredLocale field. Already in short-
+     * tag form because the entity setter validates against
+     * SUPPORTED_LOCALES.
      */
     private function resolveForVendor(string $recipientEmail, Order $order): ?string
     {
@@ -138,5 +166,36 @@ final class LocaleResolver
             }
         }
         return null;
+    }
+
+    /**
+     * Normalize a BCP-47 locale to a supported short tag.
+     *
+     *   'en'    → 'en'
+     *   'en-AE' → 'en'
+     *   'ar'    → 'ar'
+     *   'ar-AE' → 'ar'
+     *   'fr'    → 'en' (unsupported language → default)
+     *   ''      → 'en' (empty → default)
+     *   null    → 'en' (null → default)
+     *
+     * Region tags are stripped because there's no per-region content
+     * to localize (Q-LocaleValues = A locked).
+     *
+     * Public so unit tests can exercise the normalization edge cases
+     * directly, and so future callers that hold a BCP-47 string but
+     * need a short tag can use this helper rather than re-implementing.
+     */
+    public static function normalizeToShortTag(?string $locale): string
+    {
+        if ($locale === null || $locale === '') {
+            return self::DEFAULT_LOCALE;
+        }
+        // Strip region: 'en-AE' → 'en'
+        $primary = strtolower(explode('-', $locale)[0]);
+        if (in_array($primary, User::SUPPORTED_LOCALES, true)) {
+            return $primary;
+        }
+        return self::DEFAULT_LOCALE;
     }
 }

@@ -107,7 +107,7 @@ final class OrderNotificationServiceLocaleTest extends TestCase
         // Vendor email → Arabic
         $vendorEmail = $this->findSentTo('v1@shops.com');
         self::assertNotNull($vendorEmail);
-        self::assertSame('طلب جديد', $vendorEmail['subject']);
+        self::assertStringContainsString('طلب جديد', $vendorEmail['subject']);
         self::assertStringContainsString('<html lang="ar" dir="rtl">', $vendorEmail['html_body']);
     }
 
@@ -216,7 +216,11 @@ final class OrderNotificationServiceLocaleTest extends TestCase
         );
         $this->setProp($user, 'id', 42);
         if ($customerLocale !== null) {
-            $user->setPreferredLocale($customerLocale);
+            // M3.2.X.7-D Q-Unification: customer locale lives on
+            // User.locale (the existing M1.7.0 field), not a separate
+            // preferred_locale column. The resolver normalizes to a
+            // short tag.
+            $user->setLocale($customerLocale);
         }
 
         $order = new Order(user: $user, orderReference: $reference, subtotal: '99.00');

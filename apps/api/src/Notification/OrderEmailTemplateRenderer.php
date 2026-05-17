@@ -832,12 +832,62 @@ HTML,
         );
     }
 
+    // -----------------------------------------------------------------
+    // Arabic templates — vendor-facing (M3.2.X.7-D)
+    // -----------------------------------------------------------------
+    //
+    // Vendor users opt in via Vendor.preferredLocale = 'ar'. Same
+    // translation conventions as customer templates (UAE business
+    // norms: Latin order references, Western Arabic numerals, etc.).
+    //
+    // No admin-facing Arabic template exists — admin notifications are
+    // ALWAYS English per Q-VendorAdminLocale = A locked. The renderer's
+    // match expression enforces this by always dispatching admin
+    // templates to disputeOpenedAdminEn regardless of locale.
+
     /**
      * @param array<string, mixed> $extra
      */
     private function orderPlacedVendorAr(Order $order, array $extra): RenderedEmail
     {
-        return $this->arabicStub($order, 'طلب جديد', 'New order (Arabic — translation pending in M3.2.X.7-D)');
+        $ref = $order->getOrderReference();
+        $vendorItems = $extra['vendor_items'] ?? [];
+        $itemsList = '';
+        $itemsHtml = '';
+        if (is_array($vendorItems)) {
+            foreach ($vendorItems as $name) {
+                $nameStr = (string) $name;
+                $itemsList .= "  - {$nameStr}\n";
+                $itemsHtml .= '<li>' . $this->esc($nameStr) . '</li>';
+            }
+        }
+
+        return new RenderedEmail(
+            subject: "طلب جديد {$ref} — منتجات للتجهيز",
+            textBody: <<<TXT
+لديك طلب جديد للتجهيز.
+
+رقم الطلب: {$ref}
+
+منتجاتك:
+{$itemsList}
+يرجى تعليم كل منتج بحالة 'مقبول' ثم 'تم الشحن' من لوحة تحكم
+البائع بعد تجهيزه وشحنه.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'طلب جديد للتجهيز',
+                body: <<<HTML
+<p>لديك طلب جديد للتجهيز.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}</p>
+<h3>منتجاتك</h3>
+<ul>{$itemsHtml}</ul>
+<p>يرجى تعليم كل منتج بحالة 'مقبول' ثم 'تم الشحن' من لوحة تحكم البائع بعد تجهيزه وشحنه.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
     }
 
     /**
@@ -845,26 +895,34 @@ HTML,
      */
     private function orderCancelledVendorAr(Order $order, array $extra): RenderedEmail
     {
-        return $this->arabicStub($order, 'تم إلغاء الطلب', 'Order cancelled (Arabic — translation pending in M3.2.X.7-D)');
-    }
-
-    /**
-     * Shared stub builder. Returns a minimal Arabic email with
-     * RTL-correct HTML wrapper. Replaced per-template with full
-     * translations in sub-phases C + D.
-     */
-    private function arabicStub(Order $order, string $subject, string $bodyText): RenderedEmail
-    {
         $ref = $order->getOrderReference();
-        $textBody = "{$bodyText}\n\nرقم الطلب: {$ref}\n\n— 3bayti";
-        $body = "<p>{$this->esc($bodyText)}</p>"
-            . "<p><strong>رقم الطلب:</strong> {$this->esc($ref)}</p>";
+        $reason = (string) ($extra['reason'] ?? '');
+        $reasonLine = $reason !== '' ? "السبب: {$reason}" : '';
+        $reasonLineHtml = $reason !== ''
+            ? "<p><strong>السبب:</strong> {$this->esc($reason)}</p>"
+            : '';
+
         return new RenderedEmail(
-            subject: $subject,
-            textBody: $textBody,
+            subject: "تم إلغاء الطلب {$ref} — لا تقم بالشحن",
+            textBody: <<<TXT
+تم إلغاء طلب يحتوي على منتجات من متجرك.
+
+رقم الطلب: {$ref}
+{$reasonLine}
+
+لا تقم بشحن هذه المنتجات. إذا كانت قد شُحنت بالفعل، تواصل مع
+فريق الدعم فوراً.
+
+— 3bayti
+TXT,
             htmlBody: $this->wrapHtml(
-                title: $subject,
-                body: $body,
+                title: 'تم إلغاء الطلب — لا تقم بالشحن',
+                body: <<<HTML
+<p>تم إلغاء طلب يحتوي على منتجات من متجرك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}</p>
+{$reasonLineHtml}
+<p><strong>لا تقم بشحن هذه المنتجات.</strong> إذا كانت قد شُحنت بالفعل، تواصل مع فريق الدعم فوراً.</p>
+HTML,
                 locale: User::LOCALE_AR,
             ),
         );
