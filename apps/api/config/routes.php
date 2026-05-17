@@ -311,6 +311,12 @@ return function (App $app): void {
         $group->get('/disputes', \Bayti\Api\Http\Controllers\Admin\Dispute\ListDisputesController::class);
         $group->get('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\GetDisputeController::class);
         $group->patch('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\ResolveDisputeController::class);
+
+        // Notification logs (M3.2.X.4-C) — admin observability surface
+        // for the notification_logs table. Filters: order_id, template,
+        // status, recipient, error_kind, since, until, limit, offset.
+        $group->get('/notification-logs',
+            \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class);
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);

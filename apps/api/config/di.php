@@ -250,6 +250,10 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class => \DI\autowire(),
 
+    // M3.2.X.4-C — Notification log admin surface
+    \Bayti\Api\Http\Serializers\NotificationLogSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class => \DI\autowire(),
+
     // M3.1.7-E — Refund flow (full + partial)
     \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class => \DI\autowire(),
 
