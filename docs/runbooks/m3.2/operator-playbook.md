@@ -1,6 +1,6 @@
 # M3.2 — Consolidated Operator Playbook
 
-**Purpose:** Single staging-then-production runbook for the 7 pending operator follow-ups across M3.2.X.1 through M3.2.X.6.
+**Purpose:** Single staging-then-production runbook for the 8 pending operator follow-ups across M3.2.X.1 through M3.2.X.7.
 **Status:** ⏳ Awaiting operator execution
 **Estimated operator effort:** ~3-4 hours staging + ~1-2 hours production (excluding the 7-day shadow window for X.1-C-FLIP)
 **Last updated:** Sunday, May 17, 2026
@@ -329,6 +329,61 @@ curl -s "$STAGING_API/v3/categories/<some-slug>" | jq '.category.slug'
 
 - [ ] At least one full checkout → payment → order confirmation flow completes successfully on staging
 
+### 2.L — M3.2.X.7 — Verify Arabic email locale routing
+
+Migration `Version20260518000001` was applied in §2.B. Verify the column + smoke-test the routing.
+
+```bash
+# Verify the new column + constraint
+psql $STAGING_DB_URL -c "\d vendors" | grep -E "preferred_locale|chk_vendors_preferred_locale"
+# Expected: column + CHECK constraint present
+```
+
+```bash
+# Smoke-test customer-side Arabic email:
+# 1. Set a test user's locale to 'ar' via their existing profile endpoint
+curl -X PATCH -H "Authorization: Bearer $USER_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"locale": "ar"}' \
+  $STAGING_API/v3/me/profile
+
+# 2. Place a sandbox order as that user (via staging web/mobile)
+# 3. Verify the order-placed email is in Arabic
+#    (check ZeptoMail dashboard or inbox)
+```
+
+```bash
+# Smoke-test vendor-side Arabic email:
+# 1. Set a sandbox vendor's preferred_locale to 'ar'
+curl -X PUT -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"<existing>","contact_email":"<existing>","preferred_locale":"ar"}' \
+  $STAGING_API/v3/admin/vendors/<vendor_id>
+
+# 2. Place a sandbox order that includes products from that vendor
+# 3. Verify the vendor-facing order-placed email is in Arabic
+```
+
+```bash
+# Verify admin emails STAY English:
+# 1. Trigger a sandbox dispute (via Noon sandbox console)
+# 2. Confirm the ops@3bayti.ae dispute alert email is ENGLISH
+#    regardless of any other Arabic preferences in the test data
+```
+
+```sql
+-- Existing user impact check: count users already on Arabic
+-- (these will start receiving Arabic emails the moment X.7 deploys)
+SELECT locale, COUNT(*) FROM users GROUP BY locale ORDER BY locale;
+```
+
+- [ ] Schema verified
+- [ ] Customer-side Arabic email smoke test passed
+- [ ] Vendor-side Arabic email smoke test passed
+- [ ] Admin dispute email verified English
+- [ ] Existing Arabic-locale user count reviewed; downstream communication decided
+- [ ] Native Arabic reviewer pass scheduled (see `m3.2.x.7-completion.md` §Native reviewer pass; ~1-2 hours)
+
 ## 3. Production execution
 
 **Pre-condition: §2 staging items 2.A through 2.K complete and staging has been stable for ≥24 hours with no regressions.**
@@ -476,6 +531,7 @@ If a step in this playbook is ambiguous, the per-phase closure runbook has the c
 | M3.2.X.3 | `docs/runbooks/m3.2/m3.2.x.3-completion.md` |
 | M3.2.X.4 | `docs/runbooks/m3.2/m3.2.x.4-completion.md` |
 | M3.2.X.6 | `docs/runbooks/m3.2/m3.2.x.6-completion.md` |
+| M3.2.X.7 | `docs/runbooks/m3.2/m3.2.x.7-completion.md` |
 
 ## 7. Sign-off
 
