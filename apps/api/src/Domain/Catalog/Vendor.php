@@ -46,6 +46,27 @@ class Vendor
 {
     use Timestamps;
 
+    /**
+     * Vendor lifecycle status values (M3.2.X.6).
+     *
+     * - STATUS_PENDING:   Newly submitted, not yet admin-approved
+     * - STATUS_APPROVED:  Admin has approved; can transact
+     * - STATUS_SUSPENDED: Previously approved, then suspended for
+     *                     policy reasons; cannot transact
+     *
+     * See class docblock for full state-machine + relationship
+     * to legacy boolean flags.
+     */
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_SUSPENDED = 'suspended';
+
+    public const ALL_STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_APPROVED,
+        self::STATUS_SUSPENDED,
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
@@ -105,6 +126,67 @@ class Vendor
      */
     #[ORM\Column(name: 'is_featured', type: 'boolean')]
     private bool $isFeatured = false;
+
+    /**
+     * Vendor lifecycle status (M3.2.X.6).
+     *
+     * Three values: pending, approved, suspended.
+     *
+     * - pending:   Newly-submitted, not yet admin-approved. Hidden
+     *              from all public surfaces. Vendor user can see
+     *              their own pending state via the onboarding-status
+     *              endpoint.
+     * - approved:  Admin has approved. Visible per the existing
+     *              is_active / is_featured rules.
+     * - suspended: Was approved, then suspended for policy reasons.
+     *              Hidden from public surfaces. Vendor user can no
+     *              longer manage orders. Re-approval requires admin
+     *              action (no self-serve reactivation in M3.2.X.6).
+     *
+     * Relationship to legacy boolean flags (Q-LegacyFlags = A locked)
+     * ----------------------------------------------------------------
+     * The status enum is the NEW source of truth for public visibility.
+     * The legacy booleans (is_active, is_store_approved, is_verified)
+     * remain in place for backwards compatibility:
+     *
+     *   - is_store_approved tracks status approval atomically:
+     *     approve() / reactivate() sets it to true; suspend() leaves
+     *     it as-is (a suspended vendor was previously approved).
+     *   - is_active continues to mean soft-delete (independent of
+     *     status; though backfill correlates them).
+     *   - is_verified is purely cosmetic (admin-attested badge).
+     *
+     * State transitions are performed via the approve() / suspend() /
+     * reactivate() methods which validate the legal transition graph
+     * and update statusChangedAt + (for approvals) is_store_approved
+     * atomically. Direct property mutation should be avoided.
+     */
+    #[ORM\Column(name: 'status', type: 'string', length: 16, options: ['default' => self::STATUS_PENDING])]
+    private string $status = self::STATUS_PENDING;
+
+    /**
+     * Timestamp of the most recent status transition. Null for
+     * vendors that have never transitioned (i.e. still in their
+     * initial pending state).
+     *
+     * Used for forensic queries ("when was this vendor approved?")
+     * without needing to grep audit logs. Audit logs remain the
+     * canonical history; this column is convenience.
+     */
+    #[ORM\Column(name: 'status_changed_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $statusChangedAt = null;
+
+    /**
+     * Free-text reason for the most recent status transition.
+     * Populated when admin provides one during approve/suspend/
+     * reactivate; null otherwise.
+     *
+     * Stored as TEXT (not enum) — reasons are operational, not
+     * categorical. Examples: "Quality complaints from 5 customers",
+     * "Initial approval after KYC review".
+     */
+    #[ORM\Column(name: 'status_reason', type: 'text', nullable: true)]
+    private ?string $statusReason = null;
 
     /**
      * Owner User — the user record with is_vendor=1 that owns this store.
@@ -238,6 +320,130 @@ class Vendor
 
     public function isFeatured(): bool { return $this->isFeatured; }
     public function setFeatured(bool $featured): void { $this->isFeatured = $featured; }
+
+    // -----------------------------------------------------------------
+    // Lifecycle status (M3.2.X.6)
+    // -----------------------------------------------------------------
+
+    public function getStatus(): string { return $this->status; }
+    public function getStatusChangedAt(): ?\DateTimeImmutable { return $this->statusChangedAt; }
+    public function getStatusReason(): ?string { return $this->statusReason; }
+
+    /** Convenience predicate: is the vendor in pending state? */
+    public function isPending(): bool { return $this->status === self::STATUS_PENDING; }
+
+    /** Convenience predicate: is the vendor in approved state? */
+    public function isApproved(): bool { return $this->status === self::STATUS_APPROVED; }
+
+    /** Convenience predicate: is the vendor in suspended state? */
+    public function isSuspended(): bool { return $this->status === self::STATUS_SUSPENDED; }
+
+    /**
+     * Transition this vendor to STATUS_APPROVED.
+     *
+     * Valid from: STATUS_PENDING (initial admin approval),
+     *             STATUS_SUSPENDED (reactivation — though
+     *             reactivate() is the semantic alias preferred
+     *             for that case for clearer audit semantics).
+     *
+     * Invalid from: STATUS_APPROVED (already approved; no-op
+     *               raises to surface unintentional duplicate calls).
+     *
+     * Side effects (atomic):
+     *   - status → STATUS_APPROVED
+     *   - statusChangedAt → now (UTC)
+     *   - statusReason → $reason (overwrites any previous value)
+     *   - is_store_approved → true (legacy flag stays in sync per
+     *     Q-LegacyFlags = A)
+     *
+     * @throws \InvalidArgumentException on invalid transition
+     */
+    public function approve(?string $reason = null): void
+    {
+        if ($this->status === self::STATUS_APPROVED) {
+            throw new \InvalidArgumentException(
+                'Cannot approve vendor: already in approved state. '
+                . 'Use reactivate() for suspended → approved transitions if '
+                . 'distinguishing audit semantics matter.',
+            );
+        }
+        $this->transitionTo(self::STATUS_APPROVED, $reason);
+        $this->isStoreApproved = true;
+    }
+
+    /**
+     * Transition this vendor to STATUS_SUSPENDED.
+     *
+     * Valid from: STATUS_APPROVED only — a vendor must have been
+     *             approved before being suspended. Suspending a
+     *             pending vendor would be operationally confusing
+     *             (admin should simply not approve them).
+     *
+     * Invalid from: STATUS_PENDING (use admin rejection path; not
+     *               in M3.2.X.6 scope), STATUS_SUSPENDED (already
+     *               suspended).
+     *
+     * Side effects (atomic):
+     *   - status → STATUS_SUSPENDED
+     *   - statusChangedAt → now (UTC)
+     *   - statusReason → $reason
+     *
+     * is_store_approved is NOT toggled by suspension — the vendor
+     * WAS approved historically; the suspension is the more recent
+     * operational state.
+     *
+     * @throws \InvalidArgumentException on invalid transition
+     */
+    public function suspend(?string $reason = null): void
+    {
+        if ($this->status !== self::STATUS_APPROVED) {
+            throw new \InvalidArgumentException(
+                "Cannot suspend vendor from {$this->status} state. "
+                . 'Vendors must be approved before they can be suspended.',
+            );
+        }
+        $this->transitionTo(self::STATUS_SUSPENDED, $reason);
+    }
+
+    /**
+     * Transition this vendor from STATUS_SUSPENDED back to
+     * STATUS_APPROVED. Semantically distinct from approve() so
+     * audit trails can differentiate "initial approval" from
+     * "reactivation after suspension".
+     *
+     * Valid from: STATUS_SUSPENDED only.
+     *
+     * Side effects (atomic):
+     *   - status → STATUS_APPROVED
+     *   - statusChangedAt → now (UTC)
+     *   - statusReason → $reason
+     *   - is_store_approved → true (re-set in case it was somehow
+     *     toggled off via direct property mutation)
+     *
+     * @throws \InvalidArgumentException on invalid transition
+     */
+    public function reactivate(?string $reason = null): void
+    {
+        if ($this->status !== self::STATUS_SUSPENDED) {
+            throw new \InvalidArgumentException(
+                "Cannot reactivate vendor from {$this->status} state. "
+                . 'Reactivation is only valid from suspended state.',
+            );
+        }
+        $this->transitionTo(self::STATUS_APPROVED, $reason);
+        $this->isStoreApproved = true;
+    }
+
+    /**
+     * Internal: perform the state mutation + timestamp/reason update.
+     * Called only by the three public transition methods above.
+     */
+    private function transitionTo(string $newStatus, ?string $reason): void
+    {
+        $this->status = $newStatus;
+        $this->statusChangedAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+        $this->statusReason = $reason;
+    }
 
     public function getOwnerUser(): ?\Bayti\Api\Domain\User\User { return $this->ownerUser; }
     public function setOwnerUser(?\Bayti\Api\Domain\User\User $user): void { $this->ownerUser = $user; }
