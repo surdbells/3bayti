@@ -49,6 +49,14 @@ final class VendorSerializer
             'commission_rate' => $v->getCommissionRate(),
             'is_active' => $v->isActive(),
             'is_featured' => $v->isFeatured(),
+            // M3.2.X.6-C: Vendor lifecycle status fields. Admin tool
+            // displays the current status, when the most-recent
+            // transition happened, and the operator-supplied reason.
+            // status_changed_at is null for never-transitioned (i.e.
+            // still in initial pending state) vendors.
+            'status' => $v->getStatus(),
+            'status_changed_at' => $v->getStatusChangedAt()?->format(DateTimeInterface::ATOM),
+            'status_reason' => $v->getStatusReason(),
             'legacy_vendor_id' => $v->getLegacyVendorId(),
             'created_at' => $v->getCreatedAt()->format(DateTimeInterface::ATOM),
             'updated_at' => $v->getUpdatedAt()->format(DateTimeInterface::ATOM),

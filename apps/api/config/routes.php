@@ -285,6 +285,14 @@ return function (App $app): void {
         $group->put('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class);
         $group->delete('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class);
 
+        // M3.2.X.6-C — Vendor lifecycle state transitions
+        $group->post('/vendors/{id:[0-9]+}/approve',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ApproveVendorController::class);
+        $group->post('/vendors/{id:[0-9]+}/suspend',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\SuspendVendorController::class);
+        $group->post('/vendors/{id:[0-9]+}/reactivate',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ReactivateVendorController::class);
+
         // Category admin
         $group->get('/categories', \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class);
         $group->post('/categories', \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class);

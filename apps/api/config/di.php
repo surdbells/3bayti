@@ -278,6 +278,11 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class => \DI\autowire(),
 
+    // M3.2.X.6-C — Vendor lifecycle state transition controllers
+    \Bayti\Api\Http\Controllers\Admin\Vendor\ApproveVendorController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\SuspendVendorController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\ReactivateVendorController::class => \DI\autowire(),
+
     // M2.1 — Catalog admin controllers (Category)
     \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class => \DI\autowire(),

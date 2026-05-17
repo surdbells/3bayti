@@ -554,11 +554,25 @@ final class AuditEmitter
             'commission_rate' => $v->getCommissionRate(),
             'is_active' => $v->isActive(),
             'is_verified' => $v->isVerified(),
+            // M3.2.X.6-C: Captured to surface the atomic invariant
+            // between Vendor::approve() / reactivate() and the legacy
+            // is_store_approved flag (Q-LegacyFlags=A). Admin tooling
+            // and reporting that filters on this flag can verify
+            // transition-time updates via the audit diff.
+            'is_store_approved' => $v->isStoreApproved(),
             // M3.2.X.2-D: Designer Spotlight curation flag. Surfaces
             // in the audit log when admin toggles it, so we can trace
             // "who featured this vendor on date X" via the audit
             // history rather than relying on operator memory.
             'is_featured' => $v->isFeatured(),
+            // M3.2.X.6-C: Vendor lifecycle status fields. Captured in
+            // snapshots so the audit_log diff records before/after on
+            // approve/suspend/reactivate transitions. The before/after
+            // diff lets ops reconstruct exactly when a vendor moved
+            // through the lifecycle and what reason was provided.
+            'status' => $v->getStatus(),
+            'status_changed_at' => $v->getStatusChangedAt()?->format(\DateTimeInterface::ATOM),
+            'status_reason' => $v->getStatusReason(),
         ];
     }
 
