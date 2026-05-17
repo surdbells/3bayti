@@ -47,6 +47,83 @@ class VendorRepository extends EntityRepository
     }
 
     /**
+     * All Vendor entities owned by the given user, regardless of status.
+     *
+     * Used by:
+     *   - Self-serve onboarding (M3.2.X.6-D) to check whether the user
+     *     already has stores before allowing a new submission
+     *   - Vendor self-serve status endpoint (M3.2.X.6-D) to surface
+     *     pending vendors that the user has submitted but admin
+     *     hasn't approved yet
+     *
+     * NOT used by VendorAuthMiddleware — that one needs only approved
+     * vendors via existsApprovedForOwnerUser below.
+     *
+     * @return list<Vendor>
+     */
+    public function findByOwnerUser(\Bayti\Api\Domain\User\User $user): array
+    {
+        /** @var list<Vendor> $items */
+        $items = $this->createQueryBuilder('v')
+            ->where('v.ownerUser = :user')
+            ->setParameter('user', $user)
+            ->orderBy('v.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+        return $items;
+    }
+
+    /**
+     * All approved Vendor entities owned by the given user.
+     *
+     * Used by vendor controllers (M3.1.7 lineage) to restrict the
+     * orders/items view to stores in the 'approved' lifecycle state.
+     * A user with mixed approved + suspended stores sees only the
+     * approved ones via this method.
+     *
+     * Q-MiddlewareGate = A: VendorAuthMiddleware uses
+     * existsApprovedForOwnerUser to gate access at the middleware
+     * layer (more efficient than fetching full entities). This method
+     * is for controllers that need the full Vendor list.
+     *
+     * @return list<Vendor>
+     */
+    public function findApprovedByOwnerUser(\Bayti\Api\Domain\User\User $user): array
+    {
+        /** @var list<Vendor> $items */
+        $items = $this->createQueryBuilder('v')
+            ->where('v.ownerUser = :user')
+            ->andWhere('v.status = :status')
+            ->setParameter('user', $user)
+            ->setParameter('status', Vendor::STATUS_APPROVED)
+            ->orderBy('v.name', 'ASC')
+            ->getQuery()
+            ->getResult();
+        return $items;
+    }
+
+    /**
+     * Cheap existence check — does the user own AT LEAST ONE approved
+     * vendor? Used by VendorAuthMiddleware as the lifecycle gate.
+     *
+     * Uses COUNT-only query rather than fetching entities; the
+     * composite index (status, owner_user_id) added by
+     * Version20260517000001 covers this perfectly.
+     */
+    public function existsApprovedForOwnerUser(\Bayti\Api\Domain\User\User $user): bool
+    {
+        $count = (int) $this->createQueryBuilder('v')
+            ->select('COUNT(v.id)')
+            ->where('v.ownerUser = :user')
+            ->andWhere('v.status = :status')
+            ->setParameter('user', $user)
+            ->setParameter('status', Vendor::STATUS_APPROVED)
+            ->getQuery()
+            ->getSingleScalarResult();
+        return $count > 0;
+    }
+
+    /**
      * Look up a vendor by its legacy WordPress/CodeIgniter id.
      *
      * Why this exists

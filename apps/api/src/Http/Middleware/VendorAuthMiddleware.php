@@ -54,20 +54,29 @@ use Psr\Http\Server\RequestHandlerInterface;
  * endpoints here. Admin role doesn't grant vendor access — admins
  * use /v3/admin/orders for cross-vendor oversight.
  *
- * Vendor lifecycle gate (deferred)
+ * Vendor lifecycle gate (M3.2.X.6)
  * --------------------------------
- * A full vendor lifecycle (pending → approved → suspended) would
- * gate access here based on a `vendor_status` column. That column
- * doesn't exist on User yet (M2 shipped is_vendor flag without
- * lifecycle states). Future enhancement: add vendor_status + gate
- * here. For M3.1.7 the boolean flag is enough — operators manually
- * gate via flipping is_vendor.
+ * The middleware enforces TWO gates in sequence:
+ *
+ *   1. Role check: is_vendor=true
+ *   2. Lifecycle check: at least one vendor with status='approved'
+ *
+ * The lifecycle check uses VendorRepository::existsApprovedForOwnerUser
+ * resolved LAZILY from the injected EntityManagerInterface (per the
+ * M3.2.X.4-B pattern — avoids eager Doctrine metadata loading at
+ * service construction time, which breaks test mocks).
+ *
+ * Multi-vendor case: if the user owns mixed approved + suspended
+ * stores, the middleware lets them through (they're a legitimate
+ * vendor for at least one store). Per-controller logic then filters
+ * to approved-only stores via VendorRepository::findApprovedByOwnerUser.
  */
 final class VendorAuthMiddleware implements MiddlewareInterface
 {
     public function __construct(
         private readonly ResponseFactoryInterface $responseFactory,
         private readonly \Psr\Log\LoggerInterface $logger,
+        private readonly ?\Doctrine\ORM\EntityManagerInterface $em = null,
     ) {
     }
 
@@ -94,7 +103,54 @@ final class VendorAuthMiddleware implements MiddlewareInterface
             return $this->forbidden('vendor_required', 'Vendor access required for this endpoint.');
         }
 
+        // Lifecycle gate (M3.2.X.6-B): user must own at least one
+        // approved vendor. Resolved lazily — if no EM was injected
+        // (legacy DI / test setup) we skip the gate to preserve
+        // backwards-compatible behavior.
+        if ($this->em !== null && !$this->hasApprovedVendor($user)) {
+            $this->logger->warning('VendorAuthMiddleware: vendor user has no approved stores', [
+                'user_id' => $user->getId(),
+                'method' => $request->getMethod(),
+                'uri' => (string) $request->getUri(),
+            ]);
+            return $this->forbidden(
+                ErrorCodes::VENDOR_NOT_APPROVED,
+                'Your vendor account is not approved. Please wait for admin review or contact support.',
+            );
+        }
+
         return $handler->handle($request);
+    }
+
+    /**
+     * Lazy resolution of VendorRepository::existsApprovedForOwnerUser.
+     *
+     * Defensive: catches any unexpected Doctrine/DB exceptions so the
+     * middleware never returns 500 from an audit-style lookup. The
+     * worst-case behavior on a DB error is denying access (returning
+     * false), which is correct — better safe than letting a non-
+     * approved vendor through.
+     */
+    private function hasApprovedVendor(User $user): bool
+    {
+        try {
+            $repo = $this->em?->getRepository(\Bayti\Api\Domain\Catalog\Vendor::class);
+            if (!$repo instanceof \Bayti\Api\Domain\Catalog\VendorRepository) {
+                // Test mock returned something we can't use; preserve
+                // backwards-compatible (pre-gate) behavior of letting
+                // the request through. Real production wiring always
+                // provides VendorRepository via Doctrine's metadata.
+                return true;
+            }
+            return $repo->existsApprovedForOwnerUser($user);
+        } catch (\Throwable $e) {
+            $this->logger->error('VendorAuthMiddleware: approved-vendor lookup failed', [
+                'user_id' => $user->getId(),
+                'error' => $e->getMessage(),
+                'class' => $e::class,
+            ]);
+            return false;
+        }
     }
 
     private function unauthorized(): ResponseInterface

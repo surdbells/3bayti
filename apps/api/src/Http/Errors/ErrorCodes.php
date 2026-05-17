@@ -103,6 +103,18 @@ final class ErrorCodes
     /** User isn't allowed to perform the action (role check failed). */
     public const FORBIDDEN = 'FORBIDDEN';
 
+    /**
+     * Authenticated user is a vendor (is_vendor=true) but owns no
+     * vendor stores in the 'approved' lifecycle state. Returned by
+     * VendorAuthMiddleware (M3.2.X.6-B) when a pending or suspended-
+     * only vendor attempts to access /v3/vendor/* endpoints.
+     *
+     * Distinct from FORBIDDEN — FORBIDDEN is a role check ("you're
+     * not a vendor"); VENDOR_NOT_APPROVED is a lifecycle gate
+     * ("you're a vendor, but your store isn't approved yet").
+     */
+    public const VENDOR_NOT_APPROVED = 'VENDOR_NOT_APPROVED';
+
     /** Catch-all for unexpected failures (uncaught exception → 500). */
     public const INTERNAL_ERROR = 'INTERNAL_ERROR';
 
