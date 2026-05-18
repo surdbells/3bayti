@@ -1118,9 +1118,195 @@ ORDER BY id DESC LIMIT 3;"
 22. **Per-item notification attribution** — notifications today carry `order_id` but not `vendor_id`. The vendor timeline filter uses `recipient = vendor.contact_email` as a proxy for "this notification was about my items", which works for vendor-addressed emails but doesn't distinguish customer-addressed notifications by which vendor's items triggered them. Fix: add `vendor_id` column to `notification_logs` (nullable, set at send time when the notification is item-attributed). ~1 day migration + backfill + 1 day notification-emitter updates.
 23. **Actor label hydration** — timeline events include actor.type and actor.id but not actor.label (a human-readable identifier like email). Adding labels requires joining user_id → users.email in the builder. Deferred because the admin UI can hydrate labels client-side from the existing /v3/admin/users surface; revisit if a "show me what alice@3bayti.ae did across all orders" feature surfaces. ~0.5 day if it's wanted.
 
+### 2.R — M3.2.X.11 — Smoke-test Abandoned cart recovery emails
+
+X.11 ships a new two-column migration + a new cron command + a new public unsubscribe endpoint. Smoke-test all three on staging before scheduling cron production.
+
+```bash
+# 1. Apply the migration (X.11-A two-column add)
+cd apps/api && php bin/migrate.php
+
+# 2. Verify schema:
+psql "$STAGING_DSN" -c "
+SELECT column_name, data_type, is_nullable, column_default
+FROM information_schema.columns
+WHERE (table_name='notification_logs' AND column_name='cart_id')
+   OR (table_name='users' AND column_name='marketing_emails_opt_out')
+ORDER BY table_name, column_name;"
+# Expect:
+#  notification_logs.cart_id              integer    YES   NULL
+#  users.marketing_emails_opt_out         boolean    NO    false
+
+# Verify index:
+psql "$STAGING_DSN" -c "
+SELECT indexname, indexdef FROM pg_indexes
+WHERE tablename = 'notification_logs' AND indexname = 'idx_notification_logs_cart_id';"
+# Expect: partial index with 'WHERE cart_id IS NOT NULL'
+
+# 3. Identify an abandoned cart for testing. Staging usually has a
+#    few naturally; if not, fabricate one:
+psql "$STAGING_DSN" <<'SQL'
+-- Find an active cart with items that's old enough
+SELECT c.id, c.user_id, u.email, c.status,
+       c.updated_at,
+       (SELECT COUNT(*) FROM cart_items WHERE cart_id = c.id) AS item_count,
+       (SELECT COUNT(*) FROM notification_logs nl
+        WHERE nl.cart_id = c.id AND nl.template = 'cart.abandoned.customer') AS prior_reminders
+FROM carts c
+INNER JOIN users u ON u.id = c.user_id
+WHERE c.status = 'active'
+  AND u.email <> ''
+  AND c.updated_at < NOW() - INTERVAL '24 hours'
+  AND EXISTS (SELECT 1 FROM cart_items WHERE cart_id = c.id)
+ORDER BY c.updated_at ASC
+LIMIT 10;
+SQL
+# If nothing returned: artificially backdate a recent cart's updated_at:
+# UPDATE carts SET updated_at = NOW() - INTERVAL '25 hours' WHERE id = <test_cart_id>;
+
+# 4. Dry-run the cron command — lists eligible cart IDs without sending
+cd apps/api
+php bin/console carts:send-abandonment-reminders --dry-run
+# Expect output:
+#  Sending abandoned cart reminders (threshold 24h, batch 100) [DRY RUN]
+#  Found <N> eligible cart(s).
+#  Eligible cart IDs (no emails sent):
+#    <comma-separated list>
+#  [DRY RUN] N cart(s) would be processed.
+
+# 5. Try non-default options to verify clamping:
+php bin/console carts:send-abandonment-reminders --dry-run --threshold-hours=9999
+# threshold gets clamped to 168 (one week) — should see "(threshold 168h, ...)"
+
+php bin/console carts:send-abandonment-reminders --dry-run --threshold-hours=0
+# clamped to 1 — "(threshold 1h, ...)" — likely Found 0 (carts updated <1h ago are rare)
+
+# 6. Real run (sends emails). Cap with small batch first:
+php bin/console carts:send-abandonment-reminders --batch-size=1
+# Expect:
+#  Found 1 eligible cart(s).
+#  Summary table:
+#    Found     | 1
+#    Processed | 1
+#    Errors    | 0
+
+# 7. Verify the email landed (check inbox of the test user or the
+#    ZeptoMail dashboard). Body MUST contain:
+#    - cart items as a bulleted list
+#    - 'Resume Your Cart' CTA button (HTML body) +
+#      'Resume your cart:' line (text body)
+#    - 'unsubscribe here' link pointing at
+#      https://<staging-host>/v3/notifications/unsubscribe?token=...
+
+# 8. Verify the notification_log row was written:
+psql "$STAGING_DSN" -c "
+SELECT id, cart_id, order_id, template, recipient, status,
+       sent_at, error_message
+FROM notification_logs
+WHERE template = 'cart.abandoned.customer'
+ORDER BY id DESC LIMIT 3;"
+# Expect: row with status='sent', cart_id=<test_cart_id>, order_id IS NULL
+
+# 9. Verify idempotency — re-run the command. The cart should now
+#    be excluded because of the prior log row.
+php bin/console carts:send-abandonment-reminders --batch-size=10
+# Expect: Found 0 (same cart not re-sent) UNLESS there are OTHER eligible carts
+
+# 10. Test the unsubscribe endpoint. Copy the token from the email
+#     and hit the endpoint manually:
+TOKEN="<copy-from-email>"
+curl -i -s "https://staging.3bayti.ae/v3/notifications/unsubscribe?token=$TOKEN" | head -20
+# Expect: HTTP/2 200, Content-Type: text/html; charset=utf-8,
+# body contains "You've been unsubscribed."
+
+# 11. Verify opt-out flag was set:
+psql "$STAGING_DSN" -c "
+SELECT id, email, marketing_emails_opt_out
+FROM users WHERE id = <test_user_id>;"
+# Expect: marketing_emails_opt_out = TRUE
+
+# 12. Re-click the same link (idempotent — should still show success):
+curl -i -s "https://staging.3bayti.ae/v3/notifications/unsubscribe?token=$TOKEN" | head -5
+# Expect: HTTP/2 200, same success page
+
+# 13. Test invalid token paths:
+curl -i -s "https://staging.3bayti.ae/v3/notifications/unsubscribe" | head -3
+# Expect: HTTP/2 400 — invalid/expired page
+
+curl -i -s "https://staging.3bayti.ae/v3/notifications/unsubscribe?token=garbage" | head -3
+# Expect: HTTP/2 400
+
+# 14. Force-create a second test user, opted out from the start.
+#     Verify the cron command SKIPS them, doesn't send, but DOES
+#     write a SKIPPED notification_log row:
+psql "$STAGING_DSN" -c "UPDATE users SET marketing_emails_opt_out = TRUE WHERE id = <opted_out_test_user_id>;"
+# Then engineer an eligible-but-opted-out cart and run the command.
+psql "$STAGING_DSN" -c "
+SELECT id, cart_id, template, status, error_message
+FROM notification_logs
+WHERE cart_id = <opted_out_user_cart_id>
+ORDER BY id DESC LIMIT 1;"
+# Expect: row with status='skipped', error_message='marketing_opted_out'
+# This is the 'persistent suppression marker' — the cart is now
+# permanently excluded from future cron runs.
+
+# 15. Verify the X.4-C admin notification logs surface shows the
+#     cart reminders:
+ADMIN_TOKEN=...
+curl -s "https://staging.3bayti.ae/v3/admin/notification-logs?template=cart.abandoned.customer&limit=10" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+for log in d['data']:
+    print(f\"  cart_id={log.get('cart_id', '-'):>5}  status={log['status']:>7}  recipient={log['recipient']}\")"
+# Expect: rows visible with cart_id populated
+
+# 16. Performance observability:
+tail -100 apps/api/var/logs/app-*.log | grep -E "cart_(abandonment|notification|reminders)" | tail -20
+# Expect:
+#   cart_abandonment_finder.computed   (debug, per cron run)
+#   cart_notification.sent             (info, per successful send)
+#   cart_reminders.batch_complete      (info, per cron run)
+#   unsubscribe.completed              (info, per click)
+# NO cart_abandonment_finder.slow_response warnings during normal load
+
+# 17. Schedule the cron. Recommended cadence: every 1-2 hours.
+#     With default 24h threshold + 100 batch size that comfortably
+#     handles operators with ~5000 active carts/day at typical
+#     5-10% abandonment rates.
+#     Example crontab line:
+#        0 */2 * * * cd /var/www/3bayti/apps/api && php bin/console carts:send-abandonment-reminders >>/var/log/3bayti/cart-reminders.log 2>&1
+```
+
+**Smoke-test acceptance**
+
+- [ ] Migration applied: `notification_logs.cart_id` exists nullable + `users.marketing_emails_opt_out` exists boolean default FALSE
+- [ ] Partial index `idx_notification_logs_cart_id` exists `WHERE cart_id IS NOT NULL`
+- [ ] `--dry-run` lists eligible carts without sending or writing logs
+- [ ] `--threshold-hours` clamped to [1, 168]
+- [ ] Default run sends emails to eligible customers + writes SENT notification_log rows with cart_id populated
+- [ ] Re-running command produces zero re-sends (idempotency via NOT EXISTS guard)
+- [ ] Unsubscribe endpoint returns 200 + HTML success page for valid token
+- [ ] Unsubscribe endpoint returns 400 + HTML error page for invalid/missing/expired token
+- [ ] `users.marketing_emails_opt_out` flips to TRUE on first successful unsubscribe
+- [ ] Re-clicking the unsubscribe link is idempotent (200 success page, no second flush)
+- [ ] Opted-out user is SKIPPED by the cron with a SKIPPED notification_log row (persistent suppression marker)
+- [ ] X.4-C admin notification-logs surface shows cart.abandoned.customer entries filterable by template
+- [ ] PSR-3 `cart_abandonment_finder.computed`, `cart_notification.sent`, `cart_reminders.batch_complete` log events fire on every cron run
+- [ ] No `cart_abandonment_finder.slow_response` warnings during normal staging load
+- [ ] Production cron schedule decided (recommended every 1-2 hours)
+
+**Operator deferred items added by X.11:**
+
+24. **Multi-touch reminder sequence** — Q-AbandonmentWindow = B locked single threshold for v1. Once conversion data is available (probably 30-60 days after launch), assess uplift from a multi-touch sequence: 24h + 72h + 168h (one week) reminders. Each threshold would write a different template (`cart.abandoned.day1`, `cart.abandoned.day3`, `cart.abandoned.day7`) and the Finder's NOT EXISTS guard would need to be narrowed to per-template rather than any-template. Migration adds an `abandonment_stage` column to cart-scoped notification_logs OR change the per-template guard logic. ~2 days of work plus 2 new templates × 2 locales = 4 new template methods. Decision criteria: track 'cart abandoned but no day-1 reminder yet' → 'day-1 reminder fired but no purchase yet' → … funnels in analytics. Only ship multi-touch if the marginal lift over single-touch crosses ~2% additional conversion.
+
+25. **Per-template opt-out preferences** — Q-OptOutHandling = A locked at user-level boolean for v1. If customer support starts seeing "I want to opt out of cart reminders but keep newsletter subscriptions" requests (or vice versa), upgrade to a per-template `notification_preferences` table keyed on (user_id, template) with `is_opted_out` boolean. Migration + UI for managing preferences in `/v3/me/preferences` + per-template checks in the marketing send paths. ~3 days of work. Defer until customer-support data justifies the granularity.
+
+26. **Cart abandonment dashboard for ops** — beyond the existing /v3/admin/notification-logs surface, ops will want trend-level metrics: open rate (requires webhook integration with ZeptoMail), conversion-to-purchase from reminder (requires correlating cart.abandoned.customer logs to subsequent orders via user_id + time window), drop-off by cart value bucket, opt-out rate over time. ~5-7 days of work depending on chart depth. The data is already in notification_logs + orders + users today; this is purely a UI + aggregation layer. Defer until X.13 (Vendor analytics dashboard) ships and establishes the dashboard infrastructure pattern this would extend.
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.Q complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.R complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
