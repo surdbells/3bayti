@@ -12,6 +12,9 @@ use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\Payment\PaymentTransaction;
 use Bayti\Api\Domain\Payment\PaymentTransactionRepository;
+use Bayti\Api\Domain\Promo\Exception\PromoNotApplicableException;
+use Bayti\Api\Domain\Promo\PromoCodeResolverService;
+use Bayti\Api\Domain\Promo\PromoResolution;
 use Bayti\Api\Domain\User\Address;
 use Bayti\Api\Domain\User\AddressRepository;
 use Bayti\Api\Domain\User\User;
@@ -107,6 +110,7 @@ final class InitiateCheckoutController
         private readonly EntityManagerInterface $em,
         private readonly PaymentGatewayInterface $gateway,
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
+        private readonly PromoCodeResolverService $promoResolver,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -146,7 +150,32 @@ final class InitiateCheckoutController
         // Compute subtotal from cart items. Don't trust the client.
         $subtotal = $cart->computeSubtotal();
         $deliveryFee = $input->delivery_fee;
-        $discount = $input->discount;
+
+        // ------------------------------------------------------------------
+        // M3.2.X.8-D — Promo code resolution
+        //
+        // If the caller supplied promo_code, resolve it server-side via
+        // PromoCodeResolverService BEFORE the transaction. Resolution
+        // failure → 422 with a structured PROMO_* error code, no order
+        // ever created.
+        //
+        // The resolution OVERRIDES any client-supplied discount field.
+        // The legacy raw-discount path is preserved (with a deprecation
+        // header) for backwards compatibility with the live mobile build
+        // until its next release ships the promo_code field.
+        // ------------------------------------------------------------------
+        $resolution = $this->resolvePromoOrThrow($cart, $user, $input);
+        $usedLegacyDiscount = false;
+        if ($resolution !== null) {
+            $discount = $resolution->discountAmount;
+        } elseif ($input->promo_code === null && bccomp($input->discount, '0.00', 2) > 0) {
+            // Legacy path: caller supplied a raw discount but no promo
+            // code. Honor it; emit deprecation header on the response.
+            $discount = $input->discount;
+            $usedLegacyDiscount = true;
+        } else {
+            $discount = '0.00';
+        }
 
         // Server-generated order reference: V3- + 13-digit epoch_ms +
         // 4-char random hex. Total length: 3 + 13 + 4 = 20 chars,
@@ -197,7 +226,7 @@ final class InitiateCheckoutController
         $order = $this->em->wrapInTransaction(
             function (EntityManagerInterface $em) use (
                 $user, $cart, $orderReference, $subtotal, $deliveryFee, $discount,
-                $billing, $shipping,
+                $billing, $shipping, $resolution,
             ): Order {
                 $order = new Order(
                     user: $user,
@@ -237,6 +266,23 @@ final class InitiateCheckoutController
                 $cart->markConverted();
 
                 $em->flush();
+
+                // M3.2.X.8-D — Promo redemption: persist AFTER the order
+                // flush (so order.id is real for the FK), then flush
+                // again to commit the redemption + the order.promo_redemption_id
+                // setter that links them. Both writes inside this
+                // transaction so either both land or neither does.
+                if ($resolution !== null) {
+                    $redemption = $this->promoResolver->recordRedemption(
+                        promoCode: $resolution->promoCode,
+                        user: $user,
+                        order: $order,
+                        discountAmount: $resolution->discountAmount,
+                    );
+                    $order->setPromoRedemption($redemption);
+                    $em->flush();
+                }
+
                 return $order;
             },
         );
@@ -297,13 +343,53 @@ final class InitiateCheckoutController
         // Fire-and-forget: notification failure must not abort checkout.
         $this->notifications->orderPlaced($order);
 
-        return $this->ok([
+        $response = $this->ok([
             'checkout_url' => $initiation->checkoutUrl,
             'order_reference' => $orderReference,
             'provider_order_ref' => $initiation->providerOrderRef,
             'order_id' => $order->getId() ?? 0,
             'idempotent' => false,
         ]);
+
+        // M3.2.X.8-D — Deprecation header on legacy raw-discount path.
+        // Signal to clients that the `discount` request field is being
+        // phased out in favor of `promo_code`. Header is RFC 8594-style
+        // free-form; consumers can grep for the leading prefix to detect.
+        if ($usedLegacyDiscount) {
+            $response = $response->withHeader(
+                'X-Bayti-Deprecation',
+                'client-supplied discount accepted as-is; pass promo_code instead',
+            );
+        }
+
+        return $response;
+    }
+
+    /**
+     * Resolve the supplied promo code (if any) via the resolver
+     * service. Returns null when:
+     *   - no promo_code supplied (legacy / no-promo paths)
+     *   - no resolver injected (back-compat for callers that built
+     *     this controller without the optional dependency)
+     *
+     * Throws HttpException 422 (via PromoNotApplicableException
+     * mapping) when a promo code was supplied but didn't apply.
+     * Same shape as POST /v3/cart/quote — clients can use the same
+     * error-handling code path.
+     */
+    private function resolvePromoOrThrow(
+        Cart $cart,
+        User $user,
+        InitiateCheckoutInput $input,
+    ): ?PromoResolution {
+        if ($input->promo_code === null) {
+            return null;
+        }
+        try {
+            return $this->promoResolver->resolveForCart($cart, $user, $input->promo_code);
+        } catch (PromoNotApplicableException $e) {
+            throw $e->toHttpException();
+        }
     }
 
     private function resolveAddress(
