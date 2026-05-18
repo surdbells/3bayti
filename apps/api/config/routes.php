@@ -417,6 +417,11 @@ return function (App $app): void {
             '/returns/{id:[0-9]+}/confirm-receipt',
             \Bayti\Api\Http\Controllers\Vendor\Order\ConfirmReceiptController::class,
         );
+        // M3.2.X.14-C — vendor self-serve performance metrics
+        $group->get(
+            '/metrics',
+            \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfMetricsController::class,
+        );
     })
         ->add(\Bayti\Api\Http\Middleware\VendorAuthMiddleware::class)
         ->add(AuthMiddleware::class);
