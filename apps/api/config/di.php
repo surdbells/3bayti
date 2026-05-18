@@ -364,6 +364,11 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Vendor\SuspendVendorController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\ReactivateVendorController::class => \DI\autowire(),
 
+    // M3.2.X.14 — Vendor performance metrics
+    \Bayti\Api\Domain\Catalog\VendorMetricsCalculator::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\VendorMetricsSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class => \DI\autowire(),
+
     // M2.1 — Catalog admin controllers (Category)
     \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class => \DI\autowire(),

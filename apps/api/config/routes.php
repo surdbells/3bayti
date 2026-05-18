@@ -326,6 +326,10 @@ return function (App $app): void {
         $group->post('/vendors/{id:[0-9]+}/reactivate',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ReactivateVendorController::class);
 
+        // M3.2.X.14-B — Vendor performance metrics (admin single-vendor view)
+        $group->get('/vendors/{id:[0-9]+}/metrics',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class);
+
         // Category admin
         $group->get('/categories', \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class);
         $group->post('/categories', \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class);
