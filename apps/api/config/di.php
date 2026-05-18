@@ -321,6 +321,7 @@ return [
     \Bayti\Api\Domain\Cart\CartAbandonmentFinder::class => \DI\autowire(),
     \Bayti\Api\Notification\CartEmailTemplateRenderer::class => \DI\autowire(),
     \Bayti\Api\Notification\UnsubscribeTokenIssuer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Notification\UnsubscribeController::class => \DI\autowire(),
     \Bayti\Api\Notification\CartNotificationService::class => static function (
         \Psr\Container\ContainerInterface $c,
     ): \Bayti\Api\Notification\CartNotificationService {

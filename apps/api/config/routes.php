@@ -59,6 +59,20 @@ return function (App $app): void {
     $app->get('/v3/health/ready', [HealthController::class, 'readiness']);
 
     // -------------------------------------------------------------------
+    // M3.2.X.11-G — Marketing-email unsubscribe (public, no auth)
+    //
+    // GET /v3/notifications/unsubscribe?token=...
+    //
+    // Hit from email clients. Signed JWT in the query string is the
+    // only authentication. Returns HTML (not JSON) — the response
+    // renders in the email client's preview pane / browser.
+    // -------------------------------------------------------------------
+    $app->get(
+        '/v3/notifications/unsubscribe',
+        \Bayti\Api\Http\Controllers\Notification\UnsubscribeController::class,
+    );
+
+    // -------------------------------------------------------------------
     // /v3/auth/* — registration, login, password reset, session management
     //
     // Wired up incrementally in M1.4.2-M1.4.5. Each sub-phase adds a few
