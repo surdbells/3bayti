@@ -443,6 +443,57 @@ return [
     },
 
     // -------------------------------------------------------------------
+    // Object storage — Flysystem (M3.2.X.18-B)
+    // -------------------------------------------------------------------
+
+    /**
+     * FilesystemOperator — file/blob storage abstraction.
+     *
+     * v1 of this binding (M3.2.X.18-B) uses LocalFilesystemAdapter
+     * rooted at apps/api/var/uploads/. The same FilesystemOperator
+     * surface lets us swap to Cloudflare R2 (S3-compatible; configured
+     * in .env.example as R2_BUCKET) by replacing this factory body —
+     * no consumer-side changes.
+     *
+     * Why Flysystem and not raw PHP filesystem calls:
+     *   - Consumer code (e.g., ReturnPhotoStorageService) shouldn't
+     *     care whether the bytes live on local disk or in S3/R2.
+     *     Flysystem's FilesystemOperator interface lets us defer the
+     *     production-grade storage choice without forcing v1 consumers
+     *     to re-write later.
+     *   - Stream-based reads (readStream) avoid loading the whole blob
+     *     into memory when serving photos through the auth-gated
+     *     endpoint.
+     *   - Adapter swap is a single-place DI change.
+     *
+     * Root path
+     * =========
+     * Local adapter rooted at apps/api/var/uploads/. The directory is
+     * created on demand by the adapter (skipIfExists default). It is
+     * NOT committed to git (var/ is .gitignored). Operator playbook
+     * §2.N (X.18-I) will document:
+     *   - cron sweep for orphan blobs (deletes with no matching DB row)
+     *   - backup strategy (the local volume must be in the daily DB
+     *     backup window since photo evidence is operationally
+     *     important for dispute defense)
+     *
+     * Tests
+     * =====
+     * Tests rebind this with a per-test temp-directory adapter via
+     * HttpTestCase::bind. The default factory is for production
+     * + dev only.
+     */
+    \League\Flysystem\FilesystemOperator::class => static function (ContainerInterface $c): \League\Flysystem\FilesystemOperator {
+        $uploadsRoot = dirname(__DIR__) . '/var/uploads';
+        // LocalFilesystemAdapter creates the root dir on demand at
+        // first write; no need to mkdir ahead of time. The default
+        // visibility settings (0644 file, 0755 dir) are appropriate
+        // for upload content.
+        $adapter = new \League\Flysystem\Local\LocalFilesystemAdapter($uploadsRoot);
+        return new \League\Flysystem\Filesystem($adapter);
+    },
+
+    // -------------------------------------------------------------------
     // Cache / shared state — Redis in production, in-memory in tests
     // -------------------------------------------------------------------
 
