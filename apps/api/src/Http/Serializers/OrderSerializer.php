@@ -44,7 +44,14 @@ final class OrderSerializer
      *     total: string,
      *     currency: string,
      *     paid_at: string|null,
-     *     items: list<array<string, mixed>>
+     *     items: list<array<string, mixed>>,
+     *     applied_promo: array{
+     *         code: string,
+     *         discount_type: string,
+     *         discount_value: string,
+     *         discount_amount: string,
+     *         redeemed_at: string
+     *     }|null
      * }
      */
     public function listShape(Order $order): array
@@ -66,6 +73,15 @@ final class OrderSerializer
             'currency' => $order->getCurrency(),
             'paid_at' => $order->getPaidAt()?->format(\DateTimeInterface::ATOM),
             'items' => $items,
+            // M3.2.X.8-F — applied_promo block reads from the persisted
+            // PromoRedemption row. Null when no promo was applied. The
+            // snapshot fields (code, type, value) are intentionally
+            // taken from PromoRedemption's *_snapshot columns rather
+            // than the live PromoCode entity, so an admin renaming /
+            // re-pricing a code post-hoc doesn't mutate historical
+            // orders' display. The same is true of discount_amount
+            // (server-computed at checkout, frozen at redemption time).
+            'applied_promo' => $this->promoShape($order),
         ];
     }
 
@@ -148,6 +164,48 @@ final class OrderSerializer
             'state_province' => $address->getStateProvince(),
             'country_code' => $address->getCountryCode(),
             'postal_code' => $address->getPostalCode(),
+        ];
+    }
+
+    /**
+     * M3.2.X.8-F — promo block built from the persisted PromoRedemption.
+     *
+     * Reads from the snapshot columns (codeSnapshot,
+     * discountTypeSnapshot, discountValueSnapshot) so that a later
+     * admin edit of the underlying PromoCode (renaming, re-pricing,
+     * or even deletion) leaves historical order displays untouched.
+     * This is the standard "captured at redemption time" model:
+     * historical orders show what the customer saw at checkout.
+     *
+     * discount_amount is the server-computed amount that was actually
+     * applied to this specific order (NOT discount_value, which is
+     * the promo's policy figure — 10% or 50 AED — that becomes a
+     * concrete dirham amount only when multiplied by THIS cart's
+     * subtotal).
+     *
+     * redeemed_at lets ops correlate the promo apply against payment
+     * timing in support tickets.
+     *
+     * @return array{
+     *     code: string,
+     *     discount_type: string,
+     *     discount_value: string,
+     *     discount_amount: string,
+     *     redeemed_at: string
+     * }|null
+     */
+    private function promoShape(Order $order): ?array
+    {
+        $redemption = $order->getPromoRedemption();
+        if ($redemption === null) {
+            return null;
+        }
+        return [
+            'code' => $redemption->getCodeSnapshot(),
+            'discount_type' => $redemption->getDiscountTypeSnapshot(),
+            'discount_value' => $redemption->getDiscountValueSnapshot(),
+            'discount_amount' => $redemption->getDiscountAmount(),
+            'redeemed_at' => $redemption->getRedeemedAt()->format(\DateTimeInterface::ATOM),
         ];
     }
 }
