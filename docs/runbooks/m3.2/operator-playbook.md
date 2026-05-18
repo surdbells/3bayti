@@ -542,9 +542,131 @@ curl -sf $STAGING_API/v3/admin/promo-codes/$PROMO_ID -H "Authorization: Bearer $
 - [ ] Legacy raw-discount request emits `X-Bayti-Deprecation` header
 - [ ] Soft-delete on in-use code preserves the row with is_active=false
 
+### 2.N — M3.2.X.18 — Smoke-test Returns request flow
+
+```bash
+# 1. Migration is `Version20260518000003` — already applied in §2.B if
+#    rolled forward from a clean baseline. Verify the 4 tables exist:
+psql "$STAGING_DSN" -c "\dt order_return_request*; \dt order_return_refunds"
+# Expect: order_return_requests, order_return_request_items,
+#         order_return_request_photos, order_return_refunds
+
+# 2. Configure photo storage. Local-filesystem on staging is fine; prod
+#    SHOULD point to R2/S3 (env vars added in X.18-B):
+#    RETURN_PHOTO_STORAGE_DRIVER=local   (or 's3' for prod)
+#    RETURN_PHOTO_STORAGE_PATH=apps/api/var/uploads/return-photos  (local)
+#    RETURN_PHOTO_STORAGE_S3_KEY=...     RETURN_PHOTO_STORAGE_S3_SECRET=...
+#    RETURN_PHOTO_STORAGE_S3_REGION=auto RETURN_PHOTO_STORAGE_S3_BUCKET=...
+#    RETURN_PHOTO_STORAGE_S3_ENDPOINT=...  (R2: https://<account>.r2.cloudflarestorage.com)
+# Ensure the local directory exists and is writable by the web user:
+mkdir -p apps/api/var/uploads/return-photos
+chmod 775 apps/api/var/uploads/return-photos
+
+# 3. End-to-end smoke test through the 5-state lifecycle.
+#    Pick a delivered order from a test customer < 14 days old (paid_at):
+ORDER_ID=...                            # delivered test order
+CUSTOMER_TOKEN=...                      # JWT from /v3/auth/login as the customer
+ADMIN_TOKEN=...                         # JWT from /v3/auth/login as admin
+VENDOR_TOKEN=...                        # JWT from /v3/auth/login as the order's vendor user
+
+# 3a. Customer submits return with photo
+curl -X POST "$STAGING_BASE/v3/orders/$ORDER_ID/returns" \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN" \
+  -F "reason=defective" \
+  -F "customer_notes=Item broke on day two of use" \
+  -F "order_item_ids[]=<item-id>" \
+  -F "photos[]=@/path/to/evidence.jpg;type=image/jpeg"
+# Expect 201 with { data: { id, status: 'pending', photos: [...] } }
+RETURN_ID=...
+
+# 3b. Verify customer + vendor + admin notification rows landed
+psql "$STAGING_DSN" -c "SELECT template, status, recipient
+                       FROM notification_logs
+                       WHERE template LIKE 'return.submitted.%'
+                       ORDER BY id DESC LIMIT 5;"
+# Expect 3 rows: return.submitted.customer, .vendor, .admin
+
+# 3c. Photo served (auth-gated)
+curl -i "$STAGING_BASE/v3/returns/$RETURN_ID/photos/<photo-id>" \
+  -H "Authorization: Bearer $CUSTOMER_TOKEN" | head -5
+# Expect 200 with Content-Type: image/jpeg
+
+# 3d. Same photo, stranger token → 404 (existence-leak prevention)
+curl -i "$STAGING_BASE/v3/returns/$RETURN_ID/photos/<photo-id>" \
+  -H "Authorization: Bearer <stranger token>" | head -5
+# Expect 404
+
+# 3e. Admin views return + sees suggested_refund_amount
+curl "$STAGING_BASE/v3/admin/returns/$RETURN_ID" \
+  -H "Authorization: Bearer $ADMIN_TOKEN"
+# Expect 200 with data.suggested_refund_amount populated
+
+# 3f. Admin approves
+curl -X POST "$STAGING_BASE/v3/admin/returns/$RETURN_ID/approve" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"admin_notes": "Photo evidence clear"}'
+# Expect status flipped to 'approved'; new notification row 'return.approved.customer'
+
+# 3g. Admin marks picked up (logistics did the physical pickup)
+curl -X POST "$STAGING_BASE/v3/admin/returns/$RETURN_ID/mark-picked-up" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -d '{}'
+# Expect status flipped to 'picked_up'; notification 'return.picked_up.customer'
+
+# 3h. Vendor confirms physical receipt
+curl -X POST "$STAGING_BASE/v3/vendor/returns/$RETURN_ID/confirm-receipt" \
+  -H "Authorization: Bearer $VENDOR_TOKEN" -d '{}'
+# Expect status flipped to 'delivered_to_vendor';
+# notification 'return.received_by_vendor.customer'
+
+# 3i. Admin records the manual refund
+curl -X POST "$STAGING_BASE/v3/admin/returns/$RETURN_ID/record-refund" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" -H "Content-Type: application/json" \
+  -d '{"method": "bank_transfer", "amount": "90.00",
+       "reference": "STAGING-TEST", "notes": "End-to-end smoke"}'
+# Expect status='refunded' (terminal); notification 'return.refunded.customer'
+
+# 4. Arabic locale routing — repeat 3a as an Arabic-locale customer and
+#    verify the customer email lands in MSA (subject starts with
+#    'تم استلام طلب إرجاع'). Admin notification SHOULD STAY English
+#    (Q-VendorAdminLocale = A locked).
+
+# 5. Photo storage cleanup — orphan-photo-cleanup cron is not yet
+#    wired into systemd/Kubernetes (operator follow-up). The pattern
+#    is documented in apps/api/bin/sweep-orphan-return-photos.php
+#    (TODO: write this script as part of the operator follow-up
+#    backlog). Schedule it nightly with:
+#    0 3 * * * /usr/local/bin/php /var/www/3bayti/apps/api/bin/sweep-orphan-return-photos.php
+#    The script should walk apps/api/var/uploads/return-photos/ and
+#    DELETE any file whose path isn't referenced in
+#    order_return_request_photos.storage_path, with a 7-day grace
+#    period (don't delete files less than 7 days old to avoid
+#    racing in-flight uploads).
+```
+
+**Smoke-test acceptance**
+
+- [ ] 4 tables present in DB (`order_return_requests`, `order_return_request_items`, `order_return_request_photos`, `order_return_refunds`)
+- [ ] Photo upload directory exists + writable
+- [ ] Customer submit returns 201 with photo metadata in `data.photos[]`
+- [ ] Notification logs row count = 3 after submit (customer + vendor + admin)
+- [ ] Photo serve returns the bytes with correct Content-Type for the order's customer
+- [ ] Photo serve returns 404 for an unrelated user (existence-leak prevention)
+- [ ] Admin detail endpoint surfaces `suggested_refund_amount`
+- [ ] Full lifecycle traversal: pending → approved → picked_up → delivered_to_vendor → refunded
+- [ ] Notification email fires on every transition
+- [ ] Arabic locale customer receives Arabic subject; admin notification stays English
+- [ ] Orphan-photo-cleanup cron documented (operator follow-up to wire the script)
+
+**Operator deferred items added by X.18:**
+
+11. **Photo storage cron** — write + schedule `bin/sweep-orphan-return-photos.php` to delete photo files orphaned by failed submissions (DB transaction rollback after blob upload). 7-day grace period.
+12. **Photo backup strategy** — if storage driver is local, configure off-host backup (rsync to backup VPS, or move to R2 once volume warrants). Photos are legal evidence of return-eligibility decisions; data loss has compliance + dispute consequences.
+13. **Eligibility window override mechanism** — current 14-day window is constant `DEFAULT_WINDOW_DAYS` in `ReturnRequestEligibilityService`. Future enhancement: per-vendor + per-category overrides via admin. Out of scope for X.18; tracked here.
+14. **Vendor portal mock-up** — the vendor return endpoints exist (X.18-E) but the vendor portal UI is M4-Y-side work; until then, vendors interact via direct API calls or 3bayti ops relays.
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.M complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.N complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
