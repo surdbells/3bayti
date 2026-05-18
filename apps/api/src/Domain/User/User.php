@@ -241,6 +241,27 @@ class User
     #[ORM\Column(name: 'is_sub_admin', type: 'boolean', options: ['default' => false])]
     private bool $isSubAdmin = false;
 
+    /**
+     * Marketing email opt-out flag (M3.2.X.11). FALSE by default
+     * (opt-in posture). Set to TRUE via the unsubscribe link sent
+     * with every marketing email.
+     *
+     * Q-OptOutHandling = A locked: scope is *marketing* emails only.
+     * Transactional emails (order confirmations, shipping updates,
+     * payment failures, refunds, etc.) IGNORE this flag — those are
+     * required for the service to function and aren't marketing
+     * under UAE PDPL / Bahrain PDPL / Saudi PDPL.
+     *
+     * Templates currently gated by this flag:
+     *   - cart.abandoned.customer (X.11)
+     *
+     * Future marketing-class templates (newsletters, promo emails,
+     * recommendation-engine "you might like" sends) MUST also
+     * check this flag at the notification-service layer.
+     */
+    #[ORM\Column(name: 'marketing_emails_opt_out', type: 'boolean', options: ['default' => false])]
+    private bool $marketingEmailsOptOut = false;
+
     // -------------------------------------------------------------------
     // Vendor lifecycle (only meaningful when is_vendor = true)
     // -------------------------------------------------------------------
@@ -398,6 +419,12 @@ class User
     public function isFinance(): bool        { return $this->isFinance; }
     public function isSupport(): bool        { return $this->isSupport; }
     public function isSubAdmin(): bool       { return $this->isSubAdmin; }
+    public function isMarketingEmailsOptedOut(): bool { return $this->marketingEmailsOptOut; }
+
+    public function setMarketingEmailsOptOut(bool $optedOut): void
+    {
+        $this->marketingEmailsOptOut = $optedOut;
+    }
     public function isStoreApproved(): bool  { return $this->isStoreApproved; }
     public function isStoreActive(): bool    { return $this->isStoreActive; }
     public function isPhoneVerified(): bool  { return $this->isPhoneVerified; }

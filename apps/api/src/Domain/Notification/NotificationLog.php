@@ -87,6 +87,21 @@ final class NotificationLog
     private ?int $orderId;
 
     /**
+     * The cart this notification relates to (M3.2.X.11). Sibling to
+     * order_id — for cart-scoped notifications (e.g. abandoned cart
+     * reminders) cart_id is populated and order_id is null. For
+     * order-scoped notifications it's the inverse. Both could
+     * theoretically be set for a future "you abandoned this cart,
+     * here's a discount for your next order" flow; v1 keeps them
+     * mutually exclusive.
+     *
+     * FK ON DELETE SET NULL preserves audit trail if the cart is
+     * hard-deleted. Same posture as order_id.
+     */
+    #[ORM\Column(name: 'cart_id', type: 'integer', nullable: true)]
+    private ?int $cartId = null;
+
+    /**
      * EmailTemplate enum's string value (e.g. 'order.placed.customer').
      * Stored as varchar rather than enum column so adding a template
      * case in EmailTemplate.php doesn't require a schema migration.
@@ -161,6 +176,7 @@ final class NotificationLog
         string $template,
         string $recipient,
         string $status,
+        ?int $cartId = null,
     ) {
         if (!in_array($status, self::ALL_STATUSES, true)) {
             throw new \InvalidArgumentException(
@@ -169,6 +185,7 @@ final class NotificationLog
             );
         }
         $this->orderId = $orderId;
+        $this->cartId = $cartId;
         $this->template = $template;
         $this->recipient = $recipient;
         $this->status = $status;
@@ -186,8 +203,9 @@ final class NotificationLog
         ?int $orderId,
         string $template,
         string $recipient,
+        ?int $cartId = null,
     ): self {
-        return new self($orderId, $template, $recipient, self::STATUS_SENT);
+        return new self($orderId, $template, $recipient, self::STATUS_SENT, $cartId);
     }
 
     /**
@@ -203,8 +221,9 @@ final class NotificationLog
         string $recipient,
         string $errorKind,
         string $errorMessage,
+        ?int $cartId = null,
     ): self {
-        $log = new self($orderId, $template, $recipient, self::STATUS_FAILED);
+        $log = new self($orderId, $template, $recipient, self::STATUS_FAILED, $cartId);
         $log->errorKind = $errorKind;
         $log->errorMessage = $errorMessage;
         return $log;
@@ -223,8 +242,9 @@ final class NotificationLog
         string $template,
         string $recipient,
         string $reason,
+        ?int $cartId = null,
     ): self {
-        $log = new self($orderId, $template, $recipient, self::STATUS_SKIPPED);
+        $log = new self($orderId, $template, $recipient, self::STATUS_SKIPPED, $cartId);
         // For skipped rows, we don't have an error_kind in the
         // MailerException sense — populate error_message with the
         // reason short-code for triage. Leaving error_kind NULL
@@ -240,6 +260,7 @@ final class NotificationLog
 
     public function getId(): ?int { return $this->id; }
     public function getOrderId(): ?int { return $this->orderId; }
+    public function getCartId(): ?int { return $this->cartId; }
     public function getTemplate(): string { return $this->template; }
     public function getRecipient(): string { return $this->recipient; }
     public function getStatus(): string { return $this->status; }
