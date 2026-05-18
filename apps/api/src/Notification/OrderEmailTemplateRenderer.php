@@ -111,6 +111,32 @@ final class OrderEmailTemplateRenderer
             // (Q-VendorAdminLocale = A locked). The locale parameter
             // is intentionally ignored here.
             EmailTemplate::DISPUTE_OPENED_ADMIN => $this->disputeOpenedAdminEn($order, $extra),
+
+            // M3.2.X.18-G — Return request flow. Customer templates
+            // dispatch by locale; vendor template uses vendor's
+            // preferred locale; admin template always English.
+            EmailTemplate::RETURN_SUBMITTED_CUSTOMER => $isArabic
+                ? $this->returnSubmittedCustomerAr($order, $extra)
+                : $this->returnSubmittedCustomerEn($order, $extra),
+            EmailTemplate::RETURN_APPROVED_CUSTOMER => $isArabic
+                ? $this->returnApprovedCustomerAr($order, $extra)
+                : $this->returnApprovedCustomerEn($order, $extra),
+            EmailTemplate::RETURN_DENIED_CUSTOMER => $isArabic
+                ? $this->returnDeniedCustomerAr($order, $extra)
+                : $this->returnDeniedCustomerEn($order, $extra),
+            EmailTemplate::RETURN_PICKED_UP_CUSTOMER => $isArabic
+                ? $this->returnPickedUpCustomerAr($order, $extra)
+                : $this->returnPickedUpCustomerEn($order, $extra),
+            EmailTemplate::RETURN_RECEIVED_BY_VENDOR_CUSTOMER => $isArabic
+                ? $this->returnReceivedByVendorCustomerAr($order, $extra)
+                : $this->returnReceivedByVendorCustomerEn($order, $extra),
+            EmailTemplate::RETURN_REFUNDED_CUSTOMER => $isArabic
+                ? $this->returnRefundedCustomerAr($order, $extra)
+                : $this->returnRefundedCustomerEn($order, $extra),
+            EmailTemplate::RETURN_SUBMITTED_VENDOR => $isArabic
+                ? $this->returnSubmittedVendorAr($order, $extra)
+                : $this->returnSubmittedVendorEn($order, $extra),
+            EmailTemplate::RETURN_SUBMITTED_ADMIN => $this->returnSubmittedAdminEn($order, $extra),
         };
     }
 
@@ -926,5 +952,694 @@ HTML,
                 locale: User::LOCALE_AR,
             ),
         );
+    }
+
+    // =================================================================
+    // M3.2.X.18-G — Return request flow templates
+    // =================================================================
+    //
+    // Six customer-facing lifecycle events (each EN + AR), one vendor
+    // event (EN + AR per Q-VendorAdminLocale), one admin event (EN
+    // only). The $extra context provides:
+    //   - return_reference: like 'RET-7' for human-readable display
+    //   - reason: the OrderReturnRequest reason code
+    //   - admin_notes: admin's explanation (denial reasons especially)
+    //   - refund_amount + refund_method + refund_reference: only on
+    //     the refunded template
+    //   - returned_items: list of item names being returned
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnSubmittedCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $reason = (string) ($extra['reason'] ?? '');
+        $itemsList = $this->returnedItemListText($extra);
+        $itemsHtml = $this->returnedItemListHtml($extra);
+
+        return new RenderedEmail(
+            subject: "Return request received for order {$ref} — 3bayti",
+            textBody: <<<TXT
+We've received your return request and will review it shortly.
+
+Order reference: {$ref}
+Return reference: {$returnRef}
+Reason: {$reason}
+
+Items requested for return:
+{$itemsList}
+Our team typically reviews return requests within 1-2 business days.
+You'll receive another email once a decision has been made.
+
+You can track your return at any time in the 3bayti app.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'Return request received',
+                body: <<<HTML
+<p>We've received your return request and will review it shortly.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Return reference:</strong> {$this->esc($returnRef)}<br>
+<strong>Reason:</strong> {$this->esc($reason)}</p>
+<h3>Items requested for return</h3>
+{$itemsHtml}
+<p>Our team typically reviews return requests within 1-2 business days. You'll receive another email once a decision has been made.</p>
+<p>You can track your return at any time in the 3bayti app.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnSubmittedCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $reason = (string) ($extra['reason'] ?? '');
+        $itemsList = $this->returnedItemListText($extra);
+        $itemsHtml = $this->returnedItemListHtml($extra);
+
+        return new RenderedEmail(
+            subject: "تم استلام طلب إرجاع للطلب {$ref} — 3bayti",
+            textBody: <<<TXT
+لقد تلقينا طلب الإرجاع الخاص بك وسنقوم بمراجعته قريباً.
+
+رقم الطلب: {$ref}
+رقم طلب الإرجاع: {$returnRef}
+السبب: {$reason}
+
+المنتجات المطلوب إرجاعها:
+{$itemsList}
+يقوم فريقنا عادةً بمراجعة طلبات الإرجاع خلال يوم إلى يومي عمل.
+ستتلقى بريدًا إلكترونيًا آخر بمجرد اتخاذ القرار.
+
+يمكنك متابعة حالة الإرجاع في أي وقت من تطبيق 3bayti.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تم استلام طلب الإرجاع',
+                body: <<<HTML
+<p>لقد تلقينا طلب الإرجاع الخاص بك وسنقوم بمراجعته قريباً.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>رقم طلب الإرجاع:</strong> {$this->esc($returnRef)}<br>
+<strong>السبب:</strong> {$this->esc($reason)}</p>
+<h3>المنتجات المطلوب إرجاعها</h3>
+{$itemsHtml}
+<p>يقوم فريقنا عادةً بمراجعة طلبات الإرجاع خلال يوم إلى يومي عمل. ستتلقى بريدًا إلكترونيًا آخر بمجرد اتخاذ القرار.</p>
+<p>يمكنك متابعة حالة الإرجاع في أي وقت من تطبيق 3bayti.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnApprovedCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $adminNotes = (string) ($extra['admin_notes'] ?? '');
+        $notesLine = $adminNotes !== '' ? "Note from our team: {$adminNotes}\n\n" : '';
+        $notesHtml = $adminNotes !== ''
+            ? "<p><strong>Note from our team:</strong> {$this->esc($adminNotes)}</p>"
+            : '';
+
+        return new RenderedEmail(
+            subject: "Return approved for order {$ref} — 3bayti",
+            textBody: <<<TXT
+Good news — your return request has been approved.
+
+Order reference: {$ref}
+Return reference: {$returnRef}
+
+{$notesLine}Next steps:
+Our logistics partner will contact you within 2 business days to
+arrange pickup of the returned items. Please keep the items in
+their original condition and packaging.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'Return approved',
+                body: <<<HTML
+<p><strong>Good news</strong> — your return request has been approved.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Return reference:</strong> {$this->esc($returnRef)}</p>
+{$notesHtml}
+<h3>Next steps</h3>
+<p>Our logistics partner will contact you within 2 business days to arrange pickup of the returned items. Please keep the items in their original condition and packaging.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnApprovedCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $adminNotes = (string) ($extra['admin_notes'] ?? '');
+        $notesLine = $adminNotes !== '' ? "ملاحظة من فريقنا: {$adminNotes}\n\n" : '';
+        $notesHtml = $adminNotes !== ''
+            ? "<p><strong>ملاحظة من فريقنا:</strong> {$this->esc($adminNotes)}</p>"
+            : '';
+
+        return new RenderedEmail(
+            subject: "تمت الموافقة على الإرجاع للطلب {$ref} — 3bayti",
+            textBody: <<<TXT
+أخبار جيدة — تمت الموافقة على طلب الإرجاع الخاص بك.
+
+رقم الطلب: {$ref}
+رقم طلب الإرجاع: {$returnRef}
+
+{$notesLine}الخطوات التالية:
+سيتواصل معك شريك الشحن خلال يومي عمل لترتيب استلام المنتجات
+المراد إرجاعها. يرجى الاحتفاظ بالمنتجات بحالتها وعبواتها الأصلية.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تمت الموافقة على الإرجاع',
+                body: <<<HTML
+<p><strong>أخبار جيدة</strong> — تمت الموافقة على طلب الإرجاع الخاص بك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>رقم طلب الإرجاع:</strong> {$this->esc($returnRef)}</p>
+{$notesHtml}
+<h3>الخطوات التالية</h3>
+<p>سيتواصل معك شريك الشحن خلال يومي عمل لترتيب استلام المنتجات المراد إرجاعها. يرجى الاحتفاظ بالمنتجات بحالتها وعبواتها الأصلية.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnDeniedCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $adminNotes = (string) ($extra['admin_notes'] ?? '');
+
+        return new RenderedEmail(
+            subject: "Update on return for order {$ref} — 3bayti",
+            textBody: <<<TXT
+We've reviewed your return request and unfortunately are unable
+to approve it at this time.
+
+Order reference: {$ref}
+Return reference: {$returnRef}
+
+Reason from our team:
+{$adminNotes}
+
+If you have additional information you'd like us to consider, or
+if you believe this decision was made in error, please reply to
+this email or contact our support team via the 3bayti app.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'Return request decision',
+                body: <<<HTML
+<p>We've reviewed your return request and unfortunately are unable to approve it at this time.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Return reference:</strong> {$this->esc($returnRef)}</p>
+<h3>Reason from our team</h3>
+<p>{$this->esc($adminNotes)}</p>
+<p>If you have additional information you'd like us to consider, or if you believe this decision was made in error, please reply to this email or contact our support team via the 3bayti app.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnDeniedCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $adminNotes = (string) ($extra['admin_notes'] ?? '');
+
+        return new RenderedEmail(
+            subject: "تحديث حول طلب الإرجاع للطلب {$ref} — 3bayti",
+            textBody: <<<TXT
+قمنا بمراجعة طلب الإرجاع الخاص بك ولسوء الحظ لن نتمكن من
+الموافقة عليه في الوقت الحالي.
+
+رقم الطلب: {$ref}
+رقم طلب الإرجاع: {$returnRef}
+
+السبب من فريقنا:
+{$adminNotes}
+
+إذا كان لديك معلومات إضافية ترغب في أن نأخذها بعين الاعتبار،
+أو إذا كنت تعتقد أن هذا القرار اتُخذ بالخطأ، يرجى الرد على هذا
+البريد أو التواصل مع فريق الدعم من تطبيق 3bayti.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'قرار بشأن طلب الإرجاع',
+                body: <<<HTML
+<p>قمنا بمراجعة طلب الإرجاع الخاص بك ولسوء الحظ لن نتمكن من الموافقة عليه في الوقت الحالي.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>رقم طلب الإرجاع:</strong> {$this->esc($returnRef)}</p>
+<h3>السبب من فريقنا</h3>
+<p>{$this->esc($adminNotes)}</p>
+<p>إذا كان لديك معلومات إضافية ترغب في أن نأخذها بعين الاعتبار، أو إذا كنت تعتقد أن هذا القرار اتُخذ بالخطأ، يرجى الرد على هذا البريد أو التواصل مع فريق الدعم من تطبيق 3bayti.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnPickedUpCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+
+        return new RenderedEmail(
+            subject: "Items picked up for return {$returnRef} — 3bayti",
+            textBody: <<<TXT
+We've picked up your returned items.
+
+Order reference: {$ref}
+Return reference: {$returnRef}
+
+The items are now in transit back to the seller. Once they
+confirm receipt and verify the condition of the goods, we'll
+process your refund.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'Items picked up',
+                body: <<<HTML
+<p>We've picked up your returned items.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Return reference:</strong> {$this->esc($returnRef)}</p>
+<p>The items are now in transit back to the seller. Once they confirm receipt and verify the condition of the goods, we'll process your refund.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnPickedUpCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+
+        return new RenderedEmail(
+            subject: "تم استلام منتجات الإرجاع {$returnRef} — 3bayti",
+            textBody: <<<TXT
+لقد قمنا باستلام المنتجات المراد إرجاعها.
+
+رقم الطلب: {$ref}
+رقم طلب الإرجاع: {$returnRef}
+
+المنتجات الآن في طريقها إلى البائع. بمجرد تأكيد البائع استلام
+المنتجات والتحقق من حالتها، سنقوم بمعالجة الاسترداد.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تم استلام المنتجات',
+                body: <<<HTML
+<p>لقد قمنا باستلام المنتجات المراد إرجاعها.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>رقم طلب الإرجاع:</strong> {$this->esc($returnRef)}</p>
+<p>المنتجات الآن في طريقها إلى البائع. بمجرد تأكيد البائع استلام المنتجات والتحقق من حالتها، سنقوم بمعالجة الاسترداد.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnReceivedByVendorCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+
+        return new RenderedEmail(
+            subject: "Return received — refund processing for {$returnRef}",
+            textBody: <<<TXT
+The seller has confirmed receipt of your returned items.
+
+Order reference: {$ref}
+Return reference: {$returnRef}
+
+Your refund is being processed and will be issued within 2-3
+business days. You'll receive a final confirmation email once
+the refund has been completed.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'Return received',
+                body: <<<HTML
+<p>The seller has confirmed receipt of your returned items.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Return reference:</strong> {$this->esc($returnRef)}</p>
+<p>Your refund is being processed and will be issued within 2-3 business days. You'll receive a final confirmation email once the refund has been completed.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnReceivedByVendorCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+
+        return new RenderedEmail(
+            subject: "تم استلام الإرجاع — جاري معالجة الاسترداد {$returnRef}",
+            textBody: <<<TXT
+أكد البائع استلام المنتجات المُرجَعة.
+
+رقم الطلب: {$ref}
+رقم طلب الإرجاع: {$returnRef}
+
+تتم الآن معالجة الاسترداد الخاص بك وسيتم إصداره خلال يومين إلى
+ثلاثة أيام عمل. ستتلقى بريدًا إلكترونيًا تأكيديًا نهائيًا بمجرد
+اكتمال عملية الاسترداد.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تم استلام الإرجاع',
+                body: <<<HTML
+<p>أكد البائع استلام المنتجات المُرجَعة.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>رقم طلب الإرجاع:</strong> {$this->esc($returnRef)}</p>
+<p>تتم الآن معالجة الاسترداد الخاص بك وسيتم إصداره خلال يومين إلى ثلاثة أيام عمل. ستتلقى بريدًا إلكترونيًا تأكيديًا نهائيًا بمجرد اكتمال عملية الاسترداد.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnRefundedCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $amount = (string) ($extra['refund_amount'] ?? '');
+        $currency = (string) ($extra['refund_currency'] ?? $order->getCurrency());
+        $method = (string) ($extra['refund_method'] ?? '');
+        $reference = (string) ($extra['refund_reference'] ?? '');
+        $refLine = $reference !== '' ? "Reference: {$reference}\n" : '';
+        $refHtml = $reference !== ''
+            ? "<p><strong>Reference:</strong> {$this->esc($reference)}</p>"
+            : '';
+
+        return new RenderedEmail(
+            subject: "Refund issued for return {$returnRef} — 3bayti",
+            textBody: <<<TXT
+Your refund has been issued.
+
+Order reference: {$ref}
+Return reference: {$returnRef}
+Refund amount: {$amount} {$currency}
+Method: {$method}
+{$refLine}
+Depending on your bank, the funds typically appear in 5-10
+business days.
+
+Thank you for shopping with 3bayti.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'Refund issued',
+                body: <<<HTML
+<p>Your refund has been issued.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Return reference:</strong> {$this->esc($returnRef)}<br>
+<strong>Refund amount:</strong> {$this->esc($amount)} {$this->esc($currency)}<br>
+<strong>Method:</strong> {$this->esc($method)}</p>
+{$refHtml}
+<p>Depending on your bank, the funds typically appear in 5-10 business days.</p>
+<p>Thank you for shopping with 3bayti.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnRefundedCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $amount = (string) ($extra['refund_amount'] ?? '');
+        $currency = (string) ($extra['refund_currency'] ?? $order->getCurrency());
+        $method = (string) ($extra['refund_method'] ?? '');
+        $reference = (string) ($extra['refund_reference'] ?? '');
+        $refLine = $reference !== '' ? "المرجع: {$reference}\n" : '';
+        $refHtml = $reference !== ''
+            ? "<p><strong>المرجع:</strong> {$this->esc($reference)}</p>"
+            : '';
+
+        return new RenderedEmail(
+            subject: "تم إصدار الاسترداد لطلب الإرجاع {$returnRef} — 3bayti",
+            textBody: <<<TXT
+تم إصدار الاسترداد الخاص بك.
+
+رقم الطلب: {$ref}
+رقم طلب الإرجاع: {$returnRef}
+مبلغ الاسترداد: {$amount} {$currency}
+الطريقة: {$method}
+{$refLine}
+تظهر الأموال عادةً خلال 5 إلى 10 أيام عمل، حسب البنك الذي
+تتعامل معه.
+
+شكراً لتسوقك من 3bayti.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تم إصدار الاسترداد',
+                body: <<<HTML
+<p>تم إصدار الاسترداد الخاص بك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>رقم طلب الإرجاع:</strong> {$this->esc($returnRef)}<br>
+<strong>مبلغ الاسترداد:</strong> {$this->esc($amount)} {$this->esc($currency)}<br>
+<strong>الطريقة:</strong> {$this->esc($method)}</p>
+{$refHtml}
+<p>تظهر الأموال عادةً خلال 5 إلى 10 أيام عمل، حسب البنك الذي تتعامل معه.</p>
+<p>شكراً لتسوقك من 3bayti.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnSubmittedVendorEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $reason = (string) ($extra['reason'] ?? '');
+        $itemsList = $this->returnedItemListText($extra);
+        $itemsHtml = $this->returnedItemListHtml($extra);
+
+        return new RenderedEmail(
+            subject: "Return requested on order {$ref}",
+            textBody: <<<TXT
+A customer has requested a return on items from your store.
+
+Order reference: {$ref}
+Return reference: {$returnRef}
+Reason: {$reason}
+
+Items being returned:
+{$itemsList}
+3bayti operations will review the customer's photo evidence and
+decide whether to approve. If approved, our logistics partner
+will pick the items up from the customer and deliver them to
+you. You'll receive another email then.
+
+No action required from you yet — this is a heads-up so you can
+plan inventory.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'Return requested',
+                body: <<<HTML
+<p>A customer has requested a return on items from your store.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Return reference:</strong> {$this->esc($returnRef)}<br>
+<strong>Reason:</strong> {$this->esc($reason)}</p>
+<h3>Items being returned</h3>
+{$itemsHtml}
+<p>3bayti operations will review the customer's photo evidence and decide whether to approve. If approved, our logistics partner will pick the items up from the customer and deliver them to you. You'll receive another email then.</p>
+<p><strong>No action required from you yet</strong> — this is a heads-up so you can plan inventory.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnSubmittedVendorAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $reason = (string) ($extra['reason'] ?? '');
+        $itemsList = $this->returnedItemListText($extra);
+        $itemsHtml = $this->returnedItemListHtml($extra);
+
+        return new RenderedEmail(
+            subject: "طلب إرجاع للطلب {$ref}",
+            textBody: <<<TXT
+طلب أحد العملاء إرجاع منتجات من متجرك.
+
+رقم الطلب: {$ref}
+رقم طلب الإرجاع: {$returnRef}
+السبب: {$reason}
+
+المنتجات المراد إرجاعها:
+{$itemsList}
+سيقوم فريق عمليات 3bayti بمراجعة الأدلة المصورة من العميل
+واتخاذ قرار الموافقة. في حال الموافقة، سيقوم شريك الشحن
+باستلام المنتجات من العميل وتسليمها إليك. ستتلقى بريداً
+إلكترونياً آخر حينها.
+
+لا يلزم منك أي إجراء حالياً — هذا إشعار حتى تتمكن من تخطيط
+المخزون.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'طلب إرجاع',
+                body: <<<HTML
+<p>طلب أحد العملاء إرجاع منتجات من متجرك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>رقم طلب الإرجاع:</strong> {$this->esc($returnRef)}<br>
+<strong>السبب:</strong> {$this->esc($reason)}</p>
+<h3>المنتجات المراد إرجاعها</h3>
+{$itemsHtml}
+<p>سيقوم فريق عمليات 3bayti بمراجعة الأدلة المصورة من العميل واتخاذ قرار الموافقة. في حال الموافقة، سيقوم شريك الشحن باستلام المنتجات من العميل وتسليمها إليك. ستتلقى بريداً إلكترونياً آخر حينها.</p>
+<p><strong>لا يلزم منك أي إجراء حالياً</strong> — هذا إشعار حتى تتمكن من تخطيط المخزون.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnSubmittedAdminEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $returnRef = (string) ($extra['return_reference'] ?? '');
+        $reason = (string) ($extra['reason'] ?? '');
+        $customerNotes = (string) ($extra['customer_notes'] ?? '');
+        $notesLine = $customerNotes !== '' ? "Customer notes: {$customerNotes}\n" : '';
+        $notesHtml = $customerNotes !== ''
+            ? "<p><strong>Customer notes:</strong> {$this->esc($customerNotes)}</p>"
+            : '';
+        $itemsList = $this->returnedItemListText($extra);
+        $itemsHtml = $this->returnedItemListHtml($extra);
+
+        return new RenderedEmail(
+            subject: "[ACTION] New return request {$returnRef} on order {$ref}",
+            textBody: <<<TXT
+A new return request needs your review.
+
+Order reference: {$ref}
+Return reference: {$returnRef}
+Reason: {$reason}
+{$notesLine}
+Items:
+{$itemsList}
+Review and decide:
+https://3bayti.ae/admin/returns
+
+— 3bayti operations
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'New return request',
+                body: <<<HTML
+<p>A new return request needs your review.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Return reference:</strong> {$this->esc($returnRef)}<br>
+<strong>Reason:</strong> {$this->esc($reason)}</p>
+{$notesHtml}
+<h3>Items</h3>
+{$itemsHtml}
+<p>Review and decide in the <a href="https://3bayti.ae/admin/returns">admin dashboard</a>.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * Render a list of items being returned. Falls back gracefully
+     * if the extra context didn't supply 'returned_items'.
+     *
+     * @param array<string, mixed> $extra
+     */
+    private function returnedItemListText(array $extra): string
+    {
+        $items = $extra['returned_items'] ?? [];
+        if (!is_array($items) || $items === []) {
+            return "  (item list unavailable)\n";
+        }
+        $out = '';
+        foreach ($items as $name) {
+            $out .= '  - ' . (string) $name . "\n";
+        }
+        return $out;
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function returnedItemListHtml(array $extra): string
+    {
+        $items = $extra['returned_items'] ?? [];
+        if (!is_array($items) || $items === []) {
+            return '<p><em>(item list unavailable)</em></p>';
+        }
+        $out = '<ul>';
+        foreach ($items as $name) {
+            $out .= '<li>' . $this->esc((string) $name) . '</li>';
+        }
+        $out .= '</ul>';
+        return $out;
     }
 }

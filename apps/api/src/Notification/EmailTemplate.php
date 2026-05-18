@@ -40,4 +40,22 @@ enum EmailTemplate: string
 
     // Admin-facing (critical events for ops monitoring)
     case DISPUTE_OPENED_ADMIN = 'dispute.opened.admin';
+
+    // M3.2.X.18-G — Return request flow
+    // Customer: 6 lifecycle events. Each has EN + AR variants
+    //   dispatched by the renderer based on User.locale.
+    case RETURN_SUBMITTED_CUSTOMER = 'return.submitted.customer';
+    case RETURN_APPROVED_CUSTOMER = 'return.approved.customer';
+    case RETURN_DENIED_CUSTOMER = 'return.denied.customer';
+    case RETURN_PICKED_UP_CUSTOMER = 'return.picked_up.customer';
+    case RETURN_RECEIVED_BY_VENDOR_CUSTOMER = 'return.received_by_vendor.customer';
+    case RETURN_REFUNDED_CUSTOMER = 'return.refunded.customer';
+
+    // Vendor: 1 event — heads-up that goods will be returned.
+    //   Uses vendor's preferred locale (EN/AR per Q-VendorAdminLocale).
+    case RETURN_SUBMITTED_VENDOR = 'return.submitted.vendor';
+
+    // Admin: 1 event — copy on every new submission for queue oversight.
+    //   ALWAYS English per Q-VendorAdminLocale = A locked.
+    case RETURN_SUBMITTED_ADMIN = 'return.submitted.admin';
 }

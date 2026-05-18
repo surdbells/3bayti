@@ -36,6 +36,8 @@ final class ApproveReturnController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly ReturnRequestSerializer $serializer,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
+        private readonly \Psr\Log\LoggerInterface $logger,
     ) {
     }
 
@@ -85,6 +87,18 @@ final class ApproveReturnController
         }
 
         $repo->save($returnRequest);
+
+        try {
+            $this->notifications->returnApproved($returnRequest->getOrder(), [
+                'return_reference' => 'RET-' . ($returnRequest->getId() ?? 0),
+                'admin_notes' => $returnRequest->getAdminNotes() ?? '',
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('return.notification.approved_failed', [
+                'return_id' => $returnRequest->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->ok([
             'data' => $this->serializer->adminShape($returnRequest),

@@ -221,6 +221,225 @@ final class OrderNotificationService
     }
 
     // -----------------------------------------------------------------
+    // M3.2.X.18-G — Return request flow hooks
+    // -----------------------------------------------------------------
+    //
+    // Each method takes the existing $order (so we can reuse the
+    // existing safeSend / locale resolver / log persistence pipeline)
+    // PLUS a $details array carrying the return-specific context:
+    //
+    //   return_reference        — e.g. 'RET-7' for human display
+    //   reason                  — OrderReturnRequest reason code
+    //   customer_notes          — customer's free text (submitted)
+    //   admin_notes             — admin's explanation (approved/denied)
+    //   returned_items          — list of product names being returned
+    //   refund_amount, refund_method, refund_reference, refund_currency
+    //                           — only on the refunded event
+    //   vendor_email            — only when sending the vendor copy of
+    //                             return_submitted (the caller picks
+    //                             which vendor recipient to address)
+    //
+    // The "submit" event fans out to 3 recipients (customer + per-vendor
+    // + admins); the rest target the customer only. This matches the
+    // Q-Notifications decision locked in the X.18 plan.
+
+    /**
+     * Customer just submitted a new return request.
+     * Sends customer + vendor(s) + admin copies.
+     *
+     * @param array{
+     *   return_reference?: string,
+     *   reason?: string,
+     *   customer_notes?: ?string,
+     *   returned_items?: list<string>,
+     *   vendor_ids?: list<int>,
+     * } $details
+     */
+    public function returnSubmitted(Order $order, array $details = []): void
+    {
+        // Customer copy.
+        $this->sendToCustomer($order, EmailTemplate::RETURN_SUBMITTED_CUSTOMER, $details);
+
+        // Vendor copies — one per unique vendor whose items are being
+        // returned (filtered by the vendor_ids passed in details).
+        // We narrow via sendToReturnVendors so a vendor whose products
+        // aren't in this return doesn't get spammed.
+        $this->sendToReturnVendors(
+            $order,
+            EmailTemplate::RETURN_SUBMITTED_VENDOR,
+            $details,
+            $details['vendor_ids'] ?? [],
+        );
+
+        // Admin copies — one per configured admin recipient.
+        if ($this->adminRecipients === []) {
+            $this->logger->info('notification.return.no_admin_recipients_configured', [
+                'order_id' => $order->getId(),
+                'return_reference' => $details['return_reference'] ?? null,
+            ]);
+            $this->persistSkipped(
+                $order,
+                EmailTemplate::RETURN_SUBMITTED_ADMIN,
+                '',
+                self::SKIP_REASON_NO_ADMIN_RECIPIENTS,
+            );
+        } else {
+            foreach ($this->adminRecipients as $adminEmail) {
+                $this->safeSend(
+                    to: $adminEmail,
+                    template: EmailTemplate::RETURN_SUBMITTED_ADMIN,
+                    order: $order,
+                    extra: $details,
+                );
+            }
+        }
+    }
+
+    /**
+     * Admin approved the return. Customer-only.
+     *
+     * @param array{
+     *   return_reference?: string,
+     *   admin_notes?: ?string,
+     * } $details
+     */
+    public function returnApproved(Order $order, array $details = []): void
+    {
+        $this->sendToCustomer($order, EmailTemplate::RETURN_APPROVED_CUSTOMER, $details);
+    }
+
+    /**
+     * Admin denied the return. Customer-only. admin_notes is required
+     * upstream (entity invariant), so the template will always have
+     * something to render.
+     *
+     * @param array{
+     *   return_reference?: string,
+     *   admin_notes?: string,
+     * } $details
+     */
+    public function returnDenied(Order $order, array $details = []): void
+    {
+        $this->sendToCustomer($order, EmailTemplate::RETURN_DENIED_CUSTOMER, $details);
+    }
+
+    /**
+     * Logistics picked up the items from the customer. Customer-only.
+     *
+     * @param array{ return_reference?: string } $details
+     */
+    public function returnPickedUp(Order $order, array $details = []): void
+    {
+        $this->sendToCustomer($order, EmailTemplate::RETURN_PICKED_UP_CUSTOMER, $details);
+    }
+
+    /**
+     * Vendor confirmed physical receipt of the returned goods.
+     * Customer-only (vendor doesn't need a copy — they just
+     * triggered this).
+     *
+     * @param array{ return_reference?: string } $details
+     */
+    public function returnReceivedByVendor(Order $order, array $details = []): void
+    {
+        $this->sendToCustomer(
+            $order,
+            EmailTemplate::RETURN_RECEIVED_BY_VENDOR_CUSTOMER,
+            $details,
+        );
+    }
+
+    /**
+     * Admin recorded the refund. Customer-only (terminal event).
+     *
+     * @param array{
+     *   return_reference?: string,
+     *   refund_amount?: string,
+     *   refund_currency?: string,
+     *   refund_method?: string,
+     *   refund_reference?: ?string,
+     * } $details
+     */
+    public function returnRefunded(Order $order, array $details = []): void
+    {
+        $this->sendToCustomer($order, EmailTemplate::RETURN_REFUNDED_CUSTOMER, $details);
+    }
+
+    /**
+     * Variant of sendToVendors that filters to a specific list of
+     * vendor ids — used by return notifications where only the
+     * vendors whose items are being returned should be emailed
+     * (not all vendors on the order).
+     *
+     * Falls back to all vendors on the order if $vendorIds is empty,
+     * matching the sendToVendors default behavior.
+     *
+     * @param array<string, mixed> $extra
+     * @param list<int> $vendorIds
+     */
+    private function sendToReturnVendors(
+        Order $order,
+        EmailTemplate $template,
+        array $extra,
+        array $vendorIds,
+    ): void {
+        if ($vendorIds === []) {
+            $this->sendToVendors($order, $template, $extra);
+            return;
+        }
+        /** @var array<int, array{vendor: Vendor, items: list<string>}> $byVendor */
+        $byVendor = [];
+        foreach ($order->getItems() as $item) {
+            /** @var OrderItem $item */
+            $vendor = $item->getVendor();
+            $vid = $vendor->getId() ?? 0;
+            if (!in_array($vid, $vendorIds, true)) {
+                continue;
+            }
+            if (!isset($byVendor[$vid])) {
+                $byVendor[$vid] = ['vendor' => $vendor, 'items' => []];
+            }
+            $byVendor[$vid]['items'][] = $item->getProductNameSnapshot();
+        }
+
+        foreach ($byVendor as $group) {
+            $vendor = $group['vendor'];
+            try {
+                $email = $vendor->getContactEmail();
+            } catch (\Error) {
+                $this->logger->warning('notification.return.vendor.contact_email_unset', [
+                    'order_id' => $order->getId(),
+                    'vendor_id' => $vendor->getId(),
+                    'template' => $template->value,
+                ]);
+                $this->persistSkipped(
+                    $order,
+                    $template,
+                    '',
+                    self::SKIP_REASON_VENDOR_CONTACT_EMAIL_UNSET,
+                );
+                continue;
+            }
+            if ($email === '') {
+                $this->logger->warning('notification.return.vendor.no_email', [
+                    'order_id' => $order->getId(),
+                    'vendor_id' => $vendor->getId(),
+                    'template' => $template->value,
+                ]);
+                $this->persistSkipped(
+                    $order,
+                    $template,
+                    '',
+                    self::SKIP_REASON_VENDOR_NO_EMAIL,
+                );
+                continue;
+            }
+            $vendorExtra = array_merge($extra, ['vendor_items' => $group['items']]);
+            $this->safeSend($email, $template, $order, $vendorExtra);
+        }
+    }
+
+    // -----------------------------------------------------------------
     // Internal dispatch
     // -----------------------------------------------------------------
 

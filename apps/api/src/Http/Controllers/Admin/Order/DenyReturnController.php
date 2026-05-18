@@ -37,6 +37,8 @@ final class DenyReturnController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly ReturnRequestSerializer $serializer,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
+        private readonly \Psr\Log\LoggerInterface $logger,
     ) {
     }
 
@@ -86,6 +88,18 @@ final class DenyReturnController
         }
 
         $repo->save($returnRequest);
+
+        try {
+            $this->notifications->returnDenied($returnRequest->getOrder(), [
+                'return_reference' => 'RET-' . ($returnRequest->getId() ?? 0),
+                'admin_notes' => $returnRequest->getAdminNotes() ?? '',
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('return.notification.denied_failed', [
+                'return_id' => $returnRequest->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->ok([
             'data' => $this->serializer->adminShape($returnRequest),

@@ -48,6 +48,8 @@ final class RecordReturnRefundController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly ReturnRequestSerializer $serializer,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
+        private readonly \Psr\Log\LoggerInterface $logger,
     ) {
     }
 
@@ -119,6 +121,21 @@ final class RecordReturnRefundController
         }
 
         $repo->save($returnRequest);
+
+        try {
+            $this->notifications->returnRefunded($returnRequest->getOrder(), [
+                'return_reference' => 'RET-' . ($returnRequest->getId() ?? 0),
+                'refund_amount' => $refund->getAmount(),
+                'refund_currency' => $refund->getCurrency(),
+                'refund_method' => $refund->getMethod(),
+                'refund_reference' => $refund->getReference(),
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('return.notification.refunded_failed', [
+                'return_id' => $returnRequest->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return $this->ok([
             'data' => $this->serializer->adminShape($returnRequest),

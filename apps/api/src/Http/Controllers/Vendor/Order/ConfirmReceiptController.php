@@ -47,6 +47,8 @@ final class ConfirmReceiptController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly ReturnRequestSerializer $serializer,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
+        private readonly \Psr\Log\LoggerInterface $logger,
     ) {
     }
 
@@ -109,6 +111,17 @@ final class ConfirmReceiptController
         }
 
         $repo->save($returnRequest);
+
+        try {
+            $this->notifications->returnReceivedByVendor($returnRequest->getOrder(), [
+                'return_reference' => 'RET-' . ($returnRequest->getId() ?? 0),
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('return.notification.received_failed', [
+                'return_id' => $returnRequest->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         sort($intersection);
         $displayedVendorId = $intersection[0];

@@ -83,6 +83,7 @@ final class SubmitReturnController
         private readonly ReturnRequestEligibilityService $eligibility,
         private readonly ReturnPhotoStorageService $photoStorage,
         private readonly LoggerInterface $logger,
+        private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
     ) {
     }
 
@@ -210,9 +211,44 @@ final class SubmitReturnController
         $returnRepo = $this->em->getRepository(OrderReturnRequest::class);
         $returnRepo->save($returnRequest);
 
+        // M3.2.X.18-G — Fan out submit notifications: customer +
+        // affected vendors + admins. Wrapped in try/catch defense in
+        // depth — notification failure must never block the response.
+        try {
+            $this->notifications->returnSubmitted($order, [
+                'return_reference' => $this->formatReturnReference($returnRequest),
+                'reason' => $returnRequest->getReason(),
+                'customer_notes' => $returnRequest->getCustomerNotes(),
+                'returned_items' => $this->extractItemNames($returnRequest),
+                'vendor_ids' => $returnRequest->getVendorIds(),
+            ]);
+        } catch (\Throwable $e) {
+            $this->logger->error('return.notification.submit_failed', [
+                'return_id' => $returnRequest->getId(),
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return $this->created([
             'data' => $this->serializer->customerShape($returnRequest),
         ]);
+    }
+
+    private function formatReturnReference(OrderReturnRequest $rr): string
+    {
+        return 'RET-' . ($rr->getId() ?? 0);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function extractItemNames(OrderReturnRequest $rr): array
+    {
+        $out = [];
+        foreach ($rr->getItems() as $item) {
+            $out[] = $item->getOrderItem()->getProductNameSnapshot();
+        }
+        return $out;
     }
 
     private function requireUser(ServerRequestInterface $request): User
