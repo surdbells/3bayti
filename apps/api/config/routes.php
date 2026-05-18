@@ -351,6 +351,10 @@ return function (App $app): void {
         $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
             \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class);
 
+        // M3.2.X.17-C — Order timeline (admin chronological event feed)
+        $group->get('/orders/{id:[0-9]+}/timeline',
+            \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderTimelineController::class);
+
         // Refund (M3.1.7-E)
         $group->post('/orders/{id:[0-9]+}/refund',
             \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class);

@@ -68,7 +68,13 @@ use Psr\Log\LoggerInterface;
  *
  * Observability mirrors the X.10-D / X.14-A pattern.
  */
-final class OrderTimelineBuilder
+/**
+ * @internal Marked non-final ONLY to allow PHPUnit class doubles
+ *           in controller tests. Production code MUST NOT subclass
+ *           this — there's no extension point. Same posture as
+ *           FacetAggregator (X.10-A).
+ */
+class OrderTimelineBuilder
 {
     private const STATEMENT_TIMEOUT_MS = 2000;
     private const SLOW_THRESHOLD_MS = 300;

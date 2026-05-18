@@ -323,6 +323,11 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class => \DI\autowire(),
 
+    // M3.2.X.17 — Order timeline
+    \Bayti\Api\Domain\Order\OrderTimelineBuilder::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\OrderTimelineSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderTimelineController::class => \DI\autowire(),
+
     // M3.2.X.4-C — Notification log admin surface
     \Bayti\Api\Http\Serializers\NotificationLogSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class => \DI\autowire(),
