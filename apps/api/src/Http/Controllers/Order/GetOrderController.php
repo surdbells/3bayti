@@ -6,6 +6,8 @@ namespace Bayti\Api\Http\Controllers\Order;
 
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
+use Bayti\Api\Domain\Order\OrderReturnRequest;
+use Bayti\Api\Domain\Order\OrderReturnRequestRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
@@ -72,8 +74,26 @@ final class GetOrderController
             throw HttpException::notFound('Order not found.');
         }
 
+        // M3.2.X.18-H — Embed return summaries inline so the mobile
+        // order-detail screen can show a "Returns" section without
+        // a follow-up API call. Customer-scoped query (own returns
+        // only); falls back to empty list if the table doesn't yet
+        // exist (test setups without the X.18 migration).
+        $returns = [];
+        try {
+            /** @var OrderReturnRequestRepository $returnRepo */
+            $returnRepo = $this->em->getRepository(OrderReturnRequest::class);
+            $returns = $returnRepo->findForCustomerByOrder($user, $orderId);
+        } catch (\Throwable) {
+            // Defensive: never let returns lookup block the primary
+            // order-detail response. The mobile UI degrades to
+            // "no Returns section" on an empty list, which is the
+            // right call here.
+            $returns = [];
+        }
+
         return $this->ok([
-            'order' => $this->serializer->detailShape($order),
+            'order' => $this->serializer->detailShape($order, $returns),
         ]);
     }
 }

@@ -7,6 +7,8 @@ namespace Bayti\Api\Http\Controllers\Admin\Order;
 use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
+use Bayti\Api\Domain\Order\OrderReturnRequest;
+use Bayti\Api\Domain\Order\OrderReturnRequestRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
@@ -77,6 +79,17 @@ final class GetAdminOrderController
             context: ['context' => 'admin_order_detail'],
         );
 
-        return $this->ok(['order' => $this->serializer->detailShape($order)]);
+        // M3.2.X.18-H — Embed return summaries inline. Admin sees
+        // every return on the order, not customer-scoped.
+        $returns = [];
+        try {
+            /** @var OrderReturnRequestRepository $returnRepo */
+            $returnRepo = $this->em->getRepository(OrderReturnRequest::class);
+            $returns = $returnRepo->findAllByOrder($orderId);
+        } catch (\Throwable) {
+            $returns = [];
+        }
+
+        return $this->ok(['order' => $this->serializer->detailShape($order, $returns)]);
     }
 }

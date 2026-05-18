@@ -48,6 +48,25 @@ class OrderReturnRequestRepository extends EntityRepository
     }
 
     /**
+     * Admin-facing lookup: every return request associated with the
+     * given order id, regardless of customer. Used by GetAdminOrderController
+     * (M3.2.X.18-H) to embed a returns summary inline in the order
+     * detail response — avoids a second round-trip for ops.
+     *
+     * @return list<OrderReturnRequest>
+     */
+    public function findAllByOrder(int $orderId): array
+    {
+        $qb = $this->createQueryBuilder('rr')
+            ->where('IDENTITY(rr.order) = :orderId')
+            ->orderBy('rr.requestedAt', 'DESC')
+            ->setParameter('orderId', $orderId);
+
+        /** @var list<OrderReturnRequest> */
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
      * Eligibility check: does this customer already have an
      * in-flight return request that overlaps the requested
      * OrderItems? Used by ReturnRequestEligibilityService to

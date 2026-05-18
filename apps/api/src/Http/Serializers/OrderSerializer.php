@@ -7,6 +7,7 @@ namespace Bayti\Api\Http\Serializers;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderAddress;
 use Bayti\Api\Domain\Order\OrderItem;
+use Bayti\Api\Domain\Order\OrderReturnRequest;
 
 /**
  * Convert Order entities into mobile-friendly response shapes.
@@ -33,35 +34,30 @@ final class OrderSerializer
      * binding (order.id / order.date / order.status / order.total /
      * order.items[]). 'date' is the order's created_at (ISO-8601).
      *
-     * @return array{
-     *     id: int,
-     *     order_reference: string,
-     *     status: string,
-     *     date: string,
-     *     subtotal: string,
-     *     delivery_fee: string,
-     *     discount: string,
-     *     total: string,
-     *     currency: string,
-     *     paid_at: string|null,
-     *     items: list<array<string, mixed>>,
-     *     applied_promo: array{
-     *         code: string,
-     *         discount_type: string,
-     *         discount_value: string,
-     *         discount_amount: string,
-     *         redeemed_at: string
-     *     }|null
-     * }
+     * Returns block (M3.2.X.18-H)
+     * ===========================
+     * When the caller passes a non-null $returns list, the shape
+     * includes a 'returns' key with a compact summary of every
+     * return request on this order. When null, the 'returns' key
+     * is omitted entirely (back-compat with existing callers and
+     * to avoid forcing N+1 queries on list endpoints).
+     *
+     * Each summary is intentionally lightweight — id, status,
+     * reason, requested_at, item_count — enough for a "Returns"
+     * badge on the order card; clients drill down via
+     * GET /v3/returns/{id} when needed.
+     *
+     * @param list<OrderReturnRequest>|null $returns
+     * @return array<string, mixed>
      */
-    public function listShape(Order $order): array
+    public function listShape(Order $order, ?array $returns = null): array
     {
         $items = [];
         foreach ($order->getItems() as $item) {
             $items[] = $this->itemShape($item);
         }
 
-        return [
+        $shape = [
             'id' => $order->getId() ?? 0,
             'order_reference' => $order->getOrderReference(),
             'status' => $order->getStatus(),
@@ -83,16 +79,25 @@ final class OrderSerializer
             // (server-computed at checkout, frozen at redemption time).
             'applied_promo' => $this->promoShape($order),
         ];
+
+        if ($returns !== null) {
+            $shape['returns'] = $this->returnSummaries($returns);
+        }
+
+        return $shape;
     }
 
     /**
-     * Detail shape — adds billing + shipping address blocks.
+     * Detail shape — adds billing + shipping address blocks. Also
+     * supports the optional 'returns' summary list (M3.2.X.18-H);
+     * see listShape() docblock for details.
      *
+     * @param list<OrderReturnRequest>|null $returns
      * @return array<string, mixed>
      */
-    public function detailShape(Order $order): array
+    public function detailShape(Order $order, ?array $returns = null): array
     {
-        $shape = $this->listShape($order);
+        $shape = $this->listShape($order, $returns);
         $shape['billing_address'] = $this->addressShape($order->getBillingAddress());
         $shape['shipping_address'] = $this->addressShape($order->getShippingAddress());
         return $shape;
@@ -207,5 +212,53 @@ final class OrderSerializer
             'discount_amount' => $redemption->getDiscountAmount(),
             'redeemed_at' => $redemption->getRedeemedAt()->format(\DateTimeInterface::ATOM),
         ];
+    }
+
+    /**
+     * Compact summaries for the embedded 'returns' block (M3.2.X.18-H).
+     *
+     * Each summary intentionally exposes only the fields a "Returns"
+     * badge on the order card needs:
+     *
+     *   id              — for the drilldown URL
+     *   reference       — "RET-{id}" for human display
+     *   status          — drives the badge color in the UI
+     *   reason          — short reason code (so the card can show e.g.
+     *                     "Defective" without a separate fetch)
+     *   requested_at    — for sort + relative-time display
+     *   item_count      — how many items are being returned
+     *   is_terminal     — UI hint to dim the badge for resolved returns
+     *
+     * Full detail is fetched via GET /v3/returns/{id} when the user
+     * taps the badge.
+     *
+     * @param list<OrderReturnRequest> $returns
+     * @return list<array<string, mixed>>
+     */
+    private function returnSummaries(array $returns): array
+    {
+        $out = [];
+        foreach ($returns as $rr) {
+            $rrId = $rr->getId() ?? 0;
+            $out[] = [
+                'id' => $rrId,
+                'reference' => 'RET-' . $rrId,
+                'status' => $rr->getStatus(),
+                'reason' => $rr->getReason(),
+                'requested_at' => $rr->getRequestedAt()->format(\DateTimeInterface::ATOM),
+                'item_count' => $this->countReturnItems($rr),
+                'is_terminal' => $rr->isTerminal(),
+            ];
+        }
+        return $out;
+    }
+
+    private function countReturnItems(OrderReturnRequest $rr): int
+    {
+        $count = 0;
+        foreach ($rr->getItems() as $_item) {
+            $count++;
+        }
+        return $count;
     }
 }
