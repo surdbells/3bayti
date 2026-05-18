@@ -947,9 +947,180 @@ ORDER BY id DESC LIMIT 5;"
 19. **Per-item lifecycle timestamps** — X.14 ships status-derived rates only. Adding mean-time-to-accept, mean-time-to-ship requires per-item `accepted_at`/`shipped_at`/`delivered_at` columns. Migration + backfill + transition-controller updates. ~3 days of work, but only valuable if vendor performance investigation cases regularly demand timing data.
 20. **Configurable cancellation taxonomy** — Q-CancellationDef = B locks "vendor-initiated rejections only" as the cancellation rate's numerator. If business analysis later wants to track "customer cancellations after vendor accept" as a separate signal, add a `cancellation_breakdown` block to the response with rejected/customer-cancelled/admin-cancelled counts. ~1 day.
 
+### 2.Q — M3.2.X.17 — Smoke-test Admin order timeline
+
+```bash
+# 1. No migration needed — X.17 reads from existing tables only.
+#    Verify the source tables have data for a fully-lifecycled order:
+psql "$STAGING_DSN" -c "
+SELECT
+  (SELECT COUNT(*) FROM audit_log WHERE subject_type IN ('Order','OrderItem','OrderReturnRequest')) AS audit_rows,
+  (SELECT COUNT(*) FROM notification_logs WHERE order_id IS NOT NULL) AS order_notifications,
+  (SELECT COUNT(*) FROM order_return_requests) AS returns,
+  (SELECT COUNT(*) FROM order_disputes) AS disputes;"
+
+# 2. Pick a fully-lifecycled order for the smoke test. Ideal: order
+#    with audit_log rows, customer notifications, a return request,
+#    and a dispute. If staging doesn't have one organically, create
+#    one by walking an order through the full lifecycle in the admin
+#    UI or via API.
+ORDER_ID=...
+
+# 3. Admin timeline — full event history
+ADMIN_TOKEN=...                          # JWT from /v3/auth/login as admin
+
+curl -s "$STAGING_BASE/v3/admin/orders/$ORDER_ID/timeline" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('Total events:', d['meta']['total'])
+print('Order:', d['meta']['order_reference'])
+for evt in d['data'][:15]:
+    actor = evt.get('actor', {})
+    label = actor.get('label', actor.get('type', '?'))
+    print(f\"  {evt['occurred_at']}  {evt['type']:32}  by {label}: {evt['summary']}\")"
+
+# Expect: chronological event list (newest first) including
+# order.created, order.paid, notification.sent, return.submitted,
+# return.approved, dispute.created, etc.
+
+# 4. Verify each of the 14 event types appears somewhere across
+#    your fully-lifecycled order:
+curl -s "$STAGING_BASE/v3/admin/orders/$ORDER_ID/timeline?limit=200" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+events = json.load(sys.stdin)['data']
+types = set(e['type'] for e in events)
+expected = {
+    'order.created', 'order.paid', 'order.status_changed',
+    'order.item_status_changed', 'notification.sent',
+    'return.submitted', 'return.approved', 'return.picked_up',
+    'return.received_by_vendor', 'return.refunded',
+    'dispute.created'
+}
+print('Present:', sorted(types & expected))
+print('Missing:', sorted(expected - types))
+print('Unexpected:', sorted(types - expected - {'notification.failed', 'return.denied', 'return.cancelled', 'dispute.resolved'}))"
+
+# 5. Ordering direction
+curl -s "$STAGING_BASE/v3/admin/orders/$ORDER_ID/timeline?order=asc" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+events = json.load(sys.stdin)['data']
+# First event should be the earliest (order.created)
+print('First event type:', events[0]['type'] if events else 'empty')
+print('First occurred_at:', events[0]['occurred_at'] if events else 'empty')"
+# Expect: order.created first; subsequent events in chronological order
+
+# 6. Pagination
+curl -s "$STAGING_BASE/v3/admin/orders/$ORDER_ID/timeline?limit=3&offset=0" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('Returned:', len(d['data']), 'of', d['meta']['total'])"
+
+curl -s "$STAGING_BASE/v3/admin/orders/$ORDER_ID/timeline?limit=3&offset=3" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('Returned:', len(d['data']), 'of', d['meta']['total'])"
+
+# 7. Vendor self-serve timeline. Use a vendor user who owns items
+#    in the test order:
+VENDOR_TOKEN=...
+curl -s "$STAGING_BASE/v3/vendor/orders/$ORDER_ID/timeline" \
+  -H "Authorization: Bearer $VENDOR_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('Total events:', d['meta']['total'])
+for evt in d['data'][:10]:
+    print(f\"  {evt['type']:30}  {evt['summary']}\")
+# Verify no dispute events appear in vendor scope:
+types = set(e['type'] for e in d['data'])
+dispute_types = {t for t in types if t.startswith('dispute.')}
+print('Dispute events visible to vendor (should be empty):', dispute_types)"
+# Expect: SMALLER total than admin view; NO dispute.* events;
+# audits limited to vendor's own items; notifications limited
+# to vendor's email recipient.
+
+# 8. Cross-tenant attempt (vendor accessing an order with no items
+#    from their store)
+OTHER_ORDER_ID=...  # an order with NO items from this vendor
+curl -i -s "$STAGING_BASE/v3/vendor/orders/$OTHER_ORDER_ID/timeline" \
+  -H "Authorization: Bearer $VENDOR_TOKEN" | head -1
+# Expect: HTTP 404 (opaque, NOT 403 — existence-leak prevention)
+
+# 9. Multi-store user without vendor_id (if test fixture has one)
+MULTI_STORE_TOKEN=...
+curl -i -s "$STAGING_BASE/v3/vendor/orders/$ORDER_ID/timeline" \
+  -H "Authorization: Bearer $MULTI_STORE_TOKEN" | head -5
+# Expect: HTTP 422 with error.code='VENDOR_AMBIGUOUS' +
+#         error.details.available_vendor_ids = [...]
+
+# With explicit vendor_id
+curl -s "$STAGING_BASE/v3/vendor/orders/$ORDER_ID/timeline?vendor_id=101" \
+  -H "Authorization: Bearer $MULTI_STORE_TOKEN" > /dev/null \
+  && echo "200 OK"
+
+# 10. Performance observability check
+for i in \$(seq 1 10); do
+    curl -s -o /dev/null "$STAGING_BASE/v3/admin/orders/$ORDER_ID/timeline" \
+      -H "Authorization: Bearer $ADMIN_TOKEN"
+done
+tail -50 apps/api/var/logs/app-*.log | grep -E "order_timeline\\.(computed|slow_response)" | tail -15
+# Expect: 10 'order_timeline.computed' lines with duration_ms < 300
+# Any 'order_timeline.slow_response' warnings → operator follow-up #21 trigger
+
+# 11. Audit emission verification (admin endpoint only — vendor
+#     endpoint does NOT audit)
+psql "$STAGING_DSN" -c "
+SELECT action, subject_type, subject_id, changes->>'context' AS context,
+       changes->'filters' AS filters
+FROM audit_log
+WHERE changes->>'context' = 'admin_order_timeline'
+ORDER BY id DESC LIMIT 5;"
+# Expect: VIEWED rows for the admin endpoint with the filter context;
+# vendor endpoint emits NO rows here.
+
+# 12. X.17-B audit emission verification: vendor item transitions
+#     now write to audit_log. Trigger a vendor transition and check:
+psql "$STAGING_DSN" -c "
+SELECT id, action, subject_type, subject_id, user_id,
+       changes->'before' AS before, changes->'after' AS after
+FROM audit_log
+WHERE subject_type = 'OrderItem'
+ORDER BY id DESC LIMIT 3;"
+# Expect: rows with action='updated', before.item_status and
+# after.item_status populated. THIS IS NEW IN X.17-B — before this
+# phase, vendor transitions emitted no audit rows.
+```
+
+**Smoke-test acceptance**
+
+- [ ] Source tables (audit_log, notification_logs, order_return_requests, order_disputes) have data
+- [ ] `GET /v3/admin/orders/{id}/timeline` returns chronological events newest-first by default
+- [ ] All 14 event types appear when run against a fully-lifecycled order
+- [ ] `?order=asc` reverses to oldest-first
+- [ ] Pagination works (limit=3 returns 3 events; offset=3 returns the next page)
+- [ ] `GET /v3/vendor/orders/{id}/timeline` returns SMALLER event count than admin view
+- [ ] No `dispute.*` events visible to vendors
+- [ ] Cross-tenant order access returns opaque 404
+- [ ] Multi-store users without `?vendor_id` get 422 `VENDOR_AMBIGUOUS`
+- [ ] PSR-3 `order_timeline.computed` debug log fires per request with `duration_ms`
+- [ ] No `order_timeline.slow_response` warnings during normal load
+- [ ] Admin endpoint emits `audit_log` rows with `context='admin_order_timeline'`
+- [ ] Vendor endpoint does NOT emit audit rows (self-view, per spec)
+- [ ] **X.17-B specific:** vendor item transitions now produce `audit_log` rows with `subject_type='OrderItem'`, `action='updated'`, and `before`/`after` snapshots of `item_status`. Previously zero. This is the gap-closure that makes vendor transitions visible in the timeline.
+
+**Operator deferred items added by X.17:**
+
+21. **Timeline event archival** — current implementation aggregates events live across 5 tables on every request. For very-old orders with 100+ events (typical of a long return + dispute lifecycle that drags out for months) the merge-sort + pagination overhead grows. Trigger condition: `order_timeline.slow_response` warnings > 5/hour during peak. Fix: archive timeline events into a denormalized `order_timeline_events` table populated by an async cron, with the live aggregation as a fallback for recent orders. ~3 days of work.
+22. **Per-item notification attribution** — notifications today carry `order_id` but not `vendor_id`. The vendor timeline filter uses `recipient = vendor.contact_email` as a proxy for "this notification was about my items", which works for vendor-addressed emails but doesn't distinguish customer-addressed notifications by which vendor's items triggered them. Fix: add `vendor_id` column to `notification_logs` (nullable, set at send time when the notification is item-attributed). ~1 day migration + backfill + 1 day notification-emitter updates.
+23. **Actor label hydration** — timeline events include actor.type and actor.id but not actor.label (a human-readable identifier like email). Adding labels requires joining user_id → users.email in the builder. Deferred because the admin UI can hydrate labels client-side from the existing /v3/admin/users surface; revisit if a "show me what alice@3bayti.ae did across all orders" feature surfaces. ~0.5 day if it's wanted.
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.P complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.Q complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
