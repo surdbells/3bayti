@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Controllers\Vendor\Order;
 
+use Bayti\Api\Domain\Audit\AuditEmitter;
+use Bayti\Api\Domain\Audit\AuditLog;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
@@ -18,10 +20,20 @@ use Bayti\Api\Tests\Http\HttpTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use Psr\Log\NullLogger;
 
 #[CoversClass(TransitionVendorOrderItemController::class)]
 final class TransitionVendorOrderItemControllerTest extends HttpTestCase
 {
+    /** @var list<AuditLog> */
+    private array $recordedAuditLogs = [];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->recordedAuditLogs = [];
+    }
+
     #[Test]
     public function legalTransitionAdvancesItemAndRollupOrder(): void
     {
@@ -228,6 +240,137 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
         self::assertSame(Order::STATUS_DELIVERED, $order->getStatus());
     }
 
+    // =================================================================
+    // M3.2.X.17-B — Audit emission on item transitions
+    // =================================================================
+
+    #[Test]
+    public function legalTransitionEmitsItemLevelAudit(): void
+    {
+        $user = $this->makeVendorUser(7);
+        $myVendor = $this->makeVendor(id: 5);
+        $product = $this->makeProduct(id: 200);
+        $order = $this->makeOrder($user, id: 100, reference: 'V3-001', subtotal: '299.00');
+        $this->setEntityProp($order, 'status', Order::STATUS_PAID);
+
+        $item = $this->makeItem($myVendor, $product, id: 501, status: OrderItem::ITEM_STATUS_PENDING);
+        $order->addItem($item);
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findIdsByOwnerUser')->willReturn([5]);
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findForVendorIds')->willReturn($order);
+        $this->bindEmWithAudit($user, $orderRepo, $vendorRepo);
+
+        $response = $this->makePatch(
+            $user,
+            '/v3/vendor/orders/100/items/501/status',
+            ['status' => OrderItem::ITEM_STATUS_ACCEPTED, 'note' => 'will ship Fri'],
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        // 2 audit rows: item-level (pending → accepted) AND order-level
+        // (paid → fulfilling, since accepting an item rolls the order
+        // from paid to fulfilling)
+        self::assertCount(2, $this->recordedAuditLogs);
+
+        // Find the item audit
+        $itemAudit = null;
+        $orderAudit = null;
+        foreach ($this->recordedAuditLogs as $log) {
+            if ($log->getSubjectType() === 'OrderItem') {
+                $itemAudit = $log;
+            } elseif ($log->getSubjectType() === 'Order') {
+                $orderAudit = $log;
+            }
+        }
+        self::assertNotNull($itemAudit, 'expected an OrderItem audit row');
+        self::assertNotNull($orderAudit, 'expected an Order audit row');
+
+        // Item audit shape: action=updated, subject_id=501,
+        // changes carries before/after item_status
+        self::assertSame('updated', strtolower($itemAudit->getAction()));
+        self::assertSame(501, $itemAudit->getSubjectId());
+        $itemChanges = $itemAudit->getChanges();
+        self::assertSame('pending', $itemChanges['before']['item_status']);
+        self::assertSame('accepted', $itemChanges['after']['item_status']);
+        self::assertSame('will ship Fri', $itemChanges['after']['note']);
+
+        // Order audit shape: action=updated, subject_id=100,
+        // before/after status reflects the rollup
+        self::assertSame('updated', strtolower($orderAudit->getAction()));
+        self::assertSame(100, $orderAudit->getSubjectId());
+        self::assertSame('paid', $orderAudit->getChanges()['before']['status']);
+        self::assertSame('fulfilling', $orderAudit->getChanges()['after']['status']);
+    }
+
+    #[Test]
+    public function transitionWithoutOrderStatusChangeEmitsOnlyItemAudit(): void
+    {
+        // Transition from 'accepted' to 'preparing' on a single-item
+        // order that's already in 'fulfilling' — the order rollup
+        // doesn't move (still fulfilling). So we should see ONE
+        // audit row (item-level), not two.
+        $user = $this->makeVendorUser(7);
+        $myVendor = $this->makeVendor(id: 5);
+        $product = $this->makeProduct(id: 200);
+        $order = $this->makeOrder($user, id: 100, reference: 'V3-001', subtotal: '299.00');
+        $this->setEntityProp($order, 'status', Order::STATUS_FULFILLING);
+
+        $item = $this->makeItem($myVendor, $product, id: 501, status: OrderItem::ITEM_STATUS_ACCEPTED);
+        $order->addItem($item);
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findIdsByOwnerUser')->willReturn([5]);
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findForVendorIds')->willReturn($order);
+        $this->bindEmWithAudit($user, $orderRepo, $vendorRepo);
+
+        $response = $this->makePatch(
+            $user,
+            '/v3/vendor/orders/100/items/501/status',
+            ['status' => OrderItem::ITEM_STATUS_PREPARING],
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        // accepted → preparing keeps order at 'fulfilling' (no rollup)
+        self::assertSame(Order::STATUS_FULFILLING, $order->getStatus());
+        // Only the item audit fires
+        self::assertCount(1, $this->recordedAuditLogs);
+        self::assertSame('OrderItem', $this->recordedAuditLogs[0]->getSubjectType());
+    }
+
+    #[Test]
+    public function illegalTransitionEmitsNoAudit(): void
+    {
+        // setItemStatus throws BEFORE flush, so we never reach the
+        // audit emission. No audit rows should be written.
+        $user = $this->makeVendorUser(7);
+        $myVendor = $this->makeVendor(id: 5);
+        $product = $this->makeProduct(id: 200);
+        $order = $this->makeOrder($user, id: 100, reference: 'V3-001', subtotal: '299.00');
+        $this->setEntityProp($order, 'status', Order::STATUS_PAID);
+
+        // Item is pending — can't jump straight to delivered
+        $item = $this->makeItem($myVendor, $product, id: 501, status: OrderItem::ITEM_STATUS_PENDING);
+        $order->addItem($item);
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findIdsByOwnerUser')->willReturn([5]);
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findForVendorIds')->willReturn($order);
+        $this->bindEmWithAudit($user, $orderRepo, $vendorRepo);
+
+        $response = $this->makePatch(
+            $user,
+            '/v3/vendor/orders/100/items/501/status',
+            ['status' => OrderItem::ITEM_STATUS_DELIVERED],
+        );
+
+        self::assertSame(422, $response->getStatusCode());
+        self::assertCount(0, $this->recordedAuditLogs);
+    }
+
     // ===== Helpers =====
 
     private function makeVendorUser(int $id): User
@@ -250,6 +393,45 @@ final class TransitionVendorOrderItemControllerTest extends HttpTestCase
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
+        return $em;
+    }
+
+    /**
+     * Like bindEm but also wires a capturing AuditLog repo + a real
+     * AuditEmitter, so X.17-B audit-emission can be observed.
+     */
+    private function bindEmWithAudit(
+        User $user,
+        OrderRepository $orderRepo,
+        VendorRepository $vendorRepo,
+    ): EntityManagerInterface {
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->willReturn($user);
+
+        $auditRepo = new class($this->recordedAuditLogs) extends \Doctrine\ORM\EntityRepository {
+            public function __construct(private array &$sink)
+            {
+            }
+            public function save(AuditLog $log): void
+            {
+                $this->sink[] = $log;
+            }
+            public function getClassName(): string
+            {
+                return AuditLog::class;
+            }
+        };
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $vendorRepo, $auditRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+                [Vendor::class, $vendorRepo],
+                [AuditLog::class, $auditRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(AuditEmitter::class, new AuditEmitter($em, new NullLogger()));
         return $em;
     }
 

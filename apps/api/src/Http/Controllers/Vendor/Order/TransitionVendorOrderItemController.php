@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Vendor\Order;
 
+use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\Order\Order;
@@ -63,6 +64,7 @@ final class TransitionVendorOrderItemController
         private readonly OrderSerializer $serializer,
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly LoggerInterface $logger,
+        private readonly AuditEmitter $audit,
     ) {
     }
 
@@ -137,6 +139,13 @@ final class TransitionVendorOrderItemController
             throw HttpException::notFound('Order item not found.');
         }
 
+        // M3.2.X.17-B — snapshot before-state for audit emission.
+        // The audit captures item-status transitions so the X.17
+        // order-timeline endpoint can surface vendor-driven changes.
+        // Notes flow through as audit context, not just structured logs.
+        $beforeStatus = $item->getItemStatus();
+        $beforeOrderStatus = $order->getStatus();
+
         // Validate transition + apply.
         try {
             $item->setItemStatus($newStatus);
@@ -167,6 +176,37 @@ final class TransitionVendorOrderItemController
         $order->recomputeStatusFromItems();
 
         $this->em->flush();
+
+        // M3.2.X.17-B — emit audit on the item-status transition. The
+        // builder's classifyAuditType() recognizes the before/after.
+        // item_status shape and emits a 'order.item_status_changed'
+        // timeline event with the vendor as actor.
+        $this->audit->recordUpdate(
+            request: $request,
+            actor: $user,
+            subject: $item,
+            beforeSnapshot: [
+                'item_status' => $beforeStatus,
+                'note' => null,
+            ],
+            afterSnapshot: [
+                'item_status' => $newStatus,
+                'note' => $input->note,
+            ],
+        );
+
+        // If the order-level status rolled to a new value, audit that
+        // separately so the timeline shows both the item-level and
+        // order-level transitions in chronological order.
+        if ($order->getStatus() !== $beforeOrderStatus) {
+            $this->audit->recordUpdate(
+                request: $request,
+                actor: $user,
+                subject: $order,
+                beforeSnapshot: ['status' => $beforeOrderStatus],
+                afterSnapshot: ['status' => $order->getStatus()],
+            );
+        }
 
         $this->logger->info('vendor.order_item.transitioned', [
             'user_id' => $user->getId(),
