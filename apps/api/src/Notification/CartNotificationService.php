@@ -44,7 +44,14 @@ use Psr\Log\LoggerInterface;
  * The CartEmailTemplateRenderer needs an unsubscribe_url in its
  * \$extra map; we generate it here via UnsubscribeTokenIssuer.
  */
-final class CartNotificationService
+/**
+ * @internal Marked non-final to allow PHPUnit class doubles in
+ *           the console-command test (X.11-F). The service is
+ *           still designed for single-instance use; no extension
+ *           hooks. Same posture as OrderTimelineBuilder /
+ *           CartAbandonmentFinder.
+ */
+class CartNotificationService
 {
     private const SKIP_NO_USER = 'no_user';
     private const SKIP_NO_EMAIL = 'no_email';

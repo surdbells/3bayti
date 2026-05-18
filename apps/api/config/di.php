@@ -317,6 +317,24 @@ return [
         );
     },
 
+    // M3.2.X.11 — Cart abandonment recovery
+    \Bayti\Api\Domain\Cart\CartAbandonmentFinder::class => \DI\autowire(),
+    \Bayti\Api\Notification\CartEmailTemplateRenderer::class => \DI\autowire(),
+    \Bayti\Api\Notification\UnsubscribeTokenIssuer::class => \DI\autowire(),
+    \Bayti\Api\Notification\CartNotificationService::class => static function (
+        \Psr\Container\ContainerInterface $c,
+    ): \Bayti\Api\Notification\CartNotificationService {
+        $appUrl = rtrim((string) ($_ENV['APP_URL'] ?? 'http://localhost:8080'), '/');
+        return new \Bayti\Api\Notification\CartNotificationService(
+            mailer: $c->get(\Bayti\Api\Notification\MailerInterface::class),
+            renderer: $c->get(\Bayti\Api\Notification\CartEmailTemplateRenderer::class),
+            tokenIssuer: $c->get(\Bayti\Api\Notification\UnsubscribeTokenIssuer::class),
+            logger: $c->get(\Psr\Log\LoggerInterface::class),
+            appBaseUrl: $appUrl,
+            em: $c->get(\Doctrine\ORM\EntityManagerInterface::class),
+        );
+    },
+
     // M3.1.7-D — Admin order surface controllers
     \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class => \DI\autowire(),

@@ -22,6 +22,9 @@ declare(strict_types=1);
 
 use Bayti\Api\Bootstrap;
 use Bayti\Api\Console\ReconcilePendingOrdersCommand;
+use Bayti\Api\Console\SendAbandonedCartRemindersCommand;
+use Bayti\Api\Domain\Cart\CartAbandonmentFinder;
+use Bayti\Api\Notification\CartNotificationService;
 use Bayti\Api\Payment\PaymentGatewayInterface;
 use Doctrine\DBAL\Tools\Console\ConsoleRunner as DbalConsoleRunner;
 use Doctrine\DBAL\Tools\Console\Command\RunSqlCommand;
@@ -104,6 +107,22 @@ try {
     // orders:reconcile-pending` and gets a "command not found"
     // error. Easier diagnosis than silent omission.
     $logger->info('reconcile command not registered: payment gateway unavailable', [
+        'reason' => $e->getMessage(),
+    ]);
+}
+
+// M3.2.X.11-F — Cart abandonment reminders. Eagerly resolves
+// the finder + notification service via DI. Independent of the
+// payment gateway availability above so a fresh dev sandbox
+// without NOON_* env vars can still run this command.
+try {
+    /** @var CartAbandonmentFinder $finder */
+    $finder = $container->get(CartAbandonmentFinder::class);
+    /** @var CartNotificationService $cartNotifications */
+    $cartNotifications = $container->get(CartNotificationService::class);
+    $cli->add(new SendAbandonedCartRemindersCommand($em, $finder, $cartNotifications, $logger));
+} catch (\Throwable $e) {
+    $logger->info('cart reminders command not registered', [
         'reason' => $e->getMessage(),
     ]);
 }

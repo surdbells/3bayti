@@ -47,7 +47,14 @@ use Psr\Log\LoggerInterface;
  * picks the batch in <50ms on a warm cache. SLOW_THRESHOLD_MS
  * raised to 500ms to give headroom for large operators.
  */
-final class CartAbandonmentFinder
+/**
+ * @internal Marked non-final ONLY to allow PHPUnit class doubles
+ *           in console-command tests. Production code MUST NOT
+ *           subclass this — there's no extension point. Same
+ *           posture as OrderTimelineBuilder (X.17-C) and
+ *           FacetAggregator (X.10-A).
+ */
+class CartAbandonmentFinder
 {
     public const DEFAULT_THRESHOLD_HOURS = 24;
     public const DEFAULT_BATCH_SIZE = 100;
