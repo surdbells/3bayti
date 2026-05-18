@@ -367,6 +367,20 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\PromoCode\UpdatePromoCodeController::class);
         $group->delete('/promo-codes/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Admin\PromoCode\DeletePromoCodeController::class);
+
+        // M3.2.X.18-F — Returns admin surface
+        $group->get('/returns',
+            \Bayti\Api\Http\Controllers\Admin\Order\ListAdminReturnsController::class);
+        $group->get('/returns/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Order\GetAdminReturnController::class);
+        $group->post('/returns/{id:[0-9]+}/approve',
+            \Bayti\Api\Http\Controllers\Admin\Order\ApproveReturnController::class);
+        $group->post('/returns/{id:[0-9]+}/deny',
+            \Bayti\Api\Http\Controllers\Admin\Order\DenyReturnController::class);
+        $group->post('/returns/{id:[0-9]+}/mark-picked-up',
+            \Bayti\Api\Http\Controllers\Admin\Order\MarkPickedUpController::class);
+        $group->post('/returns/{id:[0-9]+}/record-refund',
+            \Bayti\Api\Http\Controllers\Admin\Order\RecordReturnRefundController::class);
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);

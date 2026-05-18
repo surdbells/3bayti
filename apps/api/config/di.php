@@ -201,6 +201,13 @@ return [
     \Bayti\Api\Http\Controllers\Vendor\Order\ListVendorReturnsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorReturnController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\Order\ConfirmReceiptController::class => \DI\autowire(),
+    // X.18-F — Admin endpoints
+    \Bayti\Api\Http\Controllers\Admin\Order\ListAdminReturnsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\GetAdminReturnController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\ApproveReturnController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\DenyReturnController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\MarkPickedUpController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Order\RecordReturnRefundController::class => \DI\autowire(),
 
     // M3.1.7-G — Dispute persistence + admin endpoints
     \Bayti\Api\Http\Serializers\DisputeSerializer::class => \DI\autowire(),
