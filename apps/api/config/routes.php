@@ -264,6 +264,10 @@ return function (App $app): void {
 
     // M2.2 — Products (Day 2 of 10-day rollout)
     $app->get('/v3/products', \Bayti\Api\Http\Controllers\Catalog\ListProductsController::class);
+    // M3.2.X.10 — Faceted search. Registered BEFORE /v3/products/{slug}
+    // so the literal 'facets' segment doesn't get eaten by the slug
+    // matcher.
+    $app->get('/v3/products/facets', \Bayti\Api\Http\Controllers\Catalog\ListFacetsController::class);
     $app->get('/v3/products/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetProductController::class);
     $app->get('/v3/vendors/{slug}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class);
 

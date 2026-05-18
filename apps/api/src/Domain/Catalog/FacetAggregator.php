@@ -59,7 +59,7 @@ use Doctrine\ORM\EntityManagerInterface;
  * Values with count=0 are never returned. The UI renders whatever it
  * gets without checking for zeros.
  */
-final class FacetAggregator
+class FacetAggregator
 {
     /**
      * Fixed price bands in AED (Q-Price-Banding = A).

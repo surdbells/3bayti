@@ -391,6 +391,11 @@ return [
     \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class => \DI\autowire(),
 
+    // M3.2.X.10 — Faceted search backend
+    \Bayti\Api\Domain\Catalog\FacetAggregator::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\FacetsSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\ListFacetsController::class => \DI\autowire(),
+
     // -------------------------------------------------------------------
     // OTP — provider selection + service
     // -------------------------------------------------------------------
