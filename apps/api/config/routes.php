@@ -161,6 +161,9 @@ return function (App $app): void {
         $group->patch('/items/{id}', \Bayti\Api\Http\Controllers\Cart\UpdateCartItemController::class);
         $group->delete('/items/{id}', \Bayti\Api\Http\Controllers\Cart\RemoveCartItemController::class);
         $group->post('/merge', \Bayti\Api\Http\Controllers\Cart\MergeAnonCartController::class);
+        // M3.2.X.8-C — Server-authoritative price quote with optional
+        // promo code resolution. Idempotent read; no DB writes.
+        $group->post('/quote', \Bayti\Api\Http\Controllers\Cart\QuoteCartController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================

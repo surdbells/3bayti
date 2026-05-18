@@ -329,6 +329,9 @@ return [
     // M2.2 — Product endpoints (Day 2 of 10-day rollout)
     \Bayti\Api\Http\Serializers\ProductSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\CartSerializer::class => \DI\autowire(),
+    // M3.2.X.8-C — Cart-quote price breakdown shape (subtotal + delivery
+    // + discount + total + optional applied_promo block).
+    \Bayti\Api\Http\Serializers\CartQuoteSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\OrderSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\ListProductsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Catalog\GetProductController::class => \DI\autowire(),
