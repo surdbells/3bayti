@@ -221,6 +221,20 @@ return [
     // Service object with no dependencies; safe to autowire.
     \Bayti\Api\Notification\LocaleResolver::class => \DI\autowire(),
 
+    // M3.2.X.8-B — PromoCodeResolverService. Holds an optional EM for
+    // lazy repository resolution per locked pattern #1; direct-
+    // injection paths for tests are also accepted via the constructor.
+    // Autowiring works because the constructor parameters all have
+    // null defaults — DI passes null for the repo overrides, EM is
+    // resolved through the existing EntityManagerInterface binding.
+    \Bayti\Api\Domain\Promo\PromoCodeResolverService::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Domain\Promo\PromoCodeResolverService {
+        return new \Bayti\Api\Domain\Promo\PromoCodeResolverService(
+            em: $c->get(\Doctrine\ORM\EntityManagerInterface::class),
+        );
+    },
+
     // OrderNotificationService: parse admin recipient list from env.
     // Comma-separated emails; empty list disables admin notifications.
     \Bayti\Api\Notification\OrderNotificationService::class => static function (

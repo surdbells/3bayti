@@ -127,4 +127,43 @@ final class ErrorCodes
 
     /** Business rule violated, e.g. cart empty at checkout; HTTP 422. */
     public const BUSINESS_RULE_VIOLATION = 'BUSINESS_RULE_VIOLATION';
+
+    // -------------------------------------------------------------------
+    // PROMO — promotional code redemption (M3.2.X.8)
+    //
+    // All PROMO_* codes are returned as HTTP 422 by the customer-facing
+    // /v3/cart/quote + /v3/checkout/initiate endpoints. The codes are
+    // intentionally specific (rather than collapsed to a generic
+    // PROMO_INVALID) so client UI can show actionable messages — a
+    // "not yet valid" code may warrant "comes back live on X" whereas
+    // an "expired" code warrants a different prompt.
+    // -------------------------------------------------------------------
+
+    /** Code text doesn't match any catalog row (after normalization). */
+    public const PROMO_NOT_FOUND = 'PROMO_NOT_FOUND';
+
+    /** Code exists but has been admin-disabled (is_active = false). */
+    public const PROMO_INACTIVE = 'PROMO_INACTIVE';
+
+    /** Code's valid_from is in the future. */
+    public const PROMO_NOT_YET_VALID = 'PROMO_NOT_YET_VALID';
+
+    /** Code's valid_until is in the past. */
+    public const PROMO_EXPIRED = 'PROMO_EXPIRED';
+
+    /** Code's currency does not match the cart's currency. */
+    public const PROMO_CURRENCY_MISMATCH = 'PROMO_CURRENCY_MISMATCH';
+
+    /**
+     * Cart subtotal is below the code's min_subtotal. Error details
+     * payload includes the required min_subtotal so client UX can
+     * show "Spend X more to unlock this code".
+     */
+    public const PROMO_MIN_SUBTOTAL_NOT_MET = 'PROMO_MIN_SUBTOTAL_NOT_MET';
+
+    /** Code has hit its global usage cap; no more redemptions accepted. */
+    public const PROMO_GLOBAL_LIMIT_REACHED = 'PROMO_GLOBAL_LIMIT_REACHED';
+
+    /** This user has already redeemed the code up to its per-user cap. */
+    public const PROMO_USER_LIMIT_REACHED = 'PROMO_USER_LIMIT_REACHED';
 }
