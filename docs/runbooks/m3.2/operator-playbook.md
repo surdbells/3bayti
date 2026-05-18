@@ -664,9 +664,128 @@ curl -X POST "$STAGING_BASE/v3/admin/returns/$RETURN_ID/record-refund" \
 13. **Eligibility window override mechanism** — current 14-day window is constant `DEFAULT_WINDOW_DAYS` in `ReturnRequestEligibilityService`. Future enhancement: per-vendor + per-category overrides via admin. Out of scope for X.18; tracked here.
 14. **Vendor portal mock-up** — the vendor return endpoints exist (X.18-E) but the vendor portal UI is M4-Y-side work; until then, vendors interact via direct API calls or 3bayti ops relays.
 
+### 2.O — M3.2.X.10 — Smoke-test Faceted search backend
+
+```bash
+# 1. No migration is needed for X.10 — the existing GIN indexes on
+#    products.available_sizes + products.available_colors (added in
+#    Version20260512000001) are reused. Verify they're present:
+psql "$STAGING_DSN" -c "\d products" | grep -E "available_sizes|available_colors|GIN"
+# Expect: products_sizes_idx (GIN), products_colors_idx (GIN)
+
+# 2. Verify the endpoint responds. Public endpoint, no auth needed:
+curl -s "$STAGING_BASE/v3/products/facets" | python3 -m json.tool | head -30
+# Expect: { data: { size, color, price, vendor, category }, meta: { total_products, applied_filters } }
+
+# 3. Smoke-test each filter axis:
+
+# 3a. Category filter
+curl -s "$STAGING_BASE/v3/products/facets?category=abayas" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('total:', d['meta']['total_products'])
+print('applied:', d['meta']['applied_filters'])
+print('color values:', [v['value'] for v in d['data']['color']['values'][:5]])"
+# Expect: total reflects 'abayas' category; applied_filters echoes 'abayas'
+# Expect: color facet counts respect category but NOT itself (disjunctive)
+
+# 3b. Disjunctive verification — refining by color should NOT zero
+#     out the color facet (it would if disjunctive wasn't working).
+curl -s "$STAGING_BASE/v3/products/facets?category=abayas&colors[]=Black" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('total:', d['meta']['total_products'])
+print('colors returned:', len(d['data']['color']['values']))
+print('first 3:', [(v['value'], v['count']) for v in d['data']['color']['values'][:3]])"
+# Expect: total drops vs 3a (filtered to Black only)
+# Expect: color facet STILL shows multiple values (Black, White, ...) — disjunctive
+# If you see only 1 color value matching the filter, disjunctive is BROKEN
+
+# 3c. Size refinement via array form
+curl -s "$STAGING_BASE/v3/products/facets?sizes[]=M&sizes[]=L" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('size facet:', [(v['value'], v['count']) for v in d['data']['size']['values']])
+print('total:', d['meta']['total_products'])"
+# Expect: total reflects products with M OR L (not AND)
+# Expect: size facet shows ALL sizes (XS, S, M, L, XL, XXL) — disjunctive
+
+# 3d. Comma-separated form alias
+curl -s "$STAGING_BASE/v3/products/facets?sizes=M,L" | python3 -m json.tool | grep -A 1 '"sizes"'
+# Expect: applied_filters.sizes = ['M', 'L']
+
+# 3e. Price-band shape
+curl -s "$STAGING_BASE/v3/products/facets" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+for b in d['data']['price']['values']:
+    print(f\"{b['value']}: count={b['count']} min={b['min']} max={b['max']}\")"
+# Expect: 5 bands (0-50, 50-100, 100-250, 250-500, 500+) with counts;
+# bands with 0 count are suppressed per Q-Empty-Facets
+
+# 3f. Fulltext + facets together
+curl -s "$STAGING_BASE/v3/products/facets?q=evening+dress" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('matches:', d['meta']['total_products'])
+print('q echoed:', d['meta']['applied_filters'].get('q'))"
+# Expect: total matches the fulltext query; applied_filters.q = 'evening dress'
+
+# 3g. Unknown slug soft-fail (200 with empty facets)
+curl -s -w '\nHTTP %{http_code}\n' "$STAGING_BASE/v3/products/facets?vendor=does-not-exist" | tail -3
+# Expect: HTTP 200, total_products=0, applied_filters.vendor='does-not-exist'
+
+# 4. Performance check via PSR-3 logs. Run the same request 10x
+#    and tail the app log:
+for i in $(seq 1 10); do curl -s -o /dev/null "$STAGING_BASE/v3/products/facets?category=abayas"; done
+tail -50 apps/api/var/logs/app-*.log | grep -E "facets\\.(computed|slow_response)" | tail -10
+# Expect: 10 'facets.computed' lines with duration_ms < 100
+# If you see ANY 'facets.slow_response' warnings → Q-Caching = B trigger
+# (see Operator deferred item #15 below)
+
+# 5. Verify the route ordering didn't regress GET /v3/products/{slug}.
+#    The literal segment 'facets' must NOT match the slug controller.
+curl -s -o /dev/null -w 'HTTP %{http_code}\n' "$STAGING_BASE/v3/products/some-real-slug"
+# Expect: HTTP 200 (or 404 if slug doesn't exist) — but NOT a JSON
+# response with 'facets' shape (data.size etc.)
+
+# 6. Verify the mobile/web catalog page hasn't regressed by sending
+#    a baseline product list query:
+curl -s "$STAGING_BASE/v3/products?category=abayas&min_price=50&limit=12" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('items:', len(d['data']))
+print('total:', d['meta']['total'])"
+# Expect: same shape and counts as before X.10 (no regression on
+# the existing endpoint; X.10-C refactored ProductFilterParser but
+# ListProductsController was NOT migrated to it yet, so this is a
+# pure sanity check)
+```
+
+**Smoke-test acceptance**
+
+- [ ] GIN indexes on `available_sizes` + `available_colors` confirmed present
+- [ ] `GET /v3/products/facets` returns the canonical envelope with all 5 facets
+- [ ] Category filter narrows + applied_filters echoed
+- [ ] Disjunctive semantics work: refining by color shows MULTIPLE colors in the color facet
+- [ ] Size refinement: both `?sizes[]=` array form and `?sizes=A,B` comma form parsed
+- [ ] Price-band shape includes `min` + `max` per band, 0-count bands suppressed
+- [ ] Fulltext `?q=` works alongside facet filters
+- [ ] Unknown slug returns 200 with empty data + `applied_filters` echo (NOT 404)
+- [ ] PSR-3 `facets.computed` debug log fires per request with `duration_ms`
+- [ ] No `facets.slow_response` warnings during normal load (or → see follow-up #15)
+- [ ] `/v3/products/{slug}` slug controller NOT eaten by the new `/facets` route
+- [ ] Existing `/v3/products` endpoint shape + counts unchanged
+
+**Operator deferred items added by X.10:**
+
+15. **Redis caching for facets** — if `facets.slow_response` warnings appear sustained in production logs, enable Q-Caching = B: 5-min Redis TTL keyed on a hash of the canonical filter shape. ~1 day of work. Trigger condition: > 10 `facets.slow_response` warnings/hour across any 4-hour window. The aggregator is already structured to support this — `FacetAggregator::compute` would gain a cache lookup at the top + cache write at the bottom; no further refactoring.
+16. **ListProductsController migration to ProductFilterParser** — X.10-C extracted the shared parser but only ListFacetsController was migrated. ListProductsController still uses the old `int FILTER_NOT_FOUND = -1` sentinel pattern. Mechanical refactor; 1-2 hours; ship as a standalone commit when convenient.
+17. **Brand + material facets** — Q-Facet-Set locked the v1 facets at 5 (size, color, price, vendor, category). Adding brand or material requires new Product columns + migration + UI work. Defer to M4 unless customer feedback flags it as a friction point.
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.N complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.O complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
