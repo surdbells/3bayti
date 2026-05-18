@@ -783,9 +783,173 @@ print('total:', d['meta']['total'])"
 16. **ListProductsController migration to ProductFilterParser** — X.10-C extracted the shared parser but only ListFacetsController was migrated. ListProductsController still uses the old `int FILTER_NOT_FOUND = -1` sentinel pattern. Mechanical refactor; 1-2 hours; ship as a standalone commit when convenient.
 17. **Brand + material facets** — Q-Facet-Set locked the v1 facets at 5 (size, color, price, vendor, category). Adding brand or material requires new Product columns + migration + UI work. Defer to M4 unless customer feedback flags it as a friction point.
 
+### 2.P — M3.2.X.14 — Smoke-test Vendor performance metrics
+
+```bash
+# 1. No migration needed for X.14 — pure read-side aggregation over
+#    existing Order/OrderItem/OrderReturnRequest/OrderDispute tables.
+#    Verify those tables are populated with at least 30 days of data:
+psql "$STAGING_DSN" -c "SELECT
+  (SELECT COUNT(*) FROM orders WHERE paid_at >= NOW() - INTERVAL '30 days') AS recent_orders,
+  (SELECT COUNT(*) FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE paid_at >= NOW() - INTERVAL '30 days')) AS recent_items,
+  (SELECT COUNT(*) FROM order_return_requests WHERE status IN ('approved', 'picked_up', 'delivered_to_vendor', 'refunded')) AS approved_returns,
+  (SELECT COUNT(*) FROM order_disputes) AS total_disputes;"
+
+# 2. Single-vendor smoke-test as admin. Pick a vendor with recent
+#    orders from the count above:
+ADMIN_TOKEN=...                          # JWT from /v3/auth/login as admin
+VENDOR_ID=...                            # vendor with 30+ days of data
+
+curl -s "$STAGING_BASE/v3/admin/vendors/$VENDOR_ID/metrics?days=30" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -m json.tool
+# Expect:
+#   { data: {
+#       vendor_id, vendor_slug, vendor_name,
+#       window: { days: 30, since, until },
+#       metrics: {
+#         fulfillment_rate: { value: 0.xxx, fulfilled_items, total_items },
+#         cancellation_rate: { ... },
+#         return_rate: { ... },
+#         dispute_rate: { value, disputed_orders, total_orders }
+#       }
+#     }
+#   }
+
+# 3. Custom window (e.g. 90 days) + clamp behavior
+curl -s "$STAGING_BASE/v3/admin/vendors/$VENDOR_ID/metrics?days=90" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('window.days:', d['data']['window']['days'])
+print('total_items:', d['data']['metrics']['fulfillment_rate']['total_items'])"
+# Expect: window.days = 90 (NOT 30), total_items >= 30-day count
+
+# Below-min clamp
+curl -s "$STAGING_BASE/v3/admin/vendors/$VENDOR_ID/metrics?days=3" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+print('window.days:', json.load(sys.stdin)['data']['window']['days'])"
+# Expect: window.days = 7 (clamped)
+
+# Above-max clamp
+curl -s "$STAGING_BASE/v3/admin/vendors/$VENDOR_ID/metrics?days=9999" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+print('window.days:', json.load(sys.stdin)['data']['window']['days'])"
+# Expect: window.days = 365 (clamped)
+
+# 4. List endpoint — admin sees every vendor
+curl -s "$STAGING_BASE/v3/admin/vendor-metrics?days=30&limit=10" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('total vendors:', d['meta']['total'])
+print('returned:', len(d['data']))
+for row in d['data'][:5]:
+    f = row['metrics']['fulfillment_rate']
+    print(f\"  {row['vendor_slug']}: fulfillment {f['value']} ({f['fulfilled_items']}/{f['total_items']})\")"
+# Expect: alphabetically-sorted vendors with their metrics
+
+# 5. Metric-based sort: top-performers descending
+curl -s "$STAGING_BASE/v3/admin/vendor-metrics?days=30&sort=fulfillment_rate_desc&limit=10" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+print('Top performers:')
+for row in d['data']:
+    f = row['metrics']['fulfillment_rate']
+    print(f\"  {row['vendor_slug']}: {f['value']}\")"
+# Expect: descending fulfillment rates. Vendors with null rates (no
+# data) should appear LAST.
+
+# 6. Worst-performers ascending
+curl -s "$STAGING_BASE/v3/admin/vendor-metrics?days=30&sort=cancellation_rate_desc&limit=5" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+print('High-cancellation vendors:')
+for row in json.load(sys.stdin)['data']:
+    c = row['metrics']['cancellation_rate']
+    print(f\"  {row['vendor_slug']}: {c['value']} ({c['rejected_items']}/{c['total_items']})\")"
+# Expect: highest cancellation rates first; investigate any > 5%
+
+# 7. Status filter
+curl -s "$STAGING_BASE/v3/admin/vendor-metrics?status=suspended" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+print('Suspended vendors:', json.load(sys.stdin)['meta']['total'])"
+
+# 8. Vendor self-serve view. Use a vendor user's token:
+VENDOR_TOKEN=...                         # JWT from /v3/auth/login as the vendor's owner
+
+# Single-store user (no vendor_id needed)
+curl -s "$STAGING_BASE/v3/vendor/metrics" \
+  -H "Authorization: Bearer $VENDOR_TOKEN" | python3 -m json.tool
+# Expect: same shape as admin single-vendor endpoint, scoped to
+# the calling user's vendor
+
+# 9. Multi-store user — without vendor_id should 422
+# (If your test fixture has a user with multiple approved stores)
+MULTI_STORE_TOKEN=...
+curl -i -s "$STAGING_BASE/v3/vendor/metrics" \
+  -H "Authorization: Bearer $MULTI_STORE_TOKEN" | head -5
+# Expect: HTTP 422 with error.code='VENDOR_AMBIGUOUS' +
+#         error.details.available_vendor_ids = [...]
+
+# With vendor_id specified
+curl -s "$STAGING_BASE/v3/vendor/metrics?vendor_id=101" \
+  -H "Authorization: Bearer $MULTI_STORE_TOKEN" | python3 -c "
+import json, sys
+print('vendor_id:', json.load(sys.stdin)['data']['vendor_id'])"
+# Expect: 101
+
+# Cross-tenant attempt (vendor_id not owned by caller)
+curl -i -s "$STAGING_BASE/v3/vendor/metrics?vendor_id=999" \
+  -H "Authorization: Bearer $VENDOR_TOKEN" | head -1
+# Expect: HTTP 404 (opaque, NOT 403 — existence-leak prevention)
+
+# 10. Performance observability check
+for i in $(seq 1 10); do
+    curl -s -o /dev/null "$STAGING_BASE/v3/admin/vendors/$VENDOR_ID/metrics" \
+      -H "Authorization: Bearer $ADMIN_TOKEN"
+done
+tail -50 apps/api/var/logs/app-*.log | grep -E "vendor_metrics\\.(computed|slow_response)" | tail -15
+# Expect: 10 'vendor_metrics.computed' lines with duration_ms < 200
+# Any 'vendor_metrics.slow_response' warnings → operator follow-up #18 trigger
+
+# 11. Audit emission verification
+psql "$STAGING_DSN" -c "
+SELECT action_type, subject_type, subject_id, changes->>'context' AS context, changes->>'window_days' AS window
+FROM audit_logs
+WHERE changes->>'context' LIKE 'admin_vendor_metrics%'
+ORDER BY id DESC LIMIT 5;"
+# Expect: VIEWED rows for both single-vendor and list endpoints
+```
+
+**Smoke-test acceptance**
+
+- [ ] All 4 source tables have recent data (orders + items + returns + disputes)
+- [ ] `GET /v3/admin/vendors/{id}/metrics` returns the canonical envelope with all 4 rates
+- [ ] Window-day param: defaults to 30, clamps below-min to 7 and above-max to 365
+- [ ] `GET /v3/admin/vendor-metrics` paginates correctly with vendor-field sort (name_asc default)
+- [ ] Metric-field sort works (`fulfillment_rate_desc`) with vendors with null data sorted LAST
+- [ ] Status filter narrows the list
+- [ ] `GET /v3/vendor/metrics` works for single-store users without `vendor_id`
+- [ ] Multi-store users without `vendor_id` get 422 `VENDOR_AMBIGUOUS` with the list
+- [ ] Multi-store users with valid owned `vendor_id` get their chosen store's metrics
+- [ ] Cross-tenant `vendor_id` (not owned) returns opaque 404 (NOT 403)
+- [ ] PSR-3 `vendor_metrics.computed` debug log fires per request with `duration_ms`
+- [ ] No `vendor_metrics.slow_response` warnings during normal load
+- [ ] `audit_logs` table has VIEWED rows for both admin endpoints
+
+**Operator deferred items added by X.14:**
+
+18. **Vendor metrics cache-warming** — current list-with-metric-sort path runs `computeForVendorList` over ALL vendors (not just the page) on every request. 3 queries regardless of vendor count, but the queries scan a 30-day window. At ~500 vendors with sustained traffic this becomes a real concern. Trigger condition: `vendor_metrics.slow_response` warning rate > 5/hour during peak hours. Fix: nightly cron warms a Redis cache of `(vendor_id, days)` → metrics shape; controller falls back to live compute on cache miss. ~2 days of work.
+19. **Per-item lifecycle timestamps** — X.14 ships status-derived rates only. Adding mean-time-to-accept, mean-time-to-ship requires per-item `accepted_at`/`shipped_at`/`delivered_at` columns. Migration + backfill + transition-controller updates. ~3 days of work, but only valuable if vendor performance investigation cases regularly demand timing data.
+20. **Configurable cancellation taxonomy** — Q-CancellationDef = B locks "vendor-initiated rejections only" as the cancellation rate's numerator. If business analysis later wants to track "customer cancellations after vendor accept" as a separate signal, add a `cancellation_breakdown` block to the response with rejected/customer-cancelled/admin-cancelled counts. ~1 day.
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.O complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.P complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
