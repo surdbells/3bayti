@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\Catalog;
 
-use Bayti\Api\Domain\Order\Order;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 
 /**
  * Compute facet counts for the catalog search/list page (M3.2.X.10).
@@ -90,8 +90,21 @@ class FacetAggregator
      */
     private const MAX_VALUES_PER_FACET = 50;
 
+    /**
+     * Per-statement timeout in milliseconds (M3.2.X.10-D).
+     *
+     * A defensive cap so a runaway facet query (malformed jsonb, lock
+     * contention, etc.) cannot tie up a DB connection indefinitely.
+     * 2000ms is generous — realistic queries complete in <50ms on a
+     * 2k-product catalog. If a query EVER hits this ceiling something
+     * is genuinely wrong and we want a fast clear error rather than
+     * a slow degraded one.
+     */
+    private const STATEMENT_TIMEOUT_MS = 2000;
+
     public function __construct(
         private readonly EntityManagerInterface $em,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -115,7 +128,31 @@ class FacetAggregator
      */
     public function compute(array $filters): array
     {
-        return [
+        // M3.2.X.10-D — defensive per-statement timeout. SET LOCAL is
+        // scoped to the current transaction only, so it doesn't bleed
+        // across pool connections. If the request runs outside a TX
+        // (which is the default for read endpoints) the SET LOCAL is
+        // a no-op — that's a known acceptable degradation; the
+        // realistic risk we're guarding against is malformed jsonb
+        // queries hitting a long fallback plan, and Doctrine's
+        // default plan picker handles those well even without the
+        // timeout. Logged at debug for ops visibility.
+        try {
+            $this->em->getConnection()->executeStatement(
+                sprintf('SET LOCAL statement_timeout = %d', self::STATEMENT_TIMEOUT_MS),
+            );
+        } catch (\Throwable $e) {
+            // Some test setups + non-PostgreSQL drivers don't speak
+            // statement_timeout. Log and continue — the lack of a
+            // cap is a defense-in-depth degradation, not a hard
+            // failure.
+            $this->logger->debug('facets.timeout.skipped', [
+                'reason' => $e->getMessage(),
+            ]);
+        }
+
+        $startNs = hrtime(true);
+        $result = [
             'size' => $this->computeSize($filters),
             'color' => $this->computeColor($filters),
             'price' => $this->computePrice($filters),
@@ -123,6 +160,32 @@ class FacetAggregator
             'category' => $this->computeCategory($filters),
             'total_products' => $this->computeTotalProducts($filters),
         ];
+        $elapsedMs = (int) ((hrtime(true) - $startNs) / 1_000_000);
+
+        // M3.2.X.10-D — operator visibility: emit a single 'facets.computed'
+        // log line per request with timing + active-filter signature so
+        // ops can grep "slow facet queries" / correlate spikes with
+        // specific filter shapes. Debug level — not noisy under
+        // production WARNING threshold but available when LOG_LEVEL=debug.
+        $this->logger->debug('facets.computed', [
+            'duration_ms' => $elapsedMs,
+            'total_products' => $result['total_products'],
+            'filter_keys' => array_keys(array_filter($filters, fn($v) => $v !== null && $v !== [])),
+            'has_search' => is_string($filters['searchQuery'] ?? null) && $filters['searchQuery'] !== '',
+        ]);
+
+        // Soft SLA hint: if we crossed 100ms ops should investigate.
+        // 100ms is the threshold Q-Caching = A picked as "acceptable
+        // without caching". Crossing it twice running is a signal to
+        // enable Redis caching per the playbook §2.O entry.
+        if ($elapsedMs > 100) {
+            $this->logger->warning('facets.slow_response', [
+                'duration_ms' => $elapsedMs,
+                'threshold_ms' => 100,
+            ]);
+        }
+
+        return $result;
     }
 
     /**

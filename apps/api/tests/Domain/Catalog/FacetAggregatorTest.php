@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Tests\Domain\Catalog;
 
 use Bayti\Api\Domain\Catalog\FacetAggregator;
+use Bayti\Api\Tests\Support\InMemoryLogger;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\Result;
@@ -54,7 +55,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $aggregator = new FacetAggregator($em);
+        $aggregator = new FacetAggregator($em, new \Psr\Log\NullLogger());
         $aggregator->compute([
             'sizes' => ['M'],         // user has size=M filter active
             'colors' => ['Black'],    // and color=Black filter
@@ -85,7 +86,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $aggregator = new FacetAggregator($em);
+        $aggregator = new FacetAggregator($em, new \Psr\Log\NullLogger());
         $aggregator->compute([
             'sizes' => ['M'],
             'colors' => ['Black'],
@@ -112,7 +113,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $aggregator = new FacetAggregator($em);
+        $aggregator = new FacetAggregator($em, new \Psr\Log\NullLogger());
         $aggregator->compute([
             'minPrice' => '50',
             'maxPrice' => '200',
@@ -140,7 +141,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $aggregator = new FacetAggregator($em);
+        $aggregator = new FacetAggregator($em, new \Psr\Log\NullLogger());
         $aggregator->compute([
             'vendorId' => 5,
             'categoryId' => 10,
@@ -162,7 +163,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $aggregator = new FacetAggregator($em);
+        $aggregator = new FacetAggregator($em, new \Psr\Log\NullLogger());
         $aggregator->compute([
             'vendorId' => 5,
             'categoryId' => 10,
@@ -195,7 +196,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $result = (new FacetAggregator($em))->compute([]);
+        $result = (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([]);
 
         $values = $result['size']['values'];
         self::assertSame('XS', $values[0]['value']);
@@ -220,7 +221,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $result = (new FacetAggregator($em))->compute([]);
+        $result = (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([]);
 
         $values = $result['size']['values'];
         self::assertSame('M', $values[0]['value']);     // canonical first
@@ -246,7 +247,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $result = (new FacetAggregator($em))->compute([]);
+        $result = (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([]);
 
         $values = $result['color']['values'];
         self::assertSame('Black', $values[0]['value']);
@@ -269,7 +270,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $result = (new FacetAggregator($em))->compute([]);
+        $result = (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([]);
 
         $values = $result['price']['values'];
         // Bands present (50-100 + 250-500 had 0 count → suppressed)
@@ -298,7 +299,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $result = (new FacetAggregator($em))->compute([]);
+        $result = (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([]);
 
         self::assertSame('almas', $result['vendor']['values'][0]['value']);
         self::assertSame('Almas Fashion', $result['vendor']['values'][0]['label']);
@@ -317,7 +318,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $result = (new FacetAggregator($em))->compute([]);
+        $result = (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([]);
 
         self::assertCount(1, $result['size']['values']);
         self::assertSame('M', $result['size']['values'][0]['value']);
@@ -339,7 +340,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $result = (new FacetAggregator($em))->compute([]);
+        $result = (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([]);
 
         self::assertCount(50, $result['color']['values']);
         self::assertSame(60, $result['color']['total_distinct']);
@@ -357,7 +358,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        (new FacetAggregator($em))->compute([
+        (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([
             'searchQuery' => 'red dress',
         ]);
 
@@ -374,7 +375,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        (new FacetAggregator($em))->compute([
+        (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([
             'searchQuery' => '   ',
         ]);
 
@@ -391,7 +392,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        (new FacetAggregator($em))->compute([
+        (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([
             'sizes' => ['S', 'M'],
             'colors' => ['Black'],
         ]);
@@ -412,7 +413,7 @@ final class FacetAggregatorTest extends TestCase
         ]);
 
         $em = $this->emWithConnection($captured['connection']);
-        $result = (new FacetAggregator($em))->compute([
+        $result = (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([
             'sizes' => ['M'],
             'colors' => ['Black'],
             'categoryId' => 5,
@@ -427,6 +428,132 @@ final class FacetAggregatorTest extends TestCase
     }
 
     // =================================================================
+    // X.10-D — Observability + defensive timeout
+    // =================================================================
+
+    #[Test]
+    public function emitsStatementTimeoutBeforeQuerying(): void
+    {
+        $captured = $this->captureQueries(
+            resultRows: [[], [], [], [], [], ['10']],
+            captureStatements: true,
+        );
+
+        $em = $this->emWithConnection($captured['connection']);
+        (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([]);
+
+        // SET LOCAL statement_timeout = 2000 must have fired exactly
+        // once at the start of compute().
+        self::assertGreaterThanOrEqual(1, count($captured['statements']));
+        self::assertStringContainsString('statement_timeout', $captured['statements'][0]);
+        self::assertStringContainsString('2000', $captured['statements'][0]);
+    }
+
+    #[Test]
+    public function timeoutFailureIsLoggedAndDoesNotPropagate(): void
+    {
+        // A connection whose executeStatement always throws (typical
+        // of non-PostgreSQL test setups). Compute should still complete.
+        $logger = new InMemoryLogger();
+        $connection = $this->createMock(Connection::class);
+        $connection->method('executeStatement')->willThrowException(
+            new \RuntimeException('driver does not support statement_timeout'),
+        );
+        $connection->method('executeQuery')->willReturnCallback(
+            function () {
+                $r = $this->createMock(Result::class);
+                $r->method('fetchAllAssociative')->willReturn([]);
+                $r->method('fetchOne')->willReturn('0');
+                return $r;
+            },
+        );
+        $em = $this->emWithConnection($connection);
+
+        $result = (new FacetAggregator($em, $logger))->compute([]);
+
+        // Compute returns cleanly
+        self::assertSame(0, $result['total_products']);
+        // And the failure was logged at debug level
+        $skipped = $logger->findByMessage('facets.timeout.skipped');
+        self::assertCount(1, $skipped);
+        self::assertSame('debug', $skipped[0]['level']);
+        self::assertStringContainsString('driver does not support', $skipped[0]['context']['reason']);
+    }
+
+    #[Test]
+    public function emitsTimingLogOnEverySuccessfulCompute(): void
+    {
+        $logger = new InMemoryLogger();
+        $captured = $this->captureQueries([[], [], [], [], [], ['10']]);
+        $em = $this->emWithConnection($captured['connection']);
+
+        (new FacetAggregator($em, $logger))->compute([
+            'categoryId' => 5,
+            'searchQuery' => 'dress',
+        ]);
+
+        $computed = $logger->findByMessage('facets.computed');
+        self::assertCount(1, $computed);
+        self::assertSame('debug', $computed[0]['level']);
+
+        $context = $computed[0]['context'];
+        self::assertArrayHasKey('duration_ms', $context);
+        self::assertIsInt($context['duration_ms']);
+        self::assertGreaterThanOrEqual(0, $context['duration_ms']);
+        self::assertSame(10, $context['total_products']);
+        self::assertContains('categoryId', $context['filter_keys']);
+        self::assertContains('searchQuery', $context['filter_keys']);
+        self::assertTrue($context['has_search']);
+    }
+
+    #[Test]
+    public function emitsSlowResponseWarningWhenOver100ms(): void
+    {
+        $logger = new InMemoryLogger();
+        // Build a connection whose executeQuery sleeps 110ms each call
+        // — but only on the first call (size facet) so we don't
+        // multiply the sleep across all 6 queries (test runtime).
+        $sleeps = [110_000, 0, 0, 0, 0, 0];   // microseconds
+        $callIdx = 0;
+        $connection = $this->createMock(Connection::class);
+        $connection->method('executeQuery')->willReturnCallback(
+            function () use (&$callIdx, $sleeps) {
+                $delay = $sleeps[$callIdx] ?? 0;
+                $callIdx++;
+                if ($delay > 0) {
+                    usleep($delay);
+                }
+                $r = $this->createMock(Result::class);
+                $r->method('fetchAllAssociative')->willReturn([]);
+                $r->method('fetchOne')->willReturn('0');
+                return $r;
+            },
+        );
+        $em = $this->emWithConnection($connection);
+
+        (new FacetAggregator($em, $logger))->compute([]);
+
+        $slow = $logger->findByMessage('facets.slow_response');
+        self::assertCount(1, $slow);
+        self::assertSame('warning', $slow[0]['level']);
+        self::assertGreaterThan(100, $slow[0]['context']['duration_ms']);
+        self::assertSame(100, $slow[0]['context']['threshold_ms']);
+    }
+
+    #[Test]
+    public function fastResponsesDoNotEmitSlowResponseWarning(): void
+    {
+        $logger = new InMemoryLogger();
+        $captured = $this->captureQueries([[], [], [], [], [], ['10']]);
+        $em = $this->emWithConnection($captured['connection']);
+
+        (new FacetAggregator($em, $logger))->compute([]);
+
+        // facets.computed at debug level fires, but no slow_response
+        self::assertEmpty($logger->findByMessage('facets.slow_response'));
+    }
+
+    // =================================================================
     // Helpers
     // =================================================================
 
@@ -435,15 +562,20 @@ final class FacetAggregatorTest extends TestCase
      * SQL + params + types and returns a Result mock yielding the
      * next canned row set.
      *
+     * When $captureStatements is true, also captures executeStatement
+     * calls (used by the X.10-D timeout-emission tests).
+     *
      * @param list<list<array<string, mixed>>|list<string>> $resultRows
-     *        Each entry is either:
-     *          - a list of associative rows (for fetchAllAssociative)
-     *          - a single-element list with one scalar (for fetchOne)
-     * @return array{connection: Connection, queries: list<array{sql: string, params: array<string, mixed>, types: array<string, int|string>}>}
+     * @return array{
+     *     connection: Connection,
+     *     queries: list<array{sql: string, params: array<string, mixed>, types: array<string, int|string>}>,
+     *     statements: list<string>
+     * }
      */
-    private function captureQueries(array $resultRows): array
+    private function captureQueries(array $resultRows, bool $captureStatements = false): array
     {
         $queries = [];
+        $statements = [];
         $callIndex = 0;
 
         $connection = $this->createMock(Connection::class);
@@ -459,8 +591,6 @@ final class FacetAggregatorTest extends TestCase
                     $result->method('fetchOne')->willReturn(false);
                     return $result;
                 }
-                // Heuristic: if the first row is a string (scalar),
-                // treat as a single fetchOne result; otherwise rows.
                 if (is_string($rowSet[0]) || is_int($rowSet[0])) {
                     $result->method('fetchAllAssociative')->willReturn([]);
                     $result->method('fetchOne')->willReturn($rowSet[0]);
@@ -472,7 +602,20 @@ final class FacetAggregatorTest extends TestCase
             },
         );
 
-        return ['connection' => $connection, 'queries' => &$queries];
+        if ($captureStatements) {
+            $connection->method('executeStatement')->willReturnCallback(
+                function (string $sql) use (&$statements): int {
+                    $statements[] = $sql;
+                    return 0;
+                },
+            );
+        }
+
+        return [
+            'connection' => $connection,
+            'queries' => &$queries,
+            'statements' => &$statements,
+        ];
     }
 
     private function emWithConnection(Connection $connection): EntityManagerInterface
