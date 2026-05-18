@@ -1,10 +1,10 @@
 # M3.2 — Consolidated Operator Playbook
 
-**Purpose:** Single staging-then-production runbook for the 8 pending operator follow-ups across M3.2.X.1 through M3.2.X.7.
+**Purpose:** Single staging-then-production runbook for the 9 pending operator follow-ups across M3.2.X.1 through M3.2.X.8.
 **Status:** ⏳ Awaiting operator execution
 **Estimated operator effort:** ~3-4 hours staging + ~1-2 hours production (excluding the 7-day shadow window for X.1-C-FLIP)
-**Last updated:** Sunday, May 17, 2026
-**Maintained alongside:** The 7 per-phase closure runbooks remain the canonical detail; this playbook is the execution-time index.
+**Last updated:** Monday, May 18, 2026
+**Maintained alongside:** The 8 per-phase closure runbooks remain the canonical detail; this playbook is the execution-time index.
 
 ## 🎯 Quick-decision summary
 
@@ -51,26 +51,28 @@ curl -s $STAGING_API/v3/categories | jq '.[0].slug'
 - [ ] Latest main commit has reached staging
 - [ ] Health endpoint responds 200: `curl -sf $STAGING_API/v3/health`
 
-### 2.B — Run migrations (3 new ones)
+### 2.B — Run migrations (5 new ones)
 
-Three migrations were added across M3.2.X.2, M3.2.X.4, M3.2.X.6. Run them in chronological order:
+Five migrations were added across M3.2.X.2, M3.2.X.4, M3.2.X.6, M3.2.X.7, M3.2.X.8. Run them in chronological order:
 
 ```bash
 # Run all pending migrations
 cd ~/3bayti/apps/api && composer migrate
-# Expected: 3 migrations applied:
+# Expected: 5 migrations applied:
 #   Version20260516000001 (M3.2.X.2 — featured vendors column)
 #   Version20260516000002 (M3.2.X.4 — notification_logs table)
 #   Version20260517000001 (M3.2.X.6 — vendor lifecycle status)
+#   Version20260518000001 (M3.2.X.7 — vendor preferred_locale)
+#   Version20260518000002 (M3.2.X.8 — promo_codes + promo_redemptions tables)
 ```
 
-- [ ] All 3 migrations applied without error
+- [ ] All 5 migrations applied without error
 
 ### 2.C — Verify schema (psql connect to staging DB)
 
 ```bash
-psql $STAGING_DB_URL -c "\d vendors" | grep -E "is_featured|status|status_changed_at|status_reason"
-# Expected: 4 rows showing the new columns
+psql $STAGING_DB_URL -c "\d vendors" | grep -E "is_featured|status|status_changed_at|status_reason|preferred_locale"
+# Expected: 5 rows showing the new columns (4 from X.2+X.6, 1 from X.7)
 
 psql $STAGING_DB_URL -c "\dt notification_logs"
 # Expected: table exists
@@ -80,12 +82,25 @@ psql $STAGING_DB_URL -c "\d notification_logs" | grep -E "order_id|template|stat
 
 psql $STAGING_DB_URL -c "\d+ vendors" | grep -E "chk_vendors_status|idx_vendors_status_owner"
 # Expected: CHECK constraint + composite index present
+
+# M3.2.X.8 — promo tables
+psql $STAGING_DB_URL -c "\dt promo_codes" | head -3
+# Expected: table exists
+psql $STAGING_DB_URL -c "\dt promo_redemptions" | head -3
+# Expected: table exists
+psql $STAGING_DB_URL -c "\d promo_codes" | grep -E "code|discount_type|discount_value|valid_from|valid_until"
+# Expected: 5 rows showing key columns
+psql $STAGING_DB_URL -c "\d orders" | grep promo_redemption_id
+# Expected: 1 row (nullable FK)
 ```
 
-- [ ] vendors table has 4 new columns from X.2 + X.6
+- [ ] vendors table has 5 new columns from X.2 + X.6 + X.7
 - [ ] notification_logs table exists with 6 indexes
 - [ ] CHECK constraint chk_vendors_status present
 - [ ] Composite index idx_vendors_status_owner present
+- [ ] promo_codes table exists with CHECK on discount_type + functional UNIQUE on UPPER(code)
+- [ ] promo_redemptions table exists with UNIQUE on order_id
+- [ ] orders.promo_redemption_id nullable FK present
 
 ### 2.D — Review M3.2.X.6 backfill results
 
@@ -384,9 +399,152 @@ SELECT locale, COUNT(*) FROM users GROUP BY locale ORDER BY locale;
 - [ ] Existing Arabic-locale user count reviewed; downstream communication decided
 - [ ] Native Arabic reviewer pass scheduled (see `m3.2.x.7-completion.md` §Native reviewer pass; ~1-2 hours)
 
+### 2.M — M3.2.X.8 — Smoke-test promo code engine
+
+The M3.2.X.8 migration `Version20260518000002` was run as part of §2.B. This step verifies the promo code engine end-to-end on staging: admin CRUD + customer quote + checkout-with-promo + rejection paths + legacy deprecation header.
+
+**Pre-condition:** `Version20260518000002` has been applied. Verify:
+
+```bash
+psql $STAGING_DB_URL -c "\d promo_codes" | head -5
+# Expected: table exists with code, discount_type, discount_value, ... columns
+psql $STAGING_DB_URL -c "\d promo_redemptions" | head -5
+# Expected: table exists with order_id (UNIQUE) FK to orders
+psql $STAGING_DB_URL -c "SELECT column_name FROM information_schema.columns WHERE table_name='orders' AND column_name='promo_redemption_id';"
+# Expected: 1 row
+```
+
+**Step 1 — Seed a sample promo:**
+
+```bash
+curl -X POST $STAGING_API/v3/admin/promo-codes \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "code": "STAGING10",
+    "description": "Staging smoke test — 10% off",
+    "discount_type": "percentage",
+    "discount_value": "10.00",
+    "min_subtotal": "50.00",
+    "usage_limit_per_user": 1,
+    "is_active": true
+  }' | jq '.data.id, .data.code, .data.currently_time_valid'
+# Expected: <id>, "STAGING10", true
+export PROMO_ID=<id from above>
+```
+
+**Step 2 — Admin CRUD round-trip:**
+
+```bash
+# List filter
+curl -sf "$STAGING_API/v3/admin/promo-codes?is_active=true" -H "Authorization: Bearer $ADMIN_JWT" | jq '.meta.total'
+# Expected: >= 1
+
+# Get by id with redemption count
+curl -sf $STAGING_API/v3/admin/promo-codes/$PROMO_ID -H "Authorization: Bearer $ADMIN_JWT" | jq '.data.redemption_count'
+# Expected: 0
+
+# Update — partial
+curl -X PUT $STAGING_API/v3/admin/promo-codes/$PROMO_ID \
+  -H "Authorization: Bearer $ADMIN_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"description": "Updated description"}' | jq '.data.description'
+# Expected: "Updated description"
+```
+
+**Step 3 — Customer quote endpoint (no order created):**
+
+```bash
+# Add an item to the user's cart first (subtotal >= 50.00 for STAGING10)
+# ... use existing POST /v3/cart/items flow ...
+
+# Then quote
+curl -X POST $STAGING_API/v3/cart/quote \
+  -H "Authorization: Bearer $USER_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"promo_code": "STAGING10"}' | jq '.data | {discount, total, applied_promo}'
+# Expected: discount > 0, total = subtotal - discount, applied_promo.code = "STAGING10"
+```
+
+**Step 4 — Checkout with promo (server-authoritative):**
+
+```bash
+# Initiate checkout WITH the promo code
+curl -X POST $STAGING_API/v3/checkout/initiate \
+  -H "Authorization: Bearer $USER_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"promo_code": "STAGING10"}' \
+  -i | head -20
+# Expected: HTTP/1.1 200
+# Expected: NO X-Bayti-Deprecation header on this response
+# Expected JSON body: checkout_url + order_reference
+
+# After completing the Noon sandbox flow, verify redemption persisted
+curl -sf $STAGING_API/v3/admin/promo-codes/$PROMO_ID -H "Authorization: Bearer $ADMIN_JWT" | jq '.data.redemption_count'
+# Expected: 1
+```
+
+**Step 5 — Verify applied_promo on the order:**
+
+```bash
+# Fetch the order detail (assuming order_id from the checkout response)
+curl -sf $STAGING_API/v3/orders/$ORDER_ID -H "Authorization: Bearer $USER_JWT" | jq '.applied_promo'
+# Expected: { code: "STAGING10", discount_type: "percentage", discount_value: "10.00", discount_amount: "<computed>", redeemed_at: "..." }
+```
+
+**Step 6 — Rejection paths:**
+
+```bash
+# Unknown code
+curl -X POST $STAGING_API/v3/cart/quote \
+  -H "Authorization: Bearer $USER_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"promo_code": "NOPE"}' | jq '.error.code'
+# Expected: "PROMO_NOT_FOUND"
+
+# Per-user limit reached (the seeded code has usage_limit_per_user=1; we just used it)
+curl -X POST $STAGING_API/v3/cart/quote \
+  -H "Authorization: Bearer $USER_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"promo_code": "STAGING10"}' | jq '.error.code'
+# Expected: "PROMO_USER_LIMIT_REACHED"
+```
+
+**Step 7 — Legacy deprecation header:**
+
+```bash
+# Old-style request with raw `discount` field, NO promo_code
+curl -i -X POST $STAGING_API/v3/checkout/initiate \
+  -H "Authorization: Bearer $USER_JWT" \
+  -H "Content-Type: application/json" \
+  -d '{"discount": "5.00"}' 2>&1 | grep -i 'x-bayti-deprecation'
+# Expected: X-Bayti-Deprecation: client-supplied discount accepted as-is; pass promo_code instead
+```
+
+**Step 8 — Soft-delete an in-use code:**
+
+```bash
+# The code has 1 redemption now → soft delete (is_active=false), not hard delete
+curl -X DELETE $STAGING_API/v3/admin/promo-codes/$PROMO_ID -H "Authorization: Bearer $ADMIN_JWT" -i | head -1
+# Expected: HTTP/1.1 204
+
+# Verify still present but inactive
+curl -sf $STAGING_API/v3/admin/promo-codes/$PROMO_ID -H "Authorization: Bearer $ADMIN_JWT" | jq '.data.is_active, .data.redemption_count'
+# Expected: false, 1
+```
+
+- [ ] Sample promo created via admin POST
+- [ ] Admin list + get + update CRUD round-trip works
+- [ ] Customer `POST /v3/cart/quote` returns price breakdown with discount + applied_promo block
+- [ ] `POST /v3/checkout/initiate` with promo_code creates order with the server-computed discount + persists redemption row
+- [ ] Order detail surfaces `applied_promo` block from snapshot fields
+- [ ] PROMO_NOT_FOUND + PROMO_USER_LIMIT_REACHED rejection paths return structured 422
+- [ ] Legacy raw-discount request emits `X-Bayti-Deprecation` header
+- [ ] Soft-delete on in-use code preserves the row with is_active=false
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.K complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.M complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
@@ -403,17 +561,19 @@ SELECT locale, COUNT(*) FROM users GROUP BY locale ORDER BY locale;
 ```bash
 # Use production DB credentials
 cd ~/3bayti/apps/api && composer migrate
-# Expected: same 3 migrations applied
+# Expected: same 5 migrations applied
 ```
 
-- [ ] All 3 migrations applied on production without error
+- [ ] All 5 migrations applied on production without error
 
 ### 3.C — Verify production schema
 
 Run the same `\d` commands from §2.C against the production DB.
 
-- [ ] vendors table has all new columns
+- [ ] vendors table has all new columns (is_featured, status, status_changed_at, status_reason, preferred_locale)
 - [ ] notification_logs table exists
+- [ ] promo_codes + promo_redemptions tables exist
+- [ ] orders.promo_redemption_id FK present
 - [ ] All constraints + indexes present
 
 ### 3.D — Production backfill review
@@ -432,11 +592,15 @@ Same as §2.E but against production. Use a fresh admin JWT for production.
 
 ### 3.F — Production smoke tests
 
-Repeat §2.F through §2.J against the production API (limited to read-only smoke tests + 1-2 controlled write tests if safe to do so). DO NOT create test vendors on production unless you have a cleanup plan.
+Repeat §2.F through §2.M against the production API (limited to read-only smoke tests + 1-2 controlled write tests if safe to do so). DO NOT create test vendors, test orders, or test promo codes on production unless you have a cleanup plan.
+
+For M3.2.X.8 specifically: production smoke can be reduced to (a) one admin-side `POST /v3/admin/promo-codes` + `DELETE` round-trip for a code prefixed `PRODSMOKE-` (hard-deletes since zero redemptions), (b) one `POST /v3/cart/quote` against a real user cart with an inactive sentinel code expecting 422, (c) verifying no `X-Bayti-Deprecation` header appears on the standard mobile build's checkout-initiate requests in APM. Skip the full happy-path checkout-with-promo flow on production — the staging smoke already proves the engine works end-to-end.
 
 - [ ] Admin endpoint smoke tests pass on production
 - [ ] Lifecycle gate verified with at least one production vendor
 - [ ] Audit log entries appearing
+- [ ] M3.2.X.8: admin promo CRUD round-trip + customer rejection-path smoke clean on production
+- [ ] M3.2.X.8: no `X-Bayti-Deprecation` header observed in standard mobile build traffic (confirms no consumer still on the legacy raw-discount path)
 
 ## 4. Deferred items — operator-driven, may take days/weeks
 
@@ -532,6 +696,7 @@ If a step in this playbook is ambiguous, the per-phase closure runbook has the c
 | M3.2.X.4 | `docs/runbooks/m3.2/m3.2.x.4-completion.md` |
 | M3.2.X.6 | `docs/runbooks/m3.2/m3.2.x.6-completion.md` |
 | M3.2.X.7 | `docs/runbooks/m3.2/m3.2.x.7-completion.md` |
+| M3.2.X.8 | `docs/runbooks/m3.2/m3.2.x.8-completion.md` |
 
 ## 7. Sign-off
 
@@ -546,4 +711,4 @@ Date completed (staging): ________________
 Date completed (production): ________________
 Operator name: ________________
 
-After sign-off, the playbook is archived as a record of the rollout. Future M3.2 phases (X.7 onwards) will get their own per-phase runbooks and may eventually trigger a new consolidated playbook if multiple phases batch up again.
+After sign-off, the playbook is archived as a record of the rollout. Future M3.2 phases (X.9 onwards) will get their own per-phase runbooks and may eventually trigger a new consolidated playbook if multiple phases batch up again.
