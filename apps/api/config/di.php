@@ -197,6 +197,10 @@ return [
     \Bayti\Api\Http\Controllers\Order\GetReturnController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Order\CancelReturnController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Order\ServeReturnPhotoController::class => \DI\autowire(),
+    // X.18-E — Vendor endpoints
+    \Bayti\Api\Http\Controllers\Vendor\Order\ListVendorReturnsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorReturnController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Order\ConfirmReceiptController::class => \DI\autowire(),
 
     // M3.1.7-G — Dispute persistence + admin endpoints
     \Bayti\Api\Http\Serializers\DisputeSerializer::class => \DI\autowire(),
