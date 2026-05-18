@@ -22,7 +22,6 @@ use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 
 /**
  * POST /v3/payment/webhook/noon
@@ -71,7 +70,11 @@ final class NoonWebhookController
         private readonly PaymentGatewayInterface $gateway,
         private readonly NoonWebhookSignatureVerifier $signatureVerifier,
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
-        private readonly LoggerInterface $logger = new NullLogger(),
+        // M3.2.X.5-A: required (no `= new NullLogger()` default) so PHP-DI's
+        // autowire injects the bound LoggerInterface. The same pattern as
+        // M3.2.X.8-D's PromoCodeResolverService: `useAttributes=false` means
+        // nullable+default parameters are not auto-injected from bindings.
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -146,6 +149,28 @@ final class NoonWebhookController
         );
 
         $events->save($event);
+
+        // ------------------------------------------------------------------
+        // M3.2.X.5-A — OBSERVABILITY: catch unknown dispute-shaped events.
+        //
+        // Our DISPUTE_EVENT_TYPES constant is based on Noon's API contract
+        // docs, not empirical observation. If Noon ever sends a real
+        // dispute eventType that DOESN'T match our list, the current code
+        // would silently classify it as a non-dispute and skip dispute
+        // persistence + admin notification.
+        //
+        // Defence: emit a warning log line for any eventType that
+        // CONTAINS the substring 'dispute' or 'chargeback' (case-
+        // insensitive) but isn't in our recognized list. This makes
+        // future unknown dispute strings self-surface in production logs
+        // and Sentry without breaking anything.
+        //
+        // Operator can run `apps/api/bin/audit-dispute-event-types.php`
+        // against the production DB to retroactively check
+        // payment_webhook_events for any dispute-shaped strings we
+        // haven't yet added to the constant.
+        // ------------------------------------------------------------------
+        $this->emitDisputeShapedWarning($eventType, $idempotencyKey);
 
         // ------------------------------------------------------------------
         // DISPUTE DETECTION (M3.1.7-G)
@@ -439,6 +464,37 @@ final class NoonWebhookController
             return false;
         }
         return in_array($eventType, self::DISPUTE_EVENT_TYPES, true);
+    }
+
+    /**
+     * M3.2.X.5-A — Observability hook for unknown dispute-shaped events.
+     *
+     * Emits a warning log line when an eventType contains 'dispute' or
+     * 'chargeback' (case-insensitive) but isn't in our recognized
+     * DISPUTE_EVENT_TYPES list. Without this, an unrecognized real
+     * dispute eventType would be silently classified as a non-dispute
+     * and no OrderDispute row + no admin email would result.
+     *
+     * The warning includes the idempotency_key so operators can pull
+     * the full payload from payment_webhook_events for manual triage.
+     */
+    private function emitDisputeShapedWarning(?string $eventType, string $idempotencyKey): void
+    {
+        if ($eventType === null || $eventType === '') {
+            return;
+        }
+        if ($this->isDisputeEvent($eventType)) {
+            return; // Already handled by the known list.
+        }
+        $lower = strtolower($eventType);
+        if (str_contains($lower, 'dispute') || str_contains($lower, 'chargeback')) {
+            $this->logger->warning('noon.webhook.unknown_dispute_event_type', [
+                'event_type' => $eventType,
+                'idempotency_key' => $idempotencyKey,
+                'recognized_types' => self::DISPUTE_EVENT_TYPES,
+                'action' => 'add this event_type to DISPUTE_EVENT_TYPES constant in NoonWebhookController if it is a real dispute event',
+            ]);
+        }
     }
 
     /**

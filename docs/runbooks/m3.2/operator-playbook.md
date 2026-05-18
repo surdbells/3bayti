@@ -1,10 +1,10 @@
 # M3.2 — Consolidated Operator Playbook
 
-**Purpose:** Single staging-then-production runbook for the 9 pending operator follow-ups across M3.2.X.1 through M3.2.X.8.
+**Purpose:** Single staging-then-production runbook for the 10 pending operator follow-ups across M3.2.X.1 through M3.2.X.8 (including X.5 audit-script run).
 **Status:** ⏳ Awaiting operator execution
 **Estimated operator effort:** ~3-4 hours staging + ~1-2 hours production (excluding the 7-day shadow window for X.1-C-FLIP)
-**Last updated:** Monday, May 18, 2026
-**Maintained alongside:** The 8 per-phase closure runbooks remain the canonical detail; this playbook is the execution-time index.
+**Last updated:** Monday, May 18, 2026 (Pass 1 of "finish Stream X" — X.5 closed via observability + audit-script approach; X.9 + X.16 scoped out per product decisions; see `stream-x-scope-revision.md`)
+**Maintained alongside:** The 9 per-phase closure runbooks remain the canonical detail; this playbook is the execution-time index.
 
 ## 🎯 Quick-decision summary
 
@@ -628,26 +628,47 @@ The `best_sellers` endpoint shipped in M3.2.X.1 ran in "shadow mode" since deplo
 - [ ] `target` flipped from `old` to `new`
 - [ ] Post-flip metrics monitored for 24h
 
-### 4.B — M3.2.X.5 — Dispute eventType empirical capture
+### 4.B — M3.2.X.5 — Dispute eventType audit (run after staging + production deploys)
 
-**Status:** ⏳ Blocks M3.2.X.5 implementation entirely
+**Status:** ✅ X.5 code shipped. Operator follow-up is now a quick read-only script, not a blocking sandbox trigger.
 
-The M3.2.X.5 phase is blocked on capturing real `eventType` strings from Noon sandbox dispute webhooks. Until an operator triggers a sandbox dispute (which is a manual Noon workflow), we don't know the actual string values to put in the `DISPUTE_EVENT_TYPES` constant.
+**Background:** May 18, 2026 product decision confirmed 3bayti runs against live Noon production credentials inherited from legacy. The original X.5 plan (manual sandbox dispute trigger to capture eventType strings) was replaced with two pieces of machinery shipped in the X.5 code:
+
+1. **Observability hook** in `NoonWebhookController` — every webhook now passes through `emitDisputeShapedWarning`. Any eventType containing `'dispute'` or `'chargeback'` substring (case-insensitive) that ISN'T in the recognized `DISPUTE_EVENT_TYPES` constant produces a `noon.webhook.unknown_dispute_event_type` warning in production logs / Sentry.
+2. **Audit script** `apps/api/bin/audit-dispute-event-types.php` — read-only operator tool that enumerates every distinct event_type ever seen in `payment_webhook_events`, flags unrecognized dispute-shaped strings, prints a backfill SQL template.
 
 **Operator actions:**
 
 ```bash
-# 1. Place a sandbox order through staging
-# 2. Use Noon's sandbox console to manually trigger a dispute on that order
-# 3. Capture the webhook payload from your webhook receiver logs
-#    (look for POST /webhook/noon entries)
-# 4. Note the exact eventType string(s) Noon sent
-# 5. Provide those strings back to the development team to resume M3.2.X.5
+# Run the audit against staging (after staging deploy)
+cd /www/wwwroot/3bayti/apps/api
+/www/server/php/83/bin/php bin/audit-dispute-event-types.php
+
+# Expected output: "Result: CLEAN — no action required." OR
+# a list of unknown dispute-shaped event_type strings to triage.
+
+# Run the audit against production (after production deploy)
+# Same command, run against production DB credentials.
 ```
 
-- [ ] Sandbox dispute triggered
-- [ ] Webhook payload captured
-- [ ] eventType strings provided to dev team
+**Interpreting results:**
+
+- **"Result: CLEAN — no action required."** → Done. Either no dispute events have arrived yet, or every dispute eventType is already in our recognized list.
+- **"Result: ACTION REQUIRED — see Section 2 above."** → For each ⚠ flagged event_type string:
+  1. Cross-check it against Noon's merchant portal API docs to confirm it's a real dispute eventType (not a partial substring match coincidence)
+  2. If confirmed: add it to `NoonWebhookController::DISPUTE_EVENT_TYPES`, ship a one-line follow-up commit
+  3. Use the backfill SQL template printed by the script to retroactively create `order_disputes` rows for any historical events that should have created them when they originally arrived
+
+**Ongoing observability** (passive):
+
+The warning hook means new unknown dispute eventTypes auto-surface in production. Monitor for `noon.webhook.unknown_dispute_event_type` log lines. If any appear:
+1. Pull the full payload via `SELECT payload FROM payment_webhook_events WHERE idempotency_key = '...'`
+2. Verify it's a real Noon dispute eventType
+3. Add to constant + run the backfill template
+
+- [ ] Audit script run against staging — result captured
+- [ ] Audit script run against production — result captured
+- [ ] If any unknown strings flagged: triaged + DISPUTE_EVENT_TYPES updated + backfill run
 
 ### 4.C — Branch protection + Chromatic + a11y allowlist + Mobile Playwright promotion
 
@@ -694,9 +715,11 @@ If a step in this playbook is ambiguous, the per-phase closure runbook has the c
 | M3.2.X.2 | `docs/runbooks/m3.2/m3.2.x.2-completion.md` |
 | M3.2.X.3 | `docs/runbooks/m3.2/m3.2.x.3-completion.md` |
 | M3.2.X.4 | `docs/runbooks/m3.2/m3.2.x.4-completion.md` |
+| M3.2.X.5 | `docs/runbooks/m3.2/m3.2.x.5-completion.md` |
 | M3.2.X.6 | `docs/runbooks/m3.2/m3.2.x.6-completion.md` |
 | M3.2.X.7 | `docs/runbooks/m3.2/m3.2.x.7-completion.md` |
 | M3.2.X.8 | `docs/runbooks/m3.2/m3.2.x.8-completion.md` |
+| Stream X scope revision (May 18, 2026) | `docs/runbooks/m3.2/stream-x-scope-revision.md` |
 
 ## 7. Sign-off
 

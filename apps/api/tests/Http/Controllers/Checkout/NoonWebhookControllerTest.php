@@ -360,6 +360,220 @@ final class NoonWebhookControllerTest extends HttpTestCase
         self::assertSame($originalStatus, $order->getStatus());
     }
 
+    // ==================================================================
+    // M3.2.X.5-A — Observability hook for unknown dispute-shaped events
+    // ==================================================================
+
+    #[Test]
+    public function emitsWarningForUnknownDisputeShapedEventType(): void
+    {
+        // An eventType containing 'dispute' (case-insensitive) that
+        // isn't in DISPUTE_EVENT_TYPES should produce a warning log
+        // line so the unknown string surfaces in production logs.
+        $logger = $this->makeCapturingLogger();
+        $this->bind(\Psr\Log\LoggerInterface::class, $logger);
+
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save');
+
+        $em = $this->stubEm(function ($em) use ($eventRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $this->createMock(PaymentTransactionRepository::class)],
+                [Order::class, $this->createMock(OrderRepository::class)],
+            ]);
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', [
+                'eventId' => 'evt-unknown-dispute-001',
+                'eventType' => 'payment.dispute.created',  // hypothetical Noon string NOT in constant
+                'result' => ['order' => ['id' => '123456789012']],
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+
+        // Find the warning entry.
+        $warnings = array_filter(
+            $logger->captured,
+            static fn (array $r): bool => $r['level'] === 'warning'
+                && $r['message'] === 'noon.webhook.unknown_dispute_event_type',
+        );
+        self::assertCount(1, $warnings, 'expected exactly one unknown-dispute warning');
+        $warning = array_values($warnings)[0];
+        self::assertSame('payment.dispute.created', $warning['context']['event_type']);
+        self::assertArrayHasKey('idempotency_key', $warning['context']);
+        self::assertArrayHasKey('recognized_types', $warning['context']);
+    }
+
+    #[Test]
+    public function emitsWarningForUnknownChargebackShapedEventType(): void
+    {
+        // Same hook — 'chargeback' substring should also trigger.
+        $logger = $this->makeCapturingLogger();
+        $this->bind(\Psr\Log\LoggerInterface::class, $logger);
+
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save');
+
+        $em = $this->stubEm(function ($em) use ($eventRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $this->createMock(PaymentTransactionRepository::class)],
+                [Order::class, $this->createMock(OrderRepository::class)],
+            ]);
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', [
+                'eventId' => 'evt-unknown-cb-001',
+                'eventType' => 'Order.Chargeback.Pending',  // mixed-case test
+                'result' => ['order' => ['id' => '123456789012']],
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $warnings = array_filter(
+            $logger->captured,
+            static fn (array $r): bool => $r['level'] === 'warning'
+                && $r['message'] === 'noon.webhook.unknown_dispute_event_type',
+        );
+        self::assertCount(1, $warnings);
+        self::assertSame('Order.Chargeback.Pending', array_values($warnings)[0]['context']['event_type']);
+    }
+
+    #[Test]
+    public function doesNotWarnForKnownDisputeEventType(): void
+    {
+        // A known dispute eventType (in DISPUTE_EVENT_TYPES) must NOT
+        // emit the unknown-dispute warning — that would be noise.
+        $logger = $this->makeCapturingLogger();
+        $this->bind(\Psr\Log\LoggerInterface::class, $logger);
+
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save');
+
+        $em = $this->stubEm(function ($em) use ($eventRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $this->createMock(PaymentTransactionRepository::class)],
+                [Order::class, $this->createMock(OrderRepository::class)],
+                [\Bayti\Api\Domain\Order\OrderDispute::class, $this->createMock(\Bayti\Api\Domain\Order\OrderDisputeRepository::class)],
+            ]);
+            $em->method('flush');
+            $em->method('persist');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', [
+                'eventId' => 'evt-known-dispute-001',
+                'eventType' => 'CHARGEBACK_OPENED',  // IS in DISPUTE_EVENT_TYPES
+                'result' => ['order' => ['id' => '123456789012']],
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $warnings = array_filter(
+            $logger->captured,
+            static fn (array $r): bool => $r['level'] === 'warning'
+                && $r['message'] === 'noon.webhook.unknown_dispute_event_type',
+        );
+        self::assertCount(0, $warnings, 'known dispute type must not emit the unknown warning');
+    }
+
+    #[Test]
+    public function doesNotWarnForUnrelatedEventType(): void
+    {
+        // Standard non-dispute eventType (e.g. 'order.captured') must
+        // NOT emit the warning either — the hook only triggers on
+        // 'dispute' or 'chargeback' substring.
+        $logger = $this->makeCapturingLogger();
+        $this->bind(\Psr\Log\LoggerInterface::class, $logger);
+
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save');
+
+        $em = $this->stubEm(function ($em) use ($eventRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $this->createMock(PaymentTransactionRepository::class)],
+                [Order::class, $this->createMock(OrderRepository::class)],
+            ]);
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', [
+                'eventId' => 'evt-captured-001',
+                'eventType' => 'order.captured',
+                'result' => ['order' => ['id' => '123456789012']],
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $warnings = array_filter(
+            $logger->captured,
+            static fn (array $r): bool => $r['level'] === 'warning'
+                && $r['message'] === 'noon.webhook.unknown_dispute_event_type',
+        );
+        self::assertCount(0, $warnings);
+    }
+
+    /**
+     * Anonymous logger that captures every call as a record array.
+     * Public `$captured` so tests can assert against it directly.
+     */
+    private function makeCapturingLogger(): \Psr\Log\LoggerInterface
+    {
+        return new class implements \Psr\Log\LoggerInterface {
+            /** @var list<array{level: string, message: string, context: array<string, mixed>}> */
+            public array $captured = [];
+            public function emergency(string|\Stringable $message, array $context = []): void { $this->log('emergency', $message, $context); }
+            public function alert(string|\Stringable $message, array $context = []): void { $this->log('alert', $message, $context); }
+            public function critical(string|\Stringable $message, array $context = []): void { $this->log('critical', $message, $context); }
+            public function error(string|\Stringable $message, array $context = []): void { $this->log('error', $message, $context); }
+            public function warning(string|\Stringable $message, array $context = []): void { $this->log('warning', $message, $context); }
+            public function notice(string|\Stringable $message, array $context = []): void { $this->log('notice', $message, $context); }
+            public function info(string|\Stringable $message, array $context = []): void { $this->log('info', $message, $context); }
+            public function debug(string|\Stringable $message, array $context = []): void { $this->log('debug', $message, $context); }
+            public function log($level, string|\Stringable $message, array $context = []): void
+            {
+                $this->captured[] = [
+                    'level' => (string) $level,
+                    'message' => (string) $message,
+                    'context' => $context,
+                ];
+            }
+        };
+    }
+
     private function setEntityId(object $entity, int $id): void
     {
         $ref = new \ReflectionProperty($entity::class, 'id');
