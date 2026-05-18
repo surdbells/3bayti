@@ -415,6 +415,9 @@ return function (App $app): void {
         $group->get('/orders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderController::class);
         $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
             \Bayti\Api\Http\Controllers\Vendor\Order\TransitionVendorOrderItemController::class);
+        // M3.2.X.17-D — vendor order timeline
+        $group->get('/orders/{id:[0-9]+}/timeline',
+            \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderTimelineController::class);
         // M3.2.X.18-E — vendor return endpoints
         $group->get(
             '/returns',

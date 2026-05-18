@@ -327,6 +327,7 @@ return [
     \Bayti\Api\Domain\Order\OrderTimelineBuilder::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\OrderTimelineSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderTimelineController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\Order\GetVendorOrderTimelineController::class => \DI\autowire(),
 
     // M3.2.X.4-C — Notification log admin surface
     \Bayti\Api\Http\Serializers\NotificationLogSerializer::class => \DI\autowire(),
