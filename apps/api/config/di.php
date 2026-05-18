@@ -282,6 +282,14 @@ return [
     \Bayti\Api\Http\Serializers\NotificationLogSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class => \DI\autowire(),
 
+    // M3.2.X.8-E — PromoCode admin CRUD surface
+    \Bayti\Api\Http\Serializers\PromoCodeSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\PromoCode\ListPromoCodesController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\PromoCode\GetPromoCodeController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\PromoCode\CreatePromoCodeController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\PromoCode\UpdatePromoCodeController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\PromoCode\DeletePromoCodeController::class => \DI\autowire(),
+
     // M3.1.7-E — Refund flow (full + partial)
     \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class => \DI\autowire(),
 

@@ -281,6 +281,8 @@ final class AuditEmitter
                 => $this->snapshotVendor($subject),
             $subject instanceof \Bayti\Api\Domain\Catalog\Category
                 => $this->snapshotCategory($subject),
+            $subject instanceof \Bayti\Api\Domain\Promo\PromoCode
+                => $this->snapshotPromoCode($subject),
             default => throw new \InvalidArgumentException(
                 'No snapshot strategy for ' . $subject::class,
             ),
@@ -598,6 +600,40 @@ final class AuditEmitter
             'display_order' => $c->getDisplayOrder(),
             'image_url' => $c->getImageUrl(),
             'is_active' => $c->isActive(),
+        ];
+    }
+
+    /**
+     * PromoCode snapshot (M3.2.X.8-E).
+     *
+     * Captures all 13 mutable columns so admin edits surface in the
+     * audit diff: code rename, discount-type or value changes, time-
+     * window adjustments, limit revisions, soft-delete toggles.
+     *
+     * No redaction needed — promo codes are not PII or secrets. The
+     * marketing-facing `code` is intentionally human-typeable and the
+     * surrounding business fields are operational data.
+     *
+     * Date fields use ATOM (RFC 3339) so the audit log is grep-able
+     * and reproducible across environments.
+     *
+     * @return array<string, mixed>
+     */
+    private function snapshotPromoCode(\Bayti\Api\Domain\Promo\PromoCode $p): array
+    {
+        return [
+            'code' => $p->getCode(),
+            'description' => $p->getDescription(),
+            'discount_type' => $p->getDiscountType(),
+            'discount_value' => $p->getDiscountValue(),
+            'currency' => $p->getCurrency(),
+            'min_subtotal' => $p->getMinSubtotal(),
+            'max_discount_amount' => $p->getMaxDiscountAmount(),
+            'usage_limit_global' => $p->getUsageLimitGlobal(),
+            'usage_limit_per_user' => $p->getUsageLimitPerUser(),
+            'valid_from' => $p->getValidFrom()?->format(\DateTimeInterface::ATOM),
+            'valid_until' => $p->getValidUntil()?->format(\DateTimeInterface::ATOM),
+            'is_active' => $p->isActive(),
         ];
     }
 

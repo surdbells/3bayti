@@ -328,6 +328,19 @@ return function (App $app): void {
         // status, recipient, error_kind, since, until, limit, offset.
         $group->get('/notification-logs',
             \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class);
+
+        // M3.2.X.8-E — Promo code CRUD. Soft-delete preserves
+        // promo_redemptions FK; hard-delete only when zero redemptions.
+        $group->get('/promo-codes',
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\ListPromoCodesController::class);
+        $group->get('/promo-codes/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\GetPromoCodeController::class);
+        $group->post('/promo-codes',
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\CreatePromoCodeController::class);
+        $group->put('/promo-codes/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\UpdatePromoCodeController::class);
+        $group->delete('/promo-codes/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\DeletePromoCodeController::class);
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);
