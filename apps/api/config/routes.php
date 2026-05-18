@@ -326,6 +326,13 @@ return function (App $app): void {
         $group->post('/vendors/{id:[0-9]+}/reactivate',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ReactivateVendorController::class);
 
+        // M3.2.X.14-D — Cross-vendor metrics list (admin dashboard).
+        // Registered BEFORE /vendors/{id:[0-9]+}/metrics so the
+        // literal 'vendor-metrics' path doesn't get parsed as a
+        // vendor id.
+        $group->get('/vendor-metrics',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorMetricsController::class);
+
         // M3.2.X.14-B — Vendor performance metrics (admin single-vendor view)
         $group->get('/vendors/{id:[0-9]+}/metrics',
             \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class);

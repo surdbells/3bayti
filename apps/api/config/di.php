@@ -368,6 +368,7 @@ return [
     \Bayti\Api\Domain\Catalog\VendorMetricsCalculator::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\VendorMetricsSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorMetricsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfMetricsController::class => \DI\autowire(),
 
     // M2.1 — Catalog admin controllers (Category)

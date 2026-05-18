@@ -198,6 +198,90 @@ class VendorRepository extends EntityRepository
     }
 
     /**
+     * Paginated admin-side vendor list for the M3.2.X.14-D metrics
+     * endpoint. Returns vendors plus a total count, allowing the
+     * controller to ship a paginated response envelope.
+     *
+     * Filters:
+     *   - status: 'pending' | 'approved' | 'suspended' | null
+     *     (null = no status filter)
+     *
+     * Sort axes ('name_asc' default):
+     *   - 'name_asc' / 'name_desc' — alpha
+     *   - 'created_at_desc' / 'created_at_asc' — by Vendor.createdAt
+     *
+     * NOTE: metric-based sorts (?sort=fulfillment_rate_desc) are NOT
+     * handled here — the controller paginates the full vendor list,
+     * computes metrics for the whole set, then sorts + slices in PHP.
+     * Acceptable for current 3bayti scale (≤200 vendors); flagged as
+     * an operator follow-up for cache-warming when scale demands.
+     *
+     * @return array{0: list<Vendor>, 1: int}
+     */
+    public function findPaginatedForAdmin(
+        int $limit,
+        int $offset,
+        ?string $status = null,
+        string $sort = 'name_asc',
+    ): array {
+        $qb = $this->createQueryBuilder('v');
+        if ($status !== null) {
+            $qb->andWhere('v.status = :status')->setParameter('status', $status);
+        }
+
+        // Sort routing — name + created_at only here; metric-based
+        // sorts are handled in PHP by the caller (see method docblock).
+        switch ($sort) {
+            case 'name_desc':
+                $qb->orderBy('v.name', 'DESC');
+                break;
+            case 'created_at_desc':
+                $qb->orderBy('v.createdAt', 'DESC');
+                break;
+            case 'created_at_asc':
+                $qb->orderBy('v.createdAt', 'ASC');
+                break;
+            case 'name_asc':
+            default:
+                $qb->orderBy('v.name', 'ASC');
+                break;
+        }
+
+        $qb->setMaxResults($limit)->setFirstResult($offset);
+
+        /** @var list<Vendor> $list */
+        $list = $qb->getQuery()->getResult();
+
+        // Re-run for total count
+        $countQb = $this->createQueryBuilder('v')->select('COUNT(v.id)');
+        if ($status !== null) {
+            $countQb->andWhere('v.status = :status')->setParameter('status', $status);
+        }
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        return [$list, $total];
+    }
+
+    /**
+     * Companion to findPaginatedForAdmin: returns ALL vendor IDs
+     * matching the supplied status filter (no pagination). Used by
+     * the metrics list endpoint when a metric-based sort is requested
+     * — the controller computes metrics for every vendor, sorts in
+     * PHP, then slices.
+     *
+     * @return list<int>
+     */
+    public function findAllIdsForAdmin(?string $status = null): array
+    {
+        $qb = $this->createQueryBuilder('v')->select('v.id');
+        if ($status !== null) {
+            $qb->andWhere('v.status = :status')->setParameter('status', $status);
+        }
+        $rows = $qb->getQuery()->getScalarResult();
+        return array_map(static fn (array $r): int => (int) $r['id'], $rows);
+    }
+
+    /**
      * Active + featured vendors, ordered alphabetically by name.
      *
      * Powers the apps/web home-page Designer Spotlight surface.
