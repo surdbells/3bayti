@@ -58,4 +58,31 @@ enum EmailTemplate: string
     // Admin: 1 event — copy on every new submission for queue oversight.
     //   ALWAYS English per Q-VendorAdminLocale = A locked.
     case RETURN_SUBMITTED_ADMIN = 'return.submitted.admin';
+
+    // M3.2.X.11 — Cart abandonment recovery (marketing class)
+    // Sent to customers whose active cart has been idle past the
+    // configured threshold (default 24h). Gated by the user's
+    // marketing_emails_opt_out flag — transactional templates above
+    // ignore that flag, marketing templates honour it.
+    case CART_ABANDONED_CUSTOMER = 'cart.abandoned.customer';
+
+    /**
+     * Marketing-class templates are gated by User::isMarketingEmailsOptedOut().
+     * Transactional templates ignore that flag (they're required for
+     * the service to function under PDPL).
+     *
+     * Adding a new marketing template:
+     *   1. Add the case above
+     *   2. Add it to this MARKETING_TEMPLATES set
+     *   3. The notification dispatch layer automatically respects
+     *      the opt-out flag for any template in this set
+     */
+    private const MARKETING_TEMPLATES = [
+        'cart.abandoned.customer',
+    ];
+
+    public function isMarketing(): bool
+    {
+        return in_array($this->value, self::MARKETING_TEMPLATES, true);
+    }
 }

@@ -137,6 +137,15 @@ final class OrderEmailTemplateRenderer
                 ? $this->returnSubmittedVendorAr($order, $extra)
                 : $this->returnSubmittedVendorEn($order, $extra),
             EmailTemplate::RETURN_SUBMITTED_ADMIN => $this->returnSubmittedAdminEn($order, $extra),
+
+            // M3.2.X.11 — cart-scoped templates are rendered by
+            // CartEmailTemplateRenderer, not this class. If a caller
+            // routes one here it's a wiring bug; fail loudly rather
+            // than silently render an empty email.
+            EmailTemplate::CART_ABANDONED_CUSTOMER => throw new \LogicException(
+                'Cart-scoped template ' . $template->value
+                . ' must be rendered by CartEmailTemplateRenderer, not OrderEmailTemplateRenderer.',
+            ),
         };
     }
 

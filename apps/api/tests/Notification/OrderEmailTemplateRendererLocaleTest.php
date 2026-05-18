@@ -239,6 +239,11 @@ final class OrderEmailTemplateRendererLocaleTest extends TestCase
         ];
 
         foreach (EmailTemplate::cases() as $template) {
+            // M3.2.X.11: cart-scoped templates are rendered by
+            // CartEmailTemplateRenderer; skip them here.
+            if (str_starts_with($template->value, 'cart.')) {
+                continue;
+            }
             $rendered = $this->renderer->render($template, $order, $extra, 'ar');
             self::assertNotEmpty($rendered->subject, "ar subject empty for {$template->value}");
             self::assertNotEmpty($rendered->textBody, "ar textBody empty for {$template->value}");

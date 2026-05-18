@@ -143,6 +143,37 @@ class Cart
         return $this->status === self::STATUS_ACTIVE;
     }
 
+    /**
+     * Is this cart eligible to be considered abandoned at the
+     * given moment with the given threshold? (M3.2.X.11)
+     *
+     * A cart is abandoned when:
+     *   - status is 'active' (not converted, not archived)
+     *   - it has at least one item
+     *   - updated_at is older than ($now - $threshold)
+     *
+     * The PreUpdate hook refreshes updated_at on every mutation
+     * (addItem, removeItem, etc.), so updated_at staleness is
+     * the right signal for "customer hasn't touched this".
+     *
+     * This helper centralises the policy but the actual eligibility
+     * query in CartAbandonmentFinder also enforces the "hasn't
+     * been emailed yet" guard via a NOT EXISTS subquery on
+     * notification_logs — that part can't be answered from the
+     * Cart entity alone.
+     */
+    public function isAbandoned(DateTimeImmutable $now, \DateInterval $threshold): bool
+    {
+        if (!$this->isActive()) {
+            return false;
+        }
+        if ($this->items->isEmpty()) {
+            return false;
+        }
+        $cutoff = $now->sub($threshold);
+        return $this->updatedAt < $cutoff;
+    }
+
     public function markConverted(): void
     {
         if ($this->status !== self::STATUS_ACTIVE) {

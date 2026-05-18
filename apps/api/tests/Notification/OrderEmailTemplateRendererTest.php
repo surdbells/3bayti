@@ -208,6 +208,11 @@ final class OrderEmailTemplateRendererTest extends TestCase
         // Sanity check: every template should produce non-empty text + html
         $order = $this->makeOrder(reference: 'V3-SANITY');
         foreach (EmailTemplate::cases() as $template) {
+            // M3.2.X.11: cart-scoped templates are rendered by
+            // CartEmailTemplateRenderer; skip them here.
+            if (str_starts_with($template->value, 'cart.')) {
+                continue;
+            }
             $extra = [
                 'item_name' => 'Test',
                 'vendor_items' => ['Test'],
