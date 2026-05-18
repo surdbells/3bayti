@@ -178,6 +178,32 @@ return function (App $app): void {
         $group->get('/{id}', \Bayti\Api\Http\Controllers\Order\GetOrderController::class);
         // M3.1.7-F — customer self-serve cancel (pending_payment only)
         $group->post('/{id:[0-9]+}/cancel', \Bayti\Api\Http\Controllers\Order\CancelOrderController::class);
+        // M3.2.X.18-D — customer return submission + list per order
+        $group->post(
+            '/{id:[0-9]+}/returns',
+            \Bayti\Api\Http\Controllers\Order\SubmitReturnController::class,
+        );
+        $group->get(
+            '/{id:[0-9]+}/returns',
+            \Bayti\Api\Http\Controllers\Order\ListCustomerReturnsController::class,
+        );
+    })->add(AuthMiddleware::class);
+
+    // M3.2.X.18-D — Customer return detail/cancel + photo serve.
+    // Separate /v3/returns group so customers can address returns
+    // directly by id (matches mobile UX of "my returns" tab).
+    $app->group('/v3/returns', function (RouteCollectorProxy $group): void {
+        $group->get('/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Order\GetReturnController::class);
+        $group->post(
+            '/{id:[0-9]+}/cancel',
+            \Bayti\Api\Http\Controllers\Order\CancelReturnController::class,
+        );
+        // Photo serve has 3-branch auth (customer/vendor/admin) inside
+        // the controller. AuthMiddleware just enforces some token.
+        $group->get(
+            '/{id:[0-9]+}/photos/{photoId:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Order\ServeReturnPhotoController::class,
+        );
     })->add(AuthMiddleware::class);
 
     // ===================================================================

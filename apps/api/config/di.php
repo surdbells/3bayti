@@ -164,6 +164,40 @@ return [
     \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Order\CancelOrderController::class => \DI\autowire(),
 
+    // M3.2.X.18 — Returns request flow
+    //   X.18-B: Flysystem-backed photo storage service
+    //   X.18-C: Eligibility + refund calculator services
+    //   X.18-D: Customer endpoints (5)
+    //   X.18-E: Vendor endpoints (ships in -E)
+    //   X.18-F: Admin endpoints (ships in -F)
+    \Bayti\Api\Domain\Order\ReturnPhotoStorageService::class => \DI\autowire(),
+    // ReturnRequestEligibilityService is bound via factory (not
+    // autowire) because its OrderReturnRequestRepository dependency
+    // can't be autowired — Doctrine repositories take an
+    // EntityManager + ClassMetadata in their constructor, and
+    // ClassMetadata has a required $name parameter PHP-DI can't
+    // guess. Pulling the repo through $em->getRepository() at
+    // factory time is the established pattern (matches OrderSerializer
+    // and other repo-using services in this file).
+    \Bayti\Api\Domain\Order\ReturnRequestEligibilityService::class => static function (
+        \Psr\Container\ContainerInterface $c
+    ): \Bayti\Api\Domain\Order\ReturnRequestEligibilityService {
+        /** @var EntityManagerInterface $em */
+        $em = $c->get(EntityManagerInterface::class);
+        /** @var \Bayti\Api\Domain\Order\OrderReturnRequestRepository $repo */
+        $repo = $em->getRepository(\Bayti\Api\Domain\Order\OrderReturnRequest::class);
+        return new \Bayti\Api\Domain\Order\ReturnRequestEligibilityService(
+            returnRepo: $repo,
+        );
+    },
+    \Bayti\Api\Domain\Order\ReturnRefundCalculator::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\ReturnRequestSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Order\SubmitReturnController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Order\ListCustomerReturnsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Order\GetReturnController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Order\CancelReturnController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Order\ServeReturnPhotoController::class => \DI\autowire(),
+
     // M3.1.7-G — Dispute persistence + admin endpoints
     \Bayti\Api\Http\Serializers\DisputeSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Dispute\ListDisputesController::class => \DI\autowire(),
