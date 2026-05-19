@@ -318,6 +318,84 @@ final class VendorAnalyticsCalculatorTest extends TestCase
         self::assertSame([], $envelope['top_products_by_revenue']);
     }
 
+    #[Test]
+    public function customerMixSeparatesNewFromReturning(): void
+    {
+        // 6 unique customers in window; 4 are new (no prior order),
+        // 2 are returning. Mock the customer_mix query as #5.
+        $calc = $this->makeCalc(queryResults: [
+            // totals, series, top_units, top_revenue
+            [['revenue' => '0', 'orders' => 0, 'items' => 0, 'unique_customers' => 0]],
+            [], [], [],
+            // customer_mix
+            [['new_customers' => 4, 'returning_customers' => 2, 'total_customers' => 6]],
+            // status_mix
+            [],
+        ]);
+
+        $envelope = $calc->computeForVendor(vendorId: 5);
+        self::assertSame(4, $envelope['customer_mix']['new']);
+        self::assertSame(2, $envelope['customer_mix']['returning']);
+        self::assertSame(6, $envelope['customer_mix']['total']);
+    }
+
+    #[Test]
+    public function customerMixQueryUsesVendorScopedDefinition(): void
+    {
+        // Q-CustomerMix = A: vendor-scoped. The SQL should have
+        // TWO CTEs (window_customers + prior_customers), both
+        // filtered by oi.vendor_id, and a LEFT JOIN classifying
+        // NULL match as new.
+        $captured = $this->captureQueries();
+        $calc = new VendorAnalyticsCalculator($captured['em'], new InMemoryLogger());
+        $calc->computeForVendor(vendorId: 5);
+
+        // 6 queries: totals, series, top_units, top_revenue,
+        // customer_mix, status_mix. customer_mix is #5 (index 4).
+        $sql = $captured['queries'][4]['sql'];
+        self::assertStringContainsString('window_customers AS', $sql);
+        self::assertStringContainsString('prior_customers AS', $sql);
+        self::assertStringContainsString('LEFT JOIN prior_customers', $sql);
+        self::assertStringContainsString('FILTER (WHERE p.user_id IS NULL)', $sql);
+    }
+
+    #[Test]
+    public function statusMixReturnsItemLevelCounts(): void
+    {
+        // 80 delivered + 4 cancelled + 5 returned = 89 total
+        $calc = $this->makeCalc(queryResults: [
+            [['revenue' => '0', 'orders' => 0, 'items' => 0, 'unique_customers' => 0]],
+            [], [], [],
+            [['new_customers' => 0, 'returning_customers' => 0, 'total_customers' => 0]],
+            [['delivered' => 80, 'cancelled' => 4, 'returned' => 5, 'total' => 89]],
+        ]);
+
+        $envelope = $calc->computeForVendor(vendorId: 5);
+        self::assertSame(80, $envelope['status_mix']['delivered']);
+        self::assertSame(4, $envelope['status_mix']['cancelled']);
+        self::assertSame(5, $envelope['status_mix']['returned']);
+        self::assertSame(89, $envelope['status_mix']['total']);
+    }
+
+    #[Test]
+    public function statusMixQueryUsesFilterClauses(): void
+    {
+        // Single aggregate with COUNT(*) FILTER (WHERE ...) for
+        // each status class — efficient single-pass over the
+        // order_items table for the window.
+        $captured = $this->captureQueries();
+        $calc = new VendorAnalyticsCalculator($captured['em'], new InMemoryLogger());
+        $calc->computeForVendor(vendorId: 5);
+
+        // status_mix is the 6th query (index 5)
+        $sql = $captured['queries'][5]['sql'];
+        self::assertStringContainsString('FILTER (WHERE oi.item_status IN', $sql);
+        self::assertStringContainsString('AS delivered', $sql);
+        self::assertStringContainsString('AS cancelled', $sql);
+        self::assertStringContainsString('AS returned', $sql);
+        self::assertStringContainsString('AS total', $sql);
+    }
+
     private function makeCalc(?InMemoryLogger $logger = null, array $queryResults = []): VendorAnalyticsCalculator
     {
         $connection = $this->createMock(Connection::class);

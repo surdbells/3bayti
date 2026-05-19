@@ -85,9 +85,6 @@ class VendorAnalyticsCalculator
     /**
      * OrderItem statuses considered "delivered" for the status_mix.
      * Mirrors VendorMetricsCalculator's FULFILLED_ITEM_STATUSES.
-     *
-     * Referenced in X.13-D status_mix query.
-     * @phpstan-ignore-next-line classConstant.unused
      */
     private const DELIVERED_ITEM_STATUSES = ['delivered'];
 
@@ -96,9 +93,6 @@ class VendorAnalyticsCalculator
      * status_mix. Vendor-initiated only — customer-cancelled
      * orders go through a different path (status_changed_at is
      * on the order, not the item).
-     *
-     * Referenced in X.13-D status_mix query.
-     * @phpstan-ignore-next-line classConstant.unused
      */
     private const CANCELLED_ITEM_STATUSES = ['rejected'];
 
@@ -106,9 +100,6 @@ class VendorAnalyticsCalculator
      * OrderItem statuses considered "returned" for status_mix.
      * Items that started delivered then went through a return
      * flow that completed are in 'refunded' state.
-     *
-     * Referenced in X.13-D status_mix query.
-     * @phpstan-ignore-next-line classConstant.unused
      */
     private const RETURNED_ITEM_STATUSES = ['refunded'];
 
@@ -563,20 +554,163 @@ class VendorAnalyticsCalculator
     }
 
     /**
+     * X.13-D: Customer mix (new vs returning).
+     *
+     * Q-CustomerMix = A locked: vendor-scoped definition. "New"
+     * means the customer's FIRST order with THIS vendor was in
+     * window — not first order with the marketplace.
+     *
+     * Implementation:
+     *   1. Find unique user_ids who ordered from this vendor in
+     *      the window
+     *   2. For each, check whether they have ANY earlier paid
+     *      order with this vendor (paid_at < since)
+     *   3. No earlier order → new; otherwise returning
+     *
+     * One CTE-based query handles both classifications. The LEFT
+     * JOIN with the prior-orders subquery is keyed on user_id;
+     * NULL match means no prior order = new customer.
+     *
      * @return array{new: int, returning: int, total: int}
      */
     private function computeCustomerMix(int $vendorId, \DateTimeImmutable $since, \DateTimeImmutable $until): array
     {
-        // X.13-D implementation. Zeros for X.13-A skeleton.
-        return ['new' => 0, 'returning' => 0, 'total' => 0];
+        $excludedPlaceholders = implode(', ', array_fill(
+            0,
+            count(self::REVENUE_EXCLUDED_ITEM_STATUSES),
+            '?',
+        ));
+
+        // Same status exclusions as revenue — a vendor doesn't gain
+        // a customer from a rejected order (the customer never got
+        // anything from them).
+        $sql = "
+            WITH window_customers AS (
+                SELECT DISTINCT o.user_id
+                FROM orders o
+                INNER JOIN order_items oi ON oi.order_id = o.id
+                WHERE oi.vendor_id = ?
+                  AND o.user_id IS NOT NULL
+                  AND o.paid_at IS NOT NULL
+                  AND o.paid_at >= ?
+                  AND o.paid_at < ?
+                  AND oi.item_status NOT IN ({$excludedPlaceholders})
+            ),
+            prior_customers AS (
+                SELECT DISTINCT o.user_id
+                FROM orders o
+                INNER JOIN order_items oi ON oi.order_id = o.id
+                WHERE oi.vendor_id = ?
+                  AND o.user_id IS NOT NULL
+                  AND o.paid_at IS NOT NULL
+                  AND o.paid_at < ?
+                  AND oi.item_status NOT IN ({$excludedPlaceholders})
+            )
+            SELECT
+                COUNT(*) FILTER (WHERE p.user_id IS NULL)::int AS new_customers,
+                COUNT(*) FILTER (WHERE p.user_id IS NOT NULL)::int AS returning_customers,
+                COUNT(*)::int AS total_customers
+            FROM window_customers w
+            LEFT JOIN prior_customers p ON p.user_id = w.user_id
+        ";
+
+        // Params: vendor_id, since, until, [exclusions]×2, vendor_id, since, [exclusions]×2
+        $params = [
+            $vendorId,
+            $since->format('Y-m-d H:i:sP'),
+            $until->format('Y-m-d H:i:sP'),
+            ...self::REVENUE_EXCLUDED_ITEM_STATUSES,
+            $vendorId,
+            $since->format('Y-m-d H:i:sP'),
+            ...self::REVENUE_EXCLUDED_ITEM_STATUSES,
+        ];
+        $types = [
+            ParameterType::INTEGER,
+            ParameterType::STRING,
+            ParameterType::STRING,
+            ...array_fill(0, count(self::REVENUE_EXCLUDED_ITEM_STATUSES), ParameterType::STRING),
+            ParameterType::INTEGER,
+            ParameterType::STRING,
+            ...array_fill(0, count(self::REVENUE_EXCLUDED_ITEM_STATUSES), ParameterType::STRING),
+        ];
+
+        $row = $this->em->getConnection()
+            ->executeQuery($sql, $params, $types)
+            ->fetchAssociative();
+
+        if ($row === false) {
+            return ['new' => 0, 'returning' => 0, 'total' => 0];
+        }
+
+        return [
+            'new' => (int) ($row['new_customers'] ?? 0),
+            'returning' => (int) ($row['returning_customers'] ?? 0),
+            'total' => (int) ($row['total_customers'] ?? 0),
+        ];
     }
 
     /**
+     * X.13-D: Status mix (item-level outcome counts).
+     *
+     * Single aggregate query counting delivered/cancelled/returned
+     * items in the window. NOT a 1:1 sum of the totals.items
+     * counter — totals.items excludes rejected/refunded items
+     * (Q-RevenueDef = A) while status_mix includes ALL items
+     * regardless of outcome, so the dashboard can show the
+     * customer-experience ratio.
+     *
      * @return array{delivered: int, cancelled: int, returned: int, total: int}
      */
     private function computeStatusMix(int $vendorId, \DateTimeImmutable $since, \DateTimeImmutable $until): array
     {
-        // X.13-D implementation. Zeros for X.13-A skeleton.
-        return ['delivered' => 0, 'cancelled' => 0, 'returned' => 0, 'total' => 0];
+        $deliveredPlaceholders = implode(', ', array_fill(0, count(self::DELIVERED_ITEM_STATUSES), '?'));
+        $cancelledPlaceholders = implode(', ', array_fill(0, count(self::CANCELLED_ITEM_STATUSES), '?'));
+        $returnedPlaceholders = implode(', ', array_fill(0, count(self::RETURNED_ITEM_STATUSES), '?'));
+
+        $sql = "
+            SELECT
+                COUNT(*) FILTER (WHERE oi.item_status IN ({$deliveredPlaceholders}))::int AS delivered,
+                COUNT(*) FILTER (WHERE oi.item_status IN ({$cancelledPlaceholders}))::int AS cancelled,
+                COUNT(*) FILTER (WHERE oi.item_status IN ({$returnedPlaceholders}))::int AS returned,
+                COUNT(*)::int AS total
+            FROM order_items oi
+            INNER JOIN orders o ON o.id = oi.order_id
+            WHERE oi.vendor_id = ?
+              AND o.paid_at IS NOT NULL
+              AND o.paid_at >= ?
+              AND o.paid_at < ?
+        ";
+
+        $params = [
+            ...self::DELIVERED_ITEM_STATUSES,
+            ...self::CANCELLED_ITEM_STATUSES,
+            ...self::RETURNED_ITEM_STATUSES,
+            $vendorId,
+            $since->format('Y-m-d H:i:sP'),
+            $until->format('Y-m-d H:i:sP'),
+        ];
+        $types = [
+            ...array_fill(0, count(self::DELIVERED_ITEM_STATUSES), ParameterType::STRING),
+            ...array_fill(0, count(self::CANCELLED_ITEM_STATUSES), ParameterType::STRING),
+            ...array_fill(0, count(self::RETURNED_ITEM_STATUSES), ParameterType::STRING),
+            ParameterType::INTEGER,
+            ParameterType::STRING,
+            ParameterType::STRING,
+        ];
+
+        $row = $this->em->getConnection()
+            ->executeQuery($sql, $params, $types)
+            ->fetchAssociative();
+
+        if ($row === false) {
+            return ['delivered' => 0, 'cancelled' => 0, 'returned' => 0, 'total' => 0];
+        }
+
+        return [
+            'delivered' => (int) ($row['delivered'] ?? 0),
+            'cancelled' => (int) ($row['cancelled'] ?? 0),
+            'returned' => (int) ($row['returned'] ?? 0),
+            'total' => (int) ($row['total'] ?? 0),
+        ];
     }
 }
