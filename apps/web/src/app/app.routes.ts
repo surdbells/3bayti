@@ -90,4 +90,16 @@ export const routes: Routes = [
       import('./features/auth/register/register').then(m => m.RegisterComponent),
     title: 'Create account · 3bayti',
   },
+  {
+    /* /verify-phone is intentionally NOT guarded. Two flows land here:
+       (a) after /register, where the user is NOT yet authenticated
+       (the API issues tokens only on /confirm), and (b) after /login
+       with is_phone_verified=false, where the user IS authenticated
+       but still needs to complete OTP. A guard would break one of
+       the two. */
+    path: 'verify-phone',
+    loadComponent: () =>
+      import('./features/auth/verify-phone/verify-phone').then(m => m.VerifyPhoneComponent),
+    title: 'Verify your phone · 3bayti',
+  },
 ];

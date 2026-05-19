@@ -1,0 +1,62 @@
+/* Verify phone — extends the shared auth-card via deliberate copy of
+   login.scss. See register.scss for the rationale (component-scoped
+   styles + Angular's isolation make @use complicated; @import the
+   neighbour's file keeps each page self-contained). */
+
+@import '../login/login.scss';
+
+/* Verify-phone-specific additions */
+
+.auth-input--code {
+  /* 6-digit OTP: large, spaced, centred. Numeric keypad is forced
+     server-side via inputmode='numeric' + autocomplete='one-time-code'
+     (iOS SMS autofill prompt). */
+  letter-spacing: 8px;
+  text-align: center;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  /* The wide letter-spacing pushes the placeholder to the right;
+     padding-inline-start counters that visually. */
+  padding-inline-start: 18px;
+}
+
+.auth-resend {
+  margin-top: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.auth-resend__prompt {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0;
+}
+
+.auth-resend__button {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 8px;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.auth-error-banner {
+  padding: 14px 16px;
+  background: #fde7e5;
+  border: 1px solid #f3c5c0;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--color-danger-700, #8a1b14);
+  margin: 0 0 18px 0;
+  line-height: 1.45;
+}
