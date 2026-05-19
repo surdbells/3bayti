@@ -1,0 +1,165 @@
+/* =============================================================================
+   Auth page shell styles
+   -----------------------------------------------------------------------------
+   Shared by /login, /register, /verify-phone, /forgot-password, /reset-password.
+   Each page imports this file. The intent is a single coherent visual treatment
+   across the auth surface so users feel they're in one flow.
+
+   Visual language: 3bayti's brand espresso + gold, plenty of breathing room,
+   a card-on-cream layout that feels like a boutique enquiry desk rather than
+   a generic SaaS form.
+   ============================================================================= */
+
+.auth-page {
+  min-height: calc(100vh - 80px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px 80px;
+  background:
+    radial-gradient(
+      ellipse at top,
+      rgba(177, 143, 31, 0.04) 0%,
+      transparent 60%
+    ),
+    #faf6ee;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border-radius: 16px;
+  padding: 36px 32px 28px;
+  box-shadow:
+    0 1px 2px rgba(46, 36, 28, 0.04),
+    0 6px 20px rgba(46, 36, 28, 0.06);
+
+  @media (max-width: 480px) {
+    padding: 28px 22px 22px;
+    border-radius: 12px;
+  }
+}
+
+.auth-card__title {
+  margin: 0 0 8px 0;
+  font-family: 'Playfair Display', 'Times New Roman', serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  letter-spacing: -0.01em;
+}
+
+.auth-card__subtitle {
+  margin: 0 0 28px 0;
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  line-height: 1.5;
+}
+
+.auth-card__footer {
+  margin: 24px 0 0 0;
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border-subtle, #e2dccc);
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  text-align: center;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-form__row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -8px;
+  margin-bottom: 18px;
+}
+
+.auth-input {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  border-radius: 8px;
+  font-size: 16px;
+  color: var(--color-text-primary, #2e241c);
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  font-family: inherit;
+
+  &::placeholder {
+    color: var(--color-text-muted, #a39588);
+  }
+
+  &:focus {
+    outline: 2px solid var(--color-brand-500, #b18f1f);
+    outline-offset: 0;
+    border-color: transparent;
+  }
+
+  &:disabled {
+    background: var(--color-bg-muted, #f4f0ea);
+    cursor: not-allowed;
+  }
+}
+
+.auth-submit {
+  appearance: none;
+  width: 100%;
+  height: 48px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--color-brand-500, #b18f1f);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background-color 0.15s ease, transform 0.05s ease;
+  font-family: inherit;
+
+  &:hover:not(:disabled) {
+    background: var(--color-brand-600, #957615);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-700, #5a3a2c);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    background: var(--color-text-muted, #a39588);
+    cursor: not-allowed;
+    opacity: 0.85;
+  }
+}
+
+.auth-link {
+  color: var(--color-brand-700, #5a3a2c);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-brand-500, #b18f1f);
+    text-decoration: underline;
+    outline: none;
+  }
+
+  &--strong {
+    font-weight: 600;
+  }
+}
+
+/* RTL polish — Playfair Display falls back gracefully via system Arabic
+   serifs, but ensure right-aligned padding for inputs in RTL. The
+   logical-property approach in .auth-input above handles this for free. */

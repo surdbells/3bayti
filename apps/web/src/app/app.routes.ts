@@ -1,11 +1,15 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './features/home/home';
+import { guestActivateGuard } from './core/auth/auth.guards';
 
 /**
  * Top-level route table for the public web app.
  *
  * Phase 1: home + a dev-only component preview + categories index.
  * Phase 2 adds: /category/:slug ✓ + /product/:slug + /designer + /designer/:slug.
+ * Y.1 (auth): /login + /register + /verify-phone + /forgot-password +
+ *             /reset-password — all gated by guestActivateGuard so
+ *             signed-in users get redirected away.
  *
  * All routes are SSR'd by default; route-level data is fetched server-
  * side via TransferState (see individual feature components).
@@ -66,5 +70,17 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/dev-components/dev-components').then(m => m.DevComponentsComponent),
     title: 'Component preview · 3bayti',
+  },
+  /* --- Auth (M3.2.Y.1) ---------------------------------------------------
+     Each auth page is lazy-loaded so the catalog bundle stays clean for
+     anonymous browsing. guestActivateGuard redirects authenticated
+     visitors away from these pages (no point landing on /login when
+     you already have a session). */
+  {
+    path: 'login',
+    canActivate: [guestActivateGuard],
+    loadComponent: () =>
+      import('./features/auth/login/login').then(m => m.LoginComponent),
+    title: 'Sign in · 3bayti',
   },
 ];
