@@ -83,4 +83,11 @@ export const routes: Routes = [
       import('./features/auth/login/login').then(m => m.LoginComponent),
     title: 'Sign in · 3bayti',
   },
+  {
+    path: 'register',
+    canActivate: [guestActivateGuard],
+    loadComponent: () =>
+      import('./features/auth/register/register').then(m => m.RegisterComponent),
+    title: 'Create account · 3bayti',
+  },
 ];

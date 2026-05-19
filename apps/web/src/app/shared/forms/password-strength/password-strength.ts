@@ -10,7 +10,7 @@ import {
   OnChanges,
   SimpleChanges,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, NgIf } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 
 /**
@@ -141,7 +141,7 @@ const STRENGTH_LABEL_KEYS: Record<number, string> = {
 @Component({
   selector: 'ui-password-strength',
   standalone: true,
-  imports: [TranslatePipe],
+  imports: [NgIf, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="strength" *ngIf="password !== ''" [attr.data-score]="score()">

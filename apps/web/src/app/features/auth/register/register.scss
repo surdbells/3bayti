@@ -1,0 +1,30 @@
+/* Register page — extends the shared auth-card via a deliberate copy.
+   SCSS @use of a non-component file gets tricky with Angular's
+   component-scoped style isolation; copying the small visual base
+   into each auth page keeps every page self-contained. */
+
+@import '../login/login.scss';
+
+/* Register-page-only additions */
+
+.auth-card--wide {
+  max-width: 480px;
+}
+
+.auth-form__row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}
+
+.auth-submit--with-meter {
+  /* The password strength meter sits between the field and the
+     submit button. Add a little top margin so they feel
+     intentionally separated. */
+  margin-top: 12px;
+}
