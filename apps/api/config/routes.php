@@ -414,6 +414,15 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Order\MarkPickedUpController::class);
         $group->post('/returns/{id:[0-9]+}/record-refund',
             \Bayti\Api\Http\Controllers\Admin\Order\RecordReturnRefundController::class);
+
+        // M3.2.X.15-F — FX rate management (display-only multi-currency).
+        // GET lists all rates with staleness flags; PUT upserts the rate
+        // for a single target currency. Audited via AuditEmitter with
+        // subject_type='FxRate'; visible via the X.4-C audit-log surface.
+        $group->get('/fx-rates',
+            \Bayti\Api\Http\Controllers\Admin\Currency\ListFxRatesController::class);
+        $group->put('/fx-rates/{target:[A-Za-z]{3}}',
+            \Bayti\Api\Http\Controllers\Admin\Currency\UpsertFxRateController::class);
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);

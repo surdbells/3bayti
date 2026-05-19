@@ -283,6 +283,8 @@ final class AuditEmitter
                 => $this->snapshotCategory($subject),
             $subject instanceof \Bayti\Api\Domain\Promo\PromoCode
                 => $this->snapshotPromoCode($subject),
+            $subject instanceof \Bayti\Api\Domain\Currency\FxRate
+                => $this->snapshotFxRate($subject),
             default => throw new \InvalidArgumentException(
                 'No snapshot strategy for ' . $subject::class,
             ),
@@ -634,6 +636,26 @@ final class AuditEmitter
             'valid_from' => $p->getValidFrom()?->format(\DateTimeInterface::ATOM),
             'valid_until' => $p->getValidUntil()?->format(\DateTimeInterface::ATOM),
             'is_active' => $p->isActive(),
+        ];
+    }
+
+    /**
+     * FxRate snapshot (M3.2.X.15-F).
+     *
+     * Captures the rate value + updated_at + actor. No PII; no
+     * sensitive fields. The before/after diff lets ops trace
+     * 'who changed AED→USD from 0.27 to 0.28 last Tuesday'.
+     *
+     * @return array<string, mixed>
+     */
+    private function snapshotFxRate(\Bayti\Api\Domain\Currency\FxRate $r): array
+    {
+        return [
+            'base_code' => $r->getBaseCode(),
+            'target_code' => $r->getTargetCode(),
+            'rate' => $r->getRate(),
+            'updated_at' => $r->getUpdatedAt()->format(\DateTimeInterface::ATOM),
+            'updated_by_user_id' => $r->getUpdatedBy()?->getId(),
         ];
     }
 

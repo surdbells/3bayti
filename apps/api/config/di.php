@@ -368,6 +368,11 @@ return [
     \Bayti\Api\Http\Middleware\RequestIdMiddleware::class => \DI\autowire(),
     \Bayti\Api\Http\Middleware\CurrencyContextMiddleware::class => \DI\autowire(),
 
+    // M3.2.X.15 — Multi-currency display
+    \Bayti\Api\Domain\Currency\CurrencyConversionService::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Currency\ListFxRatesController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Currency\UpsertFxRateController::class => \DI\autowire(),
+
     // M2.1 — Catalog serializers (autowire-friendly, no constructor deps)
     \Bayti\Api\Http\Serializers\BrandSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\VendorSerializer::class => \DI\autowire(),
