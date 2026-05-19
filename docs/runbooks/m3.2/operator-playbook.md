@@ -1304,9 +1304,243 @@ tail -100 apps/api/var/logs/app-*.log | grep -E "cart_(abandonment|notification|
 
 26. **Cart abandonment dashboard for ops** — beyond the existing /v3/admin/notification-logs surface, ops will want trend-level metrics: open rate (requires webhook integration with ZeptoMail), conversion-to-purchase from reminder (requires correlating cart.abandoned.customer logs to subsequent orders via user_id + time window), drop-off by cart value bucket, opt-out rate over time. ~5-7 days of work depending on chart depth. The data is already in notification_logs + orders + users today; this is purely a UI + aggregation layer. Defer until X.13 (Vendor analytics dashboard) ships and establishes the dashboard infrastructure pattern this would extend.
 
+### 2.S — M3.2.X.15 — Smoke-test Multi-currency display
+
+X.15 ships a new single-table migration with 5 seed rates + a request-scoped currency middleware + admin endpoints for rate management. Smoke-test all three layers on staging before public exposure.
+
+**Critical pre-launch requirement:** the seed rates in the migration are approximate as of late May 2026 and WILL drift before any production use. Operator MUST refresh all 4 non-AED rates via the admin endpoint to current real-world values before exposing the `?currency=` query param to public traffic.
+
+```bash
+# 1. Apply the migration (X.15-A single-table additive)
+cd apps/api && php bin/migrate.php
+
+# 2. Verify schema:
+psql "$STAGING_DSN" -c "
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name='fx_rates'
+ORDER BY ordinal_position;"
+# Expect:
+#  id                       bigint                    NO
+#  base_code                character varying          NO
+#  target_code              character varying          NO
+#  rate                     numeric                    NO
+#  updated_at               timestamp with time zone   NO
+#  updated_by_user_id       integer                    YES
+
+# Verify unique constraint + index:
+psql "$STAGING_DSN" -c "
+SELECT indexname, indexdef FROM pg_indexes
+WHERE tablename = 'fx_rates';"
+# Expect: PK on id, UNIQUE on (base_code, target_code), idx_fx_rates_target
+
+# 3. Verify 5 seed rows present:
+psql "$STAGING_DSN" -c "
+SELECT base_code, target_code, rate, updated_at FROM fx_rates ORDER BY target_code;"
+# Expect:
+#   AED | AED | 1.00000000
+#   AED | EUR | 0.25180000
+#   AED | GBP | 0.21450000
+#   AED | SAR | 1.02100000
+#   AED | USD | 0.27225000
+
+# 4. Test the admin LIST endpoint:
+ADMIN_TOKEN=...
+curl -s "https://staging.3bayti.ae/v3/admin/fx-rates" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -m json.tool
+# Expect: 5 data rows + meta.supported_currencies + meta.stale_after_hours=48
+
+# 5. Refresh AED→USD to current real-world value via admin UPSERT.
+#    Get the current rate from your preferred FX source (xe.com,
+#    Reuters, the central bank — Operator's call). Example for
+#    a hypothetical 0.27225 rate that needs to become 0.27230:
+curl -i -s -X PUT "https://staging.3bayti.ae/v3/admin/fx-rates/USD" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rate": "0.27230000"}'
+# Expect: HTTP/2 200, response.data.rate = "0.27230000"
+
+# 6. Repeat step 5 for EUR, SAR, GBP — refresh each to current real
+#    rates from your chosen FX source. Audit_log captures who set
+#    each value with before/after diff.
+
+# 7. Verify the audit log captured your changes:
+ADMIN_TOKEN=...
+curl -s "https://staging.3bayti.ae/v3/admin/audit-logs?subject_type=FxRate" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+for log in d['data']:
+    c = log.get('changes', {})
+    print(f\"  {log['action']:>10}  target={c.get('before', c.get('after', {})).get('target_code'):>3}  before={c.get('before', {}).get('rate', '-')}  after={c.get('after', {}).get('rate')}\")"
+# Expect: 'updated' rows for each of the 4 currencies you refreshed
+
+# 8. Defensive validation tests — verify the upsert rejects bad input:
+# Reject AED as target (identity rate protected):
+curl -i -s -X PUT "https://staging.3bayti.ae/v3/admin/fx-rates/AED" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rate": "1.0"}'
+# Expect: HTTP/2 422
+
+# Reject unsupported currency:
+curl -i -s -X PUT "https://staging.3bayti.ae/v3/admin/fx-rates/JPY" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rate": "0.07"}'
+# Expect: HTTP/2 404
+
+# Reject negative rate:
+curl -i -s -X PUT "https://staging.3bayti.ae/v3/admin/fx-rates/USD" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rate": "-1.0"}'
+# Expect: HTTP/2 422
+
+# Reject rate >= 1000 (base/target inversion guard):
+curl -i -s -X PUT "https://staging.3bayti.ae/v3/admin/fx-rates/USD" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rate": "5000"}'
+# Expect: HTTP/2 422
+
+# 9. Test catalog browsing in each supported currency.
+#    Pick a product with a non-trivial AED price (e.g. AED 365.00):
+PRODUCT_SLUG=...
+
+# AED (default — no currency param):
+curl -s "https://staging.3bayti.ae/v3/products/$PRODUCT_SLUG" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+p = d['price']
+print(f'AED default: amount={p[\"amount\"]} currency={p[\"currency\"]} source_*={list(p.keys())}')"
+# Expect: amount=365.00, currency=AED, NO source_* keys (single-amount shape)
+
+# USD (with conversion):
+curl -s "https://staging.3bayti.ae/v3/products/$PRODUCT_SLUG?currency=USD" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+p = d['price']
+print(f'USD: amount={p[\"amount\"]} currency={p[\"currency\"]} source_amount={p.get(\"source_amount\")} source_currency={p.get(\"source_currency\")}')"
+# Expect: amount=<converted>, currency=USD, source_amount=365.00, source_currency=AED
+
+# EUR:
+curl -s "https://staging.3bayti.ae/v3/products/$PRODUCT_SLUG?currency=EUR" | python3 -c "
+import json, sys; d = json.load(sys.stdin); print(d['price'])"
+
+# SAR:
+curl -s "https://staging.3bayti.ae/v3/products/$PRODUCT_SLUG?currency=SAR" | python3 -c "
+import json, sys; d = json.load(sys.stdin); print(d['price'])"
+
+# GBP:
+curl -s "https://staging.3bayti.ae/v3/products/$PRODUCT_SLUG?currency=GBP" | python3 -c "
+import json, sys; d = json.load(sys.stdin); print(d['price'])"
+
+# 10. Test fallback behaviour — unknown currency degrades to AED gracefully:
+curl -s "https://staging.3bayti.ae/v3/products/$PRODUCT_SLUG?currency=JPY" | python3 -c "
+import json, sys; d = json.load(sys.stdin); p = d['price']
+print(f'JPY (unknown): amount={p[\"amount\"]} currency={p[\"currency\"]} source_*={list(p.keys())}')"
+# Expect: AED amount + AED currency + single-amount shape (no 422)
+
+# Case-insensitive parsing:
+curl -s "https://staging.3bayti.ae/v3/products/$PRODUCT_SLUG?currency=usd" | python3 -c "
+import json, sys; d = json.load(sys.stdin); print(d['price']['currency'])"
+# Expect: USD (lowercase normalized to uppercase)
+
+# 11. Test staleness warning. Manually backdate a rate's updated_at
+#     to simulate operator inattention:
+psql "$STAGING_DSN" -c "
+UPDATE fx_rates SET updated_at = NOW() - INTERVAL '50 hours'
+WHERE base_code = 'AED' AND target_code = 'USD';"
+
+# Hit the catalog with ?currency=USD and verify the staleness warning fires:
+curl -s "https://staging.3bayti.ae/v3/products/$PRODUCT_SLUG?currency=USD" >/dev/null
+
+# Check logs:
+tail -100 apps/api/var/logs/app-*.log | grep "fx_rate" | tail -5
+# Expect:
+#   fx_rate.stale  context={target:USD, age_hours:50, threshold_hours:48}
+
+# Verify the LIST endpoint shows is_stale=true for USD:
+curl -s "https://staging.3bayti.ae/v3/admin/fx-rates" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+for row in d['data']:
+    if row['target_code'] == 'USD':
+        print(f'USD: is_stale={row[\"is_stale\"]} age_hours={row[\"age_hours\"]}')"
+# Expect: is_stale=true, age_hours>=48
+
+# Refresh USD to clear the staleness:
+curl -i -s -X PUT "https://staging.3bayti.ae/v3/admin/fx-rates/USD" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rate": "0.27230000"}'
+
+# 12. Test missing-rate fallback. Delete a seeded row to simulate a
+#     misconfigured deploy:
+psql "$STAGING_DSN" -c "DELETE FROM fx_rates WHERE target_code = 'GBP';"
+
+curl -s "https://staging.3bayti.ae/v3/products/$PRODUCT_SLUG?currency=GBP" | python3 -c "
+import json, sys; d = json.load(sys.stdin); p = d['price']
+print(f'GBP (deleted): amount={p[\"amount\"]} currency={p[\"currency\"]} source_*={list(p.keys())}')"
+# Expect: AED single-amount fallback (no source_* keys)
+
+tail -100 apps/api/var/logs/app-*.log | grep "fx_rate.missing" | tail -2
+# Expect: fx_rate.missing  context={target:GBP}
+
+# Restore GBP for ongoing testing:
+curl -i -s -X PUT "https://staging.3bayti.ae/v3/admin/fx-rates/GBP" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"rate": "0.21450000"}'
+
+# 13. Spot-check that order/cart/checkout flows are NOT affected by
+#     ?currency=X. Even with ?currency=USD, the cart endpoint returns
+#     AED amounts:
+CART_TOKEN=...  # any logged-in customer's token
+curl -s "https://staging.3bayti.ae/v3/cart?currency=USD" \
+  -H "Authorization: Bearer $CART_TOKEN" | python3 -c "
+import json, sys; d = json.load(sys.stdin)
+print(f'cart.currency = {d[\"cart\"][\"currency\"]}')"
+# Expect: 'AED' — Q-Scope = A locked, settlement-time data unaffected
+```
+
+**Smoke-test acceptance**
+
+- [ ] Migration applied: `fx_rates` table with 6 columns + UNIQUE(base, target) + idx_fx_rates_target
+- [ ] 5 seed rows present (AED→AED + AED→{USD, EUR, SAR, GBP})
+- [ ] Admin GET /v3/admin/fx-rates returns 5 rows + meta.supported_currencies + stale_after_hours=48
+- [ ] Admin PUT /v3/admin/fx-rates/USD updates the rate value and records an audit_log row with before/after diff
+- [ ] AED→AED target → 422 (identity rate protected from accidental corruption)
+- [ ] Unsupported currency (JPY) → 404
+- [ ] Negative rate → 422
+- [ ] Rate ≥ 1000 → 422 (base/target inversion guard)
+- [ ] All 4 non-AED currencies refreshed via admin to current real-world values
+- [ ] Catalog browse without ?currency param returns single-amount AED shape (no source_* keys — backward compatible)
+- [ ] Catalog browse with ?currency=USD returns dual-amount shape with source_amount + source_currency
+- [ ] Lowercase ?currency=usd normalizes to USD (case-insensitive)
+- [ ] Unknown ?currency=JPY silently degrades to AED (no 422, graceful fallback)
+- [ ] Manually backdated rate triggers `fx_rate.stale` warning in logs + `is_stale=true` in admin LIST
+- [ ] Manually deleted rate triggers `fx_rate.missing` warning in logs + catalog falls back to AED
+- [ ] Cart endpoint with ?currency=USD STILL returns AED — settlement-time data unaffected per Q-Scope = A
+- [ ] All 4 non-AED rates refreshed to current real-world values BEFORE exposing `?currency=` to public traffic
+
+**Operator deferred items added by X.15:**
+
+27. **Paid FX rates auto-refresh** — Q-RatesSource = A locked manual entry for v1. Once the operator gets tired of refreshing rates (likely after the first month of public exposure), integrate a paid source like Open Exchange Rates (~$12/month) or Currencylayer (~$10/month) with a nightly cron that pulls fresh rates and overwrites the fx_rates table. Both APIs return EUR-based rates so the cron has to derive AED→{target} by chain through EUR (AED→EUR→target). ~2 days of work: a new Console command + API client + cron schedule + the existing admin endpoint becomes operator-override-only. Decision trigger: operator manually updating rates more than 3 times in any given week.
+
+28. **Expand currency list beyond v1's 5** — Q-Currencies = A locked at AED+USD+EUR+SAR+GBP for v1. Add remaining GCC (BHD, KWD, OMR, QAR) as a single batch once we see GCC traffic crossing 5% of total visits. Each new currency requires: enum case + new seed row + admin refreshes. ~0.5 day per batch. Add additional tourist origins (CAD, AUD, CHF, JPY, INR) as traffic data justifies. JPY would also require per-currency rounding policy (0 fractional digits) — currently CurrencyConversionService::DECIMALS is hardcoded to 2.
+
+29. **Bulk CSV upload for admin rate management** — Q-AdminUI = A locked at PUT-per-currency for v1. Once the currency count exceeds 10, individual PUT calls become tedious. Add `POST /v3/admin/fx-rates/import` accepting CSV (base_code, target_code, rate) with same per-row validation as the upsert endpoint. Audit_log captures each row individually so the trail isn't lost. ~1 day of work. Triggered by operator follow-up #28 reaching threshold.
+
+30. **Per-request cache for CurrencyConversionService::findAllRates()** — currently rates load once per service instance (per-request scope). With 5 currencies this is <1ms. If currencies grow past ~50, consider Redis (5-minute TTL) so DB pressure doesn't scale with concurrent catalog browse traffic. ~1 day of work. Triggered when the operator follow-up #28 list grows past 50.
+
+31. **Notification + alerting on `fx_rate.stale` warnings** — current observability emits a PSR-3 warning per-call hitting a stale rate. Ops will want a higher-level alert when this crosses a threshold (e.g. >100 stale warnings/hour means an entire currency has been forgotten for 2+ days). Wire to the same alerting infrastructure that drives Noon payment alerts. ~1 day depending on existing alert plumbing. Triggered by operator follow-up #27 NOT being shipped yet AND staleness happening repeatedly.
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.R complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.S complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
