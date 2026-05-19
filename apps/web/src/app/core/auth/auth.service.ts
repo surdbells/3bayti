@@ -3,6 +3,7 @@ import {
   Signal,
   signal,
   computed,
+  effect,
   inject,
   PLATFORM_ID,
   DestroyRef,
@@ -120,6 +121,14 @@ export class AuthService {
    */
   private inflightRefresh: Promise<boolean> | null = null;
 
+  /**
+   * Tracks the last locale value we pushed (or recognised as already
+   * synced) to /v3/me/profile. Lets the locale-watch effect skip
+   * redundant PATCH calls. Reset to null on logout so the next login
+   * re-evaluates.
+   */
+  private lastPushedLocale: 'en' | 'ar' | null = null;
+
   constructor() {
     /* Clean up the scheduled timer when the service is destroyed.
        For a root-injected service this typically only happens on
@@ -130,6 +139,44 @@ export class AuthService {
         this.refreshTimerId = null;
       }
     });
+
+    /* Locale → server sync (Y.1-J).
+
+       When an authenticated user changes their locale via the header
+       switcher, push that choice to the API so the next session (on
+       another device, after cookie expiry, after a hard refresh, etc.)
+       resumes in the chosen locale.
+
+       This watches the LocaleService.current() signal. We deliberately
+       do NOT push on the FIRST emit after login — the API just told us
+       what the user's locale was (it set our local state via syncLocale
+       on the auth response), so pushing it back would be redundant
+       chatter. We track the last-pushed value to skip the no-op case.
+
+       Browser-only. SSR construction never fires this effect.
+
+       Failures are silent: a 5xx or auth race shouldn't surface a
+       toast for what's essentially a preference sync. The next change
+       will retry. */
+    if (isPlatformBrowser(this.platformId)) {
+      effect(() => {
+        const desired = this.locale.current();
+        const user = this._currentUser();
+        if (user === null) {
+          this.lastPushedLocale = null; /* Clear so next login re-syncs. */
+          return;
+        }
+        if (this.lastPushedLocale === desired) return;
+        if (user.locale === desired) {
+          /* Local state already matches server — no need to PATCH. */
+          this.lastPushedLocale = desired;
+          return;
+        }
+        /* Fire and forget. */
+        this.lastPushedLocale = desired;
+        void this.pushLocaleToServer(desired);
+      });
+    }
   }
 
   /* ---------- Public API ---------- */
@@ -359,12 +406,58 @@ export class AuthService {
    * resolved locale alone (browser detection wins).
    */
   private syncLocale(user: AuthUser): void {
+    /* Track the server-side value so the locale-watch effect can
+       skip pushing the same value back. user.locale may be 'en-AE'
+       etc. which the LocaleService canonicalises to 'en'/'ar' on
+       setLocale. We store the normalised form here. */
+    if (user.locale !== null) {
+      this.lastPushedLocale = user.locale.startsWith('ar') ? 'ar' : 'en';
+    }
+
     if (user.locale === null) return;
     if (user.locale === this.locale.current()) return;
     /* setLocale is async (it triggers translation load) but we
        don't await — the locale change can settle in the background.
        The signal is updated synchronously inside setLocale. */
     void this.locale.setLocale(user.locale);
+  }
+
+  /**
+   * Push the user's locale preference to /v3/me/profile.
+   *
+   * Browser-only, silent-on-failure. The browser-side HttpClient
+   * goes via the refreshInterceptor so Authorization is attached
+   * and 401s trigger a token refresh + retry. No BFF route needed —
+   * this is a Bearer-bound call, not a cookie-bound one.
+   *
+   * Returns nothing; failures are logged as a warning and otherwise
+   * swallowed. A 401 even after refresh means the session is dead;
+   * AuthService will clean up via the interceptor's failure path.
+   */
+  private async pushLocaleToServer(locale: 'en' | 'ar'): Promise<void> {
+    /* Build the v3 base URL inline rather than injecting
+       ApiConfigService — keeps the dependency graph small.
+       Future Y.2: extract a constant or DI token. */
+    const url = 'https://api-v3.3bayti.ae/v3/me/profile';
+    try {
+      await firstValueFrom(
+        this.http.patch(url, { locale }, { withCredentials: false }),
+      );
+      /* Optimistically update the local user signal so subsequent
+         renders reflect the chosen locale without a /me re-fetch. */
+      const user = this._currentUser();
+      if (user !== null) {
+        this._currentUser.set({ ...user, locale });
+      }
+    } catch (err) {
+      if (typeof console !== 'undefined') {
+        console.warn('[AuthService] locale push failed', err);
+      }
+      /* Don't roll back lastPushedLocale: a transient failure followed
+         by the user changing locale again would still trigger a push.
+         If we cleared the marker, every render-time recomputation of
+         the effect would re-fire the PATCH — bad. */
+    }
   }
 
   /**

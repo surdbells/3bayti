@@ -635,4 +635,116 @@ describe('AuthService', () => {
       expect(locale.setLocaleCalls).toEqual(['ar']);
     });
   });
+
+  /* -----------------------------------------------------------------
+     Locale push to /v3/me/profile (Y.1-J)
+     ----------------------------------------------------------------- */
+  describe('locale push to server (Y.1-J)', () => {
+    it('does NOT push when no user is authenticated', async () => {
+      const { controller, locale } = setup({ platform: 'browser' });
+      /* Change locale BEFORE login → effect fires with user===null,
+         must not PATCH. */
+      await locale.setLocale('ar');
+      TestBed.tick();
+      controller.expectNone('https://api-v3.3bayti.ae/v3/me/profile');
+    });
+
+    it('does NOT push on login when user.locale already matches the new value', async () => {
+      const { service, controller, locale } = setup({ platform: 'browser' });
+      locale._setCurrent('en');
+
+      service.login({ email: 'a@b.com', password: 'x' });
+      controller.expectOne('/auth-proxy/login').flush(
+        makeLoginResponse({ user: makeUser({ locale: 'en' }) }),
+      );
+      await Promise.resolve();
+      TestBed.tick();
+
+      controller.expectNone('https://api-v3.3bayti.ae/v3/me/profile');
+    });
+
+    it('PATCHES /v3/me/profile when an authenticated user changes locale', async () => {
+      const { service, controller, locale } = setup({ platform: 'browser' });
+      locale._setCurrent('en');
+
+      /* Step 1: log in. */
+      service.login({ email: 'a@b.com', password: 'x' });
+      controller.expectOne('/auth-proxy/login').flush(
+        makeLoginResponse({ user: makeUser({ locale: 'en' }) }),
+      );
+      await Promise.resolve();
+      TestBed.tick();
+
+      /* Step 2: switch locale. The effect should fire and PATCH. */
+      await locale.setLocale('ar');
+      TestBed.tick();
+
+      const req = controller.expectOne('https://api-v3.3bayti.ae/v3/me/profile');
+      expect(req.request.method).toBe('PATCH');
+      expect(req.request.body).toEqual({ locale: 'ar' });
+      req.flush({});
+    });
+
+    it('does NOT push twice for the same locale value', async () => {
+      const { service, controller, locale } = setup({ platform: 'browser' });
+      locale._setCurrent('en');
+
+      service.login({ email: 'a@b.com', password: 'x' });
+      controller.expectOne('/auth-proxy/login').flush(
+        makeLoginResponse({ user: makeUser({ locale: 'en' }) }),
+      );
+      await Promise.resolve();
+      TestBed.tick();
+
+      /* Switch to ar — fires one PATCH. */
+      await locale.setLocale('ar');
+      TestBed.tick();
+      controller.expectOne('https://api-v3.3bayti.ae/v3/me/profile').flush({});
+
+      /* setLocale('ar') again with the same value is a no-op in
+         LocaleService (the signal doesn't transition), so no PATCH. */
+      await locale.setLocale('ar');
+      TestBed.tick();
+      controller.expectNone('https://api-v3.3bayti.ae/v3/me/profile');
+    });
+
+    it('silently swallows PATCH failures (does not throw, no toast)', async () => {
+      const { service, controller, locale } = setup({ platform: 'browser' });
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      locale._setCurrent('en');
+
+      service.login({ email: 'a@b.com', password: 'x' });
+      controller.expectOne('/auth-proxy/login').flush(
+        makeLoginResponse({ user: makeUser({ locale: 'en' }) }),
+      );
+      await Promise.resolve();
+      TestBed.tick();
+
+      await locale.setLocale('ar');
+      TestBed.tick();
+
+      const req = controller.expectOne('https://api-v3.3bayti.ae/v3/me/profile');
+      req.flush('Server error', { status: 500, statusText: 'Server error' });
+
+      /* Effect should NOT have crashed; warn should have been called. */
+      await Promise.resolve();
+      expect(warnSpy).toHaveBeenCalledWith('[AuthService] locale push failed', expect.anything());
+      warnSpy.mockRestore();
+    });
+
+    it('does NOT push on the server (SSR build)', async () => {
+      const { service, controller, locale } = setup({ platform: 'server' });
+      locale._setCurrent('en');
+
+      service.login({ email: 'a@b.com', password: 'x' });
+      controller.expectOne('/auth-proxy/login').flush(
+        makeLoginResponse({ user: makeUser({ locale: 'en' }) }),
+      );
+      await Promise.resolve();
+
+      /* On the server the effect doesn't register at all. */
+      await locale.setLocale('ar');
+      controller.expectNone('https://api-v3.3bayti.ae/v3/me/profile');
+    });
+  });
 });

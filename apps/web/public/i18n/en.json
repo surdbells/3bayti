@@ -1,17 +1,14 @@
 {
   "common": {
     "brand": "3bayti",
-    "skipToContent": "Skip to main content"
+    "skipToContent": "Skip to main content",
+    "loading": "Loading…",
+    "close": "Close"
   },
   "nav": {
     "home": "Home",
     "categories": "Categories",
-    "primary": "Primary",
-    "account": "Account",
-    "signIn": "Sign in",
-    "register": "Register",
-    "signOut": "Sign out",
-    "myAccount": "My account"
+    "primary": "Primary"
   },
   "footer": {
     "rights": "All rights reserved.",
@@ -23,7 +20,25 @@
     "english": "English",
     "arabic": "العربية"
   },
+  "header": {
+    "signIn": "Sign in",
+    "register": "Register",
+    "userMenu": {
+      "account": "My account",
+      "orders": "Orders",
+      "signOut": "Sign out"
+    }
+  },
   "auth": {
+    "fields": {
+      "required": "This field is required.",
+      "email_invalid": "Please provide a valid email address.",
+      "phone_invalid": "Please enter a valid phone number for the selected country.",
+      "password_too_short": "Password must be at least {{requiredLength}} characters."
+    },
+    "validation": {
+      "code6Digits": "Code must be 6 digits."
+    },
     "login": {
       "title": "Sign in to your account",
       "subtitle": "Welcome back. Enter your email and password to continue.",
@@ -76,20 +91,23 @@
         "invalidCode": "That code is invalid or has expired. Please try again or request a new code.",
         "rateLimited": "Too many attempts. Please wait an hour and try again.",
         "missingVerification": "Verification session missing. Please start over.",
+        "resendUnavailable": "We couldn't resend the code from here. Please return to register and try again.",
+        "startOver": "Start over",
         "unexpected": "We couldn't verify the code. Please try again."
       }
     },
-    "forgotPassword": {
+    "forgot": {
       "title": "Reset your password",
       "subtitle": "Enter your email — we'll send a verification code to your registered phone.",
       "emailLabel": "Email address",
       "submit": "Send code",
       "backToLogin": "Back to sign in",
       "errors": {
+        "rateLimited": "Too many reset attempts. Please wait an hour and try again.",
         "unexpected": "We couldn't start the reset. Please try again."
       }
     },
-    "resetPassword": {
+    "reset": {
       "title": "Set a new password",
       "subtitle": "Enter the code we sent to your phone and choose a new password.",
       "codeLabel": "Verification code",
@@ -98,18 +116,12 @@
       "submit": "Reset password",
       "errors": {
         "invalidCode": "That code is invalid or has expired. Please try again or request a new code.",
-        "passwordMismatch": "Passwords don't match.",
+        "passwordsMismatch": "Passwords don't match.",
         "rateLimited": "Too many attempts. Please wait an hour and try again.",
+        "missingVerification": "Reset session missing. Please start over.",
+        "startOver": "Start over",
         "unexpected": "We couldn't reset your password. Please try again."
       }
-    },
-    "validation": {
-      "required": "{{field}} is required.",
-      "email": "Please provide a valid email address.",
-      "minLength": "{{field}} must be at least {{min}} characters.",
-      "phoneE164": "Phone must be in international format with country code, e.g. +971501234567.",
-      "code6Digits": "Code must be 6 digits.",
-      "passwordsMustMatch": "Passwords must match."
     },
     "passwordStrength": {
       "label": "Password strength",
