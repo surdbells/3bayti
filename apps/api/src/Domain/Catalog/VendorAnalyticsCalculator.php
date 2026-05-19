@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\Catalog;
 
+use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
 
@@ -77,8 +78,7 @@ class VendorAnalyticsCalculator
      * though they were originally paid — the vendor returned that
      * money so it's not earned revenue.
      *
-     * Referenced in X.13-B revenue queries.
-     * @phpstan-ignore-next-line classConstant.unused
+     * Used by X.13-B revenue queries.
      */
     private const REVENUE_EXCLUDED_ITEM_STATUSES = ['rejected', 'refunded'];
 
@@ -230,21 +230,105 @@ class VendorAnalyticsCalculator
     // =================================================================
 
     /**
+     * X.13-B: Period totals query.
+     *
+     * One aggregate SQL selecting:
+     *   - revenue_aed:        SUM(oi.subtotal) for items not in
+     *                          REVENUE_EXCLUDED_ITEM_STATUSES
+     *   - orders:             COUNT(DISTINCT o.id) — orders that
+     *                          contributed at least one revenue-
+     *                          counted item
+     *   - items:              SUM(oi.quantity) for same items
+     *   - unique_customers:   COUNT(DISTINCT o.user_id)
+     *
+     * AOV is derived in PHP (revenue / orders) since the math
+     * is cheap and the SQL stays clean.
+     *
+     * Order eligibility = orders.paid_at IS NOT NULL AND
+     * paid_at >= since AND paid_at < until. The Q-RevenueDef = A
+     * window anchors on paid_at, not order created_at, to match
+     * what vendors think of as "earned in this period".
+     *
      * @return array{revenue_aed: string, orders: int, items: int, aov_aed: string, unique_customers: int}
      */
     private function computeTotals(int $vendorId, \DateTimeImmutable $since, \DateTimeImmutable $until): array
     {
-        // X.13-B implementation. Returns zeros + empty for X.13-A skeleton.
+        $excludedPlaceholders = implode(', ', array_fill(
+            0,
+            count(self::REVENUE_EXCLUDED_ITEM_STATUSES),
+            '?',
+        ));
+        $sql = "
+            SELECT
+                COALESCE(SUM(oi.subtotal), 0)::text AS revenue,
+                COUNT(DISTINCT o.id) AS orders,
+                COALESCE(SUM(oi.quantity), 0)::int AS items,
+                COUNT(DISTINCT o.user_id) AS unique_customers
+            FROM order_items oi
+            INNER JOIN orders o ON o.id = oi.order_id
+            WHERE oi.vendor_id = ?
+              AND o.paid_at IS NOT NULL
+              AND o.paid_at >= ?
+              AND o.paid_at < ?
+              AND oi.item_status NOT IN ({$excludedPlaceholders})
+        ";
+
+        $params = [
+            $vendorId,
+            $since->format('Y-m-d H:i:sP'),
+            $until->format('Y-m-d H:i:sP'),
+            ...self::REVENUE_EXCLUDED_ITEM_STATUSES,
+        ];
+        $types = [
+            ParameterType::INTEGER,
+            ParameterType::STRING,
+            ParameterType::STRING,
+            ...array_fill(0, count(self::REVENUE_EXCLUDED_ITEM_STATUSES), ParameterType::STRING),
+        ];
+
+        $row = $this->em->getConnection()
+            ->executeQuery($sql, $params, $types)
+            ->fetchAssociative();
+
+        if ($row === false) {
+            // Defensive: should never happen with COALESCE aggregates,
+            // but PHPStan-friendly + future-proof.
+            return [
+                'revenue_aed' => '0.00',
+                'orders' => 0,
+                'items' => 0,
+                'aov_aed' => '0.00',
+                'unique_customers' => 0,
+            ];
+        }
+
+        $revenue = (string) ($row['revenue'] ?? '0');
+        $orders = (int) ($row['orders'] ?? 0);
+        $items = (int) ($row['items'] ?? 0);
+        $uniqueCustomers = (int) ($row['unique_customers'] ?? 0);
+
         return [
-            'revenue_aed' => '0.00',
-            'orders' => 0,
-            'items' => 0,
-            'aov_aed' => '0.00',
-            'unique_customers' => 0,
+            'revenue_aed' => $this->money($revenue),
+            'orders' => $orders,
+            'items' => $items,
+            'aov_aed' => $this->computeAov($revenue, $orders),
+            'unique_customers' => $uniqueCustomers,
         ];
     }
 
     /**
+     * X.13-B: Daily revenue series query.
+     *
+     * Postgres generate_series fills in zero-revenue days so the
+     * frontend always sees exactly `days` data points without
+     * having to plug holes itself. Joining against the order_items
+     * aggregate gives revenue + order count per day.
+     *
+     * The boundary alignment uses `date_trunc('day', paid_at)` so
+     * orders paid at any time during the day land in that day's
+     * bucket regardless of timezone weirdness. We compute the
+     * series in UTC; client-side display can shift if needed.
+     *
      * @return list<array{date: string, revenue_aed: string, orders: int}>
      */
     private function computeRevenueSeries(
@@ -253,8 +337,117 @@ class VendorAnalyticsCalculator
         \DateTimeImmutable $until,
         int $days,
     ): array {
-        // X.13-B implementation. Empty for X.13-A skeleton.
-        return [];
+        $excludedPlaceholders = implode(', ', array_fill(
+            0,
+            count(self::REVENUE_EXCLUDED_ITEM_STATUSES),
+            '?',
+        ));
+
+        // Series spans `days` rows, starting at the day-boundary
+        // of `since` and stepping by 1 day. LEFT JOIN with the
+        // aggregate ensures zero-revenue days appear as 0.00 / 0
+        // rather than being absent from the result.
+        $sql = "
+            WITH series AS (
+                SELECT generate_series(
+                    date_trunc('day', ?::timestamptz),
+                    date_trunc('day', ?::timestamptz) - INTERVAL '1 day',
+                    INTERVAL '1 day'
+                ) AS bucket
+            ),
+            daily AS (
+                SELECT
+                    date_trunc('day', o.paid_at) AS bucket,
+                    SUM(oi.subtotal) AS revenue,
+                    COUNT(DISTINCT o.id) AS orders
+                FROM order_items oi
+                INNER JOIN orders o ON o.id = oi.order_id
+                WHERE oi.vendor_id = ?
+                  AND o.paid_at IS NOT NULL
+                  AND o.paid_at >= ?
+                  AND o.paid_at < ?
+                  AND oi.item_status NOT IN ({$excludedPlaceholders})
+                GROUP BY date_trunc('day', o.paid_at)
+            )
+            SELECT
+                to_char(s.bucket, 'YYYY-MM-DD') AS date,
+                COALESCE(d.revenue, 0)::text AS revenue,
+                COALESCE(d.orders, 0)::int AS orders
+            FROM series s
+            LEFT JOIN daily d ON d.bucket = s.bucket
+            ORDER BY s.bucket ASC
+        ";
+
+        $params = [
+            $since->format('Y-m-d H:i:sP'),
+            $until->format('Y-m-d H:i:sP'),
+            $vendorId,
+            $since->format('Y-m-d H:i:sP'),
+            $until->format('Y-m-d H:i:sP'),
+            ...self::REVENUE_EXCLUDED_ITEM_STATUSES,
+        ];
+        $types = [
+            ParameterType::STRING,
+            ParameterType::STRING,
+            ParameterType::INTEGER,
+            ParameterType::STRING,
+            ParameterType::STRING,
+            ...array_fill(0, count(self::REVENUE_EXCLUDED_ITEM_STATUSES), ParameterType::STRING),
+        ];
+
+        $rows = $this->em->getConnection()
+            ->executeQuery($sql, $params, $types)
+            ->fetchAllAssociative();
+
+        return array_map(
+            fn (array $r): array => [
+                'date' => (string) $r['date'],
+                'revenue_aed' => $this->money((string) ($r['revenue'] ?? '0')),
+                'orders' => (int) ($r['orders'] ?? 0),
+            ],
+            $rows,
+        );
+    }
+
+    /**
+     * Compute AOV = revenue / orders. Returns '0.00' when no
+     * orders. Uses bcdiv for decimal-safe division (no float
+     * drift on the rounding boundary).
+     */
+    private function computeAov(string $revenue, int $orders): string
+    {
+        if ($orders === 0) {
+            return '0.00';
+        }
+        return $this->money(bcdiv($revenue, (string) $orders, 4));
+    }
+
+    /**
+     * Normalise decimal-string amounts to 2 decimal places.
+     * Matches the AED money formatting used throughout the
+     * codebase (X.15-C HALF_UP-via-bias-add-then-truncate).
+     */
+    private function money(string $value): string
+    {
+        // Use the same bias-add-then-truncate trick as
+        // CurrencyConversionService::roundHalfUp. Decimal-string
+        // precision; no floats.
+        $cmp = bccomp($value, '0', 4);
+        if ($cmp === 0) {
+            return '0.00';
+        }
+        $halfBias = '0.005';
+        $biased = $cmp > 0
+            ? bcadd($value, $halfBias, 4)
+            : bcsub($value, $halfBias, 4);
+        $truncated = bcadd($biased, '0', 2);
+        // Normalise trailing-zero padding
+        if (!str_contains($truncated, '.')) {
+            return $truncated . '.00';
+        }
+        [$whole, $frac] = explode('.', $truncated, 2);
+        $frac = str_pad(substr($frac, 0, 2), 2, '0');
+        return $whole . '.' . $frac;
     }
 
     /**
