@@ -102,4 +102,18 @@ export const routes: Routes = [
       import('./features/auth/verify-phone/verify-phone').then(m => m.VerifyPhoneComponent),
     title: 'Verify your phone · 3bayti',
   },
+  {
+    path: 'forgot-password',
+    canActivate: [guestActivateGuard],
+    loadComponent: () =>
+      import('./features/auth/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent),
+    title: 'Forgot password · 3bayti',
+  },
+  {
+    path: 'reset-password',
+    canActivate: [guestActivateGuard],
+    loadComponent: () =>
+      import('./features/auth/reset-password/reset-password').then(m => m.ResetPasswordComponent),
+    title: 'Reset password · 3bayti',
+  },
 ];
