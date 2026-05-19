@@ -1747,9 +1747,175 @@ SQL
 
 36. **Composite indexes on hot analytics queries** — currently the 6 SQL queries scan with full table-row access bounded by `oi.vendor_id` + `o.paid_at`. If `vendor_analytics.slow_response` warnings sustain on the HIGH-volume vendor, add: `CREATE INDEX idx_order_items_vendor_status ON order_items(vendor_id, item_status);` and `CREATE INDEX idx_orders_paid_at ON orders(paid_at) WHERE paid_at IS NOT NULL;`. ~0.5 day work + reindex cost. Trigger: sustained warnings OR P99 latency > 2s.
 
+### 2.U — M3.2.X.12 — Smoke-test Recommendations engine
+
+X.12 ships a single-table additive migration + a cron command + 3 HTTP endpoints. The cron MUST be run at least once before the read endpoints return meaningful results (the product_recommendations table is empty post-deploy).
+
+```bash
+# 1. Apply the migration (X.12-A single-table additive)
+cd apps/api && php bin/migrate.php
+
+# 2. Verify schema:
+psql "$STAGING_DSN" -c "
+SELECT column_name, data_type, is_nullable
+FROM information_schema.columns
+WHERE table_name='product_recommendations'
+ORDER BY ordinal_position;"
+# Expect:
+#  id                       bigint                    NO
+#  product_id               integer                   NO
+#  recommended_product_id   integer                   NO
+#  score                    numeric                   NO
+#  source                   character varying          NO
+#  rank                     integer                   NO
+#  computed_at              timestamp with time zone   NO
+
+# Verify indexes:
+psql "$STAGING_DSN" -c "
+SELECT indexname FROM pg_indexes
+WHERE tablename = 'product_recommendations';"
+# Expect: PK on id, UNIQUE on (product_id, recommended_product_id),
+# idx_product_recs_lookup (product_id, rank), idx_product_recs_source
+
+# 3. Verify the table starts empty:
+psql "$STAGING_DSN" -c "SELECT COUNT(*) FROM product_recommendations;"
+# Expect: 0
+
+# 4. Run the cron in dry-run mode first to see what would happen:
+cd apps/api
+php bin/cli.php recommendations:build --dry-run
+# Expect output ending in 'DRY RUN complete in N ms — would write
+# K rows' where K depends on order history. K = 0 is expected on
+# a fresh staging with no order data; K should be moderate on
+# production-like staging (e.g. ~500-5000 rows on a 100-vendor
+# / 10k-product / 1k-order staging).
+
+# 5. Run live:
+php bin/cli.php recommendations:build
+# Expect output ending in 'Build complete in N ms — deleted 0
+# old rows, inserted K new rows for J source products'
+
+# 6. Verify rows landed:
+psql "$STAGING_DSN" -c "
+SELECT source, COUNT(*) AS rows
+FROM product_recommendations
+GROUP BY source
+ORDER BY source;"
+# Expect distinct rows for 'copurchase' (and possibly 'category')
+# depending on staging data. fallback_popular rows are NOT written
+# by the cron — they're served dynamically at request time.
+
+# 7. Smoke-test the per-product endpoint:
+# Pick a product slug that has co-purchase data:
+PRODUCT_SLUG=$(psql -At "$STAGING_DSN" -c "
+SELECT p.slug
+FROM products p
+INNER JOIN product_recommendations pr ON pr.product_id = p.id
+GROUP BY p.id, p.slug
+HAVING COUNT(pr.id) >= 5
+LIMIT 1;")
+
+curl -s \"https://staging.3bayti.ae/v3/products/\$PRODUCT_SLUG/recommendations?limit=10\" \\
+  | python3 -m json.tool
+
+# Expect: data array with up to 10 rows; each row has product
+# (full ProductSerializer listShape) + score + source
+
+# 8. Smoke-test with a fresh product that has no co-purchase data:
+# Pick a product slug that has NO recommendations:
+ORPHAN_SLUG=$(psql -At \"\$STAGING_DSN\" -c \"
+SELECT p.slug
+FROM products p
+LEFT JOIN product_recommendations pr ON pr.product_id = p.id
+WHERE pr.id IS NULL
+LIMIT 1;\")
+
+curl -s \"https://staging.3bayti.ae/v3/products/\$ORPHAN_SLUG/recommendations\" \\
+  | python3 -c \"import json,sys; d=json.load(sys.stdin); print(f'rows={len(d[\\\"data\\\"])}; sources={[r[\\\"source\\\"] for r in d[\\\"data\\\"]]}')\"
+
+# Expect: rows > 0 if there's enough marketplace traffic to populate
+# the popular fallback; all sources = 'fallback_popular'
+
+# 9. Smoke-test the /me endpoint. Pick a customer with order history:
+CUSTOMER_TOKEN=...
+
+curl -s 'https://staging.3bayti.ae/v3/me/recommendations?limit=10' \\
+  -H \"Authorization: Bearer \$CUSTOMER_TOKEN\" | python3 -m json.tool
+
+# Expect: 10 personalized recommendations sourced from category
+# (no copurchase — copurchase is product-level)
+
+# Anonymous request → 401:
+curl -i -s 'https://staging.3bayti.ae/v3/me/recommendations' | head -1
+# Expect: HTTP/2 401
+
+# 10. Smoke-test the admin explain endpoint:
+ADMIN_TOKEN=...
+PRODUCT_ID=...   # pick the same product as step 7
+
+curl -s \"https://staging.3bayti.ae/v3/admin/recommendations/\$PRODUCT_ID/explain\" \\
+  -H \"Authorization: Bearer \$ADMIN_TOKEN\" | python3 -m json.tool
+
+# Expect:
+#   data.product_id = PRODUCT_ID
+#   data.total_recommendations >= 1
+#   data.by_source.copurchase.count + category.count = total_recommendations
+#   each row has product + score + rank
+
+# 11. Verify audit_log captures the admin explain call:
+psql \"\$STAGING_DSN\" -c \"
+SELECT created_at, action, subject_type, subject_id, changes
+FROM audit_log
+WHERE subject_type = 'Product'
+  AND changes->>'context' = 'admin_recommendations_explain'
+ORDER BY id DESC LIMIT 3;\"
+
+# 12. Non-admin trying admin endpoint → 403:
+curl -i -s \"https://staging.3bayti.ae/v3/admin/recommendations/\$PRODUCT_ID/explain\" \\
+  -H \"Authorization: Bearer \$CUSTOMER_TOKEN\" | head -1
+# Expect: HTTP/2 403, no new audit row
+
+# 13. Performance observability check:
+tail -200 apps/api/var/logs/app-*.log | grep -E \"recommendations|copurchase_affinity|category_affinity\" | tail -10
+# Expect:
+#   copurchase_affinity.computed (INFO from cron run)
+#   category_affinity.computed (INFO from cron run)
+#   recommendations.build.completed (INFO from cron run)
+#   recommendations.product.served (DEBUG per HTTP request)
+#   recommendations.user.served (DEBUG per /me request)
+
+# 14. Schedule the cron entry. Recommended: 02:00 UTC daily.
+# Example crontab line (operator adapts to your scheduler):
+#   0 2 * * * cd /var/www/3bayti/apps/api && php bin/cli.php recommendations:build >> /var/log/3bayti/recommendations-cron.log 2>&1
+```
+
+**Smoke-test acceptance**
+
+- [ ] Migration applied: `product_recommendations` table with 7 columns + UNIQUE + 2 indexes
+- [ ] Table starts empty post-deploy
+- [ ] `--dry-run` reports a non-zero row count on production-like staging data
+- [ ] Live cron run inserts rows; row count matches dry-run report
+- [ ] `GET /v3/products/{slug}/recommendations` returns up to 10 rows for products with copurchase data
+- [ ] Orphan-product slug (no copurchase data) returns popular fallback rows (source='fallback_popular')
+- [ ] `GET /v3/me/recommendations` returns personalized recommendations for authenticated customer with history
+- [ ] Anonymous request to `/v3/me/recommendations` → 401
+- [ ] `GET /v3/admin/recommendations/{id}/explain` returns full source breakdown with ranks
+- [ ] Admin call writes audit_log row with subject_type='Product' + context='admin_recommendations_explain'
+- [ ] Non-admin request to explain endpoint → 403 with no audit row
+- [ ] Logs show all 4 observability events (3 cron INFO + 1 request DEBUG)
+- [ ] Cron scheduled for daily 02:00 UTC
+
+**Operator deferred items added by X.12:**
+
+37. **Paid ML model upgrade** — Q-Algorithm = B locked at rule-based (copurchase + category) for v1. Once order data volume justifies (~6 months of production traffic), upgrade to a collaborative-filtering ML model (e.g. Implicit ALS, item-item kNN, or matrix factorization via libraries like LightFM). The existing `product_recommendations` table shape accommodates both — just additional source values like 'mf_cf' or 'als_implicit'. ~5-10 days work including offline model training infrastructure, evaluation harness, and a feature-flag toggle to A/B against the rule-based baseline. Trigger: ops survey shows recommendation click-through-rate plateauing or ML-team availability lines up.
+
+38. **Admin pin/unpin recommendations tuning** — Q-AdminTuning = A locked at fully algorithmic. When vendor escalations about "why is competitor X recommended on my product page" become operationally noisy (target: > 5/week), build a manual override surface: admins can pin a product as recommendation OR unpin (suppress) specific (source, target) pairs. ~3 days work: new table `product_recommendation_overrides` (product_id, recommended_product_id, action='pin'|'unpin', admin_user_id, created_at) + cron honors overrides + admin endpoints to create/list/delete. Audited via AuditEmitter.
+
+39. **Cron scheduler hardening + monitoring** — currently the cron entry is operator-managed (whatever scheduler the platform uses). Wrap with: lockfile to prevent concurrent runs (long copurchase queries could overlap if cron runs faster than completion), Slack/PagerDuty alert if the daily run fails or takes > 30 minutes, separate alert if the latest `recommendations.build.completed` log is > 48 hours old (stale data detection). ~1 day work. Trigger: first cron failure or stale-data incident.
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.T complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.U complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
