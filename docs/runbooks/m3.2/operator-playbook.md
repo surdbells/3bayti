@@ -1538,9 +1538,218 @@ print(f'cart.currency = {d[\"cart\"][\"currency\"]}')"
 
 31. **Notification + alerting on `fx_rate.stale` warnings** — current observability emits a PSR-3 warning per-call hitting a stale rate. Ops will want a higher-level alert when this crosses a threshold (e.g. >100 stale warnings/hour means an entire currency has been forgotten for 2+ days). Wire to the same alerting infrastructure that drives Noon payment alerts. ~1 day depending on existing alert plumbing. Triggered by operator follow-up #27 NOT being shipped yet AND staleness happening repeatedly.
 
+### 2.T — M3.2.X.13 — Smoke-test Vendor analytics dashboard
+
+X.13 ships two new HTTP endpoints + a calculator service. NO database changes — pure read-side aggregation. Smoke-test both endpoints on staging with vendors at different scales (high-volume, low-volume, zero-orders).
+
+```bash
+# 1. No migration to apply (X.13 is read-side only). Verify the
+#    calculator service is wired:
+cd apps/api
+grep -E "VendorAnalyticsCalculator|VendorAnalyticsSerializer" config/di.php
+# Expect: 4 DI bindings in the M3.2.X.13 section
+
+# 2. Pick three vendors on staging at different scales for testing:
+psql "$STAGING_DSN" <<'SQL'
+WITH vendor_volume AS (
+    SELECT
+        v.id, v.slug, v.name,
+        COUNT(DISTINCT o.id) FILTER (
+            WHERE o.paid_at IS NOT NULL
+              AND o.paid_at >= NOW() - INTERVAL '30 days'
+        ) AS paid_orders_30d
+    FROM vendors v
+    LEFT JOIN order_items oi ON oi.vendor_id = v.id
+    LEFT JOIN orders o ON o.id = oi.order_id
+    GROUP BY v.id, v.slug, v.name
+)
+SELECT id, slug, paid_orders_30d FROM vendor_volume
+ORDER BY paid_orders_30d DESC;
+SQL
+# Pick: HIGH = vendor with most orders, LOW = small vendor with
+# some orders, ZERO = vendor with 0 paid orders in window
+
+HIGH_ID=...   LOW_ID=...   ZERO_ID=...
+ADMIN_TOKEN=...
+
+# 3. Admin endpoint on the HIGH-volume vendor (default 30-day window):
+curl -s "https://staging.3bayti.ae/v3/admin/vendors/$HIGH_ID/analytics" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys
+d = json.load(sys.stdin)
+t = d['data']['totals']
+print(f'HIGH vendor: revenue={t[\"revenue_aed\"]}, orders={t[\"orders\"]}, AOV={t[\"aov_aed\"]}, customers={t[\"unique_customers\"]}')
+print(f'  revenue_series: {len(d[\"data\"][\"revenue_series\"])} rows')
+print(f'  top_units: {[p[\"slug\"] for p in d[\"data\"][\"top_products_by_units\"][:3]]}')
+print(f'  top_revenue: {[p[\"slug\"] for p in d[\"data\"][\"top_products_by_revenue\"][:3]]}')
+print(f'  customer_mix: new={d[\"data\"][\"customer_mix\"][\"new\"]} returning={d[\"data\"][\"customer_mix\"][\"returning\"]}')
+print(f'  status_mix: delivered={d[\"data\"][\"status_mix\"][\"delivered\"]} cancelled={d[\"data\"][\"status_mix\"][\"cancelled\"]} returned={d[\"data\"][\"status_mix\"][\"returned\"]}')"
+
+# Expect: revenue_aed > 0, orders > 0, revenue_series has 30 rows,
+# top_units + top_revenue lists are LIKELY different orderings.
+
+# 4. Same on the LOW-volume vendor:
+curl -s "https://staging.3bayti.ae/v3/admin/vendors/$LOW_ID/analytics" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys; d = json.load(sys.stdin); print(d['data']['totals'])"
+
+# 5. Same on the ZERO-volume vendor — verify Q-EmptyHandling = C:
+curl -s "https://staging.3bayti.ae/v3/admin/vendors/$ZERO_ID/analytics" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | python3 -c "
+import json, sys; d = json.load(sys.stdin)
+print('totals:', d['data']['totals'])
+print('series:', d['data']['revenue_series'])
+print('top_units:', d['data']['top_products_by_units'])"
+# Expect: totals all '0.00'/0, revenue_series = [], all top lists = []
+# NOT a 404 or error — Q-EmptyHandling = C dashboard-friendly shape
+
+# 6. Window param tests on the HIGH vendor:
+# Default 30
+curl -s "https://staging.3bayti.ae/v3/admin/vendors/$HIGH_ID/analytics" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data.window.days'
+# Expect: 30
+
+# Custom 7 (minimum)
+curl -s "https://staging.3bayti.ae/v3/admin/vendors/$HIGH_ID/analytics?days=7" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data.window.days'
+# Expect: 7
+
+# Custom 90
+curl -s "https://staging.3bayti.ae/v3/admin/vendors/$HIGH_ID/analytics?days=90" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data.window.days'
+# Expect: 90
+
+# Clamping: below min
+curl -s "https://staging.3bayti.ae/v3/admin/vendors/$HIGH_ID/analytics?days=0" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data.window.days'
+# Expect: 7
+
+# Clamping: above max
+curl -s "https://staging.3bayti.ae/v3/admin/vendors/$HIGH_ID/analytics?days=9999" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data.window.days'
+# Expect: 365
+
+# Non-numeric: falls back to default rather than 400
+curl -s "https://staging.3bayti.ae/v3/admin/vendors/$HIGH_ID/analytics?days=foo" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | jq '.data.window.days'
+# Expect: 30
+
+# 7. Admin auth + audit trail:
+# Non-admin → 403, no audit emitted
+USER_TOKEN=...   # any non-admin user
+curl -i -s "https://staging.3bayti.ae/v3/admin/vendors/$HIGH_ID/analytics" \
+  -H "Authorization: Bearer $USER_TOKEN" | head -3
+# Expect: HTTP/2 403
+
+# Non-existent vendor → 404, no audit
+curl -i -s "https://staging.3bayti.ae/v3/admin/vendors/99999/analytics" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" | head -3
+# Expect: HTTP/2 404
+
+# Audit trail captured for successful admin views:
+psql "$STAGING_DSN" -c "
+SELECT created_at, action, subject_type, subject_id, changes
+FROM audit_log
+WHERE subject_type = 'Vendor'
+  AND changes->>'context' = 'admin_vendor_analytics'
+ORDER BY id DESC LIMIT 5;"
+# Expect: rows for each admin view above
+
+# 8. Vendor self-serve endpoint. Single-store vendor:
+VENDOR_TOKEN=...   # token for a user owning exactly 1 store
+curl -s "https://staging.3bayti.ae/v3/vendor/analytics" \
+  -H "Authorization: Bearer $VENDOR_TOKEN" | jq '.data.vendor'
+# Expect: their single vendor; no ?vendor_id param needed
+
+# Multi-store vendor without ?vendor_id → 422 VENDOR_AMBIGUOUS:
+MULTI_VENDOR_TOKEN=...   # token for a user owning 2+ stores
+curl -i -s "https://staging.3bayti.ae/v3/vendor/analytics" \
+  -H "Authorization: Bearer $MULTI_VENDOR_TOKEN" | head -10
+# Expect: HTTP/2 422, body has error.code='VENDOR_AMBIGUOUS' and
+# error.details.available_vendor_ids = [...]
+
+# Multi-store with valid vendor_id:
+curl -s "https://staging.3bayti.ae/v3/vendor/analytics?vendor_id=<owned_id>" \
+  -H "Authorization: Bearer $MULTI_VENDOR_TOKEN" | jq '.data.vendor.id'
+# Expect: <owned_id>
+
+# Multi-store with unowned vendor_id → 404 (opaque cross-tenant):
+curl -i -s "https://staging.3bayti.ae/v3/vendor/analytics?vendor_id=99999" \
+  -H "Authorization: Bearer $MULTI_VENDOR_TOKEN" | head -3
+# Expect: HTTP/2 404 (not 403 — opaque to prevent enumeration)
+
+# 9. Verify NO audit trail for self-serve calls:
+psql "$STAGING_DSN" -c "
+SELECT COUNT(*) FROM audit_log
+WHERE changes->>'context' = 'vendor_self_analytics';"
+# Expect: 0 (vendors viewing own data is non-auditable)
+
+# 10. Performance observability:
+tail -200 apps/api/var/logs/app-*.log | grep "vendor_analytics" | tail -20
+# Expect:
+#   vendor_analytics.computed   (debug per call, with duration_ms)
+#   NO vendor_analytics.slow_response  (warnings ONLY if > 500ms)
+
+# If you see sustained slow_response warnings on the HIGH-volume
+# vendor:
+#   - Check the SQL plans for the 6 queries:
+#     EXPLAIN ANALYZE SELECT ... -- (manually run each query
+#     against staging with the same params)
+#   - Likely candidate for composite indexes (operator follow-up #36):
+#     CREATE INDEX idx_order_items_vendor_status
+#       ON order_items(vendor_id, item_status);
+#     CREATE INDEX idx_orders_paid_at
+#       ON orders(paid_at) WHERE paid_at IS NOT NULL;
+
+# 11. Spot-check that the calculator's revenue exclusion correctly
+#     drops rejected + refunded items:
+psql "$STAGING_DSN" <<'SQL'
+WITH v AS (SELECT $1::int AS vendor_id, NOW() - INTERVAL '30 days' AS since)
+SELECT
+    COUNT(*) FILTER (WHERE oi.item_status = 'delivered')     AS delivered_count,
+    COUNT(*) FILTER (WHERE oi.item_status = 'rejected')      AS rejected_count,
+    COUNT(*) FILTER (WHERE oi.item_status = 'refunded')      AS refunded_count,
+    SUM(oi.subtotal) FILTER (WHERE oi.item_status NOT IN ('rejected', 'refunded')) AS settled_revenue
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+JOIN v ON oi.vendor_id = v.vendor_id AND o.paid_at >= v.since;
+SQL
+# Compare 'settled_revenue' here to the dashboard's totals.revenue_aed
+# — they should match exactly (modulo the bcmath HALF_UP rounding).
+```
+
+**Smoke-test acceptance**
+
+- [ ] No migration needed (X.13 is read-side only)
+- [ ] Admin endpoint returns full 7-section envelope for high-volume vendors
+- [ ] Empty/zero-volume vendors return 200 with totals=0 + empty arrays (Q-EmptyHandling = C)
+- [ ] Days param clamped: 0 → 7, 9999 → 365, foo → 30 (default fallback rather than 400)
+- [ ] Non-admin user gets 403 on admin endpoint with NO audit row
+- [ ] Non-existent vendor gets 404 on admin endpoint with NO audit row
+- [ ] Admin successful views write audit_log rows with subject_type='Vendor' + context='admin_vendor_analytics' + window_days
+- [ ] Vendor self-serve single-store user: no vendor_id needed
+- [ ] Vendor self-serve multi-store user without vendor_id: 422 VENDOR_AMBIGUOUS with available_vendor_ids list
+- [ ] Vendor self-serve unowned vendor_id: 404 opaque (not 403)
+- [ ] Vendor self-serve calls write NO audit rows (non-auditable)
+- [ ] No `vendor_analytics.slow_response` warnings during normal load
+- [ ] Revenue totals match a manual SQL settlement-revenue check (exclude rejected/refunded)
+- [ ] Top-N lists frequently differ between units and revenue orderings
+
+**Operator deferred items added by X.13:**
+
+32. **Explicit from/to window param** — Q-Window = A locked at `?days=N` rolling for v1. If finance teams start asking for arbitrary fiscal-month windows ("show me revenue for April 2026 specifically"), add `?from=YYYY-MM-DD&to=YYYY-MM-DD` as an alternative. Both shapes coexist (use one or the other); validation rejects from > to. ~0.5 day work. Calculator API stays the same — just a new clamp/parse layer at the controller.
+
+33. **Weekly bucketing for long windows** — Q-TimeSeries = A locked at daily for v1. With days=365 the revenue_series returns 365 rows, which is a lot for the frontend chart. Add automatic weekly bucketing when days > 90: `?bucket=weekly` or auto-pick based on window length. ~1 day work — modify the generate_series interval + truncate to week-start. Frontend gets either daily (≤90 days) or weekly (>90 days) buckets.
+
+34. **Cross-vendor admin aggregations** — Q-AdminVisibility = A locked at per-vendor view for v1. Once 50+ vendors are live, ops will want a "market overview" surface showing total marketplace revenue, top-vendor leaderboard, vendor-mix by revenue tier, etc. Roughly a new endpoint `GET /v3/admin/analytics/marketplace` plus a new calculator method `computeMarketplace($since, $until)`. ~3-5 days work. Defer until vendor count justifies a dedicated marketplace view.
+
+35. **Redis cache for analytics queries** — Q-Caching = A locked at no-cache for v1. Once vendor dashboards hit > 100 requests/hour with overlapping windows, the 6-query batch repeats unnecessarily. Wire a Redis cache keyed on `(vendor_id, days, hour_of_day)` with a 1-hour TTL (so the dashboard refreshes hourly on the same window without hammering the DB). When this lands, the serializer's `meta.cache` field flips between 'miss' and 'hit'. ~1-2 days work. Trigger: P50 dashboard latency crosses 1s sustained.
+
+36. **Composite indexes on hot analytics queries** — currently the 6 SQL queries scan with full table-row access bounded by `oi.vendor_id` + `o.paid_at`. If `vendor_analytics.slow_response` warnings sustain on the HIGH-volume vendor, add: `CREATE INDEX idx_order_items_vendor_status ON order_items(vendor_id, item_status);` and `CREATE INDEX idx_orders_paid_at ON orders(paid_at) WHERE paid_at IS NOT NULL;`. ~0.5 day work + reindex cost. Trigger: sustained warnings OR P99 latency > 2s.
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.S complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.T complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
