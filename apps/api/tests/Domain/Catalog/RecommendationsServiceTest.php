@@ -181,6 +181,188 @@ final class RecommendationsServiceTest extends TestCase
     }
 
     // =================================================================
+    // getRecommendationsForUser (M3.2.X.12-G personalized path)
+    // =================================================================
+
+    #[Test]
+    public function userPathReturnsPopularFallbackWhenNoHistory(): void
+    {
+        // First query (findUserTopCategory) returns no row → null
+        // category → service falls through to popular fallback.
+        $service = $this->makeUserService(
+            topCategoryRow: false,
+            categoryProducts: [],
+            categoryProductEntities: [],
+            popularRows: [['product_id' => 200, 'units_sold' => 50]],
+            popularProductEntities: [200 => $this->makeProduct(200)],
+        );
+
+        $result = $service->getRecommendationsForUser(userId: 42);
+
+        self::assertCount(1, $result);
+        self::assertSame(200, $result[0]['product']->getId());
+        self::assertSame('fallback_popular', $result[0]['source']);
+    }
+
+    #[Test]
+    public function userPathReturnsCategoryAffinityWhenHistoryExists(): void
+    {
+        // Top category lookup returns category_id=7 → service runs
+        // category lookup → returns products user hasn't bought
+        $service = $this->makeUserService(
+            topCategoryRow: ['category_id' => 7, 'units' => 12],
+            categoryProducts: [
+                ['product_id' => 200, 'units_sold' => 50],
+                ['product_id' => 300, 'units_sold' => 30],
+            ],
+            categoryProductEntities: [
+                200 => $this->makeProduct(200),
+                300 => $this->makeProduct(300),
+            ],
+            popularRows: [],
+            popularProductEntities: [],
+        );
+
+        $result = $service->getRecommendationsForUser(userId: 42);
+
+        self::assertCount(2, $result);
+        self::assertSame(200, $result[0]['product']->getId());
+        self::assertSame('category', $result[0]['source']);
+        self::assertSame('50.0000', $result[0]['score']);
+    }
+
+    #[Test]
+    public function userPathFallsBackToPopularWhenCategoryExhausted(): void
+    {
+        // Has history (top category found) but category lookup
+        // returns empty (user has bought everything in category)
+        $service = $this->makeUserService(
+            topCategoryRow: ['category_id' => 7, 'units' => 12],
+            categoryProducts: [],  // empty — user bought it all
+            categoryProductEntities: [],
+            popularRows: [['product_id' => 999, 'units_sold' => 100]],
+            popularProductEntities: [999 => $this->makeProduct(999)],
+        );
+
+        $result = $service->getRecommendationsForUser(userId: 42);
+
+        self::assertCount(1, $result);
+        self::assertSame(999, $result[0]['product']->getId());
+        self::assertSame('fallback_popular', $result[0]['source']);
+    }
+
+    #[Test]
+    public function getExplainForProductReturnsRanksAndSources(): void
+    {
+        $source = $this->makeProduct(100);
+        $rec1 = $this->makeRec($source, $this->makeProduct(200), '23.0000', 'copurchase', 1);
+        $rec2 = $this->makeRec($source, $this->makeProduct(300), '1.0000', 'category', 2);
+
+        $service = $this->makeService(preComputedAllRecs: [$rec1, $rec2]);
+
+        $result = $service->getExplainForProduct(100);
+
+        self::assertCount(2, $result);
+        self::assertSame(200, $result[0]['product']->getId());
+        self::assertSame('copurchase', $result[0]['source']);
+        self::assertSame(1, $result[0]['rank']);
+        self::assertSame('category', $result[1]['source']);
+        self::assertSame(2, $result[1]['rank']);
+    }
+
+    // =================================================================
+    // Helpers (additions for user path)
+    // =================================================================
+
+    /**
+     * Helper for getRecommendationsForUser tests. Two SQL queries
+     * are involved: findUserTopCategory (first), then either
+     * getProductsInCategoryUserHasntBought OR getPopularFallback
+     * (second).
+     *
+     * @param array{category_id: int, units: int}|false $topCategoryRow
+     * @param list<array{product_id: int, units_sold: int}> $categoryProducts
+     * @param array<int, Product> $categoryProductEntities
+     * @param list<array{product_id: int, units_sold: int}> $popularRows
+     * @param array<int, Product> $popularProductEntities
+     */
+    private function makeUserService(
+        array|false $topCategoryRow,
+        array $categoryProducts,
+        array $categoryProductEntities,
+        array $popularRows,
+        array $popularProductEntities,
+    ): RecommendationsService {
+        $recRepo = $this->createMock(ProductRecommendationRepository::class);
+
+        // Build the Product entity map for findBy.
+        // findBy returns combined results — but each test only
+        // exercises one path, so this is safe.
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findBy')->willReturnCallback(
+            function (array $criteria) use ($categoryProductEntities, $popularProductEntities): array {
+                $ids = $criteria['id'] ?? [];
+                $all = $categoryProductEntities + $popularProductEntities;
+                $result = [];
+                foreach ($ids as $id) {
+                    if (isset($all[$id])) {
+                        $result[] = $all[$id];
+                    }
+                }
+                return $result;
+            },
+        );
+
+        // Sequence the executeQuery responses:
+        //   1st call: findUserTopCategory
+        //   2nd call: getProductsInCategoryUserHasntBought OR getPopularFallback
+        //   3rd call (if user exhausted category): popular fallback
+        $callIdx = 0;
+        $connection = $this->createMock(Connection::class);
+        $connection->method('executeStatement')->willReturn(0);
+        $connection->method('executeQuery')->willReturnCallback(
+            function () use (
+                &$callIdx,
+                $topCategoryRow,
+                $categoryProducts,
+                $popularRows,
+            ): Result {
+                $callIdx++;
+                $r = $this->createMock(Result::class);
+                if ($callIdx === 1) {
+                    // findUserTopCategory uses fetchAssociative
+                    $r->method('fetchAssociative')->willReturn($topCategoryRow);
+                    return $r;
+                }
+                if ($callIdx === 2) {
+                    // Either category lookup or popular fallback
+                    if ($topCategoryRow === false) {
+                        $r->method('fetchAllAssociative')->willReturn($popularRows);
+                    } else {
+                        $r->method('fetchAllAssociative')->willReturn($categoryProducts);
+                    }
+                    return $r;
+                }
+                // 3rd call = exhausted category fallback to popular
+                $r->method('fetchAllAssociative')->willReturn($popularRows);
+                return $r;
+            },
+        );
+
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('getRepository')->willReturnCallback(
+            fn (string $class) => match ($class) {
+                ProductRecommendation::class => $recRepo,
+                Product::class => $productRepo,
+                default => throw new \LogicException("Unexpected repo: {$class}"),
+            },
+        );
+        $em->method('getConnection')->willReturn($connection);
+
+        return new RecommendationsService($em, new InMemoryLogger());
+    }
+
+    // =================================================================
     // Helpers
     // =================================================================
 
@@ -188,15 +370,18 @@ final class RecommendationsServiceTest extends TestCase
      * @param list<ProductRecommendation> $preComputedRecs
      * @param list<array{product_id: int, units_sold: int}> $popularRows
      * @param array<int, Product> $popularProducts
+     * @param list<ProductRecommendation> $preComputedAllRecs Used by getExplainForProduct tests
      */
     private function makeService(
         array $preComputedRecs = [],
         array $popularRows = [],
         array $popularProducts = [],
         ?InMemoryLogger $logger = null,
+        array $preComputedAllRecs = [],
     ): RecommendationsService {
         $recRepo = $this->createMock(ProductRecommendationRepository::class);
         $recRepo->method('findTopForProduct')->willReturn($preComputedRecs);
+        $recRepo->method('findAllForProduct')->willReturn($preComputedAllRecs);
 
         $productRepo = $this->createMock(ProductRepository::class);
         $productRepo->method('findBy')->willReturn(array_values($popularProducts));

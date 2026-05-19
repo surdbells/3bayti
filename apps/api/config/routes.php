@@ -118,6 +118,12 @@ return function (App $app): void {
         // Empty body is a 200 no-op.
         $group->patch('/profile', UpdateProfileController::class);
 
+        // M3.2.X.12-G — Personalized "for-you" recommendations
+        $group->get(
+            '/recommendations',
+            \Bayti\Api\Http\Controllers\Me\GetMeRecommendationsController::class,
+        );
+
         // M1.7.2 phase A — address read + create
         $group->get('/addresses', ListAddressesController::class);
         $group->post('/addresses', CreateAddressController::class);
@@ -283,6 +289,9 @@ return function (App $app): void {
     // matcher.
     $app->get('/v3/products/facets', \Bayti\Api\Http\Controllers\Catalog\ListFacetsController::class);
     $app->get('/v3/products/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetProductController::class);
+    // M3.2.X.12-G — Per-product recommendations (public)
+    $app->get('/v3/products/{slug}/recommendations',
+        \Bayti\Api\Http\Controllers\Catalog\GetProductRecommendationsController::class);
     $app->get('/v3/vendors/{slug}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class);
 
     // M3.1.5a — by-legacy-id variants for mobile compatibility during
@@ -354,6 +363,10 @@ return function (App $app): void {
         // M3.2.X.13-E — Vendor analytics dashboard (admin single-vendor view)
         $group->get('/vendors/{id:[0-9]+}/analytics',
             \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorAnalyticsController::class);
+
+        // M3.2.X.12-G — Admin recommendations debug
+        $group->get('/recommendations/{product_id:[0-9]+}/explain',
+            \Bayti\Api\Http\Controllers\Admin\Catalog\GetAdminRecommendationsExplainController::class);
 
         // Category admin
         $group->get('/categories', \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class);

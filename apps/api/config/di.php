@@ -403,6 +403,16 @@ return [
     \Bayti\Api\Http\Serializers\VendorAnalyticsSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorAnalyticsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class => \DI\autowire(),
+
+    // M3.2.X.12 — Recommendations engine
+    \Bayti\Api\Domain\Catalog\CoPurchaseAffinityCalculator::class => \DI\autowire(),
+    \Bayti\Api\Domain\Catalog\CategoryAffinityCalculator::class => \DI\autowire(),
+    \Bayti\Api\Domain\Catalog\RecommendationsService::class => \DI\autowire(),
+    \Bayti\Api\Console\BuildRecommendationsCommand::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\RecommendationsSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Catalog\GetProductRecommendationsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Me\GetMeRecommendationsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Catalog\GetAdminRecommendationsExplainController::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\VendorMetricsSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorMetricsController::class => \DI\autowire(),
