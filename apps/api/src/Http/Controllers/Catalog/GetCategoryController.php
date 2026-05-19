@@ -123,7 +123,7 @@ final class GetCategoryController
         // Build the data block.
         $data = $this->serializer->detailShape($category, $rawProductCount);
         $data['children'] = $this->serializer->publicShapeMany($children);
-        $data['products'] = $this->productSerializer->listShapeMany($productsResult['items']);
+        $data['products'] = $this->productSerializer->configureFromRequest($request)->listShapeMany($productsResult['items']);
 
         // Build the meta block — apps/web-specific shape.
         // NOT PaginatedEnvelope::build (which emits {total, limit,

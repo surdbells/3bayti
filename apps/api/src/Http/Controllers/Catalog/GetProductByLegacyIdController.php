@@ -104,7 +104,7 @@ final class GetProductByLegacyIdController
             ->getResult();
 
         return $this->ok(PaginatedEnvelope::single(
-            $this->serializer->detailShape($product, $reviews),
+            $this->serializer->configureFromRequest($request)->detailShape($product, $reviews),
         ));
     }
 }

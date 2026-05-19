@@ -127,7 +127,7 @@ final class ListProductsController
         $result = $productRepo->findActivePaginated($filters);
 
         return $this->ok(PaginatedEnvelope::build(
-            $this->serializer->listShapeMany($result['items']),
+            $this->serializer->configureFromRequest($request)->listShapeMany($result['items']),
             $result['total'],
             $limit,
             $offset,

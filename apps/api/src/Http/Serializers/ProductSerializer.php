@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Serializers;
 
 use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Currency\Currency;
+use Bayti\Api\Domain\Currency\CurrencyConversionService;
 use Bayti\Api\Domain\Catalog\ProductReview;
 use DateTimeInterface;
 
@@ -50,6 +52,54 @@ use DateTimeInterface;
 final class ProductSerializer
 {
     private const CURRENCY = 'AED';
+
+    /**
+     * Optional display currency for prices. NULL or AED → emit
+     * canonical AED amount only (unchanged from pre-X.15 shape).
+     * Non-AED → emit dual-amount shape with source preserved.
+     */
+    private ?Currency $displayCurrency = null;
+
+    public function __construct(
+        private readonly ?CurrencyConversionService $conversion = null,
+    ) {
+    }
+
+    /**
+     * Configure the display currency for subsequent shape calls.
+     * Catalog controllers call this once per request after reading
+     * the CurrencyContextMiddleware attribute. Returns $this for
+     * fluent chaining if desired.
+     */
+    public function withDisplayCurrency(Currency $currency): self
+    {
+        $this->displayCurrency = $currency;
+        return $this;
+    }
+
+    /**
+     * Convenience: read the display currency from a ServerRequest
+     * attribute and configure it on this serializer. Returns $this
+     * for chaining.
+     *
+     * Catalog controllers do:
+     *     $this->serializer->configureFromRequest($request)
+     *         ->listShapeMany(...);
+     *
+     * Missing attribute (e.g. middleware not installed in a test
+     * environment) defaults to Currency::AED — backward-compatible.
+     */
+    public function configureFromRequest(\Psr\Http\Message\ServerRequestInterface $request): self
+    {
+        $currency = $request->getAttribute(
+            \Bayti\Api\Http\Middleware\CurrencyContextMiddleware::ATTR_DISPLAY_CURRENCY,
+            Currency::AED,
+        );
+        if (!$currency instanceof Currency) {
+            $currency = Currency::AED;
+        }
+        return $this->withDisplayCurrency($currency);
+    }
 
     /**
      * @return array<string, mixed>
@@ -151,13 +201,53 @@ final class ProductSerializer
     }
 
     /**
-     * @return array{amount: float, currency: string}
+     * Render a price as `{amount, currency}` for canonical AED or
+     * as `{amount, currency, source_amount, source_currency}` when
+     * a non-AED display currency has been configured via
+     * withDisplayCurrency() (M3.2.X.15-E).
+     *
+     * The dual-amount shape preserves the canonical AED amount
+     * alongside the display amount so clients can show
+     * 'GBP 78.29 (AED 365)' without a second roundtrip.
+     *
+     * Defensive: if the conversion service is missing OR the
+     * configured display currency is AED OR the service returns
+     * a non-converted result (rate missing → fallback), emits the
+     * single-amount AED shape. This guarantees backward
+     * compatibility for any caller that doesn't opt into the
+     * currency feature.
+     *
+     * @return array{amount: float, currency: string, source_amount?: float, source_currency?: string}
      */
     private function money(string $decimalString): array
     {
+        if (
+            $this->conversion === null
+            || $this->displayCurrency === null
+            || $this->displayCurrency === Currency::AED
+        ) {
+            return [
+                'amount' => (float) $decimalString,
+                'currency' => self::CURRENCY,
+            ];
+        }
+
+        $r = $this->conversion->convert($decimalString, $this->displayCurrency);
+        if (!$r['converted']) {
+            // Missing-rate fallback path — emit the AED-only shape
+            // so clients don't see a confusing source_currency=AED
+            // and currency=AED pair.
+            return [
+                'amount' => (float) $r['amount'],
+                'currency' => $r['currency'],
+            ];
+        }
+
         return [
-            'amount' => (float) $decimalString,
-            'currency' => self::CURRENCY,
+            'amount' => (float) $r['amount'],
+            'currency' => $r['currency'],
+            'source_amount' => (float) $r['source_amount'],
+            'source_currency' => $r['source_currency'],
         ];
     }
 
