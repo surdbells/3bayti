@@ -532,3 +532,34 @@ Stream Y starts from a strong foundation. Pick a theme, lock decisions, plan in 
 The fresh conversation has everything it needs. Begin.
 
 — Handover prepared at commit `c4a9039`, Monday, May 18, 2026.
+
+---
+
+## Appendix A — M3.2.Y.1 closed 2026-05-19
+
+Stream Y has begun and the first major sub-phase (M3.2.Y.1 — Web Auth UI Build + Flip) is closed.
+
+**Closure commit:** `b186a09` (Y.1-J) → followed by this commit (Y.1-K).
+**Final test count:** 284 vitest across 22 files. phpunit unchanged at 1380/4663.
+**Sub-phases delivered:** 11 (A through K). Detailed ledger in `docs/runbooks/m3.2/m3.2.y.1-completion.md`.
+
+**What this means for fresh-conversation kickoff:**
+
+If a fresh conversation picks up Stream Y now, the first step is NOT to plan Y.1 — Y.1 is done. The first step is to either:
+
+1. **Run the Y.1 staging-smoke pass** (§2.V of operator-playbook.md) to validate the auth surface against the live API, then proceed to Y.2 plan time.
+
+OR
+
+2. **Skip directly to Y.2 plan time** if the operator wants to defer Y.1 staging-smoke to be batched with Y.2 closure (acceptable since FEATURE_AUTH_HEADER_CTA defaults to false — the auth surface ships invisibly until Y.2 flips it).
+
+**Recommended Y.2 plan-time Q-matrix** (locked decisions to make at Y.2 plan):
+- Q-CartPersistence: signed-in vs guest cart merge strategy?
+- Q-CheckoutSteps: how many steps (address → delivery → payment → review, or fewer)?
+- Q-PaymentMethod: just Noon for v1, or COD also enabled at launch?
+- Q-OrderHistoryDepth: list-only OR list + per-order detail page (overlap with Z.1)?
+- Q-CtaFlip: when exactly does FEATURE_AUTH_HEADER_CTA flip? (proposed: after Y.2-B cart page ships)
+
+**Inherited from Y.1:** AuthService.currentUser signal, isAuthenticated signal, refresh interceptor, mapApiErrors helper, ToastService, FormField + PhoneInput + PasswordStrength primitives, i18n shape, RTL CSS pattern, BFF proxy for cookie-bound auth (Y.2 endpoints are Bearer-bound and don't need new BFF routes).
+
+— Appendix added at Y.1-K closure, Tuesday, May 19, 2026.

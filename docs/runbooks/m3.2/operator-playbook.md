@@ -1913,9 +1913,119 @@ tail -200 apps/api/var/logs/app-*.log | grep -E \"recommendations|copurchase_aff
 
 39. **Cron scheduler hardening + monitoring** — currently the cron entry is operator-managed (whatever scheduler the platform uses). Wrap with: lockfile to prevent concurrent runs (long copurchase queries could overlap if cron runs faster than completion), Slack/PagerDuty alert if the daily run fails or takes > 30 minutes, separate alert if the latest `recommendations.build.completed` log is > 48 hours old (stale data detection). ~1 day work. Trigger: first cron failure or stale-data incident.
 
+### 2.V — M3.2.Y.1 — Smoke-test Web auth UI
+
+**Status when this section was added:** Y.1 closed at commit `b186a09` (Y.1-J) + closure commit (Y.1-K). The whole auth surface — /login, /register, /verify-phone, /forgot-password, /reset-password — is shipped behind FEATURE_AUTH_HEADER_CTA, which defaults to `false`. That means the pages are reachable by direct URL but no header CTAs link to them yet. This smoke pass validates the flows BEFORE flipping the CTA on (which Y.2 does once cart/checkout makes sign-in genuinely useful).
+
+**Prerequisites:**
+- apps/web deployed to staging (Cloudflare Pages staging build)
+- apps/api at `api-v3.3bayti.ae` is the staging or production endpoint the BFF auth-proxy will hit (configured via the env-config on the SSR build)
+- Termii SMS provider live (UAE + KSA at minimum)
+- Test phone numbers reachable for OTP receipt (one UAE +971..., one KSA +966...)
+- Test email accounts (one Gmail, one corporate domain)
+
+**Steps:**
+
+#### 2.V.1 — BFF auth-proxy reachability
+
+- [ ] curl `https://<staging>/auth-proxy/me` with no cookie → expect HTTP 401 + `{ "error_code": "AUTH_NOT_AUTHENTICATED" }`. Confirms the BFF route is registered.
+- [ ] curl `https://<staging>/auth-proxy/me` with a known-bad refresh cookie (`bayti_rt=garbage`) → expect HTTP 401. Confirms the BFF doesn't crash on bad cookies.
+- [ ] Inspect response headers on a successful login (next section): the `Set-Cookie` must include `Path=/auth-proxy`, `HttpOnly`, `Secure`, `SameSite=Lax`. **Anything else is a SEV-1 — abort the rollout.**
+
+#### 2.V.2 — Register flow end-to-end (UAE)
+
+- [ ] Open `https://<staging>/register` in a fresh incognito session
+- [ ] Fill: first_name "Smoke", last_name "Test", email "smoke+1@<your-domain>", phone via the UAE selector "+971 50 XXX XXXX" (use the test UAE number), password "StagingSmoke2026!"
+- [ ] Verify the password strength meter renders 4-5 bars after typing the strong password (zxcvbn chunk loaded)
+- [ ] Submit. **Expected:** navigate to `/verify-phone?verification_id=...&phone=%2B971...&from=register`. URL query string must include both `verification_id` AND `phone`.
+- [ ] OTP SMS arrives within 30s. **Note the code.**
+- [ ] Enter the 6-digit code. Submit.
+- [ ] **Expected:** auto-login, navigate to `/`. Inspecting `document.cookie` should show the `bayti_rt` cookie is NOT visible (HttpOnly working). Inspecting the page in DevTools should show that requests to `api-v3.3bayti.ae` carry an `Authorization: Bearer ...` header (access token in memory).
+- [ ] Hard-refresh the page. **Expected:** still logged in (the BFF /me hydrates from the cookie).
+
+#### 2.V.3 — Phone-unverified login routing
+
+- [ ] In the same staging environment, manually create a user via API with `is_phone_verified=false` (the seeded test user with this property, OR PATCH a freshly registered one back to unverified for the test).
+- [ ] Open `/login` incognito, sign in with that user's credentials.
+- [ ] **Expected:** navigate to `/verify-phone?from=login`. The user IS authenticated (has tokens) but is held in the OTP loop.
+- [ ] Confirm OTP. **Expected:** navigate to `/`.
+
+#### 2.V.4 — Password reset (real email + anti-enumeration)
+
+- [ ] Sign out (if signed in).
+- [ ] Open `/forgot-password`. Submit the email of an existing test user.
+- [ ] **Expected:** navigate to `/reset-password?verification_id=...&email=...`. SMS arrives at the user's phone.
+- [ ] Enter the code, new password, confirm-password (matching). Submit.
+- [ ] **Expected:** auto-login, navigate to `/`.
+- [ ] Sign out. Open `/forgot-password` again. Submit a definitely-not-registered email (e.g. `nope-${Date.now()}@example.com`).
+- [ ] **Expected — anti-enumeration check:** SAME success-shape navigation to `/reset-password?verification_id=fake-...&email=...`. **The URL must NOT reveal whether the email was registered.** Inspect the network tab; the API response carries the `fake-` prefix, but the frontend route is identical.
+- [ ] Try entering any 6-digit code. **Expected:** `OTP_INVALID_CODE` inline error — same as if you'd typed a wrong code on a real email. **The error must NOT differ from the real-email wrong-code error.**
+
+#### 2.V.5 — Inline error mapping
+
+- [ ] On `/login`, enter a registered email but wrong password. **Expected:** "Invalid email or password" inline error on the email field. No toast.
+- [ ] On `/register`, enter an email that's already registered. **Expected:** "Email already registered" inline error on the email field. Inspect the API response: error_code should be `CONFLICT_EMAIL_TAKEN`.
+- [ ] Same with an already-registered phone → `CONFLICT_PHONE_TAKEN` → "Phone already registered" inline on phone field.
+- [ ] Trigger OTP_RATE_LIMITED by submitting `/forgot-password` 4+ times in under an hour. **Expected:** "Too many reset attempts. Please wait an hour" toast (not inline).
+
+#### 2.V.6 — Locale switching (EN ⇄ AR) end-to-end
+
+- [ ] On any page, click the locale switcher. Switch from EN to AR.
+- [ ] **Expected immediately:** `<html dir="rtl">`, `<html lang="ar">`, all UI text in Arabic, layout mirrors (logo on right, locale switcher on left).
+- [ ] Refresh. **Expected:** still in Arabic (cookie persisted on the BROWSER side).
+- [ ] Sign in if not already. Switch locale to Arabic.
+- [ ] Open DevTools Network tab. **Expected:** a PATCH request to `https://api-v3.3bayti.ae/v3/me/profile` with body `{ "locale": "ar" }`. Status 200.
+- [ ] Sign out. Sign in on a different browser. **Expected:** session auto-resumes in Arabic (server-side preference persisted).
+
+#### 2.V.7 — Open-redirect defense
+
+- [ ] Manually navigate to `/login?returnUrl=//evil.example`. Log in.
+- [ ] **Expected:** navigate to `/`, NOT to `//evil.example`. Inspect via DevTools that no external redirect happens.
+- [ ] Same with `/login?returnUrl=https://evil.example/`. **Expected:** navigate to `/`.
+- [ ] Same with `/login?returnUrl=/account/orders`. **Expected:** navigate to `/account/orders` (the in-app path is honoured).
+
+#### 2.V.8 — Refresh + 401 retry
+
+- [ ] Sign in. Open DevTools Application tab. Note the `bayti_rt` cookie value.
+- [ ] Wait at least 15 minutes (access token TTL) — OR manually invalidate the in-memory access token via DevTools (set the AccessTokenStore's value to expired).
+- [ ] Make any authenticated request (e.g. open `/account/orders` placeholder, even if it 404s the request happens).
+- [ ] **Expected in Network tab:** the original request hits 401 → an immediate POST to `/auth-proxy/refresh` → the original request retries with a fresh Bearer.
+- [ ] No user-visible disruption. The single-flight queue means even multiple concurrent requests share one refresh.
+
+#### 2.V.9 — Cookie isolation + sign-out
+
+- [ ] While signed in, open a new tab to `https://<staging>/`.
+- [ ] **Expected:** still signed in (the refresh cookie is per-domain, the BFF /me hydrates on load).
+- [ ] Click sign-out in the user-menu.
+- [ ] **Expected in Network tab:** POST to `/auth-proxy/logout` + a `Set-Cookie: bayti_rt=...; Max-Age=0` clearing the cookie.
+- [ ] Refresh the page. **Expected:** signed out (CTAs are flag-gated so won't appear until Y.2 flips).
+
+#### 2.V.10 — RTL + a11y spot check
+
+- [ ] In Arabic locale, tab through `/login` and `/register` with the keyboard. **Expected:** focus rings visible on every interactive element; tab order matches visual order.
+- [ ] Open `/register` in axe DevTools. **Expected:** zero WCAG AA violations on the page. (Baseline this — Y.2 closure pass adds the same for /login, /verify-phone, /forgot-password, /reset-password, /cart, /checkout.)
+- [ ] Test the user-menu with keyboard: Tab to trigger, Enter to open, Escape to close, Tab through menuitems. **Expected:** all reachable, Escape returns focus to the trigger.
+
+**Issues found:**
+- [ ] None to date (this section was added at Y.1-K close).
+
+**Operator deferred items added by Y.1:**
+
+40. **Playwright e2e suite for auth surface** — Y.1's per-page Playwright was deferred (sandbox limitations + per-page mocking is less valuable than a single integration pass against a live BFF). Once Playwright is wired into the apps/web test scripts and CI, write specs covering: /login happy + 401, /register happy + CONFLICT codes, /verify-phone OTP path + resend cooldown, /forgot-password real + fake-vid parity, /reset-password matched + mismatch + OTP_INVALID_CODE, header user-menu open/close/sign-out, locale switcher EN ⇄ AR. ~2-3 days work. Trigger: Y.2-prep or whenever Playwright comes online.
+
+41. **Storybook for shared form primitives** — Storybook is not installed in apps/web. Setting it up + adding stories for FormField, PhoneInput, PasswordStrength, Toast is its own ~2 day sub-phase. Trigger: Y.2-prep, alongside Chromatic baseline work.
+
+42. **Chromatic visual baselines for Y.1 + Y.2 pages** — depends on items 40 + 41. Once Playwright covers component states and Storybook covers primitives, baseline all auth-card variants in LTR and RTL. Detect any future visual regressions in the auth surface as Y.2 work potentially touches shared form styles. Trigger: Y.2-prep.
+
+43. **axe a11y baselines for Y.1 pages** — depends on item 40. @axe-core/playwright integration; WCAG AA on all five Y.1 pages plus the user-menu open state. Trigger: Y.2-prep.
+
+44. **FEATURE_AUTH_HEADER_CTA flip to true** — once Y.2 cart/checkout flow makes signing in genuinely useful (e.g. "save your cart" prompt), update the DI token default in `apps/web/src/app/core/auth/auth.tokens.ts` to `true`. This makes the "Sign in" + "Register" CTAs appear in the header for anonymous users. ~10 minutes work. Trigger: Y.2-H closure.
+
+45. **Phone-OTP resend with email-from-state** — Y.1-G's resend button currently shows an info toast pointing the user back to /register, because the email needed for `/v3/auth/send-otp` isn't carried through to /verify-phone for privacy reasons (email in URL). A future refinement passes the email via sessionStorage encrypted-at-rest, OR (preferred) the API adds a `/v3/auth/resend-otp-by-vid` endpoint that takes only the verification_id. ~1 day work. Trigger: support tickets about being unable to resend.
+
 ## 3. Production execution
 
-**Pre-condition: §2 staging items 2.A through 2.U complete and staging has been stable for ≥24 hours with no regressions.**
+**Pre-condition: §2 staging items 2.A through 2.V complete and staging has been stable for ≥24 hours with no regressions.**
 
 ### 3.A — Deploy code to production
 
@@ -2090,6 +2200,7 @@ If a step in this playbook is ambiguous, the per-phase closure runbook has the c
 | M3.2.X.6 | `docs/runbooks/m3.2/m3.2.x.6-completion.md` |
 | M3.2.X.7 | `docs/runbooks/m3.2/m3.2.x.7-completion.md` |
 | M3.2.X.8 | `docs/runbooks/m3.2/m3.2.x.8-completion.md` |
+| M3.2.Y.1 | `docs/runbooks/m3.2/m3.2.y.1-completion.md` |
 | Stream X scope revision (May 18, 2026) | `docs/runbooks/m3.2/stream-x-scope-revision.md` |
 
 ## 7. Sign-off
