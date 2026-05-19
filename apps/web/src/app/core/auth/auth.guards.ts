@@ -99,14 +99,35 @@ export const guestActivateGuard: CanActivateFn = (route): boolean | UrlTree => {
   }
 
   const returnUrl = route.queryParamMap.get('returnUrl');
-  if (returnUrl !== null && returnUrl.startsWith('/')) {
-    /* Defensive: only honor in-app returnUrls. An attacker who
-       supplies returnUrl=https://evil.example/ shouldn't be able to
-       redirect a freshly-signed-in user off-site. The startsWith('/')
-       check excludes both absolute URLs and protocol-relative URLs
-       (which start with //, and would be rewritten by URL parsing
-       to the attacker's host). */
+  if (isSafeInAppPath(returnUrl)) {
     return router.parseUrl(returnUrl);
   }
   return router.createUrlTree(['/']);
 };
+
+/**
+ * Test whether a candidate returnUrl is safe to honour.
+ *
+ * Safe in-app paths START with exactly one '/'. The second-character
+ * check rules out protocol-relative URLs like '//evil.example/' which
+ * the URL parser would interpret as the attacker's host (they start
+ * with '/' but the //host syntax means "same protocol, different
+ * authority"). Other unsafe shapes:
+ *
+ *   - absolute URLs:        https://evil/, http://evil/
+ *   - protocol-relative:    //evil/, //evil
+ *   - non-path schemes:     javascript:, data:, mailto:
+ *   - bare hostnames:       evil.example
+ *
+ * All are excluded by requiring [0] === '/' AND [1] !== '/'. A single
+ * '/' is fine — that's the site root and a legitimate returnUrl.
+ *
+ * Type guard: narrows `value: string | null` to `value is string` so
+ * callers can pass the result directly to router.parseUrl().
+ */
+function isSafeInAppPath(value: string | null): value is string {
+  if (value === null || value.length === 0) return false;
+  if (value[0] !== '/') return false;
+  if (value.length > 1 && value[1] === '/') return false;
+  return true;
+}
