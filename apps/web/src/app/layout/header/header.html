@@ -5,10 +5,22 @@
     </a>
     <nav [attr.aria-label]="'nav.primary' | translate" class="primary-nav">
       <a routerLink="/category" class="nav-link">{{ 'nav.categories' | translate }}</a>
-      <!-- Y.1-I will add Account / Sign in / Cart. -->
     </nav>
     <div class="header-actions">
       <app-locale-switcher />
+      <ng-container *ngIf="isAuthenticated() && currentUser() as user; else loggedOutCta">
+        <app-user-menu [user]="user" data-testid="header-user-menu"></app-user-menu>
+      </ng-container>
+      <ng-template #loggedOutCta>
+        <ng-container *ngIf="showLoggedOutCta()">
+          <a routerLink="/login" class="auth-cta auth-cta--ghost" data-testid="header-signin">
+            {{ 'header.signIn' | translate }}
+          </a>
+          <a routerLink="/register" class="auth-cta auth-cta--primary" data-testid="header-register">
+            {{ 'header.register' | translate }}
+          </a>
+        </ng-container>
+      </ng-template>
     </div>
   </div>
 </header>
