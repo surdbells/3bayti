@@ -397,6 +397,12 @@ return [
 
     // M3.2.X.14 — Vendor performance metrics
     \Bayti\Api\Domain\Catalog\VendorMetricsCalculator::class => \DI\autowire(),
+
+    // M3.2.X.13 — Vendor analytics dashboard
+    \Bayti\Api\Domain\Catalog\VendorAnalyticsCalculator::class => \DI\autowire(),
+    \Bayti\Api\Http\Serializers\VendorAnalyticsSerializer::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorAnalyticsController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\VendorMetricsSerializer::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorMetricsController::class => \DI\autowire(),

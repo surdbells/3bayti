@@ -351,6 +351,10 @@ return function (App $app): void {
         $group->get('/vendors/{id:[0-9]+}/metrics',
             \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class);
 
+        // M3.2.X.13-E — Vendor analytics dashboard (admin single-vendor view)
+        $group->get('/vendors/{id:[0-9]+}/analytics',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorAnalyticsController::class);
+
         // Category admin
         $group->get('/categories', \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class);
         $group->post('/categories', \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class);
@@ -458,6 +462,11 @@ return function (App $app): void {
         $group->get(
             '/metrics',
             \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfMetricsController::class,
+        );
+        // M3.2.X.13-E — vendor self-serve analytics dashboard
+        $group->get(
+            '/analytics',
+            \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class,
         );
     })
         ->add(\Bayti\Api\Http\Middleware\VendorAuthMiddleware::class)
