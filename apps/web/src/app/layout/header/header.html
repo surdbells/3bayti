@@ -1,11 +1,14 @@
 <header class="site-header">
   <div class="container">
-    <a routerLink="/" class="brand-link" aria-label="3bayti home">
-      <span class="brand-mark">3bayti</span>
+    <a routerLink="/" class="brand-link" [attr.aria-label]="'common.brand' | translate">
+      <span class="brand-mark">{{ 'common.brand' | translate }}</span>
     </a>
-    <nav aria-label="Primary" class="primary-nav">
-      <a routerLink="/category" class="nav-link">Categories</a>
-      <!-- Phase 2 will add Designers, About, Search, Account, Cart. -->
+    <nav [attr.aria-label]="'nav.primary' | translate" class="primary-nav">
+      <a routerLink="/category" class="nav-link">{{ 'nav.categories' | translate }}</a>
+      <!-- Y.1-I will add Account / Sign in / Cart. -->
     </nav>
+    <div class="header-actions">
+      <app-locale-switcher />
+    </div>
   </div>
 </header>

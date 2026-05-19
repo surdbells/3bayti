@@ -4,6 +4,7 @@ import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 
 import { routes } from './app.routes';
+import { provideI18n } from './core/i18n';
 
 /**
  * Root application config — provided once per app instance.
@@ -16,6 +17,11 @@ import { routes } from './app.routes';
  * - `provideClientHydration(withEventReplay())` enables hydration of
  *   the prerendered HTML, replaying any events that fired before
  *   Angular took over (so a click during the JS load isn't lost).
+ *
+ * - `provideI18n()` (Y.1-A) wires ngx-translate + the HTTP loader and
+ *   registers an APP_INITIALIZER that resolves the locale and loads
+ *   its translations BEFORE the app's first paint. See
+ *   ./core/i18n/i18n.providers.ts for the resolution chain.
  */
 export const appConfig: ApplicationConfig = {
   providers: [
@@ -23,5 +29,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideHttpClient(withFetch()),
     provideClientHydration(withEventReplay()),
+    provideI18n(),
   ],
 };

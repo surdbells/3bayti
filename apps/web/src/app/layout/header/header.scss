@@ -1,8 +1,7 @@
 /* Site header — sticky, branded, deliberately spare in Phase 1.
 
-   Phase 2 will introduce the full nav structure (mega-menu, search,
-   account, cart). For now we just establish the visual container so
-   the home page below has a header context. */
+   Y.1-I will introduce the full nav structure (mega-menu, search,
+   account, cart). Y.1-A adds the locale switcher slot. */
 
 .site-header {
   position: sticky;
@@ -17,8 +16,16 @@
 .container {
   display: flex;
   align-items: center;
+  /* `justify-content: space-between` distributes brand / nav / actions
+     evenly. With three slots this puts the brand on the start edge,
+     nav in the middle (via flex-grow on .primary-nav), and actions
+     on the end edge. */
   justify-content: space-between;
+  gap: 24px;
   max-width: 1280px;
+  /* margin-inline + padding-inline are logical properties — they map
+     to left/right in LTR and right/left in RTL automatically, so the
+     same rules work for both directions. */
   margin-inline: auto;
   padding-inline: 24px;
 }
@@ -33,14 +40,22 @@
   font-size: 24px;
   font-weight: 700;
   letter-spacing: 0.02em;
-  /* The leading "3" carries semantic weight as the brand mark.
-     Subtle gold accent under it for identity. */
   color: var(--color-brand-700);
 }
 
 .primary-nav {
   display: flex;
   gap: 24px;
+  /* Pull nav toward the center; actions slot keeps end alignment. */
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
 .nav-link {
@@ -65,14 +80,26 @@
      uses transform instead of border. */
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
+  /* Logical properties so the underline grows from the leading edge
+     in both LTR and RTL. */
+  inset-inline: 0;
   bottom: 0;
   height: 1px;
   background: currentColor;
   transform: scaleX(0);
+  /* The underline grows from the leading edge — `left center` in LTR
+     reads as the start edge; in RTL we need it to grow from the right.
+     Using `transform-origin: 0 center` plus logical properties works
+     when paired with `direction`-aware overrides below. */
   transform-origin: left center;
   transition: transform 0.2s ease;
+}
+
+/* In RTL, flip the transform-origin so the underline still grows
+   from the leading (right) edge. */
+:host-context([dir='rtl']) .nav-link::after,
+[dir='rtl'] .nav-link::after {
+  transform-origin: right center;
 }
 
 .nav-link:hover::after,

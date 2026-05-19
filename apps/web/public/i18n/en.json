@@ -1,0 +1,123 @@
+{
+  "common": {
+    "brand": "3bayti",
+    "skipToContent": "Skip to main content"
+  },
+  "nav": {
+    "home": "Home",
+    "categories": "Categories",
+    "primary": "Primary",
+    "account": "Account",
+    "signIn": "Sign in",
+    "register": "Register",
+    "signOut": "Sign out",
+    "myAccount": "My account"
+  },
+  "footer": {
+    "rights": "All rights reserved.",
+    "tagline": "Bayti — your home, curated."
+  },
+  "locale": {
+    "switchToArabic": "Switch to Arabic",
+    "switchToEnglish": "Switch to English",
+    "english": "English",
+    "arabic": "العربية"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to your account",
+      "subtitle": "Welcome back. Enter your email and password to continue.",
+      "emailLabel": "Email address",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "New to 3bayti?",
+      "registerLink": "Create an account",
+      "errors": {
+        "invalidCredentials": "Email or password is incorrect.",
+        "accountInactive": "This account has been disabled. Please contact support.",
+        "phoneUnverified": "Your phone number is not verified yet. Please verify it to continue.",
+        "network": "We couldn't reach the server. Please check your connection and try again.",
+        "unexpected": "Something went wrong. Please try again."
+      }
+    },
+    "register": {
+      "title": "Create your 3bayti account",
+      "subtitle": "Join the marketplace for the best of UAE design.",
+      "firstNameLabel": "First name",
+      "firstNamePlaceholder": "Optional",
+      "lastNameLabel": "Last name",
+      "lastNamePlaceholder": "Optional",
+      "emailLabel": "Email address",
+      "phoneLabel": "Phone number",
+      "phoneHint": "We'll send a verification code by SMS.",
+      "passwordLabel": "Password",
+      "passwordHint": "At least 8 characters.",
+      "submit": "Create account",
+      "haveAccount": "Already have an account?",
+      "signInLink": "Sign in",
+      "errors": {
+        "emailTaken": "That email address is already registered.",
+        "phoneTaken": "That phone number is already registered.",
+        "rateLimited": "Too many verification attempts. Please wait an hour and try again.",
+        "providerError": "We couldn't send the verification code. Please try again in a moment.",
+        "unexpected": "We couldn't create your account. Please try again."
+      }
+    },
+    "verifyPhone": {
+      "title": "Verify your phone number",
+      "subtitle": "We sent a 6-digit code to {{phone}}. Enter it below.",
+      "codeLabel": "Verification code",
+      "submit": "Verify",
+      "resendCta": "Didn't get a code?",
+      "resendButton": "Resend code",
+      "resendCooldown": "Resend available in {{seconds}}s",
+      "errors": {
+        "invalidCode": "That code is invalid or has expired. Please try again or request a new code.",
+        "rateLimited": "Too many attempts. Please wait an hour and try again.",
+        "missingVerification": "Verification session missing. Please start over.",
+        "unexpected": "We couldn't verify the code. Please try again."
+      }
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email — we'll send a verification code to your registered phone.",
+      "emailLabel": "Email address",
+      "submit": "Send code",
+      "backToLogin": "Back to sign in",
+      "errors": {
+        "unexpected": "We couldn't start the reset. Please try again."
+      }
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "subtitle": "Enter the code we sent to your phone and choose a new password.",
+      "codeLabel": "Verification code",
+      "newPasswordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "submit": "Reset password",
+      "errors": {
+        "invalidCode": "That code is invalid or has expired. Please try again or request a new code.",
+        "passwordMismatch": "Passwords don't match.",
+        "rateLimited": "Too many attempts. Please wait an hour and try again.",
+        "unexpected": "We couldn't reset your password. Please try again."
+      }
+    },
+    "validation": {
+      "required": "{{field}} is required.",
+      "email": "Please provide a valid email address.",
+      "minLength": "{{field}} must be at least {{min}} characters.",
+      "phoneE164": "Phone must be in international format with country code, e.g. +971501234567.",
+      "code6Digits": "Code must be 6 digits.",
+      "passwordsMustMatch": "Passwords must match."
+    },
+    "passwordStrength": {
+      "label": "Password strength",
+      "veryWeak": "Very weak",
+      "weak": "Weak",
+      "fair": "Fair",
+      "strong": "Strong",
+      "veryStrong": "Very strong"
+    }
+  }
+}
