@@ -1,0 +1,428 @@
+import {
+  Injectable,
+  Signal,
+  signal,
+  computed,
+  inject,
+  PLATFORM_ID,
+  DestroyRef,
+  ApplicationRef,
+} from '@angular/core';
+import { isPlatformBrowser, isPlatformServer } from '@angular/common';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { catchError, firstValueFrom, of, take, filter } from 'rxjs';
+import { AccessTokenStore, AccessTokenSnapshot } from './access-token-store';
+import { LocaleService } from '../i18n/locale.service';
+import {
+  AUTH_PROXY_BASE,
+  AUTH_REFRESH_LEAD_TIME_MS,
+} from './auth.tokens';
+import type {
+  AuthUser,
+  BffLoginResponse,
+  BffRefreshResponse,
+  ConfirmInput,
+  LoginInput,
+  RegisterInput,
+  RegisterResponse,
+  ResetConfirmInput,
+  ResetResponse,
+  SendOtpResponse,
+} from './auth.types';
+
+/**
+ * AuthService — single source of truth for authentication state.
+ *
+ * Public surface
+ * --------------
+ *   - `currentUser`     — Signal<AuthUser | null>
+ *   - `isAuthenticated` — Signal<boolean>
+ *   - `accessToken`     — Signal<string | null>
+ *   - `login()`, `register()`, `confirmRegistration()`, `refresh()`,
+ *     `logout()`, `requestPasswordReset()`, `confirmPasswordReset()`,
+ *     `resendOtp()`, `hydrate()`
+ *
+ * What this does NOT do
+ * ---------------------
+ *   - Doesn't manage refresh tokens. Refresh tokens are HttpOnly
+ *     cookies owned by the BFF; AuthService just calls
+ *     /auth-proxy/refresh and the BFF deals with the cookie swap.
+ *   - Doesn't apply the `Authorization` header to outgoing requests.
+ *     That's the refresh interceptor's job (refresh.interceptor.ts).
+ *
+ * Pre-emptive refresh
+ * -------------------
+ * On every successful login / confirm / refresh / reset-confirm, we
+ * schedule a refresh AUTH_REFRESH_LEAD_TIME_MS (~60s) before the
+ * access token's `expires_at`. If the scheduler fires while the app
+ * is hidden / suspended, the next 401 from a real request triggers
+ * the reactive refresh path instead. Both paths share the same
+ * `refresh()` method, which is idempotent under concurrent calls
+ * thanks to the single-flight promise in
+ * refresh.interceptor.ts. (AuthService's `refresh()` itself does the
+ * work; the interceptor's queueing layer sits on top.)
+ *
+ * SSR considerations
+ * ------------------
+ *   - The scheduler is browser-only. setTimeout in SSR would either
+ *     keep the Node process alive past response or trigger an
+ *     unhandled promise rejection if it fires after teardown.
+ *     `hydrate()` is the SSR-safe path: it calls /auth-proxy/me and
+ *     seeds the user signal so the rendered HTML reflects auth state.
+ *   - On the browser, an ApplicationRef.isStable subscription delays
+ *     scheduler arming until hydration is done. This prevents a
+ *     refresh from racing with the initial render.
+ */
+@Injectable({ providedIn: 'root' })
+export class AuthService {
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly http = inject(HttpClient);
+  private readonly tokenStore = inject(AccessTokenStore);
+  private readonly locale = inject(LocaleService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly appRef = inject(ApplicationRef);
+  private readonly proxyBase = inject(AUTH_PROXY_BASE);
+  private readonly refreshLeadTimeMs = inject(AUTH_REFRESH_LEAD_TIME_MS);
+
+  /* ---------- Reactive state ---------- */
+
+  private readonly _currentUser = signal<AuthUser | null>(null);
+
+  /** Current authenticated user (or null when not signed in). */
+  readonly currentUser: Signal<AuthUser | null> = this._currentUser.asReadonly();
+
+  /** True when a user is signed in AND the access token is still valid. */
+  readonly isAuthenticated = computed(
+    () => this._currentUser() !== null && this.tokenStore.hasValidToken(),
+  );
+
+  /** The raw access token signal, derived from the store. */
+  readonly accessToken = computed(() => this.tokenStore.getToken());
+
+  /* ---------- Pre-emptive refresh scheduling ---------- */
+
+  private refreshTimerId: ReturnType<typeof setTimeout> | null = null;
+
+  /**
+   * Single-flight refresh promise. While a refresh is in flight,
+   * concurrent callers (interceptor + scheduler + manual) all await
+   * the same promise rather than firing duplicate /refresh calls.
+   * Cleared back to null in finally().
+   */
+  private inflightRefresh: Promise<boolean> | null = null;
+
+  constructor() {
+    /* Arm the scheduler only on the browser, and only AFTER the app
+       has stabilised (initial render + hydration done). This keeps
+       SSR clean and avoids racing the first paint. */
+    if (isPlatformBrowser(this.platformId)) {
+      this.appRef.isStable
+        .pipe(
+          filter(stable => stable === true),
+          take(1),
+        )
+        .subscribe(() => {
+          this.scheduleRefresh();
+        });
+    }
+
+    /* Clean up the scheduled timer when the service is destroyed.
+       For a root-injected service this typically only happens on
+       full app teardown, but the cleanup is cheap and defensive. */
+    this.destroyRef.onDestroy(() => {
+      if (this.refreshTimerId !== null) {
+        clearTimeout(this.refreshTimerId);
+        this.refreshTimerId = null;
+      }
+    });
+  }
+
+  /* ---------- Public API ---------- */
+
+  /**
+   * Hydrate the session from the BFF.
+   *
+   * Called by an APP_INITIALIZER (see auth.providers.ts) so the very
+   * first render already knows whether the user is signed in. The
+   * BFF reads the HttpOnly refresh cookie and returns the current
+   * access token + user, or a 401 if there's no valid session.
+   *
+   * Safe to call on both SSR and the browser. On SSR it forwards the
+   * incoming request's Cookie header to the BFF route; on the browser
+   * cookies are automatically attached by fetch() (same-origin).
+   */
+  async hydrate(): Promise<void> {
+    try {
+      const response = await firstValueFrom(
+        this.http.get<BffLoginResponse>(`${this.proxyBase}/me`, {
+          withCredentials: true,
+        }),
+      );
+      this.applyAuthState(response);
+    } catch (err) {
+      /* Most likely a 401 (no session) — clear local state and
+         move on. Don't surface the error to the UI; this is the
+         initial check and the UI shouldn't show an error toast
+         for "you're not logged in". */
+      if (err instanceof HttpErrorResponse && err.status === 401) {
+        this.applyLogoutState();
+        return;
+      }
+      /* For other errors (network, 5xx, etc.) we also fall back
+         to logged-out, but logging it helps debugging. */
+      if (typeof console !== 'undefined') {
+        console.warn('[AuthService] hydrate failed', err);
+      }
+      this.applyLogoutState();
+    }
+  }
+
+  /**
+   * Log in with email + password.
+   *
+   * On success:
+   *   - Stores the access token in the in-memory store
+   *   - Sets currentUser
+   *   - Schedules pre-emptive refresh
+   *   - Syncs locale if user's preferred locale differs from current
+   *
+   * Throws ApiError-like HttpErrorResponse on failure. The page
+   * component is responsible for mapping the error to inline UI.
+   */
+  async login(input: LoginInput): Promise<AuthUser> {
+    const response = await firstValueFrom(
+      this.http.post<BffLoginResponse>(`${this.proxyBase}/login`, input, {
+        withCredentials: true,
+      }),
+    );
+    this.applyAuthState(response);
+    return response.user;
+  }
+
+  /**
+   * Register a new account. Returns the verification_id needed for
+   * the OTP confirm step. NO tokens issued yet — the user is still
+   * unverified.
+   */
+  async register(input: RegisterInput): Promise<RegisterResponse> {
+    return firstValueFrom(
+      this.http.post<RegisterResponse>(`${this.proxyBase}/register`, input, {
+        withCredentials: true,
+      }),
+    );
+  }
+
+  /**
+   * Confirm a registration OTP. On success, auto-logs in.
+   */
+  async confirmRegistration(input: ConfirmInput): Promise<AuthUser> {
+    const response = await firstValueFrom(
+      this.http.post<BffLoginResponse>(`${this.proxyBase}/confirm`, input, {
+        withCredentials: true,
+      }),
+    );
+    this.applyAuthState(response);
+    return response.user;
+  }
+
+  /**
+   * Resend a registration OTP. Returns a new verification_id (the
+   * previous one is invalidated by the API).
+   */
+  async resendOtp(email: string): Promise<SendOtpResponse> {
+    return firstValueFrom(
+      this.http.post<SendOtpResponse>(
+        `${this.proxyBase}/send-otp`,
+        { email },
+        { withCredentials: true },
+      ),
+    );
+  }
+
+  /**
+   * Request a password reset. Always returns 200 (anti-enumeration);
+   * the verification_id may be a fake-prefixed string for
+   * non-existent emails — that's fine, the OTP verification step
+   * will fail the same way as a bad code.
+   */
+  async requestPasswordReset(email: string): Promise<ResetResponse> {
+    return firstValueFrom(
+      this.http.post<ResetResponse>(
+        `${this.proxyBase}/reset`,
+        { email },
+        { withCredentials: true },
+      ),
+    );
+  }
+
+  /**
+   * Complete the password reset with OTP + new password. On success,
+   * auto-logs in (the API returns a token pair).
+   */
+  async confirmPasswordReset(input: ResetConfirmInput): Promise<AuthUser> {
+    const response = await firstValueFrom(
+      this.http.post<BffLoginResponse>(`${this.proxyBase}/reset-confirm`, input, {
+        withCredentials: true,
+      }),
+    );
+    this.applyAuthState(response);
+    return response.user;
+  }
+
+  /**
+   * Refresh the access token using the HttpOnly refresh cookie.
+   *
+   * Single-flight: concurrent callers share one inflight promise.
+   * Returns `true` if the refresh succeeded, `false` if it failed
+   * (which means the session is dead and the user should be logged
+   * out — callers should call `applyLogoutState()` on false).
+   *
+   * Why return boolean rather than throw
+   * ------------------------------------
+   * The refresh interceptor calls this from inside an HTTP error
+   * handler chain where mixing observables and async/await with
+   * thrown errors becomes hard to reason about. Returning a bool
+   * keeps the interceptor's logic linear.
+   */
+  refresh(): Promise<boolean> {
+    if (this.inflightRefresh !== null) {
+      return this.inflightRefresh;
+    }
+    this.inflightRefresh = this.performRefresh().finally(() => {
+      this.inflightRefresh = null;
+    });
+    return this.inflightRefresh;
+  }
+
+  /**
+   * Log out — clear server-side refresh-token row + local state.
+   *
+   * We call the BFF's logout endpoint (which calls API /logout) so
+   * the refresh token's DB row is invalidated. Then we drop local
+   * state regardless of whether the API call succeeded — local
+   * logout should always work even if the network is broken.
+   */
+  async logout(): Promise<void> {
+    try {
+      await firstValueFrom(
+        this.http
+          .post<void>(`${this.proxyBase}/logout`, {}, { withCredentials: true })
+          .pipe(catchError(() => of(undefined))),
+      );
+    } finally {
+      this.applyLogoutState();
+    }
+  }
+
+  /* ---------- Internals ---------- */
+
+  /**
+   * Apply a successful auth response to local state.
+   *
+   * Centralised here so login / confirm / refresh / reset-confirm all
+   * follow the same sequence: token first, user second, schedule
+   * refresh, sync locale.
+   */
+  private applyAuthState(response: BffLoginResponse | BffRefreshResponse): void {
+    const snapshot: AccessTokenSnapshot = {
+      token: response.access_token,
+      expiresAt: response.access_token_expires_at,
+    };
+    this.tokenStore.set(snapshot);
+    this._currentUser.set(response.user);
+    this.scheduleRefresh();
+    this.syncLocale(response.user);
+  }
+
+  /**
+   * Reset to logged-out state. Idempotent.
+   */
+  private applyLogoutState(): void {
+    this.tokenStore.clear();
+    this._currentUser.set(null);
+    this.cancelScheduledRefresh();
+  }
+
+  /**
+   * Sync the user's stored locale preference to the LocaleService.
+   *
+   * If the user has a locale on record that differs from the current
+   * resolved locale, switch to theirs. We don't write back to the
+   * API here — the user chose their locale when registering or in
+   * their profile; the client just respects it.
+   *
+   * For users without a locale on record (null), we leave the
+   * resolved locale alone (browser detection wins).
+   */
+  private syncLocale(user: AuthUser): void {
+    if (user.locale === null) return;
+    if (user.locale === this.locale.current()) return;
+    /* setLocale is async (it triggers translation load) but we
+       don't await — the locale change can settle in the background.
+       The signal is updated synchronously inside setLocale. */
+    void this.locale.setLocale(user.locale);
+  }
+
+  /**
+   * Actually perform a refresh request.
+   *
+   * Returns true on success (and applies the new state); false on
+   * failure (and clears local state so subsequent isAuthenticated
+   * reads return false).
+   */
+  private async performRefresh(): Promise<boolean> {
+    try {
+      const response = await firstValueFrom(
+        this.http.post<BffRefreshResponse>(
+          `${this.proxyBase}/refresh`,
+          {},
+          { withCredentials: true },
+        ),
+      );
+      this.applyAuthState(response);
+      return true;
+    } catch {
+      this.applyLogoutState();
+      return false;
+    }
+  }
+
+  /**
+   * Schedule a pre-emptive refresh AUTH_REFRESH_LEAD_TIME_MS before
+   * the current token's expiry. SSR-safe: no-op on the server.
+   *
+   * Cancels any existing timer first to avoid overlapping schedules.
+   */
+  private scheduleRefresh(): void {
+    if (isPlatformServer(this.platformId)) return;
+    this.cancelScheduledRefresh();
+
+    const snap = this.tokenStore.current();
+    if (snap === null) return;
+
+    const expiresAtMs = new Date(snap.expiresAt).getTime();
+    const fireAtMs = expiresAtMs - this.refreshLeadTimeMs;
+    const delayMs = fireAtMs - Date.now();
+
+    /* If the token is already inside the refresh window (e.g. user
+       hydrates a tab with a near-expired token), fire immediately.
+       If it's already EXPIRED, also fire — the refresh will either
+       extend the session or fail cleanly and log out. */
+    const clampedDelay = Math.max(delayMs, 0);
+
+    this.refreshTimerId = setTimeout(() => {
+      this.refreshTimerId = null;
+      /* Fire-and-forget: the timer doesn't await; if the refresh
+         fails, applyLogoutState() inside performRefresh() drops
+         the session. No need to handle the boolean here. */
+      void this.refresh();
+    }, clampedDelay);
+  }
+
+  private cancelScheduledRefresh(): void {
+    if (this.refreshTimerId !== null) {
+      clearTimeout(this.refreshTimerId);
+      this.refreshTimerId = null;
+    }
+  }
+}
