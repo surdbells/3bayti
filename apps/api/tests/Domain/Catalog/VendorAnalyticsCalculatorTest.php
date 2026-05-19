@@ -226,6 +226,98 @@ final class VendorAnalyticsCalculatorTest extends TestCase
         self::assertStringContainsString('o.paid_at < ?', $totalsSql);
     }
 
+    #[Test]
+    public function topProductsByUnitsReturnsSortedList(): void
+    {
+        // Skeleton sub-phase calls: [totals, series, top_units,
+        // top_revenue, customer_mix, status_mix]. Mock top_units (3rd)
+        // with 3 rows already ORDER BY units DESC from DB.
+        $calc = $this->makeCalc(queryResults: [
+            // totals
+            [['revenue' => '0', 'orders' => 0, 'items' => 0, 'unique_customers' => 0]],
+            // revenue_series
+            [],
+            // top_units
+            [
+                ['product_id' => 100, 'slug' => 'vintage-lamp', 'name' => 'Vintage Lamp', 'units' => 23, 'revenue' => '3450.00'],
+                ['product_id' => 200, 'slug' => 'antique-chair', 'name' => 'Antique Chair', 'units' => 18, 'revenue' => '5400.00'],
+                ['product_id' => 300, 'slug' => 'wall-art', 'name' => 'Wall Art', 'units' => 12, 'revenue' => '960.00'],
+            ],
+            // top_revenue, mixes
+            [], [], [],
+        ]);
+
+        $envelope = $calc->computeForVendor(vendorId: 5);
+        self::assertCount(3, $envelope['top_products_by_units']);
+
+        $first = $envelope['top_products_by_units'][0];
+        self::assertSame(100, $first['product_id']);
+        self::assertSame('vintage-lamp', $first['slug']);
+        self::assertSame('Vintage Lamp', $first['name']);
+        self::assertSame(23, $first['units']);
+        self::assertSame('3450.00', $first['revenue_aed']);
+    }
+
+    #[Test]
+    public function topProductsByRevenueReturnsSeparateList(): void
+    {
+        // Q-TopN = C locked: two separate lists for units + revenue.
+        // The product order may differ between them.
+        $calc = $this->makeCalc(queryResults: [
+            // totals
+            [['revenue' => '0', 'orders' => 0, 'items' => 0, 'unique_customers' => 0]],
+            // revenue_series
+            [],
+            // top_units (sorted by units; Antique Chair has fewer units)
+            [
+                ['product_id' => 100, 'slug' => 'vintage-lamp', 'name' => 'Vintage Lamp', 'units' => 23, 'revenue' => '3450.00'],
+                ['product_id' => 200, 'slug' => 'antique-chair', 'name' => 'Antique Chair', 'units' => 18, 'revenue' => '5400.00'],
+            ],
+            // top_revenue (sorted by revenue; Antique Chair is bigger earner)
+            [
+                ['product_id' => 200, 'slug' => 'antique-chair', 'name' => 'Antique Chair', 'units' => 18, 'revenue' => '5400.00'],
+                ['product_id' => 100, 'slug' => 'vintage-lamp', 'name' => 'Vintage Lamp', 'units' => 23, 'revenue' => '3450.00'],
+            ],
+            // mixes
+            [], [],
+        ]);
+
+        $envelope = $calc->computeForVendor(vendorId: 5);
+
+        // Different ordering for the two lists
+        self::assertSame(100, $envelope['top_products_by_units'][0]['product_id']);
+        self::assertSame(200, $envelope['top_products_by_revenue'][0]['product_id']);
+    }
+
+    #[Test]
+    public function topProductsQueryGroupsByProductId(): void
+    {
+        $captured = $this->captureQueries();
+        $calc = new VendorAnalyticsCalculator($captured['em'], new InMemoryLogger());
+        $calc->computeForVendor(vendorId: 5);
+
+        // 6 queries total: totals + series + top_units + top_revenue +
+        // customer_mix + status_mix. Top-N queries are #3 and #4.
+        $topUnitsSql = $captured['queries'][2]['sql'];
+        self::assertStringContainsString('GROUP BY oi.product_id, p.slug, p.name', $topUnitsSql);
+        self::assertStringContainsString('ORDER BY units DESC', $topUnitsSql);
+        self::assertStringContainsString('LIMIT 10', $topUnitsSql);
+
+        $topRevenueSql = $captured['queries'][3]['sql'];
+        self::assertStringContainsString('ORDER BY revenue DESC', $topRevenueSql);
+    }
+
+    #[Test]
+    public function topProductsHandlesEmptyVendorGracefully(): void
+    {
+        // No orders → empty array (not error)
+        $calc = $this->makeCalc(queryResults: []);
+        $envelope = $calc->computeForVendor(vendorId: 5);
+
+        self::assertSame([], $envelope['top_products_by_units']);
+        self::assertSame([], $envelope['top_products_by_revenue']);
+    }
+
     private function makeCalc(?InMemoryLogger $logger = null, array $queryResults = []): VendorAnalyticsCalculator
     {
         $connection = $this->createMock(Connection::class);

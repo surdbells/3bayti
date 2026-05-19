@@ -451,21 +451,115 @@ class VendorAnalyticsCalculator
     }
 
     /**
+     * X.13-C: Top-N products by units sold.
+     *
+     * GROUP BY product_id with two aggregates: SUM(quantity) for
+     * units, SUM(subtotal) for revenue. Filters mirror the totals
+     * query (paid_at-anchored, status exclusions). ORDER BY units
+     * DESC + LIMIT 10 (Q-TopN = C locked: ship two lists).
+     *
+     * Joins to products for slug + name display fields. Without
+     * this join we'd have to hydrate products one-at-a-time later;
+     * a single LEFT JOIN keeps the round-trip count down to 1.
+     *
      * @return list<array{product_id: int, slug: string, name: string, units: int, revenue_aed: string}>
      */
     private function computeTopProductsByUnits(int $vendorId, \DateTimeImmutable $since, \DateTimeImmutable $until): array
     {
-        // X.13-C implementation. Empty for X.13-A skeleton.
-        return [];
+        return $this->computeTopProducts($vendorId, $since, $until, orderBy: 'units');
     }
 
     /**
+     * X.13-C: Top-N products by revenue.
+     *
+     * Identical query shape to computeTopProductsByUnits but
+     * ORDER BY revenue DESC. The pair-of-lists output (Q-TopN = C
+     * locked) lets dashboards show 'biggest sellers by units' and
+     * 'biggest earners by revenue' separately — useful because
+     * the lists rarely overlap (low-volume premium SKUs are big
+     * earners; high-volume staples are big sellers).
+     *
      * @return list<array{product_id: int, slug: string, name: string, units: int, revenue_aed: string}>
      */
     private function computeTopProductsByRevenue(int $vendorId, \DateTimeImmutable $since, \DateTimeImmutable $until): array
     {
-        // X.13-C implementation. Empty for X.13-A skeleton.
-        return [];
+        return $this->computeTopProducts($vendorId, $since, $until, orderBy: 'revenue');
+    }
+
+    /**
+     * Shared SQL for both top-N queries. The only difference is
+     * the ORDER BY column.
+     *
+     * @return list<array{product_id: int, slug: string, name: string, units: int, revenue_aed: string}>
+     */
+    private function computeTopProducts(
+        int $vendorId,
+        \DateTimeImmutable $since,
+        \DateTimeImmutable $until,
+        string $orderBy,
+    ): array {
+        // ORDER BY column whitelist — never interpolate user input
+        // into SQL identifiers. Even though this is internal-only,
+        // the discipline matters.
+        $orderColumn = match ($orderBy) {
+            'units' => 'units',
+            'revenue' => 'revenue',
+            default => throw new \InvalidArgumentException("Invalid orderBy: {$orderBy}"),
+        };
+
+        $excludedPlaceholders = implode(', ', array_fill(
+            0,
+            count(self::REVENUE_EXCLUDED_ITEM_STATUSES),
+            '?',
+        ));
+
+        $sql = "
+            SELECT
+                oi.product_id AS product_id,
+                p.slug AS slug,
+                p.name AS name,
+                SUM(oi.quantity)::int AS units,
+                COALESCE(SUM(oi.subtotal), 0)::text AS revenue
+            FROM order_items oi
+            INNER JOIN orders o ON o.id = oi.order_id
+            INNER JOIN products p ON p.id = oi.product_id
+            WHERE oi.vendor_id = ?
+              AND o.paid_at IS NOT NULL
+              AND o.paid_at >= ?
+              AND o.paid_at < ?
+              AND oi.item_status NOT IN ({$excludedPlaceholders})
+            GROUP BY oi.product_id, p.slug, p.name
+            ORDER BY {$orderColumn} DESC, oi.product_id ASC
+            LIMIT " . self::DEFAULT_TOP_N . "
+        ";
+
+        $params = [
+            $vendorId,
+            $since->format('Y-m-d H:i:sP'),
+            $until->format('Y-m-d H:i:sP'),
+            ...self::REVENUE_EXCLUDED_ITEM_STATUSES,
+        ];
+        $types = [
+            ParameterType::INTEGER,
+            ParameterType::STRING,
+            ParameterType::STRING,
+            ...array_fill(0, count(self::REVENUE_EXCLUDED_ITEM_STATUSES), ParameterType::STRING),
+        ];
+
+        $rows = $this->em->getConnection()
+            ->executeQuery($sql, $params, $types)
+            ->fetchAllAssociative();
+
+        return array_map(
+            fn (array $r): array => [
+                'product_id' => (int) $r['product_id'],
+                'slug' => (string) $r['slug'],
+                'name' => (string) $r['name'],
+                'units' => (int) $r['units'],
+                'revenue_aed' => $this->money((string) ($r['revenue'] ?? '0')),
+            ],
+            $rows,
+        );
     }
 
     /**
