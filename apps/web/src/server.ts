@@ -6,6 +6,7 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
+import { createAuthProxyRouter, createAuthProxyConfig } from './server/auth-proxy';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -13,16 +14,20 @@ const app = express();
 const angularApp = new AngularNodeAppEngine();
 
 /**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
+ * Auth-proxy BFF — Y.1-C.
  *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
+ * Mounts the auth-proxy router under /auth-proxy. The router handles
+ * 8 endpoints (login, register, confirm, send-otp, reset, reset-confirm,
+ * refresh, logout, me) that the Angular AuthService calls via the
+ * shared @3bayti/web HttpClient. Refresh tokens are parked as
+ * HttpOnly cookies at this layer; they never enter the browser's JS
+ * context. See ./server/auth-proxy/auth-proxy.routes.ts for details.
+ *
+ * Mounting BEFORE the Angular SSR catch-all is critical — otherwise
+ * Angular would try to render a "page" at /auth-proxy/login and either
+ * 404 or worse, leak HTML in response to an XHR.
  */
+app.use('/auth-proxy', createAuthProxyRouter(createAuthProxyConfig()));
 
 /**
  * Serve static files from /browser

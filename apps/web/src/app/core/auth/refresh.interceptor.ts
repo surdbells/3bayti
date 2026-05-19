@@ -1,4 +1,4 @@
-import { inject } from '@angular/core';
+import { inject, Injector } from '@angular/core';
 import {
   HttpEvent,
   HttpHandlerFn,
@@ -36,6 +36,19 @@ import { AUTH_PROXY_BASE } from './auth.tokens';
  * implements single-flight (one inflight promise shared by all callers)
  * — this interceptor just hooks into it.
  *
+ * Why AuthService is resolved LAZILY via Injector
+ * -----------------------------------------------
+ * The provideAuth() bundle registers BOTH this interceptor AND an
+ * APP_INITIALIZER that calls AuthService.hydrate(). hydrate() makes
+ * an HTTP request, which causes this interceptor function to run,
+ * which would call inject(AuthService) — while AuthService is STILL
+ * being constructed for the same APP_INITIALIZER. That's NG0200
+ * (circular dependency).
+ *
+ * We break the cycle by injecting Injector at request-time but
+ * resolving AuthService only when the 401-retry path actually
+ * needs it. By then AuthService is fully constructed.
+ *
  * What this interceptor explicitly does NOT do
  * --------------------------------------------
  *   - Doesn't infinitely retry. Each request gets exactly one
@@ -49,7 +62,7 @@ import { AUTH_PROXY_BASE } from './auth.tokens';
  */
 export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
   const tokenStore = inject(AccessTokenStore);
-  const auth = inject(AuthService);
+  const injector = inject(Injector);
   const proxyBase = inject(AUTH_PROXY_BASE);
 
   const requestIsAuthProxy = isAuthProxyRequest(req, proxyBase);
@@ -81,7 +94,11 @@ export const refreshInterceptor: HttpInterceptorFn = (req, next) => {
 
       /* Trigger a single-flight refresh. AuthService deduplicates
          concurrent calls behind one inflight promise; the second,
-         third, ... caller awaits the same result. */
+         third, ... caller awaits the same result.
+
+         injector.get(AuthService) here (not inject() at the top)
+         breaks the APP_INITIALIZER cycle — see the file header. */
+      const auth = injector.get(AuthService);
       return from(auth.refresh()).pipe(
         switchMap(success => {
           if (!success) {

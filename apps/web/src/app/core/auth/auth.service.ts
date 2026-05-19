@@ -6,11 +6,11 @@ import {
   inject,
   PLATFORM_ID,
   DestroyRef,
-  ApplicationRef,
+  REQUEST,
 } from '@angular/core';
 import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { catchError, firstValueFrom, of, take, filter } from 'rxjs';
+import { catchError, firstValueFrom, of } from 'rxjs';
 import { AccessTokenStore, AccessTokenSnapshot } from './access-token-store';
 import { LocaleService } from '../i18n/locale.service';
 import {
@@ -69,9 +69,14 @@ import type {
  *     unhandled promise rejection if it fires after teardown.
  *     `hydrate()` is the SSR-safe path: it calls /auth-proxy/me and
  *     seeds the user signal so the rendered HTML reflects auth state.
- *   - On the browser, an ApplicationRef.isStable subscription delays
- *     scheduler arming until hydration is done. This prevents a
- *     refresh from racing with the initial render.
+ *   - On the browser, the scheduler is armed inside applyAuthState()
+ *     — i.e. only after a real auth response sets a real token. We
+ *     deliberately do NOT inject ApplicationRef and wait for isStable
+ *     here: ApplicationRef participates in the APP_INITIALIZER graph,
+ *     so injecting it from a root service used by an initializer
+ *     creates an NG0200 circular dependency during prerender. Arming
+ *     on token-set is the correct trigger anyway: with no token there
+ *     is nothing to schedule.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -80,9 +85,13 @@ export class AuthService {
   private readonly tokenStore = inject(AccessTokenStore);
   private readonly locale = inject(LocaleService);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly appRef = inject(ApplicationRef);
   private readonly proxyBase = inject(AUTH_PROXY_BASE);
   private readonly refreshLeadTimeMs = inject(AUTH_REFRESH_LEAD_TIME_MS);
+  /* SSR-only. Null on the browser AND null at build-time prerender —
+     prerender has no inbound request, so a missing REQUEST is the
+     signal to skip hydration entirely (the upstream API isn't even
+     reachable from the build machine in most CI configs). */
+  private readonly request = inject(REQUEST, { optional: true });
 
   /* ---------- Reactive state ---------- */
 
@@ -112,20 +121,6 @@ export class AuthService {
   private inflightRefresh: Promise<boolean> | null = null;
 
   constructor() {
-    /* Arm the scheduler only on the browser, and only AFTER the app
-       has stabilised (initial render + hydration done). This keeps
-       SSR clean and avoids racing the first paint. */
-    if (isPlatformBrowser(this.platformId)) {
-      this.appRef.isStable
-        .pipe(
-          filter(stable => stable === true),
-          take(1),
-        )
-        .subscribe(() => {
-          this.scheduleRefresh();
-        });
-    }
-
     /* Clean up the scheduled timer when the service is destroyed.
        For a root-injected service this typically only happens on
        full app teardown, but the cleanup is cheap and defensive. */
@@ -152,6 +147,15 @@ export class AuthService {
    * cookies are automatically attached by fetch() (same-origin).
    */
   async hydrate(): Promise<void> {
+    /* Prerender bail: there's no inbound request, so there's nothing
+       to hydrate from. On the server with a real request we proceed.
+       On the browser the platformId check is unnecessary (REQUEST is
+       always null in the browser) so we explicitly allow that path. */
+    if (isPlatformServer(this.platformId) && this.request === null) {
+      this.applyLogoutState();
+      return;
+    }
+
     try {
       const response = await firstValueFrom(
         this.http.get<BffLoginResponse>(`${this.proxyBase}/me`, {
