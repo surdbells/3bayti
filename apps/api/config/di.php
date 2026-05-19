@@ -366,6 +366,7 @@ return [
     // M2.1 — RequestIdMiddleware (added earlier in M1.6.2.B but
     // listed here for discoverability).
     \Bayti\Api\Http\Middleware\RequestIdMiddleware::class => \DI\autowire(),
+    \Bayti\Api\Http\Middleware\CurrencyContextMiddleware::class => \DI\autowire(),
 
     // M2.1 — Catalog serializers (autowire-friendly, no constructor deps)
     \Bayti\Api\Http\Serializers\BrandSerializer::class => \DI\autowire(),

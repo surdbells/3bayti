@@ -90,6 +90,12 @@ final class Bootstrap
         // renders HTML by default and doesn't speak our error envelope.
         $app->addBodyParsingMiddleware();
         $app->addRoutingMiddleware();
+        // M3.2.X.15-D — Display currency context. Runs on every
+        // request; pure (just adds an attribute). Catalog
+        // controllers read the attribute; non-catalog routes
+        // ignore it. Placed inside the request-id frame so the
+        // attribute is set before any catalog handler runs.
+        $app->add($container->get(\Bayti\Api\Http\Middleware\CurrencyContextMiddleware::class));
         $app->add($container->get(\Bayti\Api\Http\Middleware\RequestIdMiddleware::class));
         $app->add($container->get(\Bayti\Api\Http\Errors\ApiErrorMiddleware::class));
 
