@@ -2,7 +2,9 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { signal } from '@angular/core';
 import { WishlistService } from './wishlist.service';
+import { AuthService } from '../../core/auth/auth.service';
 import type { Product } from '../catalog/product.model';
 
 const V3 = 'https://api-v3.3bayti.ae/v3/me/wishlist';
@@ -25,8 +27,16 @@ function makeProduct(id: number): Product {
 }
 
 function setup(): { service: WishlistService; controller: HttpTestingController } {
+  /* Minimal AuthService stub — the service injects it only for its
+     reset-on-signout effect; treat the user as authed throughout. */
+  const authStub = { isAuthenticated: signal(true) };
   TestBed.configureTestingModule({
-    providers: [provideHttpClient(), provideHttpClientTesting(), WishlistService],
+    providers: [
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      { provide: AuthService, useValue: authStub },
+      WishlistService,
+    ],
   });
   return {
     service: TestBed.inject(WishlistService),

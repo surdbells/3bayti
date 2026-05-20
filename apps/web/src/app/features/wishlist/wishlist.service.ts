@@ -1,7 +1,8 @@
-import { Injectable, signal, computed, Signal, inject } from '@angular/core';
+import { Injectable, signal, computed, effect, Signal, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import type { Product } from '../catalog/product.model';
+import { AuthService } from '../../core/auth/auth.service';
 
 const V3_BASE = 'https://api-v3.3bayti.ae';
 
@@ -39,6 +40,7 @@ export interface WishlistMeta {
 @Injectable({ providedIn: 'root' })
 export class WishlistService {
   private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
 
   /** Saved product ids — the source of truth for the heart UI. */
   private readonly _savedIds = signal<ReadonlySet<number>>(new Set());
@@ -56,6 +58,20 @@ export class WishlistService {
 
   /** Count of saved items (from the latest meta, else the page list). */
   readonly count = computed<number>(() => this._meta()?.total ?? this._products().length);
+
+  constructor() {
+    /* Clear all wishlist state when the user signs out, so a different
+       user (or a guest) never sees the previous session's saved set.
+       Tracks the auth signal; runs on every transition to signed-out. */
+    let wasAuthed = this.auth.isAuthenticated();
+    effect(() => {
+      const authed = this.auth.isAuthenticated();
+      if (wasAuthed && !authed) {
+        this.reset();
+      }
+      wasAuthed = authed;
+    });
+  }
 
   /** Whether a given product id is currently saved. */
   isSaved(productId: number): boolean {

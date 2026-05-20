@@ -56,9 +56,9 @@ describe('AccountHubPageComponent', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders all five account tiles', () => {
+  it('renders all six account tiles', () => {
     const { fixture } = setup();
-    for (const id of ['profile', 'orders', 'addresses', 'measurements', 'password']) {
+    for (const id of ['profile', 'orders', 'addresses', 'measurements', 'wishlist', 'password']) {
       expect(fixture.nativeElement.querySelector(`[data-testid="account-tile-${id}"]`)).not.toBeNull();
     }
   });
@@ -70,6 +70,7 @@ describe('AccountHubPageComponent', () => {
       orders: '/account/orders',
       addresses: '/account/addresses',
       measurements: '/account/measurements',
+      wishlist: '/account/wishlist',
       password: '/account/password',
     };
     for (const [id, href] of Object.entries(expected)) {

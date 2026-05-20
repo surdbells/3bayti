@@ -422,6 +422,10 @@
         "title": "Measurements",
         "desc": "Save your sizes for a better fit."
       },
+      "wishlist": {
+        "title": "Wishlist",
+        "desc": "Products you’ve saved"
+      },
       "password": {
         "title": "Password",
         "desc": "Change your account password."
