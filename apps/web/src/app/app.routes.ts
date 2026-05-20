@@ -72,6 +72,16 @@ export const routes: Routes = [
     title: 'Designers · 3bayti',
   },
   {
+    /* Designer detail — `/designer/:slug`. Designer header + their
+       product grid. Prerendered at build time for known vendor slugs
+       (see app.routes.server.ts), runtime SSR for the long tail. The
+       104 designer slugs are restored to the sitemap in Y.4-D. */
+    path: 'designer/:slug',
+    loadComponent: () =>
+      import('./features/designers/designer-detail-page').then(m => m.DesignerDetailPageComponent),
+    title: 'Designer · 3bayti',
+  },
+  {
     /* Dev-only component preview. noindex'd via SeoService inside the
        component. Lazy-loaded so it doesn't bloat the production bundle
        for normal users. */

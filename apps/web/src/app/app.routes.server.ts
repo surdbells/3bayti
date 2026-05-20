@@ -51,6 +51,11 @@ const PRODUCT_API_BASE =
   process.env['API_BASE_URL'] ||
   V3_API_BASE_URL;
 
+const VENDOR_API_BASE =
+  process.env['VENDOR_API_BASE_URL'] ||
+  process.env['API_BASE_URL'] ||
+  V3_API_BASE_URL;
+
 /**
  * How many product PDP pages to prerender at build time.
  *
@@ -140,6 +145,35 @@ async function fetchRecentProductSlugs(limit: number): Promise<string[]> {
   }
 }
 
+/**
+ * Fetch every active vendor (designer) slug at build time. Used by the
+ * prerender provider for /designer/:slug.
+ *
+ * The v3 /vendors endpoint returns all active vendors in a single
+ * envelope (no pagination today — see DesignerService), so one fetch
+ * covers the full set (~104 designers per the Y.4 sitemap audit).
+ *
+ * Failure modes mirror fetchCategorySlugs: API unreachable → empty
+ * list, build proceeds with no designer pages prerendered, runtime SSR
+ * catches every request. Better than a hard build fail.
+ */
+async function fetchVendorSlugs(): Promise<string[]> {
+  try {
+    const res = await fetch(`${VENDOR_API_BASE}/vendors`);
+    if (!res.ok) {
+      console.warn(`[SSR] /vendors returned ${res.status}; skipping designer-detail prerender`);
+      return [];
+    }
+    const json = await res.json() as { data: Array<{ slug: string }> };
+    const slugs = (json.data ?? []).map((v) => v.slug).filter(Boolean);
+    console.log(`[SSR] Prerendering /designer/:slug for ${slugs.length} designers`);
+    return slugs;
+  } catch (err) {
+    console.warn(`[SSR] fetchVendorSlugs failed:`, err instanceof Error ? err.message : err);
+    return [];
+  }
+}
+
 export const serverRoutes: ServerRoute[] = [
   {
     /* Category detail — prerender every existing category slug at
@@ -165,6 +199,18 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Prerender,
     async getPrerenderParams() {
       const slugs = await fetchRecentProductSlugs(PRODUCT_PRERENDER_CAP);
+      return slugs.map((slug) => ({ slug }));
+    },
+  },
+  {
+    /* Designer detail — prerender every active designer slug at build
+       time; runtime SSR for any added after the build (PrerenderFallback
+       defaults to Server). This is what makes the Y.4-D sitemap
+       restoration meaningful: crawlers hit real static HTML, not 404s. */
+    path: 'designer/:slug',
+    renderMode: RenderMode.Prerender,
+    async getPrerenderParams() {
+      const slugs = await fetchVendorSlugs();
       return slugs.map((slug) => ({ slug }));
     },
   },
