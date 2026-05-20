@@ -189,6 +189,12 @@ return function (App $app): void {
         // Move a saved product between labels (or to uncategorized).
         $group->patch('/wishlist/{productId:[0-9]+}', \Bayti\Api\Http\Controllers\Wishlist\MoveWishlistItemController::class);
         $group->delete('/wishlist/{productId:[0-9]+}', \Bayti\Api\Http\Controllers\Wishlist\RemoveWishlistItemController::class);
+
+        // M3.2.Z.4-D — Push notification device tokens. Register
+        // (upsert) on app launch / token refresh; deactivate on
+        // logout / opt-out. Both are idempotent and owner-scoped.
+        $group->post('/device-tokens', \Bayti\Api\Http\Controllers\Notification\RegisterDeviceTokenController::class);
+        $group->delete('/device-tokens', \Bayti\Api\Http\Controllers\Notification\DeleteDeviceTokenController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
