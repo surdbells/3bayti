@@ -477,6 +477,36 @@
         "invalid": "Please check this field.",
         "generic": "We couldn't change your password. Please try again."
       }
+    },
+    "measurements": {
+      "title": "My measurements",
+      "intro": "Save your measurements once for a more accurate fit across the store. All values are in centimetres.",
+      "cmHint": "cm",
+      "fields": {
+        "bust_chest": "Bust / chest",
+        "waist": "Waist",
+        "hips": "Hips",
+        "shoulder": "Shoulder width",
+        "sleeve_length": "Sleeve length",
+        "height": "Height"
+      },
+      "notes": "Notes",
+      "notesPlaceholder": "Any fit preferences, e.g. relaxed through the waist.",
+      "save": "Save measurements",
+      "saved": "Your measurements have been saved.",
+      "clear": "Clear all",
+      "cleared": "Your measurements have been cleared.",
+      "clearConfirmTitle": "Clear measurements?",
+      "clearConfirmMessage": "This removes your saved measurements. This can’t be undone.",
+      "clearConfirmYes": "Clear measurements",
+      "errors": {
+        "range": "Enter a value between 0 and 500 cm.",
+        "invalid": "Please check this field.",
+        "notesTooLong": "Notes must not exceed 1000 characters.",
+        "loadFailed": "We couldn’t load your measurements. Please try again.",
+        "saveFailed": "We couldn’t save your measurements. Please try again.",
+        "clearFailed": "We couldn’t clear your measurements. Please try again."
+      }
     }
   }
 }

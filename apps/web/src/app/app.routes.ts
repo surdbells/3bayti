@@ -170,6 +170,13 @@ export const routes: Routes = [
     title: 'Change password · 3bayti',
   },
   {
+    path: 'account/measurements',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/account/account-measurements-page').then(m => m.AccountMeasurementsPageComponent),
+    title: 'My measurements · 3bayti',
+  },
+  {
     path: 'account/addresses',
     canActivate: [authActivateGuard],
     loadComponent: () =>
