@@ -307,25 +307,22 @@
 
       </div>
 
-      <!-- Related products. Renders a "You may also like" grid below
-           the main two-column PDP layout. Spans full width inside the
-           same ui-container, so cards align with the gallery+info above.
-
-           Data already lives in product().related_products from the
-           single /v2/products/:slug fetch — no extra API call. The
-           backend returns up to 8 items per request (verified). When
-           it returns fewer or none, the section is silently omitted.
-
-           Uses the same ProductCardComponent and grid styling as
-           /category/:slug — visual consistency across surfaces. -->
-      @if (p.related_products && p.related_products.length > 0) {
+      <!-- Related products — "You may also like".
+           Prefers the X.12 recommendations engine (co-purchase /
+           category / popular), loaded client-side via
+           relatedProducts(); falls back to the product's own
+           related_products from the single PDP fetch when the engine
+           returns nothing. Rendered through the shared ui-product-strip
+           (same horizontal-scroll treatment as the home strips) for
+           visual consistency. Silently omitted when there's nothing to
+           show. -->
+      @if (relatedProducts().length > 0) {
         <section class="pdp-related" aria-label="Related products">
-          <ui-heading level="h2" size="md">You may also like</ui-heading>
-          <div class="pdp-related__grid">
-            @for (related of p.related_products; track related.id) {
-              <ui-product-card [product]="related" />
-            }
-          </div>
+          <ui-product-strip
+            heading="You may also like"
+            [products]="relatedProducts()"
+            [loading]="false"
+          />
         </section>
       }
     }

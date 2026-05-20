@@ -13,7 +13,7 @@ import { isPlatformServer } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, map, of, switchMap, tap } from 'rxjs';
+import { catchError, from, map, of, switchMap, tap } from 'rxjs';
 
 import { SeoService } from '../../core/seo/seo.service';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
@@ -30,8 +30,9 @@ import {
   TextComponent,
   StackComponent,
 } from '../../shared/ui';
-import type { Money, ProductDetail } from './product.model';
-import { ProductCardComponent } from './product-card';
+import { ProductStripComponent } from '../../shared/ui/product-strip';
+import type { Money, Product, ProductDetail } from './product.model';
+import { RecommendationsService } from './recommendations.service';
 
 /**
  * Product detail page (PDP) — `/product/:slug`.
@@ -75,7 +76,7 @@ import { ProductCardComponent } from './product-card';
     HeadingComponent,
     TextComponent,
     StackComponent,
-    ProductCardComponent,
+    ProductStripComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './product-detail.html',
@@ -87,6 +88,7 @@ export class ProductDetailComponent {
   private seo = inject(SeoService);
   private state = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
+  private recsService = inject(RecommendationsService);
 
   /**
    * Sets the SSR HTTP response status. Called when the API returns 404
@@ -137,6 +139,47 @@ export class ProductDetailComponent {
 
   /** True between route change and data arrival. */
   readonly loading = computed(() => this.product() === null && !this.notFound());
+
+  /**
+   * Recommendations from the X.12 engine (co-purchase + category +
+   * popular fallback), loaded for the current product slug. Client-side
+   * only: recommendations are a progressive enhancement, not SEO content,
+   * so we don't pay the SSR cost or embed them in TransferState.
+   *
+   * The "you may also like" strip prefers these engine results and only
+   * falls back to the product's own `related_products` (from the single
+   * PDP fetch) when the engine returns nothing — so the section always
+   * has the best data available and never regresses below the old
+   * behaviour.
+   */
+  readonly recommendations = toSignal(
+    this.route.paramMap.pipe(
+      switchMap((params) => {
+        const slug = params.get('slug') ?? '';
+        if (slug === '' || isPlatformServer(this.platformId)) {
+          return of([] as Product[]);
+        }
+        return from(this.recsService.forProduct(slug)).pipe(
+          map((recs) => recs.map((r) => r.product)),
+          catchError(() => of([] as Product[])),
+        );
+      }),
+    ),
+    { initialValue: [] as Product[] },
+  );
+
+  /**
+   * The products to show in the "you may also like" strip: engine
+   * recommendations when present, otherwise the PDP's related_products,
+   * otherwise empty (section hidden).
+   */
+  readonly relatedProducts = computed<Product[]>(() => {
+    const engine = this.recommendations();
+    if (engine.length > 0) {
+      return engine;
+    }
+    return this.product()?.related_products ?? [];
+  });
 
   /** Currently-displayed image (clicking thumbnails switches it). */
   readonly activeImageIndex = signal(0);
