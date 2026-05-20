@@ -300,6 +300,32 @@
       "cancelled": "Cancelled",
       "refunded": "Refunded",
       "partiallyRefunded": "Partially refunded"
+    },
+    "list": {
+      "title": "Your orders",
+      "subtitle": "Track and review every order you've placed.",
+      "itemCount": "items",
+      "loadMore": "Load more",
+      "loadError": "Couldn't load your orders. Please try again.",
+      "emptyTitle": "No orders yet",
+      "emptyBody": "Once you place your first order, you'll see it here.",
+      "emptyCta": "Start shopping"
+    },
+    "detail": {
+      "title": "Order details",
+      "placedOn": "Placed on",
+      "paidOn": "Paid on",
+      "loadError": "Couldn't load this order.",
+      "cancelCta": "Cancel order",
+      "cancelConfirm": "Cancel this order? This can't be undone.",
+      "cancelSuccess": "Order cancelled.",
+      "cancelFailed": "Couldn't cancel this order.",
+      "returnsTitle": "Return requests",
+      "submitReturn": "Request a return",
+      "appliedPromo": "Promo applied",
+      "billingHeading": "Billing address",
+      "shippingHeading": "Shipping address",
+      "backToList": "← All orders"
     }
   }
 }

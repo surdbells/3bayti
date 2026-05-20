@@ -1,0 +1,268 @@
+/* Order history page styles (Y.2-H). */
+
+.orders-page {
+  min-height: calc(100vh - 200px);
+  padding: 32px 0 64px;
+  background: var(--color-bg-default, #faf7f1);
+}
+
+.orders-page__container {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.orders-page__header {
+  margin-bottom: 28px;
+}
+
+.orders-page__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.orders-page__subtitle {
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0;
+}
+
+/* --- List + cards --------------------------------------------------- */
+
+.orders-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.orders-list__item {
+  margin: 0;
+}
+
+.order-card {
+  display: block;
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px 20px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--color-border-subtle, #e2dccc);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-brand-500, #b18f1f);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(46, 36, 28, 0.06);
+    outline: none;
+  }
+}
+
+.order-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+
+.order-card__status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--color-bg-muted, #f4f0ea);
+  color: var(--color-text-primary, #2e241c);
+
+  &--positive {
+    background: rgba(46, 125, 50, 0.12);
+    color: #2e7d32;
+  }
+  &--neutral {
+    background: rgba(56, 100, 168, 0.12);
+    color: #2c5aa0;
+  }
+  &--warning {
+    background: rgba(180, 134, 25, 0.14);
+    color: #8a6210;
+  }
+  &--negative {
+    background: rgba(180, 34, 24, 0.10);
+    color: #b42218;
+  }
+}
+
+.order-card__date {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b6056);
+  font-variant-numeric: tabular-nums;
+}
+
+.order-card__ref {
+  margin: 0 0 14px 0;
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.order-card__items {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.order-card__thumb {
+  width: 56px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-bg-muted, #f4f0ea);
+  flex-shrink: 0;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.order-card__thumb-blank {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #efe8d8 25%, #e6dfcd 75%);
+}
+
+.order-card__more {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-muted, #6b6056);
+  padding: 0 6px;
+}
+
+.order-card__foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-top: 14px;
+  border-top: 1px solid var(--color-border-subtle, #e2dccc);
+}
+
+.order-card__count {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+}
+
+.order-card__total {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary, #2e241c);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Empty + load-more --------------------------------------------- */
+
+.orders-page__empty {
+  background: #fff;
+  border-radius: 12px;
+  padding: 56px 28px;
+  text-align: center;
+  border: 1px solid var(--color-border-subtle, #e2dccc);
+}
+
+.orders-page__empty-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 8px 0;
+}
+
+.orders-page__empty-body {
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.orders-page__empty-cta {
+  display: inline-block;
+  padding: 12px 24px;
+  background: var(--color-text-primary, #2e241c);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-brand-700, #5a3a2c);
+    outline: none;
+  }
+}
+
+.orders-page__loading {
+  text-align: center;
+  padding: 56px 20px;
+  color: var(--color-text-muted, #6b6056);
+  font-size: 14px;
+}
+
+.orders-page__load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.orders-page__load-more-btn {
+  appearance: none;
+  background: #fff;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #2e241c);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    border-color: var(--color-brand-500, #b18f1f);
+    color: var(--color-brand-700, #5a3a2c);
+    background: rgba(177, 143, 31, 0.04);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+/* --- RTL adjustments ------------------------------------------------ */
+
+:host-context([dir='rtl']) {
+  .order-card__date,
+  .order-card__ref,
+  .order-card__total {
+    /* Tabular numeric stays LTR for numbers; layout flips naturally. */
+    direction: ltr;
+    text-align: end;
+  }
+}

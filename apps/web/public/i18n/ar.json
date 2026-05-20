@@ -300,6 +300,32 @@
       "cancelled": "ملغى",
       "refunded": "مسترد",
       "partiallyRefunded": "مسترد جزئياً"
+    },
+    "list": {
+      "title": "طلباتك",
+      "subtitle": "تابعي ومراجعة جميع طلباتك السابقة.",
+      "itemCount": "قطعة",
+      "loadMore": "تحميل المزيد",
+      "loadError": "تعذر تحميل طلباتك. يُرجى المحاولة مرة أخرى.",
+      "emptyTitle": "لا توجد طلبات بعد",
+      "emptyBody": "بمجرد تقديم طلبك الأول، ستجدينه هنا.",
+      "emptyCta": "ابدئي التسوق"
+    },
+    "detail": {
+      "title": "تفاصيل الطلب",
+      "placedOn": "تاريخ الطلب",
+      "paidOn": "تاريخ الدفع",
+      "loadError": "تعذر تحميل هذا الطلب.",
+      "cancelCta": "إلغاء الطلب",
+      "cancelConfirm": "إلغاء هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.",
+      "cancelSuccess": "تم إلغاء الطلب.",
+      "cancelFailed": "تعذر إلغاء هذا الطلب.",
+      "returnsTitle": "طلبات الإرجاع",
+      "submitReturn": "طلب إرجاع",
+      "appliedPromo": "تم تطبيق كود الخصم",
+      "billingHeading": "عنوان الفوترة",
+      "shippingHeading": "عنوان الشحن",
+      "backToList": "→ كل الطلبات"
     }
   }
 }
