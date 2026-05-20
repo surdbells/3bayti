@@ -44,7 +44,7 @@ import { ToastService } from '../../shared/forms';
  * Returns submission
  * ------------------
  * The "Request a return" CTA is rendered when the order is
- * eligible (status in {paid, preparing, shipped, delivered} per
+ * eligible (status in {paid, fulfilling, shipped, delivered} per
  * apps/api business rules). The actual return form is Y.2-J's
  * scope — for now the CTA can navigate to a future
  * /account/orders/:id/return route.
@@ -308,14 +308,17 @@ export class AccountOrderDetailPageComponent implements OnInit {
    * the form-level RETURN_* error mappings (Y.2-J) handle it
    * gracefully with a clear toast.
    *
-   * Excludes:
-   *   - pending_payment / cancelled: no items were ever delivered
-   *   - refunded / partially_refunded: returns are already resolved
+   * Excludes (using the real apps/api Order::STATUS_* set):
+   *   - pending_payment / cancelled / failed: no items were ever
+   *     delivered, so nothing can be returned
+   *   - refunded: the order is already resolved
+   *
+   * Shown for: paid, fulfilling, shipped, delivered.
    */
   protected readonly canRequestReturn = computed(() => {
     const o = this._order();
     if (o === null) return false;
-    const excluded = ['pending_payment', 'cancelled', 'refunded', 'partially_refunded'];
+    const excluded = ['pending_payment', 'cancelled', 'failed', 'refunded'];
     return !excluded.includes(o.status);
   });
 
@@ -392,7 +395,7 @@ export class AccountOrderDetailPageComponent implements OnInit {
     return status === 'delivered' || status === 'paid';
   }
   protected isNeutral(status: string): boolean {
-    return status === 'preparing' || status === 'shipped';
+    return status === 'fulfilling' || status === 'shipped';
   }
   protected isWarning(status: string): boolean {
     return status === 'pending_payment';
@@ -400,7 +403,7 @@ export class AccountOrderDetailPageComponent implements OnInit {
   protected isNegative(status: string): boolean {
     return status === 'cancelled'
       || status === 'refunded'
-      || status === 'partially_refunded';
+      || status === 'failed';
   }
 
   protected trackById(_idx: number, entity: { id: number }): number {

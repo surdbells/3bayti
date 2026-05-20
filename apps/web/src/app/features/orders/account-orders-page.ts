@@ -216,7 +216,7 @@ export class AccountOrdersPageComponent implements OnInit {
     return status === 'delivered' || status === 'paid';
   }
   protected isNeutral(status: string): boolean {
-    return status === 'preparing' || status === 'shipped';
+    return status === 'fulfilling' || status === 'shipped';
   }
   protected isWarning(status: string): boolean {
     return status === 'pending_payment';
@@ -224,7 +224,7 @@ export class AccountOrdersPageComponent implements OnInit {
   protected isNegative(status: string): boolean {
     return status === 'cancelled'
       || status === 'refunded'
-      || status === 'partially_refunded';
+      || status === 'failed';
   }
 
   /* -----------------------------------------------------------------

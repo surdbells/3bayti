@@ -303,12 +303,12 @@
     "status": {
       "pendingPayment": "Pending payment",
       "paid": "Paid",
-      "preparing": "Preparing",
+      "fulfilling": "Being prepared",
       "shipped": "Shipped",
       "delivered": "Delivered",
       "cancelled": "Cancelled",
       "refunded": "Refunded",
-      "partiallyRefunded": "Partially refunded"
+      "failed": "Payment failed"
     },
     "list": {
       "title": "Your orders",

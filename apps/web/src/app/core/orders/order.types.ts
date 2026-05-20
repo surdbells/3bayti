@@ -93,15 +93,29 @@ export interface Order extends OrderListItem {
 /** Lifecycle statuses we surface as customer-friendly labels. The
  *  raw string from the API may be more granular; map unknowns to
  *  the closest customer-facing label. */
+/**
+ * Status → i18n key map.
+ *
+ * Source of truth: apps/api Domain\Order\Order::STATUS_* constants.
+ * The eight real statuses the API can emit are:
+ *   pending_payment, paid, fulfilling, shipped, delivered,
+ *   cancelled, refunded, failed
+ *
+ * (Earlier Y.2 work mistakenly listed 'preparing' and
+ * 'partially_refunded', which the API never sends, and omitted
+ * 'fulfilling' and 'failed'. Reconciled in Y.3-D.)
+ *
+ * Unknown statuses fall back to the raw string at the call site.
+ */
 export const ORDER_STATUS_LABELS: Record<string, string> = {
   pending_payment: 'orders.status.pendingPayment',
   paid: 'orders.status.paid',
-  preparing: 'orders.status.preparing',
+  fulfilling: 'orders.status.fulfilling',
   shipped: 'orders.status.shipped',
   delivered: 'orders.status.delivered',
   cancelled: 'orders.status.cancelled',
   refunded: 'orders.status.refunded',
-  partially_refunded: 'orders.status.partiallyRefunded',
+  failed: 'orders.status.failed',
 };
 
 /** Pagination params for GET /v3/orders. */

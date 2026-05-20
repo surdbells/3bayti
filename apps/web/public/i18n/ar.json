@@ -303,12 +303,12 @@
     "status": {
       "pendingPayment": "بانتظار الدفع",
       "paid": "مدفوع",
-      "preparing": "قيد التحضير",
+      "fulfilling": "قيد التحضير",
       "shipped": "تم الشحن",
       "delivered": "تم التسليم",
       "cancelled": "ملغى",
       "refunded": "مسترد",
-      "partiallyRefunded": "مسترد جزئياً"
+      "failed": "فشل الدفع"
     },
     "list": {
       "title": "طلباتك",

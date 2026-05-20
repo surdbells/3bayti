@@ -176,6 +176,8 @@ describe('AccountOrdersPageComponent', () => {
           makeOrder({ id: 2, status: 'pending_payment' }),
           makeOrder({ id: 3, status: 'cancelled' }),
           makeOrder({ id: 4, status: 'shipped' }),
+          makeOrder({ id: 5, status: 'fulfilling' }),
+          makeOrder({ id: 6, status: 'failed' }),
         ],
       });
       await flush();
@@ -185,6 +187,9 @@ describe('AccountOrdersPageComponent', () => {
       expect(pills[1].classList.contains('order-card__status--warning')).toBe(true);
       expect(pills[2].classList.contains('order-card__status--negative')).toBe(true);
       expect(pills[3].classList.contains('order-card__status--neutral')).toBe(true);
+      /* Y.3-D reconciliation: fulfilling → neutral, failed → negative. */
+      expect(pills[4].classList.contains('order-card__status--neutral')).toBe(true);
+      expect(pills[5].classList.contains('order-card__status--negative')).toBe(true);
     });
 
     it('renders up to 3 item thumbnails per order', async () => {

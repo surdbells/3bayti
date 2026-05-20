@@ -375,6 +375,20 @@ describe('AccountOrderDetailPageComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-testid="order-detail-return-cta"]')).toBeNull();
     });
 
+    it('shows the return CTA for fulfilling orders', async () => {
+      const { fixture } = setup({ order: makeOrder({ status: 'fulfilling' }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-return-cta"]')).not.toBeNull();
+    });
+
+    it('hides the return CTA for failed orders', async () => {
+      const { fixture } = setup({ order: makeOrder({ status: 'failed' }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-return-cta"]')).toBeNull();
+    });
+
     it('return CTA links to /account/orders/:id/return', async () => {
       const { fixture } = setup({ order: makeOrder({ id: 77, status: 'delivered' }) });
       await flush();
