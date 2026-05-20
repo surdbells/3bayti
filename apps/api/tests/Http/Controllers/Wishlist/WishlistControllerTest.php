@@ -127,6 +127,64 @@ final class WishlistControllerTest extends HttpTestCase
         self::assertSame(401, $response->getStatusCode());
     }
 
+    #[Test]
+    public function getPassesLabelFilterToTheRepository(): void
+    {
+        $user = $this->makeUser(id: 320);
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->willReturn($user);
+
+        $wishlistRepo = $this->createMock(WishlistRepository::class);
+        // label_id=7 → the repo must receive 7 as the label filter.
+        $wishlistRepo->expects(self::once())
+            ->method('findForUserPaginated')
+            ->with($user, self::anything(), self::anything(), 7)
+            ->willReturn([]);
+        $wishlistRepo->method('countForUser')->willReturn(0);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Wishlist::class, $wishlistRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('GET', '/v3/me/wishlist?label_id=7', [], $this->authHeader($user))
+        );
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function getPassesUncategorizedFilterForLabelNone(): void
+    {
+        $user = $this->makeUser(id: 321);
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->willReturn($user);
+
+        $wishlistRepo = $this->createMock(WishlistRepository::class);
+        // label_id=none → null (uncategorized only).
+        $wishlistRepo->expects(self::once())
+            ->method('findForUserPaginated')
+            ->with($user, self::anything(), self::anything(), null)
+            ->willReturn([]);
+        $wishlistRepo->method('countForUser')->willReturn(0);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $wishlistRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Wishlist::class, $wishlistRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('GET', '/v3/me/wishlist?label_id=none', [], $this->authHeader($user))
+        );
+        self::assertSame(200, $response->getStatusCode());
+    }
+
     // ---------------------------------------------------------------
     // POST /v3/me/wishlist
     // ---------------------------------------------------------------

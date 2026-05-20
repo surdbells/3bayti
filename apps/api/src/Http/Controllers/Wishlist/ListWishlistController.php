@@ -56,10 +56,24 @@ final class ListWishlistController
         $limit = max(1, min(100, (int) ($query['limit'] ?? 24)));
         $offset = max(0, (int) ($query['offset'] ?? 0));
 
+        // Optional label filter (Q-Z3=B):
+        //   absent            → all saved products
+        //   label_id=0|none   → uncategorized only (label IS NULL)
+        //   label_id=<int>    → that label only
+        $labelFilter = false;
+        if (array_key_exists('label_id', $query)) {
+            $raw = $query['label_id'];
+            if ($raw === 'none' || $raw === '0' || $raw === '') {
+                $labelFilter = null;
+            } else {
+                $labelFilter = max(0, (int) $raw) ?: null;
+            }
+        }
+
         /** @var WishlistRepository $wishlistRepo */
         $wishlistRepo = $this->em->getRepository(Wishlist::class);
-        $entries = $wishlistRepo->findForUserPaginated($user, $limit, $offset);
-        $total = $wishlistRepo->countForUser($user);
+        $entries = $wishlistRepo->findForUserPaginated($user, $limit, $offset, $labelFilter);
+        $total = $wishlistRepo->countForUser($user, $labelFilter);
 
         $products = array_map(
             static fn (Wishlist $entry) => $entry->getProduct(),

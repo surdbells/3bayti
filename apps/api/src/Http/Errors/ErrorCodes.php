@@ -93,6 +93,9 @@ final class ErrorCodes
     /** Phone already in use (registration). */
     public const CONFLICT_PHONE_TAKEN = 'CONFLICT_PHONE_TAKEN';
 
+    /** A uniquely-named resource with that name already exists. */
+    public const CONFLICT_DUPLICATE = 'CONFLICT_DUPLICATE';
+
     // -------------------------------------------------------------------
     // GENERIC
     // -------------------------------------------------------------------

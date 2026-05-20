@@ -40,6 +40,15 @@ class Wishlist
     #[ORM\JoinColumn(name: 'product_id', referencedColumnName: 'id', nullable: false, onDelete: 'CASCADE')]
     private Product $product;
 
+    /**
+     * Optional label this saved product is filed under (Q-Z3=B).
+     * Null = uncategorized. ON DELETE SET NULL: deleting the label
+     * moves the product back to uncategorized rather than removing it.
+     */
+    #[ORM\ManyToOne(targetEntity: WishlistLabel::class)]
+    #[ORM\JoinColumn(name: 'label_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?WishlistLabel $label = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
@@ -63,6 +72,16 @@ class Wishlist
     public function getProduct(): Product
     {
         return $this->product;
+    }
+
+    public function getLabel(): ?WishlistLabel
+    {
+        return $this->label;
+    }
+
+    public function setLabel(?WishlistLabel $label): void
+    {
+        $this->label = $label;
     }
 
     public function getCreatedAt(): DateTimeImmutable

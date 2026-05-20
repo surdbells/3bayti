@@ -177,7 +177,18 @@ return function (App $app): void {
         // by productId is idempotent (always 204).
         $group->get('/wishlist', \Bayti\Api\Http\Controllers\Wishlist\ListWishlistController::class);
         $group->post('/wishlist', \Bayti\Api\Http\Controllers\Wishlist\AddWishlistItemController::class);
-        $group->delete('/wishlist/{productId}', \Bayti\Api\Http\Controllers\Wishlist\RemoveWishlistItemController::class);
+
+        // M3.2.Z.3-API — wishlist labels (Q-Z3=B). Registered BEFORE the
+        // /wishlist/{productId} routes so 'labels' isn't captured as a
+        // product id.
+        $group->get('/wishlist/labels', \Bayti\Api\Http\Controllers\Wishlist\ListWishlistLabelsController::class);
+        $group->post('/wishlist/labels', \Bayti\Api\Http\Controllers\Wishlist\CreateWishlistLabelController::class);
+        $group->patch('/wishlist/labels/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Wishlist\RenameWishlistLabelController::class);
+        $group->delete('/wishlist/labels/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Wishlist\DeleteWishlistLabelController::class);
+
+        // Move a saved product between labels (or to uncategorized).
+        $group->patch('/wishlist/{productId:[0-9]+}', \Bayti\Api\Http\Controllers\Wishlist\MoveWishlistItemController::class);
+        $group->delete('/wishlist/{productId:[0-9]+}', \Bayti\Api\Http\Controllers\Wishlist\RemoveWishlistItemController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================

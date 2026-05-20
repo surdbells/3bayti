@@ -7,6 +7,8 @@ namespace Bayti\Api\Http\Controllers\Wishlist;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\Wishlist\Wishlist;
+use Bayti\Api\Domain\Wishlist\WishlistLabel;
+use Bayti\Api\Domain\Wishlist\WishlistLabelRepository;
 use Bayti\Api\Domain\Wishlist\WishlistRepository;
 use Bayti\Api\Http\Controllers\Wishlist\Dto\AddWishlistItemInput;
 use Bayti\Api\Http\Errors\ErrorCodes;
@@ -66,18 +68,37 @@ final class AddWishlistItemController
             throw HttpException::notFound('Product not found.');
         }
 
+        // Optional label (Q-Z3=B): must belong to the user.
+        $label = null;
+        if ($input->label_id !== null) {
+            /** @var WishlistLabelRepository $labelRepo */
+            $labelRepo = $this->em->getRepository(WishlistLabel::class);
+            $label = $labelRepo->findOneForUser($user, $input->label_id);
+            if ($label === null) {
+                throw HttpException::notFound('Label not found.');
+            }
+        }
+
         /** @var WishlistRepository $wishlistRepo */
         $wishlistRepo = $this->em->getRepository(Wishlist::class);
 
-        // Idempotent: if it's already saved, no-op and return 200.
+        // Idempotent: if it's already saved, no-op (but (re)assign the
+        // label when one was supplied) and return 200.
         $existing = $wishlistRepo->findOneForUserAndProduct($user, $product);
         if ($existing !== null) {
+            if ($input->label_id !== null) {
+                $existing->setLabel($label);
+                $wishlistRepo->save($existing);
+            }
             return $this->ok(PaginatedEnvelope::single(
                 $this->serializer->configureFromRequest($request)->listShape($product),
             ));
         }
 
         $entry = new Wishlist($user, $product);
+        if ($label !== null) {
+            $entry->setLabel($label);
+        }
         $wishlistRepo->save($entry);
 
         return $this->created(PaginatedEnvelope::single(
