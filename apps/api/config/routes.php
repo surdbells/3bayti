@@ -28,6 +28,7 @@ use Bayti\Api\Http\Controllers\Measurement\GetMeasurementsController;
 use Bayti\Api\Http\Controllers\Measurement\ListMeasurementsController;
 use Bayti\Api\Http\Controllers\Measurement\UpsertMeasurementsController;
 use Bayti\Api\Http\Controllers\Profile\ChangePasswordController;
+use Bayti\Api\Http\Controllers\Profile\DeleteAccountController;
 use Bayti\Api\Http\Controllers\Profile\GetProfileController;
 use Bayti\Api\Http\Controllers\Profile\UpdateLocationController;
 use Bayti\Api\Http\Controllers\Profile\UpdateProfileController;
@@ -151,6 +152,12 @@ return function (App $app): void {
         // revokes all refresh tokens + issues a fresh pair on success.
         // See ChangePasswordController docblock for the full rationale.
         $group->patch('/password', ChangePasswordController::class);
+
+        // M3.2.Y.6-A — account deletion (authenticated, re-auth via
+        // current_password). Deactivates + soft-deletes the user and
+        // revokes all refresh tokens. Order history is retained.
+        // See DeleteAccountController docblock for the full rationale.
+        $group->delete('', DeleteAccountController::class);
 
         // M1.7.3 — body measurements (default + per-category sets)
         // Path-segment design: /default for the catch-all, /category/{id}
