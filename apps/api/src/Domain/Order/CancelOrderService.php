@@ -58,6 +58,7 @@ final class CancelOrderService
         private readonly PaymentGatewayInterface $gateway,
         private readonly AuditEmitter $audit,
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
+        private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -155,6 +156,7 @@ final class CancelOrderService
                 'refund_amount' => null,
                 'reason' => $reason,
             ]);
+            $this->pushNotifications->orderCancelled($order);
 
             return new CancelOrderResult(
                 order: $order,
@@ -301,6 +303,7 @@ final class CancelOrderService
             'refund_amount' => $refundAmount,
             'reason' => $reason,
         ]);
+        $this->pushNotifications->orderCancelled($order);
 
         return new CancelOrderResult(
             order: $order,

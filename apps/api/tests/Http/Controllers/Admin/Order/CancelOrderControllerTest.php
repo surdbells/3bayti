@@ -6,6 +6,8 @@ namespace Bayti\Api\Tests\Http\Controllers\Admin\Order;
 
 use Bayti\Api\Domain\Audit\AuditEmitter;
 use Bayti\Api\Domain\Audit\AuditLog;
+use Bayti\Api\Domain\Notification\DeviceToken;
+use Bayti\Api\Domain\Notification\DeviceTokenRepository;
 use Bayti\Api\Domain\Order\CancelOrderService;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
@@ -15,6 +17,8 @@ use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController;
 use Bayti\Api\Infrastructure\Auth\JwtService;
+use Bayti\Api\Notification\Push\InMemoryPushSender;
+use Bayti\Api\Notification\Push\PushSenderInterface;
 use Bayti\Api\Payment\OrderStatusResponse;
 use Bayti\Api\Payment\PaymentGatewayException;
 use Bayti\Api\Payment\PaymentGatewayInterface;
@@ -70,6 +74,86 @@ final class CancelOrderControllerTest extends HttpTestCase
         self::assertCount(0, $this->savedTransactions);
         // Audit emitted
         self::assertCount(1, $this->recordedAuditLogs);
+    }
+
+    /**
+     * M3.2.Z.6 — lifecycle push wiring. Cancelling an order must fan a
+     * push out to the customer's active device tokens beside the email.
+     * Drives the real controller → CancelOrderService → push seam, with
+     * an InMemoryPushSender capturing the send and a DeviceTokenRepository
+     * supplying one active token for the customer.
+     */
+    #[Test]
+    public function cancellationFansOutPushToCustomerDevice(): void
+    {
+        $admin = $this->makeAdminUser(99);
+        $customer = $this->makeUser(id: 42);
+        $order = $this->makeOrder($customer, id: 100, reference: 'V3-PUSH-CANCEL', subtotal: '299.00');
+        $this->setEntityProp($order, 'status', Order::STATUS_PENDING_PAYMENT);
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('refund');
+
+        // Capture pushes.
+        $pushSender = new InMemoryPushSender();
+        $this->bind(PushSenderInterface::class, $pushSender);
+
+        // EM with a DeviceToken repo returning one active token for the
+        // customer (in addition to the usual cancel-flow repos).
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->willReturn($admin);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByIdForAdmin')->willReturn($order);
+
+        $txnRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txnRepo->method('sumRefundsForOrder')->willReturn('0.00');
+        $txnRepo->method('findLatestInitiateForOrder')->willReturn(null);
+
+        $auditRepo = new class($this->recordedAuditLogs) extends \Doctrine\ORM\EntityRepository {
+            /** @param array<int,AuditLog> $sink */
+            public function __construct(private array &$sink)
+            {
+            }
+            public function save(AuditLog $log): void
+            {
+                $this->sink[] = $log;
+            }
+            public function getClassName(): string
+            {
+                return AuditLog::class;
+            }
+        };
+
+        $deviceTokenRepo = $this->createMock(DeviceTokenRepository::class);
+        $deviceTokenRepo->method('findActiveForUser')->willReturn([
+            new DeviceToken($customer, 'fcm-customer-device', DeviceToken::PLATFORM_IOS),
+        ]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $txnRepo, $auditRepo, $deviceTokenRepo): void {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+                [PaymentTransaction::class, $txnRepo],
+                [AuditLog::class, $auditRepo],
+                [DeviceToken::class, $deviceTokenRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(AuditEmitter::class, new AuditEmitter($em, new NullLogger()));
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $response = $this->makePost($admin, '/v3/admin/orders/100/cancel', [
+            'reason' => 'customer never completed checkout',
+        ]);
+
+        self::assertSame(200, $response->getStatusCode());
+
+        // A push fanned out to the customer's device with the cancel type.
+        self::assertSame(['fcm-customer-device'], $pushSender->tokensSent());
+        $msg = $pushSender->sent()[0]['message'];
+        self::assertSame('order.cancelled', $msg->data['type']);
+        self::assertSame('V3-PUSH-CANCEL', $msg->data['order_reference']);
     }
 
     #[Test]

@@ -70,6 +70,7 @@ final class NoonWebhookController
         private readonly PaymentGatewayInterface $gateway,
         private readonly NoonWebhookSignatureVerifier $signatureVerifier,
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
+        private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         // M3.2.X.5-A: required (no `= new NullLogger()` default) so PHP-DI's
         // autowire injects the bound LoggerInterface. The same pattern as
         // M3.2.X.8-D's PromoCodeResolverService: `useAttributes=false` means
@@ -252,8 +253,10 @@ final class NoonWebhookController
         // re-deliveries find $transition='' and skip notifying.
         if ($transition === 'paid') {
             $this->notifications->orderPaid($order);
+            $this->pushNotifications->orderPaid($order);
         } elseif ($transition === 'failed') {
             $this->notifications->orderPaymentFailed($order);
+            $this->pushNotifications->orderPaymentFailed($order);
         }
 
         return $this->ok([

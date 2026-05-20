@@ -63,6 +63,7 @@ final class TransitionVendorOrderItemController
         private readonly EntityManagerInterface $em,
         private readonly OrderSerializer $serializer,
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
+        private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly LoggerInterface $logger,
         private readonly AuditEmitter $audit,
     ) {
@@ -223,8 +224,10 @@ final class TransitionVendorOrderItemController
         // moves, not just when the whole order completes.
         if ($newStatus === OrderItem::ITEM_STATUS_SHIPPED) {
             $this->notifications->itemShipped($order, $item);
+            $this->pushNotifications->itemShipped($order);
         } elseif ($newStatus === OrderItem::ITEM_STATUS_DELIVERED) {
             $this->notifications->itemDelivered($order, $item);
+            $this->pushNotifications->itemDelivered($order);
         }
 
         // Return the updated order, filtered to vendor's items.

@@ -65,6 +65,7 @@ final class RefundOrderController
         private readonly AuditEmitter $audit,
         private readonly PaymentGatewayInterface $gateway,
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
+        private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -283,6 +284,7 @@ final class RefundOrderController
             'refund_amount' => $amount,
             'is_full_refund' => $isFullRefund,
         ]);
+        $this->pushNotifications->orderRefunded($order);
 
         return $this->ok([
             'order' => $this->serializer->detailShape($order),
