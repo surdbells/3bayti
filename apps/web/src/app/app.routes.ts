@@ -160,4 +160,11 @@ export const routes: Routes = [
       import('./features/checkout/checkout-payment-page').then(m => m.CheckoutPaymentPageComponent),
     title: 'Checkout — Payment · 3bayti',
   },
+  {
+    path: 'checkout/success/:id',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/checkout/checkout-success-page').then(m => m.CheckoutSuccessPageComponent),
+    title: 'Order placed · 3bayti',
+  },
 ];

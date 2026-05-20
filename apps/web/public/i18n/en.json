@@ -289,5 +289,17 @@
       "emptyCart": "Your bag is empty.",
       "networkError": "Network error. Please try again."
     }
+  },
+  "orders": {
+    "status": {
+      "pendingPayment": "Pending payment",
+      "paid": "Paid",
+      "preparing": "Preparing",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded",
+      "partiallyRefunded": "Partially refunded"
+    }
   }
 }

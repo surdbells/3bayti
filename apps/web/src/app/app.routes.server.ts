@@ -169,6 +169,16 @@ export const serverRoutes: ServerRoute[] = [
     },
   },
   {
+    /* Order success — user-specific data, never prerendered. Each id
+       maps to one user's order, so prerendering by id makes no sense:
+       the page must be auth-gated at request time. RenderMode.Server
+       defers rendering until the request comes in (SSR), at which
+       point the auth guard fires and the page either loads the
+       order or shows the error state. */
+    path: 'checkout/success/:id',
+    renderMode: RenderMode.Server,
+  },
+  {
     /* Default: prerender everything else at build time. */
     path: '**',
     renderMode: RenderMode.Prerender,

@@ -289,5 +289,17 @@
       "emptyCart": "حقيبتك فارغة.",
       "networkError": "حدث خطأ في الشبكة. يُرجى المحاولة مرة أخرى."
     }
+  },
+  "orders": {
+    "status": {
+      "pendingPayment": "بانتظار الدفع",
+      "paid": "مدفوع",
+      "preparing": "قيد التحضير",
+      "shipped": "تم الشحن",
+      "delivered": "تم التسليم",
+      "cancelled": "ملغى",
+      "refunded": "مسترد",
+      "partiallyRefunded": "مسترد جزئياً"
+    }
   }
 }
