@@ -366,9 +366,13 @@ export class MobileNetworkAdapter {
       authToken?: string;
       pathParams?: Record<string, string>;
       queryParams?: Record<string, string | number | boolean>;
+      /** Optional request body. Most DELETEs don't carry one; the
+       *  device-token deactivation (M3.2.Z.5) sends { token } so the
+       *  server can identify which device to deactivate. */
+      body?: unknown;
     },
   ): Observable<unknown> {
-    return this.callV3Direct('DELETE', routeKey, null, opts);
+    return this.callV3Direct('DELETE', routeKey, opts?.body ?? null, opts);
   }
 
   /* ------ Internals ----------------------------------------------- */

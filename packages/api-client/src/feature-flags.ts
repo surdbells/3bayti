@@ -826,6 +826,22 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'v3-envelope',
   },
 
+  // M3.2.Z.5-A — push notification device tokens. The mobile app
+  // registers its FCM token here on sign-in and deactivates it on
+  // logout (see PushRegistrationService). Net-new v3-only routes.
+  'POST /me/device-tokens': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/device-tokens',
+    shape: 'v3-envelope',
+  },
+  'DELETE /me/device-tokens': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/device-tokens',
+    shape: 'v3-envelope',
+  },
+
   // Chat, tickets, vendor self-service, admin orders/users/payments:
   // all live on legacy. Entries added when M3 / M4 lands.
 };
