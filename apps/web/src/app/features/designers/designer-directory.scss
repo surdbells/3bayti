@@ -1,0 +1,186 @@
+/* Designer directory page styles (Y.4-B). */
+
+.designer-directory {
+  min-height: calc(100vh - 200px);
+  padding: 32px 0 64px;
+  background: var(--color-bg-default, #faf7f1);
+}
+
+.designer-directory__container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.designer-directory__header {
+  margin-bottom: 32px;
+  text-align: center;
+}
+
+.designer-directory__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.01em;
+}
+
+.designer-directory__subtitle {
+  font-size: 15px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0;
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+.designer-directory__section-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 18px 0;
+}
+
+/* --- Spotlight (featured) ------------------------------------------ */
+
+.designer-directory__spotlight {
+  margin-bottom: 48px;
+}
+
+.designer-directory__spotlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* --- All designers grid -------------------------------------------- */
+
+.designer-directory__all {
+  margin-bottom: 32px;
+}
+
+.designer-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.designer-grid__item {
+  margin: 0;
+}
+
+.designer-tile {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: #fdfaf3;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-subtle, #e2dccc);
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-brand-500, #b18f1f);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(46, 36, 28, 0.08);
+    outline: none;
+  }
+}
+
+.designer-tile__media {
+  aspect-ratio: 3 / 2;
+  background: var(--color-bg-muted, #f4f0ea);
+  overflow: hidden;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.designer-tile__media-blank {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #efe8d8 25%, #e6dfcd 75%);
+}
+
+.designer-tile__body {
+  padding: 14px 16px;
+}
+
+.designer-tile__name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.designer-tile__verified {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+/* --- Load more / empty / loading ----------------------------------- */
+
+.designer-directory__load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.designer-directory__load-more-btn {
+  appearance: none;
+  background: #fff;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #2e241c);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    border-color: var(--color-brand-500, #b18f1f);
+    color: var(--color-brand-700, #5a3a2c);
+    background: rgba(177, 143, 31, 0.04);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.designer-directory__loading,
+.designer-directory__empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--color-text-muted, #6b6056);
+  font-size: 14px;
+}

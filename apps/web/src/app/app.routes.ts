@@ -63,6 +63,15 @@ export const routes: Routes = [
     title: 'Product · 3bayti',
   },
   {
+    /* Designer directory — `/designer`. Public storefront page:
+       Designer Spotlight (featured) + paginated A-Z grid of all
+       active designers. Backed by /v3/vendors + /v3/featured-vendors. */
+    path: 'designer',
+    loadComponent: () =>
+      import('./features/designers/designer-directory-page').then(m => m.DesignerDirectoryPageComponent),
+    title: 'Designers · 3bayti',
+  },
+  {
     /* Dev-only component preview. noindex'd via SeoService inside the
        component. Lazy-loaded so it doesn't bloat the production bundle
        for normal users. */

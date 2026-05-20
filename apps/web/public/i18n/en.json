@@ -369,5 +369,25 @@
         "item_in_flight": "One or more items already have an in-flight return."
       }
     }
+  },
+  "designers": {
+    "verified": "Verified designer",
+    "directory": {
+      "title": "Our Designers",
+      "subtitle": "Discover the ateliers and labels behind every piece in our collection.",
+      "spotlightHeading": "Designer Spotlight",
+      "allHeading": "All designers",
+      "loadMore": "Load more",
+      "empty": "No designers to show just yet. Check back soon."
+    },
+    "detail": {
+      "productsHeading": "Collection",
+      "loadMore": "Load more",
+      "emptyProducts": "This designer hasn't listed any pieces yet.",
+      "notFoundTitle": "Designer not found",
+      "notFoundBody": "We couldn't find that designer. They may have moved or are no longer with us.",
+      "backToDirectory": "Browse all designers",
+      "loadError": "We couldn't load this designer. Please try again."
+    }
   }
 }
