@@ -133,7 +133,7 @@ describe('ProfileService', () => {
 
     it('propagates a validation error and leaves isSaving false', async () => {
       const { service, controller } = setup();
-      const promise = service.updateProfile({ phone: 'bad' });
+      const promise = service.updateProfile({ gender: 'other' });
       controller.expectOne(`${V3}/v3/me/profile`)
         .flush({ error_code: 'VALIDATION_FAILED' }, { status: 422, statusText: 'Unprocessable' });
       await expect(promise).rejects.toBeDefined();

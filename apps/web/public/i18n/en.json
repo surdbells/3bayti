@@ -4,7 +4,11 @@
     "skipToContent": "Skip to main content",
     "loading": "Loading…",
     "close": "Close",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "saving": "Saving…",
+    "errors": {
+      "network": "Network error. Please check your connection and try again."
+    }
   },
   "nav": {
     "home": "Home",
@@ -414,6 +418,39 @@
       "password": {
         "title": "Password",
         "desc": "Change your account password."
+      }
+    },
+    "profile": {
+      "title": "Profile",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "gender": "Gender",
+      "genderUnset": "Prefer not to say",
+      "genderOptions": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other",
+        "prefer_not_to_say": "Prefer not to say"
+      },
+      "dob": "Date of birth",
+      "locale": "Preferred language",
+      "localeOptions": {
+        "en": "English",
+        "ar": "Arabic",
+        "en-AE": "English (UAE)",
+        "ar-AE": "Arabic (UAE)"
+      },
+      "email": "Email",
+      "phone": "Phone",
+      "verified": "Verified",
+      "save": "Save changes",
+      "saved": "Your profile has been updated.",
+      "noChanges": "No changes to save.",
+      "errors": {
+        "invalid": "Please check this field.",
+        "tooLong": "This is too long.",
+        "loadFailed": "We couldn't load your profile. Please try again.",
+        "saveFailed": "We couldn't save your changes. Please try again."
       }
     }
   }

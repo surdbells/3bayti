@@ -5,22 +5,32 @@ import { AuthService } from '../../core/auth/auth.service';
 import type { AuthUser } from '../../core/auth/auth.types';
 
 /**
- * Fields the customer can edit on their profile. Mirrors the writable
- * subset of UserSerializer::publicProfile — email/phone-verified flags,
- * roles, store flags, and last_login are server-managed and read-only.
+ * Fields the customer can edit on their profile via PATCH /me/profile.
+ * Mirrors UpdateProfileInput in apps/api exactly:
+ *   - first_name, last_name (max 100)
+ *   - gender (male | female | other | prefer_not_to_say)
+ *   - dob (YYYY-MM-DD)
+ *   - locale (en | ar | en-AE | ar-AE)
  *
- * The API applies RFC 7396 JSON Merge Patch semantics: only the keys
- * present in the body are updated; omitted keys are untouched; an
- * explicit null clears a field. So this is a Partial — callers send
- * only what changed.
+ * NOT editable here (deliberately omitted to match the API):
+ *   - email / phone — changed via dedicated verified-contact flows,
+ *     not this endpoint. Shown read-only on the profile page.
+ *   - timezone — the API accepts it but the web app derives it; no
+ *     UI control for it.
+ *
+ * RFC 7396 JSON Merge Patch: only the keys present in the body are
+ * updated; omitted keys are untouched; an explicit null clears a
+ * field. So this is a Partial — callers send only what changed.
  */
+export type ProfileGender = 'male' | 'female' | 'other' | 'prefer_not_to_say';
+
 export interface ProfileUpdate {
   first_name?: string | null;
   last_name?: string | null;
-  phone?: string | null;
-  gender?: string | null;
+  gender?: ProfileGender | null;
   /** ISO 8601 date YYYY-MM-DD, or null to clear. */
   dob?: string | null;
+  locale?: string | null;
 }
 
 /**
