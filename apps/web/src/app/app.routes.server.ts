@@ -179,6 +179,12 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server,
   },
   {
+    /* Order detail — same logic as checkout/success/:id. User-specific
+       per-order data; auth-gated at request time; no prerender. */
+    path: 'account/orders/:id',
+    renderMode: RenderMode.Server,
+  },
+  {
     /* Default: prerender everything else at build time. */
     path: '**',
     renderMode: RenderMode.Prerender,
