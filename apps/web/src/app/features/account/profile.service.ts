@@ -1,8 +1,12 @@
 import { Injectable, signal, Signal, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { AuthService } from '../../core/auth/auth.service';
 import type { AuthUser } from '../../core/auth/auth.types';
+
+/** Direct v3 base for endpoints not in the RoutedHttpClient registry. */
+const V3_BASE = 'https://api-v3.3bayti.ae';
 
 /**
  * Fields the customer can edit on their profile via PATCH /me/profile.
@@ -63,6 +67,7 @@ export interface ChangePasswordResponse {
 @Injectable({ providedIn: 'root' })
 export class ProfileService {
   private readonly http = inject(RoutedHttpClient);
+  private readonly directHttp = inject(HttpClient);
   private readonly auth = inject(AuthService);
 
   private readonly _isLoading = signal<boolean>(false);
@@ -125,6 +130,32 @@ export class ProfileService {
         access_token_expires_at: env.data.access_token_expires_at,
         user: env.data.user,
       });
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  /**
+   * Delete the authenticated user's account.
+   *
+   * DELETE /v3/me with a current_password body (re-auth, Q6.2). The
+   * endpoint deactivates + soft-deletes the user and revokes all
+   * sessions server-side, returning 204. A wrong password is 401
+   * AUTH_INVALID_CREDENTIALS.
+   *
+   * Uses the direct Bearer HttpClient (auth attached by interceptor)
+   * because the endpoint isn't in the RoutedHttpClient registry and a
+   * DELETE with a request body is needed. The caller is responsible
+   * for the local logout + redirect once this resolves.
+   */
+  async deleteAccount(currentPassword: string): Promise<void> {
+    this._isSaving.set(true);
+    try {
+      await firstValueFrom(
+        this.directHttp.delete<void>(`${V3_BASE}/v3/me`, {
+          body: { current_password: currentPassword },
+        }),
+      );
     } finally {
       this._isSaving.set(false);
     }

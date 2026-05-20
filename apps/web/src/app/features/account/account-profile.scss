@@ -143,3 +143,21 @@
   color: var(--color-text-muted, #6b6056);
   font-size: 14px;
 }
+
+.account-profile__danger {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+.account-profile__danger-link {
+  font-size: 13px;
+  color: #b42218;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+    outline: none;
+  }
+}

@@ -182,6 +182,12 @@ const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
               </button>
             </div>
           </form>
+
+          <div class="account-profile__danger" data-testid="prof-danger-zone">
+            <a routerLink="/account/delete" class="account-profile__danger-link" data-testid="prof-delete-link">
+              {{ 'account.delete.title' | translate }}
+            </a>
+          </div>
         </ng-container>
 
         <ng-template #loadingState>

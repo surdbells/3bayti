@@ -140,4 +140,26 @@ describe('ProfileService', () => {
       expect(service.isSaving()).toBe(false);
     });
   });
+
+  describe('deleteAccount', () => {
+    it('DELETEs /v3/me with the current_password body', async () => {
+      const { service, controller } = setup();
+      const promise = service.deleteAccount('MyPass123');
+      const req = controller.expectOne(`${V3}/v3/me`);
+      expect(req.request.method).toBe('DELETE');
+      expect(req.request.body).toEqual({ current_password: 'MyPass123' });
+      req.flush(null, { status: 204, statusText: 'No Content' });
+      await promise;
+      expect(service.isSaving()).toBe(false);
+    });
+
+    it('propagates a 401 and leaves isSaving false', async () => {
+      const { service, controller } = setup();
+      const promise = service.deleteAccount('wrong');
+      controller.expectOne(`${V3}/v3/me`)
+        .flush({ error: { code: 'AUTH_INVALID_CREDENTIALS' } }, { status: 401, statusText: 'Unauthorized' });
+      await expect(promise).rejects.toBeDefined();
+      expect(service.isSaving()).toBe(false);
+    });
+  });
 });

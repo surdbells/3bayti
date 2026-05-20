@@ -177,6 +177,13 @@ export const routes: Routes = [
     title: 'My measurements · 3bayti',
   },
   {
+    path: 'account/delete',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/account/account-delete-page').then(m => m.AccountDeletePageComponent),
+    title: 'Delete account · 3bayti',
+  },
+  {
     path: 'account/addresses',
     canActivate: [authActivateGuard],
     loadComponent: () =>

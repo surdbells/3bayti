@@ -507,6 +507,25 @@
         "saveFailed": "We couldn’t save your measurements. Please try again.",
         "clearFailed": "We couldn’t clear your measurements. Please try again."
       }
+    },
+    "delete": {
+      "title": "Delete account",
+      "warningLead": "This permanently closes your account.",
+      "warningBody": "You’ll be signed out on all devices and won’t be able to sign back in. Your past orders are retained for our records.",
+      "confirmPassword": "Current password",
+      "confirmPasswordHint": "Confirm your password to continue.",
+      "submit": "Delete my account",
+      "confirmTitle": "Delete your account?",
+      "confirmMessage": "This can’t be undone. You’ll be signed out and won’t be able to sign back in.",
+      "confirmYes": "Delete account",
+      "confirmNo": "Keep account",
+      "done": "Your account has been deleted.",
+      "errors": {
+        "required": "Please enter your password.",
+        "wrongCurrent": "Your password is incorrect.",
+        "invalid": "Please check this field.",
+        "generic": "We couldn’t delete your account. Please try again."
+      }
     }
   }
 }
