@@ -1,16 +1,17 @@
 import { Component } from '@angular/core';
 import {IonApp, IonRouterOutlet, Platform} from '@ionic/angular/standalone';
+import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { SplashScreen } from '@capacitor/splash-screen';
-import {ActionPerformed, PushNotifications, PushNotificationSchema, Token} from "@capacitor/push-notifications";
 import {ToastController} from "@ionic/angular";
 import {fadeTransition} from "../fade.transition";
 import {AxNotificationHostComponent} from "./shared/ax-mobile/notification";
 import {AxUpdatePromptComponent} from "./shared/ax-mobile/update-prompt";
 import {AppUpdateService} from "./service/app-update.service";
 import {I18nService} from "./i18n.service";
+import {PushManager, resolvePushDeepLink} from "./core/services/push-manager.service";
 
 @Component({
   selector: 'app-root',
@@ -85,6 +86,8 @@ export class AppComponent {
     private toastCtrl: ToastController,
     private appUpdate: AppUpdateService,
     private i18n: I18nService,
+    private pushManager: PushManager,
+    private router: Router,
   ) {
       this.initializeApp();
 
@@ -129,9 +132,22 @@ export class AppComponent {
             }
           });
       });
-      /* Native-only: push registration has no web implementation. */
+      /* Native-only: attach push listeners once. Permission is NOT
+         requested here — it's requested after sign-in (Q-Z5.1=A), see
+         PushManager.onSignedIn called from the login flow. */
       if (Capacitor.isNativePlatform()) {
-        this.initPush();
+        /* Z.5-C — route a tapped notification to its target. All order
+           pushes carry order_id and deep-link to /orders/:id. The
+           Router lives here (the app shell), so the routing concern is
+           injected into PushManager via a tap handler rather than the
+           service depending on the Router itself. */
+        this.pushManager.setTapHandler((data) => {
+          const path = resolvePushDeepLink(data);
+          if (path !== null) {
+            void this.router.navigateByUrl(path);
+          }
+        });
+        void this.pushManager.initListeners();
       }
   }
 
@@ -199,36 +215,5 @@ export class AppComponent {
       await this.appUpdate.markDismissed(this.currentPromptVersion);
     }
     this.showForceUpdate = false;
-  }
-
-  async initPush() {
-    try {
-      const perm = await PushNotifications.requestPermissions();
-      if (perm.receive === 'granted') {
-        await PushNotifications.register();
-      } else {
-        console.warn('Push permission denied:', perm);
-        return;
-      }
-      await PushNotifications.addListener('registration', (token: Token) => {
-        console.log('FCM token:', token.value);
-        // send token to your server here
-      });
-      await PushNotifications.addListener('registrationError', (err) => {
-        console.error('Push registration error:', err);
-      });
-      await PushNotifications.addListener('pushNotificationReceived', (notification: PushNotificationSchema) => {
-        console.log('Received in foreground:', notification);
-        this.toastCtrl.create({
-          message: `Received: ${notification.title || ''}`,
-          duration: 3000
-        }).then(t => t.present());
-      });
-      await PushNotifications.addListener('pushNotificationActionPerformed', (action: ActionPerformed) => {
-        console.log('Action performed:', action);
-      });
-    } catch (e) {
-      console.error('initPush error', e);
-    }
   }
 }

@@ -18,6 +18,7 @@ import {BlockerService} from "../../blocker.service";
 import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
 import { CartMergeService } from '../../core/services/cart-merge.service';
+import { PushManager } from '../../core/services/push-manager.service';
 
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
@@ -48,6 +49,7 @@ export class LoginPage implements OnInit, OnDestroy {
       private toast: AxNotificationService,
       private i18n: I18nService,
       private cartMerge: CartMergeService,
+      private pushManager: PushManager,
     ) {
       this.net.setReachabilityCheck(true);
       this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -134,6 +136,12 @@ export class LoginPage implements OnInit, OnDestroy {
                 key: 'user',
                 value: JSON.stringify(userToStore)
               });
+
+              // M3.2.Z.5-B — now that the user is signed in (Q-Z5.1=A),
+              // request push permission + register this device's token.
+              // Fire-and-forget: PushManager swallows all errors and is
+              // a no-op on web, so it never blocks or breaks login.
+              void this.pushManager.onSignedIn();
 
               // M3.1.6i.2-E: merge the device-local guest cart into
               // the server-side cart, then navigate. Safe to call when
