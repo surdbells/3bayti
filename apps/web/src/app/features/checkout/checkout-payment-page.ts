@@ -44,19 +44,24 @@ import { CheckoutService } from '../../core/checkout';
  * CheckoutService cleanup
  * -----------------------
  * We DO NOT clear() CheckoutService here. The order isn't actually
- * placed until Noon's callback hits our /checkout/return route
- * (which Y.3 builds) and confirms the payment. If the user abandons
- * Noon and returns to our site, their cart + checkout state should
- * still be intact.
+ * placed until Noon confirms payment. The confirmation arrives via:
+ *   Noon → 302 from {API}/v3/checkout/return/{ref} (Y.3-A) →
+ *   /checkout/return?ref={ref} (Y.3-C), which polls the status
+ *   endpoint and clears CheckoutService only on the paid branch.
+ * If the user abandons Noon and returns to our site, their cart +
+ * checkout state should still be intact.
  *
- * Y.2-F scope vs Y.3 scope
- * ------------------------
- * Y.2-F is the *handoff*. Y.3 implements:
- *   - /checkout/return route that polls /v3/checkout/status/:ref
- *   - Order-confirmation flow on successful payment
- *   - Failure handling (back to cart with helpful messaging)
+ * The completed return chain (Y.3)
+ * --------------------------------
+ * This page is the *handoff*. The return flow (built in Y.3) is:
+ *   - {API}/v3/checkout/return/{ref} 302s the browser to the web app
+ *   - /checkout/return polls /v3/checkout/status/:ref until terminal
+ *   - paid → /checkout/success/:id; declined/failed → failure state
+ *     with Try again / Back to bag; timeout → "still processing"
  *
- * For Y.2-F we just need to get them off our site reliably.
+ * This page just needs to get the shopper off our site to Noon
+ * reliably; the return URL itself is set server-side at initiate
+ * time, so this page does not construct it.
  *
  * Bounce guards
  * -------------
