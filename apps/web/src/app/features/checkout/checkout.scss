@@ -289,3 +289,213 @@
     dd { font-weight: 700; font-size: 20px; }
   }
 }
+
+/* --- Review-page specifics (Y.2-E) ----------------------------------- */
+
+.review-section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+
+  .checkout-page__section-title {
+    margin-bottom: 0;
+  }
+}
+
+.review-section-header__edit {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  font-size: 13px;
+  color: var(--color-brand-700, #5a3a2c);
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-brand-500, #b18f1f);
+    outline: none;
+  }
+}
+
+.review-address__name {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.review-address__line {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  line-height: 1.5;
+}
+
+.review-address__phone {
+  margin: 4px 0 0 0;
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  font-variant-numeric: tabular-nums;
+}
+
+.review-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.review-item {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border-subtle, #e2dccc);
+
+  &:first-child { padding-top: 0; }
+  &:last-child { border-bottom: 0; padding-bottom: 0; }
+}
+
+.review-item__thumb {
+  width: 64px;
+  height: 76px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-bg-muted, #f4f0ea);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.review-item__thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #efe8d8 25%, #e6dfcd 75%);
+}
+
+.review-item__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.review-item__name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.review-item__variant,
+.review-item__qty {
+  margin: 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b6056);
+}
+
+.review-item__price {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary, #2e241c);
+  white-space: nowrap;
+}
+
+.review-promo {
+  display: flex;
+  gap: 8px;
+}
+
+.review-promo__input {
+  flex: 1;
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--color-text-primary, #2e241c);
+  letter-spacing: 0.04em;
+
+  &:focus {
+    outline: 2px solid var(--color-brand-500, #b18f1f);
+    outline-offset: 0;
+    border-color: transparent;
+  }
+}
+
+.review-promo__btn {
+  appearance: none;
+  background: var(--color-text-primary, #2e241c);
+  color: #fff;
+  border: 0;
+  padding: 0 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: var(--color-brand-700, #5a3a2c);
+    outline: none;
+  }
+
+  &:disabled {
+    background: var(--color-text-muted, #a39588);
+    cursor: not-allowed;
+  }
+}
+
+.review-promo-applied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--color-bg-muted, #f4f0ea);
+}
+
+.review-promo-applied__status {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2e7d32;
+
+  &--invalid {
+    color: var(--color-danger-600, #b42218);
+  }
+}
+
+.review-promo-applied__remove {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-text-primary, #2e241c);
+    outline: none;
+  }
+}

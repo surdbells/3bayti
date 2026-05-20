@@ -146,4 +146,11 @@ export const routes: Routes = [
       import('./features/checkout/checkout-address-page').then(m => m.CheckoutAddressPageComponent),
     title: 'Checkout — Shipping · 3bayti',
   },
+  {
+    path: 'checkout/review',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/checkout/checkout-review-page').then(m => m.CheckoutReviewPageComponent),
+    title: 'Checkout — Review · 3bayti',
+  },
 ];
