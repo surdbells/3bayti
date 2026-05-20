@@ -398,11 +398,20 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/profile',
     shape: 'v3-envelope',
   },
-  'PUT /me/profile': {
+  'PATCH /me/profile': {
     target: 'new',
     oldPath: '/users/updateProfile',
     newPath: '/v3/me/profile',
     shape: 'v3-envelope',
+    // M3.2.Y.5-A — method corrected PUT → PATCH to match the v3
+    // controller's actual registration in apps/api/config/routes.php
+    // ($group->patch('/profile', ...)). A live probe confirmed PATCH
+    // returns 401 (route + method accepted, auth missing) while PUT
+    // returns 500 (method-not-allowed). The v3 UpdateProfileController
+    // implements RFC 7396 JSON Merge Patch semantics, so PATCH is also
+    // the correct verb. No web caller used the old PUT entry yet
+    // (Y.5-B is the first profile-update consumer), so this is a safe
+    // pre-consumer correction.
   },
   // M3.1.1f — change password (authenticated, current_password required).
   //

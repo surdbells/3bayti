@@ -122,6 +122,15 @@ export class RoutedHttpClient {
   }
 
   /**
+   * PATCH an endpoint by routing key. Used for partial updates that
+   * follow RFC 7396 JSON Merge Patch semantics (e.g. PATCH /me/profile,
+   * PATCH /me/password).
+   */
+  patch<T>(routeKey: string, options: RequestOptions = {}): Observable<NormalisedResponse<T>> {
+    return this.request<T>('PATCH', routeKey, options);
+  }
+
+  /**
    * DELETE an endpoint by routing key.
    */
   delete<T>(routeKey: string, options: RequestOptions = {}): Observable<NormalisedResponse<T>> {
@@ -144,7 +153,7 @@ export class RoutedHttpClient {
    * and normalises the response shape.
    */
   private request<T>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     routeKey: string,
     options: RequestOptions,
   ): Observable<NormalisedResponse<T>> {

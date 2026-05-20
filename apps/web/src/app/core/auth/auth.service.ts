@@ -101,6 +101,17 @@ export class AuthService {
   /** Current authenticated user (or null when not signed in). */
   readonly currentUser: Signal<AuthUser | null> = this._currentUser.asReadonly();
 
+  /**
+   * Replace the cached current-user with a fresh profile (e.g. after a
+   * PATCH /me/profile in ProfileService). No-op when signed out, so a
+   * stale profile response can't resurrect a logged-out session.
+   */
+  applyProfile(user: AuthUser): void {
+    if (this._currentUser() !== null) {
+      this._currentUser.set(user);
+    }
+  }
+
   /** True when a user is signed in AND the access token is still valid. */
   readonly isAuthenticated = computed(
     () => this._currentUser() !== null && this.tokenStore.hasValidToken(),

@@ -146,8 +146,15 @@ export const routes: Routes = [
   },
   /* --- Account section (M3.2.Y.2 begins; Y.5 expands) -------------------
      All routes under /account require auth. Y.2-C ships /account/addresses;
-     Y.2-H + I add /account/orders + /account/orders/:id; Y.4-A may add
-     a top-level /account dashboard; Y.5 adds profile/wishlist/etc. */
+     Y.2-H + I add /account/orders + /account/orders/:id; Y.5-A adds the
+     /account hub; Y.5-B/C/D add profile/password/measurements. */
+  {
+    path: 'account',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/account/account-hub-page').then(m => m.AccountHubPageComponent),
+    title: 'My account · 3bayti',
+  },
   {
     path: 'account/addresses',
     canActivate: [authActivateGuard],

@@ -389,5 +389,32 @@
       "backToDirectory": "Browse all designers",
       "loadError": "We couldn't load this designer. Please try again."
     }
+  },
+  "account": {
+    "hub": {
+      "greeting": "My account",
+      "greetingNamed": "Hello, {{name}}",
+      "subtitle": "Manage your profile, orders, addresses, and more.",
+      "profile": {
+        "title": "Profile",
+        "desc": "Your name, contact details, and preferences."
+      },
+      "orders": {
+        "title": "Orders",
+        "desc": "Track, review, and return your orders."
+      },
+      "addresses": {
+        "title": "Addresses",
+        "desc": "Manage your delivery addresses."
+      },
+      "measurements": {
+        "title": "Measurements",
+        "desc": "Save your sizes for a better fit."
+      },
+      "password": {
+        "title": "Password",
+        "desc": "Change your account password."
+      }
+    }
   }
 }

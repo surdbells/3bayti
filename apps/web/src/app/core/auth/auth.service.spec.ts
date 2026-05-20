@@ -747,4 +747,23 @@ describe('AuthService', () => {
       controller.expectNone('https://api-v3.3bayti.ae/v3/me/profile');
     });
   });
+
+  describe('applyProfile()', () => {
+    it('replaces the current user when signed in', async () => {
+      const { service, controller } = setup();
+      const loginPromise = service.login({ email: 'jane@example.com', password: 'secret' });
+      controller.expectOne('/auth-proxy/login').flush(makeLoginResponse());
+      await loginPromise;
+
+      service.applyProfile(makeUser({ first_name: 'Updated', email: 'jane@example.com' }));
+      expect(service.currentUser()?.first_name).toBe('Updated');
+    });
+
+    it('is a no-op when signed out (cannot resurrect a session)', () => {
+      const { service } = setup();
+      expect(service.currentUser()).toBeNull();
+      service.applyProfile(makeUser({ first_name: 'Ghost' }));
+      expect(service.currentUser()).toBeNull();
+    });
+  });
 });

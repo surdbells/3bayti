@@ -1,0 +1,71 @@
+/* Account hub / dashboard styles (Y.5-A). */
+
+.account-hub {
+  min-height: calc(100vh - 200px);
+  padding: 32px 0 64px;
+  background: var(--color-bg-default, #faf7f1);
+}
+
+.account-hub__container {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.account-hub__header {
+  margin-bottom: 28px;
+}
+
+.account-hub__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.account-hub__subtitle {
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0;
+}
+
+.account-hub__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.account-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 20px 22px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid var(--color-border-subtle, #e2dccc);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-brand-500, #b18f1f);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(46, 36, 28, 0.07);
+    outline: none;
+  }
+}
+
+.account-tile__title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.account-tile__desc {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  line-height: 1.4;
+}
