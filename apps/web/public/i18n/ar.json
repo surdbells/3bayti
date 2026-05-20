@@ -238,5 +238,56 @@
       "network": "حدث خطأ في الشبكة. يُرجى المحاولة مرة أخرى.",
       "unexpected": "حدث خطأ ما. يُرجى المحاولة مرة أخرى."
     }
+  },
+  "checkout": {
+    "steps": {
+      "shipping": "الشحن",
+      "review": "المراجعة",
+      "payment": "الدفع"
+    },
+    "address": {
+      "title": "إتمام الشراء",
+      "pickHeading": "إلى أين نوصل طلبك؟",
+      "addHeading": "إضافة عنوان توصيل",
+      "backToCart": "العودة إلى الحقيبة",
+      "continue": "المتابعة إلى المراجعة"
+    },
+    "review": {
+      "title": "مراجعة طلبك",
+      "itemsHeading": "العناصر",
+      "shippingHeading": "التوصيل إلى",
+      "promoHeading": "كود الخصم",
+      "promoApply": "تطبيق",
+      "promoPlaceholder": "أدخلي الكود",
+      "promoApplied": "تم تطبيق {{code}}",
+      "promoInvalid": "{{code}} غير صالح",
+      "promoRemove": "إزالة",
+      "totalsHeading": "إجمالي الطلب",
+      "subtotal": "المجموع الفرعي",
+      "shipping": "الشحن",
+      "tax": "الضريبة",
+      "discount": "الخصم",
+      "total": "الإجمالي",
+      "backToAddress": "العودة إلى الشحن",
+      "placeOrder": "تأكيد الطلب"
+    },
+    "payment": {
+      "title": "جارٍ التحويل إلى الدفع الآمن",
+      "body": "نقوم بتحويلك إلى مزود الدفع. يُرجى عدم إغلاق هذه النافذة.",
+      "openManual": "فتح صفحة الدفع",
+      "backToReview": "العودة إلى المراجعة"
+    },
+    "success": {
+      "title": "تم تأكيد طلبك!",
+      "body": "تم استلام طلبك. سنرسل لك بريداً إلكترونياً عند الشحن.",
+      "viewOrder": "عرض الطلب",
+      "continueShopping": "متابعة التسوق"
+    },
+    "errors": {
+      "initiateFailed": "تعذر بدء عملية الدفع. يُرجى المحاولة مرة أخرى.",
+      "noShippingAddress": "يُرجى اختيار عنوان الشحن.",
+      "emptyCart": "حقيبتك فارغة.",
+      "networkError": "حدث خطأ في الشبكة. يُرجى المحاولة مرة أخرى."
+    }
   }
 }

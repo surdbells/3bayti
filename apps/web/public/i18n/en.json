@@ -238,5 +238,56 @@
       "network": "Network error. Please try again.",
       "unexpected": "Something went wrong. Please try again."
     }
+  },
+  "checkout": {
+    "steps": {
+      "shipping": "Shipping",
+      "review": "Review",
+      "payment": "Payment"
+    },
+    "address": {
+      "title": "Checkout",
+      "pickHeading": "Where should we deliver your order?",
+      "addHeading": "Add a delivery address",
+      "backToCart": "Back to bag",
+      "continue": "Continue to review"
+    },
+    "review": {
+      "title": "Review your order",
+      "itemsHeading": "Items",
+      "shippingHeading": "Delivery to",
+      "promoHeading": "Promo code",
+      "promoApply": "Apply",
+      "promoPlaceholder": "Enter code",
+      "promoApplied": "{{code}} applied",
+      "promoInvalid": "{{code}} isn't valid",
+      "promoRemove": "Remove",
+      "totalsHeading": "Order total",
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "tax": "Tax",
+      "discount": "Discount",
+      "total": "Total",
+      "backToAddress": "Back to shipping",
+      "placeOrder": "Place order"
+    },
+    "payment": {
+      "title": "Redirecting to secure checkout",
+      "body": "We're handing off to our payment provider. Please don't close this window.",
+      "openManual": "Open payment page",
+      "backToReview": "Back to review"
+    },
+    "success": {
+      "title": "Order placed!",
+      "body": "Your order has been received. We'll email you when it ships.",
+      "viewOrder": "View order",
+      "continueShopping": "Continue shopping"
+    },
+    "errors": {
+      "initiateFailed": "We couldn't start checkout. Please try again.",
+      "noShippingAddress": "Please select a shipping address.",
+      "emptyCart": "Your bag is empty.",
+      "networkError": "Network error. Please try again."
+    }
   }
 }

@@ -1,0 +1,291 @@
+/* =============================================================================
+   Checkout shared styles — used by /checkout/address, /review, /payment
+   ============================================================================= */
+
+.checkout-page {
+  min-height: calc(100vh - 80px);
+  padding: 36px 16px 80px;
+  background: #faf6ee;
+}
+
+.checkout-page__container {
+  max-width: 720px;
+  margin-inline: auto;
+}
+
+.checkout-page__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 22px 0;
+  letter-spacing: -0.01em;
+}
+
+.checkout-page__section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow:
+    0 1px 2px rgba(46, 36, 28, 0.03),
+    0 6px 18px rgba(46, 36, 28, 0.05);
+  margin-bottom: 18px;
+}
+
+.checkout-page__section-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 18px 0;
+  color: var(--color-text-primary, #2e241c);
+}
+
+/* --- Address picker cards ------------------------------------------- */
+
+.checkout-page__addresses {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.address-pick {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  border-radius: 10px;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-brand-500, #b18f1f);
+    outline: none;
+  }
+
+  &--selected {
+    border-color: var(--color-brand-500, #b18f1f);
+    background: rgba(177, 143, 31, 0.04);
+    box-shadow: 0 0 0 2px rgba(177, 143, 31, 0.08);
+
+    .address-pick__radio {
+      border-color: var(--color-brand-500, #b18f1f);
+
+      &::after {
+        content: '';
+        display: block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--color-brand-500, #b18f1f);
+      }
+    }
+  }
+}
+
+.address-pick__radio {
+  margin-top: 4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border-default, #d8cfc1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease;
+}
+
+.address-pick__body {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.address-pick__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.address-pick__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.address-pick__badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  background: var(--color-brand-500, #b18f1f);
+  color: #fff;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.address-pick__name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.address-pick__line {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  line-height: 1.5;
+}
+
+.address-pick__phone {
+  margin: 2px 0 0 0;
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Add-new link --------------------------------------------------- */
+
+.checkout-page__add-link {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 8px 4px;
+  font-size: 13px;
+  color: var(--color-brand-700, #5a3a2c);
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-brand-500, #b18f1f);
+    outline: none;
+  }
+}
+
+/* --- Loading state -------------------------------------------------- */
+
+.checkout-page__loading {
+  background: #fff;
+  border-radius: 12px;
+  padding: 32px 24px;
+  text-align: center;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0 0 18px 0;
+}
+
+/* --- Bottom action bar ---------------------------------------------- */
+
+.checkout-page__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-top: 22px;
+
+  @media (max-width: 560px) {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}
+
+.checkout-page__back {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  cursor: pointer;
+  font-family: inherit;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-brand-700, #5a3a2c);
+    outline: none;
+    text-decoration: underline;
+  }
+
+  @media (max-width: 560px) {
+    text-align: center;
+    padding: 12px;
+  }
+}
+
+.checkout-page__continue {
+  appearance: none;
+  background: var(--color-brand-500, #b18f1f);
+  color: #fff;
+  border: 0;
+  height: 50px;
+  padding: 0 32px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+  transition: background-color 0.15s ease;
+  min-width: 220px;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: var(--color-brand-600, #957615);
+    outline: none;
+  }
+
+  &:disabled {
+    background: var(--color-text-muted, #a39588);
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 560px) {
+    width: 100%;
+  }
+}
+
+/* --- Review-step summary (used by Y.2-E) ---------------------------- */
+
+.checkout-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkout-summary__line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 14px;
+
+  dt {
+    margin: 0;
+    color: var(--color-text-muted, #6b6056);
+  }
+  dd {
+    margin: 0;
+    color: var(--color-text-primary, #2e241c);
+    font-variant-numeric: tabular-nums;
+  }
+
+  &--total {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border-subtle, #e2dccc);
+    font-size: 16px;
+    dt { font-weight: 600; color: var(--color-text-primary, #2e241c); }
+    dd { font-weight: 700; font-size: 20px; }
+  }
+}

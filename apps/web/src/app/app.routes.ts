@@ -136,4 +136,14 @@ export const routes: Routes = [
       import('./features/addresses/address-book').then(m => m.AddressBookPageComponent),
     title: 'Saved addresses · 3bayti',
   },
+  /* --- Checkout (M3.2.Y.2-D onwards) ----------------------------------
+     Three-step flow: address → review → payment handoff.
+     All routes auth-gated (Q-CheckoutAuth=A). */
+  {
+    path: 'checkout/address',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/checkout/checkout-address-page').then(m => m.CheckoutAddressPageComponent),
+    title: 'Checkout — Shipping · 3bayti',
+  },
 ];
