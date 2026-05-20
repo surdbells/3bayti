@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './features/home/home';
-import { guestActivateGuard } from './core/auth/auth.guards';
+import { guestActivateGuard, authActivateGuard } from './core/auth/auth.guards';
 
 /**
  * Top-level route table for the public web app.
@@ -124,5 +124,16 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/cart/cart-page').then(m => m.CartPageComponent),
     title: 'Your bag · 3bayti',
+  },
+  /* --- Account section (M3.2.Y.2 begins; Y.5 expands) -------------------
+     All routes under /account require auth. Y.2-C ships /account/addresses;
+     Y.2-H + I add /account/orders + /account/orders/:id; Y.4-A may add
+     a top-level /account dashboard; Y.5 adds profile/wishlist/etc. */
+  {
+    path: 'account/addresses',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/addresses/address-book').then(m => m.AddressBookPageComponent),
+    title: 'Saved addresses · 3bayti',
   },
 ];

@@ -3,7 +3,8 @@
     "brand": "3bayti",
     "skipToContent": "تخطَّ إلى المحتوى الرئيسي",
     "loading": "جارٍ التحميل…",
-    "close": "إغلاق"
+    "close": "إغلاق",
+    "cancel": "إلغاء"
   },
   "nav": {
     "home": "الرئيسية",
@@ -190,6 +191,52 @@
       "fair": "متوسطة",
       "strong": "قوية",
       "veryStrong": "قوية جدًا"
+    }
+  },
+  "addresses": {
+    "title": "العناوين المحفوظة",
+    "subtitle": "إدارة عناوين شحن طلباتك.",
+    "unlabeled": "عنوان",
+    "defaultBadge": "افتراضي",
+    "backToAccount": "العودة إلى الحساب",
+    "empty": {
+      "body": "لم تقومي بحفظ أي عناوين بعد.",
+      "cta": "أضيفي أول عنوان"
+    },
+    "actions": {
+      "add": "إضافة عنوان جديد",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "setDefault": "تعيين كافتراضي"
+    },
+    "form": {
+      "titleCreate": "إضافة عنوان جديد",
+      "titleEdit": "تعديل العنوان",
+      "labelLabel": "التسمية",
+      "labelHint": "اختياري — مثل: المنزل، العمل",
+      "labelPlaceholder": "المنزل",
+      "recipientNameLabel": "اسم المستلم",
+      "recipientPhoneLabel": "هاتف المستلم",
+      "emirateLabel": "الإمارة",
+      "emiratePlaceholder": "اختاري الإمارة",
+      "areaLabel": "المنطقة / الحي",
+      "streetLabel": "عنوان الشارع",
+      "streetHint": "اختياري — مفيد للتوصيل",
+      "buildingLabel": "المبنى / الوحدة",
+      "postalCodeLabel": "الرمز البريدي",
+      "setAsDefault": "تعيين كعنوان الشحن الافتراضي",
+      "add": "إضافة العنوان",
+      "save": "حفظ التغييرات"
+    },
+    "toast": {
+      "saved": "تم حفظ العنوان.",
+      "deleted": "تم حذف العنوان.",
+      "defaultSet": "تم تحديث العنوان الافتراضي."
+    },
+    "errors": {
+      "loadFailed": "تعذر تحميل العناوين المحفوظة.",
+      "network": "حدث خطأ في الشبكة. يُرجى المحاولة مرة أخرى.",
+      "unexpected": "حدث خطأ ما. يُرجى المحاولة مرة أخرى."
     }
   }
 }

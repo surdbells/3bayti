@@ -3,7 +3,8 @@
     "brand": "3bayti",
     "skipToContent": "Skip to main content",
     "loading": "Loading…",
-    "close": "Close"
+    "close": "Close",
+    "cancel": "Cancel"
   },
   "nav": {
     "home": "Home",
@@ -190,6 +191,52 @@
       "fair": "Fair",
       "strong": "Strong",
       "veryStrong": "Very strong"
+    }
+  },
+  "addresses": {
+    "title": "Saved addresses",
+    "subtitle": "Manage where we send your orders.",
+    "unlabeled": "Address",
+    "defaultBadge": "Default",
+    "backToAccount": "Back to account",
+    "empty": {
+      "body": "You haven't saved any addresses yet.",
+      "cta": "Add your first address"
+    },
+    "actions": {
+      "add": "Add new address",
+      "edit": "Edit",
+      "delete": "Delete",
+      "setDefault": "Set as default"
+    },
+    "form": {
+      "titleCreate": "Add a new address",
+      "titleEdit": "Edit address",
+      "labelLabel": "Label",
+      "labelHint": "Optional — e.g. Home, Office",
+      "labelPlaceholder": "Home",
+      "recipientNameLabel": "Recipient name",
+      "recipientPhoneLabel": "Recipient phone",
+      "emirateLabel": "Emirate",
+      "emiratePlaceholder": "Select an emirate",
+      "areaLabel": "Area / Neighbourhood",
+      "streetLabel": "Street address",
+      "streetHint": "Optional — useful for delivery",
+      "buildingLabel": "Building / Unit",
+      "postalCodeLabel": "Postal code",
+      "setAsDefault": "Set as my default shipping address",
+      "add": "Add address",
+      "save": "Save changes"
+    },
+    "toast": {
+      "saved": "Address saved.",
+      "deleted": "Address deleted.",
+      "defaultSet": "Default address updated."
+    },
+    "errors": {
+      "loadFailed": "Couldn't load your saved addresses.",
+      "network": "Network error. Please try again.",
+      "unexpected": "Something went wrong. Please try again."
     }
   }
 }
