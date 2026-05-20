@@ -285,7 +285,32 @@
 .order-detail__actions {
   display: flex;
   justify-content: flex-end;
+  gap: 12px;
   margin-top: 24px;
+}
+
+.order-detail__return-btn {
+  display: inline-block;
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  color: var(--color-text-primary, #2e241c);
+  padding: 10px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-brand-500, #b18f1f);
+    color: var(--color-brand-700, #5a3a2c);
+    background: rgba(177, 143, 31, 0.04);
+    outline: none;
+  }
 }
 
 .order-detail__cancel-btn {

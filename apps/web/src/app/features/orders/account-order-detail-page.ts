@@ -230,11 +230,20 @@ import { ToastService } from '../../shared/forms';
           </section>
 
           <div
-            *ngIf="canCancel()"
+            *ngIf="canCancel() || canRequestReturn()"
             class="order-detail__actions"
-            data-testid="order-detail-cancel-section"
+            data-testid="order-detail-actions"
           >
+            <a
+              *ngIf="canRequestReturn()"
+              [routerLink]="['/account/orders', order()!.id, 'return']"
+              class="order-detail__return-btn"
+              data-testid="order-detail-return-cta"
+            >
+              {{ 'orders.detail.submitReturn' | translate }}
+            </a>
             <button
+              *ngIf="canCancel()"
               type="button"
               class="order-detail__cancel-btn"
               [disabled]="isCancelling()"
@@ -289,6 +298,25 @@ export class AccountOrderDetailPageComponent implements OnInit {
   protected readonly canCancel = computed(() => {
     const o = this._order();
     return o !== null && o.status === 'pending_payment' && !this._isCancelling();
+  });
+
+  /**
+   * Return-eligibility (UI-side gate, server has final say).
+   * Shows the CTA for any status where a return could plausibly be
+   * filed — the server enforces the 14-day window + per-item
+   * delivered status. If we surface the CTA for an ineligible order,
+   * the form-level RETURN_* error mappings (Y.2-J) handle it
+   * gracefully with a clear toast.
+   *
+   * Excludes:
+   *   - pending_payment / cancelled: no items were ever delivered
+   *   - refunded / partially_refunded: returns are already resolved
+   */
+  protected readonly canRequestReturn = computed(() => {
+    const o = this._order();
+    if (o === null) return false;
+    const excluded = ['pending_payment', 'cancelled', 'refunded', 'partially_refunded'];
+    return !excluded.includes(o.status);
   });
 
   protected readonly hasDiscount = computed(() => {

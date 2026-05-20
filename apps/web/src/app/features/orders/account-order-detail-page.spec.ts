@@ -248,22 +248,22 @@ describe('AccountOrderDetailPageComponent', () => {
   });
 
   describe('cancel flow', () => {
-    it('cancel section visible only when status is pending_payment', async () => {
+    it('cancel button visible only when status is pending_payment', async () => {
       const { fixture } = setup({
         order: makeOrder({ status: 'pending_payment' }),
       });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cancel-section"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]')).not.toBeNull();
     });
 
-    it('cancel section hidden when status is not pending_payment', async () => {
+    it('cancel button hidden when status is not pending_payment', async () => {
       const { fixture } = setup({
         order: makeOrder({ status: 'paid' }),
       });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cancel-section"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]')).toBeNull();
     });
 
     it('cancel button calls OrderService.cancel after confirm', async () => {
@@ -307,8 +307,8 @@ describe('AccountOrderDetailPageComponent', () => {
       fixture.detectChanges();
       const status = fixture.nativeElement.querySelector('[data-testid="order-detail-status"]');
       expect(status?.getAttribute('data-status')).toBe('cancelled');
-      /* Cancel section should now be hidden. */
-      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cancel-section"]')).toBeNull();
+      /* Cancel button should now be hidden. */
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]')).toBeNull();
     });
 
     it('toasts success after a successful cancel', async () => {
@@ -336,6 +336,51 @@ describe('AccountOrderDetailPageComponent', () => {
       btn.click();
       await flush();
       expect(toast.errors).toContain('orders.detail.cancelFailed');
+    });
+  });
+
+  describe('return CTA', () => {
+    it('shows the return CTA for paid orders', async () => {
+      const { fixture } = setup({ order: makeOrder({ status: 'paid' }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-return-cta"]')).not.toBeNull();
+    });
+
+    it('shows the return CTA for delivered orders', async () => {
+      const { fixture } = setup({ order: makeOrder({ status: 'delivered' }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-return-cta"]')).not.toBeNull();
+    });
+
+    it('hides the return CTA for pending_payment orders', async () => {
+      const { fixture } = setup({ order: makeOrder({ status: 'pending_payment' }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-return-cta"]')).toBeNull();
+    });
+
+    it('hides the return CTA for cancelled orders', async () => {
+      const { fixture } = setup({ order: makeOrder({ status: 'cancelled' }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-return-cta"]')).toBeNull();
+    });
+
+    it('hides the return CTA for refunded orders', async () => {
+      const { fixture } = setup({ order: makeOrder({ status: 'refunded' }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-return-cta"]')).toBeNull();
+    });
+
+    it('return CTA links to /account/orders/:id/return', async () => {
+      const { fixture } = setup({ order: makeOrder({ id: 77, status: 'delivered' }) });
+      await flush();
+      fixture.detectChanges();
+      const cta = fixture.nativeElement.querySelector('[data-testid="order-detail-return-cta"]') as HTMLAnchorElement;
+      expect(cta.getAttribute('href')).toBe('/account/orders/77/return');
     });
   });
 
