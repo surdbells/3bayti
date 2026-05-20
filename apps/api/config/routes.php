@@ -265,6 +265,25 @@ return function (App $app): void {
         \Bayti\Api\Http\Controllers\Checkout\NoonWebhookController::class,
     );
 
+    // M3.2.Y.3-A — Noon payment-return browser redirect.
+    //
+    // INTENTIONALLY UNAUTHENTICATED — Noon redirects the raw browser
+    // here after hosted checkout; we cannot rely on a valid auth token
+    // being present on this request. The endpoint leaks nothing: it
+    // only reflects the supplied reference into a 302 to the web app's
+    // polling page. The authoritative, ownership-enforcing check
+    // happens when the web app polls GET /v3/checkout/status/{ref}
+    // (which IS authenticated). See CheckoutReturnRedirectController.
+    //
+    // The mobile webview intercepts this API path before the redirect
+    // resolves, so it is unaffected by the 302 target.
+    //
+    // NEVER add AuthMiddleware to this route.
+    $app->get(
+        '/v3/checkout/return/{order_reference}',
+        \Bayti\Api\Http\Controllers\Checkout\CheckoutReturnRedirectController::class,
+    );
+
     // ===================================================================
     // M2.1 — Catalog: public read endpoints (no auth required)
     // ===================================================================
