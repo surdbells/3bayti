@@ -185,6 +185,11 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server,
   },
   {
+    /* Return submission form — user-specific per-order data. */
+    path: 'account/orders/:id/return',
+    renderMode: RenderMode.Server,
+  },
+  {
     /* Default: prerender everything else at build time. */
     path: '**',
     renderMode: RenderMode.Prerender,

@@ -326,6 +326,39 @@
       "billingHeading": "Billing address",
       "shippingHeading": "Shipping address",
       "backToList": "← All orders"
+    },
+    "returns": {
+      "title": "Request a return",
+      "itemsHeading": "Which items?",
+      "reasonHeading": "Reason",
+      "notesHeading": "Additional notes",
+      "notesPlaceholder": "Tell us more about the issue (optional)…",
+      "photosHeading": "Photos (optional)",
+      "photosHint": "Up to 5 photos, JPEG or PNG or WebP, max 5 MB each.",
+      "removePhoto": "Remove photo",
+      "submit": "Submit return request",
+      "success": "Return request submitted.",
+      "reason": {
+        "defective": "Defective",
+        "wrongItem": "Wrong item",
+        "damagedInTransit": "Damaged in transit",
+        "notAsDescribed": "Not as described",
+        "changedMind": "Changed my mind",
+        "sizeIssue": "Size issue",
+        "other": "Other"
+      },
+      "errors": {
+        "noItems": "Please select at least one item.",
+        "notesRequired": "Please tell us a bit more.",
+        "photoTooLarge": "Each photo must be 5 MB or smaller.",
+        "tooManyPhotos": "You can attach up to 5 photos.",
+        "submitFailed": "Couldn't submit your return. Please try again.",
+        "networkError": "Network error. Please try again.",
+        "ineligible": "This order isn't eligible for a return.",
+        "item_not_delivered": "One or more items haven't been delivered yet.",
+        "window_expired": "The return window has expired.",
+        "item_in_flight": "One or more items already have an in-flight return."
+      }
     }
   }
 }

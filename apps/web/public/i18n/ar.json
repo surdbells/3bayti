@@ -326,6 +326,39 @@
       "billingHeading": "عنوان الفوترة",
       "shippingHeading": "عنوان الشحن",
       "backToList": "→ كل الطلبات"
+    },
+    "returns": {
+      "title": "طلب إرجاع",
+      "itemsHeading": "ما هي القطع؟",
+      "reasonHeading": "السبب",
+      "notesHeading": "ملاحظات إضافية",
+      "notesPlaceholder": "أخبرينا المزيد عن المشكلة (اختياري)…",
+      "photosHeading": "صور (اختياري)",
+      "photosHint": "حتى 5 صور، JPEG أو PNG أو WebP، 5 ميغابايت كحد أقصى لكل صورة.",
+      "removePhoto": "حذف الصورة",
+      "submit": "إرسال طلب الإرجاع",
+      "success": "تم إرسال طلب الإرجاع.",
+      "reason": {
+        "defective": "معيب",
+        "wrongItem": "قطعة خاطئة",
+        "damagedInTransit": "تالف أثناء النقل",
+        "notAsDescribed": "لا يطابق الوصف",
+        "changedMind": "غيّرتُ رأيي",
+        "sizeIssue": "مشكلة في المقاس",
+        "other": "آخر"
+      },
+      "errors": {
+        "noItems": "يُرجى اختيار قطعة واحدة على الأقل.",
+        "notesRequired": "يُرجى إخبارنا بمزيد من التفاصيل.",
+        "photoTooLarge": "يجب ألا تتجاوز كل صورة 5 ميغابايت.",
+        "tooManyPhotos": "يمكنك إرفاق ما يصل إلى 5 صور.",
+        "submitFailed": "تعذر إرسال طلب الإرجاع. يُرجى المحاولة مرة أخرى.",
+        "networkError": "حدث خطأ في الشبكة. يُرجى المحاولة مرة أخرى.",
+        "ineligible": "هذا الطلب غير مؤهل للإرجاع.",
+        "item_not_delivered": "لم يتم تسليم قطعة واحدة أو أكثر بعد.",
+        "window_expired": "انتهت نافذة الإرجاع.",
+        "item_in_flight": "قطعة واحدة أو أكثر لديها طلب إرجاع قيد التنفيذ بالفعل."
+      }
     }
   }
 }

@@ -150,6 +150,13 @@ export const routes: Routes = [
       import('./features/orders/account-order-detail-page').then(m => m.AccountOrderDetailPageComponent),
     title: 'Order details · 3bayti',
   },
+  {
+    path: 'account/orders/:id/return',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/orders/account-order-return-page').then(m => m.AccountOrderReturnPageComponent),
+    title: 'Request a return · 3bayti',
+  },
   /* --- Checkout (M3.2.Y.2-D onwards) ----------------------------------
      Three-step flow: address → review → payment handoff.
      All routes auth-gated (Q-CheckoutAuth=A). */

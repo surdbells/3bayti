@@ -6,6 +6,8 @@ import type {
   OrderListItem,
   OrderListParams,
   OrderListResponse,
+  SubmitReturnInput,
+  ReturnRequestResponse,
 } from './order.types';
 
 /**
@@ -129,6 +131,45 @@ export class OrderService {
         this._listItems.set(next);
       }
       return updated;
+    });
+  }
+
+  /**
+   * Submit a customer return request for an order.
+   *
+   * Endpoint: POST /v3/orders/:id/returns (multipart/form-data)
+   * Fields:
+   *   - reason: one of ReturnReason
+   *   - customer_notes: optional; required when reason='other'
+   *   - order_item_ids[]: list of OrderItem ids to return
+   *   - photos[]: 0-5 image files
+   *
+   * Returns the created return-request shape (currently typed as
+   * unknown until Y.5 surfaces a return-detail UI — the caller only
+   * needs to know the submission succeeded for now).
+   */
+  async submitReturn(
+    orderId: number,
+    input: SubmitReturnInput,
+  ): Promise<ReturnRequestResponse> {
+    return this.runWithLoadingDetail(async () => {
+      const form = new FormData();
+      form.set('reason', input.reason);
+      if (input.customer_notes !== null && input.customer_notes !== undefined) {
+        form.set('customer_notes', input.customer_notes);
+      }
+      for (const itemId of input.order_item_ids) {
+        form.append('order_item_ids[]', String(itemId));
+      }
+      for (const photo of input.photos) {
+        form.append('photos[]', photo, photo.name);
+      }
+      return firstValueFrom(
+        this.http.post<ReturnRequestResponse>(
+          `${V3_BASE}/v3/orders/${orderId}/returns`,
+          form,
+        ),
+      );
     });
   }
 

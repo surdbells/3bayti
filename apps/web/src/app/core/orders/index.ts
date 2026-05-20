@@ -8,5 +8,15 @@ export type {
   OrderListResponse,
   AppliedPromo,
   ReturnSummary,
+  ReturnReason,
+  SubmitReturnInput,
+  ReturnRequestResponse,
 } from './order.types';
-export { ORDER_STATUS_LABELS } from './order.types';
+export {
+  ORDER_STATUS_LABELS,
+  RETURN_REASONS,
+  RETURN_REASON_LABELS,
+  RETURN_PHOTO_MAX_BYTES,
+  RETURN_PHOTO_MAX_COUNT,
+  RETURN_PHOTO_ACCEPT,
+} from './order.types';

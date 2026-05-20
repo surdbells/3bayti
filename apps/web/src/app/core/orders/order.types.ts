@@ -113,3 +113,65 @@ export interface OrderListParams {
 /** Paginated list response. The API returns a bare array currently;
  *  if pagination metadata lands we'll evolve this. */
 export type OrderListResponse = OrderListItem[];
+
+/** Customer return-request reasons, mirrors apps/api ALL_REASONS. */
+export type ReturnReason =
+  | 'defective'
+  | 'wrong_item'
+  | 'damaged_in_transit'
+  | 'not_as_described'
+  | 'changed_mind'
+  | 'size_issue'
+  | 'other';
+
+export const RETURN_REASONS: ReturnReason[] = [
+  'defective',
+  'wrong_item',
+  'damaged_in_transit',
+  'not_as_described',
+  'changed_mind',
+  'size_issue',
+  'other',
+];
+
+/** Translation keys for each reason. */
+export const RETURN_REASON_LABELS: Record<ReturnReason, string> = {
+  defective: 'orders.returns.reason.defective',
+  wrong_item: 'orders.returns.reason.wrongItem',
+  damaged_in_transit: 'orders.returns.reason.damagedInTransit',
+  not_as_described: 'orders.returns.reason.notAsDescribed',
+  changed_mind: 'orders.returns.reason.changedMind',
+  size_issue: 'orders.returns.reason.sizeIssue',
+  other: 'orders.returns.reason.other',
+};
+
+/** Submission payload for POST /v3/orders/:id/returns. */
+export interface SubmitReturnInput {
+  reason: ReturnReason;
+  /** Required when reason='other', optional otherwise. */
+  customer_notes: string | null;
+  /** OrderItem ids to return. Must be non-empty per server-side validation. */
+  order_item_ids: number[];
+  /** 0-5 image files (jpeg/png/webp, max 5 MB each). */
+  photos: File[];
+}
+
+/** API response shape for a created return request (post-submission).
+ *  Lightweight — the Y.2 surface only needs to know whether it
+ *  succeeded; Y.5 may surface a full detail page. */
+export interface ReturnRequestResponse {
+  id: number;
+  status: string;
+  reason: ReturnReason;
+  requested_at: string;
+  item_count: number;
+}
+
+/** Maximum file size for a single photo per server-side validation. */
+export const RETURN_PHOTO_MAX_BYTES = 5 * 1024 * 1024;
+
+/** Maximum number of photos allowed in a single submission. */
+export const RETURN_PHOTO_MAX_COUNT = 5;
+
+/** Accepted MIME types for return photos per server-side validation. */
+export const RETURN_PHOTO_ACCEPT = 'image/jpeg,image/png,image/webp';

@@ -225,4 +225,66 @@ describe('OrderService', () => {
       await expect(promise).resolves.toBeDefined();
     });
   });
+
+  describe('submitReturn', () => {
+    it('POSTs multipart/form-data to /v3/orders/:id/returns', async () => {
+      const { service, controller } = setup();
+      const photo = new File(['fake-image-bytes'], 'p1.jpg', { type: 'image/jpeg' });
+      const promise = service.submitReturn(7, {
+        reason: 'defective',
+        customer_notes: 'broken zipper',
+        order_item_ids: [1, 2],
+        photos: [photo],
+      });
+      const req = controller.expectOne(`${V3_BASE}/v3/orders/7/returns`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toBeInstanceOf(FormData);
+
+      const body = req.request.body as FormData;
+      expect(body.get('reason')).toBe('defective');
+      expect(body.get('customer_notes')).toBe('broken zipper');
+      expect(body.getAll('order_item_ids[]')).toEqual(['1', '2']);
+      const files = body.getAll('photos[]');
+      expect(files).toHaveLength(1);
+      expect((files[0] as File).name).toBe('p1.jpg');
+
+      req.flush({ id: 99, status: 'pending', reason: 'defective',
+                  requested_at: '2026-05-20T00:00:00Z', item_count: 2 });
+      const result = await promise;
+      expect(result.id).toBe(99);
+    });
+
+    it('omits customer_notes when null', async () => {
+      const { service, controller } = setup();
+      const promise = service.submitReturn(1, {
+        reason: 'changed_mind',
+        customer_notes: null,
+        order_item_ids: [5],
+        photos: [],
+      });
+      const req = controller.expectOne(`${V3_BASE}/v3/orders/1/returns`);
+      const body = req.request.body as FormData;
+      expect(body.has('customer_notes')).toBe(false);
+      expect(body.get('reason')).toBe('changed_mind');
+      expect(body.getAll('order_item_ids[]')).toEqual(['5']);
+      req.flush({ id: 1, status: 'pending', reason: 'changed_mind',
+                  requested_at: '2026-05-20T00:00:00Z', item_count: 1 });
+      await promise;
+    });
+
+    it('toggles isLoadingDetail during the request', async () => {
+      const { service, controller } = setup();
+      const promise = service.submitReturn(1, {
+        reason: 'defective', customer_notes: null,
+        order_item_ids: [1], photos: [],
+      });
+      expect(service.isLoadingDetail()).toBe(true);
+      controller.expectOne(`${V3_BASE}/v3/orders/1/returns`).flush({
+        id: 1, status: 'pending', reason: 'defective',
+        requested_at: '2026-05-20T00:00:00Z', item_count: 1,
+      });
+      await promise;
+      expect(service.isLoadingDetail()).toBe(false);
+    });
+  });
 });

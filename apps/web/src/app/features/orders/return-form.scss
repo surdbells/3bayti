@@ -1,0 +1,329 @@
+/* Return submission form styles (Y.2-J).
+ *
+ * Reuses orders-page container/empty/loading + checkout-section card
+ * patterns from order-detail.scss. Adds form-specific styling for
+ * the item-pick checkboxes, reason radio cards, textarea, and the
+ * photo selection chips. */
+
+.orders-page {
+  min-height: calc(100vh - 200px);
+  padding: 32px 0 64px;
+  background: var(--color-bg-default, #faf7f1);
+}
+
+.orders-page__container {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 20px;
+  &--narrow { max-width: 720px; }
+}
+
+.orders-page__back-link {
+  display: inline-block;
+  margin-bottom: 20px;
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-text-primary, #2e241c);
+    outline: none;
+  }
+}
+
+.return-page__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 22px 0;
+  letter-spacing: -0.01em;
+}
+
+/* --- Sections ------------------------------------------------------- */
+
+.checkout-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 22px;
+  margin-bottom: 16px;
+  border: 1px solid var(--color-border-subtle, #e2dccc);
+}
+
+.checkout-section__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 16px 0;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* --- Items list with checkboxes ------------------------------------- */
+
+.return-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.return-item {
+  border-bottom: 1px solid var(--color-border-subtle, #e2dccc);
+  &:last-child { border-bottom: 0; }
+}
+
+.return-item__label {
+  display: grid;
+  grid-template-columns: 24px 64px 1fr;
+  gap: 14px;
+  padding: 14px 0;
+  align-items: center;
+  cursor: pointer;
+}
+
+.return-item__check {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--color-brand-500, #b18f1f);
+}
+
+.return-item__thumb {
+  width: 64px;
+  height: 76px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-bg-muted, #f4f0ea);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.review-item__thumb-placeholder {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #efe8d8 25%, #e6dfcd 75%);
+}
+
+.return-item__body {
+  min-width: 0;
+}
+
+.review-item__name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.review-item__qty {
+  margin: 4px 0 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #6b6056);
+}
+
+/* --- Reason radio cards --------------------------------------------- */
+
+.return-reasons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.return-reason {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--color-text-primary, #2e241c);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &--selected {
+    border-color: var(--color-brand-500, #b18f1f);
+    background: rgba(177, 143, 31, 0.04);
+  }
+
+  &:hover {
+    border-color: var(--color-brand-500, #b18f1f);
+  }
+}
+
+.return-reason__input {
+  cursor: pointer;
+  accent-color: var(--color-brand-500, #b18f1f);
+}
+
+/* --- Textarea + form polish ----------------------------------------- */
+
+.return-form__textarea {
+  width: 100%;
+  min-height: 96px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--color-text-primary, #2e241c);
+  resize: vertical;
+
+  &:focus {
+    outline: 2px solid var(--color-brand-500, #b18f1f);
+    outline-offset: 0;
+    border-color: transparent;
+  }
+}
+
+.return-form__hint {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0 0 12px 0;
+}
+
+.return-form__required {
+  color: var(--color-danger-600, #b42218);
+  margin-left: 2px;
+}
+
+.return-form__error {
+  color: var(--color-danger-600, #b42218);
+  font-size: 12px;
+  margin: 8px 0 0 0;
+}
+
+.return-form__file-input {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.return-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+/* --- Photo chips ---------------------------------------------------- */
+
+.return-photos {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.return-photo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--color-bg-muted, #f4f0ea);
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--color-text-primary, #2e241c);
+  max-width: 280px;
+}
+
+.return-photo__name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.return-photo__remove {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--color-text-muted, #6b6056);
+  cursor: pointer;
+  font-family: inherit;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--color-danger-600, #b42218);
+    outline: none;
+  }
+}
+
+/* --- Loading + empty (reused) -------------------------------------- */
+
+.orders-page__loading {
+  text-align: center;
+  padding: 56px 20px;
+  color: var(--color-text-muted, #6b6056);
+  font-size: 14px;
+}
+
+.orders-page__empty {
+  background: #fff;
+  border-radius: 12px;
+  padding: 56px 28px;
+  text-align: center;
+  border: 1px solid var(--color-border-subtle, #e2dccc);
+}
+
+.orders-page__empty-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 12px 0;
+}
+
+.orders-page__empty-cta {
+  display: inline-block;
+  padding: 12px 24px;
+  background: var(--color-text-primary, #2e241c);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: var(--color-brand-700, #5a3a2c);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.order-detail__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 12px 0 8px 0;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
