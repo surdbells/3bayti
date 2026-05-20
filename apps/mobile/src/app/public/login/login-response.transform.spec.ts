@@ -185,8 +185,8 @@ describe('transformV3LoginResponse', () => {
 
       // Returned as-is, preserving extras
       expect(result).toBe(legacy as unknown as LegacyUserShape);
-      expect(result!.billing_name).toBe('Legacy User');
-      expect(result!.avatar).toBe('https://cdn.example.com/avatar.jpg');
+      expect(result!['billing_name']).toBe('Legacy User');
+      expect(result!['avatar']).toBe('https://cdn.example.com/avatar.jpg');
     });
   });
 

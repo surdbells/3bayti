@@ -251,7 +251,7 @@ goToReviews(id: number, name: string) {
       }))
   }
   orders() {
-    this.router.navigate(['/', 'orders']);
+    this.router.navigate(['/', 'my-orders']);
   }
   open_product(id: number, name: string) {
     this.router.navigate(

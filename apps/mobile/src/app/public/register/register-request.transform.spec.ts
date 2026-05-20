@@ -49,9 +49,9 @@ describe('transformLegacyRegisterRequest', () => {
     // Type-level: result must not have these keys.
     // Runtime: defensive assertion in case object spread accidentally
     // included them.
-    expect((result as Record<string, unknown>)['confirm_password']).toBeUndefined();
-    expect((result as Record<string, unknown>)['accepted_terms']).toBeUndefined();
-    expect((result as Record<string, unknown>)['countryCode']).toBeUndefined();
+    expect((result as unknown as Record<string, unknown>)['confirm_password']).toBeUndefined();
+    expect((result as unknown as Record<string, unknown>)['accepted_terms']).toBeUndefined();
+    expect((result as unknown as Record<string, unknown>)['countryCode']).toBeUndefined();
   });
 
   it('maps non-UAE Gulf dial codes to ISO', () => {

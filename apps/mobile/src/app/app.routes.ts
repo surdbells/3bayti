@@ -47,8 +47,8 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/measurements/measurements.page').then( m => m.MeasurementsPage)
   },
   {
-    path: 'orders',
-    loadComponent: () => import('./customer/orders/orders.page').then(m => m.OrdersPage)
+    path: 'orders/:id',
+    loadComponent: () => import('./customer/order-detail/order-detail.page').then(m => m.OrderDetailPage)
   },
   {
     path: 'reviews',

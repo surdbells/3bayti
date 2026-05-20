@@ -1,0 +1,193 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_order_detail' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [routerLink]="['/ticketlist']" fill="clear" class="m7-header-action">
+        <ion-chip class="abayti_primary_background abayti_white">
+          <ion-avatar>
+            <ax-icon name="headset" />
+          </ion-avatar>
+          <ion-label>{{ 'support' | translate }}</ion-label>
+        </ion-chip>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg ion-padding-horizontal">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (ui_controls.is_loading && !order) {
+    <ax-loader></ax-loader>
+  }
+
+  @if (ui_controls.not_found && !ui_controls.is_loading) {
+    <div class="empty-state" data-testid="order-not-found">
+      <ax-icon name="alert-circle" class="empty-state__icon" />
+      <h3 class="empty-state__title">{{ 'order_detail_not_found_title' | translate }}</h3>
+      <p class="empty-state__subtitle">{{ 'order_detail_not_found_subtitle' | translate }}</p>
+      <ion-button fill="outline" (click)="goBack()">{{ 'back_order' | translate }}</ion-button>
+    </div>
+  }
+
+  @if (order && !ui_controls.is_loading) {
+    <!-- Header: reference + status -->
+    <ion-card class="detail-card detail-card--head">
+      <div class="head-row">
+        <div class="head-meta">
+          <span class="head-label">{{ 'order_reference' | translate }}</span>
+          <h2 class="head-ref" data-testid="order-ref">{{ order.order_reference }}</h2>
+          @if (order.date) {
+            <span class="head-date">{{ order.date | date: 'medium' }}</span>
+          }
+        </div>
+        <span
+          class="status-pill"
+          [ngClass]="'status-pill--' + order.status"
+          data-testid="order-status"
+        >{{ order.status | uppercase }}</span>
+      </div>
+    </ion-card>
+
+    <!-- Items -->
+    <ion-card class="detail-card">
+      <h3 class="section-title">{{ 'order_items' | translate }}</h3>
+      <div class="items">
+        @for (item of order.items; track item.id) {
+          <div class="item-row">
+            <div
+              class="item-thumb"
+              (click)="open_vendor(item.vendor_id, item.product_name)"
+              role="button"
+              tabindex="0"
+            >
+              @if (item.product_image) {
+                <img class="item-img" [src]="item.product_image" [alt]="item.product_name" />
+              } @else {
+                <div class="item-img item-img--fallback">
+                  <span>{{ item.product_name.charAt(0) | uppercase }}</span>
+                </div>
+              }
+            </div>
+            <div class="item-body">
+              <p class="item-name">{{ item.product_name }}</p>
+              <div class="item-attrs">
+                @if (item.size) {
+                  <span class="item-attr">{{ 'label_size' | translate }}: {{ item.size }}</span>
+                }
+                @if (item.color) {
+                  <span class="item-attr">{{ 'label_color' | translate }}: {{ item.color }}</span>
+                }
+                @if (item.is_custom) {
+                  <span class="item-attr item-attr--custom">{{ 'label_custom' | translate }}</span>
+                }
+              </div>
+              <div class="item-foot">
+                <span class="item-qty">×{{ item.quantity }}</span>
+                <span class="item-price">{{ order.currency }} {{ item.subtotal }}</span>
+              </div>
+              @if (item.item_status) {
+                <span
+                  class="item-status-pill"
+                  [ngClass]="'item-status-pill--' + item.item_status"
+                >{{ item.item_status | uppercase }}</span>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    </ion-card>
+
+    <!-- Money breakdown -->
+    <ion-card class="detail-card">
+      <h3 class="section-title">{{ 'order_summary' | translate }}</h3>
+      <div class="money-row">
+        <span>{{ 'label_subtotal' | translate }}</span>
+        <span>{{ order.currency }} {{ order.subtotal }}</span>
+      </div>
+      <div class="money-row">
+        <span>{{ 'label_delivery_fee' | translate }}</span>
+        <span>{{ order.currency }} {{ order.delivery_fee }}</span>
+      </div>
+      @if (hasDiscount()) {
+        <div class="money-row money-row--discount" data-testid="discount-row">
+          <span>
+            {{ 'label_discount' | translate }}
+            @if (order.applied_promo) {
+              <span class="promo-code">({{ order.applied_promo.code }})</span>
+            }
+          </span>
+          <span>− {{ order.currency }} {{ order.discount }}</span>
+        </div>
+      }
+      <div class="money-row money-row--total">
+        <span>{{ 'label_total' | translate }}</span>
+        <span data-testid="order-total">{{ order.currency }} {{ order.total }}</span>
+      </div>
+    </ion-card>
+
+    <!-- Addresses -->
+    @if (order.shipping_address || order.billing_address) {
+      <ion-card class="detail-card">
+        @if (order.shipping_address; as addr) {
+          <div class="address-block" data-testid="shipping-address">
+            <h3 class="section-title">{{ 'label_shipping_address' | translate }}</h3>
+            <p class="address-name">{{ addr.first_name }} {{ addr.last_name }}</p>
+            <p class="address-line">{{ addr.street }}</p>
+            <p class="address-line">{{ addr.city }}<span *ngIf="addr.state_province">, {{ addr.state_province }}</span></p>
+            <p class="address-line">{{ addr.country_code }}<span *ngIf="addr.postal_code"> {{ addr.postal_code }}</span></p>
+            @if (addr.phone) { <p class="address-line">{{ addr.phone }}</p> }
+          </div>
+        }
+        @if (order.billing_address; as addr) {
+          <div class="address-block" data-testid="billing-address">
+            <h3 class="section-title">{{ 'label_billing_address' | translate }}</h3>
+            <p class="address-name">{{ addr.first_name }} {{ addr.last_name }}</p>
+            <p class="address-line">{{ addr.street }}</p>
+            <p class="address-line">{{ addr.city }}<span *ngIf="addr.state_province">, {{ addr.state_province }}</span></p>
+            <p class="address-line">{{ addr.country_code }}<span *ngIf="addr.postal_code"> {{ addr.postal_code }}</span></p>
+            @if (addr.phone) { <p class="address-line">{{ addr.phone }}</p> }
+          </div>
+        }
+      </ion-card>
+    }
+
+    <!-- Returns -->
+    @if (order.returns.length > 0) {
+      <ion-card class="detail-card" data-testid="returns-block">
+        <h3 class="section-title">{{ 'order_returns' | translate }}</h3>
+        @for (ret of order.returns; track ret.id) {
+          <div class="return-row">
+            <span class="return-id">#{{ ret.id }}</span>
+            <span class="status-pill" [ngClass]="'status-pill--' + ret.status">{{ ret.status | uppercase }}</span>
+          </div>
+        }
+      </ion-card>
+    }
+
+    <!-- Cancel -->
+    @if (canCancel()) {
+      <div class="cancel-wrap">
+        <ion-button
+          expand="block"
+          fill="outline"
+          color="danger"
+          (click)="confirmCancel()"
+          [disabled]="ui_controls.is_cancelling"
+          data-testid="cancel-order-btn"
+        >
+          {{ 'button_cancel_order' | translate }}
+        </ion-button>
+      </div>
+    }
+  }
+</ion-content>
+
+<app-tab-bar></app-tab-bar>

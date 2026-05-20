@@ -1,0 +1,291 @@
+/* Customer order-detail page styles — M3.2.Z.1.
+   Mirrors my-orders.page.scss pill + card conventions, extended to
+   the full v3 status enum. */
+
+.detail-card {
+  background: var(--ax-color-bg-surface, #fff);
+  border-radius: var(--ax-radius-lg, 16px);
+  padding: 16px;
+  margin: 12px 0;
+  box-shadow: 0 1px 2px rgba(46, 36, 28, 0.06);
+}
+
+.detail-card--head {
+  margin-top: 16px;
+}
+
+.head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.head-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.head-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+
+.head-ref {
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ax-color-text-primary, #2e241c);
+}
+
+.head-date {
+  font-size: 12px;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ax-color-text-secondary, #6b6056);
+  margin: 0 0 12px 0;
+}
+
+/* ----- Status pills (full v3 enum) ----------------------- */
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+  background: rgba(46, 36, 28, 0.08);
+  color: var(--ax-color-text-secondary, #6b6056);
+
+  &--pending_payment { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+  &--paid { background: rgba(59, 130, 246, 0.12); color: #1e6fdb; }
+  &--processing,
+  &--fulfilling { background: rgba(59, 130, 246, 0.12); color: #1e6fdb; }
+  &--shipping,
+  &--shipped { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+  &--delivered { background: rgba(34, 197, 94, 0.14); color: #15803d; }
+  &--cancelled,
+  &--failed { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
+  &--refunded { background: rgba(139, 92, 246, 0.14); color: #6d28d9; }
+  /* return statuses */
+  &--requested { background: rgba(245, 158, 11, 0.14); color: #b45309; }
+  &--approved { background: rgba(34, 197, 94, 0.14); color: #15803d; }
+  &--rejected,
+  &--denied { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
+  &--received { background: rgba(59, 130, 246, 0.12); color: #1e6fdb; }
+}
+
+/* ----- Items ------------------------------------------------ */
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.item-row {
+  display: flex;
+  gap: 12px;
+}
+
+.item-thumb {
+  flex: 0 0 72px;
+  cursor: pointer;
+}
+
+.item-img {
+  width: 72px;
+  height: 72px;
+  border-radius: var(--ax-radius-md, 12px);
+  object-fit: cover;
+  object-position: top center;
+  background: var(--ax-color-bg-brand-subtle, #f3ede2);
+}
+
+.item-img--fallback {
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+
+.item-body {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.item-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--ax-color-text-primary, #2e241c);
+}
+
+.item-attrs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.item-attr {
+  font-size: 11px;
+  color: var(--ax-color-text-secondary, #6b6056);
+
+  &--custom {
+    color: #6d28d9;
+    font-weight: 600;
+  }
+}
+
+.item-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-qty {
+  font-size: 12px;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+
+.item-price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ax-color-text-primary, #2e241c);
+}
+
+.item-status-pill {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ax-palette-neutral-0, #fff);
+  background: rgba(46, 36, 28, 0.55);
+
+  &--pending { background: rgba(245, 158, 11, 0.95); }
+  &--processing { background: rgba(59, 130, 246, 0.95); }
+  &--completed,
+  &--delivered,
+  &--shipped { background: rgba(34, 197, 94, 0.95); }
+  &--cancelled,
+  &--failed { background: rgba(192, 57, 43, 0.95); }
+}
+
+/* ----- Money breakdown -------------------------------------- */
+
+.money-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  padding: 6px 0;
+  color: var(--ax-color-text-primary, #2e241c);
+
+  &--discount {
+    color: #15803d;
+  }
+
+  &--total {
+    margin-top: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--ax-color-border-subtle, #e2dccc);
+    font-weight: 700;
+    font-size: 16px;
+  }
+}
+
+.promo-code {
+  font-size: 12px;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+
+/* ----- Addresses -------------------------------------------- */
+
+.address-block {
+  & + & {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--ax-color-border-subtle, #e2dccc);
+  }
+}
+
+.address-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 4px 0;
+  color: var(--ax-color-text-primary, #2e241c);
+}
+
+.address-line {
+  font-size: 13px;
+  margin: 0 0 2px 0;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+
+/* ----- Returns ---------------------------------------------- */
+
+.return-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.return-id {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary, #2e241c);
+}
+
+/* ----- Cancel + empty --------------------------------------- */
+
+.cancel-wrap {
+  margin: 16px 0 24px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 64px 24px;
+  gap: 12px;
+}
+
+.empty-state__icon {
+  font-size: 40px;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+
+.empty-state__title {
+  font-size: 17px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--ax-color-text-primary, #2e241c);
+}
+
+.empty-state__subtitle {
+  font-size: 14px;
+  margin: 0 0 8px 0;
+  color: var(--ax-color-text-secondary, #6b6056);
+}

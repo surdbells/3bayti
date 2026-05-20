@@ -1,0 +1,184 @@
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { provideRouter, Router } from '@angular/router';
+import { ActivatedRoute } from '@angular/router';
+import { of, throwError } from 'rxjs';
+import { OrderDetailPage } from './order-detail.page';
+import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { AxNotificationService } from '../../shared/ax-mobile/notification';
+import { Preferences } from '@capacitor/preferences';
+
+/* A representative v3 GET /orders/:id success envelope. */
+function okOrder(overrides: Record<string, unknown> = {}) {
+  return {
+    response_code: 200,
+    status: 'success',
+    data: {
+      order: {
+        id: 42,
+        order_reference: 'ORD-42',
+        status: 'pending_payment',
+        date: '2026-05-01T10:00:00+00:00',
+        subtotal: 200,
+        delivery_fee: 20,
+        discount: 30,
+        total: 190,
+        currency: 'AED',
+        paid_at: null,
+        items: [
+          {
+            id: 1,
+            product_id: 100,
+            vendor_id: 5,
+            product_name: 'Abaya',
+            product_image: 'https://img/abaya.jpg',
+            quantity: 2,
+            unit_price: 100,
+            subtotal: 200,
+            size: 'M',
+            color: 'Black',
+            is_custom: false,
+            item_status: 'pending',
+          },
+        ],
+        applied_promo: { code: 'SAVE30', type: 'fixed', value: 30, discount_amount: 30 },
+        returns: [],
+        billing_address: {
+          first_name: 'Jane', last_name: 'Doe', phone: '+971500000000', email: 'j@d.co',
+          street: '1 St', city: 'Dubai', state_province: null, country_code: 'AE', postal_code: null,
+        },
+        shipping_address: {
+          first_name: 'Jane', last_name: 'Doe', phone: '+971500000000', email: 'j@d.co',
+          street: '1 St', city: 'Dubai', state_province: null, country_code: 'AE', postal_code: null,
+        },
+        ...overrides,
+      },
+    },
+  };
+}
+
+class AdapterStub {
+  getResponse: any = okOrder();
+  getError = false;
+  cancelResponse: any = { response_code: 200, status: 'success', data: { cancellation: { was_already_cancelled: false } } };
+  lastGet: { routeKey: string; opts: any } | null = null;
+  lastPost: { routeKey: string; body: any; opts: any } | null = null;
+
+  get_v3(routeKey: string, opts: any) {
+    this.lastGet = { routeKey, opts };
+    return this.getError ? throwError(() => new Error('net')) : of(this.getResponse);
+  }
+  post_v3(routeKey: string, body: any, opts: any) {
+    this.lastPost = { routeKey, body, opts };
+    return of(this.cancelResponse);
+  }
+}
+
+class ToastStub {
+  errors: string[] = [];
+  successes: string[] = [];
+  error(m: string) { this.errors.push(m); }
+  success(m: string) { this.successes.push(m); }
+}
+
+function setup(routeId: string | null = '42') {
+  const adapter = new AdapterStub();
+  const toast = new ToastStub();
+
+  TestBed.configureTestingModule({
+    imports: [OrderDetailPage],
+    providers: [
+      provideRouter([]),
+      { provide: MobileNetworkAdapter, useValue: adapter },
+      { provide: AxNotificationService, useValue: toast },
+      {
+        provide: ActivatedRoute,
+        useValue: { snapshot: { paramMap: { get: (_: string) => routeId } } },
+      },
+    ],
+  });
+
+  const fixture = TestBed.createComponent(OrderDetailPage);
+  const router = TestBed.inject(Router);
+  spyOn(router, 'navigate');
+  return { fixture, component: fixture.componentInstance, adapter, toast, router };
+}
+
+describe('OrderDetailPage', () => {
+  beforeEach(() => {
+    spyOn(Preferences, 'get').and.returnValue(
+      Promise.resolve({ value: JSON.stringify({ id: 7, token: 'tok', is_customer: true }) }) as any,
+    );
+  });
+
+  it('creates', () => {
+    const { component } = setup();
+    expect(component).toBeTruthy();
+  });
+
+  it('loads the order via GET /orders/:id with the path param + auth token', fakeAsync(() => {
+    const { fixture, component, adapter } = setup('42');
+    fixture.detectChanges();
+    tick();
+    expect(adapter.lastGet?.routeKey).toBe('GET /orders/:id');
+    expect(adapter.lastGet?.opts.pathParams).toEqual({ id: '42' });
+    expect(adapter.lastGet?.opts.authToken).toBe('tok');
+    expect(component.order?.order_reference).toBe('ORD-42');
+    expect(component.order?.items.length).toBe(1);
+  }));
+
+  it('maps money fields and detects a discount', fakeAsync(() => {
+    const { fixture, component } = setup();
+    fixture.detectChanges();
+    tick();
+    expect(component.order?.total).toBe(190);
+    expect(component.hasDiscount()).toBeTrue();
+    expect(component.order?.applied_promo?.code).toBe('SAVE30');
+  }));
+
+  it('shows cancel only on pending_payment', fakeAsync(() => {
+    const { fixture, component } = setup();
+    fixture.detectChanges();
+    tick();
+    expect(component.canCancel()).toBeTrue();
+    component.order!.status = 'delivered';
+    expect(component.canCancel()).toBeFalse();
+  }));
+
+  it('redirects to my-orders on an invalid id', fakeAsync(() => {
+    const { fixture, component, router } = setup('0');
+    fixture.detectChanges();
+    tick();
+    expect(router.navigate).toHaveBeenCalledWith(['/', 'my-orders']);
+    expect(component.order).toBeNull();
+  }));
+
+  it('flags not_found on a 404', fakeAsync(() => {
+    const { fixture, component, adapter } = setup();
+    adapter.getResponse = { response_code: 404, status: 'error' };
+    fixture.detectChanges();
+    tick();
+    expect(component.ui_controls.not_found).toBeTrue();
+    expect(component.order).toBeNull();
+  }));
+
+  it('cancels via POST /orders/:id/cancel and updates status', fakeAsync(() => {
+    const { fixture, component, adapter, toast } = setup();
+    fixture.detectChanges();
+    tick();
+    component['executeCancel']();
+    tick();
+    expect(adapter.lastPost?.routeKey).toBe('POST /orders/:id/cancel');
+    expect(adapter.lastPost?.opts.pathParams).toEqual({ id: '42' });
+    expect(component.order?.status).toBe('cancelled');
+    expect(toast.successes.length).toBe(1);
+  }));
+
+  it('reports a network error toast on load failure', fakeAsync(() => {
+    const { fixture, component, adapter, toast } = setup();
+    adapter.getError = true;
+    fixture.detectChanges();
+    tick();
+    expect(toast.errors.length).toBe(1);
+    expect(component.ui_controls.is_loading).toBeFalse();
+  }));
+});

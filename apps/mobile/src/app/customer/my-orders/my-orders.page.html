@@ -63,6 +63,9 @@
               {{ order.showItems ? ('button_hide_items' | translate) : ('button_view_items' | translate) }}
               <ax-icon [name]="order.showItems ? 'chevron-up' : 'chevron-down'" slot="end"></ax-icon>
             </ion-button>
+            <ion-button size="small" fill="solid" class="view-detail-btn" (click)="onView(order)">
+              {{ 'button_view_details' | translate }}
+            </ion-button>
             @if (canCancel(order)) {
               <ion-button size="small" fill="outline" color="danger" class="cancel-btn" (click)="confirmCancel(order)">
                 {{ 'button_cancel_order' | translate }}

@@ -546,7 +546,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.router.navigate(['/', 'explore']);
   }
   user_orders() {
-    this.router.navigate(['/', 'orders']);
+    this.router.navigate(['/', 'my-orders']);
   }
   user_cart() {
     this.router.navigate(['/', 'cart']);

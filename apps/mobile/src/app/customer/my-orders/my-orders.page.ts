@@ -188,7 +188,7 @@ export class MyOrdersPage implements OnInit {
   }
 
   onView(order: Order) {
-    // navigate to order details or modal
+    this.router.navigate(['/', 'orders', order.id]);
   }
 
   onReview(order: Order) {

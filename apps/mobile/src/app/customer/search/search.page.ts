@@ -183,7 +183,7 @@ export class SearchPage implements OnInit, OnDestroy {
     this.router.navigate(['/', 'wishlist']);
   }
   user_support() {
-    this.router.navigate(['/', 'orders']);
+    this.router.navigate(['/', 'my-orders']);
   }
   get_label() {
     this.ui_controls.is_loading_category = true;
@@ -264,7 +264,7 @@ export class SearchPage implements OnInit, OnDestroy {
   }
 
   user_orders() {
-    this.router.navigate(['/', 'orders']);
+    this.router.navigate(['/', 'my-orders']);
   }
   open_vendor(id: number, name: string) {
     this.router.navigate(
