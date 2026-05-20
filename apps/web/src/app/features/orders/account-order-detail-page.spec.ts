@@ -266,31 +266,38 @@ describe('AccountOrderDetailPageComponent', () => {
       expect(fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]')).toBeNull();
     });
 
-    it('cancel button calls OrderService.cancel after confirm', async () => {
+    it('cancel button opens the confirm modal; confirming calls OrderService.cancel', async () => {
       const { fixture, orderService } = setup({
         order: makeOrder({ id: 42, status: 'pending_payment' }),
       });
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
       await flush();
       fixture.detectChanges();
-      const btn = fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement;
-      btn.click();
+      /* Modal not shown until the cancel button is clicked. */
+      expect(fixture.nativeElement.querySelector('[data-testid="confirm-modal"]')).toBeNull();
+
+      (fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="confirm-modal"]')).not.toBeNull();
+
+      (fixture.nativeElement.querySelector('[data-testid="confirm-modal-confirm"]') as HTMLButtonElement).click();
       await flush();
-      expect(confirmSpy).toHaveBeenCalled();
       expect(orderService.cancelCalls).toEqual([42]);
     });
 
-    it('skips cancel when user declines confirm', async () => {
+    it('skips cancel when the modal is dismissed', async () => {
       const { fixture, orderService } = setup({
         order: makeOrder({ id: 42, status: 'pending_payment' }),
       });
-      vi.spyOn(window, 'confirm').mockReturnValue(false);
       await flush();
       fixture.detectChanges();
-      const btn = fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement;
-      btn.click();
+      (fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="confirm-modal-cancel"]') as HTMLButtonElement).click();
       await flush();
+      fixture.detectChanges();
       expect(orderService.cancelCalls).toEqual([]);
+      /* Modal closed after dismissal. */
+      expect(fixture.nativeElement.querySelector('[data-testid="confirm-modal"]')).toBeNull();
     });
 
     it('updates the rendered status after a successful cancel', async () => {
@@ -298,11 +305,11 @@ describe('AccountOrderDetailPageComponent', () => {
         order: makeOrder({ id: 42, status: 'pending_payment' }),
         cancelResponse: makeOrder({ id: 42, status: 'cancelled' }),
       });
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
       await flush();
       fixture.detectChanges();
-      const btn = fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement;
-      btn.click();
+      (fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="confirm-modal-confirm"]') as HTMLButtonElement).click();
       await flush();
       fixture.detectChanges();
       const status = fixture.nativeElement.querySelector('[data-testid="order-detail-status"]');
@@ -315,11 +322,11 @@ describe('AccountOrderDetailPageComponent', () => {
       const { fixture, toast } = setup({
         order: makeOrder({ id: 42, status: 'pending_payment' }),
       });
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
       await flush();
       fixture.detectChanges();
-      const btn = fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement;
-      btn.click();
+      (fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="confirm-modal-confirm"]') as HTMLButtonElement).click();
       await flush();
       expect(toast.successes).toContain('orders.detail.cancelSuccess');
     });
@@ -329,11 +336,11 @@ describe('AccountOrderDetailPageComponent', () => {
         order: makeOrder({ id: 42, status: 'pending_payment' }),
         shouldThrowCancel: true,
       });
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
       await flush();
       fixture.detectChanges();
-      const btn = fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement;
-      btn.click();
+      (fixture.nativeElement.querySelector('[data-testid="order-detail-cancel"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="confirm-modal-confirm"]') as HTMLButtonElement).click();
       await flush();
       expect(toast.errors).toContain('orders.detail.cancelFailed');
     });

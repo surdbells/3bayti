@@ -34,6 +34,19 @@ export interface ProfileUpdate {
 }
 
 /**
+ * Response from PATCH /me/password. The endpoint revokes all sessions
+ * and issues a fresh token pair (see ProfileService.changePassword).
+ * Mirrors apps/api ChangePasswordController's ok([...]) body.
+ */
+export interface ChangePasswordResponse {
+  access_token: string;
+  access_token_expires_at: string;
+  refresh_token: string;
+  refresh_token_expires_at: string;
+  user: AuthUser;
+}
+
+/**
  * ProfileService — read + partial-update of the authenticated user's
  * profile. Public-ish account read, but auth-gated; routed through
  * RoutedHttpClient (which carries the bearer via the auth interceptor)
@@ -85,6 +98,33 @@ export class ProfileService {
       const user = env.data.user;
       this.auth.applyProfile(user);
       return user;
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  /**
+   * Change the account password.
+   *
+   * The endpoint re-authenticates via current_password, revokes ALL of
+   * the user's refresh tokens (including this session's), and returns a
+   * FRESH token pair. We adopt it via AuthService.applyPasswordChange
+   * so the current session survives the revocation — otherwise the
+   * very next request would fail with a revoked token.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    this._isSaving.set(true);
+    try {
+      const env = await firstValueFrom(
+        this.http.patch<ChangePasswordResponse>('PATCH /me/password', {
+          body: { current_password: currentPassword, new_password: newPassword },
+        }),
+      );
+      this.auth.applyPasswordChange({
+        access_token: env.data.access_token,
+        access_token_expires_at: env.data.access_token_expires_at,
+        user: env.data.user,
+      });
     } finally {
       this._isSaving.set(false);
     }

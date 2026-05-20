@@ -766,4 +766,34 @@ describe('AuthService', () => {
       expect(service.currentUser()).toBeNull();
     });
   });
+
+  describe('applyPasswordChange()', () => {
+    it('adopts the fresh token + user when signed in', async () => {
+      const { service, controller, tokenStore } = setup();
+      const loginPromise = service.login({ email: 'jane@example.com', password: 'secret' });
+      controller.expectOne('/auth-proxy/login').flush(makeLoginResponse());
+      await loginPromise;
+
+      service.applyPasswordChange({
+        access_token: 'rotated.jwt.v2',
+        access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+        user: makeUser({ email: 'jane@example.com', first_name: 'Jane2' }),
+      });
+
+      expect(tokenStore.getToken()).toBe('rotated.jwt.v2');
+      expect(service.currentUser()?.first_name).toBe('Jane2');
+      expect(service.isAuthenticated()).toBe(true);
+    });
+
+    it('is a no-op when signed out', () => {
+      const { service, tokenStore } = setup();
+      service.applyPasswordChange({
+        access_token: 'should.not.apply',
+        access_token_expires_at: new Date(Date.now() + 3_600_000).toISOString(),
+        user: makeUser(),
+      });
+      expect(tokenStore.getToken()).toBeNull();
+      expect(service.currentUser()).toBeNull();
+    });
+  });
 });

@@ -237,27 +237,35 @@ describe('AddressBookPageComponent', () => {
   });
 
   describe('delete action', () => {
-    it('confirms then calls AddressService.delete on confirm=true', async () => {
+    it('opens the confirm modal; confirming calls AddressService.delete', async () => {
       const { fixture, addressService } = setup({
         addresses: [makeAddress({ id: 1 }), makeAddress({ id: 5 })],
       });
-      const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
-      const btn = fixture.nativeElement.querySelector('[data-testid="address-delete-5"]') as HTMLButtonElement;
-      btn.click();
+      /* Modal closed initially. */
+      expect(fixture.nativeElement.querySelector('[data-testid="confirm-modal"]')).toBeNull();
+
+      (fixture.nativeElement.querySelector('[data-testid="address-delete-5"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="confirm-modal"]')).not.toBeNull();
+
+      (fixture.nativeElement.querySelector('[data-testid="confirm-modal-confirm"]') as HTMLButtonElement).click();
       await Promise.resolve();
-      expect(confirmSpy).toHaveBeenCalled();
+      await Promise.resolve();
       expect(addressService.deleteCalls).toEqual([5]);
     });
 
-    it('cancels delete on confirm=false', async () => {
+    it('cancels delete when the modal is dismissed', async () => {
       const { fixture, addressService } = setup({
         addresses: [makeAddress({ id: 1 }), makeAddress({ id: 5 })],
       });
-      vi.spyOn(window, 'confirm').mockReturnValue(false);
-      const btn = fixture.nativeElement.querySelector('[data-testid="address-delete-5"]') as HTMLButtonElement;
-      btn.click();
+      (fixture.nativeElement.querySelector('[data-testid="address-delete-5"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="confirm-modal-cancel"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
       await Promise.resolve();
       expect(addressService.deleteCalls).toEqual([]);
+      /* Modal closed after dismissal. */
+      expect(fixture.nativeElement.querySelector('[data-testid="confirm-modal"]')).toBeNull();
     });
 
     it('toasts on delete failure', async () => {
@@ -265,9 +273,10 @@ describe('AddressBookPageComponent', () => {
         addresses: [makeAddress({ id: 1 }), makeAddress({ id: 5 })],
       });
       addressService.shouldThrowDelete = true;
-      vi.spyOn(window, 'confirm').mockReturnValue(true);
-      const btn = fixture.nativeElement.querySelector('[data-testid="address-delete-5"]') as HTMLButtonElement;
-      btn.click();
+      (fixture.nativeElement.querySelector('[data-testid="address-delete-5"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (fixture.nativeElement.querySelector('[data-testid="confirm-modal-confirm"]') as HTMLButtonElement).click();
+      await Promise.resolve();
       await Promise.resolve();
       await Promise.resolve();
       expect(toast.errors).toContain('addresses.errors.unexpected');

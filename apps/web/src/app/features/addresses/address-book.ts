@@ -13,6 +13,7 @@ import { AddressService } from '../../core/addresses';
 import type { Address } from '../../core/addresses';
 import { AddressFormComponent } from './address-form';
 import { ToastService } from '../../shared/forms';
+import { ConfirmModalComponent } from '../../shared/ui';
 
 /**
  * Address book page — /account/addresses.
@@ -46,7 +47,7 @@ import { ToastService } from '../../shared/forms';
 @Component({
   selector: 'app-address-book',
   standalone: true,
-  imports: [NgIf, NgFor, RouterLink, TranslatePipe, AddressFormComponent],
+  imports: [NgIf, NgFor, RouterLink, TranslatePipe, AddressFormComponent, ConfirmModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="address-book" data-testid="address-book-page">
@@ -177,6 +178,18 @@ import { ToastService } from '../../shared/forms';
           </a>
         </p>
       </div>
+
+      <ui-confirm-modal
+        [open]="pendingDelete() !== null"
+        [title]="'addresses.deleteConfirmTitle'"
+        [message]="'addresses.deleteConfirmMessage'"
+        [confirmLabel]="'addresses.deleteConfirmYes'"
+        [cancelLabel]="'common.cancel'"
+        [danger]="true"
+        [busy]="isDeleting()"
+        (confirm)="onDeleteConfirmed()"
+        (cancel)="onDeleteDismissed()"
+      ></ui-confirm-modal>
     </main>
   `,
   styleUrl: './address-book.scss',
@@ -188,6 +201,12 @@ export class AddressBookPageComponent implements OnInit {
   protected readonly mode = signal<'list' | 'create' | 'edit'>('list');
   protected readonly editingAddress = signal<Address | null>(null);
   protected readonly formHeadingId = 'address-form-heading';
+
+  /** Address awaiting delete confirmation (null = modal closed). */
+  protected readonly _pendingDelete = signal<Address | null>(null);
+  protected readonly pendingDelete = this._pendingDelete.asReadonly();
+  protected readonly _isDeleting = signal<boolean>(false);
+  protected readonly isDeleting = this._isDeleting.asReadonly();
 
   protected readonly addresses = this.addressService.addresses;
   protected readonly isLoading = this.addressService.isLoading;
@@ -247,20 +266,29 @@ export class AddressBookPageComponent implements OnInit {
     }
   }
 
-  protected async onDelete(addr: Address): Promise<void> {
-    /* Confirm via native browser confirm. A custom modal here would
-       be the right Y.5 polish but is out of scope for Y.2. */
-    if (typeof confirm !== 'undefined') {
-      const ok = confirm(
-        `Delete the address labelled "${addr.label ?? addr.recipient_name}"?`,
-      );
-      if (!ok) return;
-    }
+  /** Delete button → stash the target + open the confirm modal. */
+  protected onDelete(addr: Address): void {
+    this._pendingDelete.set(addr);
+  }
+
+  /** Modal dismissed — clear the pending target. */
+  protected onDeleteDismissed(): void {
+    this._pendingDelete.set(null);
+  }
+
+  /** Modal confirmed — perform the delete for the pending address. */
+  protected async onDeleteConfirmed(): Promise<void> {
+    const addr = this._pendingDelete();
+    if (addr === null) return;
+    this._isDeleting.set(true);
     try {
       await this.addressService.delete(addr.id);
       this.toast.success('addresses.toast.deleted');
     } catch {
       this.toast.error('addresses.errors.unexpected');
+    } finally {
+      this._isDeleting.set(false);
+      this._pendingDelete.set(null);
     }
   }
 }

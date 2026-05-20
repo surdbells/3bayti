@@ -5,14 +5,14 @@ import {
   signal,
   computed,
   OnInit,
-  PLATFORM_ID,
 } from '@angular/core';
-import { NgIf, NgFor, DatePipe, isPlatformBrowser } from '@angular/common';
+import { NgIf, NgFor, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { OrderService, ORDER_STATUS_LABELS } from '../../core/orders';
 import type { Order } from '../../core/orders';
 import { ToastService } from '../../shared/forms';
+import { ConfirmModalComponent } from '../../shared/ui';
 
 /**
  * /account/orders/:id — single-order detail page.
@@ -58,7 +58,7 @@ import { ToastService } from '../../shared/forms';
 @Component({
   selector: 'app-account-order-detail',
   standalone: true,
-  imports: [NgIf, NgFor, DatePipe, RouterLink, TranslatePipe],
+  imports: [NgIf, NgFor, DatePipe, RouterLink, TranslatePipe, ConfirmModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="orders-page" data-testid="order-detail-page">
@@ -277,6 +277,18 @@ import { ToastService } from '../../shared/forms';
           </div>
         </ng-template>
       </div>
+
+      <ui-confirm-modal
+        [open]="showCancelConfirm()"
+        [title]="'orders.detail.cancelConfirmTitle'"
+        [message]="confirmMessage()"
+        [confirmLabel]="'orders.detail.cancelConfirmYes'"
+        [cancelLabel]="'orders.detail.cancelConfirmNo'"
+        [danger]="true"
+        [busy]="isCancelling()"
+        (confirm)="onCancelConfirmed()"
+        (cancel)="onCancelDismissed()"
+      ></ui-confirm-modal>
     </main>
   `,
   styleUrl: './order-detail.scss',
@@ -285,7 +297,6 @@ export class AccountOrderDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly orderService = inject(OrderService);
   private readonly toast = inject(ToastService);
-  private readonly platformId = inject(PLATFORM_ID);
 
   private readonly _order = signal<Order | null>(null);
   protected readonly order = this._order.asReadonly();
@@ -294,6 +305,9 @@ export class AccountOrderDetailPageComponent implements OnInit {
   protected readonly errored = this._errored.asReadonly();
   private readonly _isCancelling = signal(false);
   protected readonly isCancelling = this._isCancelling.asReadonly();
+
+  private readonly _showCancelConfirm = signal(false);
+  protected readonly showCancelConfirm = this._showCancelConfirm.asReadonly();
 
   protected readonly canCancel = computed(() => {
     const o = this._order();
@@ -352,17 +366,28 @@ export class AccountOrderDetailPageComponent implements OnInit {
      Cancel
      ----------------------------------------------------------------- */
 
-  protected async onCancelClick(): Promise<void> {
+  /**
+   * Cancel button → open the confirm modal. The actual cancel happens
+   * in onCancelConfirmed when the user confirms. (Replaced the native
+   * window.confirm() with the reusable ConfirmModal in Y.5-C.)
+   */
+  protected onCancelClick(): void {
     if (!this.canCancel()) return;
-    const order = this._order();
-    if (order === null) return;
+    if (this._order() === null) return;
+    this._showCancelConfirm.set(true);
+  }
 
-    /* Native confirm() — keyboard-accessible and unambiguous. The
-       custom confirm modal lands in Y.5. */
-    if (isPlatformBrowser(this.platformId)) {
-      /* In tests this can be stubbed via window.confirm. */
-      const confirmed = window.confirm(this.confirmMessage());
-      if (!confirmed) return;
+  /** User dismissed the confirm modal — close it, do nothing. */
+  protected onCancelDismissed(): void {
+    this._showCancelConfirm.set(false);
+  }
+
+  /** User confirmed cancellation in the modal — perform the cancel. */
+  protected async onCancelConfirmed(): Promise<void> {
+    const order = this._order();
+    if (order === null) {
+      this._showCancelConfirm.set(false);
+      return;
     }
 
     this._isCancelling.set(true);
@@ -374,12 +399,11 @@ export class AccountOrderDetailPageComponent implements OnInit {
       this.toast.error('orders.detail.cancelFailed');
     } finally {
       this._isCancelling.set(false);
+      this._showCancelConfirm.set(false);
     }
   }
 
-  /** Confirm message — pulled from translations at call time. Since
-   *  this is read inside a native confirm() (not a template), we
-   *  can't use the pipe; we mirror the key for the tests to assert. */
+  /** Confirm message i18n key — used by the modal's [message]. */
   protected confirmMessage(): string {
     return 'orders.detail.cancelConfirm';
   }

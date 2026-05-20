@@ -112,6 +112,33 @@ export class AuthService {
     }
   }
 
+  /**
+   * Adopt the fresh access token + user returned by a successful
+   * PATCH /me/password. The password-change endpoint revokes ALL of
+   * the user's refresh tokens (including the current session's) and
+   * issues a new pair, so the caller MUST adopt the new access token
+   * or the next request fails with a revoked token. Mirrors the
+   * token-first / user-second / reschedule sequence of applyAuthState.
+   *
+   * No-op when signed out (defensive — a password change can only
+   * happen for an authenticated user).
+   */
+  applyPasswordChange(input: {
+    access_token: string;
+    access_token_expires_at: string;
+    user: AuthUser;
+  }): void {
+    if (this._currentUser() === null) {
+      return;
+    }
+    this.tokenStore.set({
+      token: input.access_token,
+      expiresAt: input.access_token_expires_at,
+    });
+    this._currentUser.set(input.user);
+    this.scheduleRefresh();
+  }
+
   /** True when a user is signed in AND the access token is still valid. */
   readonly isAuthenticated = computed(
     () => this._currentUser() !== null && this.tokenStore.hasValidToken(),

@@ -1,0 +1,114 @@
+/* Reusable confirmation modal styles (Y.5-C). */
+
+.confirm-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(28, 22, 17, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 1000;
+  animation: confirm-modal-fade 0.12s ease-out;
+}
+
+.confirm-modal {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 18px 48px rgba(28, 22, 17, 0.28);
+  animation: confirm-modal-pop 0.14s ease-out;
+}
+
+.confirm-modal__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 10px 0;
+}
+
+.confirm-modal__message {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0 0 24px 0;
+}
+
+.confirm-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.confirm-modal__cancel,
+.confirm-modal__confirm {
+  appearance: none;
+  padding: 11px 22px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.confirm-modal__cancel {
+  background: #fff;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  color: var(--color-text-primary, #2e241c);
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-text-muted, #6b6056);
+    outline: none;
+  }
+}
+
+.confirm-modal__confirm {
+  background: var(--color-text-primary, #2e241c);
+  border: 1px solid var(--color-text-primary, #2e241c);
+  color: #fff;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: var(--color-brand-700, #5a3a2c);
+    border-color: var(--color-brand-700, #5a3a2c);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  &--danger {
+    background: #b42218;
+    border-color: #b42218;
+
+    &:hover:not(:disabled),
+    &:focus-visible:not(:disabled) {
+      background: #97170f;
+      border-color: #97170f;
+    }
+  }
+}
+
+@keyframes confirm-modal-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes confirm-modal-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm-modal__backdrop,
+  .confirm-modal {
+    animation: none;
+  }
+}

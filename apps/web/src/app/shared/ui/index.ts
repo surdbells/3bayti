@@ -13,6 +13,7 @@ export { HeadingComponent } from './heading';
 export { TextComponent } from './text';
 export { StackComponent } from './stack';
 export { SkeletonShimmerComponent } from './skeleton-shimmer';
+export { ConfirmModalComponent } from './confirm-modal';
 /* ProductStripComponent is exported separately because it depends on
  * features/catalog (ProductCard) and we don't want to introduce a
  * shared → features dependency through the barrel. Consumers import

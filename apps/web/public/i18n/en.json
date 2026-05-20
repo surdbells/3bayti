@@ -8,7 +8,8 @@
     "saving": "Saving…",
     "errors": {
       "network": "Network error. Please check your connection and try again."
-    }
+    },
+    "confirm": "Confirm"
   },
   "nav": {
     "home": "Home",
@@ -203,6 +204,9 @@
     "unlabeled": "Address",
     "defaultBadge": "Default",
     "backToAccount": "Back to account",
+    "deleteConfirmTitle": "Delete address?",
+    "deleteConfirmMessage": "This address will be removed from your account. This can’t be undone.",
+    "deleteConfirmYes": "Delete address",
     "empty": {
       "body": "You haven't saved any addresses yet.",
       "cta": "Add your first address"
@@ -331,6 +335,9 @@
       "loadError": "Couldn't load this order.",
       "cancelCta": "Cancel order",
       "cancelConfirm": "Cancel this order? This can't be undone.",
+      "cancelConfirmTitle": "Cancel order?",
+      "cancelConfirmYes": "Yes, cancel",
+      "cancelConfirmNo": "Keep order",
       "cancelSuccess": "Order cancelled.",
       "cancelFailed": "Couldn't cancel this order.",
       "returnsTitle": "Return requests",
@@ -451,6 +458,24 @@
         "tooLong": "This is too long.",
         "loadFailed": "We couldn't load your profile. Please try again.",
         "saveFailed": "We couldn't save your changes. Please try again."
+      }
+    },
+    "password": {
+      "title": "Change password",
+      "intro": "For your security, changing your password signs you out of other devices.",
+      "current": "Current password",
+      "new": "New password",
+      "newHint": "At least 8 characters.",
+      "confirm": "Confirm new password",
+      "save": "Update password",
+      "changed": "Your password has been changed.",
+      "errors": {
+        "required": "This field is required.",
+        "tooShort": "Password must be at least 8 characters.",
+        "mismatch": "Passwords don't match.",
+        "wrongCurrent": "Your current password is incorrect.",
+        "invalid": "Please check this field.",
+        "generic": "We couldn't change your password. Please try again."
       }
     }
   }
