@@ -55,6 +55,64 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
  * compilation. See PHP-DI docs:
  * https://php-di.org/doc/php-definitions.html#closures
  */
+/**
+ * Resolve Firebase service-account credentials for FCM from env, in
+ * precedence order:
+ *   1. FCM_SERVICE_ACCOUNT_JSON  — the full service-account JSON inline
+ *   2. FCM_SERVICE_ACCOUNT_FILE  — a path to the service-account JSON
+ *   3. FCM_PROJECT_ID / FCM_CLIENT_EMAIL / FCM_PRIVATE_KEY — the three
+ *      fields individually
+ *
+ * Returns [projectId, clientEmail, privateKey]; any unresolved field is
+ * an empty string (the caller decides whether that's fatal). Malformed
+ * JSON yields empty strings rather than throwing, so a bad value in dev
+ * degrades to NullPushSender instead of crashing container resolution.
+ *
+ * Top-level function (not a closure) so it's callable from inside the
+ * DI factory under PHP-DI's compiled-container mode. Guarded with
+ * function_exists so the binding test can require this file under a
+ * different path without a redeclaration fatal.
+ *
+ * @return array{0: string, 1: string, 2: string}
+ */
+if (!function_exists('loadFcmServiceAccount')) {
+    function loadFcmServiceAccount(): array
+    {
+        $project = '';
+        $email = '';
+        $key = '';
+
+        $json = $_ENV['FCM_SERVICE_ACCOUNT_JSON'] ?? '';
+        $file = $_ENV['FCM_SERVICE_ACCOUNT_FILE'] ?? '';
+
+        if ($json === '' && $file !== '' && is_file($file) && is_readable($file)) {
+            $json = (string) file_get_contents($file);
+        }
+
+        if ($json !== '') {
+            $decoded = json_decode($json, true);
+            if (is_array($decoded)) {
+                $project = is_string($decoded['project_id'] ?? null) ? $decoded['project_id'] : '';
+                $email = is_string($decoded['client_email'] ?? null) ? $decoded['client_email'] : '';
+                $key = is_string($decoded['private_key'] ?? null) ? $decoded['private_key'] : '';
+            }
+        }
+
+        // Individual fields override / fill gaps (handy for local dev).
+        $project = (string) ($_ENV['FCM_PROJECT_ID'] ?? '') ?: $project;
+        $email = (string) ($_ENV['FCM_CLIENT_EMAIL'] ?? '') ?: $email;
+        $key = (string) ($_ENV['FCM_PRIVATE_KEY'] ?? '') ?: $key;
+
+        // Env-stored private keys often have literal "\n" — normalise to
+        // real newlines so the PEM parses.
+        if ($key !== '') {
+            $key = str_replace('\n', "\n", $key);
+        }
+
+        return [$project, $email, $key];
+    }
+}
+
 return [
     'app.rootPath' => static fn(): string => dirname(__DIR__),
 
@@ -314,6 +372,66 @@ return [
             // Falls back to English for unknown recipients per
             // Q-FallbackBehavior = A.
             localeResolver: $c->get(\Bayti\Api\Notification\LocaleResolver::class),
+        );
+    },
+
+    // M3.2.Z.4-C — Push notifications (sender + orchestrator).
+    //
+    // PushSenderInterface binding selects the implementation based on
+    // environment, mirroring the MailerInterface block:
+    //   - APP_ENV=prod AND FCM service-account creds present → FcmHttpV1Sender
+    //   - PUSH_PROVIDER=fcm (explicit override)               → FcmHttpV1Sender
+    //   - otherwise                                           → NullPushSender
+    //
+    // FCM credentials come from a Firebase service-account JSON. Provide
+    // EITHER the whole JSON in FCM_SERVICE_ACCOUNT_JSON, OR a path to it
+    // in FCM_SERVICE_ACCOUNT_FILE, OR the three fields individually
+    // (FCM_PROJECT_ID / FCM_CLIENT_EMAIL / FCM_PRIVATE_KEY). Q-Z4=A:
+    // FCM relays to APNs for iOS, so this single adapter serves both.
+    \Bayti\Api\Notification\Push\PushSenderInterface::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Notification\Push\PushSenderInterface {
+        $env = $_ENV['APP_ENV'] ?? 'dev';
+        $override = $_ENV['PUSH_PROVIDER'] ?? null;
+        $logger = $c->get(\Psr\Log\LoggerInterface::class);
+
+        [$projectId, $clientEmail, $privateKey] = loadFcmServiceAccount();
+        $haveCreds = $projectId !== '' && $clientEmail !== '' && $privateKey !== '';
+
+        $useFcm = ($env === 'prod' && $haveCreds) || $override === 'fcm';
+
+        if (!$useFcm) {
+            return new \Bayti\Api\Notification\Push\NullPushSender($logger);
+        }
+
+        if (!$haveCreds) {
+            throw new \RuntimeException(
+                'FcmHttpV1Sender requires FCM service-account credentials. '
+                . 'Set FCM_SERVICE_ACCOUNT_JSON, FCM_SERVICE_ACCOUNT_FILE, or '
+                . 'FCM_PROJECT_ID + FCM_CLIENT_EMAIL + FCM_PRIVATE_KEY. '
+                . 'Either set them, or unset PUSH_PROVIDER/APP_ENV to use NullPushSender.',
+            );
+        }
+
+        return new \Bayti\Api\Notification\Push\FcmHttpV1Sender(
+            projectId: $projectId,
+            clientEmail: $clientEmail,
+            privateKey: $privateKey,
+            httpClient: null, // adapter constructs its own with timeout
+            logger: $logger,
+        );
+    },
+
+    \Bayti\Api\Notification\Push\PushNotificationService::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Notification\Push\PushNotificationService {
+        return new \Bayti\Api\Notification\Push\PushNotificationService(
+            sender: $c->get(\Bayti\Api\Notification\Push\PushSenderInterface::class),
+            logger: $c->get(\Psr\Log\LoggerInterface::class),
+            // EM passed directly so DeviceTokenRepository is resolved
+            // LAZILY per fan-out rather than eagerly at construction
+            // (same locked pattern as OrderNotificationService).
+            em: $c->get(\Doctrine\ORM\EntityManagerInterface::class),
         );
     },
 
