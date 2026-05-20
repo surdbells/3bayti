@@ -17,6 +17,7 @@ import { Preferences } from '@capacitor/preferences';
 import { ActionSheetController } from '@ionic/angular';
 
 import { TranslatePipe } from '../../translate.pipe';
+import { I18nService } from '../../i18n.service';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
@@ -108,6 +109,7 @@ export class VendorOrderDetailPage implements OnInit {
     private toast: AxNotificationService,
     private actionSheetCtrl: ActionSheetController,
     private mobileAdapter: MobileNetworkAdapter,
+    private i18n: I18nService,
   ) {}
 
   async ngOnInit() {
@@ -203,7 +205,8 @@ export class VendorOrderDetailPage implements OnInit {
     return item.item_status === 'shipped';
   }
 
-  async confirmTransition(item: VendorOrderItem, newStatus: string, label: string) {
+  async confirmTransition(item: VendorOrderItem, newStatus: string, labelKey: string) {
+    const label = this.i18n.t(labelKey);
     const sheet = await this.actionSheetCtrl.create({
       header: `${label}?`,
       subHeader: item.product_name,

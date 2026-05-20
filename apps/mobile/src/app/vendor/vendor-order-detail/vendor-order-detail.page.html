@@ -57,7 +57,7 @@
               fill="solid"
               color="success"
               [disabled]="ui_controls.is_transitioning"
-              (click)="confirmTransition(item, 'accepted', 'button_accept_item' | translate)"
+              (click)="confirmTransition(item, 'accepted', 'button_accept_item')"
             >
               {{ 'button_accept_item' | translate }}
             </ion-button>
@@ -68,7 +68,7 @@
               fill="outline"
               color="danger"
               [disabled]="ui_controls.is_transitioning"
-              (click)="confirmTransition(item, 'rejected', 'button_reject_item' | translate)"
+              (click)="confirmTransition(item, 'rejected', 'button_reject_item')"
             >
               {{ 'button_reject_item' | translate }}
             </ion-button>
@@ -78,7 +78,7 @@
               size="small"
               fill="solid"
               [disabled]="ui_controls.is_transitioning"
-              (click)="confirmTransition(item, 'preparing', 'button_mark_preparing' | translate)"
+              (click)="confirmTransition(item, 'preparing', 'button_mark_preparing')"
             >
               {{ 'button_mark_preparing' | translate }}
             </ion-button>
@@ -88,7 +88,7 @@
               size="small"
               fill="solid"
               [disabled]="ui_controls.is_transitioning"
-              (click)="confirmTransition(item, 'shipped', 'button_mark_shipped' | translate)"
+              (click)="confirmTransition(item, 'shipped', 'button_mark_shipped')"
             >
               {{ 'button_mark_shipped' | translate }}
             </ion-button>
@@ -98,7 +98,7 @@
               size="small"
               fill="solid"
               [disabled]="ui_controls.is_transitioning"
-              (click)="confirmTransition(item, 'delivered', 'button_mark_delivered' | translate)"
+              (click)="confirmTransition(item, 'delivered', 'button_mark_delivered')"
             >
               {{ 'button_mark_delivered' | translate }}
             </ion-button>
