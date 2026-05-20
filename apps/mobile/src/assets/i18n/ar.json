@@ -515,5 +515,9 @@
   "label_subtotal": "المجموع الفرعي",
   "label_shipping_address": "عنوان الشحن",
   "label_billing_address": "عنوان الفوترة",
-  "button_view_details": "عرض التفاصيل"
+  "button_view_details": "عرض التفاصيل",
+  "address_default": "افتراضي",
+  "address_use_different": "استخدام عنوان آخر",
+  "address_select_saved": "اختاري عنواناً محفوظاً",
+  "or_enter_manually": "أو أدخلي يدوياً"
 }

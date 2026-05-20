@@ -508,6 +508,18 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/addresses/:id',
     shape: 'v3-envelope',
   },
+  'GET /me/addresses/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/addresses/:id',
+    shape: 'v3-envelope',
+  },
+  'PATCH /me/addresses/:id/default': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/addresses/:id/default',
+    shape: 'v3-envelope',
+  },
   'GET /me/measurements': {
     target: 'new',
     oldPath: '/users/measurements',

@@ -523,5 +523,9 @@
   "label_subtotal": "Subtotal",
   "label_shipping_address": "Shipping Address",
   "label_billing_address": "Billing Address",
-  "button_view_details": "View Details"
+  "button_view_details": "View Details",
+  "address_default": "Default",
+  "address_use_different": "Use a different address",
+  "address_select_saved": "Select a saved address",
+  "or_enter_manually": "or enter manually"
 }

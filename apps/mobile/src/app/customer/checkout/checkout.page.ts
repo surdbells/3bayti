@@ -45,6 +45,7 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxPlaceAutocompleteComponent, PlaceDetails } from '../../shared/ax-mobile/place-autocomplete';
+import { AddressService, SavedAddress } from '../../core/services/address.service';
 @Component({
   selector: 'app-checkout',
   templateUrl: './checkout.page.html',
@@ -88,6 +89,11 @@ export class CheckoutPage implements OnInit, OnDestroy {
   isConfirmBilling = false;
   isCityOpen = false;
   isAreaOpen = false;
+  /* Z.2 — saved-address book picker. */
+  savedAddresses: SavedAddress[] = [];
+  isAddressPickerOpen = false;
+  selectedAddressId: number | null = null;
+  isLoadingAddresses = false;
   private sub: Subscription;
   @ViewChild('accordionGroup', { static: true }) accordionGroup!: IonAccordionGroup;
   constructor(
@@ -99,7 +105,8 @@ export class CheckoutPage implements OnInit, OnDestroy {
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
-    private i18n: I18nService
+    private i18n: I18nService,
+    private addressService: AddressService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -306,6 +313,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
       this.get_billing();
       this.getCities();
       this.getArea(2);
+      this.loadSavedAddresses();
     }
   }
   load_cart() {
@@ -614,6 +622,72 @@ export class CheckoutPage implements OnInit, OnDestroy {
         }
       }))
   }
+  /**
+   * Z.2 — Load the user's saved address book (v3). Pre-selects the
+   * default address (if any) and applies it to the checkout so a
+   * returning customer can confirm in one tap.
+   */
+  async loadSavedAddresses() {
+    this.isLoadingAddresses = true;
+    try {
+      this.savedAddresses = await this.addressService.list(this.single_user.token);
+      const def = this.savedAddresses.find(a => a.is_default || a.is_default_shipping)
+        ?? this.savedAddresses[0];
+      if (def) {
+        this.applySavedAddress(def);
+      }
+    } catch {
+      /* Non-fatal: the manual delivery-info form remains usable. */
+    } finally {
+      this.isLoadingAddresses = false;
+    }
+  }
+
+  openAddressPicker() {
+    if (this.savedAddresses.length > 0) {
+      this.isAddressPickerOpen = true;
+    }
+  }
+
+  /**
+   * Apply a saved address to the checkout: fills both the editable
+   * delivery-info form (this.update) and the single_user.billing_*
+   * fields that checkout_initiate() reads, and marks delivery info
+   * confirmed so the user can proceed straight to payment.
+   */
+  applySavedAddress(addr: SavedAddress) {
+    this.selectedAddressId = addr.id;
+
+    const name = addr.recipient_name ?? `${this.single_user.first_name} ${this.single_user.last_name}`.trim();
+    const phone = addr.recipient_phone ?? this.single_user.phone;
+
+    this.update.name = name;
+    this.update.phone = phone;
+    this.update.email = this.single_user.email;
+    this.update.city = addr.emirate ?? this.update.city;
+    this.update.area = addr.area ?? this.update.area;
+    this.update.street = addr.street_address ?? '';
+    this.update.villa_number = addr.building_details ?? '';
+
+    this.single_user.billing_name = name;
+    this.single_user.billing_phone = phone;
+    this.single_user.billing_email = this.single_user.email;
+    this.single_user.billing_city = addr.emirate ?? '';
+    this.single_user.billing_area = addr.area ?? '';
+    this.single_user.billing_street = addr.street_address ?? '';
+    this.single_user.billing_country = addr.country ?? 'AE';
+
+    this.isConfirmBilling = true;
+    this.isAddressPickerOpen = false;
+  }
+
+  /** Human-readable one-line summary for an address row. */
+  addressSummary(addr: SavedAddress): string {
+    return [addr.street_address, addr.area, addr.emirate]
+      .filter(Boolean)
+      .join(', ');
+  }
+
   getCities() {
     this.ui_controls.is_loading = true;
     this.networkService.get_request(GlobalComponent.topexCities)

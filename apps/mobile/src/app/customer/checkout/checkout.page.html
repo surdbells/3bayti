@@ -35,6 +35,45 @@
         <ion-label>{{ 'delivery_info' | translate }}</ion-label>
       </ion-item>
       <div class="ion-padding" slot="content">
+        @if (savedAddresses.length > 0) {
+          <div class="saved-address-picker" data-testid="saved-address-picker">
+            @if (selectedAddressId !== null) {
+              <div class="saved-address-selected" data-testid="selected-address">
+                @for (a of savedAddresses; track a.id) {
+                  @if (a.id === selectedAddressId) {
+                    <div class="saved-address-card">
+                      <div class="saved-address-card__body">
+                        <span class="saved-address-card__label">
+                          {{ a.label || a.recipient_name }}
+                          @if (a.is_default || a.is_default_shipping) {
+                            <span class="saved-address-card__default">{{ 'address_default' | translate }}</span>
+                          }
+                        </span>
+                        <span class="saved-address-card__line">{{ addressSummary(a) }}</span>
+                        @if (a.recipient_phone) {
+                          <span class="saved-address-card__line">{{ a.recipient_phone }}</span>
+                        }
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+            }
+            <ion-button
+              fill="outline"
+              size="small"
+              expand="block"
+              (click)="openAddressPicker()"
+              data-testid="change-address-btn"
+            >
+              <ax-icon name="map-pin" slot="start"></ax-icon>
+              {{ (selectedAddressId !== null ? 'address_use_different' : 'address_select_saved') | translate }}
+            </ion-button>
+            <div class="saved-address-divider">
+              <span>{{ 'or_enter_manually' | translate }}</span>
+            </div>
+          </div>
+        }
         @if (!ui_controls.is_loading){
           <ion-row>
             <ion-col>
@@ -220,4 +259,35 @@
       </ul>
     </ax-bottom-sheet>
   }
+
+  <ax-bottom-sheet
+    [isOpen]="isAddressPickerOpen"
+    (didDismiss)="isAddressPickerOpen = false"
+    [snapPoints]="[0.5, 0.9]"
+    [initialSnap]="0"
+    [title]="'address_select_saved' | translate">
+
+    <ul class="picker-list" data-testid="address-picker-list">
+      @for (a of savedAddresses; track a.id) {
+        <li
+          class="picker-list__item address-pick"
+          [class.address-pick--active]="a.id === selectedAddressId"
+          (click)="applySavedAddress(a)"
+          role="button"
+          tabindex="0"
+        >
+          <span class="address-pick__label">
+            {{ a.label || a.recipient_name }}
+            @if (a.is_default || a.is_default_shipping) {
+              <span class="saved-address-card__default">{{ 'address_default' | translate }}</span>
+            }
+          </span>
+          <span class="address-pick__line">{{ addressSummary(a) }}</span>
+          @if (a.recipient_phone) {
+            <span class="address-pick__line">{{ a.recipient_phone }}</span>
+          }
+        </li>
+      }
+    </ul>
+  </ax-bottom-sheet>
 </ion-content>
