@@ -9,7 +9,7 @@ import {
 } from '@angular/core';
 import { isPlatformServer } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, map, of, tap } from 'rxjs';
+import { catchError, from, map, of, tap } from 'rxjs';
 
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { SeoService } from '../../core/seo/seo.service';
@@ -19,6 +19,9 @@ import { SkeletonShimmerComponent } from '../../shared/ui/skeleton-shimmer';
 import { ProductStripComponent } from '../../shared/ui/product-strip';
 import { HeroCarouselComponent } from '../../shared/ui/hero-carousel';
 import { DesignerCardComponent } from '../catalog/designer-card';
+import { RecommendationsService } from '../catalog/recommendations.service';
+import type { Product } from '../catalog/product.model';
+import { AuthService } from '../../core/auth/auth.service';
 import type { Category } from '../categories/category.model';
 import { categoryIconUrl, categoryHasIcon } from '../categories/category-icons';
 import { HomeDataService } from './home-data.service';
@@ -68,6 +71,8 @@ export class HomeComponent {
   private state = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
   private homeData = inject(HomeDataService);
+  private auth = inject(AuthService);
+  private recsService = inject(RecommendationsService);
 
   /* ----- Categories (one extra fetch beyond the 4 home-page endpoints)
    *
@@ -93,6 +98,22 @@ export class HomeComponent {
   readonly bestSellers  = toSignal(this.homeData.bestSellers$(),       { initialValue: null });
   readonly newArrivals  = toSignal(this.homeData.newArrivals$(),       { initialValue: null });
   readonly vendors      = toSignal(this.homeData.featuredVendors$(),   { initialValue: null });
+
+  /* ----- Personalized "For you" strip (X.12 / W.1).
+     Only loaded for signed-in users, browser-side (the personalized
+     endpoint is auth-gated and not SEO content). Resolves to a
+     Product[] (possibly empty); the template hides the strip when the
+     user is anonymous or the engine returns nothing. Errors degrade to
+     [] inside the service. ----- */
+  readonly forYou = toSignal(
+    isPlatformServer(this.platformId) || !this.auth.isAuthenticated()
+      ? of([] as Product[])
+      : from(this.recsService.forMe()).pipe(
+          map((recs) => recs.map((r) => r.product)),
+          catchError(() => of([] as Product[])),
+        ),
+    { initialValue: [] as Product[] },
+  );
 
   constructor() {
     const siteUrl = environment.SITE_URL;
