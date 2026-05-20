@@ -356,6 +356,21 @@ export class MobileNetworkAdapter {
     return this.callV3Direct('PATCH', routeKey, body, opts);
   }
 
+  /**
+   * DELETE a v3 endpoint directly by routeKey. Added M3.2.Z.3-Mobile
+   * for wishlist label/item deletion and similar mutating endpoints.
+   */
+  delete_v3(
+    routeKey: string,
+    opts?: {
+      authToken?: string;
+      pathParams?: Record<string, string>;
+      queryParams?: Record<string, string | number | boolean>;
+    },
+  ): Observable<unknown> {
+    return this.callV3Direct('DELETE', routeKey, null, opts);
+  }
+
   /* ------ Internals ----------------------------------------------- */
 
   /**

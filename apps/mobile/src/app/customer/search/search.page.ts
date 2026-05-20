@@ -31,6 +31,8 @@ import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import { WishlistService } from '../../core/services/wishlist.service';
+import { I18nService } from '../../i18n.service';
 @Component({
   selector: 'app-search',
   templateUrl: './search.page.html',
@@ -77,6 +79,8 @@ export class SearchPage implements OnInit, OnDestroy {
     private router: Router,
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
+    private wishlistService: WishlistService,
+    private i18n: I18nService,
     private toast: AxNotificationService
   ) {
     this.net.setReachabilityCheck(true);
@@ -187,31 +191,29 @@ export class SearchPage implements OnInit, OnDestroy {
   }
   get_label() {
     this.ui_controls.is_loading_category = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
-      .subscribe(({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.categories = response.data;
-            this.ui_controls.is_loading_category = false;
-          }
-        }
-      }))
+    this.wishlistService.listLabels(this.single_user.token)
+      .then((labels) => {
+        this.categories = labels.map((l) => ({ id: l.id, name: l.name, count: l.count })) as any;
+        this.ui_controls.is_loading_category = false;
+      })
+      .catch(() => {
+        this.ui_controls.is_loading_category = false;
+      });
   }
   addToCloset(label: number) {
     this.ui_controls.is_loading_category = true;
     this.addCloset.label_id = label;
     this.isWishOpen = false;
-    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
-      .subscribe(({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.success_notification(response.message);
-            this.ui_controls.is_loading_category = false;
-          }else{
-            this.ui_controls.is_loading_category = false;
-          }
+    this.wishlistService.add(this.single_user.token, this.addCloset.product_id, label)
+      .then((ok) => {
+        if (ok) {
+          this.success_notification(this.i18n.t('text_added_to_wishlist'));
         }
-      }))
+        this.ui_controls.is_loading_category = false;
+      })
+      .catch(() => {
+        this.ui_controls.is_loading_category = false;
+      });
   }
   startAddToCloset(product: number, product_name: string, image_1: string) {
     this.addCloset.id = this.single_user.id;

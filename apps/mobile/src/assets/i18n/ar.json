@@ -519,5 +519,8 @@
   "address_default": "افتراضي",
   "address_use_different": "استخدام عنوان آخر",
   "address_select_saved": "اختاري عنواناً محفوظاً",
-  "or_enter_manually": "أو أدخلي يدوياً"
+  "or_enter_manually": "أو أدخلي يدوياً",
+  "text_all_saved": "كل المحفوظات",
+  "text_category_created": "تم إنشاء الفئة",
+  "text_added_to_wishlist": "تمت الإضافة إلى قائمة رغباتك"
 }

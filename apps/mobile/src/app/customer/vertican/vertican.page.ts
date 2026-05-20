@@ -32,6 +32,8 @@ import {TranslatePipe} from "../../translate.pipe";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import { WishlistService } from '../../core/services/wishlist.service';
+import { I18nService } from '../../i18n.service';
 
 @Component({
   selector: 'app-vertican',
@@ -89,6 +91,8 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     private cdr: ChangeDetectorRef,
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
+    private wishlistService: WishlistService,
+    private i18n: I18nService,
     private toast: AxNotificationService,
     private ngZone: NgZone
   ) {
@@ -435,15 +439,15 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
 
   get_label() {
     this.ui_controls.is_loading_category = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
-      .subscribe({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.categories = response.data;
-            this.ui_controls.is_loading_category = false;
-            this.cdr.markForCheck();
-          }
-        }
+    this.wishlistService.listLabels(this.single_user.token)
+      .then((labels) => {
+        this.categories = labels.map((l) => ({ id: l.id, name: l.name, count: l.count })) as any;
+        this.ui_controls.is_loading_category = false;
+        this.cdr?.markForCheck();
+      })
+      .catch(() => {
+        this.ui_controls.is_loading_category = false;
+        this.cdr?.markForCheck();
       });
   }
 
@@ -452,15 +456,17 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.addCloset.label_id = label;
     this.isWishOpen = false;
 
-    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
-      .subscribe({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.success_notification(response.message);
-          }
-          this.ui_controls.is_loading_category = false;
-          this.cdr.markForCheck();
+    this.wishlistService.add(this.single_user.token, this.addCloset.product_id, label)
+      .then((ok) => {
+        if (ok) {
+          this.success_notification(this.i18n.t('text_added_to_wishlist'));
         }
+        this.ui_controls.is_loading_category = false;
+        this.cdr?.markForCheck();
+      })
+      .catch(() => {
+        this.ui_controls.is_loading_category = false;
+        this.cdr?.markForCheck();
       });
   }
 

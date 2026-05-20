@@ -31,6 +31,7 @@ import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { ConnectionService } from '../../service/connection.service';
 import {GlobalComponent} from "../../global-component";
 import { I18nService } from '../../i18n.service';
+import { WishlistService } from '../../core/services/wishlist.service';
 import {Products} from "../../class/products";
 import {Labels} from "../../class/labels";
 import {CartIconComponent} from "../../cart-icon.component";
@@ -126,7 +127,8 @@ export class AccountPage implements OnInit, OnDestroy {
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
-    private i18n: I18nService
+    private i18n: I18nService,
+    private wishlistService: WishlistService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -364,40 +366,35 @@ export class AccountPage implements OnInit, OnDestroy {
 
   get_label() {
     this.ui_controls.is_loading_category = true;
-    // M3.2.X.1.5-A: wishlist label read — no v3 endpoint yet; adapter
-    // falls through to legacy NetworkService. Structural migration only.
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readWishlistLabel)
-      .subscribe(({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.categories = response.data;
-            this.ui_controls.is_loading_category = false;
-          }else{
-            this.ui_controls.is_loading_category = false;
-            this.error_notification(response.message)
-          }
-        }
-      }))
+    // M3.2.Z.3-Mobile: migrated to v3 label-aware wishlist.
+    this.wishlistService.listLabels(this.single_user.token)
+      .then((labels) => {
+        this.categories = labels.map((l) => ({ id: l.id, name: l.name, count: l.count })) as any;
+        this.ui_controls.is_loading_category = false;
+      })
+      .catch(() => {
+        this.ui_controls.is_loading_category = false;
+        this.error_notification(this.i18n.t('text_something_went_wrong'));
+      });
   }
 
   addToCloset(label: number) {
     this.ui_controls.is_loading_category = true;
-    this.addCloset.label_id = label;
     this.isWishOpen = false;
-    // M3.2.X.1.5-A: addWishlist mutation — POST to legacy via adapter
-    // fallthrough (no v3 wishlist endpoint yet).
-    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
-      .subscribe(({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.success_notification(response.message);
-            this.ui_controls.is_loading_category = false;
-          }else{
-            this.ui_controls.is_loading_category = false;
-            this.error_notification(response.message);
-          }
+    // M3.2.Z.3-Mobile: save to v3 wishlist under the chosen label.
+    this.wishlistService.add(this.single_user.token, this.addCloset.product_id, label)
+      .then((ok) => {
+        this.ui_controls.is_loading_category = false;
+        if (ok) {
+          this.success_notification(this.i18n.t('text_added_to_wishlist'));
+        } else {
+          this.error_notification(this.i18n.t('text_something_went_wrong'));
         }
-      }))
+      })
+      .catch(() => {
+        this.ui_controls.is_loading_category = false;
+        this.error_notification(this.i18n.t('text_something_went_wrong'));
+      });
   }
 
   startAddToCloset(product: number, product_name: string, image_1: string) {

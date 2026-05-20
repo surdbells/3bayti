@@ -41,6 +41,8 @@ import { InfiniteScrollCustomEvent } from "@ionic/angular";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import { WishlistService } from '../../core/services/wishlist.service';
+import { I18nService } from '../../i18n.service';
 @Component({
   selector: 'app-best-sellers',
   templateUrl: './best-sellers.page.html',
@@ -127,6 +129,8 @@ export class BestSellersPage implements OnInit, OnDestroy {
     private router: Router,
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
+    private wishlistService: WishlistService,
+    private i18n: I18nService,
     private toast: AxNotificationService,
     private cdr: ChangeDetectorRef
   ) {
@@ -301,19 +305,15 @@ export class BestSellersPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading_category = true;
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.readWishlistLabel)
-      .subscribe({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.categories = response.data;
-          }
-          this.ui_controls.is_loading_category = false;
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.ui_controls.is_loading_category = false;
-          this.cdr.markForCheck();
-        }
+    this.wishlistService.listLabels(this.single_user.token)
+      .then((labels) => {
+        this.categories = labels.map((l) => ({ id: l.id, name: l.name, count: l.count })) as any;
+        this.ui_controls.is_loading_category = false;
+        this.cdr?.markForCheck();
+      })
+      .catch(() => {
+        this.ui_controls.is_loading_category = false;
+        this.cdr?.markForCheck();
       });
   }
 
@@ -323,19 +323,17 @@ export class BestSellersPage implements OnInit, OnDestroy {
     this.isWishOpen = false;
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.addCloset, GlobalComponent.addWishlist)
-      .subscribe({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.success_notification(response.message);
-          }
-          this.ui_controls.is_loading_category = false;
-          this.cdr.markForCheck();
-        },
-        error: () => {
-          this.ui_controls.is_loading_category = false;
-          this.cdr.markForCheck();
+    this.wishlistService.add(this.single_user.token, this.addCloset.product_id, label)
+      .then((ok) => {
+        if (ok) {
+          this.success_notification(this.i18n.t('text_added_to_wishlist'));
         }
+        this.ui_controls.is_loading_category = false;
+        this.cdr?.markForCheck();
+      })
+      .catch(() => {
+        this.ui_controls.is_loading_category = false;
+        this.cdr?.markForCheck();
       });
   }
 

@@ -774,6 +774,58 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'v2',
   },
 
+  // ---- Wishlist v3 (label-aware; M3.2.Y.6 + Z.3) ----
+  // These target the new /v3/me/wishlist surface directly (used by the
+  // mobile wishlist migration in Z.3-Mobile via *_v3 adapter calls).
+  'GET /me/wishlist': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/wishlist',
+    shape: 'v3-envelope',
+  },
+  'POST /me/wishlist': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/wishlist',
+    shape: 'v3-envelope',
+  },
+  'PATCH /me/wishlist/:productId': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/wishlist/:productId',
+    shape: 'v3-envelope',
+  },
+  'DELETE /me/wishlist/:productId': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/wishlist/:productId',
+    shape: 'v3-envelope',
+  },
+  'GET /me/wishlist/labels': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/wishlist/labels',
+    shape: 'v3-envelope',
+  },
+  'POST /me/wishlist/labels': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/wishlist/labels',
+    shape: 'v3-envelope',
+  },
+  'PATCH /me/wishlist/labels/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/wishlist/labels/:id',
+    shape: 'v3-envelope',
+  },
+  'DELETE /me/wishlist/labels/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/wishlist/labels/:id',
+    shape: 'v3-envelope',
+  },
+
   // Chat, tickets, vendor self-service, admin orders/users/payments:
   // all live on legacy. Entries added when M3 / M4 lands.
 };

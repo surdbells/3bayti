@@ -25,6 +25,17 @@
           <span class="category-card__name">{{ 'heading_new_category' | translate }}</span>
         </button>
 
+        <!-- All saved (no label filter) -->
+        <button (click)="get_wishlist_by_label(0, '')"
+                class="category-card"
+                [class.category-card--active]="selected_label_id === 0"
+                type="button">
+          <span class="category-card__icon-wrap">
+            <ax-icon name="heart" size="md"></ax-icon>
+          </span>
+          <span class="category-card__name">{{ 'text_all_saved' | translate }}</span>
+        </button>
+
         <!-- User-created categories -->
         @for (cat of categories; track cat.id) {
           <button (click)="get_wishlist_by_label(cat.id, cat.name)"
@@ -43,7 +54,7 @@
   }
 
   <!-- Items section title — direct child of ion-content (matches best-sellers layout) -->
-  @if (!ui_controls.is_loading && selected_label_id !== 0) {
+  @if (!ui_controls.is_loading) {
     <h3 class="section-title section-title--items">{{ selected_label }}</h3>
 
     @if (wishlists.length > 0) {
@@ -67,6 +78,13 @@
                     (load)="onImageLoad(a_wishlist.id)"
                     (error)="onImageError(a_wishlist.id)"
                     (click)="open_product(a_wishlist.product, a_wishlist.name)" />
+                  <button
+                    class="m6d-remove-btn"
+                    type="button"
+                    aria-label="{{ 'button_remove' | translate }}"
+                    (click)="remove_item(a_wishlist.product)">
+                    <ax-icon name="x" size="sm"></ax-icon>
+                  </button>
                 </div>
                 <div (click)="open_product(a_wishlist.product, a_wishlist.name)" class="m6d-info">
                   <p class="m6d-name">{{ a_wishlist.name }}</p>
@@ -84,14 +102,6 @@
         <h2>{{ 'heading_no_items_in_wishlist' | translate }}</h2>
       </div>
     }
-  }
-
-  <!-- Initial state: prompt to tap a category -->
-  @if (!ui_controls.is_loading && selected_label_id === 0 && categories.length > 0) {
-    <div class="initial-prompt">
-      <ax-icon name="heart" size="xl"></ax-icon>
-      <p>{{ 'text_tap_category_to_view' | translate }}</p>
-    </div>
   }
 
   <!-- Loader -->
@@ -118,7 +128,7 @@
             type="text"
             [maxlength]="25"
             [required]="true"
-            [(ngModel)]="add_label.label_name"
+            [(ngModel)]="add_label_name"
             name="label_name">
           </ax-text-field>
 

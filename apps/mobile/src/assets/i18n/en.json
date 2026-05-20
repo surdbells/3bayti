@@ -527,5 +527,8 @@
   "address_default": "Default",
   "address_use_different": "Use a different address",
   "address_select_saved": "Select a saved address",
-  "or_enter_manually": "or enter manually"
+  "or_enter_manually": "or enter manually",
+  "text_all_saved": "All saved",
+  "text_category_created": "Category created",
+  "text_added_to_wishlist": "Added to your wishlist"
 }
