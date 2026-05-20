@@ -61,7 +61,10 @@ const OUT_DIR  = process.env.OUTPUT_DIR || join(__dirname, '..', 'dist', '3bayti
 const STATIC_PAGES = [
   { loc: '/',          changefreq: 'weekly',  priority: '1.0' },
   { loc: '/category',  changefreq: 'weekly',  priority: '0.9' },
-  // Phase 2 will add /designers, /about, /contact, /faq, /sizing-guide, etc.
+  // /designer directory index — added M3.2.Y.4-D alongside the
+  // per-designer URLs below. Per-designer (/designer/:slug) entries
+  // come from the vendors loop in the dynamic section.
+  { loc: '/designer',  changefreq: 'weekly',  priority: '0.8' },
 ];
 
 async function fetchSitemapDataFrom(baseUrl) {
@@ -165,33 +168,34 @@ async function main() {
       });
     }
     /*
-     * Vendor (designer) URLs deliberately NOT included in sitemap.
+     * Designer (vendor) URLs. Restored in M3.2.Y.4-D now that
+     * /designer and /designer/:slug are implemented (Y.4-B/C) and
+     * prerendered at build time (app.routes.server.ts fetchVendorSlugs).
      *
-     * Day 7 audit found 104 /designer/* URLs in the sitemap pointing
-     * at routes that apps/web doesn't implement yet — /designer and
-     * /designer/:slug return 404. Search engines crawling sitemap.xml
-     * would have hit those 404s and downgraded the site's trust score.
+     * Before Y.4 these were deliberately excluded: the Day-7 audit
+     * found 104 /designer/* URLs pointing at routes that returned 404,
+     * which would have downgraded the site's crawl trust. Those routes
+     * now emit real static HTML, so the URLs are safe — and valuable —
+     * to advertise to crawlers again.
      *
-     * When the designer routes are built (Phase 2 / M3), restore
-     * vendor entries here. Pattern would be:
-     *
-     *   for (const vendor of apiData.vendors || []) {
-     *     entries.push({
-     *       loc: `${SITE_URL}/designer/${vendor.slug}`,
-     *       lastmod: vendor.last_modified,
-     *       changefreq: 'weekly',
-     *       priority: '0.6',
-     *     });
-     *   }
-     *
-     * For now, the vendors array from /sitemap-data is consumed only
-     * for the log line below (count visibility), not for output.
+     * priority 0.6: below products (0.7) and categories, since a
+     * designer page is a navigational hub rather than a conversion
+     * leaf, but still a first-class indexable destination.
      */
+    for (const vendor of apiData.vendors || []) {
+      if (!vendor.slug) continue;
+      entries.push({
+        loc: `${SITE_URL}/designer/${vendor.slug}`,
+        lastmod: vendor.last_modified,
+        changefreq: 'weekly',
+        priority: '0.6',
+      });
+    }
     console.log(
       `[sitemap] ${entries.length} URLs total `
       + `(${apiData.categories?.length || 0} categories, `
       + `${apiData.products?.length || 0} products, `
-      + `${apiData.vendors?.length || 0} vendors fetched but EXCLUDED from sitemap — see comment above)`
+      + `${apiData.vendors?.length || 0} designers)`
     );
   } else {
     console.log(`[sitemap] static-only mode: ${entries.length} URLs`);
