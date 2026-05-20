@@ -170,6 +170,14 @@ return function (App $app): void {
         $group->put('/measurements/category/{id}', UpsertMeasurementsController::class);
         $group->delete('/measurements/default', DeleteMeasurementsController::class);
         $group->delete('/measurements/category/{id}', DeleteMeasurementsController::class);
+
+        // M3.2.Y.6-C — Wishlist (products-only). GET lists saved
+        // products (paginated, ProductSerializer list shape); POST is
+        // idempotent (already-saved → no-op success, not 409); DELETE
+        // by productId is idempotent (always 204).
+        $group->get('/wishlist', \Bayti\Api\Http\Controllers\Wishlist\ListWishlistController::class);
+        $group->post('/wishlist', \Bayti\Api\Http\Controllers\Wishlist\AddWishlistItemController::class);
+        $group->delete('/wishlist/{productId}', \Bayti\Api\Http\Controllers\Wishlist\RemoveWishlistItemController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
