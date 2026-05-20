@@ -1,5 +1,8 @@
-import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { Component, ChangeDetectionStrategy, Input, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { Money, Product } from './product.model';
+import { WishlistService } from '../wishlist/wishlist.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 /**
  * ProductCard — single card in any product display surface.
@@ -72,12 +75,14 @@ import { Money, Product } from './product.model';
               <span class="product-card__badge">Best seller</span>
             }
 
-            <!-- Top-right: like / wishlist button. Wishlist behavior
-                 lands in Phase 5 (local-first then merge-on-login).
-                 For now this is decorative — clicking does nothing. -->
+            <!-- Top-right: like / wishlist button. Reflects saved
+                 state for signed-in users; toggles on click. Guests
+                 are routed to sign-in. -->
             <button
               type="button"
               class="product-card__like"
+              [class.is-saved]="isSaved()"
+              [attr.aria-pressed]="isSaved()"
               aria-label="Save to wishlist"
               (click)="onLikeClick($event)"
             >
@@ -162,6 +167,16 @@ export class ProductCardComponent {
   /** The product to render. Null/undefined renders nothing. */
   @Input({ required: true }) product!: Product | null;
 
+  private readonly wishlist = inject(WishlistService);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+
+  /** Whether this product is currently on the user's wishlist. */
+  isSaved(): boolean {
+    const id = this.product?.id;
+    return id !== undefined && this.wishlist.isSaved(id);
+  }
+
   /** Build the canonical /product/:slug URL. */
   productUrl(): string {
     return `/product/${this.product?.slug ?? ''}`;
@@ -205,14 +220,23 @@ export class ProductCardComponent {
   }
 
   /**
-   * Like button click. Currently a no-op — wishlist functionality
-   * lands in Phase 5 (local-first guest wishlist with merge on login).
-   * The button intercepts the click so it doesn't trigger the parent
-   * anchor's navigation.
+   * Like button click. Toggles wishlist membership for signed-in
+   * users; routes guests to sign-in (preserving intent is a later
+   * refinement). Intercepts the click so it doesn't trigger the
+   * parent anchor's navigation.
    */
   onLikeClick(event: MouseEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    /* TODO Phase 5: invoke WishlistService.toggle(product.slug) */
+    const product = this.product;
+    if (product === null) return;
+    if (!this.auth.isAuthenticated()) {
+      void this.router.navigateByUrl('/login');
+      return;
+    }
+    /* Fire-and-forget; the service updates the saved-set signal which
+       re-renders the heart. Errors are swallowed here — a failed
+       toggle simply leaves the prior state. */
+    void this.wishlist.toggle(product).catch(() => undefined);
   }
 }

@@ -184,6 +184,13 @@ export const routes: Routes = [
     title: 'Delete account · 3bayti',
   },
   {
+    path: 'account/wishlist',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/wishlist/account-wishlist-page').then(m => m.AccountWishlistPageComponent),
+    title: 'My wishlist · 3bayti',
+  },
+  {
     path: 'account/addresses',
     canActivate: [authActivateGuard],
     loadComponent: () =>

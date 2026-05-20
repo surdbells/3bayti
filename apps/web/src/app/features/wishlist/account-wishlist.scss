@@ -1,0 +1,118 @@
+/* Account wishlist page styles (Y.6-D). */
+
+.account-wishlist {
+  min-height: calc(100vh - 200px);
+  padding: 32px 0 64px;
+  background: var(--color-bg-default, #faf7f1);
+}
+
+.account-wishlist__container {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.account-wishlist__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  margin-bottom: 16px;
+
+  a {
+    color: var(--color-brand-700, #5a3a2c);
+    text-decoration: none;
+
+    &:hover,
+    &:focus-visible {
+      text-decoration: underline;
+      outline: none;
+    }
+  }
+}
+
+.account-wishlist__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 24px 0;
+}
+
+.account-wishlist__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.account-wishlist__load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 36px;
+}
+
+.account-wishlist__load-more-btn {
+  appearance: none;
+  background: #fff;
+  border: 1px solid var(--color-text-primary, #2e241c);
+  color: var(--color-text-primary, #2e241c);
+  padding: 12px 32px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: var(--color-text-primary, #2e241c);
+    color: #fff;
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.account-wishlist__empty {
+  text-align: center;
+  padding: 64px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+.account-wishlist__empty-text {
+  font-size: 15px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0;
+}
+
+.account-wishlist__empty-cta {
+  display: inline-block;
+  background: var(--color-text-primary, #2e241c);
+  color: #fff;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-brand-700, #5a3a2c);
+    outline: none;
+  }
+}
+
+.account-wishlist__loading {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--color-text-muted, #6b6056);
+  font-size: 14px;
+}

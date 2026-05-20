@@ -189,6 +189,15 @@
   stroke-width: 1.5;
 }
 
+.product-card__like.is-saved {
+  background: var(--color-brand-50);
+}
+
+.product-card__like.is-saved svg {
+  fill: #b42218;
+  stroke: #b42218;
+}
+
 /* ----- Out of stock overlay ----------------------------------------- */
 
 .product-card__stock-overlay {

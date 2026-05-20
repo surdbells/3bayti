@@ -526,6 +526,15 @@
         "invalid": "Please check this field.",
         "generic": "We couldn’t delete your account. Please try again."
       }
+    },
+    "wishlist": {
+      "title": "My wishlist",
+      "loadMore": "Load more",
+      "empty": "You haven’t saved anything yet.",
+      "browse": "Browse the collection",
+      "errors": {
+        "loadFailed": "We couldn’t load your wishlist. Please try again."
+      }
     }
   }
 }
