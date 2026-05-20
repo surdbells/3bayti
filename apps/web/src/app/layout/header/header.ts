@@ -4,6 +4,7 @@ import { NgIf } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { LocaleSwitcherComponent } from './locale-switcher';
 import { UserMenuComponent } from './user-menu';
+import { CartIconComponent } from './cart-icon';
 import { AuthService } from '../../core/auth/auth.service';
 import { FEATURE_AUTH_HEADER_CTA } from '../../core/auth/auth.tokens';
 
@@ -36,7 +37,7 @@ import { FEATURE_AUTH_HEADER_CTA } from '../../core/auth/auth.tokens';
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [NgIf, RouterLink, TranslateModule, LocaleSwitcherComponent, UserMenuComponent],
+  imports: [NgIf, RouterLink, TranslateModule, LocaleSwitcherComponent, UserMenuComponent, CartIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './header.html',
   styleUrl: './header.scss',

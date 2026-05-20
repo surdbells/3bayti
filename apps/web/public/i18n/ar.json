@@ -23,10 +23,35 @@
   "header": {
     "signIn": "تسجيل الدخول",
     "register": "إنشاء حساب",
+    "cart": {
+      "openEmpty": "فتح الحقيبة، فارغة",
+      "openWithCount": "فتح الحقيبة، {{count}} عنصراً"
+    },
     "userMenu": {
       "account": "حسابي",
       "orders": "الطلبات",
       "signOut": "تسجيل الخروج"
+    }
+  },
+  "cart": {
+    "drawer": {
+      "title": "حقيبتك",
+      "subtotal": "المجموع الفرعي",
+      "qtyLabel": "الكمية",
+      "remove": "إزالة",
+      "removeAria": "إزالة {{name}}",
+      "viewCart": "عرض الحقيبة",
+      "checkout": "إتمام الشراء",
+      "shippingNote": "تُحتسب الشحن والضرائب عند الدفع.",
+      "unnamedItem": "منتج",
+      "empty": {
+        "title": "حقيبتك فارغة",
+        "body": "بمجرد إضافة قطع تحبينها، ستظهر هنا.",
+        "cta": "متابعة التسوق"
+      },
+      "errors": {
+        "removeFailed": "تعذرت إزالة هذا العنصر. يُرجى المحاولة مرة أخرى."
+      }
     }
   },
   "auth": {

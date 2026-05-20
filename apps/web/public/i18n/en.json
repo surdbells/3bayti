@@ -23,10 +23,35 @@
   "header": {
     "signIn": "Sign in",
     "register": "Register",
+    "cart": {
+      "openEmpty": "Open cart, empty",
+      "openWithCount": "Open cart, {{count}} items"
+    },
     "userMenu": {
       "account": "My account",
       "orders": "Orders",
       "signOut": "Sign out"
+    }
+  },
+  "cart": {
+    "drawer": {
+      "title": "Your bag",
+      "subtotal": "Subtotal",
+      "qtyLabel": "Qty",
+      "remove": "Remove",
+      "removeAria": "Remove {{name}}",
+      "viewCart": "View cart",
+      "checkout": "Checkout",
+      "shippingNote": "Shipping & taxes calculated at checkout.",
+      "unnamedItem": "Item",
+      "empty": {
+        "title": "Your bag is empty",
+        "body": "Once you add pieces you love, they'll appear here.",
+        "cta": "Continue shopping"
+      },
+      "errors": {
+        "removeFailed": "Couldn't remove that item. Please try again."
+      }
     }
   },
   "auth": {
