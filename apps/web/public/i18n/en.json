@@ -52,6 +52,41 @@
       "errors": {
         "removeFailed": "Couldn't remove that item. Please try again."
       }
+    },
+    "page": {
+      "title": "Your bag",
+      "itemsHeading": "Items in your bag",
+      "size": "Size",
+      "color": "Colour",
+      "customMade": "Made to measure",
+      "each": "each",
+      "qtyAriaFor": "Quantity for",
+      "increaseQty": "Increase quantity",
+      "decreaseQty": "Decrease quantity",
+      "summaryTitle": "Order summary",
+      "promoLabel": "Promo code",
+      "promoPlaceholder": "Enter code",
+      "promoApply": "Apply",
+      "promoApplied": "{{code}} applied successfully.",
+      "promoInvalid": "{{code}} isn't valid for this order.",
+      "guestPromoSignInLink": "Sign in",
+      "guestPromoSuffix": "to apply a promo code.",
+      "subtotal": "Subtotal",
+      "shipping": "Shipping",
+      "tax": "Tax",
+      "discount": "Discount",
+      "total": "Total",
+      "checkout": "Proceed to checkout",
+      "continueShopping": "Continue shopping",
+      "empty": {
+        "title": "Your bag is empty",
+        "body": "Browse the catalogue to discover pieces you'll love.",
+        "cta": "Start shopping"
+      },
+      "errors": {
+        "updateFailed": "Couldn't update that item. Please try again.",
+        "promoFailed": "Couldn't apply the promo code. Please try again."
+      }
     }
   },
   "auth": {

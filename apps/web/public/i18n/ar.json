@@ -52,6 +52,41 @@
       "errors": {
         "removeFailed": "تعذرت إزالة هذا العنصر. يُرجى المحاولة مرة أخرى."
       }
+    },
+    "page": {
+      "title": "حقيبتك",
+      "itemsHeading": "العناصر في حقيبتك",
+      "size": "المقاس",
+      "color": "اللون",
+      "customMade": "تفصيل حسب المقاس",
+      "each": "للقطعة",
+      "qtyAriaFor": "الكمية لـ",
+      "increaseQty": "زيادة الكمية",
+      "decreaseQty": "تقليل الكمية",
+      "summaryTitle": "ملخص الطلب",
+      "promoLabel": "كود الخصم",
+      "promoPlaceholder": "أدخل الكود",
+      "promoApply": "تطبيق",
+      "promoApplied": "تم تطبيق {{code}} بنجاح.",
+      "promoInvalid": "{{code}} غير صالح لهذا الطلب.",
+      "guestPromoSignInLink": "سجّلي الدخول",
+      "guestPromoSuffix": "لاستخدام كود الخصم.",
+      "subtotal": "المجموع الفرعي",
+      "shipping": "الشحن",
+      "tax": "الضريبة",
+      "discount": "الخصم",
+      "total": "الإجمالي",
+      "checkout": "الانتقال إلى الدفع",
+      "continueShopping": "متابعة التسوق",
+      "empty": {
+        "title": "حقيبتك فارغة",
+        "body": "تصفّحي الكتالوج لاكتشاف قطع تنال إعجابك.",
+        "cta": "ابدئي التسوق"
+      },
+      "errors": {
+        "updateFailed": "تعذر تحديث هذا العنصر. يُرجى المحاولة مرة أخرى.",
+        "promoFailed": "تعذر تطبيق كود الخصم. يُرجى المحاولة مرة أخرى."
+      }
     }
   },
   "auth": {

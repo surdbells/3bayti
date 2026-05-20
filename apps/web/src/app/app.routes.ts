@@ -116,4 +116,13 @@ export const routes: Routes = [
       import('./features/auth/reset-password/reset-password').then(m => m.ResetPasswordComponent),
     title: 'Reset password · 3bayti',
   },
+  /* --- Cart + Checkout (M3.2.Y.2) --------------------------------------
+     /cart is public — guests and authenticated users both see their
+     cart. Checkout routes (Y.2-D+) are auth-gated. */
+  {
+    path: 'cart',
+    loadComponent: () =>
+      import('./features/cart/cart-page').then(m => m.CartPageComponent),
+    title: 'Your bag · 3bayti',
+  },
 ];
