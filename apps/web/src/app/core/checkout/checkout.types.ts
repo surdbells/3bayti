@@ -55,3 +55,30 @@ export interface InitiateCheckoutInput {
   billing_address_id?: number | null;
   shipping_address_id?: number | null;
 }
+
+/**
+ * Server response from GET /v3/checkout/status/{order_reference}.
+ *
+ * Mirrors apps/api GetCheckoutStatusController. Reads ONLY local
+ * Order state (never calls Noon's GET_ORDER — Noon bans aggressive
+ * polling). The webhook receiver is the authoritative state-of-record
+ * by the time we poll; until it arrives, status stays
+ * 'pending_payment' and terminal=false, telling us to keep polling.
+ */
+export interface CheckoutStatusResponse {
+  order_reference: string;
+  order_id: number;
+  /** One of OrderStatus (pending_payment | paid | fulfilling |
+   *  shipped | delivered | cancelled | refunded | failed). */
+  status: string;
+  /** True once the order reached a state that won't change via the
+   *  payment flow (paid/fulfilling/shipped/delivered/cancelled/
+   *  refunded/failed). Stop polling when true. */
+  terminal: boolean;
+  /** True for paid + any post-paid fulfilment state. The success
+   *  signal for the return page. */
+  paid: boolean;
+  total: string;
+  currency: string;
+  paid_at: string | null;
+}
