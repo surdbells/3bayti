@@ -182,6 +182,13 @@ export const routes: Routes = [
     title: 'Checkout — Payment · 3bayti',
   },
   {
+    path: 'checkout/return',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/checkout/checkout-return-page').then(m => m.CheckoutReturnPageComponent),
+    title: 'Confirming payment · 3bayti',
+  },
+  {
     path: 'checkout/success/:id',
     canActivate: [authActivateGuard],
     loadComponent: () =>

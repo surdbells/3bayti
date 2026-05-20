@@ -652,3 +652,17 @@
   font-variant-numeric: tabular-nums;
   margin: 0;
 }
+
+/* --- Return page (Y.3-C) -------------------------------------------- */
+
+.return-failed__icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(180, 34, 24, 0.10);
+  color: #b42218;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}

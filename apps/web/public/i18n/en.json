@@ -277,6 +277,15 @@
       "openManual": "Open payment page",
       "backToReview": "Back to review"
     },
+    "return": {
+      "title": "Confirming your payment",
+      "confirming": "Hang tight — we're confirming your payment. This usually takes a few seconds.",
+      "failedBody": "Your payment wasn't completed. No charge was made. You can try again or head back to your bag.",
+      "processingBody": "We haven't been able to confirm your payment just yet. It may still be processing — check your orders in a few minutes.",
+      "tryAgain": "Try again",
+      "backToBag": "Back to bag",
+      "viewOrders": "View my orders"
+    },
     "success": {
       "title": "Order placed!",
       "body": "Your order has been received. We'll email you when it ships.",

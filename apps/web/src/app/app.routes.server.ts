@@ -179,6 +179,14 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server,
   },
   {
+    /* Payment-return resolver — lands here from Noon's 302 with a
+       ?ref query param, then polls the authenticated status endpoint.
+       Must render at request time (auth-gated, user-specific outcome);
+       prerendering would bake a stale "confirming" shell. */
+    path: 'checkout/return',
+    renderMode: RenderMode.Server,
+  },
+  {
     /* Order detail — same logic as checkout/success/:id. User-specific
        per-order data; auth-gated at request time; no prerender. */
     path: 'account/orders/:id',
