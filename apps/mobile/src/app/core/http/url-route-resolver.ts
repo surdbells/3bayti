@@ -81,7 +81,14 @@ type MethodMap = Partial<Record<HttpMethod, string>>;
 const URL_TO_ROUTE_KEY: Map<string, MethodMap> = (() => {
   const map = new Map<string, MethodMap>();
 
-  for (const [routeKey, entry] of Object.entries(ENDPOINT_ROUTING)) {
+  // Defensive: under some bundlers (e.g. Karma/webpack) a circular
+  // import can leave ENDPOINT_ROUTING momentarily undefined at this
+  // module's eval time. The app (esbuild) always has it defined. Guard
+  // so module load never throws — consistent with the "skip silently
+  // rather than crash module load" posture below.
+  const routing = ENDPOINT_ROUTING ?? {};
+
+  for (const [routeKey, entry] of Object.entries(routing)) {
     // routeKey is `"METHOD /path"` — split once on the first space.
     const spaceIdx = routeKey.indexOf(' ');
     if (spaceIdx < 0) {

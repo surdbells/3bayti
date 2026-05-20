@@ -1,11 +1,10 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { ActivatedRoute } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { OrderDetailPage } from './order-detail.page';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
-import { Preferences } from '@capacitor/preferences';
 
 /* A representative v3 GET /orders/:id success envelope. */
 function okOrder(overrides: Record<string, unknown> = {}) {
@@ -104,10 +103,21 @@ function setup(routeId: string | null = '42') {
 }
 
 describe('OrderDetailPage', () => {
+  /* Capacitor Preferences (web) is a Proxy whose `get` can't be spied
+     (no own/proto descriptor). In Karma there IS a real window +
+     localStorage, so seed the user there under the plugin's
+     'CapacitorStorage.' prefix and let the real plugin read it. */
+  const USER_KEY = 'CapacitorStorage.user';
+
   beforeEach(() => {
-    spyOn(Preferences, 'get').and.returnValue(
-      Promise.resolve({ value: JSON.stringify({ id: 7, token: 'tok', is_customer: true }) }) as any,
+    window.localStorage.setItem(
+      USER_KEY,
+      JSON.stringify({ id: 7, token: 'tok', is_customer: true }),
     );
+  });
+
+  afterEach(() => {
+    window.localStorage.removeItem(USER_KEY);
   });
 
   it('creates', () => {
@@ -115,70 +125,62 @@ describe('OrderDetailPage', () => {
     expect(component).toBeTruthy();
   });
 
-  it('loads the order via GET /orders/:id with the path param + auth token', fakeAsync(() => {
-    const { fixture, component, adapter } = setup('42');
-    fixture.detectChanges();
-    tick();
+  it('loads the order via GET /orders/:id with the path param + auth token', async () => {
+    const { component, adapter } = setup('42');
+    await component.ngOnInit();
     expect(adapter.lastGet?.routeKey).toBe('GET /orders/:id');
     expect(adapter.lastGet?.opts.pathParams).toEqual({ id: '42' });
     expect(adapter.lastGet?.opts.authToken).toBe('tok');
     expect(component.order?.order_reference).toBe('ORD-42');
     expect(component.order?.items.length).toBe(1);
-  }));
+  });
 
-  it('maps money fields and detects a discount', fakeAsync(() => {
-    const { fixture, component } = setup();
-    fixture.detectChanges();
-    tick();
+  it('maps money fields and detects a discount', async () => {
+    const { component } = setup();
+    await component.ngOnInit();
     expect(component.order?.total).toBe(190);
     expect(component.hasDiscount()).toBeTrue();
     expect(component.order?.applied_promo?.code).toBe('SAVE30');
-  }));
+  });
 
-  it('shows cancel only on pending_payment', fakeAsync(() => {
-    const { fixture, component } = setup();
-    fixture.detectChanges();
-    tick();
+  it('shows cancel only on pending_payment', async () => {
+    const { component } = setup();
+    await component.ngOnInit();
     expect(component.canCancel()).toBeTrue();
     component.order!.status = 'delivered';
     expect(component.canCancel()).toBeFalse();
-  }));
+  });
 
-  it('redirects to my-orders on an invalid id', fakeAsync(() => {
-    const { fixture, component, router } = setup('0');
-    fixture.detectChanges();
-    tick();
+  it('redirects to my-orders on an invalid id', async () => {
+    const { component, router } = setup('0');
+    await component.ngOnInit();
     expect(router.navigate).toHaveBeenCalledWith(['/', 'my-orders']);
     expect(component.order).toBeNull();
-  }));
+  });
 
-  it('flags not_found on a 404', fakeAsync(() => {
-    const { fixture, component, adapter } = setup();
+  it('flags not_found on a 404', async () => {
+    const { component, adapter } = setup();
     adapter.getResponse = { response_code: 404, status: 'error' };
-    fixture.detectChanges();
-    tick();
+    await component.ngOnInit();
     expect(component.ui_controls.not_found).toBeTrue();
     expect(component.order).toBeNull();
-  }));
+  });
 
-  it('cancels via POST /orders/:id/cancel and updates status', fakeAsync(() => {
-    const { fixture, component, adapter, toast } = setup();
-    fixture.detectChanges();
-    tick();
+  it('cancels via POST /orders/:id/cancel and updates status', async () => {
+    const { component, adapter, toast } = setup();
+    await component.ngOnInit();
     component['executeCancel']();
-    tick();
     expect(adapter.lastPost?.routeKey).toBe('POST /orders/:id/cancel');
     expect(adapter.lastPost?.opts.pathParams).toEqual({ id: '42' });
     expect(component.order?.status).toBe('cancelled');
     expect(toast.successes.length).toBe(1);
-  }));
+  });
 
-  it('reports a network error toast on load failure', fakeAsync(() => {
-    const { fixture, component, adapter, toast } = setup();
+  it('reports a network error toast on load failure', async () => {
+    const { component, adapter, toast } = setup();
     adapter.getError = true;
-    fixture.detectChanges();
-    tick();
+    await component.ngOnInit();
     expect(toast.errors.length).toBe(1);
     expect(component.ui_controls.is_loading).toBeFalse();
-  }));
+  });
 });

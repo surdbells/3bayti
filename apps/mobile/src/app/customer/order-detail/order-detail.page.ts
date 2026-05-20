@@ -15,7 +15,7 @@ import {
   ActionSheetController,
   RefresherCustomEvent,
 } from '@ionic/angular/standalone';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../translate.pipe';
 import { Preferences } from '@capacitor/preferences';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
@@ -114,6 +114,7 @@ interface OrderDetail {
     AxIconComponent,
     AxLoaderComponent,
     AppTabBarComponent,
+    RouterLink,
   ],
 })
 export class OrderDetailPage implements OnInit {

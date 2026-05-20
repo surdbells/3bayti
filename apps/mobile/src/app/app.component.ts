@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import {IonApp, IonRouterOutlet, Platform} from '@ionic/angular/standalone';
+import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { SplashScreen } from '@capacitor/splash-screen';
@@ -128,11 +129,22 @@ export class AppComponent {
             }
           });
       });
-      this.initPush();
+      /* Native-only: push registration has no web implementation. */
+      if (Capacitor.isNativePlatform()) {
+        this.initPush();
+      }
   }
 
   initializeApp() {
-    ScreenOrientation.lock({orientation: 'portrait'}).then(r => console.log('ScreenOrientation loaded'));
+    /* Native-only: ScreenOrientation has no web implementation and
+       throws "not available" on web/headless test platforms. Guard on
+       the platform so component specs (and any web build) don't crash;
+       also fail-safe with a catch in case the plugin is missing. */
+    if (Capacitor.isNativePlatform()) {
+      ScreenOrientation.lock({ orientation: 'portrait' })
+        .then(() => console.log('ScreenOrientation loaded'))
+        .catch((e) => console.warn('ScreenOrientation.lock failed:', e));
+    }
   }
 
   /* Run AppUpdateService.check() and update local UI state.
