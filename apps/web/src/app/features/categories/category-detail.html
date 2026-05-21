@@ -2,9 +2,9 @@
   <ui-container size="default">
     <ui-stack gap="2xl">
 
-      <!-- Breadcrumb (visible) — mirrors the JSON-LD structure for users -->
+      <!-- Breadcrumb -->
       <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a [href]="'/'" class="breadcrumb-link">Home</a>
+        <a href="/" class="breadcrumb-link">Home</a>
         <span class="breadcrumb-sep" aria-hidden="true">›</span>
         <a [href]="categoriesIndexUrl()" class="breadcrumb-link">Categories</a>
         @if (category(); as cat) {
@@ -14,8 +14,6 @@
       </nav>
 
       @if (loading()) {
-        <!-- Loading state — only seen during client-side route transitions
-             (prerendered HTML never shows this; data is in TransferState). -->
         <ui-text tone="secondary">Loading…</ui-text>
       } @else if (notFound()) {
         <header class="category-header">
@@ -23,24 +21,25 @@
             <p class="eyebrow">Category not found</p>
             <ui-heading level="h1" size="xl">No such category</ui-heading>
             <ui-text size="lg" tone="secondary">
-              The category you're looking for doesn't exist. Browse all
-              categories below.
+              The category you're looking for doesn't exist. Browse all categories below.
             </ui-text>
-            <p>
-              <a [href]="categoriesIndexUrl()" class="back-link">
-                ← All categories
-              </a>
-            </p>
+            <p><a [href]="categoriesIndexUrl()" class="back-link">← All categories</a></p>
           </ui-stack>
         </header>
+
       } @else if (category(); as cat) {
 
-        <!-- Header: eyebrow + name + product count -->
+        <!-- Header -->
         <header class="category-header">
           <ui-stack gap="md">
             <p class="eyebrow">Category</p>
             <ui-heading level="h1" size="xl">{{ cat.name }}</ui-heading>
-            @if (meta(); as m) {
+            @if (catalogTotal() > 0) {
+              <ui-text size="lg" tone="secondary">
+                {{ catalogTotal() }} {{ catalogTotal() === 1 ? 'piece' : 'pieces' }}
+                from independent UAE designers
+              </ui-text>
+            } @else if (meta(); as m) {
               <ui-text size="lg" tone="secondary">
                 {{ m.total_products }} {{ m.total_products === 1 ? 'piece' : 'pieces' }}
                 from independent UAE designers
@@ -49,34 +48,84 @@
           </ui-stack>
         </header>
 
-        <!-- Products grid -->
-        @if (products().length === 0) {
-          <ui-text tone="secondary">
-            No products in this category yet. Check back soon.
-          </ui-text>
+        <!-- Filter + grid layout (browser only — facets need a live call) -->
+        @if (isBrowser()) {
+          <div class="catalog-layout">
+
+            <!-- Filter sidebar -->
+            <aside class="catalog-layout__sidebar">
+              <app-facet-filters
+                [filters]="currentFilters()"
+                [facets]="facets()"
+                (filterChange)="onFilterChange($event)"
+              />
+            </aside>
+
+            <!-- Product grid -->
+            <section class="catalog-layout__grid" aria-label="Products in this category">
+
+              <!-- Loading shimmer row -->
+              @if (isLoadingGrid()) {
+                <div class="grid-loading" aria-live="polite" aria-label="Loading products…">
+                  @for (_ of [1,2,3,4,5,6]; track _) {
+                    <div class="grid-loading__card"></div>
+                  }
+                </div>
+              }
+
+              <!-- Empty state -->
+              @if (!isLoadingGrid() && products().length === 0) {
+                <div class="grid-empty">
+                  <p class="grid-empty__title">No products match your filters</p>
+                  <p class="grid-empty__hint">Try adjusting or clearing your filters.</p>
+                </div>
+              }
+
+              <!-- Product cards -->
+              @if (!isLoadingGrid() && products().length > 0) {
+                <div class="product-grid">
+                  @for (p of products(); track p.id) {
+                    <ui-product-card [product]="p" />
+                  }
+                </div>
+
+                <!-- Load more / total indicator -->
+                <div class="grid-footer">
+                  <p class="grid-count">
+                    Showing {{ products().length }} of {{ catalogTotal() }}
+                  </p>
+                  @if (hasMore()) {
+                    <button
+                      class="load-more-btn"
+                      type="button"
+                      (click)="loadMore()"
+                      [disabled]="isLoadingGrid()"
+                      aria-label="Load more products">
+                      {{ isLoadingGrid() ? 'Loading…' : 'Load more' }}
+                    </button>
+                  }
+                </div>
+              }
+
+            </section>
+          </div>
+
         } @else {
-          <section class="product-grid-section" aria-label="Products in this category">
-            <div class="product-grid">
-              @for (p of products(); track p.id) {
-                <ui-product-card [product]="p" />
-              }
-            </div>
-
-            <!-- Pagination placeholder. W2.1b will add real pagination
-                 with /category/:slug?page=N. For now, if there's more
-                 than 20 products, surface a hint to scroll. -->
-            @if (meta(); as m) {
-              @if (m.total_products > products().length) {
-                <p class="pagination-hint">
-                  Showing {{ products().length }} of {{ m.total_products }}.
-                  More coming soon.
-                </p>
-              }
-            }
-          </section>
+          <!-- SSR: render the embedded products as plain grid for SEO -->
+          @if (products().length === 0) {
+            <ui-text tone="secondary">No products in this category yet. Check back soon.</ui-text>
+          } @else {
+            <section class="product-grid-section" aria-label="Products in this category">
+              <div class="product-grid">
+                @for (p of products(); track p.id) {
+                  <ui-product-card [product]="p" />
+                }
+              </div>
+            </section>
+          }
         }
-      }
 
+      }
     </ui-stack>
   </ui-container>
 </main>

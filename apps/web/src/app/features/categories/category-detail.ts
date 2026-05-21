@@ -10,7 +10,7 @@ import {
   effect,
 } from '@angular/core';
 import { isPlatformServer } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, map, of, switchMap, tap } from 'rxjs';
@@ -26,47 +26,26 @@ import {
   TextComponent,
   StackComponent,
 } from '../../shared/ui';
-import { ProductCardComponent } from '../catalog/product-card';
 import type { CategoryDetail, CategoryDetailMeta } from './category.model';
+import { CatalogService, type CatalogFilters, type CatalogSort } from './catalog.service';
+import { FacetFiltersComponent } from './facet-filters.component';
+import { ProductCardComponent } from '../catalog/product-card';
 
 /**
  * Category detail page — `/category/:slug`.
  *
- * Server-rendered landing page for each category (Abayas, Kaftans, etc.).
- * Pulls category metadata + first 20 products from a single API call to
- * `/v3/categories/:slug` and embeds the full result in the prerendered
- * HTML via TransferState. Crawlers see all 20 products as <a> tags
- * pointing to /product/:slug — exactly the SEO surface this site exists
- * to provide.
+ * Now serves two roles:
+ *  1. SSR: fetches category metadata + embedded 20 products from
+ *     `/v3/categories/:slug` for SEO (unchanged — crawlers still see
+ *     a rich, pre-rendered product grid).
+ *  2. Browser: drives a filterable, paginated grid via CatalogService
+ *     (GET /v3/products + GET /v3/products/facets). Filter state is
+ *     synced to / read from URL query params so filters are shareable.
  *
- * Routing: was on legacy /v2/categories/:slug until M3.2.X.3, when the
- * v3 endpoint was augmented to match the v2 wire contract (embedded
- * products + total_products/page_size meta envelope). Now routes
- * through RoutedHttpClient → /v3/categories/:slug.
- *
- * Why a single API call instead of two:
- *   The /v3/categories/:slug endpoint returns metadata + an embedded
- *   products array (page 1, 20 items). Older approaches would fetch
- *   metadata then separately fetch /products?category=:slug — two
- *   round trips. The combined endpoint cuts that in half.
- *
- * Why TransferState:
- *   Same rationale as /category index. SSR fetches the data, embeds the
- *   JSON in <script id="ng-state">, browser hydration finds the cache
- *   and skips the re-fetch. Network: 1 request server-side, 0 browser-
- *   side after hydration.
- *
- * Image handling on product cards:
- *   ProductCardComponent (W2.1prep) handles missing/broken image URLs
- *   with a letter-fallback. So even if some products in this category
- *   have null primary_image, the grid renders cleanly.
- *
- * Pagination:
- *   This page renders the FIRST page only (20 products). Pagination
- *   beyond page 1 is deferred to W2.1b. Most users never paginate
- *   anyway, and SEO-wise page 1 is the canonical URL search engines
- *   should index. Subsequent pages use `?page=2` query strings which
- *   aren't prerenderable without listing every page slug — defer.
+ * The filter sidebar is visible only browser-side (facets require a
+ * live products call; they're not embedded in the SSR metadata).
+ * On first hydration the grid shows the SSR products; filters layer
+ * on top asynchronously when the browser loads.
  */
 @Component({
   selector: 'app-category-detail',
@@ -77,6 +56,7 @@ import type { CategoryDetail, CategoryDetailMeta } from './category.model';
     TextComponent,
     StackComponent,
     ProductCardComponent,
+    FacetFiltersComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './category-detail.html',
@@ -84,115 +64,103 @@ import type { CategoryDetail, CategoryDetailMeta } from './category.model';
 })
 export class CategoryDetailComponent {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
   private state = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
-
-  /**
-   * Sets the SSR HTTP response status. Called when the API returns 404
-   * for the category slug — without this the response would be HTTP 200
-   * with a "not found" page, which crawlers index as real content.
-   * No-op on the browser. (W2.2c)
-   */
+  private catalog = inject(CatalogService);
   private setSsrStatus = createSetSsrStatus();
 
-  /** Current slug from the route. Drives the API call. */
+  // ── SSR metadata ──────────────────────────────────────────────────
+  // (unchanged from original; keeps SEO intact)
+
+  /** Current slug from the route. */
   readonly slug = toSignal(
     this.route.paramMap.pipe(map((params) => params.get('slug') ?? '')),
     { initialValue: '' },
   );
 
-  /**
-   * True when the category was not found (404 from the API).
-   *
-   * NOTE on field order: this MUST be declared BEFORE `response`
-   * below. TypeScript class fields initialize top-to-bottom, and
-   * `response`'s `toSignal()` subscribes synchronously on creation;
-   * its inner `switchMap` may then call `fetchCategoryDetail$()` which
-   * touches `this.notFound.set(...)`. If `notFound` were declared
-   * after `response`, that .set call would throw at construction time
-   * with `Cannot read properties of undefined (reading 'set')` —
-   * surfaced specifically when the client hydrates with a populated
-   * TransferState (the cache-hit path is synchronous, so the .set
-   * fires before the rest of the class fields are initialized).
-   *
-   * SSR prerender doesn't hit this because the cache-miss path is
-   * async (HTTP latency) — by the time tap()/catchError() runs,
-   * `notFound` exists.
-   */
   readonly notFound = signal(false);
 
-  /**
-   * Category detail + embedded products, fetched once per slug.
-   *
-   * The fetch result includes both `data` (CategoryDetail) and `meta`
-   * (CategoryDetailMeta), since we need total_products for the page
-   * header. We store the whole envelope in TransferState so hydration
-   * doesn't lose the meta.
-   */
   readonly response = toSignal(
     this.route.paramMap.pipe(
       switchMap((params) => {
         const slug = params.get('slug') ?? '';
-        if (!slug) {
-          return of(null);
-        }
+        if (!slug) return of(null);
         return this.fetchCategoryDetail$(slug);
       }),
     ),
     { initialValue: null as CategoryDetailEnvelope | null },
   );
 
-  /** Just the category metadata. */
-  readonly category = computed<CategoryDetail | null>(() => this.response()?.data ?? null);
+  readonly category  = computed<CategoryDetail | null>(() => this.response()?.data ?? null);
+  readonly meta      = computed<CategoryDetailMeta | null>(() => this.response()?.meta ?? null);
+  readonly loading   = computed(() => this.response() === null);
 
-  /** Just the meta (total_products, page_size). */
-  readonly meta = computed<CategoryDetailMeta | null>(() => this.response()?.meta ?? null);
+  // ── Filter state (URL-driven) ─────────────────────────────────────
 
-  /** Just the products list — what the grid iterates over. */
-  readonly products = computed(() => this.response()?.data?.products ?? []);
+  /**
+   * Active filters, derived from the URL query params. The URL is the
+   * single source of truth so filters survive page reload and are
+   * shareable via link. Kept in sync by `onFilterChange` (router.navigate).
+   */
+  readonly activeFilters = signal<CatalogFilters>({ category: '', sort: 'newest' });
 
-  /** Loading state — true between route change and data arrival. */
-  readonly loading = computed(() => this.response() === null);
+  readonly currentFilters = computed<CatalogFilters>(() => {
+    const f = this.activeFilters();
+    return f.category ? f : { category: this.slug(), sort: 'newest' };
+  });
+
+  /** Products from the catalog service (filtered + paginated). */
+  readonly catalogProducts = this.catalog.products;
+  readonly catalogTotal    = this.catalog.total;
+  readonly catalogHasMore  = this.catalog.hasMore;
+  readonly isLoadingGrid   = this.catalog.isLoadingList;
+  readonly facets          = this.catalog.facets;
+  readonly isLoadingFacets = this.catalog.isLoadingFacets;
+
+  /**
+   * Products shown in the grid:
+   *   - SSR: the embedded products from the category metadata (fast,
+   *     no extra fetch, crawlers see them)
+   *   - Browser after first catalog load: the filtered catalog results
+   */
+  readonly products = computed(() => {
+    const cat = this.catalogProducts();
+    if (cat.length > 0) return cat;
+    // Fallback to SSR-embedded products before the catalog call completes
+    return this.response()?.data?.products ?? [];
+  });
+
+  readonly hasMore = computed(() => this.catalogHasMore());
+
+  /** Current page index (used to calculate the offset for load-more). */
+  private _page = signal(0);
+  readonly page = this._page.asReadonly();
+
+  readonly isBrowser = computed(() => !isPlatformServer(this.platformId));
 
   constructor() {
-    /* SEO + JSON-LD: re-apply whenever the response signal changes.
-       Using effect() instead of queueMicrotask because Angular SSR
-       runs change detection synchronously during prerender — micro-
-       tasks scheduled outside the CD cycle don't get to run before
-       HTML capture. effect() integrates with the signal graph and
-       fires within the CD cycle, ensuring SEO tags ARE present in
-       the prerendered HTML. */
+    // SEO effect (unchanged)
     effect(() => {
       const cat = this.category();
       if (!cat) return;
-
       const siteUrl = environment.SITE_URL;
       const url = `${siteUrl}/category/${cat.slug}`;
       const total = this.meta()?.total_products ?? cat.product_count;
-
-      /* Build a description that reads naturally regardless of the
-         category being well-stocked, sparse, or empty. */
       const description = total === 0
         ? `Browse ${cat.name.toLowerCase()} from independent UAE designers on 3bayti — ` +
-          `more pieces coming soon.`
+          'more pieces coming soon.'
         : total === 1
           ? `One hand-picked ${cat.name.toLowerCase().replace(/s$/, '')} from an independent ` +
-            `UAE designer on 3bayti.`
+            'UAE designer on 3bayti.'
           : `Shop ${total} hand-picked ${cat.name.toLowerCase()} from independent UAE designers. ` +
-            `Curated styles, made-to-measure fits, delivered to your door.`;
-
+            'Curated styles, made-to-measure fits, delivered to your door.';
       this.seo.set({
         title: `${cat.name} · Modest Wear & Designer Pieces`,
-        description,
-        url,
-        type: 'website',
+        description, url, type: 'website',
       });
-
-      /* JSON-LD: BreadcrumbList + ItemList for SERP rich results.
-         The ItemList helps Google understand this page lists
-         products that link out to individual product pages. */
       this.seo.setStructuredData([
         breadcrumbSchema([
           { name: 'Home', url: `${siteUrl}/` },
@@ -201,44 +169,78 @@ export class CategoryDetailComponent {
         ]),
         itemListSchema(
           this.products().map((p, idx) => ({
-            position: idx + 1,
-            name: p.name,
+            position: idx + 1, name: p.name,
             url: `${siteUrl}/product/${p.slug}`,
             image: p.primary_image?.url,
           })),
         ),
       ]);
     });
+
+    // Sync URL query params → activeFilters signal (browser + SSR).
+    // We subscribe directly (not via toSignal) to avoid the overload
+    // resolution issues with nullable initialValue in this Angular version.
+    this.route.queryParamMap.subscribe((qp) => {
+      const raw = (key: string) => qp.get(key) ?? '';
+      const sizes  = raw('sizes')  ? raw('sizes').split(',')  : [];
+      const colors = raw('colors') ? raw('colors').split(',') : [];
+      const sort   = (raw('sort') || 'newest') as CatalogSort;
+      const minP   = parseFloat(raw('min_price'));
+      const maxP   = parseFloat(raw('max_price'));
+      this.activeFilters.set({
+        category: this.slug(),
+        sizes, colors, sort,
+        minPrice: isNaN(minP) ? null : minP,
+        maxPrice: isNaN(maxP) ? null : maxP,
+        q: raw('q') || null,
+      });
+    });
+
+    // Drive catalog + facets whenever filters change (browser only)
+    effect(() => {
+      const filters = this.currentFilters();
+      if (isPlatformServer(this.platformId) || !filters.category) return;
+      this._page.set(0);
+      this.catalog.reset();
+      void this.catalog.loadProducts(filters, 0, false);
+      void this.catalog.loadFacets(filters);
+    });
   }
 
-  /**
-   * Fetch (or hydrate from TransferState) the category detail envelope.
-   *
-   * Cache key includes the slug so each category gets its own state
-   * entry — switching categories client-side picks up the right cache.
-   */
+  /** Called by the filter panel; writes the new filter state to the URL. */
+  onFilterChange(filters: CatalogFilters): void {
+    const q: Record<string, string> = {};
+    if (filters.sizes?.length)  q['sizes']     = filters.sizes.join(',');
+    if (filters.colors?.length) q['colors']    = filters.colors.join(',');
+    if (filters.sort && filters.sort !== 'newest') q['sort'] = filters.sort;
+    if (filters.minPrice != null) q['min_price'] = String(filters.minPrice);
+    if (filters.maxPrice != null) q['max_price'] = String(filters.maxPrice);
+    if (filters.q) q['q'] = filters.q;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: q,
+      replaceUrl: true,    // don't push a history entry per filter click
+    });
+  }
+
+  /** Load the next page and append to the grid. */
+  async loadMore(): Promise<void> {
+    const nextPage = this._page() + 1;
+    this._page.set(nextPage);
+    await this.catalog.loadProducts(this.currentFilters(), nextPage, true);
+  }
+
+  categoriesIndexUrl(): string { return '/category'; }
+
+  // ── Private ──────────────────────────────────────────────────────
+
   private fetchCategoryDetail$(slug: string) {
     const stateKey = makeStateKey<CategoryDetailEnvelope>(`category-detail-${slug}`);
-
-    /* Browser-side: check if SSR seeded the cache. */
     const cached = this.state.get(stateKey, null);
     if (cached !== null) {
-      /* Re-apply SEO since the cached path skips the constructor's
-         queueMicrotask in a freshly-loaded route. */
       this.notFound.set(false);
       return of(cached);
     }
-
-    /* normaliseResponse returns NormalisedResponse<CategoryDetail> with
-       meta typed as PaginationMeta. The actual wire shape from
-       /v3/categories/:slug has meta: { total_products, page_size }
-       per the apps/web CategoryDetailMeta interface — endpoint-
-       specific shape. M3.2.X.3 augmented the v3 endpoint to emit
-       this shape exactly. The runtime payload is correct; we cast
-       to CategoryDetailEnvelope so the component's computed signals
-       get the right type. Removing this cast requires typing
-       RoutedHttpClient.get to carry the per-endpoint meta variant —
-       M3.2.Z typed-envelope refactor scope. */
     return this.routed.get<CategoryDetail>('GET /categories/:slug', { params: { slug } }).pipe(
       map((env) => env as unknown as CategoryDetailEnvelope),
       tap((envelope) => {
@@ -248,11 +250,8 @@ export class CategoryDetailComponent {
         this.notFound.set(false);
       }),
       catchError((err: HttpErrorResponse) => {
-        /* 404 from API → set notFound flag, return null so loading clears. */
         if (err.status === 404) {
           this.notFound.set(true);
-          /* W2.2c: propagate 404 to the HTTP response so crawlers see
-           * a real 404 instead of indexing this slug as a 200 page. */
           this.setSsrStatus(404);
         } else {
           console.error(`[/category/${slug}] fetch failed:`, err.status);
@@ -261,17 +260,8 @@ export class CategoryDetailComponent {
       }),
     );
   }
-
-  /**
-   * URL for the back-to-categories link in the breadcrumb. Used in
-   * the template.
-   */
-  categoriesIndexUrl(): string {
-    return '/category';
-  }
 }
 
-/** Local type for the full envelope (data + meta) returned by /v3/categories/:slug. */
 interface CategoryDetailEnvelope {
   data: CategoryDetail;
   meta: CategoryDetailMeta;
