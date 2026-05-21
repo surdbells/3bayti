@@ -17,6 +17,7 @@ import { CheckoutService } from '../../core/checkout';
 import { AddressService } from '../../core/addresses';
 import type { Address } from '../../core/addresses';
 import { ToastService } from '../../shared/forms';
+import { CurrencyService } from '../../core/currency/currency.service';
 
 /**
  * /checkout/review — step 2 of 3.
@@ -256,6 +257,14 @@ import { ToastService } from '../../shared/forms';
           </dl>
         </section>
 
+        @if (isDisplayConverted()) {
+          <p class="checkout-aed-notice" role="note">
+            ﹡ Displayed prices are indicative. Your payment will be
+            charged in <strong>AED</strong> at the rate set by your
+            card issuer or payment provider.
+          </p>
+        }
+
         <div class="checkout-page__actions">
           <button
             type="button"
@@ -286,6 +295,9 @@ export class CheckoutReviewPageComponent implements OnInit {
   private readonly addressService = inject(AddressService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
+  private readonly currencyService = inject(CurrencyService);
+  /** True when the visitor has a non-AED display currency set. */
+  protected readonly isDisplayConverted = this.currencyService.isConverted;
 
   protected readonly items = computed<CartItem[]>(() => this.cart.cart().items);
   protected readonly currency = this.cart.currency;

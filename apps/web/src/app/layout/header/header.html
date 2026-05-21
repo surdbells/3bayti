@@ -8,6 +8,7 @@
     </nav>
     <div class="header-actions">
       <app-locale-switcher />
+      <app-currency-switcher />
       <app-cart-icon data-testid="header-cart-icon" />
       <ng-container *ngIf="isAuthenticated() && currentUser() as user; else loggedOutCta">
         <app-user-menu [user]="user" data-testid="header-user-menu"></app-user-menu>

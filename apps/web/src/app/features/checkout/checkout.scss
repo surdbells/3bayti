@@ -666,3 +666,19 @@
   justify-content: center;
   margin-bottom: 16px;
 }
+
+/* AED settlement notice — shown when a non-AED display currency is
+   active. Visually subtle; role="note" ensures screen readers catch it. */
+.checkout-aed-notice {
+  margin: 0;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--color-text-tertiary);
+  background: var(--color-bg-muted);
+  border-radius: 8px;
+  line-height: 1.5;
+
+  strong {
+    color: var(--color-text-secondary);
+  }
+}

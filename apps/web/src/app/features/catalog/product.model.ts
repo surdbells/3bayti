@@ -18,6 +18,29 @@
 export interface Money {
   amount: number;
   currency: string; // e.g. 'AED'
+  /** Present when a non-AED display currency was requested (?currency=XXX). */
+  source_amount?: number;
+  /** The requested display currency code (e.g. 'USD'). */
+  source_currency?: string;
+}
+
+/**
+ * Format a price for display. When a display currency is present
+ * (dual-amount shape) shows the converted amount first, with the AED
+ * canonical amount as a secondary label. Falls back to plain AED.
+ *
+ * Examples:
+ *   dual   → "USD 81.49 / AED 299.00"
+ *   single → "AED 299.00"
+ */
+export function formatMoney(money: Money | null | undefined): string {
+  if (!money) return '';
+  if (money.source_amount != null && money.source_currency) {
+    const src = `${money.source_currency} ${money.source_amount.toFixed(2)}`;
+    const aed = `AED ${money.amount.toFixed(2)}`;
+    return `${src} / ${aed}`;
+  }
+  return `${money.currency} ${money.amount.toFixed(2)}`;
 }
 
 /** Image with optional dimensions + alt text. */

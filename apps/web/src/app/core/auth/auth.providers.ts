@@ -2,6 +2,7 @@ import { EnvironmentProviders, makeEnvironmentProviders, provideAppInitializer, 
 import { withInterceptors, provideHttpClient, withFetch } from '@angular/common/http';
 import { AuthService } from './auth.service';
 import { refreshInterceptor } from './refresh.interceptor';
+import { currencyInterceptor } from '../currency/currency.interceptor';
 
 /**
  * provideAuth() — wires the auth interceptor and hydrates the session
@@ -44,7 +45,7 @@ export function provideAuth(): EnvironmentProviders {
   return makeEnvironmentProviders([
     /* Replace the previous provideHttpClient call. withFetch() keeps
        the same edge-runtime compatibility as the old config. */
-    provideHttpClient(withFetch(), withInterceptors([refreshInterceptor])),
+    provideHttpClient(withFetch(), withInterceptors([refreshInterceptor, currencyInterceptor])),
 
     /* Hydrate the session before the app's first paint. */
     provideAppInitializer(() => {
