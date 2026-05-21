@@ -1,0 +1,38 @@
+<app-vendor-shell>
+  <div class="ax-page">
+    <div class="ax-page-header">
+      <div>
+        <h1 class="ax-page-title">Store Metrics</h1>
+        <p class="ax-page-subtitle">Performance indicators for your store</p>
+      </div>
+      <div class="ax-page-actions">
+        <select class="ax-select" [(ngModel)]="days" (change)="onDaysChange()">
+          @for (d of dayOptions; track d) {
+            <option [value]="d">Last {{ d }} days</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    @if (loading) { <app-ax-skeleton /> }
+    @else if (error) { <app-ax-empty-state [title]="error" description="Check your connection." /> }
+    @else if (data) {
+      <p class="ax-caption">
+        {{ data.window.since | date:'mediumDate' }} – {{ data.window.until | date:'mediumDate' }}
+      </p>
+      <div class="metrics-grid">
+        @for (key of metricKeys; track key) {
+          <div class="metric-card" [class.metric-card--highlight]="metricValue(key) !== '—'">
+            <span class="metric-label">{{ label(key) }}</span>
+            <span class="metric-value">{{ metricValue(key) }}</span>
+            @if (metricDetail(key)) {
+              <span class="metric-detail">{{ metricDetail(key) }}</span>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <app-ax-empty-state title="No metrics yet" description="Metrics appear once you have order activity." />
+    }
+  </div>
+</app-vendor-shell>

@@ -79,6 +79,16 @@ export const routes: Routes = [
     title: 'Products'
   },
   {
+    path: 'analytics',
+    loadComponent: () => import('./vendor/vendor-analytics/vendor-analytics.component').then(m => m.VendorAnalyticsComponent),
+    title: 'Sales Analytics'
+  },
+  {
+    path: 'metrics',
+    loadComponent: () => import('./vendor/vendor-metrics/vendor-metrics.component').then(m => m.VendorMetricsComponent),
+    title: 'Store Metrics'
+  },
+  {
     path: 'create-product',
     loadComponent: () => import('./vendor/create-product/create-product.component').then(m => m.CreateProductComponent),
     title: 'Create product'
@@ -236,6 +246,11 @@ export const routes: Routes = [
     path: 'admintickets',
     loadComponent: () => import('./backend/tickets/tickets.component').then(m => m.TicketsComponent),
     title: 'View ticket'
+  },
+  {
+    path: 'notification-logs',
+    loadComponent: () => import('./backend/notification-logs/notification-logs.component').then(m => m.NotificationLogsComponent),
+    title: 'Notification Logs'
   },
   {
     path: 'ticket_messages',

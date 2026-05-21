@@ -1,0 +1,17 @@
+.ax-page { padding: 24px; }
+.ax-page-header { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+.ax-page-title { font-size: 22px; font-weight: 700; color: #212529; margin: 0; }
+.ax-page-subtitle { font-size: 14px; color: #6c757d; margin: 4px 0 0; }
+.logs-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 20px; }
+.ax-select, .ax-input { padding: 7px 12px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 13px; background: #fff; }
+.ax-input { min-width: 160px; }
+.ax-btn { padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid transparent; }
+.ax-btn--primary { background: #212529; color: #fff; border-color: #212529; }
+.ax-btn--primary:hover { background: #343a40; }
+.ax-btn--ghost { background: transparent; color: #495057; border-color: #dee2e6; }
+.ax-btn--ghost:hover { background: #f8f9fa; }
+.log-status-badge { padding: 3px 10px; border-radius: 9999px; font-size: 12px; font-weight: 500; }
+.log-status-badge--sent   { background: #d1fae5; color: #065f46; }
+.log-status-badge--failed { background: #fee2e2; color: #991b1b; }
+.logs-pagination { display: flex; align-items: center; gap: 16px; margin-top: 20px; }
+.logs-count { font-size: 13px; color: #6c757d; }

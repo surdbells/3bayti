@@ -202,10 +202,20 @@
         </div>
       </div>
 
-      <!-- Right: status timeline -->
+      <!-- Right: status timeline (W.6: rich API timeline when available,
+           locally-derived fallback while loading or on error) -->
       <aside class="ax-card ax-p-5">
-        <h4 class="ax-h6 ax-m-0 ax-mb-4">Order status</h4>
-        <app-ax-activity-feed [items]="timeline"></app-ax-activity-feed>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h4 class="ax-h6 ax-m-0">Order timeline</h4>
+          @if (timelineLoading) {
+            <span style="font-size:12px;color:#6c757d">Loading…</span>
+          } @else if (apiTimeline.length > 0) {
+            <span style="font-size:11px;color:#6c757d;background:#f8f9fa;padding:2px 8px;border-radius:9999px">Full history</span>
+          }
+        </div>
+        <app-ax-activity-feed
+          [items]="apiTimeline.length > 0 ? apiTimeline : timeline">
+        </app-ax-activity-feed>
       </aside>
     </div>
   </div>

@@ -1,4 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import jsPDF from 'jspdf';
@@ -10,7 +11,18 @@ import { GlobalComponent } from '../../global-component';
 import {
   AxActivityFeedComponent,
   AxActivityItem,
+  AxActivityVariant,
 } from '../../shared/rich/ax-activity-feed.component';
+
+/** A single event from GET /v3/vendor/orders/{id}/timeline (X.17-D). */
+interface ApiTimelineEvent {
+  type: string;
+  actor_type: string;
+  actor_label: string;
+  description: string;
+  created_at: string;
+  payload?: Record<string, unknown>;
+}
 import { AxCopyToClipboardDirective } from '../../shared/rich/ax-copy-to-clipboard.directive';
 
 import { AxConfirmService } from '../../shared/overlays';
@@ -30,6 +42,13 @@ import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.c
 })
 export class ViewOrderComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
+  private readonly http = inject(HttpClient);
+
+  /** Richer timeline from GET /v3/vendor/orders/{id}/timeline (X.17-D).
+   *  Loaded after the legacy order fetch resolves. Falls back gracefully
+   *  to the locally-derived timeline when the API call fails. */
+  apiTimeline: AxActivityItem[] = [];
+  timelineLoading = false;
 
   constructor(
     private router: Router,
@@ -146,6 +165,7 @@ export class ViewOrderComponent implements OnInit {
         if (response.response_code === 200 && response.status === 'success') {
           this.data = response.data;
           this.ui_controls.is_loading = false;
+          this.loadApiTimeline();
         }
       },
     });
@@ -289,5 +309,65 @@ export class ViewOrderComponent implements OnInit {
       default:
         return 'ax-badge-neutral';
     }
+  }
+
+  /**
+   * Fetch the rich aggregated timeline from GET /v3/vendor/orders/{id}/timeline
+   * (X.17-D). Converts the API events to AxActivityItem[] for display.
+   * On any error the apiTimeline remains [] and the template falls back
+   * to the locally-derived timeline (get timeline() above), so the page
+   * never regresses below its pre-W.6 behaviour.
+   */
+  loadApiTimeline(): void {
+    const orderId = this.single.order;
+    if (!orderId || !this.user_session.token) return;
+    this.timelineLoading = true;
+    const headers = new HttpHeaders({ Authorization: `Bearer ${this.user_session.token}` });
+    this.http
+      .get<{ data: ApiTimelineEvent[]; meta: { total: number } }>(
+        `https://api-v3.3bayti.ae/v3/vendor/orders/${orderId}/timeline`,
+        { headers },
+      )
+      .subscribe({
+        next: (res) => {
+          this.apiTimeline = (res.data ?? []).map((e) => ({
+            icon: this.timelineIcon(e.type),
+            variant: this.timelineVariant(e.type),
+            title: e.description,
+            body: e.actor_label
+              ? `<span style="font-size:12px;color:#6c757d">${e.actor_label}</span>`
+              : undefined,
+          } as AxActivityItem));
+          this.timelineLoading = false;
+        },
+        error: () => {
+          this.timelineLoading = false;
+          // silent: falls back to get timeline()
+        },
+      });
+  }
+
+  private timelineIcon(type: string): string {
+    const map: Record<string, string> = {
+      'order.placed': 'shopping_bag',
+      'order.paid': 'payments',
+      'order.payment_failed': 'payment',
+      'order.fulfilled': 'inventory',
+      'item.shipped': 'local_shipping',
+      'item.delivered': 'check_circle',
+      'order.cancelled': 'cancel',
+      'order.refunded': 'currency_exchange',
+      'note.added': 'note',
+      'status.changed': 'sync',
+    };
+    return map[type] ?? 'history';
+  }
+
+  private timelineVariant(type: string): AxActivityVariant {
+    if (type.includes('paid') || type.includes('delivered')) return 'success';
+    if (type.includes('failed') || type.includes('cancelled')) return 'danger';
+    if (type.includes('refunded')) return 'warning';
+    if (type.includes('placed') || type.includes('fulfilled')) return 'brand';
+    return 'default';
   }
 }
