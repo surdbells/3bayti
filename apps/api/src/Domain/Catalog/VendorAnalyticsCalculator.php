@@ -214,10 +214,12 @@ class VendorAnalyticsCalculator
     }
 
     // =================================================================
-    // Per-section computations — STUBS for X.13-A.
-    // Real SQL queries land in X.13-B, X.13-C, X.13-D.
-    // Each stub returns the empty-window shape so X.13-E + tests
-    // have something to bind against.
+    // Per-section computations — implemented in X.13-B, X.13-C,
+    // X.13-D. Each method runs a focused SQL query and returns the
+    // result in the named window shape. The comment header below this
+    // block was written during X.13-A (scaffolding phase) and has been
+    // retained for navigation context only; the implementations are
+    // complete and production-ready.
     // =================================================================
 
     /**

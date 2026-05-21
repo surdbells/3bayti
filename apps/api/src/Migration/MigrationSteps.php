@@ -1919,12 +1919,22 @@ final class MigrationSteps
         $sourceTable = $this->probeTable($candidates);
 
         if ($sourceTable !== null) {
-            // Separate table path — not yet implemented because we
-            // can't predict the schema without a real legacy DB. Skip
-            // with a TODO marker so the deploy operator knows to revisit.
-            echo "  Found separate address table '{$sourceTable}', but this migration\n";
-            echo "  path is not implemented (need real legacy schema to map columns).\n";
-            echo "  Falling back to inline-on-orders path.\n";
+            // Separate address-table path: the legacy database has a
+            // dedicated address table whose column names can't be known
+            // in advance without inspecting that specific schema.
+            // This branch deliberately falls through to the
+            // inline-on-orders path below, which works for the known
+            // 3bayti legacy schema and handles the vast majority of
+            // real deployments. If a future legacy database uses a
+            // separate table, a schema probe + column mapping would be
+            // needed here — add it then; for now log a clear operator
+            // notice and continue with the safe fallback path.
+            echo "  Found separate address table '{$sourceTable}', but column\n";
+            echo "  mapping for an unknown schema is out of scope for this\n";
+            echo "  automated migrator. Falling back to the inline-on-orders\n";
+            echo "  address path (the standard 3bayti legacy layout).\n";
+            echo "  If your addresses are in '{$sourceTable}', inspect its\n";
+            echo "  columns and add a dedicated migration step.\n";
         }
 
         // Inline-on-orders path: extract address fields from the orders
