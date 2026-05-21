@@ -865,6 +865,255 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'v3-envelope',
   },
 
+
+  // =======================================================================
+  // M3.3 — Portal route keys (PortalCrudAdapter).
+  // target='old' → legacy; flip to 'new' when the v3 endpoint is ready.
+  // =======================================================================
+  // Vendor surface
+  'DELETE /vendor/coupons/:id': {
+    target: 'old', oldPath: '/vendors/coupons/delete-coupon', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
+  },
+  'DELETE /vendor/labels/:id': {
+    target: 'old', oldPath: '/vendors/labels/delete-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',
+  },
+  'DELETE /vendor/measurements/:id': {
+    target: 'old', oldPath: '/vendors/measurement/delete-measurement', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
+  },
+  'DELETE /vendor/products/:id': {
+    target: 'old', oldPath: '/vendors/products/delete-product', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
+  },
+  'GET /vendor/analytics': {
+    target: 'new', oldPath: '/vendors/common/dashboard-activity', newPath: '/v3/vendor/analytics', shape: 'v3-envelope',
+  },
+  'GET /vendor/coupons': {
+    target: 'old', oldPath: '/vendors/coupons/get-coupons', newPath: '/v3/vendor/coupons', shape: 'v3-envelope',
+  },
+  'GET /vendor/coupons/:id': {
+    target: 'old', oldPath: '/vendors/coupons/get-coupon-by-id', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
+  },
+  'GET /vendor/coupons/:id/analytics': {
+    target: 'old', oldPath: '/vendors/coupons/coupon-analytics', newPath: '/v3/vendor/coupons/:id/analytics', shape: 'v3-envelope',
+  },
+  'GET /vendor/labels': {
+    target: 'old', oldPath: '/vendors/labels/read-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
+  },
+  'GET /vendor/measurements': {
+    target: 'old', oldPath: '/vendors/measurement/get-measurements', newPath: '/v3/me/measurements', shape: 'v3-envelope',
+  },
+  'GET /vendor/measurements/:id': {
+    target: 'old', oldPath: '/vendors/measurement/getMeasurementById', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
+  },
+  'GET /vendor/messages': {
+    target: 'old', oldPath: '/admin/message-vendor', newPath: '/v3/vendor/messages', shape: 'v3-envelope',
+  },
+  'GET /vendor/metrics': {
+    target: 'new', oldPath: '/vendors/common/dashboard-activity', newPath: '/v3/vendor/metrics', shape: 'v3-envelope',
+  },
+  'GET /vendor/notifications': {
+    target: 'old', oldPath: '/vendors/common/notifications', newPath: '/v3/vendor/notifications', shape: 'v3-envelope',
+  },
+  'GET /vendor/onboarding/status': {
+    target: 'new', oldPath: '/vendors/common/compliance', newPath: '/v3/vendor/onboarding/status', shape: 'v3-envelope',
+  },
+  'GET /vendor/products': {
+    target: 'old', oldPath: '/vendors/products/get-products', newPath: '/v3/vendor/products', shape: 'v3-envelope',
+  },
+  'GET /vendor/products/:id': {
+    target: 'old', oldPath: '/vendors/products/getProductById', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
+  },
+  'GET /vendor/returns': {
+    target: 'old', oldPath: '/vendors/orders/get-return-orders', newPath: '/v3/vendor/returns', shape: 'v3-envelope',
+  },
+  'GET /vendor/returns/:id': {
+    target: 'old', oldPath: '/vendors/orders/get-return-orders', newPath: '/v3/vendor/returns/:id', shape: 'v3-envelope',
+  },
+  'GET /vendor/reviews': {
+    target: 'old', oldPath: '/vendors/products/get-products-reviews', newPath: '/v3/vendor/reviews', shape: 'v3-envelope',
+  },
+  'GET /vendor/store': {
+    target: 'old', oldPath: '/vendors/settings/vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',
+  },
+  'GET /vendor/store/notifications': {
+    target: 'old', oldPath: '/vendors/settings/vendor-store-notifications', newPath: '/v3/vendor/store/notifications', shape: 'v3-envelope',
+  },
+  'GET /vendor/store/payment': {
+    target: 'old', oldPath: '/vendors/settings/vendor-store-payment', newPath: '/v3/vendor/store/payment', shape: 'v3-envelope',
+  },
+  'GET /vendor/store/tax': {
+    target: 'old', oldPath: '/vendors/settings/vendor-store-tax', newPath: '/v3/vendor/store/tax', shape: 'v3-envelope',
+  },
+  'PATCH /vendor/compliance': {
+    target: 'old', oldPath: '/vendors/settings/update-compliance', newPath: '/v3/vendor/compliance', shape: 'v3-envelope',
+  },
+  'PATCH /vendor/store': {
+    target: 'old', oldPath: '/vendors/settings/update-vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',
+  },
+  'PATCH /vendor/store/notifications': {
+    target: 'old', oldPath: '/vendors/settings/update-vendor-notifications', newPath: '/v3/vendor/store/notifications', shape: 'v3-envelope',
+  },
+  'PATCH /vendor/store/payment': {
+    target: 'old', oldPath: '/vendors/settings/update-vendor-payment', newPath: '/v3/vendor/store/payment', shape: 'v3-envelope',
+  },
+  'PATCH /vendor/store/status': {
+    target: 'old', oldPath: '/vendors/settings/switch-store-status', newPath: '/v3/vendor/store/status', shape: 'v3-envelope',
+  },
+  'PATCH /vendor/store/tax': {
+    target: 'old', oldPath: '/vendors/settings/update-vendor-tax', newPath: '/v3/vendor/store/tax', shape: 'v3-envelope',
+  },
+  'POST /vendor/coupons': {
+    target: 'old', oldPath: '/vendors/coupons/create-coupon', newPath: '/v3/vendor/coupons', shape: 'v3-envelope',
+  },
+  'POST /vendor/coupons/:id/toggle': {
+    target: 'old', oldPath: '/vendors/coupons/toggle-coupon-status', newPath: '/v3/vendor/coupons/:id/toggle', shape: 'v3-envelope',
+  },
+  'POST /vendor/labels': {
+    target: 'old', oldPath: '/vendors/labels/create-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
+  },
+  'POST /vendor/measurements': {
+    target: 'old', oldPath: '/vendors/measurement/create-measurement', newPath: '/v3/me/measurements', shape: 'v3-envelope',
+  },
+  'POST /vendor/messages': {
+    target: 'old', oldPath: '/admin/message-vendor', newPath: '/v3/vendor/messages', shape: 'v3-envelope',
+  },
+  'POST /vendor/notifications/mark-read': {
+    target: 'old', oldPath: '/vendors/common/mark_notifications', newPath: '/v3/vendor/notifications/mark-read', shape: 'v3-envelope',
+  },
+  'POST /vendor/onboarding/submit': {
+    target: 'new', oldPath: '/vendors/common/compliance', newPath: '/v3/vendor/onboarding/submit', shape: 'v3-envelope',
+  },
+  'POST /vendor/products': {
+    target: 'old', oldPath: '/vendors/products/create-product', newPath: '/v3/vendor/products', shape: 'v3-envelope',
+  },
+  'POST /vendor/returns/:id/confirm-receipt': {
+    target: 'old', oldPath: '/vendors/orders/update-order-status', newPath: '/v3/vendor/returns/:id/confirm-receipt', shape: 'v3-envelope',
+  },
+  'PUT /vendor/coupons/:id': {
+    target: 'old', oldPath: '/vendors/coupons/update-coupon', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
+  },
+  'PUT /vendor/labels/:id': {
+    target: 'old', oldPath: '/vendors/labels/update-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',
+  },
+  'PUT /vendor/measurements/:id': {
+    target: 'old', oldPath: '/vendors/measurement/update-measurement', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
+  },
+  'PUT /vendor/products/:id': {
+    target: 'old', oldPath: '/vendors/products/update-product', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
+  },
+  // Admin surface
+  'DELETE /admin/products/:id': {
+    target: 'old', oldPath: '/vendors/products/delete-product', newPath: '/v3/admin/products/:id', shape: 'v3-envelope',
+  },
+  'GET /admin/collections': {
+    target: 'old', oldPath: '/admin/collections/get-collection', newPath: '/v3/admin/collections', shape: 'v3-envelope',
+  },
+  'GET /admin/collections/:id': {
+    target: 'old', oldPath: '/admin/collections/read-collection', newPath: '/v3/admin/collections/:id', shape: 'v3-envelope',
+  },
+  'GET /admin/commissions': {
+    target: 'old', oldPath: '/admin/common/commissions', newPath: '/v3/admin/commissions', shape: 'v3-envelope',
+  },
+  'GET /admin/customers': {
+    target: 'old', oldPath: '/admin/common/get-customers', newPath: '/v3/admin/users?role=customer', shape: 'v3-envelope',
+  },
+  'GET /admin/orders': {
+    target: 'new', oldPath: '/admin/common/get-store-orders', newPath: '/v3/admin/orders', shape: 'v3-envelope',
+  },
+  'GET /admin/orders/:id': {
+    target: 'new', oldPath: '/admin/common/pluralById', newPath: '/v3/admin/orders/:id', shape: 'v3-envelope',
+  },
+  'GET /admin/orders/:id/timeline': {
+    target: 'new', oldPath: '/admin/common/processingById', newPath: '/v3/admin/orders/:id/timeline', shape: 'v3-envelope',
+  },
+  'GET /admin/products': {
+    target: 'new', oldPath: '/admin/common/products', newPath: '/v3/products', shape: 'v3-envelope',
+  },
+  'GET /admin/tickets': {
+    target: 'old', oldPath: '/admin/common/tickets', newPath: '/v3/admin/tickets', shape: 'v3-envelope',
+  },
+  'GET /admin/tickets/:id/messages': {
+    target: 'old', oldPath: '/admin/common/ticket-messages', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
+  },
+  'GET /admin/transactions': {
+    target: 'old', oldPath: '/admin/common/transactions', newPath: '/v3/admin/transactions', shape: 'v3-envelope',
+  },
+  'GET /admin/users': {
+    target: 'old', oldPath: '/admin/common/get-users', newPath: '/v3/admin/users', shape: 'v3-envelope',
+  },
+  'GET /admin/users/:id': {
+    target: 'old', oldPath: '/admin/common/get-users', newPath: '/v3/admin/users/:id', shape: 'v3-envelope',
+  },
+  'GET /admin/vendor-metrics': {
+    target: 'new', oldPath: '/admin/common/dashboard-activity', newPath: '/v3/admin/vendor-metrics', shape: 'v3-envelope',
+  },
+  'GET /admin/vendors/:id': {
+    target: 'new', oldPath: '/admin/common/getSingleStore', newPath: '/v3/admin/vendors/:id', shape: 'v3-envelope',
+  },
+  'GET /admin/vendors/:id/analytics': {
+    target: 'new', oldPath: '/admin/common/dashboard-activity', newPath: '/v3/admin/vendors/:id/analytics', shape: 'v3-envelope',
+  },
+  'GET /admin/vendors/:id/metrics': {
+    target: 'new', oldPath: '/admin/common/dashboard-activity', newPath: '/v3/admin/vendors/:id/metrics', shape: 'v3-envelope',
+  },
+  'PATCH /admin/orders/:id/status': {
+    target: 'new', oldPath: '/admin/common/processing', newPath: '/v3/admin/orders/:id/status', shape: 'v3-envelope',
+  },
+  'PATCH /admin/orders/:orderId/items/:itemId/status': {
+    target: 'new', oldPath: '/admin/common/processing', newPath: '/v3/admin/orders/:orderId/items/:itemId/status', shape: 'v3-envelope',
+  },
+  'PATCH /admin/tickets/:id/priority': {
+    target: 'old', oldPath: '/admin/common/ticket-priority', newPath: '/v3/admin/tickets/:id/priority', shape: 'v3-envelope',
+  },
+  'PATCH /admin/tickets/:id/status': {
+    target: 'old', oldPath: '/admin/common/ticket-status', newPath: '/v3/admin/tickets/:id/status', shape: 'v3-envelope',
+  },
+  'POST /admin/collections': {
+    target: 'old', oldPath: '/admin/collections/create-collection', newPath: '/v3/admin/collections', shape: 'v3-envelope',
+  },
+  'POST /admin/orders/:id/cancel': {
+    target: 'new', oldPath: '/admin/common/processing', newPath: '/v3/admin/orders/:id/cancel', shape: 'v3-envelope',
+  },
+  'POST /admin/orders/:id/refund': {
+    target: 'new', oldPath: '/admin/common/processing', newPath: '/v3/admin/orders/:id/refund', shape: 'v3-envelope',
+  },
+  'POST /admin/products': {
+    target: 'old', oldPath: '/vendors/products/create-product', newPath: '/v3/admin/products', shape: 'v3-envelope',
+  },
+  'POST /admin/tickets/:id/messages': {
+    target: 'old', oldPath: '/admin/common/send-ticket-message', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
+  },
+  'POST /admin/users/:id/activate': {
+    target: 'old', oldPath: '/admin/common/activate-customer', newPath: '/v3/admin/users/:id/activate', shape: 'v3-envelope',
+  },
+  'POST /admin/users/:id/deactivate': {
+    target: 'old', oldPath: '/admin/common/deactivate-customer', newPath: '/v3/admin/users/:id/deactivate', shape: 'v3-envelope',
+  },
+  'POST /admin/vendors/:id/approve': {
+    target: 'new', oldPath: '/admin/common/activate-store', newPath: '/v3/admin/vendors/:id/approve', shape: 'v3-envelope',
+  },
+  'POST /admin/vendors/:id/reactivate': {
+    target: 'new', oldPath: '/admin/common/activate-store', newPath: '/v3/admin/vendors/:id/reactivate', shape: 'v3-envelope',
+  },
+  'POST /admin/vendors/:id/suspend': {
+    target: 'new', oldPath: '/admin/common/deactivate-store', newPath: '/v3/admin/vendors/:id/suspend', shape: 'v3-envelope',
+  },
+  'PUT /admin/collections/:id': {
+    target: 'old', oldPath: '/admin/collections/update-collection', newPath: '/v3/admin/collections/:id', shape: 'v3-envelope',
+  },
+  'PUT /admin/products/:id': {
+    target: 'old', oldPath: '/vendors/products/update-product', newPath: '/v3/admin/products/:id', shape: 'v3-envelope',
+  },
+  // Utility / shared
+  'GET /utility/categories': {
+    target: 'new', oldPath: '/utility/category', newPath: '/v3/categories', shape: 'v3-envelope',
+  },
+  'GET /utility/collections': {
+    target: 'old', oldPath: '/utility/collections', newPath: '/v3/admin/collections', shape: 'v3-envelope',
+  },
+  'GET /utility/stores': {
+    target: 'new', oldPath: '/utility/stores', newPath: '/v3/vendors', shape: 'v3-envelope',
+  },
+
   // Chat, tickets, vendor self-service, admin orders/users/payments:
   // all live on legacy. Entries added when M3 / M4 lands.
 };

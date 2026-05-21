@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CrudService } from '../../services/crud.service';
+import { PortalAuthService } from '../../services/portal-auth.service';
 import { Router, RouterLink } from '@angular/router';
 import { HotToastService } from '@ngneat/hot-toast';
 import { CookieService } from 'ngx-cookie-service';
@@ -25,6 +26,7 @@ import { TranslatePipe } from '../../translate.pipe';
 export class LoginComponent implements OnInit {
   constructor(
     private crudService: CrudService,
+    private authService: PortalAuthService,
     private router: Router,
     private cookieService: CookieService,
     private toast: HotToastService,
@@ -77,7 +79,10 @@ export class LoginComponent implements OnInit {
       return;
     }
     this.loading = true;
-    this.crudService.post_request(this.login, GlobalComponent.UserLogin).subscribe({
+    // M3.3.0-C — flipped to v3 auth via PortalAuthService.
+    // Response is mapped to the legacy SESSION shape so all downstream
+    // components (role guards, header nav, etc.) work without changes.
+    this.authService.login(this.login.email, this.login.password).subscribe({
       next: (response) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.user_session = response.data;
