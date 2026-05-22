@@ -15,7 +15,7 @@
         <label class="ax-label ax-m-0">Filter by status</label>
         <select
           class="ax-select"
-          [(ngModel)]="singleStatus.status"
+          [(ngModel)]="selectedStatus"
           (change)="onStatusChange($event)"
           aria-label="Filter orders by status">
           <option *ngFor="let s of statusOptions" [value]="s.value">{{ s.label }}</option>

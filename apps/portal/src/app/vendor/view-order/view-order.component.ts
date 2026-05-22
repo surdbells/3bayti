@@ -1,11 +1,12 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { forkJoin } from 'rxjs';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import {
@@ -42,7 +43,6 @@ import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.c
 })
 export class ViewOrderComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
-  private readonly http = inject(HttpClient);
 
   /** Richer timeline from GET /v3/vendor/orders/{id}/timeline (X.17-D).
    *  Loaded after the legacy order fetch resolves. Falls back gracefully
@@ -54,6 +54,7 @@ export class ViewOrderComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -79,7 +80,7 @@ export class ViewOrderComponent implements OnInit {
     is_customer: false,
   };
 
-  data = {
+  data: any = {
     id: 0,
     token: '',
     order: 0,
@@ -160,15 +161,47 @@ export class ViewOrderComponent implements OnInit {
 
   get_order_by_id() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.single, GlobalComponent.getOrderById).subscribe({
+    const orderId = this.single.order;
+    this.adapter.get_v3('GET /vendor/orders/:id', { params: { id: String(orderId) } }).subscribe({
       next: (response) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.data = response.data;
+        if (response?.data) {
+          this.data = this.mapV3Order(response.data);
           this.ui_controls.is_loading = false;
           this.loadApiTimeline();
         }
       },
+      error: () => {
+        this.ui_controls.is_loading = false;
+        this.toast.error('Failed to load order.');
+      },
     });
+  }
+
+  /** Map a v3 order to the flat shape the template expects. */
+  private mapV3Order(o: any): any {
+    const items = o.items ?? [];
+    const firstItem = items[0] ?? {};
+    const customer = o.customer ?? {};
+    return {
+      ...o,
+      // Legacy template fields (template uses these directly)
+      id:          o.id,
+      order_ref:   o.order_reference,
+      order:       o.id,
+      product:     firstItem.product_name ?? o.order_reference,
+      image:       firstItem.product_image?.url ?? '',
+      quantity:    items.reduce((s: number, i: any) => s + (i.quantity ?? 1), 0),
+      email:       customer.email ?? '',
+      total_price: o.subtotal,
+      name:        `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim(),
+      created:     o.created_at,
+      status:      o.status,
+      // Keep v3 fields for the richer template sections
+      items,
+      customer,
+      shipping_address: o.shipping_address,
+      billing_address:  o.billing_address,
+    };
   }
 
   printInvoice() {
@@ -225,18 +258,44 @@ export class ViewOrderComponent implements OnInit {
 
   updateOrderStatus(order: number, status: string, email: string) {
     this.ui_controls.updating_order = true;
-    this.update_order.order = order;
-    this.update_order.status = status;
-    this.update_order.email = email;
-    this.crudService.post_request(this.update_order, GlobalComponent.updateOrderStatus).subscribe({
-      next: (response) => {
-        if (response.response_code === 200 && response.status === 'success') {
+    // v3: PATCH per order-item. Map legacy status → v3 status code.
+    const v3Status = this.mapStatusToV3(status);
+    const items: any[] = this.data?.items ?? [];
+    if (items.length === 0) {
+      this.ui_controls.updating_order = false;
+      return;
+    }
+    // Advance the first non-terminal item; for simplicity advance all.
+    const calls = items.map((item: any) =>
+      this.adapter.patch_v3(
+        'PATCH /vendor/orders/:orderId/items/:itemId/status',
+        { status: v3Status },
+        { params: { orderId: String(order), itemId: String(item.id) } },
+      ),
+    );
+    // Fire sequentially (forkJoin-style via reduce)
+    forkJoin(calls).subscribe({
+        next: () => {
           this.ui_controls.updating_order = false;
-          this.success_notification(response.message);
+          this.success_notification('Order status updated');
           this.get_order_by_id();
-        }
-      },
-    });
+        },
+        error: () => {
+          this.ui_controls.updating_order = false;
+          this.error_notification('Failed to update order status.');
+        },
+      });
+  }
+
+  private mapStatusToV3(legacy: string): string {
+    const map: Record<string, string> = {
+      'Accepted':           'fulfilling',
+      'Ready for Delivery': 'shipped',
+      'Delivered':          'delivered',
+      'Returned':           'refunded',
+      'Cancelled':          'cancelled',
+    };
+    return map[legacy] ?? legacy.toLowerCase();
   }
 
   /** Builds the status timeline. Each status in the set is either
@@ -320,31 +379,22 @@ export class ViewOrderComponent implements OnInit {
    */
   loadApiTimeline(): void {
     const orderId = this.single.order;
-    if (!orderId || !this.user_session.token) return;
+    if (!orderId) return;
     this.timelineLoading = true;
-    const headers = new HttpHeaders({ Authorization: `Bearer ${this.user_session.token}` });
-    this.http
-      .get<{ data: ApiTimelineEvent[]; meta: { total: number } }>(
-        `https://api-v3.3bayti.ae/v3/vendor/orders/${orderId}/timeline`,
-        { headers },
-      )
-      .subscribe({
-        next: (res) => {
-          this.apiTimeline = (res.data ?? []).map((e) => ({
-            icon: this.timelineIcon(e.type),
-            variant: this.timelineVariant(e.type),
-            title: e.description,
-            body: e.actor_label
-              ? `<span style="font-size:12px;color:#6c757d">${e.actor_label}</span>`
-              : undefined,
-          } as AxActivityItem));
-          this.timelineLoading = false;
-        },
-        error: () => {
-          this.timelineLoading = false;
-          // silent: falls back to get timeline()
-        },
-      });
+    this.adapter.get_v3('GET /vendor/orders/:id/timeline', { params: { id: String(orderId) } }).subscribe({
+      next: (res: any) => {
+        this.apiTimeline = (res?.data ?? []).map((e: ApiTimelineEvent) => ({
+          icon: this.timelineIcon(e.type),
+          variant: this.timelineVariant(e.type),
+          title: e.description,
+          body: e.actor_label
+            ? `<span style="font-size:12px;color:#6c757d">${e.actor_label}</span>`
+            : undefined,
+        } as AxActivityItem));
+        this.timelineLoading = false;
+      },
+      error: () => { this.timelineLoading = false; },
+    });
   }
 
   private timelineIcon(type: string): string {

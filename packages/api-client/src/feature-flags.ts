@@ -758,6 +758,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/vendor/orders/:id',
     shape: 'v3-envelope',
   },
+  'GET /vendor/orders/:id/timeline': {
+    target: 'new', oldPath: '/vendors/orders/getOrderById', newPath: '/v3/vendor/orders/:id/timeline', shape: 'v3-envelope',
+  },
+
   'PATCH /vendor/orders/:orderId/items/:itemId/status': {
     target: 'new',
     oldPath: '',
@@ -923,10 +927,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/vendors/products/getProductById', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
   },
   'GET /vendor/returns': {
-    target: 'old', oldPath: '/vendors/orders/get-return-orders', newPath: '/v3/vendor/returns', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/orders/get-return-orders', newPath: '/v3/vendor/returns', shape: 'v3-envelope',
   },
   'GET /vendor/returns/:id': {
-    target: 'old', oldPath: '/vendors/orders/get-return-orders', newPath: '/v3/vendor/returns/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/orders/get-return-orders', newPath: '/v3/vendor/returns/:id', shape: 'v3-envelope',
   },
   'GET /vendor/reviews': {
     target: 'old', oldPath: '/vendors/products/get-products-reviews', newPath: '/v3/vendor/reviews', shape: 'v3-envelope',
@@ -986,7 +990,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/vendors/products/create-product', newPath: '/v3/vendor/products', shape: 'v3-envelope',
   },
   'POST /vendor/returns/:id/confirm-receipt': {
-    target: 'old', oldPath: '/vendors/orders/update-order-status', newPath: '/v3/vendor/returns/:id/confirm-receipt', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/orders/update-order-status', newPath: '/v3/vendor/returns/:id/confirm-receipt', shape: 'v3-envelope',
   },
   'PUT /vendor/coupons/:id': {
     target: 'old', oldPath: '/vendors/coupons/update-coupon', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',

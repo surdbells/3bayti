@@ -1,18 +1,43 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
-import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { CommonModule } from '@angular/common';
-import { GlobalComponent } from '../../global-component';
-import { Orders } from '../../class/orders';
-import { CartItems } from '../../class/cart_items';
 import { FormsModule } from '@angular/forms';
 import {
   AxTableComponent,
   AxColumnComponent,
   AxEmptyStateComponent,
 } from '../../shared/data';
+
+/** Flat display row — kept for template compatibility. */
+interface OrderRow {
+  id: number;
+  order_ref: string;
+  product: string;
+  image: string;
+  quantity: number;
+  email: string;
+  total_price: string;
+  name: string;
+  created: string;
+  status: string;
+  /** v3 order_reference, used when navigating to view-order. */
+  order_reference: string;
+}
+
+/** v3 status → label for the filter dropdown. */
+const V3_STATUS_OPTIONS = [
+  { value: '',             label: 'All orders' },
+  { value: 'paid',         label: 'Paid' },
+  { value: 'fulfilling',   label: 'Fulfilling' },
+  { value: 'shipped',      label: 'Shipped' },
+  { value: 'delivered',    label: 'Delivered' },
+  { value: 'cancelled',    label: 'Cancelled' },
+  { value: 'refunded',     label: 'Refunded' },
+  { value: 'failed',       label: 'Failed' },
+];
 
 @Component({
   selector: 'app-vendor-orders',
@@ -29,158 +54,100 @@ import {
   styleUrl: './vendor-orders.component.css',
 })
 export class VendorOrdersComponent implements OnInit {
-  cartItems?: CartItems[];
-  orders?: Orders[];
-
-  constructor(
-    private router: Router,
-    private crudService: CrudService,
-    private toast: HotToastService,
-  ) {}
+  orders: OrderRow[] = [];
+  selectedStatus = '';
 
   ui_controls = {
     is_loading: false,
     no_orders: false,
-    loading_items: false,
-    updating_order: false,
   };
 
-  session_data: any = '';
-  user_session = {
-    id: 0,
-    token: '',
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    is_2fa: false,
-    is_active: false,
-    is_admin: false,
-    is_vendor: false,
-    is_customer: false,
-  };
+  readonly statusOptions = V3_STATUS_OPTIONS;
 
-  order = {
-    token: '',
-    id: 0,
-  };
+  constructor(
+    private router: Router,
+    private adapter: PortalCrudAdapter,
+    private toast: HotToastService,
+  ) {}
 
-  singleStatus = {
-    id: 0,
-    token: '',
-    status: 'Accepted',
-  };
-
-  readonly statusOptions = [
-    { value: 'pending',            label: 'Pending' },
-    { value: 'Accepted',           label: 'Accepted' },
-    { value: 'Ready for Delivery', label: 'Ready for Delivery' },
-    { value: 'Delivered',          label: 'Delivered' },
-    { value: 'Return Requested',   label: 'Return Requested' },
-    { value: 'Returned',           label: 'Returned' },
-    { value: 'Cancelled',          label: 'Cancelled' },
-    { value: 'Refunded',           label: 'Refunded' },
-  ];
-
-  ngOnInit() {
-    this.session_data = sessionStorage.getItem('SESSION');
-    this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    this.order.token = this.user_session.token;
-    this.order.id = this.user_session.id;
-    this.singleStatus.token = this.user_session.token;
-    this.singleStatus.id = this.user_session.id;
-    this.get_vendor_orders();
+  ngOnInit(): void {
+    this.loadOrders();
   }
 
-  goBack() {
-    this.router.navigate(['/account']).then(r => console.log(r));
+  goBack(): void {
+    this.router.navigate(['/account']);
   }
 
-  error_notification(message: string) {
-    this.toast.error(message);
+  onStatusChange(event: Event): void {
+    this.selectedStatus = (event.target as HTMLSelectElement).value;
+    this.loadOrders();
   }
 
-  success_notification(message: string) {
-    this.toast.success(message);
-  }
-
-  get_vendor_orders() {
-    this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.order, GlobalComponent.getVendorOrders).subscribe({
-      next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.orders = response.data;
-          this.ui_controls.is_loading = false;
-          this.ui_controls.no_orders = false;
-        } else {
-          this.ui_controls.no_orders = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_orders = true;
-      },
-    });
-  }
-
-  open_order(id: number, name: string) {
-    this.router
-      .navigate(['/', 'order'], { queryParams: { id, name } })
-      .then(r => console.log(r));
-  }
-
-  onStatusChange(event: Event) {
-    this.singleStatus.status = (event.target as HTMLSelectElement).value;
-    this.get_vendor_orders_status();
-  }
-
-  get_vendor_orders_status() {
+  loadOrders(): void {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_orders = false;
-    this.orders = [];
-    this.crudService.post_request(this.singleStatus, GlobalComponent.getVendorOrdersByStatus).subscribe({
-      next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.orders = response.data;
-          this.ui_controls.is_loading = false;
-          this.ui_controls.no_orders = false;
-        } else {
-          this.ui_controls.no_orders = true;
-        }
+    const query: Record<string, string | number | boolean | undefined | null> = {
+      limit: 50,
+      offset: 0,
+    };
+    if (this.selectedStatus) {
+      query['status'] = this.selectedStatus;
+    }
+    this.adapter.get_v3('GET /vendor/orders', { query }).subscribe({
+      next: (res: any) => {
         this.ui_controls.is_loading = false;
+        const raw: any[] = res?.data ?? [];
+        this.orders = raw.map((o) => this.mapOrder(o));
+        this.ui_controls.no_orders = this.orders.length === 0;
       },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
+      error: () => {
         this.ui_controls.is_loading = false;
         this.ui_controls.no_orders = true;
+        this.toast.error('Unable to load orders right now.');
       },
     });
   }
 
-  /** Maps a status value to its badge treatment. */
+  open_order(id: number, _name: string): void {
+    this.router.navigate(['/', 'order'], { queryParams: { id } });
+  }
+
   statusBadgeClass(status: string): string {
     switch (status) {
-      case 'Accepted':
-      case 'Ready for Delivery':
-      case 'Delivered':
-        return 'ax-badge-success';
-      case 'Return Requested':
-        return 'ax-badge-warning';
-      case 'pending':
-        return 'ax-badge-danger';
-      case 'Returned':
-      case 'Cancelled':
-      case 'Refunded':
-      default:
-        return 'ax-badge-neutral';
+      case 'paid':
+      case 'delivered': return 'ax-badge-success';
+      case 'fulfilling':
+      case 'shipped':   return 'ax-badge-primary';
+      case 'failed':
+      case 'cancelled': return 'ax-badge-danger';
+      case 'refunded':  return 'ax-badge-warning';
+      default:          return 'ax-badge-neutral';
     }
   }
 
   statusLabel(status: string): string {
-    return status === 'pending' ? 'Pending' : status;
+    const found = V3_STATUS_OPTIONS.find((s) => s.value === status);
+    return found?.label ?? status;
+  }
+
+  // ── private ─────────────────────────────────────────────────────────
+
+  /** Map a v3 order envelope to the flat OrderRow the template uses. */
+  private mapOrder(o: any): OrderRow {
+    const firstItem = (o.items ?? [])[0] ?? {};
+    const customer  = o.customer ?? {};
+    return {
+      id:               o.id,
+      order_ref:        o.order_reference ?? '',
+      order_reference:  o.order_reference ?? '',
+      product:          firstItem.product_name ?? `Order ${o.order_reference}`,
+      image:            firstItem.product_image?.url ?? '',
+      quantity:         (o.items ?? []).reduce((s: number, i: any) => s + (i.quantity ?? 1), 0),
+      email:            customer.email ?? '',
+      total_price:      `AED ${parseFloat(o.subtotal ?? '0').toFixed(2)}`,
+      name:             `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim() || '—',
+      created:          o.created_at ? new Date(o.created_at).toLocaleDateString('en-AE') : '',
+      status:           o.status ?? '',
+    };
   }
 }
