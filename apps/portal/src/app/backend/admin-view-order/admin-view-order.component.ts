@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import html2canvas from 'html2canvas';
@@ -80,6 +81,7 @@ export class AdminViewOrderComponent implements OnInit {
     private route: ActivatedRoute,
     private crudService: CrudService,
     private location: Location,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -110,7 +112,8 @@ export class AdminViewOrderComponent implements OnInit {
 
   get_order_by_id() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.single, GlobalComponent.getOrderById).subscribe({
+    const avOId = this.single.order ?? this.single.id;
+    this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(avOId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.data = response.data;

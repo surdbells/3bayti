@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { Orders } from '../../class/orders';
 import { GlobalComponent } from '../../global-component';
@@ -20,6 +21,7 @@ export class VendorReturnsComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -60,7 +62,7 @@ export class VendorReturnsComponent implements OnInit {
 
   get_vendor_orders() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.order, GlobalComponent.getVendorReturnOrders).subscribe({
+    this.adapter.get_v3('GET /vendor/returns', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.orders = response.data;

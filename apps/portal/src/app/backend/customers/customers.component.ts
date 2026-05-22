@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { CommonModule } from '@angular/common';
 import { GlobalComponent } from '../../global-component';
@@ -35,6 +36,7 @@ export class CustomersComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -73,8 +75,8 @@ export class CustomersComponent implements OnInit {
     this.ui_controls.no_data = false;
     this.crudService.post_request(this.get_data, GlobalComponent.getCustomers).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.customers = response.data;
+        if (response?.data) {
+          this.customers = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.customers || this.customers.length === 0;
         } else {
           this.ui_controls.no_data = true;
@@ -106,7 +108,8 @@ export class CustomersComponent implements OnInit {
   activate_customer(customer: number, _name: string) {
     this.ui_controls.is_loading = true;
     this.activate.customer = customer;
-    this.crudService.post_request(this.activate, GlobalComponent.activateCustomer).subscribe({
+    const custActId = this.activate.customer ?? this.activate.id;
+    this.adapter.post_v3('POST /admin/users/:id/activate', {}, { params: { id: String(custActId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);
@@ -134,7 +137,8 @@ export class CustomersComponent implements OnInit {
   deactivate_customer(customer: number, _name: string) {
     this.ui_controls.is_loading = true;
     this.deactivate.customer = customer;
-    this.crudService.post_request(this.deactivate, GlobalComponent.deactivateCustomer).subscribe({
+    const custDeactId = this.deactivate.customer ?? this.deactivate.id;
+    this.adapter.post_v3('POST /admin/users/:id/deactivate', {}, { params: { id: String(custDeactId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);

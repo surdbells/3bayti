@@ -1,6 +1,7 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import {
   ApexAxisChartSeries,
@@ -80,6 +81,7 @@ export class UserComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {
     this.chartOptions = {};
@@ -132,7 +134,7 @@ export class UserComponent implements OnInit {
     this.stats.id = this.user_session.id;
     this.stats.token = this.user_session.token;
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.stats, GlobalComponent.getVendorStats).subscribe({
+    this.adapter.get_v3('GET /vendor/analytics', { query: { days: 30 } }).subscribe({
       next: (response) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.ui_controls.is_loading = false;

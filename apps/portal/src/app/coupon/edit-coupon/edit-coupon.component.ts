@@ -151,7 +151,7 @@ export class EditCouponComponent implements OnInit {
   }
 
   fetchLookupData(): void {
-    this.crudService.get_request(GlobalComponent.UtilityCategory).subscribe({
+    this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (r: any) => {
         if (r.response_code === 200 && r.status === 'success') {
           this.categories = (r.data || []).map((c: any) => ({ id: c.id ?? c.category_id, name: c.name ?? c.category_name }));
@@ -171,7 +171,7 @@ export class EditCouponComponent implements OnInit {
     }
 
     if (this.user_session.is_admin) {
-      this.crudService.get_request(GlobalComponent.UtilityStores).subscribe({
+      this.adapter.get_v3('GET /utility/stores').subscribe({
         next: (r: any) => {
           if (r.response_code === 200 && r.status === 'success') {
             this.stores = (r.data || []).map((s: any) => ({ id: s.user_id ?? s.id, store_name: s.store_name }));

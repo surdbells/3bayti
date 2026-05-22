@@ -224,7 +224,7 @@ export class CreateProductComponent implements OnInit {
   // ═══════════════════════════════════════════════════════════════
   fetchCategory(): void {
     this.ui.page_loading = true;
-    this.crudService.get_request(GlobalComponent.UtilityCategory).subscribe({
+    this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.category = response.data;
@@ -236,13 +236,8 @@ export class CreateProductComponent implements OnInit {
   }
 
   fetchCollections(): void {
-    this.crudService.get_request(GlobalComponent.UtilityCollections).subscribe({
-      next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.dropdownList = response.data;
-        }
-      },
-    });
+    // M3.4-H: Collections endpoint deferred — empty list for now
+    this.dropdownList = [];
   }
 
   fetchVendorLabels(): void {

@@ -277,13 +277,8 @@ export class EditProductComponent implements OnInit {
   }
 
   fetchCollections(): void {
-    this.crudService.get_request(GlobalComponent.UtilityCollections).subscribe({
-      next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.dropdownList = response.data;
-        }
-      },
-    });
+    // M3.4-H: Collections endpoint deferred — empty list for now
+    this.dropdownList = [];
   }
 
   fetchVendorLabels(): void {

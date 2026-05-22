@@ -91,18 +91,8 @@ export class SingleComponent implements OnInit {
   }
 
   get_orderProducts() {
-    this.getProductsById.order = this.single_order.order_id;
-    this.crudService.post_request(this.getProductsById, GlobalComponent.productsByProcessingId).subscribe({
-      next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.items = response.data;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: () => {
-        this.ui_controls.is_loading = false;
-      },
-    });
+    // M3.4-F: Products embedded in order items from GET /admin/orders/:id.
+    // order_products was a legacy property; items now read directly from this.order.items in the template.
   }
 
   statusBadgeClass(status: string): string {

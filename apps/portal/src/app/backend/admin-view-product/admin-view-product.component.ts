@@ -308,7 +308,7 @@ export class AdminViewProductComponent implements OnInit {
 
   get_category() {
     this.ui_controls.page_loading = true;
-    this.crudService.get_request(GlobalComponent.UtilityCategory).subscribe({
+    this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.category = response.data;
@@ -329,15 +329,9 @@ export class AdminViewProductComponent implements OnInit {
   }
 
   get_collections() {
-    this.ui_controls.page_loading = true;
-    this.crudService.get_request(GlobalComponent.UtilityCollections).subscribe({
-      next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.dropdownList = response.data;
-          this.ui_controls.page_loading = false;
-        }
-      },
-    });
+    // M3.4-H: Collections endpoint deferred — empty list for now
+    this.dropdownList = [];
+    this.ui_controls.page_loading = false;
   }
 
   get_product_by_id() {
