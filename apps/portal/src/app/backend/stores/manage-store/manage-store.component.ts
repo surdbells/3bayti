@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../../global-component';
 import { FormsModule } from '@angular/forms';
@@ -111,7 +112,7 @@ export class ManageStoreComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.crudService.post_request(this.get_data, GlobalComponent.getSingleStore).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data) {
           this.store = response.data;
           this.message.name = this.store.first_name;
           this.message.email = this.store.email;

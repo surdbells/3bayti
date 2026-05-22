@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { CommonModule } from '@angular/common';
 import { Stores } from '../../class/stores';
@@ -50,6 +51,7 @@ export class StoresComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -87,8 +89,8 @@ export class StoresComponent implements OnInit {
     this.ui_controls.no_data = false;
     this.crudService.post_request(this.get_data, GlobalComponent.getStores).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.stores = response.data;
+        if (response?.data) {
+          this.stores = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.stores || this.stores.length === 0;
         } else {
           this.ui_controls.no_data = true;
