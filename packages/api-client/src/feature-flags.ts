@@ -1018,7 +1018,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/admin/common/commissions', newPath: '/v3/admin/commissions', shape: 'v3-envelope',
   },
   'GET /admin/customers': {
-    target: 'old', oldPath: '/admin/common/get-customers', newPath: '/v3/admin/users?role=customer', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/get-customers', newPath: '/v3/admin/users?role=customer', shape: 'v3-envelope',
   },
   'GET /admin/orders': {
     target: 'new', oldPath: '/admin/common/get-store-orders', newPath: '/v3/admin/orders', shape: 'v3-envelope',
@@ -1042,10 +1042,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/admin/common/transactions', newPath: '/v3/admin/transactions', shape: 'v3-envelope',
   },
   'GET /admin/users': {
-    target: 'old', oldPath: '/admin/common/get-users', newPath: '/v3/admin/users', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/get-users', newPath: '/v3/admin/users', shape: 'v3-envelope',
   },
   'GET /admin/users/:id': {
-    target: 'old', oldPath: '/admin/common/get-users', newPath: '/v3/admin/users/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/get-users', newPath: '/v3/admin/users/:id', shape: 'v3-envelope',
   },
   'GET /admin/vendor-metrics': {
     target: 'new', oldPath: '/admin/common/dashboard-activity', newPath: '/v3/admin/vendor-metrics', shape: 'v3-envelope',
@@ -1087,10 +1087,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/admin/common/send-ticket-message', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
   },
   'POST /admin/users/:id/activate': {
-    target: 'old', oldPath: '/admin/common/activate-customer', newPath: '/v3/admin/users/:id/activate', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/activate-customer', newPath: '/v3/admin/users/:id/activate', shape: 'v3-envelope',
   },
   'POST /admin/users/:id/deactivate': {
-    target: 'old', oldPath: '/admin/common/deactivate-customer', newPath: '/v3/admin/users/:id/deactivate', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/deactivate-customer', newPath: '/v3/admin/users/:id/deactivate', shape: 'v3-envelope',
   },
   'POST /admin/vendors/:id/approve': {
     target: 'new', oldPath: '/admin/common/activate-store', newPath: '/v3/admin/vendors/:id/approve', shape: 'v3-envelope',

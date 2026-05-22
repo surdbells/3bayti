@@ -456,6 +456,16 @@ return function (App $app): void {
         $group->get('/notification-logs',
             \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class);
 
+        // M3.3.2-C — Admin user list, detail, activate, deactivate.
+        $group->get('/users',
+            \Bayti\Api\Http\Controllers\Admin\User\ListUsersController::class);
+        $group->get('/users/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\User\GetUserController::class);
+        $group->post('/users/{id:[0-9]+}/activate',
+            \Bayti\Api\Http\Controllers\Admin\User\ActivateUserController::class);
+        $group->post('/users/{id:[0-9]+}/deactivate',
+            \Bayti\Api\Http\Controllers\Admin\User\DeactivateUserController::class);
+
         // M3.2.X.8-E — Promo code CRUD. Soft-delete preserves
         // promo_redemptions FK; hard-delete only when zero redemptions.
         $group->get('/promo-codes',

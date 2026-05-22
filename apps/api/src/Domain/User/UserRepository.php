@@ -102,6 +102,57 @@ class UserRepository extends EntityRepository
      * to thread EntityManager around. Use sparingly — services that
      * batch multiple operations should flush themselves.
      */
+
+    /**
+     * Paginated list of users with optional role + search filters.
+     * Used by GET /v3/admin/users (M3.3.2-C).
+     *
+     * @param array{role?:string|null,search?:string|null,limit?:int,offset?:int} $filters
+     * @return array{items: list<User>, total: int}
+     */
+    public function findPaginated(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('u')
+            ->where('u.deletedAt IS NULL');
+
+        if (!empty($filters['role'])) {
+            $role = $filters['role'];
+            $map  = [
+                'admin'    => 'u.isAdmin = true',
+                'vendor'   => 'u.isVendor = true',
+                'customer' => 'u.isCustomer = true',
+                'finance'  => 'u.isFinance = true',
+                'support'  => 'u.isSupport = true',
+            ];
+            if (isset($map[$role])) {
+                $qb->andWhere($map[$role]);
+            }
+        }
+
+        if (!empty($filters['search'])) {
+            $needle = '%' . $filters['search'] . '%';
+            $qb->andWhere(
+                $qb->expr()->orX(
+                    $qb->expr()->like('u.email', ':s'),
+                    $qb->expr()->like('u.firstName', ':s'),
+                    $qb->expr()->like('u.lastName', ':s'),
+                ),
+            )->setParameter('s', $needle);
+        }
+
+        $countQb = clone $qb;
+        $total   = (int) $countQb->select('COUNT(u.id)')->getQuery()->getSingleScalarResult();
+
+        $qb->orderBy('u.id', 'DESC')
+           ->setMaxResults($filters['limit'] ?? 20)
+           ->setFirstResult($filters['offset'] ?? 0);
+
+        /** @var list<User> $items */
+        $items = $qb->getQuery()->getResult();
+
+        return ['items' => $items, 'total' => $total];
+    }
+
     public function save(User $user, bool $flush = true): void
     {
         $em = $this->getEntityManager();
