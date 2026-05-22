@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { Labels } from '../../class/labels';
@@ -35,6 +36,7 @@ export class CollectionsComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -61,10 +63,10 @@ export class CollectionsComponent implements OnInit {
   get_collections() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.collection, GlobalComponent.readCollection).subscribe({
+    this.adapter.get_v3('GET /admin/collections', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.collections = response.data;
+        if (response?.data) {
+          this.collections = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.collections || this.collections.length === 0;
         } else {
           this.ui_controls.no_data = true;

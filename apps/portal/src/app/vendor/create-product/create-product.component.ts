@@ -236,8 +236,11 @@ export class CreateProductComponent implements OnInit {
   }
 
   fetchCollections(): void {
-    // M3.4-H: Collections endpoint deferred — empty list for now
-    this.dropdownList = [];
+    this.adapter.get_v3('GET /admin/collections', { query: { limit: 100, offset: 0 } }).subscribe({
+      next: (res: any) => {
+        this.dropdownList = (Array.isArray(res?.data) ? res.data : res?.data?.items ?? []).map((col: any) => ({ id: col.id, collection: col.collection ?? col.name }));
+      },
+    });
   }
 
   fetchVendorLabels(): void {

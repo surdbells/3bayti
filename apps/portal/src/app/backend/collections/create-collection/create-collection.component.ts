@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { FormsModule } from '@angular/forms';
 import { GlobalComponent } from '../../../global-component';
@@ -32,6 +33,7 @@ export class CreateCollectionComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -60,7 +62,7 @@ export class CreateCollectionComponent implements OnInit {
       return;
     }
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.create, GlobalComponent.createCollection).subscribe({
+    this.adapter.post_v3('POST /admin/collections', { name: this.create.collection }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_loading = false;
         if (response.response_code === 200 && response.status === 'success') {

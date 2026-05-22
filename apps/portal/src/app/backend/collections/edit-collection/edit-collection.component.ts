@@ -3,6 +3,7 @@ import { NgIf } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
@@ -44,6 +45,7 @@ export class EditCollectionComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -81,7 +83,8 @@ export class EditCollectionComponent implements OnInit {
       return;
     }
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.update, GlobalComponent.updateCollection).subscribe({
+    const ecUpdId = this.update.collection ?? this.update.id;
+    this.adapter.put_v3('PUT /admin/collections/:id', this.update, { params: { id: String(ecUpdId) } }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_loading = false;
         if (response.response_code === 200 && response.status === 'success') {
@@ -101,7 +104,8 @@ export class EditCollectionComponent implements OnInit {
 
   getCollection() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.read, GlobalComponent.getCollection).subscribe({
+    const ecId = this.read.collection ?? this.read.id;
+    this.adapter.get_v3('GET /admin/collections/:id', { params: { id: String(ecId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.update = response.data;

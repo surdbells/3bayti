@@ -466,6 +466,18 @@ return function (App $app): void {
         $group->post('/users/{id:[0-9]+}/deactivate',
             \Bayti\Api\Http\Controllers\Admin\User\DeactivateUserController::class);
 
+        // M3.4-H — Product collection CRUD (admin).
+        $group->get('/collections',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'list']);
+        $group->post('/collections',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'create']);
+        $group->get('/collections/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'get']);
+        $group->put('/collections/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'update']);
+        $group->delete('/collections/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'delete']);
+
         // M3.4-G — Support ticket CRUD + messaging.
         $group->get('/tickets',
             \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketsController::class);
