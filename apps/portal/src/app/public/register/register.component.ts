@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { Router, RouterLink } from '@angular/router';
 import { CookieService } from 'ngx-cookie-service';
 import { HotToastService } from '@ngneat/hot-toast';
@@ -34,6 +35,7 @@ import { AxEmptyStateComponent } from '../../shared/data';
 export class RegisterComponent implements OnInit {
   constructor(
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private router: Router,
     private cookieService: CookieService,
     private toast: HotToastService,
@@ -129,9 +131,9 @@ export class RegisterComponent implements OnInit {
       return;
     }
     this.ui_controls.loading = true;
-    this.crudService.post_request(this.register, GlobalComponent.UserRegister).subscribe({
+    this.adapter.post_v3('POST /auth/register', this.register).subscribe({
       next: (response) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data?.id || response?.response_code === 200) {
           this.ui_controls.loading = false;
           this.ui_controls.registered = true;
           this.success_notification(response.message);

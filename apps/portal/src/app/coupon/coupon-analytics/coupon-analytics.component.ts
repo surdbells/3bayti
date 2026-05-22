@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
@@ -76,6 +77,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
     private router: Router,
     private route: ActivatedRoute,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -111,7 +113,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   fetchOverview(): void {
-    this.crudService.post_request(this.analyticsRequest('overview'), GlobalComponent.couponAnalytics).subscribe({
+    this.adapter.get_v3('GET /vendor/coupons/:id/analytics', { params: { id: String(this.coupon_id) }, query: { period: 'overview' } }).subscribe({
       next: (r: any) => {
         if (r.response_code === 200) this.overview = r.data;
         this.ui.loading = false;
@@ -121,7 +123,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
 
   fetchCouponDetails(): void {
     const payload = { token: this.user_session.token, id: this.user_session.id, coupon_id: this.coupon_id };
-    this.crudService.post_request(payload, GlobalComponent.getCouponById).subscribe({
+    this.adapter.get_v3('GET /vendor/coupons/:id', { params: { id: String(this.coupon_id) } }).subscribe({
       next: (r: any) => {
         if (r.response_code === 200 && r.status === 'success') {
           this.coupon_code = r.data.code;

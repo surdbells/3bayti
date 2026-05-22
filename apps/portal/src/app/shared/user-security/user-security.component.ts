@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
@@ -46,6 +47,7 @@ export class UserSecurityComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -82,7 +84,7 @@ export class UserSecurityComponent implements OnInit {
     this.ui_controls.is_saving = true;
     this.crudService.post_request(this.update_password, GlobalComponent.updateUserPassword).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data || response?.response_code === 200) {
           this.success_notification(response.message);
           this.update_password.password = '';
           this.update_password.confirm_password = '';
