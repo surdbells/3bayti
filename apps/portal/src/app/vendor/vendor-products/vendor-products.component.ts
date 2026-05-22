@@ -431,15 +431,11 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     this.delete_payload.product = id;
     this.delete_payload.name = name;
 
-    this.crudService.post_request(this.delete_payload, GlobalComponent.deleteProductById).subscribe({
-      next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.toast.success('Product deleted successfully');
-          this.fetchProducts();
-        } else {
-          this.toast.error('Unable to delete product');
-        }
+    this.adapter.delete_v3('DELETE /vendor/products/:id', { params: { id: String(id) } }).subscribe({
+      next: () => {
+        this.toast.success('Product deleted successfully');
         this.ui.deleting = false;
+        this.fetchProducts();
       },
       error: () => {
         this.toast.error('Unable to delete product');

@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { Category } from '../../class/category';
@@ -196,6 +197,7 @@ export class CreateProductComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -469,15 +471,16 @@ export class CreateProductComponent implements OnInit {
     this.create.images = this.galleryEncoded.map(e => e.dataUrl).slice(0, 5);
 
     this.ui.loading = true;
+    const body = this.buildV3Payload(status);
 
-    this.crudService.post_request(this.create, GlobalComponent.createProduct).subscribe({
+    this.adapter.post_v3('POST /vendor/products', body).subscribe({
       next: (response: any) => {
         this.ui.loading = false;
-        if (response.response_code === 200 && response.status === 'success') {
-          this.toast.success(response.message);
+        if (response?.data?.id) {
+          this.toast.success('Product saved successfully');
           this.router.navigate(['/products']);
         } else {
-          this.toast.error(response.message);
+          this.toast.error(response?.message ?? 'Failed to save product');
         }
       },
       error: () => {
@@ -494,4 +497,50 @@ export class CreateProductComponent implements OnInit {
     if (this.user_session.is_vendor) this.router.navigate(['/account']);
     if (this.user_session.is_admin) this.router.navigate(['/backend']);
   }
+
+  // ── M3.3.1-C: v3 payload builder ───────────────────────────────
+  private buildV3Payload(status: string): Record<string, unknown> {
+    const d = this.create;
+    // Map legacy boolean size flags → array of size labels
+    const sizeMap: Record<string, string> = {
+      size_xs:'XS', size_s:'S', size_m:'M', size_l:'L', size_xl:'XL', size_xxl:'XXL',
+      size_50:'50',size_51:'51',size_52:'52',size_53:'53',size_54:'54',size_55:'55',
+      size_56:'56',size_57:'57',size_58:'58',size_59:'59',size_60:'60',size_61:'61',
+      size_62:'62',size_63:'63',size_64:'64',
+    };
+    const sizes = Object.entries(sizeMap)
+      .filter(([k]) => (d as any)[k])
+      .map(([, v]) => v);
+    // Colors stored as CSV in legacy; split back to array
+    const colors = (d.colors ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    // Images: use first as primary, rest as gallery
+    const imgs: string[] = this.galleryEncoded.map(e => e.dataUrl).slice(0, 5);
+    return {
+      name:              d.name,
+      description:       d.description,
+      price:             d.price,
+      cost_per_item:     d.cost_per_item,
+      category_id:       d.category || null,
+      stock_quantity:    d.quantity,
+      stock_status:      d.stock_status,
+      allow_oversell:    d.allow_checkout_when_out_of_stock,
+      min_order_qty:     d.minimum_order_quantity,
+      max_order_qty:     d.maximum_order_quantity,
+      primary_image_url: imgs[0] ?? null,
+      image_urls:        imgs.slice(1),
+      sizes,
+      colors,
+      is_featured:       d.is_featured,
+      is_new:            d.is_new,
+      is_hot:            d.is_hot,
+      is_sale:           d.is_sale,
+      requires_extra_msmt: d.require_extra_msmt,
+      extra_msmt:        d.extra_msmt || null,
+      status,
+    };
+  }
+
+  /** Expose galleryEncoded for the payload builder. */
+  private get galleryEncodedForPayload() { return this.galleryEncoded; }
+
 }

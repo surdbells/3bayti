@@ -5,6 +5,7 @@ import { Category } from '../../class/category';
 import { Labels } from '../../class/labels';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import imageCompression from 'browser-image-compression';
@@ -206,6 +207,7 @@ export class EditProductComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -235,7 +237,8 @@ export class EditProductComponent implements OnInit {
   }
 
   fetchProductById(): void {
-    this.crudService.post_request(this.single_product, GlobalComponent.getProductById).subscribe({
+    const productId = this.single_product.product;
+    this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(productId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.update = response.data;
@@ -264,7 +267,7 @@ export class EditProductComponent implements OnInit {
   }
 
   fetchCategory(): void {
-    this.crudService.get_request(GlobalComponent.UtilityCategory).subscribe({
+    this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.category = response.data;
@@ -480,14 +483,16 @@ export class EditProductComponent implements OnInit {
     this.syncImagesToUpdate();
     this.ui.loading = true;
 
-    this.crudService.post_request(this.update, GlobalComponent.updateProduct).subscribe({
+    const productId = this.update.product || this.update.id;
+    const v3Body = this.buildV3UpdatePayload();
+    this.adapter.put_v3('PUT /vendor/products/:id', v3Body, { params: { id: String(productId) } }).subscribe({
       next: (response: any) => {
         this.ui.loading = false;
-        if (response.response_code === 200 && response.status === 'success') {
-          this.toast.success(response.message);
+        if (response?.data?.id || response?.response_code === 200) {
+          this.toast.success('Product updated successfully');
           this.router.navigate(['/products']);
         } else {
-          this.toast.error(response.message);
+          this.toast.error(response?.message ?? 'Failed to update product');
         }
       },
       error: () => {
@@ -503,4 +508,47 @@ export class EditProductComponent implements OnInit {
   goBack(): void {
     this.router.navigate(['/products']);
   }
+
+  // ── M3.3.1-C: v3 payload builder ────────────────────────────────
+  private buildV3UpdatePayload(): Record<string, unknown> {
+    const d = this.update;
+    const sizeMap: Record<string, string> = {
+      size_xs:'XS', size_s:'S', size_m:'M', size_l:'L', size_xl:'XL', size_xxl:'XXL',
+      size_50:'50',size_51:'51',size_52:'52',size_53:'53',size_54:'54',size_55:'55',
+      size_56:'56',size_57:'57',size_58:'58',size_59:'59',size_60:'60',size_61:'61',
+      size_62:'62',size_63:'63',size_64:'64',
+    };
+    const sizes = Object.entries(sizeMap)
+      .filter(([k]) => (d as any)[k])
+      .map(([, v]) => v);
+    const colors = (d.colors ?? '').split(',').map((s: string) => s.trim()).filter(Boolean);
+    const existingImgs: string[] = Array.isArray(d.images)
+      ? d.images.filter((i: string) => !!i && !i.includes('placeholder'))
+      : [];
+    const primaryImg = d.image_1 && !d.image_1.includes('placeholder') ? d.image_1 : (existingImgs[0] ?? null);
+    const galleryImgs = existingImgs.filter((i: string) => i !== primaryImg).slice(0, 4);
+    return {
+      name:              d.name,
+      description:       d.description,
+      price:             d.price,
+      cost_per_item:     d.cost_per_item,
+      category_id:       d.category || null,
+      stock_quantity:    d.quantity,
+      stock_status:      d.stock_status,
+      allow_oversell:    d.allow_checkout_when_out_of_stock,
+      min_order_qty:     d.minimum_order_quantity,
+      max_order_qty:     d.maximum_order_quantity,
+      primary_image_url: primaryImg,
+      image_urls:        galleryImgs,
+      sizes,
+      colors,
+      is_featured:       d.is_featured,
+      is_new:            d.is_new,
+      is_hot:            d.is_hot,
+      is_sale:           d.is_sale,
+      requires_extra_msmt: d.require_extra_msmt,
+      extra_msmt:        d.extra_msmt || null,
+    };
+  }
+
 }

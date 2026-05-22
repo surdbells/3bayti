@@ -532,6 +532,19 @@ return function (App $app): void {
             '/analytics',
             \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class,
         );
+
+        // M3.3.1-C — Vendor product write (create / update / soft-delete).
+        // Read is handled by the public GET /v3/vendors/{slug}/products +
+        // GET /v3/vendors/by-legacy-id/{id}/products catalog endpoints.
+        $group->post('/products',
+            \Bayti\Api\Http\Controllers\Vendor\Product\CreateVendorProductController::class,
+        );
+        $group->put('/products/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Vendor\Product\UpdateVendorProductController::class,
+        );
+        $group->delete('/products/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Vendor\Product\DeleteVendorProductController::class,
+        );
     })
         ->add(\Bayti\Api\Http\Middleware\VendorAuthMiddleware::class)
         ->add(AuthMiddleware::class);

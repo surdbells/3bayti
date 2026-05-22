@@ -885,7 +885,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/vendors/measurement/delete-measurement', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
   },
   'DELETE /vendor/products/:id': {
-    target: 'old', oldPath: '/vendors/products/delete-product', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/products/delete-product', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
   },
   'GET /vendor/analytics': {
     target: 'new', oldPath: '/vendors/common/dashboard-activity', newPath: '/v3/vendor/analytics', shape: 'v3-envelope',
@@ -987,7 +987,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/common/compliance', newPath: '/v3/vendor/onboarding/submit', shape: 'v3-envelope',
   },
   'POST /vendor/products': {
-    target: 'old', oldPath: '/vendors/products/create-product', newPath: '/v3/vendor/products', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/products/create-product', newPath: '/v3/vendor/products', shape: 'v3-envelope',
   },
   'POST /vendor/returns/:id/confirm-receipt': {
     target: 'new', oldPath: '/vendors/orders/update-order-status', newPath: '/v3/vendor/returns/:id/confirm-receipt', shape: 'v3-envelope',
@@ -1002,7 +1002,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/vendors/measurement/update-measurement', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
   },
   'PUT /vendor/products/:id': {
-    target: 'old', oldPath: '/vendors/products/update-product', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/products/update-product', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
   },
   // Admin surface
   'DELETE /admin/products/:id': {
