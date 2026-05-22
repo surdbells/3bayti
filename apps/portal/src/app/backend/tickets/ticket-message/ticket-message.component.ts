@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../../global-component';
 
@@ -48,6 +49,7 @@ export class TicketMessageComponent implements OnInit {
     private router: Router,
     private crudService: CrudService,
     private route: ActivatedRoute,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -81,7 +83,8 @@ export class TicketMessageComponent implements OnInit {
 
   get_ticket_messages() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.get_msg_t, GlobalComponent.ticketsMessages).subscribe({
+    const tmId = this.get_msg_t.ticket ?? this.get_msg_t.id;
+    this.adapter.get_v3('GET /admin/tickets/:id/messages', { params: { id: String(tmId) } }).subscribe({
       next: (response: any) => {
         this.message = response.data;
         this.ui_controls.no_data = !this.message || this.message.length === 0;
@@ -99,7 +102,8 @@ export class TicketMessageComponent implements OnInit {
       return;
     }
     this.ui_controls.sending = true;
-    this.crudService.post_request(this.add_message, GlobalComponent.sendTicketMessage).subscribe({
+    const tmSendId = this.add_message.ticket ?? this.add_message.id;
+    this.adapter.post_v3('POST /admin/tickets/:id/messages', this.add_message, { params: { id: String(tmSendId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.add_message.message = '';

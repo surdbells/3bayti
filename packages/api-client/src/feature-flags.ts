@@ -1033,10 +1033,14 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/admin/common/products', newPath: '/v3/products', shape: 'v3-envelope',
   },
   'GET /admin/tickets': {
-    target: 'old', oldPath: '/admin/common/tickets', newPath: '/v3/admin/tickets', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/tickets', newPath: '/v3/admin/tickets', shape: 'v3-envelope',
   },
+  'GET /admin/tickets/:id': {
+    target: 'new', oldPath: '/admin/common/ticket-by-id', newPath: '/v3/admin/tickets/:id', shape: 'v3-envelope',
+  },
+
   'GET /admin/tickets/:id/messages': {
-    target: 'old', oldPath: '/admin/common/ticket-messages', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/ticket-messages', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
   },
   'GET /admin/transactions': {
     target: 'new', oldPath: '/admin/common/transactions', newPath: '/v3/admin/transactions', shape: 'v3-envelope',
@@ -1066,10 +1070,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/admin/common/processing', newPath: '/v3/admin/orders/:orderId/items/:itemId/status', shape: 'v3-envelope',
   },
   'PATCH /admin/tickets/:id/priority': {
-    target: 'old', oldPath: '/admin/common/ticket-priority', newPath: '/v3/admin/tickets/:id/priority', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/ticket-priority', newPath: '/v3/admin/tickets/:id/priority', shape: 'v3-envelope',
   },
   'PATCH /admin/tickets/:id/status': {
-    target: 'old', oldPath: '/admin/common/ticket-status', newPath: '/v3/admin/tickets/:id/status', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/ticket-status', newPath: '/v3/admin/tickets/:id/status', shape: 'v3-envelope',
   },
   'POST /admin/collections': {
     target: 'old', oldPath: '/admin/collections/create-collection', newPath: '/v3/admin/collections', shape: 'v3-envelope',
@@ -1084,7 +1088,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/products/create-product', newPath: '/v3/admin/products', shape: 'v3-envelope',
   },
   'POST /admin/tickets/:id/messages': {
-    target: 'old', oldPath: '/admin/common/send-ticket-message', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/send-ticket-message', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
   },
   'POST /admin/users/:id/activate': {
     target: 'new', oldPath: '/admin/common/activate-customer', newPath: '/v3/admin/users/:id/activate', shape: 'v3-envelope',

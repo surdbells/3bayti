@@ -466,6 +466,20 @@ return function (App $app): void {
         $group->post('/users/{id:[0-9]+}/deactivate',
             \Bayti\Api\Http\Controllers\Admin\User\DeactivateUserController::class);
 
+        // M3.4-G — Support ticket CRUD + messaging.
+        $group->get('/tickets',
+            \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketsController::class);
+        $group->get('/tickets/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Ticket\GetTicketController::class);
+        $group->patch('/tickets/{id:[0-9]+}/status',
+            \Bayti\Api\Http\Controllers\Admin\Ticket\UpdateTicketStatusController::class);
+        $group->patch('/tickets/{id:[0-9]+}/priority',
+            \Bayti\Api\Http\Controllers\Admin\Ticket\UpdateTicketPriorityController::class);
+        $group->get('/tickets/{id:[0-9]+}/messages',
+            \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketMessagesController::class);
+        $group->post('/tickets/{id:[0-9]+}/messages',
+            \Bayti\Api\Http\Controllers\Admin\Ticket\CreateTicketMessageController::class);
+
         // M3.3.2-D — Admin finance (transactions + commissions read).
         $group->get('/transactions',
             \Bayti\Api\Http\Controllers\Admin\Finance\ListTransactionsController::class);

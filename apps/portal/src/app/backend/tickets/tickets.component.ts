@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
@@ -64,6 +65,7 @@ export class TicketsComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -98,10 +100,10 @@ export class TicketsComponent implements OnInit {
   get_tickets() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_ticket, GlobalComponent.tickets).subscribe({
+    this.adapter.get_v3('GET /admin/tickets', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.tickets = response.data;
+        if (response?.data) {
+          this.tickets = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.tickets || this.tickets.length === 0;
         } else {
           this.ui_controls.no_data = true;
@@ -119,10 +121,10 @@ export class TicketsComponent implements OnInit {
     this.get_ticket_priority.priority = (event.target as HTMLSelectElement).value;
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_ticket_priority, GlobalComponent.tickets).subscribe({
+    this.adapter.get_v3('GET /admin/tickets', { query: { priority: this.get_ticket_priority.priority, limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.tickets = response.data;
+        if (response?.data) {
+          this.tickets = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.tickets || this.tickets.length === 0;
         } else {
           this.ui_controls.no_data = true;
@@ -140,10 +142,10 @@ export class TicketsComponent implements OnInit {
     this.get_ticket_status.status = (event.target as HTMLSelectElement).value;
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_ticket_status, GlobalComponent.tickets).subscribe({
+    this.adapter.get_v3('GET /admin/tickets', { query: { status: this.get_ticket_status.status, limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.tickets = response.data;
+        if (response?.data) {
+          this.tickets = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.tickets || this.tickets.length === 0;
         } else {
           this.ui_controls.no_data = true;
@@ -174,10 +176,10 @@ export class TicketsComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.status.status = status;
     this.status.ticket = ticket;
-    this.crudService.post_request(this.status, GlobalComponent.ticketsStatus).subscribe({
+    this.adapter.patch_v3('PATCH /admin/tickets/:id/status', { status: this.status.status }, { params: { id: String(this.status.ticket) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.success_notification(response.message);
+        if (response?.data) {
+          this.success_notification('Ticket status updated');
           this.get_tickets();
         }
         this.ui_controls.is_loading = false;
@@ -202,10 +204,10 @@ export class TicketsComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.priority.ticket = ticket;
     this.priority.priority = priority;
-    this.crudService.post_request(this.priority, GlobalComponent.ticketsPriority).subscribe({
+    this.adapter.patch_v3('PATCH /admin/tickets/:id/priority', { priority: this.priority.priority }, { params: { id: String(this.priority.ticket) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.success_notification(response.message);
+        if (response?.data) {
+          this.success_notification('Ticket status updated');
           this.get_tickets();
         }
         this.ui_controls.is_loading = false;
