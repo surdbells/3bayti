@@ -566,6 +566,20 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Vendor\Review\ListVendorReviewsController::class,
         );
 
+        // M3.4-D — Vendor label CRUD.
+        $group->get('/labels',
+            [\Bayti\Api\Http\Controllers\Vendor\Label\VendorLabelCrudController::class, 'list'],
+        );
+        $group->post('/labels',
+            [\Bayti\Api\Http\Controllers\Vendor\Label\VendorLabelCrudController::class, 'create'],
+        );
+        $group->put('/labels/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Vendor\Label\VendorLabelCrudController::class, 'update'],
+        );
+        $group->delete('/labels/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Vendor\Label\VendorLabelCrudController::class, 'delete'],
+        );
+
         // M3.3.1-F — Vendor coupon CRUD (vendor-scoped promo codes)
         $group->get('/coupons',
             \Bayti\Api\Http\Controllers\Vendor\Coupon\ListVendorCouponsController::class,

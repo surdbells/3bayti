@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
@@ -44,6 +45,7 @@ export class LabelComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -74,7 +76,7 @@ export class LabelComponent implements OnInit {
 
   get_vendor_labels() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.vendor_labels, GlobalComponent.readLabel).subscribe({
+    this.adapter.get_v3('GET /vendor/labels').subscribe({
       next: (response: any) => {
         this.labels = response.data;
         // Seed edit map with current values
@@ -96,7 +98,7 @@ export class LabelComponent implements OnInit {
       return;
     }
     this.ui_controls.is_creating_label = true;
-    this.crudService.post_request(this.vendor_label_create, GlobalComponent.createLabel).subscribe({
+    this.adapter.post_v3('POST /vendor/labels', this.vendor_label_create).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.vendor_label_create.label = '';
@@ -123,7 +125,8 @@ export class LabelComponent implements OnInit {
     this.update.label_id = id;
     this.update.label = newText;
     this.ui_controls.is_saving_label_id = id;
-    this.crudService.post_request(this.update, GlobalComponent.updateLabel).subscribe({
+    const lid = this.update.label_id ?? this.update.id;
+    this.adapter.put_v3('PUT /vendor/labels/:id', this.update, { params: { id: String(lid) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);
@@ -157,7 +160,8 @@ export class LabelComponent implements OnInit {
   deleteLabel(id: number) {
     this.ui_controls.is_loading = true;
     this.delete.label_id = id;
-    this.crudService.post_request(this.delete, GlobalComponent.deleteLabel).subscribe({
+    const dlid = this.delete.label_id ?? this.delete.id;
+    this.adapter.delete_v3('DELETE /vendor/labels/:id', { params: { id: String(dlid) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);

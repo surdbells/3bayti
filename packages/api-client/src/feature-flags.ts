@@ -879,7 +879,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/coupons/delete-coupon', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
   },
   'DELETE /vendor/labels/:id': {
-    target: 'old', oldPath: '/vendors/labels/delete-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/labels/delete-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',
   },
   'DELETE /vendor/measurements/:id': {
     target: 'old', oldPath: '/vendors/measurement/delete-measurement', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
@@ -900,7 +900,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/vendors/coupons/coupon-analytics', newPath: '/v3/vendor/coupons/:id/analytics', shape: 'v3-envelope',
   },
   'GET /vendor/labels': {
-    target: 'old', oldPath: '/vendors/labels/read-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/labels/read-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
   },
   'GET /vendor/measurements': {
     target: 'old', oldPath: '/vendors/measurement/get-measurements', newPath: '/v3/me/measurements', shape: 'v3-envelope',
@@ -972,7 +972,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/coupons/toggle-coupon-status', newPath: '/v3/vendor/coupons/:id/toggle', shape: 'v3-envelope',
   },
   'POST /vendor/labels': {
-    target: 'old', oldPath: '/vendors/labels/create-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/labels/create-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
   },
   'POST /vendor/measurements': {
     target: 'old', oldPath: '/vendors/measurement/create-measurement', newPath: '/v3/me/measurements', shape: 'v3-envelope',
@@ -996,7 +996,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/coupons/update-coupon', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
   },
   'PUT /vendor/labels/:id': {
-    target: 'old', oldPath: '/vendors/labels/update-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/labels/update-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',
   },
   'PUT /vendor/measurements/:id': {
     target: 'old', oldPath: '/vendors/measurement/update-measurement', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',

@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { CommonModule, Location } from '@angular/common';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
@@ -127,6 +128,7 @@ export class AdminViewProductComponent implements OnInit {
     private route: ActivatedRoute,
     private crudService: CrudService,
     private location: Location,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -274,7 +276,7 @@ export class AdminViewProductComponent implements OnInit {
       return;
     }
     this.ui_controls.is_creating_label = true;
-    this.crudService.post_request(this.vendor_label_create, GlobalComponent.createLabel).subscribe({
+    this.adapter.post_v3('POST /vendor/labels', this.vendor_label_create).subscribe({
       next: (response: any) => {
         this.ui_controls.is_creating_label = false;
         if (response.response_code === 200 && response.status === 'success') {
@@ -317,10 +319,10 @@ export class AdminViewProductComponent implements OnInit {
   }
 
   get_vendor_labels() {
-    this.crudService.post_request(this.vendor_labels, GlobalComponent.readLabel).subscribe({
+    this.adapter.get_v3('GET /vendor/labels').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.labels = response.data;
+        if (response?.data) {
+          this.labels = Array.isArray(response.data) ? response.data : [];
         }
       },
     });

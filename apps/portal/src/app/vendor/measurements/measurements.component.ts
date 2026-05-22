@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgClass, NgIf } from '@angular/common';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { TranslatePipe } from '../../translate.pipe';
@@ -38,6 +39,7 @@ export class MeasurementsComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -108,12 +110,13 @@ export class MeasurementsComponent implements OnInit {
     }
     this.ui_controls.is_empty = false;
     this.ui_controls.is_creating = true;
-    this.crudService.post_request(this.create, GlobalComponent.createMeasurement).subscribe({
+    const msValues = { size: this.create.size, bust: this.create.bust, waist: this.create.waist, hip: this.create.hip, length: this.create.length, neck: this.create.neck, arm: this.create.arm, armhole: this.create.armhole, shoulder: this.create.shoulder };
+    this.adapter.post_v3('POST /vendor/measurements', { values: msValues }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_creating = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data?.id || response?.response_code === 200) {
           this.ui_controls.is_empty = false;
-          this.success_notification(response.message);
+          this.success_notification('Measurement saved');
           this.read_measurements();
         } else if ([503, 401, 402, 400].includes(response.response_code) && response.status === 'failed') {
           this.ui_controls.is_empty = true;
@@ -135,10 +138,10 @@ export class MeasurementsComponent implements OnInit {
     this.read.token = this.user_session.token;
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = true;
-    this.crudService.post_request(this.read, GlobalComponent.readMeasurement).subscribe({
+    this.adapter.get_v3('GET /vendor/measurements').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.measurements = response.data;
+        if (response?.data) {
+          this.measurements = Array.isArray(response.data) ? response.data : [];
           this.ui_controls.is_empty = !this.measurements || this.measurements.length === 0;
         } else if ([503, 401, 400].includes(response.response_code) && response.status === 'failed') {
           this.ui_controls.is_empty = true;
@@ -188,10 +191,11 @@ export class MeasurementsComponent implements OnInit {
     this.delete_measure.id = this.user_session.id;
     this.delete_measure.token = this.user_session.token;
     this.delete_measure.measurement = id;
-    this.crudService.post_request(this.delete_measure, GlobalComponent.deleteMeasurement).subscribe({
+    const delMid = this.delete_measure.measurement ?? this.delete_measure.id;
+    this.adapter.delete_v3('DELETE /vendor/measurements/:id', { params: { id: String(delMid) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.success_notification(response.message);
+        if (response?.data || response?.response_code === 200) {
+          this.success_notification('Measurement deleted');
           this.read_measurements();
         }
         this.ui_controls.deleting = false;
@@ -204,12 +208,14 @@ export class MeasurementsComponent implements OnInit {
 
   update_measurements() {
     this.ui_controls.is_updating = true;
-    this.crudService.post_request(this.update, GlobalComponent.updateMeasurement).subscribe({
+    const updMid = this.update.measurement ?? this.update.id;
+    const updValues = { size: this.update.size, bust: this.update.bust, waist: this.update.waist, hip: this.update.hip, length: this.update.length, neck: this.update.neck, arm: this.update.arm, armhole: this.update.armhole, shoulder: this.update.shoulder };
+    this.adapter.put_v3('PUT /vendor/measurements/:id', { values: updValues }, { params: { id: String(updMid) } }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_updating = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data?.id || response?.response_code === 200) {
           this.ui_controls.editing = false;
-          this.success_notification(response.message);
+          this.success_notification('Measurement updated');
           this.read_measurements();
         } else if ([401, 400].includes(response.response_code) && response.status === 'failed') {
           this.ui_controls.editing = false;

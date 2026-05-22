@@ -82,4 +82,12 @@ class VendorLabelRepository extends EntityRepository
         $results = $qb->getQuery()->getResult();
         return $results;
     }
+
+    public function save(VendorLabel $label): void
+    {
+        $em = $this->getEntityManager();
+        $em->persist($label);
+        $em->flush();
+    }
+
 }

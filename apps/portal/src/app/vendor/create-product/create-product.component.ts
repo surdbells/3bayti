@@ -246,10 +246,10 @@ export class CreateProductComponent implements OnInit {
   }
 
   fetchVendorLabels(): void {
-    this.crudService.post_request(this.vendor_labels, GlobalComponent.readLabel).subscribe({
+    this.adapter.get_v3('GET /vendor/labels').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.labels = response.data;
+        if (response?.data) {
+          this.labels = Array.isArray(response.data) ? response.data : [];
         }
       },
     });
@@ -261,7 +261,7 @@ export class CreateProductComponent implements OnInit {
       return;
     }
     this.ui.creating_label = true;
-    this.crudService.post_request(this.vendor_label_create, GlobalComponent.createLabel).subscribe({
+    this.adapter.post_v3('POST /vendor/labels', this.vendor_label_create).subscribe({
       next: (response: any) => {
         this.ui.creating_label = false;
         if (response.response_code === 200 && response.status === 'success') {
