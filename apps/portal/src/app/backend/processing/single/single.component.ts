@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../../global-component';
 import { CommonModule } from '@angular/common';
@@ -53,6 +54,7 @@ export class SingleComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private route: ActivatedRoute,
     private toast: HotToastService,
   ) {}
@@ -72,7 +74,8 @@ export class SingleComponent implements OnInit {
   get_processingById() {
     this.getProcessingById.order = this.order;
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.getProcessingById, GlobalComponent.processingById).subscribe({
+    const orderId = this.getProcessingById.order ?? this.getProcessingById.id;
+    this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(orderId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.single_order = response.data;

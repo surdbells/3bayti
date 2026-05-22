@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { Orders } from '../../../class/orders';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
@@ -38,6 +39,7 @@ export class StoreOrdersComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private route: ActivatedRoute,
     private toast: HotToastService,
   ) {}
@@ -74,10 +76,10 @@ export class StoreOrdersComponent implements OnInit {
   get_vendor_orders() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_orders = false;
-    this.crudService.post_request(this.order, GlobalComponent.getStoreOrders).subscribe({
+    this.adapter.get_v3('GET /admin/orders', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.orders = response.data;
+        if (response?.data) {
+          this.orders = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_orders = !this.orders || this.orders.length === 0;
         } else {
           this.ui_controls.no_orders = true;
@@ -104,10 +106,11 @@ export class StoreOrdersComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_orders = false;
     this.orders = [];
-    this.crudService.post_request(this.singleStatus, GlobalComponent.getStoreOrdersByStatus).subscribe({
+    const statusFilter = this.singleStatus.status;
+    this.adapter.get_v3('GET /admin/orders', { query: { limit: 50, offset: 0, status: statusFilter } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.orders = response.data;
+        if (response?.data) {
+          this.orders = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_orders = !this.orders || this.orders.length === 0;
         } else {
           this.ui_controls.no_orders = true;
