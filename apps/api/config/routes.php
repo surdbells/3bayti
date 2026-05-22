@@ -579,6 +579,32 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Vendor\Settings\UpdateVendorStoreController::class,
         );
 
+        // M3.4-A — Vendor payment (bank/payout) + tax (UAE VAT compliance).
+        // All fields already on the Vendor entity; no schema migration needed.
+        $group->get('/store/payment',
+            \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorPaymentController::class,
+        );
+        $group->patch('/store/payment',
+            \Bayti\Api\Http\Controllers\Vendor\Settings\UpdateVendorPaymentController::class,
+        );
+        $group->get('/store/tax',
+            \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorTaxController::class,
+        );
+        $group->patch('/store/tax',
+            \Bayti\Api\Http\Controllers\Vendor\Settings\UpdateVendorTaxController::class,
+        );
+
+        // M3.4-B — Vendor notification preferences + store status toggle.
+        $group->get('/store/notifications',
+            \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorNotificationsController::class,
+        );
+        $group->patch('/store/notifications',
+            \Bayti\Api\Http\Controllers\Vendor\Settings\UpdateVendorNotificationsController::class,
+        );
+        $group->patch('/store/status',
+            \Bayti\Api\Http\Controllers\Vendor\Settings\ToggleVendorStoreStatusController::class,
+        );
+
         // M3.3.1-C — Vendor product write (create / update / soft-delete).
         // Read is handled by the public GET /v3/vendors/{slug}/products +
         // GET /v3/vendors/by-legacy-id/{id}/products catalog endpoints.

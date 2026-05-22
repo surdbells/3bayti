@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -55,6 +56,7 @@ export class VendorTaxComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -79,7 +81,7 @@ export class VendorTaxComponent implements OnInit {
 
   get_data() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.get_single, GlobalComponent.getVendorTax).subscribe({
+    this.adapter.get_v3('GET /vendor/store/tax').subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.store_single = response.data;
@@ -108,7 +110,7 @@ export class VendorTaxComponent implements OnInit {
     this.update_tax.tax_contact_email = this.store_single.tax_contact_email;
 
     this.ui_controls.is_saving = true;
-    this.crudService.post_request(this.update_tax, GlobalComponent.updateStoreTax).subscribe({
+    this.adapter.patch_v3('PATCH /vendor/store/tax', this.update_tax).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);

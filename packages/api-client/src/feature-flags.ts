@@ -939,13 +939,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/settings/vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',
   },
   'GET /vendor/store/notifications': {
-    target: 'old', oldPath: '/vendors/settings/vendor-store-notifications', newPath: '/v3/vendor/store/notifications', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/vendor-store-notifications', newPath: '/v3/vendor/store/notifications', shape: 'v3-envelope',
   },
   'GET /vendor/store/payment': {
-    target: 'old', oldPath: '/vendors/settings/vendor-store-payment', newPath: '/v3/vendor/store/payment', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/vendor-store-payment', newPath: '/v3/vendor/store/payment', shape: 'v3-envelope',
   },
   'GET /vendor/store/tax': {
-    target: 'old', oldPath: '/vendors/settings/vendor-store-tax', newPath: '/v3/vendor/store/tax', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/vendor-store-tax', newPath: '/v3/vendor/store/tax', shape: 'v3-envelope',
   },
   'PATCH /vendor/compliance': {
     target: 'old', oldPath: '/vendors/settings/update-compliance', newPath: '/v3/vendor/compliance', shape: 'v3-envelope',
@@ -954,16 +954,16 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/settings/update-vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',
   },
   'PATCH /vendor/store/notifications': {
-    target: 'old', oldPath: '/vendors/settings/update-vendor-notifications', newPath: '/v3/vendor/store/notifications', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/update-vendor-notifications', newPath: '/v3/vendor/store/notifications', shape: 'v3-envelope',
   },
   'PATCH /vendor/store/payment': {
-    target: 'old', oldPath: '/vendors/settings/update-vendor-payment', newPath: '/v3/vendor/store/payment', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/update-vendor-payment', newPath: '/v3/vendor/store/payment', shape: 'v3-envelope',
   },
   'PATCH /vendor/store/status': {
-    target: 'old', oldPath: '/vendors/settings/switch-store-status', newPath: '/v3/vendor/store/status', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/switch-store-status', newPath: '/v3/vendor/store/status', shape: 'v3-envelope',
   },
   'PATCH /vendor/store/tax': {
-    target: 'old', oldPath: '/vendors/settings/update-vendor-tax', newPath: '/v3/vendor/store/tax', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/update-vendor-tax', newPath: '/v3/vendor/store/tax', shape: 'v3-envelope',
   },
   'POST /vendor/coupons': {
     target: 'new', oldPath: '/vendors/coupons/create-coupon', newPath: '/v3/vendor/coupons', shape: 'v3-envelope',

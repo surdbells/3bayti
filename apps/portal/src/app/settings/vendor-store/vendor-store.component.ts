@@ -151,10 +151,10 @@ export class VendorStoreComponent implements OnInit {
     this.update_status.store_status = this.store_single.store_status;
 
     this.ui_controls.is_saving_status = true;
-    this.crudService.post_request(this.update_status, GlobalComponent.updateStoreStatus).subscribe({
+    this.adapter.patch_v3('PATCH /vendor/store/status', { store_status: this.store_single.store_status }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.success_notification(response.message);
+        if (response?.data) {
+          this.success_notification('Store status updated.');
           this.get_data();
         } else if (response.status === 'failed') {
           this.error_notification(response.message);

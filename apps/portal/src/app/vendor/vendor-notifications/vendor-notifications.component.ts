@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -19,6 +20,7 @@ export class VendorNotificationsComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -92,9 +94,9 @@ export class VendorNotificationsComponent implements OnInit {
 
   get_data() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.get_single, GlobalComponent.getVendorNotifications).subscribe({
+    this.adapter.get_v3('GET /vendor/store/notifications').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data) {
           this.store_single = response.data;
         } else if (response.response_code === 200 && response.status === 'failed') {
           this.error_notification(response.message);
@@ -127,11 +129,11 @@ export class VendorNotificationsComponent implements OnInit {
     this.update_notifications.store_notify_custom_order = this.store_single.store_notify_custom_order;
 
     this.ui_controls.is_saving = true;
-    this.crudService.post_request(this.update_notifications, GlobalComponent.updateStoreNotifications).subscribe({
+    this.adapter.patch_v3('PATCH /vendor/store/notifications', this.update_notifications).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data) {
           this.get_data();
-          this.success_notification(response.message);
+          this.success_notification('Notification preferences saved.');
         } else if (response.response_code === 200 && response.status === 'failed') {
           this.error_notification(response.message);
         } else if (response.response_code === 400 && response.status === 'failed') {

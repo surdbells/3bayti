@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { TranslatePipe } from '../../translate.pipe';
@@ -34,6 +35,7 @@ export class VendorComplianceComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -93,7 +95,7 @@ export class VendorComplianceComponent implements OnInit {
 
   get_data() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.get_single, GlobalComponent.getCompliance).subscribe({
+    this.adapter.get_v3('GET /vendor/onboarding/status').subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.compliance = response.data;
@@ -124,10 +126,10 @@ export class VendorComplianceComponent implements OnInit {
     }
 
     this.ui_controls.is_submitting = true;
-    this.crudService.post_request(this.compliance, GlobalComponent.updateCompliance).subscribe({
+    this.adapter.post_v3('POST /vendor/onboarding/submit', this.compliance).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.success_notification(response.message);
+        if (response?.data || response?.response_code === 200) {
+          this.success_notification('Compliance submitted.');
           this.get_data();
         } else if ((response.response_code === 200 || response.response_code === 400) && response.status === 'failed') {
           this.error_notification(response.message);

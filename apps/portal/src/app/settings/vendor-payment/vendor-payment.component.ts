@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -45,6 +46,7 @@ export class VendorPaymentComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -69,7 +71,7 @@ export class VendorPaymentComponent implements OnInit {
 
   get_data() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.get_single, GlobalComponent.getVendorPayment).subscribe({
+    this.adapter.get_v3('GET /vendor/store/payment').subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.store_single = response.data;
@@ -93,7 +95,7 @@ export class VendorPaymentComponent implements OnInit {
     this.update_payment.store_account_number = this.store_single.store_account_number;
 
     this.ui_controls.is_saving = true;
-    this.crudService.post_request(this.update_payment, GlobalComponent.updateStorePayment).subscribe({
+    this.adapter.patch_v3('PATCH /vendor/store/payment', this.update_payment).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);

@@ -279,6 +279,16 @@ class Vendor
     #[ORM\Column(name: 'legacy_logo_data_url', type: 'text', nullable: true)]
     private ?string $legacyLogoDataUrl = null;
 
+    /**
+     * Vendor notification preference flags (M3.4-B).
+     * Stored as JSON so new preference keys can be added without
+     * ALTER TABLE. Null = all defaults (treat as all-true on read).
+     *
+     * @var array<string,bool>|null
+     */
+    #[ORM\Column(name: 'notification_prefs', type: 'json', nullable: true)]
+    private ?array $notificationPrefs = null;
+
     #[ORM\Column(name: 'legacy_cover_data_url', type: 'text', nullable: true)]
     private ?string $legacyCoverDataUrl = null;
 
@@ -545,6 +555,18 @@ class Vendor
 
     public function getLegacyLogoDataUrl(): ?string { return $this->legacyLogoDataUrl; }
     public function setLegacyLogoDataUrl(?string $dataUrl): void { $this->legacyLogoDataUrl = $dataUrl; }
+
+    /** @return array<string,bool> */
+    public function getNotificationPrefs(): array
+    {
+        return $this->notificationPrefs ?? [];
+    }
+
+    /** @param array<string,bool> $prefs */
+    public function setNotificationPrefs(array $prefs): void
+    {
+        $this->notificationPrefs = $prefs;
+    }
 
     public function getLegacyCoverDataUrl(): ?string { return $this->legacyCoverDataUrl; }
     public function setLegacyCoverDataUrl(?string $dataUrl): void { $this->legacyCoverDataUrl = $dataUrl; }
