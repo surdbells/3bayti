@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../../global-component';
 import { CommonModule } from '@angular/common';
@@ -53,6 +54,7 @@ export class PluralComponent implements OnInit {
     private router: Router,
     private crudService: CrudService,
     private route: ActivatedRoute,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -71,7 +73,8 @@ export class PluralComponent implements OnInit {
   get_processingById() {
     this.getProcessingById.vendor = this.single_vendor;
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.getProcessingById, GlobalComponent.pluralById).subscribe({
+    const pluralOId = this.getProcessingById.id;
+    this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(pluralOId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.vendor = response.data;
@@ -88,7 +91,8 @@ export class PluralComponent implements OnInit {
 
   get_vendorProducts() {
     this.getProductsByVendor.vendor = this.vendor.id;
-    this.crudService.post_request(this.getProductsByVendor, GlobalComponent.productsByVendorId).subscribe({
+    const pluralVId = this.getProductsByVendor.vendor ?? this.getProductsByVendor.id;
+    this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(pluralVId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.items = response.data;

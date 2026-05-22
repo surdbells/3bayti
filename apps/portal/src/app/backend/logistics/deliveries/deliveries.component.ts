@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../../global-component';
 import { CommonModule } from '@angular/common';
@@ -58,6 +59,7 @@ export class DeliveriesComponent implements OnInit {
     private router: Router,
     private crudService: CrudService,
     private route: ActivatedRoute,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -76,9 +78,10 @@ export class DeliveriesComponent implements OnInit {
   get_processingById() {
     this.getProcessingById.vendor = this.single_vendor;
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.getProcessingById, GlobalComponent.pluralById).subscribe({
+    const delOrderId = this.getProcessingById.id;
+    this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(delOrderId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data) {
           this.vendor = response.data;
           this.get_vendorProducts();
         } else {
@@ -93,7 +96,8 @@ export class DeliveriesComponent implements OnInit {
 
   get_vendorProducts() {
     this.getProductsByVendor.vendor = this.vendor.id;
-    this.crudService.post_request(this.getProductsByVendor, GlobalComponent.productsByVendorId).subscribe({
+    const vendorIdForDel = this.getProductsByVendor.vendor ?? this.getProductsByVendor.id;
+    this.adapter.get_v3('GET /admin/vendors/:id', { params: { id: String(vendorIdForDel) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.items = response.data;

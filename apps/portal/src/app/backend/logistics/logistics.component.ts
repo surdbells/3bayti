@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
@@ -45,6 +46,7 @@ export class LogisticsComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -73,7 +75,7 @@ export class LogisticsComponent implements OnInit {
   get_logistics() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_del, GlobalComponent.logistics).subscribe({
+    this.adapter.get_v3('GET /admin/orders', { query: { status: 'shipped', limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.logistic = response.data;
@@ -96,7 +98,8 @@ export class LogisticsComponent implements OnInit {
     this.get_del_status.status = (event.target as HTMLSelectElement).value;
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_del_status, GlobalComponent.logistics).subscribe({
+    const logStatus = this.get_del_status.status;
+    this.adapter.get_v3('GET /admin/orders', { query: { status: logStatus, limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.logistic = response.data;

@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { Reviews } from '../../class/reviews';
 import { GlobalComponent } from '../../global-component';
@@ -20,6 +21,7 @@ export class VendorReviewsComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -59,9 +61,9 @@ export class VendorReviewsComponent implements OnInit {
 
   product_review() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.review, GlobalComponent.getProductReviews).subscribe({
+    this.adapter.get_v3('GET /vendor/reviews', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data) {
           this.reviews = response.data ?? [];
           this.ui_controls.no_reviews = this.reviews!.length === 0;
         } else {

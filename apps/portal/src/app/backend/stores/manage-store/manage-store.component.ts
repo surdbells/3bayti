@@ -75,6 +75,7 @@ export class ManageStoreComponent implements OnInit {
     private router: Router,
     private crudService: CrudService,
     private route: ActivatedRoute,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -135,7 +136,8 @@ export class ManageStoreComponent implements OnInit {
       return;
     }
     this.ui_controls.sending_message = true;
-    this.crudService.post_request(this.message, GlobalComponent.messageVendor).subscribe({
+    const storeVid = this.get_data.store ?? this.message.id;
+    this.adapter.post_v3('POST /admin/vendors/:id/messages', this.message, { params: { id: String(storeVid) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.message.subject = '';

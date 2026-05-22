@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../../global-component';
 import { CommonModule } from '@angular/common';
@@ -62,6 +63,7 @@ export class StoreSalesComponent implements OnInit {
     private router: Router,
     private crudService: CrudService,
     private route: ActivatedRoute,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -97,10 +99,10 @@ export class StoreSalesComponent implements OnInit {
   get_sales() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_store_s, GlobalComponent.sales).subscribe({
+    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.sales = response.data;
+        if (response?.data) {
+          this.sales = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.sales || this.sales.length === 0;
         } else {
           this.ui_controls.no_data = true;
@@ -119,10 +121,10 @@ export class StoreSalesComponent implements OnInit {
   get_range_sales() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_store_range, GlobalComponent.sales).subscribe({
+    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 50, offset: 0, since: this.get_store_range.start_date, until: this.get_store_range.end_date } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.sales = response.data;
+        if (response?.data) {
+          this.sales = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.sales || this.sales.length === 0;
         } else {
           this.ui_controls.no_data = true;

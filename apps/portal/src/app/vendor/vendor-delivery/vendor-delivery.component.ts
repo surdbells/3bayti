@@ -3,6 +3,7 @@ import { NgClass, NgForOf, NgIf } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { Orders } from '../../class/orders';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 
@@ -20,6 +21,7 @@ export class VendorDeliveryComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -60,10 +62,10 @@ export class VendorDeliveryComponent implements OnInit {
 
   get_vendor_orders() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.order, GlobalComponent.getVendorDeliveryOrders).subscribe({
+    this.adapter.get_v3('GET /vendor/orders', { query: { status: 'shipped', limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.orders = response.data;
+        if (response?.data) {
+          this.orders = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_orders = !this.orders || this.orders.length === 0;
         } else {
           this.ui_controls.no_orders = true;

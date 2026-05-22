@@ -472,6 +472,10 @@ return function (App $app): void {
         $group->get('/commissions',
             \Bayti\Api\Http\Controllers\Admin\Finance\ListCommissionsController::class);
 
+        // M3.4-C — Admin message a specific vendor (portal → vendor comms).
+        $group->post('/vendors/{id:[0-9]+}/messages',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\SendVendorMessageController::class);
+
         // M3.3.2-F — Admin product write (admin can create/update/delete any product).
         $group->post('/products',
             \Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController::class);
@@ -555,6 +559,11 @@ return function (App $app): void {
         $group->get(
             '/analytics',
             \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class,
+        );
+
+        // M3.4-C — Vendor product reviews (read-only).
+        $group->get('/reviews',
+            \Bayti\Api\Http\Controllers\Vendor\Review\ListVendorReviewsController::class,
         );
 
         // M3.3.1-F — Vendor coupon CRUD (vendor-scoped promo codes)

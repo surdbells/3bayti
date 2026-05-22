@@ -933,7 +933,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/orders/get-return-orders', newPath: '/v3/vendor/returns/:id', shape: 'v3-envelope',
   },
   'GET /vendor/reviews': {
-    target: 'old', oldPath: '/vendors/products/get-products-reviews', newPath: '/v3/vendor/reviews', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/products/get-products-reviews', newPath: '/v3/vendor/reviews', shape: 'v3-envelope',
   },
   'GET /vendor/store': {
     target: 'new', oldPath: '/vendors/settings/vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',
@@ -1124,6 +1124,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
 
   'GET /products/by-legacy-id/:id': {
     target: 'new', oldPath: '', newPath: '/v3/products/by-legacy-id/:id', shape: 'v3-envelope',
+  },
+
+  'POST /admin/vendors/:id/messages': {
+    target: 'new', oldPath: '/admin/message-vendor', newPath: '/v3/admin/vendors/:id/messages', shape: 'v3-envelope',
   },
 
   // Chat, tickets, vendor self-service, admin orders/users/payments:
