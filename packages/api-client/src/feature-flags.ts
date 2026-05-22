@@ -1118,6 +1118,14 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/utility/stores', newPath: '/v3/vendors', shape: 'v3-envelope',
   },
 
+  'GET /vendors/by-legacy-id/:id/products': {
+    target: 'new', oldPath: '', newPath: '/v3/vendors/by-legacy-id/:id/products', shape: 'v3-envelope',
+  },
+
+  'GET /products/by-legacy-id/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/products/by-legacy-id/:id', shape: 'v3-envelope',
+  },
+
   // Chat, tickets, vendor self-service, admin orders/users/payments:
   // all live on legacy. Entries added when M3 / M4 lands.
 };

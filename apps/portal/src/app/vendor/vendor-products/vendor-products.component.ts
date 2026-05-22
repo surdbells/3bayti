@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, formatCurrency } from '@angular/common';
@@ -147,6 +148,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -177,27 +179,24 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
 
   fetchProducts(): void {
     this.ui.loading = true;
-
-    const payload: any = {
-      token: this.user_session.token,
-      id: this.user_session.id,
-      store: this.user_session.id,
-      page: this.pagination.page,
-      per_page: this.pagination.per_page,
+    const page = this.pagination.page;
+    const perPage = this.pagination.per_page;
+    const vendorId = this.user_session.id;
+    const query: Record<string, string | number | boolean | undefined | null> = {
+      limit: perPage,
+      offset: (page - 1) * perPage,
     };
-
-    if (this.filters.search.trim())        payload.search = this.filters.search.trim();
-    if (this.filters.status)               payload.status = this.filters.status;
-    if (this.filters.stock_status)         payload.stock_status = this.filters.stock_status;
-    if (this.filters.category_id)          payload.category_id = this.filters.category_id;
-    if (this.filters.price_min !== null)   payload.price_min = this.filters.price_min;
-    if (this.filters.price_max !== null)   payload.price_max = this.filters.price_max;
-
-    this.crudService.post_request(payload, GlobalComponent.getProduct).subscribe({
+    this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', {
+      params: { id: String(vendorId) },
+      query,
+    }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.products = response.data ?? [];
-          this.pagination = response.pagination ?? this.pagination;
+        if (response?.data) {
+          this.products = (response.data ?? []).map((p: any) => this.mapProduct(p));
+          const meta = response.meta ?? {};
+          if (meta.total !== undefined) {
+            this.pagination.total = meta.total;
+          }
           this.ui.no_products = this.products.length === 0;
         } else {
           this.products = [];
@@ -206,21 +205,34 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
         this.ui.loading = false;
       },
       error: () => {
-        this.toast.error('Unable to complete your request at this time.');
+        this.toast.error('Unable to load products at this time.');
         this.ui.loading = false;
       },
     });
   }
 
+  /** Map a v3 product list shape to the flat shape the template uses. */
+  private mapProduct(p: any): any {
+    return {
+      ...p,
+      product_id: p.id,
+      product_name: p.name,
+      product_price: p.price?.amount ?? p.price,
+      product_image: p.primary_image?.url ?? '',
+      category_name: p.category?.name ?? '',
+      product_status: p.status,
+    };
+  }
+
   fetchCategories(): void {
-    this.crudService.get_request(GlobalComponent.UtilityCategory).subscribe({
+    this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.categories = (response.data || []).map((c: any) => ({
-            id: c.id ?? c.category_id,
-            name: c.name ?? c.category_name,
-          }));
-        }
+        const items = Array.isArray(response?.data) ? response.data
+          : Array.isArray(response) ? response : [];
+        this.categories = items.map((c: any) => ({
+          id: c.id ?? c.category_id,
+          name: c.name ?? c.category_name,
+        }));
       },
     });
   }
@@ -319,10 +331,20 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
       product: id,
     };
 
-    this.crudService.post_request(payload, GlobalComponent.getProductById).subscribe({
+    this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(id) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.single_product = response.data;
+        if (response?.data) {
+          const p = response.data;
+          this.single_product = {
+            ...p,
+            product_id: p.id,
+            product_name: p.name,
+            product_price: p.price?.amount ?? p.price,
+            image_1: p.primary_image?.url ?? '',
+            images: (p.images ?? []).map((i: any) => i?.url ?? i),
+            category_name: p.category?.name ?? '',
+            product_status: p.status,
+          };
           this.ui.loaded_preview = true;
         }
       },
