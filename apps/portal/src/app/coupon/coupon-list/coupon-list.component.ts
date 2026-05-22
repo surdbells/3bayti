@@ -1,6 +1,7 @@
 import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -96,6 +97,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -134,7 +136,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
     if (this.filters.status) payload.status = this.filters.status;
     if (this.filters.discount_type) payload.discount_type = this.filters.discount_type;
 
-    this.crudService.post_request(payload, GlobalComponent.getCoupons).subscribe({
+    this.adapter.get_v3('GET /vendor/coupons', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.coupons = response.data ?? [];
@@ -232,7 +234,10 @@ export class CouponListComponent implements OnInit, OnDestroy {
       status,
     };
 
-    this.crudService.post_request(payload, GlobalComponent.toggleCouponStatus).subscribe({
+    const toggleId = payload.coupon_id ?? payload.id;
+    const existing = (this.coupons as any[]).find((c: any) => (c.id || c.coupon_id) === toggleId);
+    const toggleBody = { is_active: !existing?.is_active };
+    this.adapter.put_v3('PUT /vendor/coupons/:id', toggleBody, { params: { id: String(toggleId) } }).subscribe({
       next: (response: any) => {
         this.ui.toggling = false;
         if (response.response_code === 200 && response.status === 'success') {
@@ -271,7 +276,8 @@ export class CouponListComponent implements OnInit, OnDestroy {
       coupon_id: couponId,
     };
 
-    this.crudService.post_request(payload, GlobalComponent.deleteCoupon).subscribe({
+    const deleteId = payload.coupon_id ?? payload.id;
+    this.adapter.delete_v3('DELETE /vendor/coupons/:id', { params: { id: String(deleteId) } }).subscribe({
       next: (response: any) => {
         this.ui.deleting = false;
         if (response.response_code === 200 && response.status === 'success') {

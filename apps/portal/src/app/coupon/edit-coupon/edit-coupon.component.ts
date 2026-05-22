@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
@@ -80,6 +81,7 @@ export class EditCouponComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -99,7 +101,8 @@ export class EditCouponComponent implements OnInit {
       coupon_id: this.coupon_id,
     };
 
-    this.crudService.post_request(payload, GlobalComponent.getCouponById).subscribe({
+    const couponId = payload.coupon_id ?? payload.id;
+    this.adapter.get_v3('GET /vendor/coupons/:id', { params: { id: String(couponId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           const d = response.data;
@@ -261,11 +264,12 @@ export class EditCouponComponent implements OnInit {
       }
     }
 
-    this.crudService.post_request(payload, GlobalComponent.updateCoupon).subscribe({
+    const couponId = payload.coupon_id ?? payload.id;
+    this.adapter.put_v3('PUT /vendor/coupons/:id', payload, { params: { id: String(couponId) } }).subscribe({
       next: (response: any) => {
         this.ui.loading = false;
-        if (response.response_code === 200 && response.status === 'success') {
-          this.toast.success(response.message);
+        if (response?.data?.id) {
+          this.toast.success('Coupon updated successfully');
           this.router.navigate(['/coupons']);
         } else {
           this.toast.error(response.message);

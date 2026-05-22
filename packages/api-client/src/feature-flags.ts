@@ -876,7 +876,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // =======================================================================
   // Vendor surface
   'DELETE /vendor/coupons/:id': {
-    target: 'old', oldPath: '/vendors/coupons/delete-coupon', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/coupons/delete-coupon', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
   },
   'DELETE /vendor/labels/:id': {
     target: 'old', oldPath: '/vendors/labels/delete-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',
@@ -891,10 +891,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/common/dashboard-activity', newPath: '/v3/vendor/analytics', shape: 'v3-envelope',
   },
   'GET /vendor/coupons': {
-    target: 'old', oldPath: '/vendors/coupons/get-coupons', newPath: '/v3/vendor/coupons', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/coupons/get-coupons', newPath: '/v3/vendor/coupons', shape: 'v3-envelope',
   },
   'GET /vendor/coupons/:id': {
-    target: 'old', oldPath: '/vendors/coupons/get-coupon-by-id', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/coupons/get-coupon-by-id', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
   },
   'GET /vendor/coupons/:id/analytics': {
     target: 'old', oldPath: '/vendors/coupons/coupon-analytics', newPath: '/v3/vendor/coupons/:id/analytics', shape: 'v3-envelope',
@@ -966,10 +966,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/vendors/settings/update-vendor-tax', newPath: '/v3/vendor/store/tax', shape: 'v3-envelope',
   },
   'POST /vendor/coupons': {
-    target: 'old', oldPath: '/vendors/coupons/create-coupon', newPath: '/v3/vendor/coupons', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/coupons/create-coupon', newPath: '/v3/vendor/coupons', shape: 'v3-envelope',
   },
   'POST /vendor/coupons/:id/toggle': {
-    target: 'old', oldPath: '/vendors/coupons/toggle-coupon-status', newPath: '/v3/vendor/coupons/:id/toggle', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/coupons/toggle-coupon-status', newPath: '/v3/vendor/coupons/:id/toggle', shape: 'v3-envelope',
   },
   'POST /vendor/labels': {
     target: 'old', oldPath: '/vendors/labels/create-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
@@ -993,7 +993,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/orders/update-order-status', newPath: '/v3/vendor/returns/:id/confirm-receipt', shape: 'v3-envelope',
   },
   'PUT /vendor/coupons/:id': {
-    target: 'old', oldPath: '/vendors/coupons/update-coupon', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/coupons/update-coupon', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
   },
   'PUT /vendor/labels/:id': {
     target: 'old', oldPath: '/vendors/labels/update-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',

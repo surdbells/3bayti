@@ -175,6 +175,17 @@ class PromoCode
     #[ORM\Column(name: 'is_active', type: 'boolean', options: ['default' => true])]
     private bool $isActive = true;
 
+    /**
+     * Optional vendor scope. NULL = sitewide (admin-created) promo code
+     * visible to all vendors. Non-null = vendor-owned coupon visible and
+     * manageable only by that vendor's authenticated user.
+     *
+     * Stores the v3 Vendor entity PK (not legacy_vendor_id). Nullable
+     * so existing promo codes are unaffected by this schema addition.
+     */
+    #[ORM\Column(name: 'vendor_id', type: 'bigint', nullable: true)]
+    private ?int $vendorId = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private DateTimeImmutable $createdAt;
 
@@ -370,6 +381,9 @@ class PromoCode
     {
         $this->isActive = $active;
     }
+
+    public function getVendorId(): ?int { return $this->vendorId; }
+    public function setVendorId(?int $vendorId): void { $this->vendorId = $vendorId; }
 
     /**
      * Convenience predicate: is this code time-window-valid at $at?

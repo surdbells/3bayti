@@ -69,6 +69,48 @@ class PromoCodeRepository extends EntityRepository
     }
 
     /**
+     * Return all promo codes owned by a specific vendor (vendor_id = $vendorId),
+     * newest first. Used by the vendor coupon list endpoint.
+     *
+     * @return list<PromoCode>
+     */
+    public function findByVendorId(int $vendorId, int $limit = 50, int $offset = 0): array
+    {
+        /** @var list<PromoCode> */
+        return $this->createQueryBuilder('pc')
+            ->where('pc.vendorId = :vid')
+            ->setParameter('vid', $vendorId)
+            ->orderBy('pc.createdAt', 'DESC')
+            ->addOrderBy('pc.id', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Count promo codes owned by a specific vendor (for pagination meta).
+     */
+    public function countByVendorId(int $vendorId): int
+    {
+        return (int) $this->createQueryBuilder('pc')
+            ->select('COUNT(pc.id)')
+            ->where('pc.vendorId = :vid')
+            ->setParameter('vid', $vendorId)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Find a single vendor-owned promo code by id + vendor_id.
+     * Returns null if not found OR if the code belongs to a different vendor.
+     */
+    public function findByIdAndVendor(int $id, int $vendorId): ?PromoCode
+    {
+        return $this->findOneBy(['id' => $id, 'vendorId' => $vendorId]);
+    }
+
+    /**
      * Filter + paginate for the admin list endpoint.
      *
      * @param array{

@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
@@ -77,6 +78,7 @@ export class CreateCouponComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -224,11 +226,11 @@ export class CreateCouponComponent implements OnInit {
       }
     }
 
-    this.crudService.post_request(payload, GlobalComponent.createCoupon).subscribe({
+    this.adapter.post_v3('POST /vendor/coupons', payload).subscribe({
       next: (response: any) => {
         this.ui.loading = false;
-        if (response.response_code === 200 && response.status === 'success') {
-          this.toast.success(response.message);
+        if (response?.data?.id) {
+          this.toast.success('Coupon created successfully');
           this.router.navigate(['/coupons']);
         } else {
           this.toast.error(response.message);

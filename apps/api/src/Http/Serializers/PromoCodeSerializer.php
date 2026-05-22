@@ -49,6 +49,7 @@ final class PromoCodeSerializer
             'valid_from' => $code->getValidFrom()?->format(DateTimeInterface::ATOM),
             'valid_until' => $code->getValidUntil()?->format(DateTimeInterface::ATOM),
             'is_active' => $code->isActive(),
+            'vendor_id' => $code->getVendorId(),
             'currently_time_valid' => $code->isCurrentlyTimeValid(),
             'created_at' => $code->getCreatedAt()->format(DateTimeInterface::ATOM),
             'updated_at' => $code->getUpdatedAt()->format(DateTimeInterface::ATOM),

@@ -533,7 +533,21 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class,
         );
 
-        // M3.3.1-D — Vendor store settings (own profile read/update)
+        // M3.3.1-F — Vendor coupon CRUD (vendor-scoped promo codes)
+        $group->get('/coupons',
+            \Bayti\Api\Http\Controllers\Vendor\Coupon\ListVendorCouponsController::class,
+        );
+        $group->post('/coupons',
+            \Bayti\Api\Http\Controllers\Vendor\Coupon\CreateVendorCouponController::class,
+        );
+        $group->put('/coupons/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Vendor\Coupon\UpdateVendorCouponController::class,
+        );
+        $group->delete('/coupons/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Vendor\Coupon\DeleteVendorCouponController::class,
+        );
+
+        // M3.3.1-D — Vendor store settings
         $group->get('/store',
             \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorStoreController::class,
         );
