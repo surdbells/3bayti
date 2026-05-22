@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
@@ -50,6 +51,7 @@ export class TransactionsComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -78,10 +80,10 @@ export class TransactionsComponent implements OnInit {
   get_trxs() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_trx, GlobalComponent.transactions).subscribe({
+    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.transactions = response.data;
+        if (response?.data) {
+          this.transactions = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.transactions || this.transactions.length === 0;
         } else {
           this.ui_controls.no_data = true;
@@ -100,10 +102,10 @@ export class TransactionsComponent implements OnInit {
   get_range_trx() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_trx_range, GlobalComponent.transactions).subscribe({
+    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 50, offset: 0, since: this.get_trx_range.start_date, until: this.get_trx_range.end_date } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.transactions = response.data;
+        if (response?.data) {
+          this.transactions = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.no_data = !this.transactions || this.transactions.length === 0;
         } else {
           this.ui_controls.no_data = true;

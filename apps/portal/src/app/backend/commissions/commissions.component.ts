@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
@@ -58,6 +59,7 @@ export class CommissionsComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -86,7 +88,7 @@ export class CommissionsComponent implements OnInit {
   get_sales() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_s, GlobalComponent.commissions).subscribe({
+    this.adapter.get_v3('GET /admin/commissions', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.sales = response.data;
@@ -109,7 +111,7 @@ export class CommissionsComponent implements OnInit {
   get_range_sales() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_sale_range, GlobalComponent.commissions).subscribe({
+    this.adapter.get_v3('GET /admin/commissions', { query: { limit: 50, offset: 0, since: this.get_sale_range.start_date, until: this.get_sale_range.end_date } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.sales = response.data;

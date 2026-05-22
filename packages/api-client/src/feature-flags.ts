@@ -1006,7 +1006,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   // Admin surface
   'DELETE /admin/products/:id': {
-    target: 'old', oldPath: '/vendors/products/delete-product', newPath: '/v3/admin/products/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/products/delete-product', newPath: '/v3/admin/products/:id', shape: 'v3-envelope',
   },
   'GET /admin/collections': {
     target: 'old', oldPath: '/admin/collections/get-collection', newPath: '/v3/admin/collections', shape: 'v3-envelope',
@@ -1015,7 +1015,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/admin/collections/read-collection', newPath: '/v3/admin/collections/:id', shape: 'v3-envelope',
   },
   'GET /admin/commissions': {
-    target: 'old', oldPath: '/admin/common/commissions', newPath: '/v3/admin/commissions', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/commissions', newPath: '/v3/admin/commissions', shape: 'v3-envelope',
   },
   'GET /admin/customers': {
     target: 'new', oldPath: '/admin/common/get-customers', newPath: '/v3/admin/users?role=customer', shape: 'v3-envelope',
@@ -1039,7 +1039,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/admin/common/ticket-messages', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
   },
   'GET /admin/transactions': {
-    target: 'old', oldPath: '/admin/common/transactions', newPath: '/v3/admin/transactions', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/transactions', newPath: '/v3/admin/transactions', shape: 'v3-envelope',
   },
   'GET /admin/users': {
     target: 'new', oldPath: '/admin/common/get-users', newPath: '/v3/admin/users', shape: 'v3-envelope',
@@ -1081,7 +1081,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/admin/common/processing', newPath: '/v3/admin/orders/:id/refund', shape: 'v3-envelope',
   },
   'POST /admin/products': {
-    target: 'old', oldPath: '/vendors/products/create-product', newPath: '/v3/admin/products', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/products/create-product', newPath: '/v3/admin/products', shape: 'v3-envelope',
   },
   'POST /admin/tickets/:id/messages': {
     target: 'old', oldPath: '/admin/common/send-ticket-message', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
@@ -1105,7 +1105,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/admin/collections/update-collection', newPath: '/v3/admin/collections/:id', shape: 'v3-envelope',
   },
   'PUT /admin/products/:id': {
-    target: 'old', oldPath: '/vendors/products/update-product', newPath: '/v3/admin/products/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/products/update-product', newPath: '/v3/admin/products/:id', shape: 'v3-envelope',
   },
   // Utility / shared
   'GET /utility/categories': {

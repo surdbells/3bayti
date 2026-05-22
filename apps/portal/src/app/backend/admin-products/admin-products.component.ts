@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Products } from '../../class/products';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { FormsModule } from '@angular/forms';
@@ -40,6 +41,7 @@ export class AdminProductsComponent implements OnInit {
     private router: Router,
     private crudService: CrudService,
     private route: ActivatedRoute,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -68,7 +70,7 @@ export class AdminProductsComponent implements OnInit {
   get_product() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.product, GlobalComponent.getAdminProducts).subscribe({
+    this.adapter.get_v3('GET /admin/products', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.products = response.data ?? [];
@@ -92,7 +94,7 @@ export class AdminProductsComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
     this.products = [];
-    this.crudService.post_request(this.product_S, GlobalComponent.getAdminProducts).subscribe({
+    this.adapter.get_v3('GET /admin/products', { query: { limit: 50, offset: 0, vendor: this.product_S.id } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.products = response.data ?? [];

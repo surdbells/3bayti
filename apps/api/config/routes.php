@@ -466,6 +466,20 @@ return function (App $app): void {
         $group->post('/users/{id:[0-9]+}/deactivate',
             \Bayti\Api\Http\Controllers\Admin\User\DeactivateUserController::class);
 
+        // M3.3.2-D — Admin finance (transactions + commissions read).
+        $group->get('/transactions',
+            \Bayti\Api\Http\Controllers\Admin\Finance\ListTransactionsController::class);
+        $group->get('/commissions',
+            \Bayti\Api\Http\Controllers\Admin\Finance\ListCommissionsController::class);
+
+        // M3.3.2-F — Admin product write (admin can create/update/delete any product).
+        $group->post('/products',
+            \Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController::class);
+        $group->put('/products/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Product\UpdateAdminProductController::class);
+        $group->delete('/products/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Product\DeleteAdminProductController::class);
+
         // M3.2.X.8-E — Promo code CRUD. Soft-delete preserves
         // promo_redemptions FK; hard-delete only when zero redemptions.
         $group->get('/promo-codes',
