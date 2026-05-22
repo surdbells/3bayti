@@ -936,7 +936,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/vendors/products/get-products-reviews', newPath: '/v3/vendor/reviews', shape: 'v3-envelope',
   },
   'GET /vendor/store': {
-    target: 'old', oldPath: '/vendors/settings/vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',
   },
   'GET /vendor/store/notifications': {
     target: 'old', oldPath: '/vendors/settings/vendor-store-notifications', newPath: '/v3/vendor/store/notifications', shape: 'v3-envelope',
@@ -951,7 +951,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/vendors/settings/update-compliance', newPath: '/v3/vendor/compliance', shape: 'v3-envelope',
   },
   'PATCH /vendor/store': {
-    target: 'old', oldPath: '/vendors/settings/update-vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/update-vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',
   },
   'PATCH /vendor/store/notifications': {
     target: 'old', oldPath: '/vendors/settings/update-vendor-notifications', newPath: '/v3/vendor/store/notifications', shape: 'v3-envelope',

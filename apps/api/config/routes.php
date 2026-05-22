@@ -533,6 +533,14 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class,
         );
 
+        // M3.3.1-D — Vendor store settings (own profile read/update)
+        $group->get('/store',
+            \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorStoreController::class,
+        );
+        $group->patch('/store',
+            \Bayti\Api\Http\Controllers\Vendor\Settings\UpdateVendorStoreController::class,
+        );
+
         // M3.3.1-C — Vendor product write (create / update / soft-delete).
         // Read is handled by the public GET /v3/vendors/{slug}/products +
         // GET /v3/vendors/by-legacy-id/{id}/products catalog endpoints.

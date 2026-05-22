@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { AxRichEditorComponent } from '../../shared/rich/ax-rich-editor.component';
@@ -65,6 +66,7 @@ export class VendorStoreComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -89,10 +91,20 @@ export class VendorStoreComponent implements OnInit {
 
   get_data() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.get_single, GlobalComponent.getVendorStore).subscribe({
+    this.adapter.get_v3('GET /vendor/store').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.store_single = response.data;
+        if (response?.data) {
+          const d = response.data;
+          this.store_single = {
+            ...this.store_single,
+            store_name: d.name ?? d.store_name ?? '',
+            store_description: d.description ?? d.store_description ?? '',
+            store_email: d.contact_email ?? d.store_email ?? '',
+            store_phone: d.contact_phone ?? d.store_phone ?? '',
+            store_logo: d.logo_url ?? d.store_logo ?? '',
+            store_cover: d.cover_image_url ?? d.store_cover ?? '',
+            store_status: !!d.is_active,
+          };
         } else if (response.status === 'failed') {
           this.error_notification(response.message);
         }
@@ -117,13 +129,12 @@ export class VendorStoreComponent implements OnInit {
     this.update_store.store_cover = this.store_single.store_cover;
 
     this.ui_controls.is_saving_basic = true;
-    this.crudService.post_request(this.update_store, GlobalComponent.updateStoreBasic).subscribe({
+    const body = { store_name: this.update_store.store_name, store_description: this.update_store.store_description, store_email: this.update_store.store_email, store_phone: this.update_store.store_phone, store_logo: this.update_store.store_logo, store_cover: this.update_store.store_cover };
+    this.adapter.patch_v3('PATCH /vendor/store', body).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.success_notification(response.message);
+        if (response?.data) {
+          this.success_notification('Store updated successfully');
           this.get_data();
-        } else if (response.status === 'failed') {
-          this.error_notification(response.message);
         }
         this.ui_controls.is_saving_basic = false;
       },
