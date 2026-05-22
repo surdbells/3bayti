@@ -1,15 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
-import { GlobalComponent } from '../../global-component';
 import {
   AxEmptyStateComponent, AxSkeletonComponent,
 } from '../../shared/data';
-
-const V3 = 'https://api-v3.3bayti.ae';
 
 interface MetricValue { value: number | null; [k: string]: unknown; }
 interface VendorMetrics {
@@ -50,23 +47,17 @@ export class VendorMetricsComponent implements OnInit {
   readonly dayOptions = [7, 14, 30, 90];
   readonly metricKeys = Object.keys(METRIC_LABELS);
 
-  private token = '';
 
-  constructor(private http: HttpClient, private toast: HotToastService) {}
+  constructor(private adapter: PortalCrudAdapter, private toast: HotToastService) {}
 
   ngOnInit(): void {
-    const raw = sessionStorage.getItem('SESSION');
-    if (raw) this.token = GlobalComponent.decodeBase64(raw)?.token ?? '';
     this.load();
   }
 
   load(): void {
     this.loading = true; this.error = '';
-    const headers = new HttpHeaders({ Authorization: `Bearer ${this.token}` });
-    this.http.get<{ data: VendorMetrics }>(
-      `${V3}/v3/vendor/metrics?days=${this.days}`, { headers }
-    ).subscribe({
-      next: (res) => { this.data = res.data; this.loading = false; },
+    this.adapter.get_v3('GET /vendor/metrics', { query: { days: this.days } }).subscribe({
+      next: (res: any) => { this.data = res?.data ?? res; this.loading = false; },
       error: () => {
         this.error = 'Could not load metrics.';
         this.loading = false;
