@@ -39,6 +39,7 @@ export class StoreProductsComponent implements OnInit {
     private router: Router,
     private crudService: CrudService,
     private route: ActivatedRoute,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -69,7 +70,8 @@ export class StoreProductsComponent implements OnInit {
   get_vendor_product() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.product, GlobalComponent.getProduct).subscribe({
+    const spId = this.product.store ?? this.product.id;
+    this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(spId) }, query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.products = response.data ?? [];

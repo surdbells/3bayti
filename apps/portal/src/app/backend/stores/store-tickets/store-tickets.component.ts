@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
@@ -28,11 +29,13 @@ export class StoreTicketsComponent implements OnInit {
   };
 
   get_data = { id: 0, token: '' };
+  tickets: any[] = [];
 
   constructor(
     private router: Router,
     private crudService: CrudService,
     private route: ActivatedRoute,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -56,9 +59,10 @@ export class StoreTicketsComponent implements OnInit {
 
   get_post() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.get_data, GlobalComponent.baseURL).subscribe({
+    this.adapter.get_v3('GET /admin/tickets', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response?.data) {
+          this.tickets = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
           this.ui_controls.is_loading = false;
         }
       },

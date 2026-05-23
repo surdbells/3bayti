@@ -179,7 +179,9 @@ export class AdminViewOrderComponent implements OnInit {
     this.update_order.order = order;
     this.update_order.status = status;
     this.update_order.email = email;
-    this.crudService.post_request(this.update_order, GlobalComponent.updateOrderStatus).subscribe({
+    const avuOId = this.update_order.order ?? this.update_order.id;
+    const avuItemId = 0; // item-level status: resolved at order fetch in M3.5
+    this.adapter.patch_v3('PATCH /admin/orders/:orderId/items/:itemId/status', { status: this.update_order.status }, { params: { orderId: String(avuOId), itemId: String(avuItemId) } }).subscribe({
       next: (response: any) => {
         this.ui_controls.updating_order = false;
         if (response.response_code === 200 && response.status === 'success') {

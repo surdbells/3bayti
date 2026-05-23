@@ -83,7 +83,7 @@ export class UserProfileComponent implements OnInit {
 
   get_data() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.get_single, GlobalComponent.getUserProfile).subscribe({
+    this.adapter.get_v3('GET /me/profile').subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.user_single = response.data;
@@ -109,7 +109,7 @@ export class UserProfileComponent implements OnInit {
     this.update_single.avatar = this.user_single.avatar;
 
     this.ui_controls.is_saving = true;
-    this.crudService.post_request(this.update_single, GlobalComponent.updateUserProfile).subscribe({
+    this.adapter.patch_v3('PATCH /me/profile', this.update_single).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);

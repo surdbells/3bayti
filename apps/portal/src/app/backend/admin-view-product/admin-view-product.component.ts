@@ -253,7 +253,8 @@ export class AdminViewProductComponent implements OnInit {
     this.update.colors = this.getSelectedIdsCsv();
     this.update.collection = this.selectedItemsForPayload;
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.update, GlobalComponent.updateProduct).subscribe({
+    const avp2Id = this.update.product_id ?? this.update.id;
+    this.adapter.put_v3('PUT /admin/products/:id', this.update, { params: { id: String(avp2Id) } }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_loading = false;
         if (response.response_code === 200 && response.status === 'success') {
@@ -338,7 +339,8 @@ export class AdminViewProductComponent implements OnInit {
   }
 
   get_product_by_id() {
-    this.crudService.post_request(this.single_product, GlobalComponent.getProductById).subscribe({
+    const avp2GId = this.single_product.product ?? this.single_product.id;
+    this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(avp2GId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.update = response.data;

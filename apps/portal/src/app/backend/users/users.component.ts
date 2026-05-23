@@ -195,7 +195,7 @@ export class UsersComponent implements OnInit {
     if (this.register.password !== this.register.confirm_password) { this.error_notification('Password does not match'); return; }
 
     this.ui_controls.is_registering = true;
-    this.crudService.post_request(this.register, GlobalComponent.AdminUserRegister).subscribe({
+    this.adapter.post_v3('POST /admin/users/create', this.register).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);
@@ -239,7 +239,8 @@ export class UsersComponent implements OnInit {
     }
     this.password_c.user = this.single.id;
     this.ui_controls.is_updating_password = true;
-    this.crudService.post_request(this.password_c, GlobalComponent.AdminUserPassword).subscribe({
+    const pwUId = this.password_c.user ?? this.password_c.id;
+    this.adapter.patch_v3('PATCH /admin/users/:id/password', this.password_c, { params: { id: String(pwUId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);

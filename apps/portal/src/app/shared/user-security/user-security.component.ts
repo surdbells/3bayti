@@ -82,7 +82,7 @@ export class UserSecurityComponent implements OnInit {
     }
 
     this.ui_controls.is_saving = true;
-    this.crudService.post_request(this.update_password, GlobalComponent.updateUserPassword).subscribe({
+    this.adapter.patch_v3('PATCH /me/password', this.update_password).subscribe({
       next: (response: any) => {
         if (response?.data || response?.response_code === 200) {
           this.success_notification(response.message);

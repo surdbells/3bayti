@@ -111,7 +111,8 @@ export class ManageStoreComponent implements OnInit {
 
   get_store() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.get_data, GlobalComponent.getSingleStore).subscribe({
+    const msVId = this.get_data.store ?? this.get_data.id;
+    this.adapter.get_v3('GET /admin/vendors/:id', { params: { id: String(msVId) } }).subscribe({
       next: (response: any) => {
         if (response?.data) {
           this.store = response.data;

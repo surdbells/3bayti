@@ -32,6 +32,7 @@ export class CouponWidgetComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
   ) {}
 
   ngOnInit(): void {
@@ -44,7 +45,7 @@ export class CouponWidgetComponent implements OnInit {
     const base = { token: this.user_session.token, id: this.user_session.id };
 
     // Overview
-    this.crudService.post_request({ ...base, action: 'overview' }, GlobalComponent.couponAnalytics).subscribe({
+    this.adapter.get_v3('GET /vendor/coupons/:id/analytics', { params: { id: String(0) }, query: { period: 'overview' } }).subscribe({
       next: (r: any) => {
         if (r.response_code === 200) {
           this.stats = r.data;
@@ -54,7 +55,7 @@ export class CouponWidgetComponent implements OnInit {
     });
 
     // Top 3
-    this.crudService.post_request({ ...base, action: 'top_coupons', sort_by: 'uses', limit: 3 }, GlobalComponent.couponAnalytics).subscribe({
+    this.adapter.get_v3('GET /vendor/coupons/:id/analytics', { params: { id: String(0) }, query: { period: 'overview' } }).subscribe({
       next: (r: any) => {
         if (r.response_code === 200) this.top_coupons = r.data;
       },

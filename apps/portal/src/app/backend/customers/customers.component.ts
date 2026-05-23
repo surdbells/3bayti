@@ -73,7 +73,7 @@ export class CustomersComponent implements OnInit {
   get_customer() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_data, GlobalComponent.getCustomers).subscribe({
+    this.adapter.get_v3('GET /admin/customers', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response?.data) {
           this.customers = Array.isArray(response.data) ? response.data : response.data?.items ?? [];

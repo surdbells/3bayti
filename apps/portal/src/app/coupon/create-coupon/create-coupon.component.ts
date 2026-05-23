@@ -101,7 +101,7 @@ export class CreateCouponComponent implements OnInit {
 
     if (this.user_session.is_vendor) {
       const payload = { token: this.user_session.token, id: this.user_session.id, store: this.user_session.id };
-      this.crudService.post_request(payload, GlobalComponent.getProduct).subscribe({
+      this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(payload.id ?? 0) }, query: { limit: 100 } }).subscribe({
         next: (r: any) => {
           if (r.response_code === 200 && r.status === 'success') {
             this.products = (r.data || []).map((p: any) => ({ id: p.id, name: p.name }));

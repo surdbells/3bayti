@@ -87,7 +87,7 @@ export class StoresComponent implements OnInit {
   get_store() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_data, GlobalComponent.getStores).subscribe({
+    this.adapter.get_v3('GET /admin/vendors', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response?.data) {
           this.stores = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
@@ -122,7 +122,8 @@ export class StoresComponent implements OnInit {
   activate_store(store: number, _name: string) {
     this.ui_controls.is_loading = true;
     this.activate.store = store;
-    this.crudService.post_request(this.activate, GlobalComponent.activateStore).subscribe({
+    const actVId = this.activate.store ?? this.activate.id;
+    this.adapter.post_v3('POST /admin/vendors/:id/approve', {}, { params: { id: String(actVId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);
@@ -150,7 +151,8 @@ export class StoresComponent implements OnInit {
   deactivate_store(store: number, _name: string) {
     this.ui_controls.is_loading = true;
     this.deactivate.store = store;
-    this.crudService.post_request(this.deactivate, GlobalComponent.deactivateStore).subscribe({
+    const deactVId = this.deactivate.store ?? this.deactivate.id;
+    this.adapter.post_v3('POST /admin/vendors/:id/suspend', {}, { params: { id: String(deactVId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);
@@ -178,7 +180,8 @@ export class StoresComponent implements OnInit {
   delete_store(store: number, _name: string) {
     this.ui_controls.is_loading = true;
     this.delete.store = store;
-    this.crudService.post_request(this.delete, GlobalComponent.deleteStore).subscribe({
+    const delVId = this.delete.store ?? this.delete.id;
+    this.adapter.delete_v3('DELETE /admin/vendors/:id', { params: { id: String(delVId) } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);

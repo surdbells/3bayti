@@ -120,7 +120,8 @@ export class ProcessingComponent implements OnInit {
   get_processing_range() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.crudService.post_request(this.get_processing_r, GlobalComponent.processing).subscribe({
+    const procStatus = (this.get_processing_r as any).status ?? '';
+    this.adapter.get_v3('GET /admin/orders', { query: { status: procStatus, limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.transaction = response.data;
