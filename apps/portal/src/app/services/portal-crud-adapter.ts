@@ -128,6 +128,13 @@ export class PortalCrudAdapter {
     }
   }
 
+  /** Returns the v3 API base URL (no trailing slash). Used by
+   *  ImageUploadService for direct multipart POSTs that can't go
+   *  through the standard JSON adapter. */
+  getV3BaseUrl(): string {
+    return BASES.new;
+  }
+
   /** Convenience: decode the full session object (same as per-component
    *  `GlobalComponent.decodeBase64(sessionStorage.getItem('SESSION'))`). */
   getSession(): any {

@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
+import { ImageUploadService } from '../../services/image-upload.service';
 import { HotToastService } from '@ngneat/hot-toast';
 import { GlobalComponent } from '../../global-component';
 import { Category } from '../../class/category';
@@ -198,6 +199,7 @@ export class CreateProductComponent implements OnInit {
     private router: Router,
     private crudService: CrudService,
     private adapter: PortalCrudAdapter,
+    private imageUpload: ImageUploadService,
     private toast: HotToastService,
   ) {}
 
@@ -332,17 +334,12 @@ export class CreateProductComponent implements OnInit {
     }
     try {
       const compressed = await imageCompression(first.file, {
-        maxSizeMB: 3,
-        maxWidthOrHeight: 1920,
-        useWebWorker: true,
+        maxSizeMB: 3, maxWidthOrHeight: 1920, useWebWorker: true,
       });
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        this.create.image_1 = reader.result as string;
-      };
-      reader.readAsDataURL(compressed);
+      const result = await this.imageUpload.upload(compressed, 'product');
+      this.create.image_1 = result.url;
     } catch (error) {
-      this.toast.error('Image compression failed: ' + error);
+      this.toast.error('Image upload failed: ' + error);
     }
   }
 
@@ -388,14 +385,14 @@ export class CreateProductComponent implements OnInit {
             maxWidthOrHeight: 1920,
             useWebWorker: true,
           });
-          const dataUrl = await this.fileToDataURL(compressed);
+          const uploaded = await this.imageUpload.upload(compressed, 'product');
           return {
             file: compressed,
             name: compressed.name,
             type: compressed.type,
             size: compressed.size,
-            dataUrl,
-            base64: dataUrl.split(',')[1] ?? '',
+            dataUrl: uploaded.url,
+            base64: '',
           } as EncodedFile;
         }),
       );

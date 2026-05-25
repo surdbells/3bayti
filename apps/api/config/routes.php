@@ -105,6 +105,19 @@ return function (App $app): void {
     });
 
     // -------------------------------------------------------------------
+    // /v3/upload — authenticated image upload (product images, vendor logo/cover)
+    // One endpoint; context query param selects the storage path:
+    //   ?context=product       → products/{vendor-slug}/{ulid}.{ext}
+    //   ?context=vendor_logo   → vendors/{vendor-slug}/logo.{ext}
+    //   ?context=vendor_cover  → vendors/{vendor-slug}/cover.{ext}
+    // Returns {storage_path, url, mime_type, size_bytes}.
+    // Apache serves var/uploads/ under /uploads/ — the URL in the
+    // response is the canonical origin URL; CF image transforms are
+    // applied by the front-end wrapper around that URL.
+    $app->post('/v3/upload',
+        \Bayti\Api\Http\Controllers\Media\UploadImageController::class,
+    )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
+
     // /v3/me/* — current-user-scoped account management
     //
     // Wired up in M1.7. All routes JWT-protected via AuthMiddleware.

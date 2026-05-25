@@ -716,6 +716,12 @@ return [
         return new \League\Flysystem\Filesystem($adapter);
     },
 
+    // Image upload service — product images + vendor logo/cover (Phase 1)
+    // Wraps FilesystemOperator with path-scheme helpers and mime/size
+    // validation. Swap to R2: change the FilesystemOperator binding above
+    // (AwsS3V3Adapter); this binding needs no change.
+    \Bayti\Api\Domain\Media\ImageStorageService::class => \DI\autowire(),
+
     // -------------------------------------------------------------------
     // Cache / shared state — Redis in production, in-memory in tests
     // -------------------------------------------------------------------

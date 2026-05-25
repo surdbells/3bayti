@@ -475,6 +475,28 @@ Edit it (aaPanel → Website → `api-v3.3bayti.ae` → Config, or `nano`):
         SetHandler "proxy:unix:/tmp/php-cgi-83.sock|fcgi://localhost"
     </FilesMatch>
 
+    # Static file serving for uploaded images.
+    # Flysystem writes to apps/api/var/uploads/; Apache serves that
+    # directory under /uploads/ as a public static path.
+    # Cloudflare image transforms work by wrapping this URL:
+    #   /cdn-cgi/image/width=400,quality=80,format=auto/uploads/products/...
+    # The PHP front-controller is NOT involved for /uploads/ requests —
+    # Apache serves the files directly, keeping latency low and PHP-FPM
+    # load off the image hot path.
+    Alias /uploads /www/wwwroot/3bayti/apps/api/var/uploads
+
+    <Directory /www/wwwroot/3bayti/apps/api/var/uploads>
+        Options -Indexes
+        AllowOverride None
+        Require all granted
+        # Long cache for hashed ULID filenames — they never change.
+        # Stable filenames (logo.jpg, cover.jpg) get a shorter TTL so
+        # re-uploads propagate within 5 minutes via CF cache purge.
+        <FilesMatch "\.(jpg|jpeg|png|webp|gif)$">
+            Header always set Cache-Control "public, max-age=31536000, immutable"
+        </FilesMatch>
+    </Directory>
+
     ErrorLog  /www/wwwlogs/api-v3.3bayti.ae.error.log
     CustomLog /www/wwwlogs/api-v3.3bayti.ae.access.log combined
 </VirtualHost>
