@@ -13,6 +13,8 @@ Estimated time: 90–120 minutes end-to-end on a fresh droplet.
 | Service | URL / socket |
 |---|---|
 | v3 API | `https://api-v3.3bayti.ae` |
+| Image uploads (Flysystem local) | `https://api-v3.3bayti.ae/uploads/` (Apache Alias → `var/uploads/`) |
+| Cloudflare image transforms | `https://api-v3.3bayti.ae/cdn-cgi/image/width=480,.../uploads/...` |
 | aaPanel admin | `http://<droplet-ip>:8888` |
 | PostgreSQL 16 | `127.0.0.1:5432` |
 | Redis 7 | `127.0.0.1:6379` |
@@ -292,6 +294,11 @@ APP_VERSION=initial
 APP_URL=https://api-v3.3bayti.ae
 WEB_APP_URL=https://3bayti.ae
 APP_SECRET=<64-char-random-string>
+
+# Public base URL for uploaded files.
+# Apache serves apps/api/var/uploads/ under /uploads/ (Step 14 vhost Alias).
+# The front-end wraps this with /cdn-cgi/image/... for CF image transforms.
+UPLOADS_PUBLIC_URL=https://api-v3.3bayti.ae/uploads
 
 DB_DRIVER=pdo_pgsql
 DB_HOST=127.0.0.1
@@ -728,6 +735,145 @@ Then `ionic serve` will hit the new server and CORS will be allowed.
 - [ ] Redis is bound to `127.0.0.1` only: `grep bind /etc/redis/redis.conf`
 - [ ] aaPanel port 8888 is firewalled to your IP only
 
+## 23. Migrate legacy product images to Flysystem
+
+This copies all product images and vendor logos from the legacy server
+into local Flysystem storage (`var/uploads/`) and updates the URL columns
+in PostgreSQL so Cloudflare image transforms start working.
+
+**Run this after Step 22 passes.** The migration is idempotent — any URL
+already starting with `UPLOADS_PUBLIC_URL` is skipped, so re-running is
+always safe.
+
+### 23a. Verify var/uploads/ is writable and Apache serves it
+
+```bash
+# Confirm the Alias is working (should return 404, not 403 or 500)
+curl -I https://api-v3.3bayti.ae/uploads/test
+# Expected: HTTP/2 404 (directory exists, file doesn't — correct)
+
+# Confirm the directory exists and is owned by www
+ls -la /www/wwwroot/3bayti/apps/api/var/uploads/
+# If it doesn't exist yet, Flysystem creates it on first write — that's fine.
+```
+
+### 23b. (Option A) Fetch images from the legacy server over HTTP
+
+Use this if the old server is reachable at `https://api.3bayti.ae`. The
+migration script fetches each image via HTTP and writes it to Flysystem.
+
+```bash
+cd /www/wwwroot/3bayti/apps/api
+
+# Dry-run first — see what would happen without writing anything
+php bin/migrate-from-legacy/migrate-images.php --dry-run
+
+# Run the full migration
+php bin/migrate-from-legacy/migrate-images.php \
+  2>&1 | tee /tmp/image-migration-$(date +%Y%m%d-%H%M).log
+```
+
+### 23b. (Option B) Copy directly from legacy disk (faster, no HTTP)
+
+Use this if you can read the old server's file tree on the same machine
+(e.g. mounted NFS, rsync copy, or both servers share a volume).
+
+```bash
+# First, rsync the legacy image directory to the new server
+rsync -avz --progress \
+  root@<old-server-ip>:/www/wwwroot/legacy/vendors/products/ \
+  /tmp/legacy-product-images/
+
+# Then run the migration pointing at the local copy
+php bin/migrate-from-legacy/migrate-images.php \
+  --ssh-copy=/tmp/legacy-product-images \
+  2>&1 | tee /tmp/image-migration-$(date +%Y%m%d-%H%M).log
+```
+
+### 23c. Verify migration
+
+```bash
+# Check how many products still have legacy URLs
+psql -U bayti_v3 -h 127.0.0.1 -d bayti_v3 -c "
+  SELECT COUNT(*) AS legacy_product_images_remaining
+  FROM products
+  WHERE primary_image_url LIKE 'https://api.3bayti.ae/%';
+"
+# Target: 0
+
+# Check vendor logos
+psql -U bayti_v3 -h 127.0.0.1 -d bayti_v3 -c "
+  SELECT COUNT(*) AS legacy_vendor_logos_remaining
+  FROM vendors
+  WHERE logo_url LIKE 'https://api.3bayti.ae/%'
+     OR legacy_logo_data_url IS NOT NULL;
+"
+# Target: 0
+
+# Test a migrated image URL directly
+curl -I https://api-v3.3bayti.ae/uploads/products/<vendor-slug>/<file>.jpg
+# Expected: HTTP/2 200, content-type: image/jpeg
+
+# Test Cloudflare image transform on the same URL
+curl -I "https://api-v3.3bayti.ae/cdn-cgi/image/width=480,quality=82,fit=cover,format=auto/https://api-v3.3bayti.ae/uploads/products/<vendor-slug>/<file>.jpg"
+# Expected: HTTP/2 200, content-type: image/webp (or avif)
+# CF-Cache-Status: HIT (on second request — first request populates the cache)
+```
+
+### 23d. Individual retry flags
+
+```bash
+# Retry a single product (useful for testing)
+php bin/migrate-from-legacy/migrate-images.php --product-id=123
+
+# Retry a single vendor
+php bin/migrate-from-legacy/migrate-images.php --vendor-id=5
+
+# Migrate only vendor logos (skip products)
+php bin/migrate-from-legacy/migrate-images.php --vendors-only
+
+# Cap total files processed (useful for incremental runs)
+php bin/migrate-from-legacy/migrate-images.php --limit=500
+```
+
+### 23e. Set var/uploads/ permissions after migration
+
+```bash
+# Ensure www can write new uploads (product images via portal)
+chown -R www:www /www/wwwroot/3bayti/apps/api/var/uploads
+chmod -R 755 /www/wwwroot/3bayti/apps/api/var/uploads
+```
+
+---
+
+## 24. Cloudflare image transform smoke test
+
+Confirm Cloudflare is actually resizing images (not just passing through).
+
+```bash
+# Pick any migrated product image URL from the DB:
+psql -U bayti_v3 -h 127.0.0.1 -d bayti_v3 -c \
+  "SELECT primary_image_url FROM products WHERE primary_image_url LIKE '%/uploads/%' LIMIT 1;"
+
+# Test the transform — check the content-type and CF headers
+curl -sI \
+  "https://api-v3.3bayti.ae/cdn-cgi/image/width=480,quality=82,fit=cover,format=auto/<IMAGE_URL_FROM_ABOVE>" \
+  -H "Accept: image/avif,image/webp,*/*" \
+  | grep -iE "content-type|content-length|cf-cache|cf-ray"
+
+# Expected:
+#   content-type: image/webp       (or image/avif if browser supports it)
+#   cf-cache-status: MISS          (first request — CF is fetching from origin)
+#
+# Run the same curl again:
+#   cf-cache-status: HIT           (served from CF edge — zero origin load)
+```
+
+> **If you see `content-type: image/jpeg` and no `cf-cache-status`:** the
+> domain is not Cloudflare-proxied (gray cloud). Switch `api-v3.3bayti.ae`
+> to orange cloud in Cloudflare DNS. TLS must already be working (Step 17)
+> before enabling the proxy.
+
 ---
 
 ## Troubleshooting quick reference
@@ -744,3 +890,11 @@ Then `ionic serve` will hit the new server and CORS will be allowed.
 | Let's Encrypt fails | DNS still pointing at old server | Gray-cloud the Cloudflare record, wait TTL |
 | Deploy job: Permission denied (publickey) | Deploy key not in authorized_keys | Step 7 |
 | Deploy script not found | Script not created or wrong path | Step 18 |
+| `POST /v3/upload` returns 403 | `open_basedir` blocking `var/uploads/` write | Confirm `.user.ini` open_basedir includes full `apps/api/` path (Step 12) |
+| `POST /v3/upload` returns 500 | `var/uploads/` not writable by www | `chown -R www:www var/uploads && chmod -R 755 var/uploads` |
+| `/uploads/` returns 403 Forbidden | Apache dir listing disabled | Normal — listing off by design; individual file paths work |
+| `/uploads/` returns 404 or 500 | Apache Alias not active | Verify Alias block in vhost (Step 14) and `a2enmod headers; apachectl graceful` |
+| CF transform returns JPEG not WebP | Domain not CF-proxied (gray cloud) | Switch `api-v3.3bayti.ae` to orange cloud in Cloudflare DNS |
+| CF transform returns Cloudflare 530 error | Image Resizing not enabled | Cloudflare dashboard → Speed → Optimization → Enable Image Resizing |
+| Image migration: HTTP fetch failed | Old server unreachable from new IP | Use `--ssh-copy=` with rsync'd directory (Step 23b Option B) |
+| Image migration: all rows skipped | `UPLOADS_PUBLIC_URL` wrong or unset | Set `UPLOADS_PUBLIC_URL=https://api-v3.3bayti.ae/uploads` in `.env` |
