@@ -74,7 +74,7 @@
                 [class.loaded]="imageLoaded['latest-' + latest_product.product_id]"
                 (load)="onImageLoad('latest-' + latest_product.product_id)"
                 (error)="onImageError('latest-' + latest_product.product_id)"
-                [src]="latest_product.image_1"
+                [src]="cfImage(latest_product.image_1, 'card')"
                 alt="{{latest_product.product_name}}" />
             </div>
             <div (click)="open_product(latest_product.product_id, latest_product.product_name)" class="m6d-info">
@@ -112,7 +112,7 @@
                     [class.loaded]="imageLoaded['cat-' + product.product_id]"
                     (load)="onImageLoad('cat-' + product.product_id)"
                     (error)="onImageError('cat-' + product.product_id)"
-                    [src]="product.image_1"
+                    [src]="cfImage(product.image_1, 'card')"
                     alt="{{product.product_name}}" />
                 </div>
                 <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">

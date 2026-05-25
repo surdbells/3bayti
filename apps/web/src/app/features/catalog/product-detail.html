@@ -45,7 +45,7 @@
           <div class="pdp-main-image">
             @if (activeImage(); as img) {
               <img
-                [src]="img.url"
+                [src]="img.url | cfImage:'detail'"
                 [alt]="activeImageAlt()"
                 [width]="img.width || 900"
                 [height]="img.height || 1200"
@@ -84,7 +84,7 @@
                   (keydown)="onThumbnailKeydown($event, i)"
                 >
                   <img
-                    [src]="img.url"
+                    [src]="img.url | cfImage:'detail'"
                     [alt]="img.alt || (p.name + ' image ' + (i + 1))"
                     loading="lazy"
                     decoding="async"

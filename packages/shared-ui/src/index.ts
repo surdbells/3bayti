@@ -18,5 +18,12 @@
  * sub-path like `@3bayti/shared-ui/angular`.
  */
 
+// Cloudflare image transforms — framework-agnostic utility + presets
+export { cfImage, CF_PRESETS } from './image-transform';
+export type { CfImageOptions } from './image-transform';
+
+// Angular pipe — import CfImagePipe in component `imports` array
+export { CfImagePipe } from './angular/cf-image.pipe';
+export type { CfPresetName } from './angular/cf-image.pipe';
 export {};
 // CI trigger marker — touched 2026-05-06 to provoke initial workflow run.

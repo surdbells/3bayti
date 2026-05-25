@@ -62,7 +62,7 @@
                 <img
                   loading="lazy"
                   decoding="async"
-                  [src]="product.image_1"
+                  [src]="cfImage(product.image_1, 'card')"
                   [alt]="product.product_name"
                   [class.loaded]="imageLoaded[product.product_id]"
                   (load)="onImageLoad(product.product_id)"

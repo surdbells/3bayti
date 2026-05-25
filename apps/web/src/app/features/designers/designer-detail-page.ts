@@ -12,6 +12,7 @@ import { ProductCardComponent } from '../catalog/product-card';
 import { DesignerService, DESIGNER_PAGE_SIZE } from '../catalog/designer.service';
 import type { Designer } from '../catalog/designer.model';
 import type { Product } from '../catalog/product.model';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * /designer/:slug — a single designer's page.
@@ -42,7 +43,7 @@ import type { Product } from '../catalog/product.model';
 @Component({
   selector: 'app-designer-detail',
   standalone: true,
-  imports: [NgIf, NgFor, RouterLink, TranslatePipe, ProductCardComponent],
+  imports: [CfImagePipe, NgIf, NgFor, RouterLink, TranslatePipe, ProductCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="designer-detail" data-testid="designer-detail-page">
@@ -52,7 +53,7 @@ import type { Product } from '../catalog/product.model';
           <div class="designer-detail__cover" aria-hidden="true">
             <img
               *ngIf="(designer()!.cover_image_url ?? '') !== ''; else coverBlank"
-              [src]="designer()!.cover_image_url"
+              [src]="designer()!.cover_image_url | cfImage:'cover'"
               alt=""
             />
             <ng-template #coverBlank>

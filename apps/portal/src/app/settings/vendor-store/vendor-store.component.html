@@ -107,7 +107,7 @@
             <div class="ax-card ax-p-3">
               <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Cover image</div>
               <img
-                [src]="store_single.store_cover"
+                [src]="store_single.store_cover | cfImage:'cover'"
                 alt="Store cover"
                 style="width: 100%; aspect-ratio: 800 / 428; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
               <input

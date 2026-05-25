@@ -18,6 +18,7 @@ import { AddressService } from '../../core/addresses';
 import type { Address } from '../../core/addresses';
 import { ToastService } from '../../shared/forms';
 import { CurrencyService } from '../../core/currency/currency.service';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * /checkout/review — step 2 of 3.
@@ -76,7 +77,7 @@ import { CurrencyService } from '../../core/currency/currency.service';
 @Component({
   selector: 'app-checkout-review',
   standalone: true,
-  imports: [NgIf, NgFor, ReactiveFormsModule, TranslatePipe, CheckoutStepperComponent],
+  imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, TranslatePipe, CheckoutStepperComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="checkout-page" data-testid="checkout-review-page">
@@ -131,7 +132,7 @@ import { CurrencyService } from '../../core/currency/currency.service';
               <div class="review-item__thumb" aria-hidden="true">
                 <img
                   *ngIf="item.product_image !== ''; else thumbPlaceholder"
-                  [src]="item.product_image"
+                  [src]="item.product_image | cfImage:'thumb'"
                   alt=""
                   loading="lazy"
                 />

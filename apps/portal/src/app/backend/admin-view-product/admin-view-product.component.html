@@ -80,7 +80,7 @@
                   *ngFor="let src of update.images; let i = index"
                   style="position: relative;">
                   <img
-                    [src]="getImageUrl(src)"
+                    [src]="getImageUrl(src) | cfImage:'card'"
                     alt=""
                     style="width: 100%; aspect-ratio: 1 / 1; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle); display: block;" />
                 </div>
@@ -309,7 +309,7 @@
             <app-ax-accordion-item title="Featured image *">
               <div class="ax-flex ax-flex-col ax-gap-3">
                 <img
-                  [src]="getImageUrl(update.image_1)"
+                  [src]="getImageUrl(update.image_1) | cfImage:'card'"
                   alt="Featured preview"
                   style="width: 100%; height: 220px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
                 <div class="ax-form-field">

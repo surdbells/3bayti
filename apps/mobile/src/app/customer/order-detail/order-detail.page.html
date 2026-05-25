@@ -69,7 +69,7 @@
               tabindex="0"
             >
               @if (item.product_image) {
-                <img class="item-img" [src]="item.product_image" [alt]="item.product_name" />
+                <img class="item-img" [src]="cfImage(item.product_image, 'thumb')" [alt]="item.product_name" />
               } @else {
                 <div class="item-img item-img--fallback">
                   <span>{{ item.product_name.charAt(0) | uppercase }}</span>

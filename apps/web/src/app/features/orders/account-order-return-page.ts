@@ -30,6 +30,7 @@ import type {
   SubmitReturnInput,
 } from '../../core/orders';
 import { ToastService, mapApiErrors } from '../../shared/forms';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * /account/orders/:id/return — submit a return request.
@@ -71,7 +72,7 @@ import { ToastService, mapApiErrors } from '../../shared/forms';
 @Component({
   selector: 'app-account-order-return',
   standalone: true,
-  imports: [NgIf, NgFor, RouterLink, ReactiveFormsModule, TranslatePipe],
+  imports: [CfImagePipe, NgIf, NgFor, RouterLink, ReactiveFormsModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="orders-page" data-testid="order-return-page">
@@ -120,7 +121,7 @@ import { ToastService, mapApiErrors } from '../../shared/forms';
                     <div class="return-item__thumb" aria-hidden="true">
                       <img
                         *ngIf="(item.product_image ?? '') !== ''; else thumbBlank"
-                        [src]="item.product_image"
+                        [src]="item.product_image | cfImage:'thumb'"
                         alt=""
                         loading="lazy"
                       />

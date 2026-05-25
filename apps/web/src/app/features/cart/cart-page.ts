@@ -14,6 +14,7 @@ import { CartService } from '../../core/cart';
 import type { Cart, CartItem, CartQuoteResponse } from '../../core/cart';
 import { ToastService } from '../../shared/forms';
 import { AuthService } from '../../core/auth/auth.service';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * Cart page — `/cart`.
@@ -58,7 +59,7 @@ import { AuthService } from '../../core/auth/auth.service';
 @Component({
   selector: 'app-cart-page',
   standalone: true,
-  imports: [NgIf, NgFor, ReactiveFormsModule, RouterLink, TranslatePipe],
+  imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, RouterLink, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="cart-page" data-testid="cart-page">
@@ -85,7 +86,7 @@ import { AuthService } from '../../core/auth/auth.service';
                   <div class="cart-page__item-thumb">
                     <img
                       *ngIf="item.product_image !== ''; else thumbPlaceholder"
-                      [src]="item.product_image"
+                      [src]="item.product_image | cfImage:'thumb'"
                       [alt]="''"
                       loading="lazy"
                     />

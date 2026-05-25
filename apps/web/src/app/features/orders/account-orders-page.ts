@@ -11,6 +11,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { OrderService, ORDER_STATUS_LABELS } from '../../core/orders';
 import type { OrderListItem } from '../../core/orders';
 import { ToastService } from '../../shared/forms';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * /account/orders — paginated order history.
@@ -47,7 +48,7 @@ import { ToastService } from '../../shared/forms';
 @Component({
   selector: 'app-account-orders',
   standalone: true,
-  imports: [NgIf, NgFor, DatePipe, RouterLink, TranslatePipe],
+  imports: [CfImagePipe, NgIf, NgFor, DatePipe, RouterLink, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="orders-page" data-testid="orders-page">
@@ -96,7 +97,7 @@ import { ToastService } from '../../shared/forms';
                     <div class="order-card__thumb" aria-hidden="true">
                       <img
                         *ngIf="(item.product_image ?? '') !== ''; else thumbBlank"
-                        [src]="item.product_image"
+                        [src]="item.product_image | cfImage:'thumb'"
                         alt=""
                         loading="lazy"
                       />

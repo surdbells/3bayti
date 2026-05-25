@@ -28,6 +28,7 @@ import {Products} from "../../class/products";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { cfImage } from '../shared/cf-image';
 // M3.1.7-I: widen OrderStatus to include v3 backend's full enum so
 // the cancel button can show conditionally on pending_payment. The
 // FilterStatus chips still reflect the customer-friendly subset.
@@ -86,6 +87,8 @@ interface Order {
   ]
 })
 export class MyOrdersPage implements OnInit {
+  /** Expose cfImage for template usage. */
+  readonly cfImage = cfImage;
   orders: Order[] = [];
   // filter chips
   statuses: FilterStatus[] = ['all', 'processing', 'shipping', 'delivered'];

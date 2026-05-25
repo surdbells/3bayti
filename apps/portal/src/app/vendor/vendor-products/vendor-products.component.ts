@@ -18,6 +18,7 @@ import { AxPaginationComponent } from '../../shared/data';
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { CfImagePipe } from '../../shared/cf-image.pipe';
 // ── Color map for preview drawer ─────────────────────────────────
 const COLOR_HEX_MAP: Record<string, string> = {
   'black': '#000000', 'white': '#FFFFFF', 'off-white': '#FAF9F6',
@@ -64,7 +65,7 @@ interface ProductListItem {
 @Component({
   selector: 'app-vendor-products',
   standalone: true,
-  imports: [
+  imports: [CfImagePipe, 
     VendorShellComponent,
     AdminShellComponent,
     CommonModule,

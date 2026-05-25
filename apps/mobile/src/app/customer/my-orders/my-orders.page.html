@@ -41,7 +41,7 @@
             @for (item of order.items; track item) {
               <div (click)="open_vendor(item.store, item.product_name)" class="product-card">
                 <div class="product-image-wrapper">
-                  <img loading="lazy" [src]="item.product_image" alt="{{ item.product_name }}" class="product-image" />
+                  <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="{{ item.product_name }}" class="product-image" />
                   <span class="item-status-pill" [ngClass]="'item-status-pill--' + item.status">{{ item.status | uppercase }}</span>
                 </div>
                 <h5 class="product-name">{{ item.product_name }}</h5>

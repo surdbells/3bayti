@@ -17,6 +17,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { CartService, CartDrawerService } from '../../core/cart';
 import type { CartItem } from '../../core/cart';
 import { ToastService } from '../../shared/forms';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * CartDrawerComponent — slide-out panel showing the user's cart.
@@ -51,7 +52,7 @@ import { ToastService } from '../../shared/forms';
 @Component({
   selector: 'app-cart-drawer',
   standalone: true,
-  imports: [NgIf, NgFor, RouterLink, TranslatePipe],
+  imports: [CfImagePipe, NgIf, NgFor, RouterLink, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ng-container *ngIf="isBrowser">
@@ -99,7 +100,7 @@ import { ToastService } from '../../shared/forms';
                 <div class="cart-drawer__item-thumb" aria-hidden="true">
                   <img
                     *ngIf="item.product_image !== ''; else thumbPlaceholder"
-                    [src]="item.product_image"
+                    [src]="item.product_image | cfImage:'thumb'"
                     [alt]="''"
                     loading="lazy"
                   />

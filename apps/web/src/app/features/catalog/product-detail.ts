@@ -33,6 +33,7 @@ import {
 import { ProductStripComponent } from '../../shared/ui/product-strip';
 import type { Money, Product, ProductDetail } from './product.model';
 import { RecommendationsService } from './recommendations.service';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * Product detail page (PDP) — `/product/:slug`.
@@ -71,7 +72,7 @@ import { RecommendationsService } from './recommendations.service';
 @Component({
   selector: 'app-product-detail',
   standalone: true,
-  imports: [
+  imports: [CfImagePipe, 
     ContainerComponent,
     HeadingComponent,
     TextComponent,

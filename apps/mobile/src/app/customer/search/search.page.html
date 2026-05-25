@@ -48,7 +48,7 @@
                     [class.loaded]="imageLoaded[product.product_id]"
                     (load)="onImageLoad(product.product_id)"
                     (error)="onImageError(product.product_id)"
-                    [src]="product.product_image"
+                    [src]="cfImage(product.product_image, 'card')"
                     alt="{{product.product_name}}" />
                   <button (click)="startAddToCloset(product.product_id, product.product_name, product.product_image); $event.stopPropagation()" class="m6d-like" type="button" aria-label="Add to closet">
                     <ax-icon name="heart-plus" />

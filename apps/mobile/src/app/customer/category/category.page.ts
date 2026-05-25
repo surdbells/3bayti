@@ -35,6 +35,7 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { I18nService } from '../../i18n.service';
+import { cfImage } from '../shared/cf-image';
 @Component({
   selector: 'app-category',
   templateUrl: './category.page.html',
@@ -59,6 +60,8 @@ import { I18nService } from '../../i18n.service';
     TranslatePipe, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent]
 })
 export class CategoryPage implements OnInit, OnDestroy {
+  /** Expose cfImage for template usage. */
+  readonly cfImage = cfImage;
   category_listing: Products[] = [];
   categories: Labels[] = [];
   isOnline = true;

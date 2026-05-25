@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { Money, Product } from './product.model';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { AuthService } from '../../core/auth/auth.service';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * ProductCard — single card in any product display surface.
@@ -45,6 +46,7 @@ import { AuthService } from '../../core/auth/auth.service';
 @Component({
   selector: 'ui-product-card',
   standalone: true,
+  imports: [CfImagePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (product) {
@@ -53,7 +55,7 @@ import { AuthService } from '../../core/auth/auth.service';
           <div class="product-card__image-wrap">
             @if (product.primary_image?.url) {
               <img
-                [src]="product.primary_image!.url"
+                [src]="product.primary_image!.url | cfImage:'card'"
                 [alt]="imageAlt()"
                 loading="lazy"
                 decoding="async"
@@ -141,7 +143,7 @@ import { AuthService } from '../../core/auth/auth.service';
         <div class="product-card" [class.is-out-of-stock]="!product.in_stock">
           <div class="product-card__image-wrap">
             @if (product.primary_image?.url) {
-              <img [src]="product.primary_image!.url" [alt]="imageAlt()" loading="lazy" decoding="async" />
+              <img [src]="product.primary_image!.url | cfImage:'card'" [alt]="imageAlt()" loading="lazy" decoding="async" />
             } @else {
               <div class="product-card__fallback" aria-hidden="true">
                 <span>{{ initial() }}</span>

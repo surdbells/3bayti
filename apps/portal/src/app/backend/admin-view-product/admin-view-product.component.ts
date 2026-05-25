@@ -14,6 +14,7 @@ import { Labels } from '../../class/labels';
 import { AxRichEditorComponent } from '../../shared/rich/ax-rich-editor.component';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { CfImagePipe } from '../../shared/cf-image.pipe';
 import {
   AxMultiselectComponent,
   AxMultiselectOption,
@@ -32,7 +33,7 @@ interface ColorOption {
 @Component({
   selector: 'app-admin-view-product',
   standalone: true,
-  imports: [
+  imports: [CfImagePipe, 
     AdminShellComponent,
     CommonModule,
     FormsModule,

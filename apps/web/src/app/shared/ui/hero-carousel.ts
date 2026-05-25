@@ -13,6 +13,7 @@ import { isPlatformBrowser } from '@angular/common';
 
 import { SkeletonShimmerComponent } from './skeleton-shimmer';
 import type { Product } from '../../features/catalog/product.model';
+import { CfImagePipe } from './cf-image.pipe';
 
 /**
  * HeroCarouselComponent — coverflow product carousel for the home-page
@@ -64,7 +65,7 @@ import type { Product } from '../../features/catalog/product.model';
 @Component({
   selector: 'ui-hero-carousel',
   standalone: true,
-  imports: [SkeletonShimmerComponent],
+  imports: [CfImagePipe, SkeletonShimmerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="hero-carousel" role="region" aria-label="Featured products">
@@ -107,7 +108,7 @@ import type { Product } from '../../features/catalog/product.model';
                 >
                   @if (product.primary_image; as img) {
                     <img
-                      [src]="img.url"
+                      [src]="img.url | cfImage:'hero'"
                       [alt]="img.alt ?? product.name"
                       class="hero-carousel__image"
                       [attr.loading]="i === 0 ? 'eager' : 'lazy'"
@@ -154,7 +155,7 @@ import type { Product } from '../../features/catalog/product.model';
                 >
                   @if (product.primary_image; as img) {
                     <img
-                      [src]="img.url"
+                      [src]="img.url | cfImage:'hero'"
                       [alt]="''"
                       class="hero-carousel__image"
                       loading="lazy"

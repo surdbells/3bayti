@@ -109,7 +109,7 @@
                 [class.loaded]="imageLoaded['best-' + best_seller.product_id]"
                 (load)="onImageLoad('best-' + best_seller.product_id)"
                 (error)="onImageError('best-' + best_seller.product_id)"
-                [src]="best_seller.image_1"
+                [src]="cfImage(best_seller.image_1, 'card')"
                 alt="{{best_seller.product_name}}" />
               <button (click)="startAddToCloset(best_seller.product_id, best_seller.product_name, best_seller.image_1)" class="m6d-like" type="button" aria-label="Add to closet">
                 <ax-icon name="heart-plus" />
@@ -152,7 +152,7 @@
                 [class.loaded]="imageLoaded['new-' + new_arrival.product_id]"
                 (load)="onImageLoad('new-' + new_arrival.product_id)"
                 (error)="onImageError('new-' + new_arrival.product_id)"
-                [src]="new_arrival.image_1"
+                [src]="cfImage(new_arrival.image_1, 'card')"
                 alt="{{new_arrival.product_name}}" />
               <button (click)="startAddToCloset(new_arrival.product_id, new_arrival.product_name, new_arrival.image_1)" class="m6d-like" type="button" aria-label="Add to closet">
                 <ax-icon name="heart-plus" />
@@ -189,7 +189,7 @@
                 [class.loaded]="imageLoaded['vendor-hero-' + vendor_feature.store_id]"
                 (load)="onImageLoad('vendor-hero-' + vendor_feature.store_id)"
                 (error)="onImageError('vendor-hero-' + vendor_feature.store_id)"
-                [src]="vendor_feature.products[0].image"
+                [src]="cfImage(vendor_feature.products[0].image, 'card')"
                 alt="{{ vendor_feature.store_name }}" />
               <div class="m6e-featured-hero-overlay">
                 <h3 class="m6e-featured-store-name">{{ vendor_feature.store_name }}</h3>
@@ -217,7 +217,7 @@
                           [class.loaded]="imageLoaded['vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id]"
                           (load)="onImageLoad('vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id)"
                           (error)="onImageError('vendor-' + vendor_feature.store_id + '-' + vendor_products.product_id)"
-                          [src]="vendor_products.image"
+                          [src]="cfImage(vendor_products.image, 'card')"
                           alt="product" />
                         <span class="m6e-featured-thumb-price">Ð{{ vendor_products.price }}</span>
                       </div>

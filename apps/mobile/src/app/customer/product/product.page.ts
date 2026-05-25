@@ -40,6 +40,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import { cfImage } from '../shared/cf-image';
 export interface StoreMeasurement {
   id: number;
   token: string;
@@ -87,6 +88,8 @@ export interface ColorOption {
   ]
 })
 export class ProductPage implements OnInit, OnDestroy {
+  /** Expose cfImage for template usage. */
+  readonly cfImage = cfImage;
   store_measurement: StoreMeasurement[] = [];
   product: Products[] = [];
   @ViewChild('swiper', { static: true }) swiperEl!: ElementRef<HTMLElement>;

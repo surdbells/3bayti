@@ -43,6 +43,7 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { I18nService } from '../../i18n.service';
+import { cfImage } from '../shared/cf-image';
 @Component({
   selector: 'app-best-sellers',
   templateUrl: './best-sellers.page.html',
@@ -68,6 +69,8 @@ import { I18nService } from '../../i18n.service';
     TranslatePipe, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent]
 })
 export class BestSellersPage implements OnInit, OnDestroy {
+  /** Expose cfImage for template usage. */
+  readonly cfImage = cfImage;
   best_sellers: Products[] = [];
   categories: Labels[] = [];
   isOnline = true;

@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * Featured-vendor data shape. Mirrors the mobile app's `customer/featured`
@@ -74,6 +75,7 @@ export interface FeaturedVendor {
 @Component({
   selector: 'ui-designer-card',
   standalone: true,
+  imports: [CfImagePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (vendor) {
@@ -106,7 +108,7 @@ export interface FeaturedVendor {
               [attr.aria-label]="product.name"
             >
               <img
-                [src]="product.image_url"
+                [src]="product.image_url | cfImage:'card'"
                 [alt]="product.name"
                 loading="lazy"
                 decoding="async"

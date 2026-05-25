@@ -13,6 +13,7 @@ import { OrderService, ORDER_STATUS_LABELS } from '../../core/orders';
 import type { Order } from '../../core/orders';
 import { ToastService } from '../../shared/forms';
 import { ConfirmModalComponent } from '../../shared/ui';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * /account/orders/:id — single-order detail page.
@@ -58,7 +59,7 @@ import { ConfirmModalComponent } from '../../shared/ui';
 @Component({
   selector: 'app-account-order-detail',
   standalone: true,
-  imports: [NgIf, NgFor, DatePipe, RouterLink, TranslatePipe, ConfirmModalComponent],
+  imports: [CfImagePipe, NgIf, NgFor, DatePipe, RouterLink, TranslatePipe, ConfirmModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="orders-page" data-testid="order-detail-page">
@@ -109,7 +110,7 @@ import { ConfirmModalComponent } from '../../shared/ui';
                 <div class="review-item__thumb" aria-hidden="true">
                   <img
                     *ngIf="(item.product_image ?? '') !== ''; else thumbBlank"
-                    [src]="item.product_image"
+                    [src]="item.product_image | cfImage:'thumb'"
                     alt=""
                     loading="lazy"
                   />

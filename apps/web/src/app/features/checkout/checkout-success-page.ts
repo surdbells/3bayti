@@ -13,6 +13,7 @@ import type { Order } from '../../core/orders';
 import { CheckoutService } from '../../core/checkout';
 import { CartService } from '../../core/cart';
 import { ToastService } from '../../shared/forms';
+import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
  * /checkout/success/:id — order placed confirmation.
@@ -47,7 +48,7 @@ import { ToastService } from '../../shared/forms';
 @Component({
   selector: 'app-checkout-success',
   standalone: true,
-  imports: [NgIf, NgFor, RouterLink, TranslatePipe],
+  imports: [CfImagePipe, NgIf, NgFor, RouterLink, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="checkout-page" data-testid="checkout-success-page">
@@ -86,7 +87,7 @@ import { ToastService } from '../../shared/forms';
                 <div class="review-item__thumb" aria-hidden="true">
                   <img
                     *ngIf="(item.product_image ?? '') !== ''; else thumbPlaceholder"
-                    [src]="item.product_image"
+                    [src]="item.product_image | cfImage:'thumb'"
                     alt=""
                     loading="lazy"
                   />

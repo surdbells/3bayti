@@ -41,6 +41,7 @@ import {TranslatePipe} from "../../translate.pipe";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import { cfImage } from '../shared/cf-image';
 interface Category {
   readonly id: number;
   readonly name: string;
@@ -72,6 +73,8 @@ export interface Store {
 })
 
 export class AccountPage implements OnInit, OnDestroy {
+  /** Expose cfImage for template usage. */
+  readonly cfImage = cfImage;
   best_sellers: Products[] = [];
   new_arrivals: Products[] = [];
   vendor_featured: Store[] = [];
