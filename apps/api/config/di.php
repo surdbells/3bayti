@@ -722,6 +722,10 @@ return [
     // (AwsS3V3Adapter); this binding needs no change.
     \Bayti\Api\Domain\Media\ImageStorageService::class => \DI\autowire(),
 
+    // Gift card repositories (M3.5) — autowire suffices; all deps are
+    // EntityManagerInterface which is already bound above.
+    \Bayti\Api\Domain\GiftCard\GiftCardRepository::class => \DI\autowire(),
+
     // -------------------------------------------------------------------
     // Cache / shared state — Redis in production, in-memory in tests
     // -------------------------------------------------------------------

@@ -229,7 +229,35 @@ return function (App $app): void {
         // M3.2.X.8-C — Server-authoritative price quote with optional
         // promo code resolution. Idempotent read; no DB writes.
         $group->post('/quote', \Bayti\Api\Http\Controllers\Cart\QuoteCartController::class);
+        // M3.5 — Gift card preview: how much of this card applies to the cart.
+        // Pure read — no balance deducted (debit happens at /checkout/initiate).
+        $group->post('/gift-card', \Bayti\Api\Http\Controllers\GiftCard\ApplyGiftCardToCartController::class);
     })->add(AuthMiddleware::class);
+
+    // ===================================================================
+    // M3.5 — Gift Cards
+    // ===================================================================
+    // Public (no auth):
+    $app->get('/v3/gift-cards/themes',
+        \Bayti\Api\Http\Controllers\GiftCard\ListGiftCardThemesController::class);
+    $app->get('/v3/gift-cards/balance',
+        \Bayti\Api\Http\Controllers\GiftCard\CheckGiftCardBalanceController::class);
+
+    // Authenticated customer routes:
+    $app->post('/v3/gift-cards/purchase',
+        \Bayti\Api\Http\Controllers\GiftCard\PurchaseGiftCardController::class
+    )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
+    $app->get('/v3/gift-cards/mine',
+        \Bayti\Api\Http\Controllers\GiftCard\ListMyGiftCardsController::class
+    )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
+    $app->post('/v3/gift-cards/redeem',
+        \Bayti\Api\Http\Controllers\GiftCard\RedeemGiftCardController::class
+    )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
+
+    // Admin/internal — activate after payment confirmation:
+    $app->post('/v3/gift-cards/{id:[0-9]+}/activate',
+        \Bayti\Api\Http\Controllers\GiftCard\ActivateGiftCardController::class
+    )->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class);
 
     // ===================================================================
     // M3.1.6e — Orders (authenticated read-only customer view)

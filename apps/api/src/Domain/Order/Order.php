@@ -154,6 +154,22 @@ class Order
     #[ORM\JoinColumn(name: 'promo_redemption_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?PromoRedemption $promoRedemption = null;
 
+    /**
+     * Amount paid via gift card (M3.5 gift card feature).
+     * '0.00' when no gift card was applied.
+     * The gateway is charged (total - gift_card_amount) instead of total.
+     * Stored as DECIMAL(10,2) string for bcmath precision.
+     */
+    #[ORM\Column(name: 'gift_card_amount', type: 'decimal', precision: 10, scale: 2, options: ['default' => '0.00'])]
+    private string $giftCardAmount = '0.00';
+
+    /**
+     * The gift card code applied to this order (snapshot at checkout).
+     * Null when no gift card was applied. Max 16 chars (raw code without hyphens).
+     */
+    #[ORM\Column(name: 'gift_card_code_snapshot', type: 'string', length: 16, nullable: true)]
+    private ?string $giftCardCodeSnapshot = null;
+
     public function __construct(
         User $user,
         string $orderReference,
@@ -530,6 +546,40 @@ class Order
     public function setPromoRedemption(?PromoRedemption $redemption): void
     {
         $this->promoRedemption = $redemption;
+    }
+
+    public function getGiftCardAmount(): string { return $this->giftCardAmount; }
+    public function getGiftCardCodeSnapshot(): ?string { return $this->giftCardCodeSnapshot; }
+
+    /**
+     * Record that a gift card was applied to this order.
+     * The amount is the portion of the total covered by the gift card.
+     * The gateway is charged (total - amount) after this.
+     *
+     * Called by InitiateCheckoutController inside the checkout EM
+     * transaction, after GiftCard::debit() succeeds.
+     */
+    public function applyGiftCard(string $amount, string $codeSnapshot): void
+    {
+        if (!preg_match('/^\d+(\.\d{1,2})?$/', $amount)) {
+            throw new \InvalidArgumentException(
+                "gift_card_amount must be a non-negative DECIMAL(10,2) string, got '{$amount}'."
+            );
+        }
+        if (bccomp($amount, $this->total, 2) > 0) {
+            throw new \DomainException(
+                "Gift card amount {$amount} exceeds order total {$this->total}."
+            );
+        }
+        $this->giftCardAmount      = $amount;
+        $this->giftCardCodeSnapshot = substr(strtoupper(str_replace('-', '', $codeSnapshot)), 0, 16);
+    }
+
+    /** Amount the payment gateway must charge (total minus any gift card applied). */
+    public function gatewayChargeAmount(): string
+    {
+        $diff = bcsub($this->total, $this->giftCardAmount, 2);
+        return bccomp($diff, '0.00', 2) < 0 ? '0.00' : $diff;
     }
 
     private function recomputeTotals(): void
