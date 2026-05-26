@@ -6,6 +6,8 @@ namespace Bayti\Api\Http\Controllers\Checkout;
 
 use Bayti\Api\Domain\Cart\Cart;
 use Bayti\Api\Domain\Cart\CartRepository;
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderAddress;
 use Bayti\Api\Domain\Order\OrderItem;
@@ -178,6 +180,49 @@ final class InitiateCheckoutController
             $discount = '0.00';
         }
 
+        // ------------------------------------------------------------------
+        // M3.5 — Gift card resolution (pre-transaction, like promo)
+        //
+        // If the caller supplied gift_card_code, load and validate the card
+        // before entering the EM transaction. Validation failure → 422 with
+        // a clear message. No debit happens here — debit is inside the
+        // transaction so it's atomic with the order creation.
+        // ------------------------------------------------------------------
+        $giftCard = null;
+        $giftCardAmount = '0.00';
+        if ($input->gift_card_code !== null) {
+            /** @var GiftCardRepository $gcRepo */
+            $gcRepo = $this->em->getRepository(GiftCard::class);
+            $giftCard = $gcRepo->findByCode($input->gift_card_code);
+
+            if ($giftCard === null) {
+                throw HttpException::badRequest('Gift card not found.');
+            }
+            // Must be owned by or assigned to this user
+            $gcBuyerId     = $giftCard->getBuyerUser()->getId();
+            $gcRecipientId = $giftCard->getRecipientUser()?->getId();
+            $uid           = $user->getId();
+            if ($gcBuyerId !== $uid && $gcRecipientId !== $uid) {
+                throw HttpException::forbidden('This gift card is not associated with your account.');
+            }
+            if (!$giftCard->isSpendable()) {
+                throw HttpException::badRequest(
+                    'This gift card is not spendable (status: ' . $giftCard->getStatus() . ').'
+                );
+            }
+            // Compute how much the card can cover (may be < total)
+            // We pass a tentative total here (subtotal + deliveryFee - discount).
+            // The exact order total is computed inside the transaction — we use
+            // the same arithmetic as Order::computeTotal() for consistency.
+            $tentativeTotal = bcsub(
+                bcadd($subtotal, $deliveryFee, 2),
+                $discount,
+                2
+            );
+            $tentativeTotal = bccomp($tentativeTotal, '0.00', 2) < 0 ? '0.00' : $tentativeTotal;
+            $giftCardAmount = $giftCard->applyableAmount($tentativeTotal);
+        }
+
         // Server-generated order reference: V3- + 13-digit epoch_ms +
         // 4-char random hex. Total length: 3 + 13 + 4 = 20 chars,
         // under the 32-char DB cap. Collision probability negligible
@@ -227,7 +272,7 @@ final class InitiateCheckoutController
         $order = $this->em->wrapInTransaction(
             function (EntityManagerInterface $em) use (
                 $user, $cart, $orderReference, $subtotal, $deliveryFee, $discount,
-                $billing, $shipping, $resolution,
+                $billing, $shipping, $resolution, $giftCard, $giftCardAmount,
             ): Order {
                 $order = new Order(
                     user: $user,
@@ -268,11 +313,7 @@ final class InitiateCheckoutController
 
                 $em->flush();
 
-                // M3.2.X.8-D — Promo redemption: persist AFTER the order
-                // flush (so order.id is real for the FK), then flush
-                // again to commit the redemption + the order.promo_redemption_id
-                // setter that links them. Both writes inside this
-                // transaction so either both land or neither does.
+                // M3.2.X.8-D — Promo redemption (unchanged).
                 if ($resolution !== null) {
                     $redemption = $this->promoResolver->recordRedemption(
                         promoCode: $resolution->promoCode,
@@ -284,9 +325,65 @@ final class InitiateCheckoutController
                     $em->flush();
                 }
 
+                // M3.5 — Gift card debit (atomic with order creation).
+                // Debit the card inside the transaction so a gateway failure
+                // after this point rolls back both the order AND the debit
+                // (they're in the same EM transaction; gateway call is outside).
+                if ($giftCard !== null && bccomp($giftCardAmount, '0.00', 2) > 0) {
+                    // Re-check spendability under the write lock (order row
+                    // now exists; gift card row is about to be mutated).
+                    $em->refresh($giftCard);
+                    if (!$giftCard->isSpendable()) {
+                        throw new \LogicException(
+                            'Gift card became non-spendable between validation and debit.'
+                        );
+                    }
+                    $giftCard->debit(
+                        amount: $giftCardAmount,
+                        orderReference: $orderReference,
+                        orderId: $order->getId(),
+                    );
+                    $order->applyGiftCard($giftCardAmount, $giftCard->getCode());
+                    $em->flush();
+                }
+
                 return $order;
             },
         );
+
+        // ------------------------------------------------------------------
+        // M3.5 — Gateway skip: if the gift card covers the full order total,
+        // skip the Noon INITIATE call entirely and mark the order paid now.
+        // The mobile app receives { checkout_url: null, gateway_skipped: true }
+        // and navigates directly to /success.
+        // ------------------------------------------------------------------
+        if (bccomp($order->gatewayChargeAmount(), '0.00', 2) === 0) {
+            // Mark order paid immediately (no gateway involved).
+            /** @var OrderRepository $orderRepo */
+            $orderRepo = $this->em->getRepository(Order::class);
+            $order->markPaid();
+            $orderRepo->save($order);
+
+            $this->notifications->orderPlaced($order);
+            $this->pushNotifications->orderPlaced($order);
+
+            $this->logger->info('checkout.initiate: gift-card full-cover — gateway skipped', [
+                'user_id'         => $user->getId(),
+                'order_id'        => $order->getId(),
+                'order_reference' => $orderReference,
+                'gift_card_amount'=> $order->getGiftCardAmount(),
+            ]);
+
+            return $this->ok([
+                'checkout_url'      => null,
+                'gateway_skipped'   => true,
+                'order_reference'   => $orderReference,
+                'provider_order_ref'=> '',
+                'order_id'          => $order->getId() ?? 0,
+                'idempotent'        => false,
+                'gift_card_amount'  => $order->getGiftCardAmount(),
+            ]);
+        }
 
         // ------------------------------------------------------------------
         // Call Noon INITIATE. Failure modes:
@@ -351,6 +448,7 @@ final class InitiateCheckoutController
             'provider_order_ref' => $initiation->providerOrderRef,
             'order_id' => $order->getId() ?? 0,
             'idempotent' => false,
+            'gift_card_amount' => $order->getGiftCardAmount(),
         ]);
 
         // M3.2.X.8-D — Deprecation header on legacy raw-discount path.

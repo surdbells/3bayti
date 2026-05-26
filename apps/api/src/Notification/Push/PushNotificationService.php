@@ -127,6 +127,49 @@ final class PushNotificationService
     // -----------------------------------------------------------------
 
     /**
+     * Gift card expiry nudge (M3.5).
+     * Called by the nightly expiry-check CLI script for cards expiring
+     * within 30 days that have a non-zero balance.
+     * Fire-and-forget: never throws.
+     */
+    public function giftCardExpiryNudge(\Bayti\Api\Domain\GiftCard\GiftCard $card): void
+    {
+        $user   = $card->getRecipientUser() ?? $card->getBuyerUser();
+        $tokens = $this->activeTokensFor($user);
+        if ($tokens === []) return;
+
+        $expiresAt = $card->getExpiresAt();
+        $daysLeft  = $expiresAt !== null
+            ? (int) (new \DateTimeImmutable())->diff($expiresAt)->days
+            : 30;
+
+        $message = new PushMessage(
+            title: 'Your gift card expires soon',
+            body: sprintf(
+                'You have AED %s left on your 3bayti gift card. Use it within %d day%s before it expires.',
+                $card->getBalance(),
+                $daysLeft,
+                $daysLeft === 1 ? '' : 's',
+            ),
+            data: [
+                'type'    => 'gift_card.expiry_nudge',
+                'card_id' => (string) ($card->getId() ?? ''),
+                'balance' => $card->getBalance(),
+            ],
+        );
+
+        $context = [
+            'event'   => 'gift_card.expiry_nudge',
+            'card_id' => $card->getId(),
+            'user_id' => $user->getId(),
+        ];
+
+        foreach ($tokens as $deviceToken) {
+            $this->sendOne($deviceToken, $message, $context);
+        }
+    }
+
+    /**
      * Build the message and fan out to all of the customer's active
      * device tokens. Never throws.
      */

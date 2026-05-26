@@ -428,6 +428,22 @@ export class CheckoutPage implements OnInit, OnDestroy {
           //                        response.data = { url, order_reference, order_id, ... }
           //   Legacy (raw Noon):   response.resultCode === 0,
           //                        response.result.checkoutData.postUrl
+
+          // M3.5 — Gift card full-cover: gateway was skipped server-side.
+          // No webview needed — go straight to the success/process page.
+          const isGatewaySkipped =
+            response.response_code === 200 &&
+            response.data?.gateway_skipped === true;
+
+          if (isGatewaySkipped) {
+            this.ui_controls.checking_out = false;
+            const orderRef = response.data?.order_reference ?? '';
+            this.router.navigate(['/success'], {
+              queryParams: { orderReference: orderRef, gift_card_paid: '1' }
+            });
+            return;
+          }
+
           const isV3Shape =
             response.response_code === 200 &&
             response.data &&

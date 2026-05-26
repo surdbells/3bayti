@@ -93,6 +93,21 @@ final class InitiateCheckoutInput
     #[Assert\Positive(message: 'shipping_address_id must be a positive integer.')]
     public readonly ?int $shipping_address_id;
 
+    /**
+     * Gift card code to apply at checkout (M3.5).
+     * When supplied the server debits min(card.balance, order.total)
+     * from the card inside the checkout EM transaction and charges
+     * only the remainder to the payment gateway.
+     * When the full order is covered by the card, the Noon gateway
+     * call is skipped and the order transitions directly to 'paid'.
+     * Format: raw 16 chars or hyphenated XXXX-XXXX-XXXX-XXXX.
+     */
+    #[Assert\Length(
+        max: 19,
+        maxMessage: 'gift_card_code is too long (max 19 chars including hyphens).',
+    )]
+    public readonly ?string $gift_card_code;
+
     public function __construct(
         ?string $channel = 'MOBILE',
         ?string $delivery_fee = '0.00',
@@ -100,6 +115,7 @@ final class InitiateCheckoutInput
         ?string $promo_code = null,
         ?int $billing_address_id = null,
         ?int $shipping_address_id = null,
+        ?string $gift_card_code = null,
     ) {
         $this->channel = $channel ?? 'MOBILE';
         $this->delivery_fee = $delivery_fee ?? '0.00';
@@ -112,5 +128,9 @@ final class InitiateCheckoutInput
         }
         $this->billing_address_id = $billing_address_id;
         $this->shipping_address_id = $shipping_address_id;
+        // Normalise gift card code: strip hyphens, uppercase
+        $this->gift_card_code = $gift_card_code !== null
+            ? (strtoupper(str_replace('-', '', trim($gift_card_code))) ?: null)
+            : null;
     }
 }
