@@ -26,7 +26,7 @@ import { GlobalComponent } from "../../global-component";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
-import { cfImage } from '../shared/cf-image';
+import { cfImage } from '../../shared/cf-image';
 export interface StyleProduct {
   product_id: number;
   product_name: string;

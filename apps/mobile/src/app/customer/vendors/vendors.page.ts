@@ -24,7 +24,7 @@ import {HScrollProgressComponent} from "../../h-scroll-progress/h-scroll-progres
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
-import { cfImage } from '../shared/cf-image';
+import { cfImage } from '../../shared/cf-image';
 @Component({
   selector: 'app-vendors',
   templateUrl: './vendors.page.html',

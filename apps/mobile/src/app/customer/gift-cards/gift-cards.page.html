@@ -1,0 +1,265 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">
+      @if (ui.step === 1) { Gift Cards }
+      @else if (ui.step === 2) { Personalise }
+      @else { Confirm Order }
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+
+  <!-- Step indicator -->
+  <div class="gc-steps">
+    <div class="gc-step" [class.active]="ui.step >= 1" [class.done]="ui.step > 1">
+      <span class="gc-step__dot">1</span><span class="gc-step__label">Theme</span>
+    </div>
+    <div class="gc-step__line" [class.active]="ui.step >= 2"></div>
+    <div class="gc-step" [class.active]="ui.step >= 2" [class.done]="ui.step > 2">
+      <span class="gc-step__dot">2</span><span class="gc-step__label">Personalise</span>
+    </div>
+    <div class="gc-step__line" [class.active]="ui.step >= 3"></div>
+    <div class="gc-step" [class.active]="ui.step >= 3">
+      <span class="gc-step__dot">3</span><span class="gc-step__label">Confirm</span>
+    </div>
+  </div>
+
+  <!-- ── STEP 1: Pick theme ──────────────────────────────────────── -->
+  @if (ui.step === 1) {
+    @if (ui.loading_themes) {
+      <div class="gc-loader"><ax-loader /></div>
+    } @else {
+      <div class="gc-intro">
+        <h2 class="gc-intro__title">Send a 3bayti Gift Card</h2>
+        <p class="gc-intro__sub">Choose a design for the occasion</p>
+      </div>
+
+      <div class="gc-theme-grid">
+        @for (key of themeKeys; track key) {
+          <button
+            class="gc-theme-card"
+            type="button"
+            (click)="selectTheme(key)"
+            [style.--gc-primary]="themes[key].primary_color"
+            [style.--gc-accent]="themes[key].accent_color"
+            [attr.aria-label]="themes[key].label"
+          >
+            <!-- Card visual -->
+            <div class="gc-theme-card__visual">
+              <div class="gc-theme-card__shimmer"></div>
+              <div class="gc-theme-card__badge">
+                <span class="gc-theme-card__logo">3bayti</span>
+              </div>
+              @if (themes[key].supports_photo) {
+                <div class="gc-theme-card__photo-hint">
+                  <ax-icon name="camera" [size]="16" />
+                </div>
+              }
+            </div>
+            <!-- Labels -->
+            <div class="gc-theme-card__info">
+              <span class="gc-theme-card__name">{{ themes[key].label }}</span>
+              <span class="gc-theme-card__arabic">{{ themes[key].arabic_label }}</span>
+            </div>
+            <div class="gc-theme-card__arrow">
+              <ax-icon name="chevron-right" [size]="16" />
+            </div>
+          </button>
+        }
+      </div>
+    }
+  }
+
+  <!-- ── STEP 2: Denomination + personalisation ─────────────────── -->
+  @if (ui.step === 2 && selectedTheme) {
+    <div class="gc-section-header">
+      <div class="gc-mini-card" [style.--gc-primary]="selectedTheme.primary_color" [style.--gc-accent]="selectedTheme.accent_color">
+        <span class="gc-mini-card__logo">3bayti</span>
+        <span class="gc-mini-card__theme">{{ selectedTheme.label }}</span>
+        @if (effectiveDenomination) {
+          <span class="gc-mini-card__amount">AED {{ effectiveDenomination }}</span>
+        }
+      </div>
+    </div>
+
+    <div class="gc-form ion-padding-horizontal">
+      <!-- Denomination presets -->
+      <p class="gc-label">Select amount (AED)</p>
+      <div class="gc-presets">
+        @for (p of presets; track p) {
+          <button
+            type="button"
+            class="gc-preset-chip"
+            [class.selected]="form.denomination === p && !ui.show_custom_amount"
+            (click)="selectDenomination(p)"
+          >{{ p | number:'1.0-0' }}</button>
+        }
+        <button
+          type="button"
+          class="gc-preset-chip gc-preset-chip--custom"
+          [class.selected]="ui.show_custom_amount"
+          (click)="toggleCustomAmount()"
+        >Custom</button>
+      </div>
+
+      @if (ui.show_custom_amount) {
+        <ax-text-field
+          label="Custom amount (AED 100 – 10,000)"
+          type="number"
+          inputmode="decimal"
+          [(ngModel)]="form.custom_amount"
+          name="custom_amount"
+          placeholder="e.g. 750"
+        />
+      }
+
+      <!-- Recipient name -->
+      <ax-text-field
+        label="Recipient name (optional)"
+        type="text"
+        [maxlength]="100"
+        [(ngModel)]="form.recipient_name"
+        name="recipient_name"
+        placeholder="e.g. Sara"
+      />
+
+      <!-- Personal message -->
+      <div class="gc-textarea-wrap">
+        <label class="gc-label gc-label--sm">Personal message (optional, max 150 chars)</label>
+        <textarea
+          class="gc-textarea"
+          maxlength="150"
+          [(ngModel)]="form.recipient_message"
+          name="recipient_message"
+          placeholder="Write a heartfelt message…"
+          rows="3"
+        ></textarea>
+        <span class="gc-char-count">{{ (form.recipient_message || '').length }}/150</span>
+      </div>
+
+      <!-- Schedule delivery -->
+      <div class="gc-row">
+        <label class="gc-label gc-label--sm">Schedule delivery (optional)</label>
+        <input
+          class="gc-date-input"
+          type="datetime-local"
+          [(ngModel)]="form.scheduled_delivery_at"
+          name="scheduled_delivery_at"
+        />
+        <p class="gc-hint">Leave blank to deliver when payment is confirmed.</p>
+      </div>
+
+      <!-- Recipient photo (luxury only) -->
+      @if (isPhotoTheme) {
+        <div class="gc-photo-section">
+          <p class="gc-label">Add recipient photo <span class="gc-badge--luxury">Luxury only</span></p>
+          @if (form.recipient_photo_url) {
+            <div class="gc-photo-preview">
+              <img [src]="form.recipient_photo_url" alt="Recipient" class="gc-photo-img" />
+              <button type="button" class="gc-photo-remove" (click)="removePhoto()">
+                <ax-icon name="x" [size]="16" />
+              </button>
+            </div>
+          } @else {
+            <label class="gc-photo-upload" for="gc-photo-input">
+              <ax-icon name="camera" [size]="24" />
+              <span>Upload photo</span>
+              <input id="gc-photo-input" type="file" accept="image/*" (change)="onPhotoSelected($event)" />
+            </label>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="gc-footer ion-padding-horizontal">
+      <ion-button expand="block" (click)="nextToConfirm()" [disabled]="!effectiveDenomination">
+        Continue
+      </ion-button>
+    </div>
+  }
+
+  <!-- ── STEP 3: Confirm ────────────────────────────────────────── -->
+  @if (ui.step === 3 && selectedTheme) {
+    <div class="gc-confirm ion-padding-horizontal">
+
+      <!-- Large card preview -->
+      <div class="gc-card-preview"
+           [style.background]="selectedTheme.primary_color"
+           [style.color]="'#fff'">
+        <div class="gc-card-preview__header">
+          <span class="gc-card-preview__logo">3bayti</span>
+          <span class="gc-card-preview__theme">{{ selectedTheme.label }}</span>
+        </div>
+        @if (form.recipient_photo_url) {
+          <div class="gc-card-preview__photo-ring">
+            <img [src]="form.recipient_photo_url" alt="Recipient" />
+          </div>
+        }
+        <div class="gc-card-preview__amount">AED {{ effectiveDenomination }}</div>
+        @if (form.recipient_name) {
+          <div class="gc-card-preview__to">For {{ form.recipient_name }}</div>
+        }
+        @if (form.recipient_message) {
+          <div class="gc-card-preview__message">"{{ form.recipient_message }}"</div>
+        }
+        <div class="gc-card-preview__code">XXXX-XXXX-XXXX-XXXX</div>
+      </div>
+
+      <!-- Summary -->
+      <div class="gc-summary-card">
+        <div class="gc-summary-row">
+          <span>Design</span>
+          <span>{{ selectedTheme.label }}</span>
+        </div>
+        <div class="gc-summary-row">
+          <span>Value</span>
+          <strong>AED {{ effectiveDenomination }}</strong>
+        </div>
+        @if (form.recipient_name) {
+          <div class="gc-summary-row">
+            <span>For</span>
+            <span>{{ form.recipient_name }}</span>
+          </div>
+        }
+        @if (form.scheduled_delivery_at) {
+          <div class="gc-summary-row">
+            <span>Send on</span>
+            <span>{{ form.scheduled_delivery_at | date:'medium' }}</span>
+          </div>
+        } @else {
+          <div class="gc-summary-row">
+            <span>Delivery</span>
+            <span>Immediately on payment</span>
+          </div>
+        }
+      </div>
+
+      <div class="gc-notice">
+        <ax-icon name="info" [size]="16" />
+        Valid for 12 months from activation. Redeemable in the 3bayti app only.
+      </div>
+    </div>
+
+    <div class="gc-footer ion-padding-horizontal">
+      <ion-button
+        expand="block"
+        (click)="purchaseCard()"
+        [disabled]="ui.purchasing"
+      >
+        @if (ui.purchasing) {
+          <ion-spinner slot="start" name="crescent"></ion-spinner>
+          Processing…
+        } @else {
+          Pay AED {{ effectiveDenomination }}
+        }
+      </ion-button>
+    </div>
+  }
+
+</ion-content>

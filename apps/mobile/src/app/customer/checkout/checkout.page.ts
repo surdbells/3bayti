@@ -237,6 +237,25 @@ export class CheckoutPage implements OnInit, OnDestroy {
     f_subtotal: "",
     f_total: ""
   };
+
+  // ── Gift card ──────────────────────────────────────────────────────
+  giftCard = {
+    code:              '',        // user-entered code (formatted XXXX-XXXX-XXXX-XXXX)
+    preview:           null as any, // result of POST /v3/cart/gift-card
+    applied:           false,
+    checking:          false,
+    is_open:           false,     // accordion open state
+  };
+
+  get gcAppliedAmount(): number {
+    return this.giftCard.applied ? Number(this.giftCard.preview?.gift_card_amount ?? 0) : 0;
+  }
+
+  get gcGatewayAmount(): number {
+    return this.giftCard.applied
+      ? Number(this.giftCard.preview?.gateway_amount ?? this.bill.total)
+      : Number(this.bill.total) || 0;
+  }
   checkout = {
     apiOperation: "INITIATE",
     order: {
@@ -367,8 +386,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
       this.error_notification(this.i18n.t('text_confirm_delivery_info'))
       return;
     }
+
     // Bill total may be string (v3) or number (legacy). Coerce defensively.
-    this.checkout.order.amount = Number(this.bill.total) || 0;
+    this.checkout.order.amount = this.gcGatewayAmount;
+    (this.checkout.order as any).gift_card_code = this.giftCard.applied ? this.giftCard.code : undefined;
     this.checkout.order.reference = GlobalComponent.generateTransactionReference();
     this.checkout.order.name = this.single_user.first_name + " " + this.single_user.last_name;
     this.checkout.shipping.address.street = this.single_user.billing_street;
@@ -568,6 +589,46 @@ export class CheckoutPage implements OnInit, OnDestroy {
       event.target.complete();
     }, 200);
   }
+  // ── Gift card methods ─────────────────────────────────────────────
+
+  toggleGiftCardSection() {
+    this.giftCard.is_open = !this.giftCard.is_open;
+  }
+
+  onGiftCodeInput(event: any) {
+    const raw = (event.target?.value ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 16);
+    this.giftCard.code = raw.match(/.{1,4}/g)?.join('-') ?? raw;
+    this.giftCard.preview = null;
+    this.giftCard.applied = false;
+  }
+
+  previewGiftCard() {
+    const raw = this.giftCard.code.replace(/-/g, '');
+    if (raw.length !== 16) { this.error_notification('Enter a full 16-character gift card code.'); return; }
+    this.giftCard.checking = true;
+    this.networkAdapter.post_v3('/v3/cart/gift-card', { code: this.giftCard.code }).subscribe({
+      next: (res: any) => {
+        this.giftCard.checking = false;
+        if (res?.data?.gift_card_amount) {
+          this.giftCard.preview = res.data;
+          this.giftCard.applied = true;
+        } else {
+          this.error_notification(res?.message ?? 'This gift card cannot be applied.');
+        }
+      },
+      error: (err: any) => {
+        this.giftCard.checking = false;
+        this.error_notification(err?.error?.message ?? 'Gift card not valid.');
+      },
+    });
+  }
+
+  removeGiftCard() {
+    this.giftCard.preview = null;
+    this.giftCard.applied = false;
+    this.giftCard.code    = '';
+  }
+
   error_notification(message: string) {
     this.toast.error(message, {
       position: "top-center"

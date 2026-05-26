@@ -26,7 +26,7 @@ import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
-import { cfImage } from '../shared/cf-image';
+import { cfImage } from '../../shared/cf-image';
 
 /**
  * Customer order-detail screen — M3.2.Z.1.

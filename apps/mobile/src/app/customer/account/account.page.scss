@@ -552,3 +552,50 @@ ion-content.home-bg {
 ion-modal ion-content {
   --background: var(--profile-bg);
 }
+
+// ── Gift card balance widget ───────────────────────────────────────
+
+.gc-balance-widget {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #2E241C 0%, #4A3728 100%);
+  border-radius: var(--ax-radius-lg, 16px);
+  padding: 14px 16px;
+  margin: 4px 0 12px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  &:active { opacity: 0.88; }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: #fff;
+    ion-icon, ax-icon { color: #C8B88A; }
+  }
+
+  &__label {
+    font-size: 12px;
+    color: rgba(255,255,255,0.65);
+    font-weight: 500;
+  }
+
+  &__amount {
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+  }
+
+  &__right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: rgba(255,255,255,0.5);
+  }
+
+  &__count {
+    font-size: 12px;
+    font-weight: 500;
+  }
+}

@@ -214,9 +214,70 @@
     </ion-accordion>
   </ion-accordion-group>
 
+  <!-- ── Gift card section ──────────────────────────────────────── -->
+  <div class="gc-apply-section">
+    <button type="button" class="gc-apply-toggle" (click)="toggleGiftCardSection()">
+      <div class="gc-apply-toggle__left">
+        <ax-icon name="gift" [size]="18" />
+        <span>{{ giftCard.applied ? 'Gift card applied' : 'Have a gift card?' }}</span>
+      </div>
+      @if (giftCard.applied) {
+        <span class="gc-apply-toggle__saved">−AED {{ giftCard.preview?.gift_card_amount }}</span>
+      }
+      <ax-icon [name]="giftCard.is_open ? 'chevron-up' : 'chevron-down'" [size]="16" />
+    </button>
+
+    @if (giftCard.is_open) {
+      <div class="gc-apply-body">
+        @if (!giftCard.applied) {
+          <input
+            class="gc-code-input"
+            type="text"
+            [value]="giftCard.code"
+            (input)="onGiftCodeInput($event)"
+            placeholder="XXXX-XXXX-XXXX-XXXX"
+            maxlength="19"
+            autocorrect="off"
+            autocapitalize="characters"
+          />
+          <button type="button" class="gc-apply-btn"
+                  (click)="previewGiftCard()"
+                  [disabled]="giftCard.checking || giftCard.code.replace('-','').length < 16">
+            @if (giftCard.checking) { Checking… } @else { Apply }
+          </button>
+        } @else {
+          <!-- Applied state -->
+          <div class="gc-apply-result">
+            <div class="gc-apply-result__row">
+              <span>Gift card ({{ giftCard.code }})</span>
+              <span class="gc-apply-result__saving">−AED {{ giftCard.preview?.gift_card_amount }}</span>
+            </div>
+            <div class="gc-apply-result__row">
+              <span>Remaining balance after order</span>
+              <span>AED {{ giftCard.preview?.balance_remaining }}</span>
+            </div>
+            <div class="gc-apply-result__row gc-apply-result__row--total">
+              <span>Amount to pay via card</span>
+              <strong>AED {{ giftCard.preview?.gateway_amount }}</strong>
+            </div>
+            <button type="button" class="gc-remove-btn" (click)="removeGiftCard()">
+              <ax-icon name="x" [size]="14" /> Remove
+            </button>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
   <ion-button (click)="checkout_initiate()" expand="block" class="checkout-cta ion-margin-vertical" type="button">
     <ax-icon name="shopping-cart" slot="start" />
-    {{ 'button_checkout' | translate }}
+    @if (giftCard.applied && gcGatewayAmount === 0) {
+      Complete with gift card
+    } @else if (giftCard.applied) {
+      Pay AED {{ gcGatewayAmount | number:'1.2-2' }}
+    } @else {
+      {{ 'button_checkout' | translate }}
+    }
   </ion-button>
 
   @if (ui_controls.checking_out){

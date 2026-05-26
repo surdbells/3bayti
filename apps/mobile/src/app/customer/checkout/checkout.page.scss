@@ -213,3 +213,117 @@
   font-size: 13px;
   color: var(--ax-color-text-secondary, #6b6056);
 }
+
+// ── Gift card apply section ────────────────────────────────────────
+
+.gc-apply-section {
+  margin: 0 0 4px;
+  background: var(--ax-color-bg-surface, #fff);
+  border-radius: var(--ax-radius-lg, 16px);
+  border: 1px solid var(--ax-color-border-subtle, rgba(46,36,28,0.08));
+  overflow: hidden;
+}
+
+.gc-apply-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary, #2E241C);
+
+  &__left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+  }
+
+  &__saved {
+    font-size: 13px;
+    font-weight: 700;
+    color: #2D7D4F;
+  }
+}
+
+.gc-apply-body {
+  border-top: 1px solid var(--ax-color-border-subtle);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.gc-code-input {
+  font-family: monospace;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 12px 14px;
+  border: 1.5px solid var(--ax-color-border-subtle);
+  border-radius: 10px;
+  background: var(--ax-color-bg-muted, #f5f0eb);
+  color: var(--ax-color-text-primary);
+  width: 100%;
+  box-sizing: border-box;
+
+  &:focus { outline: none; border-color: var(--ax-color-brand-primary); }
+  &::placeholder { opacity: 0.4; font-weight: 400; letter-spacing: 0.05em; }
+}
+
+.gc-apply-btn {
+  padding: 11px;
+  background: var(--ax-color-brand-primary, #2E241C);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.gc-apply-result {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--ax-color-text-secondary);
+
+    &--total {
+      padding-top: 8px;
+      border-top: 1px solid var(--ax-color-border-subtle);
+      color: var(--ax-color-text-primary);
+      font-weight: 600;
+      strong { font-size: 15px; }
+    }
+  }
+
+  &__saving { color: #2D7D4F; font-weight: 700; }
+}
+
+.gc-remove-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  color: #C0392B;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  align-self: flex-start;
+}

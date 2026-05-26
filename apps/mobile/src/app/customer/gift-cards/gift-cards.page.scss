@@ -1,0 +1,464 @@
+// ============================================================
+// Gift Cards page — theme browser + purchase flow
+// ============================================================
+// Design system: M2 tokens (--ax-color-*, --ax-radius-*, etc.)
+// Card designs use CSS custom properties --gc-primary / --gc-accent
+// set inline from the API theme metadata.
+
+// ── Step indicator ────────────────────────────────────────────
+
+.gc-steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px 24px 8px;
+  gap: 0;
+}
+
+.gc-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+
+  &__dot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--ax-color-bg-muted, #f5f0eb);
+    color: var(--ax-color-text-secondary, #8B6F47);
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+  }
+
+  &__label {
+    font-size: 10px;
+    color: var(--ax-color-text-secondary);
+    font-weight: 500;
+  }
+
+  &.active .gc-step__dot {
+    background: var(--ax-color-brand-primary, #2E241C);
+    color: #fff;
+  }
+
+  &.done .gc-step__dot {
+    background: var(--ax-color-success, #2D7D4F);
+    color: #fff;
+  }
+
+  &__line {
+    flex: 1;
+    height: 2px;
+    background: var(--ax-color-border-subtle, rgba(46,36,28,0.12));
+    margin: 0 4px;
+    margin-bottom: 14px;
+    min-width: 28px;
+    transition: background 0.2s;
+
+    &.active { background: var(--ax-color-brand-primary, #2E241C); }
+  }
+}
+
+// ── Intro ─────────────────────────────────────────────────────
+
+.gc-loader {
+  display: flex;
+  justify-content: center;
+  padding: 48px 0;
+}
+
+.gc-intro {
+  text-align: center;
+  padding: 12px 24px 16px;
+
+  &__title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--ax-color-text-primary, #2E241C);
+    margin: 0 0 4px;
+  }
+
+  &__sub {
+    font-size: 14px;
+    color: var(--ax-color-text-secondary);
+    margin: 0;
+  }
+}
+
+// ── Theme grid ────────────────────────────────────────────────
+
+.gc-theme-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px 24px;
+}
+
+.gc-theme-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--ax-color-bg-surface, #fff);
+  border-radius: var(--ax-radius-lg, 16px);
+  border: 1px solid var(--ax-color-border-subtle, rgba(46,36,28,0.08));
+  box-shadow: 0 2px 8px rgba(46,36,28,0.06);
+  padding: 12px;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:active { transform: scale(0.98); box-shadow: none; }
+
+  &__visual {
+    width: 72px;
+    height: 46px;
+    border-radius: 8px;
+    background: var(--gc-primary, #2E241C);
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  &__shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.15) 60%, transparent 80%);
+  }
+
+  &__badge {
+    position: absolute;
+    bottom: 6px;
+    left: 8px;
+  }
+
+  &__logo {
+    font-size: 10px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.9);
+    letter-spacing: 0.05em;
+  }
+
+  &__photo-hint {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+  }
+
+  &__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__name {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--ax-color-text-primary, #2E241C);
+  }
+
+  &__arabic {
+    font-size: 13px;
+    color: var(--ax-color-text-secondary);
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+  }
+
+  &__arrow {
+    color: var(--ax-color-text-secondary);
+  }
+}
+
+// ── Mini card header (step 2) ─────────────────────────────────
+
+.gc-section-header {
+  padding: 16px 16px 0;
+}
+
+.gc-mini-card {
+  background: var(--gc-primary, #2E241C);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 100%);
+  }
+
+  &__logo { font-size: 13px; font-weight: 800; letter-spacing: 0.05em; }
+  &__theme { font-size: 12px; opacity: 0.8; }
+  &__amount { font-size: 20px; font-weight: 700; }
+}
+
+// ── Form ──────────────────────────────────────────────────────
+
+.gc-form {
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 120px; // space for sticky footer
+}
+
+.gc-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ax-color-text-secondary, #8B6F47);
+  margin: 0;
+
+  &--sm { font-size: 12px; }
+}
+
+.gc-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.gc-preset-chip {
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: var(--ax-color-bg-muted, #f5f0eb);
+  border: 1.5px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary, #2E241C);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &.selected {
+    background: var(--ax-color-brand-primary, #2E241C);
+    color: #fff;
+    border-color: var(--ax-color-brand-primary);
+  }
+
+  &--custom {
+    border-color: var(--ax-color-border-subtle, rgba(46,36,28,0.2));
+    background: transparent;
+  }
+}
+
+.gc-textarea-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+}
+
+.gc-textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--ax-color-border-subtle, rgba(46,36,28,0.15));
+  border-radius: 12px;
+  background: var(--ax-color-bg-surface, #fff);
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--ax-color-text-primary, #2E241C);
+  resize: none;
+  box-sizing: border-box;
+
+  &:focus { outline: none; border-color: var(--ax-color-brand-primary); }
+}
+
+.gc-char-count {
+  font-size: 11px;
+  color: var(--ax-color-text-tertiary, #B8A898);
+  text-align: right;
+}
+
+.gc-row { display: flex; flex-direction: column; gap: 8px; }
+
+.gc-date-input {
+  padding: 10px 14px;
+  border: 1.5px solid var(--ax-color-border-subtle, rgba(46,36,28,0.15));
+  border-radius: 12px;
+  background: var(--ax-color-bg-surface);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ax-color-text-primary);
+  &:focus { outline: none; border-color: var(--ax-color-brand-primary); }
+}
+
+.gc-hint {
+  font-size: 12px;
+  color: var(--ax-color-text-secondary);
+  margin: 0;
+}
+
+// ── Photo upload ──────────────────────────────────────────────
+
+.gc-badge--luxury {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #1A1A1A;
+  color: #C8B88A;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-left: 6px;
+}
+
+.gc-photo-section { display: flex; flex-direction: column; gap: 10px; }
+
+.gc-photo-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 100px;
+  border: 2px dashed var(--ax-color-border-subtle, rgba(46,36,28,0.2));
+  border-radius: 12px;
+  color: var(--ax-color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+
+  input { display: none; }
+  &:hover { border-color: var(--ax-color-brand-primary); }
+}
+
+.gc-photo-preview {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 12px;
+  overflow: hidden;
+
+  img { width: 100%; height: 100%; object-fit: cover; }
+}
+
+.gc-photo-remove {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+// ── Confirm step ──────────────────────────────────────────────
+
+.gc-confirm {
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 120px;
+}
+
+.gc-card-preview {
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  &__header { display: flex; justify-content: space-between; align-items: center; }
+  &__logo { font-size: 16px; font-weight: 900; letter-spacing: 0.08em; opacity: 0.95; }
+  &__theme { font-size: 12px; opacity: 0.7; }
+  &__amount { font-size: 32px; font-weight: 800; margin: 8px 0 4px; }
+  &__to { font-size: 14px; opacity: 0.85; }
+  &__message { font-size: 13px; opacity: 0.8; font-style: italic; }
+  &__code { font-size: 13px; font-family: monospace; opacity: 0.4; margin-top: 8px; letter-spacing: 0.1em; }
+
+  &__photo-ring {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.4);
+    align-self: center;
+
+    img { width: 100%; height: 100%; object-fit: cover; }
+  }
+}
+
+.gc-summary-card {
+  background: var(--ax-color-bg-surface, #fff);
+  border-radius: var(--ax-radius-lg, 16px);
+  border: 1px solid var(--ax-color-border-subtle);
+  overflow: hidden;
+}
+
+.gc-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+
+  &:last-child { border-bottom: none; }
+
+  span:first-child { color: var(--ax-color-text-secondary); }
+
+  strong { font-weight: 700; color: var(--ax-color-text-primary); }
+}
+
+.gc-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--ax-color-bg-brand-subtle, #fef9f3);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--ax-color-text-secondary);
+  line-height: 1.5;
+}
+
+// ── Sticky footer ─────────────────────────────────────────────
+
+.gc-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 16px 16px calc(16px + var(--ion-safe-area-bottom, 0px));
+  background: var(--ax-color-bg-surface, #fff);
+  border-top: 1px solid var(--ax-color-border-subtle);
+  z-index: 100;
+}

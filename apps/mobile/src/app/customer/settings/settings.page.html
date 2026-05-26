@@ -52,6 +52,14 @@
           <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
         </button>
 
+        <button type="button" class="settings-item" (click)="openGiftCards()">
+          <div class="item-icon" style="background: linear-gradient(135deg, #2E241C, #4A3728);">
+            <ax-icon name="gift" [size]="20" style="color: #C8B88A;"></ax-icon>
+          </div>
+          <span class="item-label">{{ 'gift_cards' | translate }}</span>
+          <ax-icon name="chevron-right" [size]="20" class="item-arrow"></ax-icon>
+        </button>
+
         <button type="button" class="settings-item" (click)="openMeasurement()">
           <div class="item-icon">
             <ax-icon name="ruler" [size]="20"></ax-icon>

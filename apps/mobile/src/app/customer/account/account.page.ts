@@ -41,7 +41,7 @@ import {TranslatePipe} from "../../translate.pipe";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
-import { cfImage } from '../shared/cf-image';
+import { cfImage } from '../../shared/cf-image';
 interface Category {
   readonly id: number;
   readonly name: string;
@@ -208,7 +208,32 @@ export class AccountPage implements OnInit, OnDestroy {
     is_customer: false
   }
 
+
+  // ── Gift card balance widget ──────────────────────────────────────
+  activeGiftCards: any[] = [];
+
+  get totalGiftCardBalance(): string {
+    const total = this.activeGiftCards.reduce((sum: number, c: any) => sum + Number(c.balance), 0);
+    return total.toFixed(2);
+  }
+
+  loadGiftCardBalance() {
+    this.networkAdapter.get_v3('/v3/gift-cards/mine').subscribe({
+      next: (res: any) => {
+        this.activeGiftCards = (res?.data ?? []).filter(
+          (c: any) => c.status === 'active' || c.status === 'partially_used'
+        );
+      },
+      error: () => { /* silent fail — widget just doesn't show */ },
+    });
+  }
+
+  openGiftCards() {
+    this.router.navigate(['/my-gift-cards']);
+  }
+
   ngOnInit() {
+    this.loadGiftCardBalance();
     this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
     this.getObject();
   }

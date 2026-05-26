@@ -1,0 +1,107 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">Redeem Gift Card</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  <div class="gcr-body ion-padding-horizontal">
+
+    <div class="gcr-illustration">
+      <div class="gcr-card-mock">
+        <span class="gcr-card-mock__logo">3bayti</span>
+        @if (preview) {
+          <span class="gcr-card-mock__amount">AED {{ preview.balance }}</span>
+          <span class="gcr-card-mock__theme">{{ preview.theme }}</span>
+        } @else {
+          <span class="gcr-card-mock__hint">Enter your code below</span>
+        }
+      </div>
+    </div>
+
+    <p class="gcr-instruction">
+      Enter the 16-character code from your gift card to add it to your wallet.
+    </p>
+
+    <!-- Code input -->
+    <div class="gcr-code-field">
+      <label class="gcr-label">Gift card code</label>
+      <input
+        class="gcr-code-input"
+        type="text"
+        [value]="code"
+        (input)="onCodeInput($event)"
+        placeholder="XXXX-XXXX-XXXX-XXXX"
+        maxlength="19"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="characters"
+        spellcheck="false"
+      />
+    </div>
+
+    <!-- Balance preview -->
+    @if (preview) {
+      <div class="gcr-preview" [class.gcr-preview--spent]="!preview.is_spendable">
+        <div class="gcr-preview__row">
+          <span>Balance</span>
+          <strong>{{ preview.currency }} {{ preview.balance }}</strong>
+        </div>
+        <div class="gcr-preview__row">
+          <span>Status</span>
+          <span [class.gcr-status--active]="preview.is_spendable"
+                [class.gcr-status--inactive]="!preview.is_spendable">
+            {{ preview.status | titlecase }}
+          </span>
+        </div>
+        @if (preview.expires_at) {
+          <div class="gcr-preview__row">
+            <span>Expires</span>
+            <span>{{ preview.expires_at | date:'mediumDate' }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Actions -->
+    <div class="gcr-actions">
+      @if (!preview) {
+        <button type="button" class="gcr-btn gcr-btn--primary"
+                (click)="checkBalance()" [disabled]="ui.checking || code.replace('-','').length < 16">
+          @if (ui.checking) {
+            <ion-spinner name="crescent" style="width:18px;height:18px"></ion-spinner>
+            Checking…
+          } @else {
+            <ax-icon name="search" [size]="18" />
+            Check balance
+          }
+        </button>
+      } @else if (preview.is_spendable) {
+        <button type="button" class="gcr-btn gcr-btn--primary"
+                (click)="redeemCard()" [disabled]="ui.redeeming">
+          @if (ui.redeeming) {
+            <ion-spinner name="crescent" style="width:18px;height:18px"></ion-spinner>
+            Adding to wallet…
+          } @else {
+            <ax-icon name="wallet" [size]="18" />
+            Add to my wallet
+          }
+        </button>
+        <button type="button" class="gcr-btn gcr-btn--ghost" (click)="preview = null; code = ''">
+          Try a different code
+        </button>
+      } @else {
+        <p class="gcr-note">This card cannot be redeemed ({{ preview.status }}).</p>
+        <button type="button" class="gcr-btn gcr-btn--ghost" (click)="preview = null; code = ''">
+          Try a different code
+        </button>
+      }
+    </div>
+
+  </div>
+</ion-content>

@@ -171,5 +171,22 @@ export const routes: Routes = [
     path: 'vendor-orders/:id',
     loadComponent: () => import('./vendor/vendor-order-detail/vendor-order-detail.page').then(m => m.VendorOrderDetailPage),
     title: 'Order Detail'
-  },...CHAT_ROUTES
+  },
+  {
+    path: 'gift-cards',
+    loadComponent: () => import('./customer/gift-cards/gift-cards.page').then(m => m.GiftCardsPage)
+  },
+  {
+    path: 'my-gift-cards',
+    loadComponent: () => import('./customer/my-gift-cards/my-gift-cards.page').then(m => m.MyGiftCardsPage)
+  },
+  {
+    path: 'gift-card-detail',
+    loadComponent: () => import('./customer/gift-card-detail/gift-card-detail.page').then(m => m.GiftCardDetailPage)
+  },
+  {
+    path: 'gift-card-redeem',
+    loadComponent: () => import('./customer/gift-card-redeem/gift-card-redeem.page').then(m => m.GiftCardRedeemPage)
+  },
+  ...CHAT_ROUTES
 ];

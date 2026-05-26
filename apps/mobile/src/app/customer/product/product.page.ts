@@ -40,7 +40,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
-import { cfImage } from '../shared/cf-image';
+import { cfImage } from '../../shared/cf-image';
 export interface StoreMeasurement {
   id: number;
   token: string;

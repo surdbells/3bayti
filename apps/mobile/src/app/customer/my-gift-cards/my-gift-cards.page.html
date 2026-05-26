@@ -1,0 +1,95 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">My Gift Cards</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  <ion-refresher slot="fixed" (ionRefresh)="load($event)">
+    <ion-refresher-content />
+  </ion-refresher>
+
+  @if (ui.loading) {
+    <div class="mgc-loader"><ax-loader /></div>
+  } @else {
+
+    <!-- Action row -->
+    <div class="mgc-actions ion-padding-horizontal">
+      <button type="button" class="mgc-action-btn" (click)="buyNew()">
+        <ax-icon name="gift" [size]="20" />
+        <span>Buy a gift card</span>
+      </button>
+      <button type="button" class="mgc-action-btn mgc-action-btn--outline" (click)="redeemCode()">
+        <ax-icon name="scan-line" [size]="20" />
+        <span>Redeem a code</span>
+      </button>
+    </div>
+
+    @if (cards.length === 0) {
+      <div class="mgc-empty">
+        <ax-icon name="gift" [size]="48" />
+        <h3>No gift cards yet</h3>
+        <p>Buy a gift card for someone special, or enter a code you received.</p>
+        <button type="button" class="mgc-cta" (click)="buyNew()">Buy a gift card</button>
+      </div>
+    } @else {
+      <div class="mgc-list ion-padding-horizontal">
+        @for (card of cards; track card.id) {
+          <button
+            type="button"
+            class="mgc-card"
+            [class.mgc-card--spent]="!isSpendable(card)"
+            (click)="openCard(card)"
+            [style.--gc-primary]="card.theme_meta?.primary_color ?? '#2E241C'"
+            [style.--gc-accent]="card.theme_meta?.accent_color ?? '#FDF6F0'"
+          >
+            <div class="mgc-card__visual">
+              <div class="mgc-card__shimmer"></div>
+              @if (card.recipient_photo_url) {
+                <div class="mgc-card__photo">
+                  <img [src]="cfImage(card.recipient_photo_url, 'thumb')" alt="Recipient" />
+                </div>
+              }
+              <span class="mgc-card__logo">3bayti</span>
+              <span class="mgc-card__theme">{{ card.theme_meta?.label ?? card.theme }}</span>
+              <span class="mgc-card__code">{{ card.code }}</span>
+            </div>
+
+            <div class="mgc-card__body">
+              <div class="mgc-card__top">
+                <div>
+                  <div class="mgc-card__amount">{{ card.currency }} {{ card.balance }}</div>
+                  @if (card.balance !== card.denomination) {
+                    <div class="mgc-card__denom">of {{ card.currency }} {{ card.denomination }}</div>
+                  }
+                </div>
+                <div class="mgc-card__status"
+                     [style.color]="statusMeta[card.status]?.color ?? '#8B6F47'">
+                  {{ statusMeta[card.status]?.label ?? card.status }}
+                </div>
+              </div>
+
+              @if (card.recipient_name) {
+                <div class="mgc-card__to">For {{ card.recipient_name }}</div>
+              }
+
+              @if (card.expires_at) {
+                <div class="mgc-card__expiry">
+                  <ax-icon name="clock" [size]="12" />
+                  Expires {{ card.expires_at | date:'mediumDate' }}
+                </div>
+              }
+            </div>
+
+            <ax-icon name="chevron-right" [size]="18" class="mgc-card__arrow" />
+          </button>
+        }
+      </div>
+    }
+  }
+</ion-content>

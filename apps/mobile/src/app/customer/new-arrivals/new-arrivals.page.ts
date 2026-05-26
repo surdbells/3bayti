@@ -43,7 +43,7 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { I18nService } from '../../i18n.service';
-import { cfImage } from '../shared/cf-image';
+import { cfImage } from '../../shared/cf-image';
 @Component({
   selector: 'app-new-arrivals',
   templateUrl: './new-arrivals.page.html',

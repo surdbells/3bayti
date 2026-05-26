@@ -1,0 +1,106 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">Gift Card</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="shareCard()">
+        <ax-icon name="share-2" />
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+  @if (card) {
+    <!-- Big card visual -->
+    <div class="gcd-hero"
+         [style.background]="themeMeta.primary_color ?? '#2E241C'"
+         [style.color]="'#fff'">
+      <div class="gcd-hero__inner">
+        <div class="gcd-hero__top">
+          <span class="gcd-hero__logo">3bayti</span>
+          <span class="gcd-hero__theme">{{ themeMeta.label ?? card.theme }}</span>
+        </div>
+
+        @if (card.recipient_photo_url) {
+          <div class="gcd-hero__photo">
+            <img [src]="cfImage(card.recipient_photo_url, 'logo')" alt="Recipient" />
+          </div>
+        }
+
+        <div class="gcd-hero__amount">{{ card.currency }} {{ card.balance }}</div>
+
+        @if (card.balance !== card.denomination) {
+          <div class="gcd-hero__progress">
+            <div class="gcd-hero__progress-track">
+              <div class="gcd-hero__progress-fill" [style.width.%]="balancePct"></div>
+            </div>
+            <span class="gcd-hero__progress-label">{{ balancePct }}% remaining of {{ card.currency }} {{ card.denomination }}</span>
+          </div>
+        }
+
+        @if (card.recipient_name) {
+          <div class="gcd-hero__to">For {{ card.recipient_name }}</div>
+        }
+        @if (card.recipient_message) {
+          <div class="gcd-hero__msg">"{{ card.recipient_message }}"</div>
+        }
+      </div>
+    </div>
+
+    <!-- Code section -->
+    <div class="gcd-section ion-padding-horizontal">
+      <p class="gcd-section__title">Card Code</p>
+      <button type="button" class="gcd-code-row" (click)="copyCode()">
+        <span class="gcd-code">{{ card.code }}</span>
+        <ax-icon name="copy" [size]="18" />
+      </button>
+    </div>
+
+    <!-- Info row -->
+    <div class="gcd-info ion-padding-horizontal">
+      <div class="gcd-info-item">
+        <span class="gcd-info-item__label">Status</span>
+        <span class="gcd-info-item__value">{{ card.status | titlecase }}</span>
+      </div>
+      @if (card.expires_at) {
+        <div class="gcd-info-item">
+          <span class="gcd-info-item__label">Expires</span>
+          <span class="gcd-info-item__value">{{ card.expires_at | date:'mediumDate' }}</span>
+        </div>
+      }
+      <div class="gcd-info-item">
+        <span class="gcd-info-item__label">Redeemable at</span>
+        <span class="gcd-info-item__value">3bayti app only</span>
+      </div>
+    </div>
+
+    <!-- Transaction history -->
+    @if (transactions.length > 0) {
+      <div class="gcd-section ion-padding-horizontal">
+        <p class="gcd-section__title">Spend history</p>
+        @for (tx of transactions; track tx.id) {
+          <div class="gcd-tx" [class.gcd-tx--credit]="tx.type === 'credit'">
+            <div class="gcd-tx__icon">
+              <ax-icon [name]="tx.type === 'debit' ? 'shopping-bag' : 'rotate-ccw'" [size]="16" />
+            </div>
+            <div class="gcd-tx__body">
+              <div class="gcd-tx__desc">
+                @if (tx.type === 'debit') { Order {{ tx.order_reference }} }
+                @else { Refund from {{ tx.order_reference }} }
+              </div>
+              <div class="gcd-tx__date">{{ tx.created_at | date:'mediumDate' }}</div>
+            </div>
+            <div class="gcd-tx__amount" [class.positive]="tx.type === 'credit'">
+              {{ tx.type === 'debit' ? '-' : '+' }}{{ card.currency }} {{ tx.amount }}
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+</ion-content>
