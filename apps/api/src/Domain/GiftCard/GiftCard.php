@@ -413,6 +413,24 @@ class GiftCard
     public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
     public function getPurchaseOrderReference(): ?string { return $this->purchaseOrderReference; }
     public function getUpdatedAt(): \DateTimeImmutable { return $this->updatedAt; }
+
+    /**
+     * Store the order reference before payment so the webhook can find
+     * this card by reference and activate it. Called by
+     * initiateGiftCardPurchase() after the synthetic order is created.
+     * Status stays pending_payment until Noon confirms payment.
+     */
+    public function setPurchaseOrderReferenceForPayment(string $orderReference): void
+    {
+        if ($this->status !== self::STATUS_PENDING_PAYMENT) {
+            throw new \LogicException(
+                "Cannot set purchase order reference on a card with status '{$this->status}'."
+            );
+        }
+        $this->purchaseOrderReference = $orderReference;
+        $this->updatedAt = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+    }
+
     /** @return Collection<int, GiftCardTransaction> */
     public function getTransactions(): Collection { return $this->transactions; }
 

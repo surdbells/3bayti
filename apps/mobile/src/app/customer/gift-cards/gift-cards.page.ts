@@ -7,6 +7,7 @@ import {
   IonToolbar, IonSpinner, IonIcon, NavController,
 } from '@ionic/angular/standalone';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { InAppBrowser } from '@capgo/inappbrowser';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
@@ -80,6 +81,11 @@ export class GiftCardsPage implements OnInit {
   }
 
   private v3BaseUrl = 'https://api-v3.3bayti.ae';
+  private readonly v3ReturnPrefix = 'https://api-v3.3bayti.ae/v3/checkout/return/';
+
+  // Payment state — set after checkout/initiate succeeds
+  paymentState: { orderReference: string; giftCardId: number } | null = null;
+  ui_checking_out = false;
 
   constructor(
     private router: Router,
@@ -200,14 +206,12 @@ export class GiftCardsPage implements OnInit {
       scheduled_delivery_at: this.form.scheduled_delivery_at,
     };
 
+    // Step 1: Create the pending_payment gift card
     this.network.post_v3('/v3/gift-cards/purchase', payload).subscribe({
       next: (res: any) => {
         this.ui.purchasing = false;
         if (res?.data?.id) {
-          // Navigate to checkout to pay for the gift card
-          this.router.navigate(['/gift-card-checkout'], {
-            state: { gift_card: res.data },
-          });
+          this.initiateGiftCardPayment(res.data.id);
         } else {
           this.notify.error(res?.message ?? 'Could not create gift card. Please try again.');
         }
@@ -217,5 +221,112 @@ export class GiftCardsPage implements OnInit {
         this.notify.error(err?.error?.message ?? 'Purchase failed. Please try again.');
       },
     });
+  }
+
+  // Step 2: Initiate Noon payment for the gift card
+  private initiateGiftCardPayment(giftCardId: number) {
+    this.ui_checking_out = true;
+
+    const initPayload = {
+      gift_card_purchase_id: giftCardId,
+      channel: 'MOBILE',
+    };
+
+    this.network.post_v3('/v3/checkout/initiate', initPayload).subscribe({
+      next: (res: any) => {
+        this.ui_checking_out = false;
+
+        // Gateway skipped (card denomination = 0 — shouldn't happen but handle it)
+        if (res?.data?.gateway_skipped === true) {
+          this.notify.success('Gift card activated!');
+          this.router.navigate(['/my-gift-cards']);
+          return;
+        }
+
+        const checkoutUrl = res?.data?.checkout_url ?? res?.data?.url;
+        const orderReference = res?.data?.order_reference ?? '';
+
+        if (!checkoutUrl || !orderReference) {
+          this.notify.error('Could not start payment. Please try again.');
+          return;
+        }
+
+        this.paymentState = { orderReference, giftCardId };
+        this.openPaymentWebview(checkoutUrl, orderReference, giftCardId);
+      },
+      error: (err: any) => {
+        this.ui_checking_out = false;
+        this.notify.error(err?.error?.message ?? 'Could not start payment. Please try again.');
+      },
+    });
+  }
+
+  // Step 3: Open Noon webview and listen for return URL
+  private openPaymentWebview(url: string, orderReference: string, giftCardId: number) {
+    let processed = false;
+    let listenerHandle: any = null;
+    const returnPrefix = this.v3ReturnPrefix;
+
+    InAppBrowser.openWebView({ url, title: 'Pay for Gift Card' }).catch((err: any) => {
+      console.error('openWebView failed', err);
+      this.notify.error('Could not open payment page. Please try again.');
+    });
+
+    InAppBrowser.addListener('urlChangeEvent', (info: any) => {
+      try {
+        if (processed) return;
+        const urlStr: string = info?.url ?? '';
+        if (!urlStr.startsWith(returnPrefix)) return;
+
+        processed = true;
+        try {
+          if (typeof listenerHandle?.remove === 'function') listenerHandle.remove();
+          else if (typeof listenerHandle === 'function') listenerHandle();
+        } catch { /* ignore */ }
+
+        const closeAndPoll = async () => {
+          try { await InAppBrowser.close(); } catch { /* ignore */ }
+          this.pollGiftCardPayment(orderReference, giftCardId);
+        };
+        closeAndPoll();
+      } catch (err) {
+        console.error('urlChangeEvent error', err);
+      }
+    }).then((handle: any) => {
+      listenerHandle = handle;
+    }).catch((err: any) => {
+      console.error('addListener failed', err);
+    });
+  }
+
+  // Step 4: Poll checkout status until paid/failed, then navigate
+  private pollGiftCardPayment(orderReference: string, giftCardId: number, attempts = 0) {
+    if (attempts > 12) { // 12 × 2.5s = 30s timeout
+      this.notify.error('Payment confirmation timed out. Check My Gift Cards to see your card status.');
+      this.router.navigate(['/my-gift-cards']);
+      return;
+    }
+
+    setTimeout(() => {
+      this.network.get_v3(`/v3/checkout/status/${orderReference}`).subscribe({
+        next: (res: any) => {
+          const data = res?.data ?? res;
+          if (data?.paid === true || data?.status === 'paid') {
+            this.notify.success('Gift card activated! 🎁');
+            this.router.navigate(['/my-gift-cards']);
+          } else if (data?.status === 'failed' || data?.status === 'cancelled') {
+            this.notify.error('Payment was not completed. Your gift card has not been charged.');
+            this.router.navigate(['/gift-cards']);
+          } else {
+            // Not yet terminal — poll again
+            this.pollGiftCardPayment(orderReference, giftCardId, attempts + 1);
+          }
+        },
+        error: () => {
+          // Network error — retry
+          this.pollGiftCardPayment(orderReference, giftCardId, attempts + 1);
+        },
+      });
+    }, 2500);
   }
 }

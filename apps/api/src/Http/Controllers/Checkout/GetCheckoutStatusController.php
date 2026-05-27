@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Checkout;
 
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\User\User;
@@ -102,15 +104,42 @@ final class GetCheckoutStatusController
             || $status === Order::STATUS_SHIPPED
             || $status === Order::STATUS_DELIVERED;
 
+        // M3.5 Phase 4 — activate gift card on status poll if webhook was delayed.
+        // Idempotent: already-active cards are skipped inside activateIfPending().
+        if ($paid) {
+            try {
+                /** @var GiftCardRepository $gcRepo */
+                $gcRepo = $this->em->getRepository(GiftCard::class);
+                $card   = $gcRepo->findByPurchaseOrderReference($reference);
+                if ($card !== null && $card->getStatus() === GiftCard::STATUS_PENDING_PAYMENT) {
+                    $card->activate($reference);
+                    $gcRepo->save($card);
+                }
+            } catch (\Throwable) {
+                // Never fail the status poll due to activation error.
+            }
+        }
+
+        $giftCardId = null;
+        if ($paid) {
+            try {
+                /** @var GiftCardRepository $gcr */
+                $gcr  = $this->em->getRepository(GiftCard::class);
+                $card = $gcr->findByPurchaseOrderReference($reference);
+                $giftCardId = $card?->getId();
+            } catch (\Throwable) { /* silent */ }
+        }
+
         return $this->ok([
             'order_reference' => $reference,
-            'order_id' => $order->getId() ?? 0,
-            'status' => $status,
-            'terminal' => $terminal,
-            'paid' => $paid,
-            'total' => $order->getTotal(),
-            'currency' => $order->getCurrency(),
-            'paid_at' => $order->getPaidAt()?->format(\DateTimeInterface::ATOM),
+            'order_id'        => $order->getId() ?? 0,
+            'status'          => $status,
+            'terminal'        => $terminal,
+            'paid'            => $paid,
+            'total'           => $order->getTotal(),
+            'currency'        => $order->getCurrency(),
+            'paid_at'         => $order->getPaidAt()?->format(\DateTimeInterface::ATOM),
+            'gift_card_id'    => $giftCardId,
         ]);
     }
 

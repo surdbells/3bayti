@@ -135,6 +135,25 @@ final class InitiateCheckoutController
 
         $input = $this->validator->parse($request, InitiateCheckoutInput::class);
 
+        // ------------------------------------------------------------------
+        // M3.5 Phase 4 — Gift card PURCHASE flow (no cart involved).
+        //
+        // When gift_card_purchase_id is supplied the buyer is paying for a
+        // gift card they just created (status=pending_payment). We bypass
+        // the cart entirely: create a synthetic single-item order whose
+        // total equals the card denomination, then call Noon INITIATE.
+        //
+        // On Noon webhook paid → NoonWebhookController calls activateGiftCard()
+        // which finds the card by purchase_order_reference and activates it.
+        //
+        // This is a completely separate code path from the normal cart
+        // checkout. After the early return below the rest of __invoke()
+        // (cart-based flow) is not executed.
+        // ------------------------------------------------------------------
+        if ($input->gift_card_purchase_id !== null) {
+            return $this->initiateGiftCardPurchase($request, $user, $input);
+        }
+
         /** @var CartRepository $carts */
         $carts = $this->em->getRepository(Cart::class);
         $cart = $carts->findActiveForUser($user);
@@ -463,6 +482,132 @@ final class InitiateCheckoutController
         }
 
         return $response;
+    }
+
+    /**
+     * Gift card purchase flow — creates a synthetic order for the card
+     * denomination, calls Noon INITIATE, and returns the checkout URL.
+     * The cart is not touched. Called when gift_card_purchase_id is set.
+     */
+    private function initiateGiftCardPurchase(
+        \Psr\Http\Message\ServerRequestInterface $request,
+        User $user,
+        InitiateCheckoutInput $input,
+    ): \Psr\Http\Message\ResponseInterface {
+        /** @var GiftCardRepository $gcRepo */
+        $gcRepo = $this->em->getRepository(GiftCard::class);
+
+        $card = $gcRepo->find($input->gift_card_purchase_id);
+        if ($card === null) {
+            throw HttpException::notFound('Gift card not found.');
+        }
+        if ($card->getBuyerUser()->getId() !== $user->getId()) {
+            throw HttpException::forbidden('This gift card does not belong to your account.');
+        }
+        if ($card->getStatus() !== GiftCard::STATUS_PENDING_PAYMENT) {
+            throw HttpException::badRequest(
+                'This gift card is not awaiting payment (status: ' . $card->getStatus() . ').'
+            );
+        }
+
+        /** @var \Bayti\Api\Domain\User\AddressRepository $addresses */
+        $addresses = $this->em->getRepository(\Bayti\Api\Domain\User\Address::class);
+        $billing  = $this->resolveAddress($addresses, $user, $input->billing_address_id, 'billing');
+        $shipping = $this->resolveAddress($addresses, $user, $input->shipping_address_id, 'shipping');
+
+        $denomination   = $card->getDenomination();
+        $orderReference = $this->generateOrderReference();
+
+        // Idempotency: same (user, card) pair returns existing checkout URL.
+        $idempotencyKey = sprintf('gc-purchase:user=%d:card=%d', $user->getId() ?? 0, $card->getId() ?? 0);
+
+        /** @var \Bayti\Api\Domain\Payment\PaymentTransactionRepository $transactions */
+        $transactions = $this->em->getRepository(\Bayti\Api\Domain\Payment\PaymentTransaction::class);
+        $existing = $transactions->findByIdempotencyKey($idempotencyKey);
+        if ($existing !== null) {
+            $cachedUrl = $this->extractCheckoutUrl($existing);
+            if ($cachedUrl !== null) {
+                return $this->ok([
+                    'checkout_url'       => $cachedUrl,
+                    'order_reference'    => $existing->getOrder()->getOrderReference(),
+                    'provider_order_ref' => $existing->getProviderOrderRef() ?? '',
+                    'order_id'           => $existing->getOrder()->getId() ?? 0,
+                    'idempotent'         => true,
+                    'gift_card_id'       => $card->getId(),
+                ]);
+            }
+        }
+
+        // Create the synthetic order (no cart items — just the denomination).
+        $order = $this->em->wrapInTransaction(
+            function (\Doctrine\ORM\EntityManagerInterface $em) use (
+                $user, $orderReference, $denomination, $billing, $shipping,
+            ): Order {
+                $order = new Order(
+                    user: $user,
+                    orderReference: $orderReference,
+                    subtotal: $denomination,
+                    deliveryFee: '0.00',
+                    discount: '0.00',
+                );
+                $order->addAddress($this->snapshotAddress($billing, OrderAddress::TYPE_BILLING));
+                $order->addAddress($this->snapshotAddress($shipping, OrderAddress::TYPE_SHIPPING));
+                $em->persist($order);
+                $em->flush();
+                return $order;
+            }
+        );
+
+        // Store the reference on the card so the webhook can find it.
+        $card->setPurchaseOrderReferenceForPayment($orderReference);
+        $this->em->flush();
+
+        // Call Noon INITIATE.
+        $returnUrl = $this->buildReturnUrl($orderReference);
+        try {
+            $initiation = $this->gateway->initiateCheckout(
+                order: $order,
+                returnUrl: $returnUrl,
+                channel: $input->channel,
+            );
+        } catch (\Bayti\Api\Payment\PaymentGatewayException $e) {
+            $this->markOrderFailed($order, $e);
+            $this->logger->error('checkout.initiate: gc-purchase gateway failure', [
+                'user_id' => $user->getId(), 'card_id' => $card->getId(), 'message' => $e->getMessage(),
+            ]);
+            throw HttpException::upstreamFailure(
+                ErrorCodes::PAYMENT_PROVIDER_ERROR,
+                'Payment provider could not initiate checkout. Please try again.',
+            );
+        }
+
+        $tx = new \Bayti\Api\Domain\Payment\PaymentTransaction(
+            order: $order,
+            operation: \Bayti\Api\Domain\Payment\PaymentTransaction::OPERATION_INITIATE,
+            status: 'initiated',
+            amount: $order->getTotal(),
+            idempotencyKey: $idempotencyKey,
+            provider: \Bayti\Api\Domain\Payment\PaymentTransaction::PROVIDER_NOON,
+            providerOrderRef: $initiation->providerOrderRef,
+            currency: $order->getCurrency(),
+            requestPayload: ['returnUrl' => $returnUrl, 'channel' => $input->channel],
+            responsePayload: $initiation->rawResponse,
+        );
+        $transactions->save($tx);
+
+        $this->logger->info('checkout.initiate: gc-purchase success', [
+            'user_id' => $user->getId(), 'order_id' => $order->getId(),
+            'card_id' => $card->getId(), 'denomination' => $denomination,
+        ]);
+
+        return $this->ok([
+            'checkout_url'       => $initiation->checkoutUrl,
+            'order_reference'    => $orderReference,
+            'provider_order_ref' => $initiation->providerOrderRef,
+            'order_id'           => $order->getId() ?? 0,
+            'idempotent'         => false,
+            'gift_card_id'       => $card->getId(),
+        ]);
     }
 
     /**

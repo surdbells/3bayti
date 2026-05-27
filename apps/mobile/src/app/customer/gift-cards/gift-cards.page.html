@@ -250,11 +250,14 @@
       <ion-button
         expand="block"
         (click)="purchaseCard()"
-        [disabled]="ui.purchasing"
+        [disabled]="ui.purchasing || ui_checking_out"
       >
         @if (ui.purchasing) {
           <ion-spinner slot="start" name="crescent"></ion-spinner>
-          Processing…
+          Creating card…
+        } @else if (ui_checking_out) {
+          <ion-spinner slot="start" name="crescent"></ion-spinner>
+          Opening payment…
         } @else {
           Pay AED {{ effectiveDenomination }}
         }

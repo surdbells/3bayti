@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Checkout;
 
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderDispute;
 use Bayti\Api\Domain\Order\OrderDisputeRepository;
@@ -252,6 +254,13 @@ final class NoonWebhookController
         // we never email about state that isn't committed. Idempotent
         // re-deliveries find $transition='' and skip notifying.
         if ($transition === 'paid') {
+            // M3.5 Phase 4 — activate gift card when its purchase order is paid.
+            // Wrapped in try/catch so a repository or activation failure never
+            // aborts the webhook response (order is already marked paid).
+            try {
+                $this->activateGiftCardForOrder($order);
+            } catch (\Throwable) { /* silent — logged inside activateGiftCardForOrder */ }
+
             $this->notifications->orderPaid($order);
             $this->pushNotifications->orderPaid($order);
         } elseif ($transition === 'failed') {
@@ -661,5 +670,34 @@ final class NoonWebhookController
             return $payload['reason'];
         }
         return null;
+    }
+
+    /**
+     * If this order was created to fund a gift card purchase, activate
+     * the card now that payment is confirmed. Idempotent — already-active
+     * cards are silently skipped.
+     */
+    private function activateGiftCardForOrder(Order $order): void
+    {
+        $ref = $order->getOrderReference();
+        /** @var GiftCardRepository $gcRepo */
+        $gcRepo = $this->em->getRepository(GiftCard::class);
+        $card   = $gcRepo->findByPurchaseOrderReference($ref);
+        if ($card === null) return;
+
+        // Idempotent: only activate once
+        if ($card->getStatus() !== GiftCard::STATUS_PENDING_PAYMENT) return;
+
+        try {
+            $card->activate($ref);
+            $gcRepo->save($card);
+        } catch (\Throwable $e) {
+            // Log but never throw — the order is already paid.
+            $this->logger->error('webhook: gift card activation failed', [
+                'order_reference' => $ref,
+                'card_id'         => $card->getId(),
+                'error'           => $e->getMessage(),
+            ]);
+        }
     }
 }

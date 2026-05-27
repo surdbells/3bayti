@@ -108,6 +108,30 @@ final class InitiateCheckoutInput
     )]
     public readonly ?string $gift_card_code;
 
+    /**
+     * Gift card purchase flow (M3.5 Phase 4).
+     *
+     * When supplied, the checkout bypasses the cart entirely and
+     * creates a single-line synthetic order whose sole purpose is to
+     * charge the buyer for the gift card denomination via Noon.
+     *
+     * Flow:
+     *   1. Client calls POST /v3/gift-cards/purchase → gets pending card {id}
+     *   2. Client calls POST /v3/checkout/initiate with gift_card_purchase_id=<id>
+     *   3. Server creates a synthetic order (denomination as total, no cart items)
+     *   4. Server calls Noon INITIATE → returns checkout_url to client
+     *   5. Client opens webview, buyer pays
+     *   6. Noon webhook fires → NoonWebhookController marks order paid and
+     *      calls GiftCard::activate() with the order_reference
+     *   7. Client polls GET /v3/checkout/status/{ref} → sees paid=true
+     *   8. Client navigates to /my-gift-cards
+     *
+     * The gift card's purchase_order_reference is set during activate(),
+     * linking the card back to the funding order for audit.
+     */
+    #[Assert\Positive(message: 'gift_card_purchase_id must be a positive integer.')]
+    public readonly ?int $gift_card_purchase_id;
+
     public function __construct(
         ?string $channel = 'MOBILE',
         ?string $delivery_fee = '0.00',
@@ -116,6 +140,7 @@ final class InitiateCheckoutInput
         ?int $billing_address_id = null,
         ?int $shipping_address_id = null,
         ?string $gift_card_code = null,
+        ?int $gift_card_purchase_id = null,
     ) {
         $this->channel = $channel ?? 'MOBILE';
         $this->delivery_fee = $delivery_fee ?? '0.00';
@@ -132,5 +157,6 @@ final class InitiateCheckoutInput
         $this->gift_card_code = $gift_card_code !== null
             ? (strtoupper(str_replace('-', '', trim($gift_card_code))) ?: null)
             : null;
+        $this->gift_card_purchase_id = $gift_card_purchase_id;
     }
 }
