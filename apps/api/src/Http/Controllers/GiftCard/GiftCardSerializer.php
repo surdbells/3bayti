@@ -16,46 +16,80 @@ final class GiftCardSerializer
 {
     private const THEME_META = [
         GiftCard::THEME_BIRTHDAY => [
-            'label'         => 'Birthday',
-            'primary_color' => '#F5A623',
-            'accent_color'  => '#FFF3D6',
-            'supports_photo'=> false,
-            'arabic_label'  => 'عيد ميلاد',
+            'label'          => 'Birthday',
+            'arabic_label'   => 'عيد ميلاد',
+            // Deep amber-black card with gold sunburst rays from top-right corner,
+            // concentric gold circles, and a diamond-chain border strip.
+            'primary_color'  => '#3A1A00',   // deep amber-black card base
+            'accent_color'   => '#E8C040',   // gold sunburst / title
+            'text_color'     => '#F5E060',   // amount + display text
+            'border_color'   => '#E8C040',   // outer card border
+            'pattern'        => 'sunburst',  // mobile picks the sunburst SVG template
+            'supports_photo' => false,
         ],
         GiftCard::THEME_WEDDING => [
-            'label'         => 'Wedding Anniversary',
-            'primary_color' => '#C9A0A0',
-            'accent_color'  => '#FDF6F0',
-            'supports_photo'=> false,
-            'arabic_label'  => 'ذكرى الزفاف',
+            'label'          => 'Wedding Anniversary',
+            'arabic_label'   => 'ذكرى الزفاف',
+            // Deep burgundy-black card with layered sinusoidal vine waves,
+            // interlocking gold rings (wedding band motif), and a dot-column divider.
+            'primary_color'  => '#260014',   // deep burgundy-black card base
+            'accent_color'   => '#D4AF37',   // gold rings / vines / title
+            'text_color'     => '#F5E060',   // amount + display text
+            'border_color'   => '#D4AF37',
+            'pattern'        => 'rings',     // mobile picks the interlocking-rings template
+            'supports_photo' => false,
         ],
         GiftCard::THEME_EID => [
-            'label'         => 'Eid Mubarak',
-            'primary_color' => '#1A5C3A',
-            'accent_color'  => '#E8F5EE',
-            'supports_photo'=> false,
-            'arabic_label'  => 'عيد مبارك',
+            'label'          => 'Eid Mubarak',
+            'arabic_label'   => 'عيد مبارك',
+            // Deep forest-black card with a single clean 12-pointed Islamic
+            // geometric star, crescent + star top-right, and arabesque wave borders.
+            'primary_color'  => '#002A12',   // deep forest-black card base
+            'accent_color'   => '#D4AF37',   // gold star / arabesque / title
+            'text_color'     => '#F5E060',   // amount + display text
+            'border_color'   => '#2A8A50',   // outer border green accent
+            'pattern'        => 'star',      // mobile picks the 12-point-star template
+            'supports_photo' => false,
         ],
         GiftCard::THEME_MOTHER => [
-            'label'         => "Mother's Day",
-            'primary_color' => '#E8A0B4',
-            'accent_color'  => '#FDF0F5',
-            'supports_photo'=> false,
-            'arabic_label'  => 'عيد الأم',
+            'label'          => "Mother's Day",
+            'arabic_label'   => 'عيد الأم',
+            // Deep plum-black card with a large 12-petal symmetrical bloom
+            // centre-right, a smaller bloom echo top-right, and a fleur-de-lis
+            // diamond dot border strip.
+            'primary_color'  => '#22001A',   // deep plum-black card base
+            'accent_color'   => '#D4AF37',   // gold bloom petals / title
+            'text_color'     => '#F5E060',   // amount + display text
+            'border_color'   => '#D4AF37',
+            'pattern'        => 'bloom',     // mobile picks the petal-bloom template
+            'supports_photo' => false,
         ],
         GiftCard::THEME_GRADUATION => [
-            'label'         => 'Graduation',
-            'primary_color' => '#1B3C6E',
-            'accent_color'  => '#EDF2FB',
-            'supports_photo'=> false,
-            'arabic_label'  => 'التخرج',
+            'label'          => 'Graduation',
+            'arabic_label'   => 'التخرج',
+            // Deep navy-black card with a layered heraldic seal (tick-mark outer ring,
+            // 16-point star, inner rings, mortar board glyph), navy stripe top/bottom,
+            // and subtle vertical column lines on the left margin.
+            'primary_color'  => '#000C26',   // deep navy-black card base
+            'accent_color'   => '#D4AF37',   // gold seal / title
+            'text_color'     => '#F5E060',   // amount + display text
+            'border_color'   => '#1A3070',   // outer border navy accent
+            'pattern'        => 'seal',      // mobile picks the heraldic-seal template
+            'supports_photo' => false,
         ],
         GiftCard::THEME_LUXURY => [
-            'label'         => 'Luxury Gift',
-            'primary_color' => '#1A1A1A',
-            'accent_color'  => '#C8B88A',
-            'supports_photo'=> true,
-            'arabic_label'  => 'هدية فاخرة',
+            'label'          => 'Luxury Gift',
+            'arabic_label'   => 'هدية فاخرة',
+            // Pure black-gold card with fine diagonal cross-hatch, bold gold side
+            // pillars, a grand outer medallion ring with tick marks, a 16-point
+            // decorative star behind an ornate framed recipient photo circle, and
+            // a triple outer gold border.
+            'primary_color'  => '#1A1200',   // pure black-gold card base
+            'accent_color'   => '#E8C040',   // bright gold pillars / medallion / title
+            'text_color'     => '#F0D060',   // amount + display text
+            'border_color'   => '#E8C040',   // bold outer gold border
+            'pattern'        => 'medallion', // mobile picks the grand-medallion template
+            'supports_photo' => true,        // ONLY theme that accepts recipient_photo_url
         ],
     ];
 
