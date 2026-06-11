@@ -52,7 +52,7 @@ final class ListVendorReviewsController
         $items = $qb->getQuery()->getResult();
 
         $countQb = clone $qb;
-        $total   = (int) $countQb->select('COUNT(r.id)')->setMaxResults(null)->setFirstResult(0)->getQuery()->getSingleScalarResult();
+        $total   = (int) $countQb->select('COUNT(r.id)')->resetDQLPart('orderBy')->setMaxResults(null)->setFirstResult(0)->getQuery()->getSingleScalarResult();
 
         $data = array_map(static fn(ProductReview $r) => [
             'id'           => $r->getId(),

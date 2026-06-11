@@ -42,7 +42,7 @@ class TicketRepository extends EntityRepository
         }
 
         $countQb = clone $qb;
-        $total   = (int) $countQb->select('COUNT(t.id)')->setMaxResults(null)->setFirstResult(0)->getQuery()->getSingleScalarResult();
+        $total   = (int) $countQb->select('COUNT(t.id)')->resetDQLPart('orderBy')->setMaxResults(null)->setFirstResult(0)->getQuery()->getSingleScalarResult();
 
         /** @var list<Ticket> $items */
         $items = $qb->getQuery()->getResult();

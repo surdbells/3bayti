@@ -33,7 +33,7 @@ class ProductCollectionRepository extends EntityRepository
             $qb->where('c.isActive = :a')->setParameter('a', $activeOnly);
         }
         $countQb = clone $qb;
-        $total   = (int) $countQb->select('COUNT(c.id)')->getQuery()->getSingleScalarResult();
+        $total   = (int) $countQb->select('COUNT(c.id)')->resetDQLPart('orderBy')->getQuery()->getSingleScalarResult();
         $qb->setMaxResults($limit)->setFirstResult($offset);
         /** @var list<ProductCollection> $items */
         $items = $qb->getQuery()->getResult();

@@ -42,7 +42,7 @@ final class ListCommissionsController
         $orders = $qb->getQuery()->getResult();
 
         $countQb = clone $qb;
-        $total   = (int) $countQb->select('COUNT(o.id)')->setMaxResults(null)->setFirstResult(0)->getQuery()->getSingleScalarResult();
+        $total   = (int) $countQb->select('COUNT(o.id)')->resetDQLPart('orderBy')->setMaxResults(null)->setFirstResult(0)->getQuery()->getSingleScalarResult();
 
         $data = array_map(static fn(Order $o) => [
             'id'              => $o->getId(),
