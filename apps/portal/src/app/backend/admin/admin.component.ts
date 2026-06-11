@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -70,6 +70,7 @@ const ICON_MAP: Record<string, string> = {
     ChartComponent,
     AxPaginationComponent,
     TranslatePipe,
+    RouterLink,
   ],
   standalone: true,
   templateUrl: './admin.component.html',
