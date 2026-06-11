@@ -1067,6 +1067,29 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/vendors/:id/metrics': {
     target: 'new', oldPath: '/admin/common/dashboard-activity', newPath: '/v3/admin/vendors/:id/metrics', shape: 'v3-envelope',
   },
+  // Platform-wide admin analytics dashboard
+  'GET /admin/analytics': {
+    target: 'new', oldPath: '/admin/common/dashboard', newPath: '/v3/admin/analytics', shape: 'v3-envelope',
+  },
+  // Gift cards
+  'GET /gift-cards/themes': {
+    target: 'new', oldPath: '/gift-cards/themes', newPath: '/v3/gift-cards/themes', shape: 'v3-envelope',
+  },
+  'GET /gift-cards/balance': {
+    target: 'new', oldPath: '/gift-cards/balance', newPath: '/v3/gift-cards/balance', shape: 'v3-envelope',
+  },
+  'GET /gift-cards/mine': {
+    target: 'new', oldPath: '/gift-cards/mine', newPath: '/v3/gift-cards/mine', shape: 'v3-envelope',
+  },
+  'POST /gift-cards/purchase': {
+    target: 'new', oldPath: '/gift-cards/purchase', newPath: '/v3/gift-cards/purchase', shape: 'v3-envelope',
+  },
+  'POST /gift-cards/redeem': {
+    target: 'new', oldPath: '/gift-cards/redeem', newPath: '/v3/gift-cards/redeem', shape: 'v3-envelope',
+  },
+  'POST /gift-cards/:id/activate': {
+    target: 'new', oldPath: '/gift-cards/activate', newPath: '/v3/gift-cards/:id/activate', shape: 'v3-envelope',
+  },
   'PATCH /admin/orders/:id/status': {
     target: 'new', oldPath: '/admin/common/processing', newPath: '/v3/admin/orders/:id/status', shape: 'v3-envelope',
   },
