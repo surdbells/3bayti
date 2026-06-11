@@ -18,6 +18,11 @@
         </div>
 
         <div class="ax-flex ax-gap-2 ax-items-center">
+          <select class="ax-input ax-input-sm" style="width:90px" (change)="pageSize=+$any($event.target).value; get_users(0, searchQuery, roleFilter)">
+            <option value="20">20 / page</option>
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+          </select>
           <input
             type="search"
             class="ax-input ax-input-sm"

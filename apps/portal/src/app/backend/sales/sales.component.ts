@@ -89,7 +89,7 @@ export class SalesComponent implements OnInit {
   get_sales() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 50, offset: 0 } }).subscribe({
+    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 20, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response?.data) {
           this.sales = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
@@ -111,7 +111,7 @@ export class SalesComponent implements OnInit {
   get_range_sales() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 50, offset: 0, since: this.get_sale_range.start_date, until: this.get_sale_range.end_date } }).subscribe({
+    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 20, offset: 0, since: this.get_sale_range.start_date, until: this.get_sale_range.end_date } }).subscribe({
       next: (response: any) => {
         if (response?.data) {
           this.sales = Array.isArray(response.data) ? response.data : response.data?.items ?? [];

@@ -73,7 +73,7 @@ export class CustomersComponent implements OnInit {
   get_customer() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /admin/customers', { query: { limit: 50, offset: 0 } }).subscribe({
+    this.adapter.get_v3('GET /admin/users', { query: { limit: 20, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response?.data) {
           this.customers = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
@@ -111,7 +111,7 @@ export class CustomersComponent implements OnInit {
     const custActId = this.activate.customer ?? this.activate.id;
     this.adapter.post_v3('POST /admin/users/:id/activate', {}, { params: { id: String(custActId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_customer();
         }
@@ -140,7 +140,7 @@ export class CustomersComponent implements OnInit {
     const custDeactId = this.deactivate.customer ?? this.deactivate.id;
     this.adapter.post_v3('POST /admin/users/:id/deactivate', {}, { params: { id: String(custDeactId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_customer();
         }

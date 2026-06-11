@@ -88,7 +88,7 @@ export class StoresComponent implements OnInit {
 
   // Pagination & search state
   total = 0;
-  pageSize = 50;
+  pageSize = 20;
   pageIndex = 0;
   search = '';
 

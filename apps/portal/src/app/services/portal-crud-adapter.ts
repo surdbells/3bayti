@@ -7,6 +7,7 @@ import {
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { Router } from '@angular/router';
 
 import { resolveUrl } from '@3bayti/api-client';
 import { GlobalComponent } from '../global-component';
@@ -68,7 +69,7 @@ export interface V3RequestOptions {
 
 @Injectable({ providedIn: 'root' })
 export class PortalCrudAdapter {
-  constructor(private readonly http: HttpClient) {}
+  constructor(private readonly http: HttpClient, private readonly router: Router) {}
 
   // ── Read ────────────────────────────────────────────────────────────
 
@@ -175,7 +176,11 @@ export class PortalCrudAdapter {
   }
 
   private handleError = (err: HttpErrorResponse): Observable<never> => {
-    // Mirror CrudService.error() so existing component error callbacks work
+    // 401 = token expired or invalid — clear session and redirect to login
+    if (err.status === 401) {
+      sessionStorage.removeItem('SESSION');
+      this.router.navigate(['/login']).catch(() => {});
+    }
     const message =
       err.error instanceof ErrorEvent
         ? err.error.message

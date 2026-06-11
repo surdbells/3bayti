@@ -178,7 +178,8 @@ export class AdminComponent implements OnInit {
     this.adapter.get_v3('GET /admin/analytics', { query: { days: 30 } })
       .subscribe({
         next: (response) => {
-          if (response.response_code === 200 && response.status === 'success') {
+          this.ui_controls.is_loading = false;
+          if (response) {
             this.ui_controls.is_loading = false;
             this.total_products = response.total_products;
             this.total_orders = response.total_orders;

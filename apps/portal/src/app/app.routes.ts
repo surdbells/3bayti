@@ -283,6 +283,11 @@ export const routes: Routes = [
     title: 'Platform Users'
   },
   {
+    path: 'admin-gift-cards',
+    loadComponent: () => import('./backend/gift-cards/gift-cards.component').then(m => m.GiftCardsAdminComponent),
+    title: 'Gift Cards'
+  },
+  {
     path: 'coupons',
     loadComponent: () => import('./coupon/coupon-list/coupon-list.component').then(m => m.CouponListComponent),
     title: 'Coupons and Discounts'

@@ -84,9 +84,9 @@ export class ProcessingComponent implements OnInit {
   get_processing() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /admin/orders', { query: { limit: 50, offset: 0 } }).subscribe({
+    this.adapter.get_v3('GET /admin/orders', { query: { limit: 20, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.transaction = response.data;
           this.ui_controls.no_data = !this.transaction || this.transaction.length === 0;
         } else {
@@ -109,7 +109,7 @@ export class ProcessingComponent implements OnInit {
     const orderId = this.getProcessingById.order ?? this.getProcessingById.id;
     this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(orderId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.transaction = response.data;
         }
         this.ui_controls.is_loading = false;
@@ -121,9 +121,9 @@ export class ProcessingComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
     const procStatus = (this.get_processing_r as any).status ?? '';
-    this.adapter.get_v3('GET /admin/orders', { query: { status: procStatus, limit: 50, offset: 0 } }).subscribe({
+    this.adapter.get_v3('GET /admin/orders', { query: { status: procStatus, limit: 20, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.transaction = response.data;
           this.ui_controls.no_data = !this.transaction || this.transaction.length === 0;
         } else {
