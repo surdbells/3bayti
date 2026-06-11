@@ -41,6 +41,107 @@
 
 import { AngularAppEngine, createRequestHandler } from '@angular/ssr';
 
+const UPSTREAM_BASE = 'https://api-v3.3bayti.ae';
+const REFRESH_COOKIE = 'bayti_refresh';
+const COOKIE_PATH    = '/auth-proxy';
+const COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
+
+function getRefreshToken(cookieHeader: string | null): string | null {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${REFRESH_COOKIE}=([^;]+)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function setRefreshCookie(token: string, headers: Headers): void {
+  headers.append('Set-Cookie',
+    `${REFRESH_COOKIE}=${encodeURIComponent(token)}; Path=${COOKIE_PATH}; HttpOnly; Secure; SameSite=Lax; Max-Age=${COOKIE_MAX_AGE}`);
+}
+
+function clearRefreshCookie(headers: Headers): void {
+  headers.append('Set-Cookie',
+    `${REFRESH_COOKIE}=; Path=${COOKIE_PATH}; HttpOnly; Secure; SameSite=Lax; Max-Age=0`);
+}
+
+async function upstreamFetch(path: string, method: string, body: unknown, accessToken?: string, req?: Request): Promise<Response> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (accessToken) headers['Authorization'] = `Bearer ${accessToken}`;
+  if (req) {
+    const ip = req.headers.get('CF-Connecting-IP') ?? req.headers.get('X-Forwarded-For');
+    if (ip) headers['X-Forwarded-For'] = ip;
+    const ua = req.headers.get('User-Agent');
+    if (ua) headers['User-Agent'] = ua;
+  }
+  return fetch(`${UPSTREAM_BASE}${path}`, {
+    method, headers, body: body != null ? JSON.stringify(body) : undefined,
+  });
+}
+
+function isAuthSuccess(d: unknown): d is { access_token: string; access_token_expires_at: string; refresh_token: string; refresh_token_expires_at: string; user: unknown } {
+  return typeof d === 'object' && d !== null &&
+    typeof (d as Record<string, unknown>)['access_token'] === 'string' &&
+    typeof (d as Record<string, unknown>)['refresh_token'] === 'string';
+}
+
+function stripped(d: Record<string, unknown>): Record<string, unknown> {
+  const { refresh_token: _rt, ...rest } = d; void _rt; return rest;
+}
+
+async function handleAuthProxy(req: Request): Promise<Response | null> {
+  const url = new URL(req.url);
+  if (!url.pathname.startsWith('/auth-proxy/')) return null;
+  const seg = url.pathname.slice('/auth-proxy/'.length);
+  const cookie = req.headers.get('Cookie');
+  const rh = new Headers({ 'Content-Type': 'application/json' });
+
+  if (seg === 'me' && req.method === 'GET') {
+    const rt = getRefreshToken(cookie);
+    if (!rt) return new Response(JSON.stringify({ error_code: 'AUTH_REFRESH_TOKEN_INVALID', message: 'No active session.' }), { status: 401, headers: rh });
+    const rr = await upstreamFetch('/v3/auth/refresh', 'POST', { refresh_token: rt }, undefined, req);
+    const rd = await rr.json().catch(() => null);
+    if (rr.status !== 200 || !isAuthSuccess(rd)) { clearRefreshCookie(rh); return new Response(JSON.stringify(rd), { status: rr.status, headers: rh }); }
+    setRefreshCookie(rd.refresh_token, rh);
+    const mr = await upstreamFetch('/v3/auth/me', 'GET', null, rd.access_token, req);
+    const md = await mr.json().catch(() => null);
+    if (mr.status !== 200) { clearRefreshCookie(rh); return new Response(JSON.stringify(md), { status: mr.status, headers: rh }); }
+    return new Response(JSON.stringify({ access_token: rd.access_token, access_token_expires_at: rd.access_token_expires_at, refresh_token_expires_at: rd.refresh_token_expires_at, user: md }), { status: 200, headers: rh });
+  }
+
+  if (seg === 'refresh' && req.method === 'POST') {
+    const rt = getRefreshToken(cookie);
+    if (!rt) return new Response(JSON.stringify({ error_code: 'AUTH_REFRESH_TOKEN_INVALID', message: 'No refresh token.' }), { status: 401, headers: rh });
+    const ur = await upstreamFetch('/v3/auth/refresh', 'POST', { refresh_token: rt }, undefined, req);
+    const ud = await ur.json().catch(() => null);
+    if (ur.status === 200 && isAuthSuccess(ud)) { setRefreshCookie(ud.refresh_token, rh); return new Response(JSON.stringify(stripped(ud as Record<string,unknown>)), { status: 200, headers: rh }); }
+    clearRefreshCookie(rh); return new Response(JSON.stringify(ud), { status: ur.status, headers: rh });
+  }
+
+  if (seg === 'logout' && req.method === 'POST') {
+    const rt = getRefreshToken(cookie); clearRefreshCookie(rh);
+    if (rt) await upstreamFetch('/v3/auth/logout', 'POST', { refresh_token: rt }, undefined, req).catch(() => null);
+    return new Response(null, { status: 204, headers: rh });
+  }
+
+  const authSuccessMap: Record<string, string> = { 'login': '/v3/auth/login', 'confirm': '/v3/auth/confirm', 'reset-confirm': '/v3/auth/reset/confirm' };
+  if (req.method === 'POST' && authSuccessMap[seg]) {
+    const body = await req.json().catch(() => ({}));
+    const ur = await upstreamFetch(authSuccessMap[seg], 'POST', body, undefined, req);
+    const ud = await ur.json().catch(() => null);
+    if ((ur.status === 200 || ur.status === 201) && isAuthSuccess(ud)) { setRefreshCookie(ud.refresh_token, rh); return new Response(JSON.stringify(stripped(ud as Record<string,unknown>)), { status: ur.status, headers: rh }); }
+    return new Response(JSON.stringify(ud), { status: ur.status, headers: rh });
+  }
+
+  const passthroughMap: Record<string, string> = { 'register': '/v3/auth/register', 'send-otp': '/v3/auth/send-otp', 'reset': '/v3/auth/reset' };
+  if (req.method === 'POST' && passthroughMap[seg]) {
+    const body = await req.json().catch(() => ({}));
+    const ur = await upstreamFetch(passthroughMap[seg], 'POST', body, undefined, req);
+    const ud = await ur.json().catch(() => null);
+    return new Response(JSON.stringify(ud), { status: ur.status, headers: rh });
+  }
+
+  return new Response(JSON.stringify({ error_code: 'NOT_FOUND', message: 'Unknown auth-proxy endpoint.' }), { status: 404, headers: rh });
+}
+
+
 /* Singleton — instantiated once per Worker isolate. The class internally
  * caches the parsed app manifest and entry-point loaders, so reusing the
  * same instance across requests avoids redundant work. */
@@ -66,6 +167,9 @@ export default {
        *     prerendered pages are served by the assets binding before
        *     reaching here).
        *   - null: no Angular route matched the URL. */
+      const authProxyResponse = await handleAuthProxy(request);
+      if (authProxyResponse) return authProxyResponse;
+
       const response = await angularApp.handle(request);
       if (response) {
         return response;
