@@ -1403,10 +1403,6 @@ final class MigrationSteps
             }
             echo "  Remapped {$remapped} products.label_id from legacy → v3 ids.\n";
 
-            // Validate the FK now that data is consistent.
-            $this->conn->executeStatement('ALTER TABLE products VALIDATE CONSTRAINT fk_products_label');
-            echo "  Validated fk_products_label.\n";
-
             $this->conn->executeStatement(
                 "SELECT setval('vendor_labels_id_seq', COALESCE((SELECT MAX(id) FROM vendor_labels), 0) + 1, false)"
             );
