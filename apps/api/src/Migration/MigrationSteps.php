@@ -1641,7 +1641,7 @@ final class MigrationSteps
         echo "===== migrate-orders =====\n";
 
         // Probe table name. Legacy candidates ordered by likelihood.
-        $candidates = ['orders', 'order', 'order_master', 'customer_orders'];
+        $candidates = ['ec_orders', 'orders', 'order', 'order_master', 'customer_orders'];
         $sourceTable = $this->probeTable($candidates);
         if ($sourceTable === null) {
             return $this->skipMissingTable('orders', $candidates);
@@ -1799,7 +1799,7 @@ final class MigrationSteps
     {
         echo "===== migrate-order-items =====\n";
 
-        $candidates = ['order_items', 'orderitems', 'order_item', 'order_details', 'order_lines'];
+        $candidates = ['ec_order_items', 'order_items', 'orderitems', 'order_item', 'order_details', 'order_lines'];
         $sourceTable = $this->probeTable($candidates);
         if ($sourceTable === null) {
             return $this->skipMissingTable('order_items', $candidates);
@@ -1964,7 +1964,7 @@ final class MigrationSteps
 
         // Inline-on-orders path: extract address fields from the orders
         // table itself. Probe the orders table for address columns.
-        $ordersTable = $this->probeTable(['orders', 'order', 'order_master']);
+        $ordersTable = $this->probeTable(['ec_orders', 'orders', 'order', 'order_master']);
         if ($ordersTable === null) {
             return $this->skipMissingTable('orders (for inline addresses)', ['orders']);
         }

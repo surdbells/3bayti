@@ -73,13 +73,27 @@ export class PortalAuthService {
   }> {
     return this.adapter.post_v3('POST /auth/login', { email, password }).pipe(
       map((res: any) => {
-        if (res?.response_code === 200 && res?.status === 'success') {
-          const session = this.mapToSession(res.data);
+        // v3 API returns the payload directly at the top level — no
+        // response_code wrapper. Success is indicated by access_token
+        // presence (HTTP 200; Angular HttpClient throws on non-2xx).
+        if (res?.access_token) {
+          const session = this.mapToSession(res);
           const encoded = GlobalComponent.encodeBase64(session);
           sessionStorage.setItem('SESSION', encoded);
-          return { ...res, data: session };
+          return {
+            response_code: 200,
+            status: 'success',
+            message: 'Login successful',
+            data: session,
+          };
         }
-        return res;
+        // Unexpected 200 body without a token — treat as failure.
+        return {
+          response_code: 400,
+          status: 'failed',
+          message: res?.message ?? 'Login failed. Please try again.',
+          data: null as any,
+        };
       }),
     );
   }
