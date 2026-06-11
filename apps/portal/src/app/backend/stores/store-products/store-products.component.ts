@@ -73,8 +73,8 @@ export class StoreProductsComponent implements OnInit {
     const spId = this.product.store ?? this.product.id;
     this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(spId) }, query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.products = response.data ?? [];
+        if (response) {
+          this.products = response.data ?? response.products ?? [];
           this.ui_controls.no_data = !this.products || this.products.length === 0;
         } else {
           this.ui_controls.no_data = true;

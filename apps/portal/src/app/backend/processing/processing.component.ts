@@ -29,6 +29,7 @@ export interface Transaction {
 })
 export class ProcessingComponent implements OnInit {
   transaction?: Transaction[];
+  total = 0;
 
   ui_controls = {
     is_loading: false,
@@ -87,7 +88,8 @@ export class ProcessingComponent implements OnInit {
     this.adapter.get_v3('GET /admin/orders', { query: { limit: 20, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response) {
-          this.transaction = response.data;
+          this.transaction = response.orders ?? response.data ?? [];
+          this.total = response.pagination?.total ?? this.transaction.length;
           this.ui_controls.no_data = !this.transaction || this.transaction.length === 0;
         } else {
           this.ui_controls.no_data = true;
@@ -124,7 +126,8 @@ export class ProcessingComponent implements OnInit {
     this.adapter.get_v3('GET /admin/orders', { query: { status: procStatus, limit: 20, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response) {
-          this.transaction = response.data;
+          this.transaction = response.orders ?? response.data ?? [];
+          this.total = response.pagination?.total ?? this.transaction.length;
           this.ui_controls.no_data = !this.transaction || this.transaction.length === 0;
         } else {
           this.ui_controls.no_data = true;

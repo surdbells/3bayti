@@ -79,7 +79,7 @@ export class StoreOrdersComponent implements OnInit {
     this.adapter.get_v3('GET /admin/orders', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response?.data) {
-          this.orders = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
+          this.orders = response.orders ?? (Array.isArray(response.data) ? response.data : response.data?.items ?? []);
           this.ui_controls.no_orders = !this.orders || this.orders.length === 0;
         } else {
           this.ui_controls.no_orders = true;
@@ -110,7 +110,7 @@ export class StoreOrdersComponent implements OnInit {
     this.adapter.get_v3('GET /admin/orders', { query: { limit: 50, offset: 0, status: statusFilter } }).subscribe({
       next: (response: any) => {
         if (response?.data) {
-          this.orders = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
+          this.orders = response.orders ?? (Array.isArray(response.data) ? response.data : response.data?.items ?? []);
           this.ui_controls.no_orders = !this.orders || this.orders.length === 0;
         } else {
           this.ui_controls.no_orders = true;

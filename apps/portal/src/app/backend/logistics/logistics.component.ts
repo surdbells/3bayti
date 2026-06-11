@@ -77,8 +77,8 @@ export class LogisticsComponent implements OnInit {
     this.ui_controls.no_data = false;
     this.adapter.get_v3('GET /admin/orders', { query: { status: 'shipped', limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.logistic = response.data;
+        if (response) {
+          this.logistic = response.orders ?? response.data ?? [];
           this.ui_controls.no_data = !this.logistic || this.logistic.length === 0;
         } else {
           this.ui_controls.no_data = true;
@@ -101,8 +101,8 @@ export class LogisticsComponent implements OnInit {
     const logStatus = this.get_del_status.status;
     this.adapter.get_v3('GET /admin/orders', { query: { status: logStatus, limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.logistic = response.data;
+        if (response) {
+          this.logistic = response.orders ?? response.data ?? [];
           this.ui_controls.no_data = !this.logistic || this.logistic.length === 0;
         } else {
           this.ui_controls.no_data = true;

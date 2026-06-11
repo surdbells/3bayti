@@ -64,8 +64,8 @@ export class VendorReturnsComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.adapter.get_v3('GET /vendor/returns', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.orders = response.data;
+        if (response) {
+          this.orders = response.data ?? [];
           this.ui_controls.no_orders = !this.orders || this.orders.length === 0;
         } else {
           this.ui_controls.no_orders = true;

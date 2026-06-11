@@ -90,9 +90,9 @@ export class CommissionsComponent implements OnInit {
     this.ui_controls.no_data = false;
     this.adapter.get_v3('GET /admin/commissions', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.sales = response.data;
-          this.stats = response.message;
+        if (response) {
+          this.sales = response.data ?? response.commissions ?? [];
+          this.stats = response.stats ?? response.meta ?? {};
           this.ui_controls.no_data = !this.sales || this.sales.length === 0;
         } else {
           this.ui_controls.no_data = true;
@@ -113,9 +113,9 @@ export class CommissionsComponent implements OnInit {
     this.ui_controls.no_data = false;
     this.adapter.get_v3('GET /admin/commissions', { query: { limit: 50, offset: 0, since: this.get_sale_range.start_date, until: this.get_sale_range.end_date } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.sales = response.data;
-          this.stats = response.message;
+        if (response) {
+          this.sales = response.data ?? response.commissions ?? [];
+          this.stats = response.stats ?? response.meta ?? {};
           this.ui_controls.no_data = !this.sales || this.sales.length === 0;
         } else {
           this.ui_controls.no_data = true;

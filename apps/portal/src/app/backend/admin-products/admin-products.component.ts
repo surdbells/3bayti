@@ -70,7 +70,7 @@ export class AdminProductsComponent implements OnInit {
   get_product() {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /v3/products', { query: { limit: 20, offset: 0 } }).subscribe({
+    this.adapter.get_v3('GET /products', { query: { limit: 20, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response) {
           this.products = response.data ?? [];
@@ -94,7 +94,7 @@ export class AdminProductsComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
     this.products = [];
-    this.adapter.get_v3('GET /v3/products', { query: { limit: 20, offset: 0, vendor: this.product_S.id } }).subscribe({
+    this.adapter.get_v3('GET /products', { query: { limit: 20, offset: 0, vendor: this.product_S.id } }).subscribe({
       next: (response: any) => {
         if (response) {
           this.products = response.data ?? [];
