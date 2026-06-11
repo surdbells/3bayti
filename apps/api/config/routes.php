@@ -448,6 +448,10 @@ return function (App $app): void {
         $group->get('/vendor-metrics',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorMetricsController::class);
 
+        // Platform-wide analytics dashboard (admin home screen KPIs)
+        $group->get('/analytics',
+            \Bayti\Api\Http\Controllers\Admin\GetAdminPlatformAnalyticsController::class);
+
         // M3.2.X.14-B — Vendor performance metrics (admin single-vendor view)
         $group->get('/vendors/{id:[0-9]+}/metrics',
             \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class);

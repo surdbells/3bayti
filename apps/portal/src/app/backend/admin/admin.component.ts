@@ -175,7 +175,7 @@ export class AdminComponent implements OnInit {
     this.stats.id = this.user_session.id;
     this.stats.token = this.user_session.token;
     this.ui_controls.is_loading = true;
-    this.adapter.get_v3('GET /vendor/analytics', { query: { days: 30 } })
+    this.adapter.get_v3('GET /admin/analytics', { query: { days: 30 } })
       .subscribe({
         next: (response) => {
           if (response.response_code === 200 && response.status === 'success') {
