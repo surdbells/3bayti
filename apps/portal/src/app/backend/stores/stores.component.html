@@ -13,16 +13,22 @@
           </button>
           <span class="ax-page-header-eyebrow">Marketplace</span>
           <h1 class="ax-page-title">Stores</h1>
-          <p *ngIf="stores && stores.length > 0" class="ax-page-subtitle">
-            {{ stores.length }} vendor store{{ stores.length !== 1 ? 's' : '' }} on the platform.
+          <p *ngIf="total > 0" class="ax-page-subtitle">
+            {{ total | number }} vendor store{{ total !== 1 ? 's' : '' }} on the platform.
           </p>
         </div>
 
         <div class="ax-flex ax-gap-2 ax-items-center">
+          <input
+            type="search"
+            class="ax-input ax-input-sm"
+            placeholder="Search stores..."
+            style="width:200px"
+            (input)="onSearch($event)" />
           <button
             type="button"
             class="ax-btn ax-btn-outline ax-btn-sm"
-            (click)="get_store()"
+            (click)="get_store(0, search)"
             [disabled]="ui_controls.is_loading">
             <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
             Refresh
@@ -146,6 +152,21 @@
               </tr>
             </tbody>
           </table>
+        </div>
+        <!-- Pagination -->
+        <div *ngIf="totalPages > 1" class="ax-flex ax-justify-between ax-items-center ax-p-3" style="border-top:1px solid var(--ax-color-border-subtle)">
+          <span class="ax-text-sm ax-text-secondary">
+            Showing {{ pageIndex * pageSize + 1 }}–{{ (pageIndex + 1) * pageSize < total ? (pageIndex + 1) * pageSize : total }} of {{ total }}
+          </span>
+          <div class="ax-flex ax-gap-2">
+            <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="prevPage()" [disabled]="pageIndex === 0">
+              <span class="material-symbols-outlined">chevron_left</span>
+            </button>
+            <span class="ax-text-sm ax-text-secondary ax-px-2" style="line-height:2rem">{{ pageIndex + 1 }} / {{ totalPages }}</span>
+            <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="nextPage()" [disabled]="pageIndex >= totalPages - 1">
+              <span class="material-symbols-outlined">chevron_right</span>
+            </button>
+          </div>
         </div>
       </section>
 

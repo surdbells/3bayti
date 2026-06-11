@@ -98,7 +98,7 @@ export class UsersComponent implements OnInit {
     this.password_c.token = this.user_session.token;
     this.single.id = this.user_session.id;
     this.single.token = this.user_session.token;
-    this.get_users();
+    this.get_users(0, '', 'customer');
   }
 
   goBack() {
@@ -113,13 +113,26 @@ export class UsersComponent implements OnInit {
     this.toast.success(message);
   }
 
-  get_users() {
+  // Pagination & search state
+  total = 0;
+  pageSize = 50;
+  pageIndex = 0;
+  searchQuery = '';
+  roleFilter = 'customer';
+
+  get_users(page = 0, search = '', role = 'customer') {
     this.ui_controls.is_loading = true;
-    this.adapter.get_v3('GET /admin/users', { query: { limit: 50, offset: 0 } }).subscribe({
+    this.pageIndex = page;
+    this.searchQuery = search;
+    this.roleFilter = role;
+    const query: any = { limit: this.pageSize, offset: page * this.pageSize, role };
+    if (search) query['search'] = search;
+    this.adapter.get_v3('GET /admin/users', { query }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
-          this.customers = response.data;
-        }
+        // v3 returns { data: [...], meta: { total, limit, offset } }
+        const raw: any[] = response?.data ?? [];
+        this.total = response?.meta?.total ?? raw.length;
+        this.customers = raw;
         this.ui_controls.is_loading = false;
       },
       error: () => {
@@ -127,6 +140,12 @@ export class UsersComponent implements OnInit {
       },
     });
   }
+
+  get totalPages(): number { return Math.ceil(this.total / this.pageSize); }
+  prevPage() { if (this.pageIndex > 0) this.get_users(this.pageIndex - 1, this.searchQuery, this.roleFilter); }
+  nextPage() { if (this.pageIndex < this.totalPages - 1) this.get_users(this.pageIndex + 1, this.searchQuery, this.roleFilter); }
+  onSearch(e: Event) { this.get_users(0, (e.target as HTMLInputElement).value, this.roleFilter); }
+  onRoleFilter(role: string) { this.get_users(0, this.searchQuery, role); }
 
   start_activate(customer: number, name: string) {
     this.confirm
@@ -149,7 +168,7 @@ export class UsersComponent implements OnInit {
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);
-          this.get_users();
+          this.get_users(0, '', 'customer');
         }
         this.ui_controls.is_loading = false;
       },
@@ -178,7 +197,7 @@ export class UsersComponent implements OnInit {
       next: (response: any) => {
         if (response.response_code === 200 && response.status === 'success') {
           this.success_notification(response.message);
-          this.get_users();
+          this.get_users(0, '', 'customer');
         }
         this.ui_controls.is_loading = false;
       },
@@ -204,7 +223,7 @@ export class UsersComponent implements OnInit {
             password: '', confirm_password: '',
             is_finance: false, is_support: false, _sub_admin: false,
           };
-          this.get_users();
+          this.get_users(0, '', 'customer');
         } else {
           this.error_notification(response.message);
         }
@@ -246,7 +265,7 @@ export class UsersComponent implements OnInit {
           this.success_notification(response.message);
           this.password_c.password = '';
           this.open.set(false);
-          this.get_users();
+          this.get_users(0, '', 'customer');
         } else {
           this.error_notification(response.message);
         }

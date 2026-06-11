@@ -4,6 +4,7 @@ import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Stores } from '../../class/stores';
 import { GlobalComponent } from '../../global-component';
 import { AxConfirmService } from '../../shared/overlays';
@@ -19,6 +20,7 @@ import {
   imports: [
     AdminShellComponent,
     CommonModule,
+    FormsModule,
     AxDropdownDirective,
     AxDropdownItemDirective,
   ],
@@ -84,17 +86,38 @@ export class StoresComponent implements OnInit {
     this.toast.success(message);
   }
 
-  get_store() {
+  // Pagination & search state
+  total = 0;
+  pageSize = 50;
+  pageIndex = 0;
+  search = '';
+
+  get_store(page = 0, search = '') {
     this.ui_controls.is_loading = true;
     this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /admin/vendors', { query: { limit: 50, offset: 0 } }).subscribe({
+    this.pageIndex = page;
+    this.search = search;
+    const query: any = { limit: this.pageSize, offset: page * this.pageSize };
+    if (search) query['search'] = search;
+    this.adapter.get_v3('GET /admin/vendors', { query }).subscribe({
       next: (response: any) => {
-        if (response?.data) {
-          this.stores = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
-          this.ui_controls.no_data = !this.stores || this.stores.length === 0;
-        } else {
-          this.ui_controls.no_data = true;
-        }
+        // v3 returns { vendors: [...], meta: { total, limit, offset } }
+        // or { data: [...], meta: ... } depending on endpoint version
+        const raw: any[] = response?.vendors ?? response?.data ?? [];
+        this.total = response?.meta?.total ?? raw.length;
+        // Map v3 vendor fields to the legacy shape expected by the template
+        this.stores = raw.map((v: any) => ({
+          id:            v.id,
+          token:         '',
+          store_name:    v.name,
+          store_email:   v.contact_email,
+          store_phone:   v.contact_phone,
+          store_address: v.country_code ?? '',
+          last_login:    v.updated_at ?? '',
+          status:        v.is_active === true,
+          approved:      v.status === 'approved',
+        }));
+        this.ui_controls.no_data = this.stores.length === 0;
         this.ui_controls.is_loading = false;
       },
       error: (e: any) => {
@@ -105,6 +128,11 @@ export class StoresComponent implements OnInit {
       },
     });
   }
+
+  get totalPages(): number { return Math.ceil(this.total / this.pageSize); }
+  prevPage() { if (this.pageIndex > 0) this.get_store(this.pageIndex - 1, this.search); }
+  nextPage() { if (this.pageIndex < this.totalPages - 1) this.get_store(this.pageIndex + 1, this.search); }
+  onSearch(e: Event) { this.get_store(0, (e.target as HTMLInputElement).value); }
 
   start_activate(store: number, name: string) {
     this.confirm

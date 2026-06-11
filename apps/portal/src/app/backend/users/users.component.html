@@ -12,16 +12,27 @@
           </button>
           <span class="ax-page-header-eyebrow">Access control</span>
           <h1 class="ax-page-title">Platform users</h1>
-          <p *ngIf="customers && customers.length > 0" class="ax-page-subtitle">
-            {{ customers.length }} user{{ customers.length !== 1 ? 's' : '' }} with access to the admin platform.
+          <p *ngIf="total > 0" class="ax-page-subtitle">
+            {{ total | number }} {{ roleFilter }} users on the platform.
           </p>
         </div>
 
         <div class="ax-flex ax-gap-2 ax-items-center">
+          <input
+            type="search"
+            class="ax-input ax-input-sm"
+            placeholder="Search users..."
+            style="width:200px"
+            (input)="onSearch($event)" />
+          <select class="ax-input ax-input-sm" style="width:130px" (change)="onRoleFilter($any($event.target).value)">
+            <option value="customer">Customers</option>
+            <option value="vendor">Vendors</option>
+            <option value="admin">Admins</option>
+          </select>
           <button
             type="button"
             class="ax-btn ax-btn-outline ax-btn-sm"
-            (click)="get_users()"
+            (click)="get_users(0, searchQuery, roleFilter)"
             [disabled]="ui_controls.is_loading">
             <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
             Refresh
@@ -157,6 +168,18 @@
                     </tr>
                   </tbody>
                 </table>
+              </div>
+              <!-- Pagination -->
+              <div *ngIf="totalPages > 1" class="ax-flex ax-justify-between ax-items-center ax-p-3" style="border-top:1px solid var(--ax-color-border-subtle)">
+                <span class="ax-text-sm ax-text-secondary">{{ total | number }} total users &mdash; page {{ pageIndex + 1 }} / {{ totalPages }}</span>
+                <div class="ax-flex ax-gap-2">
+                  <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="prevPage()" [disabled]="pageIndex === 0">
+                    <span class="material-symbols-outlined">chevron_left</span>
+                  </button>
+                  <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="nextPage()" [disabled]="pageIndex >= totalPages - 1">
+                    <span class="material-symbols-outlined">chevron_right</span>
+                  </button>
+                </div>
               </div>
             </div>
 
