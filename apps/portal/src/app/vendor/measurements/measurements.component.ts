@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { NgClass, NgIf } from '@angular/common';
+import { NgIf } from '@angular/common';
 import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
@@ -28,7 +28,7 @@ export interface Measurements {
 @Component({
   selector: 'app-measurements',
   standalone: true,
-  imports: [VendorShellComponent, FormsModule, NgIf, NgClass, TranslatePipe],
+  imports: [VendorShellComponent, FormsModule, NgIf, TranslatePipe],
   templateUrl: './measurements.component.html',
   styleUrl: './measurements.component.css',
 })

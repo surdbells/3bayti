@@ -6,7 +6,7 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import {
   AxTableComponent, AxColumnComponent,
-  AxEmptyStateComponent, AxSkeletonComponent, AxPaginationComponent,
+  AxEmptyStateComponent, AxSkeletonComponent,
 } from '../../shared/data';
 
 interface AnalyticsTotals {
@@ -39,7 +39,7 @@ interface AnalyticsDashboard {
     CommonModule, FormsModule,
     VendorShellComponent,
     AxTableComponent, AxColumnComponent,
-    AxEmptyStateComponent, AxSkeletonComponent, AxPaginationComponent,
+    AxEmptyStateComponent, AxSkeletonComponent,
   ],
   templateUrl: './vendor-analytics.component.html',
   styleUrl: './vendor-analytics.component.css',

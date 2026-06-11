@@ -219,7 +219,7 @@
   <div class="ax-sidenav-footer">
     <div class="ax-sidenav-user" role="button" tabindex="0" aria-label="Account menu">
       <span class="ax-avatar ax-avatar-sm" aria-hidden="true">
-        {{ (user_session.first_name?.[0] || '') + (user_session.last_name?.[0] || '') }}
+        {{ (user_session.first_name[0] || '') + (user_session.last_name[0] || '') }}
       </span>
       <span class="ax-sidenav-user-info">
         <span class="ax-sidenav-user-name">{{ user_session.first_name }} {{ user_session.last_name }}</span>

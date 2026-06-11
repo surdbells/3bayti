@@ -84,7 +84,7 @@
               aria-haspopup="true"
               [attr.aria-expanded]="ui_controls.profile_open">
         <span class="ax-avatar ax-avatar-xs" *ngIf="!user_session.avatar">
-          {{ (user_session.first_name?.[0] || '') + (user_session.last_name?.[0] || '') }}
+          {{ (user_session.first_name[0] || '') + (user_session.last_name[0] || '') }}
         </span>
         <span class="ax-avatar ax-avatar-xs" *ngIf="user_session.avatar">
           <img [src]="user_session.avatar" [alt]="user_session.first_name" />

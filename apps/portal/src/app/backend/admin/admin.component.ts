@@ -1,6 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { TopComponent } from '../../partials/top/top.component';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -67,13 +66,10 @@ const ICON_MAP: Record<string, string> = {
   imports: [
     AdminShellComponent,
     CommonModule,
-    TopComponent,
     NgApexchartsModule,
     ChartComponent,
     AxPaginationComponent,
-    RouterLink,
     TranslatePipe,
-    RouterLinkActive
   ],
   standalone: true,
   templateUrl: './admin.component.html',

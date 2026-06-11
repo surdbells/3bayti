@@ -2,7 +2,7 @@
   "name": "3bayti",
   "version": "0.0.0",
   "private": true,
-  "description": "3bayti platform monorepo — web, mobile, portal, api",
+  "description": "3bayti platform monorepo \u2014 web, mobile, portal, api",
   "license": "UNLICENSED",
   "packageManager": "pnpm@9.15.0",
   "engines": {

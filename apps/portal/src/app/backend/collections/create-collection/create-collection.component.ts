@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { NgIf } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { CrudService } from '../../../services/crud.service';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
@@ -10,7 +10,7 @@ import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.c
 @Component({
   selector: 'app-create-collection',
   standalone: true,
-  imports: [AdminShellComponent, NgIf, RouterLink, FormsModule],
+  imports: [AdminShellComponent, NgIf, FormsModule],
   templateUrl: './create-collection.component.html',
   styleUrl: './create-collection.component.css',
 })

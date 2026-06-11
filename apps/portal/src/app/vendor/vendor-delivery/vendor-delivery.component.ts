@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { NgClass, NgForOf, NgIf } from '@angular/common';
-import { Router, RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Orders } from '../../class/orders';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
@@ -11,7 +11,7 @@ import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.c
 @Component({
   selector: 'app-vendor-delivery',
   standalone: true,
-  imports: [VendorShellComponent, NgClass, NgForOf, NgIf, RouterLink],
+  imports: [VendorShellComponent, NgClass, NgForOf, NgIf],
   templateUrl: './vendor-delivery.component.html',
   styleUrl: './vendor-delivery.component.css',
 })

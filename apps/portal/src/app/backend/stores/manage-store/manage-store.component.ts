@@ -6,7 +6,6 @@ import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { FormsModule } from '@angular/forms';
-import { TranslatePipe } from '../../../translate.pipe';
 
 import { AccountSetupComponent } from '../account-setup/account-setup.component';
 
@@ -23,7 +22,6 @@ import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.c
     CommonModule,
     FormsModule,
     AccountSetupComponent,
-    TranslatePipe,
     AxRichEditorComponent,
     AxTabsComponent,
     AxTabComponent,

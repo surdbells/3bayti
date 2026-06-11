@@ -98,7 +98,7 @@ export class GiftCardsAdminComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    const raw = sessionStorage.getItem('SESSION');
+    const raw = sessionStorage.getItem('SESSION') ?? '';
     this.user_session = GlobalComponent.decodeBase64(raw);
     this.load();
   }

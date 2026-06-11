@@ -83,7 +83,7 @@
                 [(ngModel)]="add_message.message"
                 name="message"
                 placeholder="Type your reply…"></textarea>
-              <span class="ax-hint">{{ add_message.message?.length || 0 }} / 160 characters</span>
+              <span class="ax-hint">{{ add_message.message.length || 0 }} / 160 characters</span>
             </div>
 
             <button
