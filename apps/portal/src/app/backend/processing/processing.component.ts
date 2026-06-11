@@ -88,9 +88,10 @@ export class ProcessingComponent implements OnInit {
     this.adapter.get_v3('GET /admin/orders', { query: { limit: 20, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response) {
-          this.transaction = response.orders ?? response.data ?? [];
-          this.total = response.pagination?.total ?? this.transaction.length;
-          this.ui_controls.no_data = !this.transaction || this.transaction.length === 0;
+          const rows = response.orders ?? response.data ?? [];
+          this.transaction = rows;
+          this.total = response.pagination?.total ?? rows.length;
+          this.ui_controls.no_data = rows.length === 0;
         } else {
           this.ui_controls.no_data = true;
         }
@@ -126,9 +127,10 @@ export class ProcessingComponent implements OnInit {
     this.adapter.get_v3('GET /admin/orders', { query: { status: procStatus, limit: 20, offset: 0 } }).subscribe({
       next: (response: any) => {
         if (response) {
-          this.transaction = response.orders ?? response.data ?? [];
-          this.total = response.pagination?.total ?? this.transaction.length;
-          this.ui_controls.no_data = !this.transaction || this.transaction.length === 0;
+          const rows = response.orders ?? response.data ?? [];
+          this.transaction = rows;
+          this.total = response.pagination?.total ?? rows.length;
+          this.ui_controls.no_data = rows.length === 0;
         } else {
           this.ui_controls.no_data = true;
         }
