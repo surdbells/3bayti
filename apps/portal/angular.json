@@ -28,7 +28,6 @@
             ],
             "styles": [
               "node_modules/@angular/cdk/overlay-prebuilt.css",
-              "node_modules/@ngneat/hot-toast/src/styles/styles.css",
               "src/styles.css"
             ],
             "scripts": []

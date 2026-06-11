@@ -64,7 +64,7 @@ export class AxCopyToClipboardDirective {
         const message = this.axCopyLabel === 'Copied to clipboard'
           ? this.axCopyLabel
           : `${this.axCopyLabel} copied`;
-        this.toast?.success(message, { duration: 2000 });
+        this.toast?.success(message);
       }
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
