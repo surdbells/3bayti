@@ -1649,11 +1649,12 @@ final class MigrationSteps
         echo "  Source table: {$sourceTable}\n";
 
         // Probe required columns.
-        $idCol = $this->firstPresentColumn($sourceTable, ['order_id', 'id']);
-        $userCol = $this->firstPresentColumn($sourceTable, ['user_id', 'customer_id']);
-        $totalCol = $this->firstPresentColumn($sourceTable, ['total', 'total_amount', 'grand_total']);
-        $statusCol = $this->firstPresentColumn($sourceTable, ['status', 'order_status', 'payment_status']);
-        $createdCol = $this->firstPresentColumn($sourceTable, ['created', 'created_at', 'date_created', 'order_date']);
+        // ec_orders uses ec_orders_id as PK, amount as the order total.
+        $idCol      = $this->firstPresentColumn($sourceTable, ['ec_orders_id', 'order_id', 'id']);
+        $userCol    = $this->firstPresentColumn($sourceTable, ['user_id', 'customer_id']);
+        $totalCol   = $this->firstPresentColumn($sourceTable, ['amount', 'total', 'total_amount', 'grand_total']);
+        $statusCol  = $this->firstPresentColumn($sourceTable, ['status', 'order_status', 'payment_status']);
+        $createdCol = $this->firstPresentColumn($sourceTable, ['created_at', 'created', 'date_created', 'order_date']);
 
         if ($idCol === null || $userCol === null || $totalCol === null) {
             echo "  Legacy table '{$sourceTable}' missing required columns.\n";
@@ -1663,13 +1664,17 @@ final class MigrationSteps
         }
 
         // Optional columns — passed through if present.
-        $subtotalCol = $this->firstPresentColumn($sourceTable, ['subtotal', 'sub_total', 'items_total']);
-        $deliveryCol = $this->firstPresentColumn($sourceTable, ['delivery_fee', 'shipping_fee', 'delivery_cost']);
-        $discountCol = $this->firstPresentColumn($sourceTable, ['discount', 'discount_amount']);
-        $currencyCol = $this->firstPresentColumn($sourceTable, ['currency', 'currency_code']);
-        $orderRefCol = $this->firstPresentColumn($sourceTable, ['order_reference', 'order_code', 'reference']);
-        $paidAtCol = $this->firstPresentColumn($sourceTable, ['paid_at', 'payment_date']);
-
+        $subtotalCol    = $this->firstPresentColumn($sourceTable, ['sub_total', 'subtotal', 'items_total']);
+        $deliveryCol    = $this->firstPresentColumn($sourceTable, ['shipping_amount', 'delivery_fee', 'shipping_fee', 'delivery_cost']);
+        $discountCol    = $this->firstPresentColumn($sourceTable, ['discount_amount', 'discount']);
+        $currencyCol    = $this->firstPresentColumn($sourceTable, ['currency', 'currency_code']);
+        $orderRefCol    = $this->firstPresentColumn($sourceTable, ['code', 'order_reference', 'order_code', 'reference']);
+        $paidAtCol      = $this->firstPresentColumn($sourceTable, ['paid_at', 'payment_date', 'completed_at']);
+        // ec_orders embeds one item per row — capture inline item columns.
+        $productIdCol   = $this->firstPresentColumn($sourceTable, ['product_id']);
+        $productNameCol = $this->firstPresentColumn($sourceTable, ['product_name']);
+        $quantityCol    = $this->firstPresentColumn($sourceTable, ['quantity']);
+        $storeIdCol     = $this->firstPresentColumn($sourceTable, ['store_id']);
         $selectCols = "{$idCol} AS lid, {$userCol} AS luser, {$totalCol} AS ltotal";
         if ($statusCol !== null) {
             $selectCols .= ", {$statusCol} AS lstatus";
@@ -1694,6 +1699,19 @@ final class MigrationSteps
         }
         if ($paidAtCol !== null) {
             $selectCols .= ", {$paidAtCol} AS lpaid_at";
+        }
+
+        if ($productIdCol !== null) {
+            $selectCols .= ", {$productIdCol} AS lproduct_id";
+        }
+        if ($productNameCol !== null) {
+            $selectCols .= ", {$productNameCol} AS lproduct_name";
+        }
+        if ($quantityCol !== null) {
+            $selectCols .= ", {$quantityCol} AS lquantity";
+        }
+        if ($storeIdCol !== null) {
+            $selectCols .= ", {$storeIdCol} AS lstore_id";
         }
 
         $totalRows = $this->legacy->count($sourceTable);
@@ -1770,6 +1788,50 @@ final class MigrationSteps
                         'created_at' => $createdAt,
                         'updated_at' => $createdAt,
                     ]);
+                    // ec_orders embeds one item per row — synthesise an order_item.
+                    $v3OrderId = (int) $this->conn->lastInsertId();
+                    if ($v3OrderId > 0 && isset($row['lproduct_id'])) {
+                        $legacyProductId = (int) $row['lproduct_id'];
+                        $v3ProductId = null;
+                        if ($legacyProductId > 0) {
+                            $pr = $this->conn->fetchAssociative(
+                                'SELECT id FROM products WHERE legacy_product_id = ?',
+                                [$legacyProductId]
+                            );
+                            $v3ProductId = $pr !== false ? (int) $pr['id'] : null;
+                        }
+                        // Resolve vendor from store_id
+                        $v3VendorId = null;
+                        if (isset($row['lstore_id'])) {
+                            $vr = $this->conn->fetchAssociative(
+                                'SELECT id FROM vendors WHERE legacy_vendor_id = ?',
+                                [(int) $row['lstore_id']]
+                            );
+                            $v3VendorId = $vr !== false ? (int) $vr['id'] : null;
+                        }
+                        $itemPrice = $this->normaliseMoneyString($row['ltotal'] ?? '0');
+                        $qty = max(1, (int) ($row['lquantity'] ?? 1));
+                        $productName = isset($row['lproduct_name'])
+                            ? substr(trim((string) $row['lproduct_name']), 0, 255)
+                            : 'Migrated Product';
+                        try {
+                            $this->conn->insert('order_items', [
+                                'order_id'              => $v3OrderId,
+                                'product_id'            => $v3ProductId,
+                                'vendor_id'             => $v3VendorId,
+                                'legacy_product_id'     => $legacyProductId ?: null,
+                                'product_name_snapshot' => $productName,
+                                'quantity'              => $qty,
+                                'unit_price'            => $itemPrice,
+                                'subtotal'              => $itemPrice,
+                                'created_at'            => $createdAt,
+                                'updated_at'            => $createdAt,
+                            ]);
+                        } catch (\Throwable $ie) {
+                            // Non-fatal — order is migrated, item best-effort.
+                            $this->log->error('order_items', $legacyId, $ie->getMessage());
+                        }
+                    }
                     $migrated++;
                 } catch (\Throwable $e) {
                     $this->log->error('orders', $legacyId, $e->getMessage());
