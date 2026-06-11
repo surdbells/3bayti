@@ -152,7 +152,11 @@ final class MigrationSteps
 
             $this->conn->commit();
         } catch (\Throwable $e) {
-            $this->conn->rollBack();
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
             throw $e;
         }
 
@@ -432,7 +436,11 @@ final class MigrationSteps
 
             $this->conn->commit();
         } catch (\Throwable $e) {
-            $this->conn->rollBack();
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
             throw $e;
         }
 
@@ -701,7 +709,11 @@ final class MigrationSteps
 
             $this->conn->commit();
         } catch (\Throwable $e) {
-            $this->conn->rollBack();
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
             throw $e;
         }
 
@@ -943,7 +955,7 @@ final class MigrationSteps
                              requires_extra_msmt = EXCLUDED.requires_extra_msmt,
                              extra_msmt = EXCLUDED.extra_msmt,
                              delivery_info = EXCLUDED.delivery_info,
-                             label_id = EXCLUDED.label_id,
+                             label_id = COALESCE(products.label_id, EXCLUDED.label_id),
                              updated_at = date_trunc('second', NOW())",
                         [
                             'legacy_id' => $legacyId, 'vendor_id' => $vendorId,
@@ -973,7 +985,7 @@ final class MigrationSteps
                             'req_extra' => (int) ($row['require_extra_msmt'] ?? 0) === 1 ? 'true' : 'false',
                             'extra_msmt' => trim((string) ($row['extra_msmt'] ?? '')) ?: null,
                             'delivery' => $deliveryInfo,
-                            'label_id' => $row['label'] !== null ? (int) $row['label'] : null,
+                            'label_id' => null, // populated by migrateVendorLabels() remap
                             'created_at' => $createdAt, 'updated_at' => $updatedAt,
                         ]
                     );
@@ -997,7 +1009,11 @@ final class MigrationSteps
 
             $this->conn->commit();
         } catch (\Throwable $e) {
-            $this->conn->rollBack();
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
             throw $e;
         }
 
@@ -1108,7 +1124,11 @@ final class MigrationSteps
 
             $this->conn->commit();
         } catch (\Throwable $e) {
-            $this->conn->rollBack();
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
             throw $e;
         }
 
@@ -1144,7 +1164,11 @@ final class MigrationSteps
             $this->conn->executeStatement('ALTER SEQUENCE vendors_id_seq RESTART WITH 1');
             $this->conn->commit();
         } catch (\Throwable $e) {
-            $this->conn->rollBack();
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
             throw $e;
         }
 
@@ -1210,7 +1234,7 @@ final class MigrationSteps
         // their legacy schema uses a different name. Once production
         // run identifies the actual table, this can be simplified
         // to a single hard-coded name.
-        $candidates = ['labels', 'vendor_collections'];
+        $candidates = ['vendor_custom_labels', 'labels', 'vendor_collections'];
         $sourceTable = null;
         foreach ($candidates as $name) {
             if ($this->legacy->tableExists($name)) {
@@ -1235,11 +1259,14 @@ final class MigrationSteps
         // `id` vs `label_id` for the PK, `vendor_id` vs `store_id`
         // for the vendor FK, etc. Use the columns we find.
         $idCol = $this->legacy->columnExists($sourceTable, 'label_id') ? 'label_id'
-            : ($this->legacy->columnExists($sourceTable, 'id') ? 'id' : null);
+            : ($this->legacy->columnExists($sourceTable, 'vcl_id') ? 'vcl_id'
+            : ($this->legacy->columnExists($sourceTable, 'id') ? 'id' : null));
         $nameCol = $this->legacy->columnExists($sourceTable, 'label_name') ? 'label_name'
-            : ($this->legacy->columnExists($sourceTable, 'name') ? 'name' : null);
+            : ($this->legacy->columnExists($sourceTable, 'label') ? 'label'
+            : ($this->legacy->columnExists($sourceTable, 'name') ? 'name' : null));
         $vendorCol = $this->legacy->columnExists($sourceTable, 'store_id') ? 'store_id'
-            : ($this->legacy->columnExists($sourceTable, 'vendor_id') ? 'vendor_id' : null);
+            : ($this->legacy->columnExists($sourceTable, 'user_id') ? 'user_id'
+            : ($this->legacy->columnExists($sourceTable, 'vendor_id') ? 'vendor_id' : null));
 
         if ($idCol === null || $nameCol === null || $vendorCol === null) {
             echo "  Legacy table '{$sourceTable}' has unexpected column shape.\n";
@@ -1353,36 +1380,28 @@ final class MigrationSteps
                 }
             }
 
-            // Now that vendor_labels are populated and products.label_id
-            // values that reference legacy ids need to be re-mapped to
-            // v3 ids. Run the remap in the same transaction so a
-            // failure rolls back both.
-            //
-            // Strategy: UPDATE products SET label_id = (SELECT id FROM
-            // vendor_labels WHERE legacy_label_id = products.label_id).
-            // products.label_id values that don't match any
-            // vendor_labels.legacy_label_id get NULLed (orphan
-            // cleanup; same semantic as ON DELETE SET NULL).
-            $remapped = (int) $this->conn->executeStatement(
-                "UPDATE products
-                 SET label_id = vl.id
-                 FROM vendor_labels vl
-                 WHERE products.label_id IS NOT NULL
-                   AND products.label_id = vl.legacy_label_id"
+            // Remap: re-read legacy products.label column and match to
+            // vendor_labels.legacy_label_id now that labels are inserted.
+            // label_id was stored as NULL during migrateProducts() to avoid
+            // the FK violation (vendor_labels was empty at that point).
+            $legacyLabelled = $this->legacy->fetchAll(
+                "SELECT product_id, label FROM products WHERE label IS NOT NULL AND label != 0"
             );
-            echo "  Remapped {$remapped} products.label_id from legacy → v3 ids.\n";
-
-            $orphans = (int) $this->conn->executeStatement(
-                "UPDATE products
-                 SET label_id = NULL
-                 WHERE label_id IS NOT NULL
-                   AND NOT EXISTS (
-                     SELECT 1 FROM vendor_labels vl WHERE vl.id = products.label_id
-                   )"
-            );
-            if ($orphans > 0) {
-                echo "  Nulled {$orphans} orphan products.label_id (legacy ids with no v3 label).\n";
+            $remapped = 0;
+            foreach ($legacyLabelled as $lp) {
+                $v3LabelId = $this->conn->fetchOne(
+                    'SELECT id FROM vendor_labels WHERE legacy_label_id = ?',
+                    [(int) $lp['label']]
+                );
+                if ($v3LabelId === false || $v3LabelId === null) {
+                    continue;
+                }
+                $remapped += (int) $this->conn->executeStatement(
+                    'UPDATE products SET label_id = ? WHERE legacy_product_id = ?',
+                    [(int) $v3LabelId, (int) $lp['product_id']]
+                );
             }
+            echo "  Remapped {$remapped} products.label_id from legacy → v3 ids.\n";
 
             // Validate the FK now that data is consistent.
             $this->conn->executeStatement('ALTER TABLE products VALIDATE CONSTRAINT fk_products_label');
@@ -1394,7 +1413,11 @@ final class MigrationSteps
 
             $this->conn->commit();
         } catch (\Throwable $e) {
-            $this->conn->rollBack();
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
             throw $e;
         }
 
@@ -1421,7 +1444,7 @@ final class MigrationSteps
         //   CANDIDATE 1: `styles` — most likely.
         //   CANDIDATE 2: `stylist` — alternative based on mobile
         //                folder name (customer/styles/).
-        $candidates = ['styles', 'stylist'];
+        $candidates = ['styles', 'collections', 'stylist'];
         $sourceTable = null;
         foreach ($candidates as $name) {
             if ($this->legacy->tableExists($name)) {
@@ -1444,9 +1467,11 @@ final class MigrationSteps
 
         // Column probe.
         $idCol = $this->legacy->columnExists($sourceTable, 'id') ? 'id'
-            : ($this->legacy->columnExists($sourceTable, 'style_id') ? 'style_id' : null);
+            : ($this->legacy->columnExists($sourceTable, 'collections_id') ? 'collections_id'
+            : ($this->legacy->columnExists($sourceTable, 'style_id') ? 'style_id' : null));
         $nameCol = $this->legacy->columnExists($sourceTable, 'style_name') ? 'style_name'
-            : ($this->legacy->columnExists($sourceTable, 'name') ? 'name' : null);
+            : ($this->legacy->columnExists($sourceTable, 'collection_name') ? 'collection_name'
+            : ($this->legacy->columnExists($sourceTable, 'name') ? 'name' : null));
         $typeCol = $this->legacy->columnExists($sourceTable, 'type') ? 'type' : null;
         // total_price is optional; if absent, default to 0.
         $totalPriceCol = $this->legacy->columnExists($sourceTable, 'total_price') ? 'total_price' : null;
@@ -1567,7 +1592,11 @@ final class MigrationSteps
 
             $this->conn->commit();
         } catch (\Throwable $e) {
-            $this->conn->rollBack();
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
             throw $e;
         }
 
