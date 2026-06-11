@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
-import { HotToastService } from '@ngneat/hot-toast';
+import { HotToastService } from '../../shared/toast/toast.service';
 import { Reviews } from '../../class/reviews';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';

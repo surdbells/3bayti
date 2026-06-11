@@ -4,7 +4,7 @@ import { Router, RouterLink } from '@angular/router';
 import { Orders } from '../../class/orders';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
-import { HotToastService } from '@ngneat/hot-toast';
+import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';

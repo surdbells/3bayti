@@ -7,7 +7,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { ImageUploadService } from '../../services/image-upload.service';
-import { HotToastService } from '@ngneat/hot-toast';
+import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import imageCompression from 'browser-image-compression';
 

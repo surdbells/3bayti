@@ -3,7 +3,7 @@ import { TopComponent } from '../../partials/top/top.component';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
-import { HotToastService } from '@ngneat/hot-toast';
+import { HotToastService } from '../../shared/toast/toast.service';
 import {
   ApexAxisChartSeries,
   ApexChart,

@@ -2,7 +2,7 @@ import { Component, EventEmitter, HostListener, OnInit, Output } from '@angular/
 import { GlobalComponent } from '../../global-component';
 import { Router, RouterLink } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
-import { HotToastService } from '@ngneat/hot-toast';
+import { HotToastService } from '../../shared/toast/toast.service';
 import { CommonModule } from '@angular/common';
 import { Notifications } from '../../class/notifications';
 import { LanguageSwitcherComponent } from '../../language-switcher.component';

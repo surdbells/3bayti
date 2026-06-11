@@ -3,7 +3,7 @@ import {APP_INITIALIZER, ApplicationConfig, provideZoneChangeDetection} from '@a
 import { provideRouter } from '@angular/router';
 
 import { routes } from './app.routes';
-import {provideHotToastConfig} from '@ngneat/hot-toast';
+import {provideHotToastConfig} from './shared/toast/toast.service';
 import {provideHttpClient} from '@angular/common/http';
 import {I18nService} from './i18n.service';
 function initI18n(i18n: I18nService) {

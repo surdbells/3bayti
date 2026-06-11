@@ -8,7 +8,7 @@ import {
   inject,
   Optional,
 } from '@angular/core';
-import { HotToastService } from '@ngneat/hot-toast';
+import { HotToastService } from '../toast/toast.service';
 
 /**
  * Copy-to-clipboard directive. Put on any clickable element.

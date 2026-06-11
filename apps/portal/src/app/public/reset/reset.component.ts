@@ -2,7 +2,7 @@ import {Component, OnInit} from '@angular/core';
 import {CrudService} from '../../services/crud.service';
 import {Router, RouterLink} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
-import {HotToastService} from '@ngneat/hot-toast';
+import {HotToastService} from '../../shared/toast/toast.service';
 import {GlobalComponent} from '../../global-component';
 import {FormsModule} from '@angular/forms';
 import {CommonModule} from '@angular/common';
