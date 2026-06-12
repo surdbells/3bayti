@@ -1123,6 +1123,12 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'POST /admin/users/:id/deactivate': {
     target: 'new', oldPath: '/admin/common/deactivate-customer', newPath: '/v3/admin/users/:id/deactivate', shape: 'v3-envelope',
   },
+  'POST /admin/users': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/users', shape: 'v3-envelope',
+  },
+  'PATCH /admin/users/:id/password': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/users/:id/password', shape: 'v3-envelope',
+  },
   'POST /admin/vendors/:id/approve': {
     target: 'new', oldPath: '/admin/common/activate-store', newPath: '/v3/admin/vendors/:id/approve', shape: 'v3-envelope',
   },

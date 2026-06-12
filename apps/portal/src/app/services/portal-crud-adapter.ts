@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 
 import { resolveUrl } from '@3bayti/api-client';
 import { GlobalComponent } from '../global-component';
+import type { V3RouteKey } from './v3-route-keys.generated';
 
 /**
  * PortalCrudAdapter — the portal's counterpart to MobileNetworkAdapter.
@@ -73,7 +74,7 @@ export class PortalCrudAdapter {
 
   // ── Read ────────────────────────────────────────────────────────────
 
-  get_v3(routeKey: string, opts?: V3RequestOptions): Observable<any> {
+  get_v3(routeKey: V3RouteKey, opts?: V3RequestOptions): Observable<any> {
     const url = this.url(routeKey, opts);
     return this.http
       .get<any>(url, { headers: this.headers(opts?.authToken), params: this.qp(opts?.query) })
@@ -82,28 +83,28 @@ export class PortalCrudAdapter {
 
   // ── Write ───────────────────────────────────────────────────────────
 
-  post_v3(routeKey: string, body: any, opts?: V3RequestOptions): Observable<any> {
+  post_v3(routeKey: V3RouteKey, body: any, opts?: V3RequestOptions): Observable<any> {
     const url = this.url(routeKey, opts);
     return this.http
       .post<any>(url, body, { headers: this.headers(opts?.authToken), params: this.qp(opts?.query) })
       .pipe(catchError(this.handleError));
   }
 
-  put_v3(routeKey: string, body: any, opts?: V3RequestOptions): Observable<any> {
+  put_v3(routeKey: V3RouteKey, body: any, opts?: V3RequestOptions): Observable<any> {
     const url = this.url(routeKey, opts);
     return this.http
       .put<any>(url, body, { headers: this.headers(opts?.authToken), params: this.qp(opts?.query) })
       .pipe(catchError(this.handleError));
   }
 
-  patch_v3(routeKey: string, body: any, opts?: V3RequestOptions): Observable<any> {
+  patch_v3(routeKey: V3RouteKey, body: any, opts?: V3RequestOptions): Observable<any> {
     const url = this.url(routeKey, opts);
     return this.http
       .patch<any>(url, body, { headers: this.headers(opts?.authToken), params: this.qp(opts?.query) })
       .pipe(catchError(this.handleError));
   }
 
-  delete_v3(routeKey: string, opts?: V3RequestOptions & { body?: any }): Observable<any> {
+  delete_v3(routeKey: V3RouteKey, opts?: V3RequestOptions & { body?: any }): Observable<any> {
     const url = this.url(routeKey, opts);
     return this.http
       .delete<any>(url, {

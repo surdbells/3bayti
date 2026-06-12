@@ -201,7 +201,7 @@ export class UsersComponent implements OnInit {
     if (r.password !== r.confirm_password) { this.toast.error('Password does not match'); return; }
 
     this.ui_controls.is_registering = true;
-    this.adapter.post_v3('POST /admin/users/create', this.register).subscribe({
+    this.adapter.post_v3('POST /admin/users', this.register).subscribe({
       next: (response: any) => {
         if (response) {
           this.toast.success('User created successfully.');
