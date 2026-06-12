@@ -182,101 +182,27 @@
     </div>
 
     <!-- LIST VIEW -->
-    <section *ngIf="ui.list_view && !ui.no_products && !ui.loading && !ui.deleting" class="ax-card ax-p-0">
-      <div class="ax-table-wrapper">
-        <table class="ax-table ax-table-hover">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Category</th>
-              <th>Status</th>
-              <th style="text-align: right;">Price</th>
-              <th style="text-align: center;">Qty</th>
-              <th>Stock</th>
-              <th style="width: 3rem;"></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let p of products; trackBy: trackById">
-              <td>
-                <div class="ax-flex ax-items-center ax-gap-3">
-                  <img
-                    [src]="p.image | cfImage:'card'"
-                    alt=""
-                    loading="lazy"
-                    style="width: 44px; height: 44px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle); flex-shrink: 0;" />
-                  <div style="min-width: 0;">
-                    <div class="ax-font-medium ax-text-primary ax-truncate" style="max-width: 220px;">{{ p.name }}</div>
-                    <div *ngIf="p.store_name" class="ax-text-2xs ax-text-tertiary">{{ p.store_name }}</div>
-                  </div>
-                </div>
-              </td>
-              <td><span class="ax-text-sm ax-text-secondary">{{ p.category }}</span></td>
-              <td>
-                <span [ngClass]="getStatusBadgeClass(p.status)">{{ p.status }}</span>
-              </td>
-              <td style="text-align: right;">
-                <span class="ax-font-semibold ax-numeric">{{ p.price_formatted }}</span>
-              </td>
-              <td style="text-align: center;">
-                <span class="ax-numeric">{{ p.quantity }}</span>
-              </td>
-              <td>
-                <span [ngClass]="getStockBadgeClass(p.stock_status)">
-                  {{ getStockLabel(p.stock_status) }}
-                </span>
-              </td>
-              <td>
-                <button
-                  type="button"
-                  class="ax-btn ax-btn-ghost ax-btn-sm"
-                  [axDropdown]="rowMenu"
-                  axDropdownAlign="end"
-                  aria-label="Product actions">
-                  <span class="material-symbols-outlined" aria-hidden="true">more_vert</span>
-                </button>
-
-                <ng-template #rowMenu>
-                  <button
-                    type="button"
-                    class="ax-dropdown-item"
-                    axDropdownItem
-                    (click)="preview(p.id)">
-                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-                    Preview
-                  </button>
-                  <button
-                    type="button"
-                    class="ax-dropdown-item"
-                    axDropdownItem
-                    (click)="editProduct(p.id)">
-                    <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                    Edit
-                  </button>
-                  <button
-                    type="button"
-                    class="ax-dropdown-item"
-                    axDropdownItem
-                    (click)="productSales(p.id, p.name)">
-                    <span class="material-symbols-outlined" aria-hidden="true">bar_chart</span>
-                    Sales
-                  </button>
-                  <div class="ax-dropdown-divider"></div>
-                  <button
-                    type="button"
-                    class="ax-dropdown-item ax-dropdown-item-danger"
-                    axDropdownItem
-                    (click)="startDelete(p.id, p.name)">
-                    <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                    Delete
-                  </button>
-                </ng-template>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+    <section *ngIf="ui.list_view" class="ax-card ax-p-0">
+      <app-ax-data-table [config]="tableConfig" [dataSource]="tableDataSource" (rowAction)="onTableRowAction($event)">
+        <ng-template axCell="name" let-p>
+          <div class="ax-flex ax-items-center ax-gap-3">
+            <img [src]="p.image | cfImage:'card'" alt="" loading="lazy"
+              style="width:44px;height:44px;object-fit:cover;object-position:top center;border-radius:var(--ax-radius-md);border:1px solid var(--ax-color-border-subtle);flex-shrink:0;" />
+            <div style="min-width:0;">
+              <div class="ax-font-medium ax-text-primary ax-truncate" style="max-width:220px;">{{ p.name }}</div>
+              <div *ngIf="p.store_name" class="ax-text-2xs ax-text-tertiary">{{ p.store_name }}</div>
+            </div>
+          </div>
+        </ng-template>
+        <ng-template axCell="status" let-p>
+          <span [ngClass]="getStatusBadgeClass(p.status)">{{ p.status | titlecase }}</span>
+        </ng-template>
+        <ng-template axCell="stock_status" let-p>
+          <span [ngClass]="getStockBadgeClass(p.stock_status)">{{ getStockLabel(p.stock_status) }}</span>
+        </ng-template>
+      </app-ax-data-table>
     </section>
+
 
     <!-- GRID VIEW -->
     <section *ngIf="ui.grid_view && !ui.no_products && !ui.loading && !ui.deleting" class="ax-page-section">

@@ -9,11 +9,17 @@ import { GlobalComponent } from '../../global-component';
 import { Products } from '../../class/products';
 import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
-import {
-  AxDropdownDirective,
-  AxDropdownItemDirective,
-} from '../../shared/overlays';
 import { AxPaginationComponent } from '../../shared/data';
+import {
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+} from '../../shared/data/enterprise';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
@@ -44,7 +50,7 @@ interface Pagination {
   total_pages: number;
 }
 
-interface ProductListItem {
+interface ProductListItem extends Record<string, unknown> {
   id: number;
   store: number;
   category: string;
@@ -71,9 +77,9 @@ interface ProductListItem {
     CommonModule,
     FormsModule,
     RouterLink,
-    AxDropdownDirective,
-    AxDropdownItemDirective,
     AxPaginationComponent,
+    AxDataTableComponent,
+    AxCellDirective,
   ],
   templateUrl: './vendor-products.component.html',
   styleUrl: './vendor-products.component.css',
@@ -81,6 +87,68 @@ interface ProductListItem {
 export class VendorProductsComponent implements OnInit, OnDestroy {
   // ── Product data ───────────────────────────────────────────────
   products: ProductListItem[] = [];
+
+  // ── Enterprise table (list view) ───────────────────────────────
+  tableDataSource!: AxServerDataSource<ProductListItem>;
+  readonly tableConfig: AxDataTableConfig<ProductListItem> = {
+    tableId: 'vendor-products',
+    mode: 'server',
+    rowId: 'id',
+    pageSize: 20,
+    pageSizeOptions: [20, 50, 100],
+    globalSearch: true,
+    searchPlaceholder: 'Search products by name…',
+    stickyHeader: true,
+    hover: true,
+    emptyTitle: 'No products',
+    emptyDescription: 'You have not listed any products yet.',
+    export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'my-products' },
+    columns: [
+      { key: 'name', label: 'Product', sortable: true, sticky: 'left', width: '18rem' },
+      { key: 'category', label: 'Category', hideOnMobile: true },
+      { key: 'status', label: 'Status', align: 'center' },
+      { key: 'price_formatted', label: 'Price', align: 'right' },
+      { key: 'quantity', label: 'Qty', align: 'center', hideOnMobile: true },
+      { key: 'stock_status', label: 'Stock', align: 'center' },
+    ],
+    rowActions: [
+      { id: 'preview', label: 'Preview', icon: 'visibility' },
+      { id: 'edit', label: 'Edit', icon: 'edit' },
+      { id: 'sales', label: 'Sales', icon: 'bar_chart' },
+      { id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger' },
+    ],
+  };
+
+  onTableRowAction(e: { action: { id: string }; row: ProductListItem }): void {
+    const { action, row } = e;
+    switch (action.id) {
+      case 'preview': return this.preview(row.id);
+      case 'edit': return this.editProduct(row.id);
+      case 'sales': return this.productSales(row.id, row.name);
+      case 'delete': return this.startDelete(row.id, row.name);
+    }
+  }
+
+  private buildTableSource(): void {
+    const vendorId = this.user_session.id;
+    this.tableDataSource = new AxServerDataSource<ProductListItem>((q: AxQueryState) => {
+      const query: any = { limit: q.pageSize, offset: q.pageIndex * q.pageSize };
+      if (q.search) query.search = q.search;
+      return this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', {
+        params: { id: String(vendorId) },
+        query,
+      }).pipe(
+        map((response: any): AxServerFetchResult<ProductListItem> => {
+          const rows = (response?.data ?? []).map((p: any) => this.mapProduct(p));
+          return { rows, total: response?.meta?.total ?? rows.length };
+        }),
+        catchError(() => {
+          this.toast.error('Unable to load products at this time.');
+          return of({ rows: [], total: 0 } as AxServerFetchResult<ProductListItem>);
+        }),
+      );
+    });
+  }
   pagination: Pagination = { page: 1, per_page: 10, total: 0, total_pages: 0 };
 
   // ── Preview drawer ─────────────────────────────────────────────
@@ -170,6 +238,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     });
 
     this.fetchCategories();
+    this.buildTableSource();
     this.fetchProducts();
   }
 
@@ -437,6 +506,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
         this.toast.success('Product deleted successfully');
         this.ui.deleting = false;
         this.fetchProducts();
+        this.tableDataSource?.retry();
       },
       error: () => {
         this.toast.error('Unable to delete product');
