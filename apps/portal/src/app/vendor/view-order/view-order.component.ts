@@ -5,7 +5,6 @@ import { CommonModule } from '@angular/common';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
@@ -53,7 +52,6 @@ export class ViewOrderComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private crudService: CrudService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}

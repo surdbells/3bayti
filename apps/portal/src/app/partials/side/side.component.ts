@@ -1,7 +1,6 @@
 import { Component, EventEmitter, Input, OnInit, Output } from '@angular/core';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { CrudService } from '../../services/crud.service';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { TranslatePipe } from '../../translate.pipe';
@@ -25,7 +24,6 @@ export class SideComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private crudService: CrudService,
     private toast: HotToastService,
   ) {}
 

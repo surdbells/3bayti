@@ -1,6 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { ImageUploadService } from '../../services/image-upload.service';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -197,7 +196,6 @@ export class CreateProductComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private crudService: CrudService,
     private adapter: PortalCrudAdapter,
     private imageUpload: ImageUploadService,
     private toast: HotToastService,

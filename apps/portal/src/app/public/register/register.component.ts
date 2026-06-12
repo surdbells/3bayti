@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { Router, RouterLink } from '@angular/router';
 import { CookieService } from 'ngx-cookie-service';
@@ -34,7 +33,6 @@ import { AxEmptyStateComponent } from '../../shared/data';
 })
 export class RegisterComponent implements OnInit {
   constructor(
-    private crudService: CrudService,
     private adapter: PortalCrudAdapter,
     private router: Router,
     private cookieService: CookieService,

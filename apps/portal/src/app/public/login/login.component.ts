@@ -1,5 +1,4 @@
 import { Component, OnInit } from '@angular/core';
-import { CrudService } from '../../services/crud.service';
 import { PortalAuthService } from '../../services/portal-auth.service';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -25,7 +24,6 @@ import { TranslatePipe } from '../../translate.pipe';
 })
 export class LoginComponent implements OnInit {
   constructor(
-    private crudService: CrudService,
     private authService: PortalAuthService,
     private router: Router,
     private route: ActivatedRoute,

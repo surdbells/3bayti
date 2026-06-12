@@ -1,6 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { CommonModule, Location } from '@angular/common';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -127,7 +126,6 @@ export class AdminViewProductComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private crudService: CrudService,
     private location: Location,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,

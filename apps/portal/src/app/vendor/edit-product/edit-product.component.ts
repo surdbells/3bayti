@@ -4,7 +4,6 @@ import { CommonModule } from '@angular/common';
 import { Category } from '../../class/category';
 import { Labels } from '../../class/labels';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { ImageUploadService } from '../../services/image-upload.service';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -207,7 +206,6 @@ export class EditProductComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private crudService: CrudService,
     private adapter: PortalCrudAdapter,
     private imageUpload: ImageUploadService,
     private toast: HotToastService,
