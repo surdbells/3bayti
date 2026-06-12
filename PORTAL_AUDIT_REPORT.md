@@ -53,8 +53,14 @@
 - **Gift card admin** has no list/aggregate endpoint; the new screen shows themes only.
 
 ### Missing infrastructure
-- **No route guards.** Auth is purely reactive (401→redirect). A direct navigation to `/backend` while unauthenticated briefly renders the shell before the first failed call. Needs a `canActivateChild` auth guard + role guards.
-- **No resolvers.** Every screen fetches in `ngOnInit`; no pre-navigation data resolution, so loading flicker is universal.
+- ~~**No route guards.**~~ ✅ FIXED. Functional guards (authGuard/adminGuard/
+  vendorGuard) now protect all 62 routes (30 admin, 24 vendor, 3 shared, 5
+  public). Guards run before the lazy component loads, eliminating the
+  unauthorized first-paint, and login round-trips via ?returnUrl.
+- **No resolvers.** Every screen fetches in `ngOnInit`; no pre-navigation data
+  resolution, so loading flicker is universal. (Mitigated per-screen by the
+  enterprise table's skeleton state, but route-level resolvers would remove
+  the flash entirely.)
 
 ---
 
