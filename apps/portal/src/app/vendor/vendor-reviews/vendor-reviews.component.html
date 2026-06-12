@@ -1,107 +1,28 @@
 <app-vendor-shell>
   <div class="ax-container">
-    <!-- Page header -->
     <header class="ax-page-header">
       <div class="ax-page-header-content">
-        <button
-          type="button"
-          (click)="goBack()"
-          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
-          style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-          Back
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to account
         </button>
         <span class="ax-page-header-eyebrow">Feedback</span>
         <h1 class="ax-page-title">Reviews</h1>
-        <p *ngIf="reviews && reviews.length > 0" class="ax-page-subtitle">
-          {{ reviews.length }} review{{ reviews.length !== 1 ? 's' : '' }} from verified purchases.
-        </p>
+        <p class="ax-page-subtitle">Customer reviews for your products.</p>
       </div>
     </header>
 
-    <!-- Loading -->
-    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-      <span class="ax-spinner ax-spinner-lg" aria-label="Loading reviews"></span>
-    </div>
-
-    <!-- Table -->
-    <section
-      *ngIf="!ui_controls.no_reviews && !ui_controls.is_loading"
-      class="ax-card ax-p-0">
-      <div class="ax-table-wrapper">
-        <table class="ax-table ax-table-hover">
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Customer</th>
-              <th>Rating</th>
-              <th>Comment</th>
-              <th>Date</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let a_review of reviews; let i = index">
-              <td>
-                <span class="ax-font-medium ax-text-primary">{{ a_review.product_name }}</span>
-              </td>
-              <td>
-                <span class="ax-text-sm ax-text-secondary">{{ a_review.customer_name }}</span>
-              </td>
-              <td>
-                <div
-                  class="ax-flex ax-items-center ax-gap-1"
-                  [attr.aria-label]="a_review.rating + ' out of 5 stars'">
-                  <span
-                    *ngFor="let _ of range(ratingStars(a_review.rating).filled)"
-                    class="material-symbols-outlined"
-                    style="font-size: 1rem; color: var(--ax-color-bg-brand); font-variation-settings: 'FILL' 1;"
-                    aria-hidden="true">star</span>
-                  <span
-                    *ngFor="let _ of range(ratingStars(a_review.rating).empty)"
-                    class="material-symbols-outlined"
-                    style="font-size: 1rem; color: var(--ax-color-border-base);"
-                    aria-hidden="true">star</span>
-                  <span class="ax-text-2xs ax-text-tertiary ax-ml-1">{{ a_review.rating }}/5</span>
-                </div>
-              </td>
-              <td style="max-width: 20rem;">
-                <span class="ax-text-sm ax-text-secondary">{{ a_review.comment }}</span>
-              </td>
-              <td>
-                <span class="ax-text-2xs ax-text-tertiary">{{ a_review.created }}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- Empty state -->
-    <section *ngIf="ui_controls.no_reviews && !ui_controls.is_loading" class="ax-page-section">
-      <div class="ax-card ax-p-8 ax-text-center">
-        <span
-          class="material-symbols-outlined"
-          style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
-          aria-hidden="true">reviews</span>
-        <h3 class="ax-h4 ax-m-0 ax-mt-3">No ratings yet</h3>
-        <p class="ax-text-secondary ax-mt-2" style="max-width: 34rem; margin-left: auto; margin-right: auto;">
-          Ratings are collected automatically from verified purchases. Build trust by improving product information and the customer experience.
-        </p>
-        <a routerLink="/products" class="ax-btn ax-btn-primary ax-mt-4">
-          <span class="material-symbols-outlined" aria-hidden="true">tune</span>
-          Improve product details
-        </a>
-        <div
-          class="ax-text-xs ax-text-tertiary ax-mt-5"
-          style="border-top: 1px solid var(--ax-color-border-subtle); padding-top: var(--ax-space-3); max-width: 28rem; margin-left: auto; margin-right: auto; text-align: left;">
-          <div class="ax-mb-1">• Add clear photos (main + lifestyle)</div>
-          <div class="ax-mb-1">• Use accurate titles, specs, and sizing</div>
-          <div class="ax-mb-1">• State shipping times &amp; return policy clearly</div>
-          <div class="ax-mt-2 ax-text-center ax-text-2xs" style="color: var(--ax-color-text-tertiary);">
-            Fewer pre-purchase doubts = more orders, which generate ratings automatically.
-          </div>
-        </div>
-      </div>
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource">
+        <ng-template axCell="rating" let-row>
+          <span class="ax-flex ax-gap-0" style="color:#f5a623" [attr.aria-label]="row.rating + ' out of 5'">
+            <span class="material-symbols-outlined" *ngFor="let s of ratingStars(row.rating).filled" style="font-size:1rem;font-variation-settings:'FILL' 1">star</span>
+            <span class="material-symbols-outlined" *ngFor="let s of ratingStars(row.rating).empty" style="font-size:1rem;color:var(--ax-color-border-subtle)">star</span>
+          </span>
+        </ng-template>
+        <ng-template axCell="comment" let-row>
+          <span class="ax-text-sm ax-text-secondary" style="display:block;max-width:24rem;white-space:normal">{{ row.comment }}</span>
+        </ng-template>
+      </app-ax-data-table>
     </section>
   </div>
 </app-vendor-shell>

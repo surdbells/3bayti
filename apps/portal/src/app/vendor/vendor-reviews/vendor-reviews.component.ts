@@ -1,36 +1,39 @@
 import { Component, OnInit } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
+import { Router } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
-import { Reviews } from '../../class/reviews';
 import { GlobalComponent } from '../../global-component';
-import { CommonModule } from '@angular/common';
-
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import {
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+} from '../../shared/data/enterprise';
+
+interface ReviewRow extends Record<string, unknown> {
+  id: number;
+  product_name: string;
+  customer_name: string;
+  rating: number;
+  comment: string;
+  created: string;
+}
+
 @Component({
   selector: 'app-vendor-reviews',
-  imports: [VendorShellComponent, CommonModule, RouterLink],
   standalone: true,
+  imports: [VendorShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
   templateUrl: './vendor-reviews.component.html',
   styleUrl: './vendor-reviews.component.css',
 })
 export class VendorReviewsComponent implements OnInit {
-  reviews?: Reviews[];
-
-  constructor(
-    private router: Router,
-    private crudService: CrudService,
-    private adapter: PortalCrudAdapter,
-    private toast: HotToastService,
-  ) {}
-
-  ui_controls = {
-    is_loading: false,
-    no_reviews: false,
-  };
-
-  session_data: any = '';
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',
@@ -38,55 +41,86 @@ export class VendorReviewsComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  review = {
-    token: '',
-    id: 0,
-  };
+  config!: AxDataTableConfig<ReviewRow>;
+  dataSource!: AxServerDataSource<ReviewRow>;
 
-  ngOnInit(): void {
-    this.session_data = sessionStorage.getItem('SESSION');
-    this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    this.review.token = this.user_session.token;
-    this.review.id = this.user_session.id;
-    this.product_review();
+  constructor(
+    private router: Router,
+    private adapter: PortalCrudAdapter,
+    private toast: HotToastService,
+  ) {}
+
+  ngOnInit() {
+    this.user_session = GlobalComponent.decodeBase64(
+      sessionStorage.getItem('SESSION') ?? '',
+    );
+    this.buildTable();
   }
 
-  goBack() {
-    this.router.navigate(['/account']).then(r => console.log(r));
+  private buildTable() {
+    this.dataSource = new AxServerDataSource<ReviewRow>((q) => this.fetchReviews(q));
+    this.config = {
+      tableId: 'vendor-reviews',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: true,
+      searchPlaceholder: 'Search reviews by product or customer…',
+      stickyHeader: true,
+      hover: true,
+      emptyTitle: 'No reviews yet',
+      emptyDescription: 'Your products have not received any reviews yet.',
+      export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'reviews' },
+      filters: [
+        {
+          key: 'rating', label: 'Rating', type: 'select',
+          options: [
+            { label: '5 stars', value: 5 },
+            { label: '4 stars', value: 4 },
+            { label: '3 stars', value: 3 },
+            { label: '2 stars', value: 2 },
+            { label: '1 star', value: 1 },
+          ],
+        },
+      ],
+      columns: [
+        { key: 'product_name', label: 'Product', sortable: true, sticky: 'left', width: '14rem' },
+        { key: 'customer_name', label: 'Customer', hideOnMobile: true },
+        { key: 'rating', label: 'Rating', align: 'center' },
+        { key: 'comment', label: 'Comment' },
+        { key: 'created', label: 'Date', hideOnMobile: true,
+          format: (v) => (v ? new Date(String(v)).toLocaleDateString() : '—') },
+      ],
+    };
   }
 
-  error_notification(message: string) {
-    this.toast.error(message);
+  private fetchReviews(query: AxQueryState) {
+    const q: any = {
+      limit: query.pageSize,
+      offset: query.pageIndex * query.pageSize,
+    };
+    if (query.search) q.search = query.search;
+    if (query.filters['rating']) q.rating = query.filters['rating'];
+    return this.adapter.get_v3('GET /vendor/reviews', { query: q }).pipe(
+      map((response: any): AxServerFetchResult<ReviewRow> => {
+        const raw: any[] = response?.data ?? [];
+        return { rows: raw as ReviewRow[], total: response?.meta?.total ?? raw.length };
+      }),
+      catchError(() => {
+        this.toast.error('Unable to load reviews at this time.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<ReviewRow>);
+      }),
+    );
   }
 
-  product_review() {
-    this.ui_controls.is_loading = true;
-    this.adapter.get_v3('GET /vendor/reviews', { query: { limit: 50, offset: 0 } }).subscribe({
-      next: (response: any) => {
-        if (response?.data) {
-          this.reviews = response.data ?? [];
-          this.ui_controls.no_reviews = this.reviews!.length === 0;
-        } else {
-          this.ui_controls.no_reviews = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_reviews = true;
-      },
-    });
-  }
-
-  /** Render rating as filled/empty star chars for a11y-preserved display. */
-  ratingStars(rating: number): { filled: number; empty: number } {
+  ratingStars(rating: number): { filled: number[]; empty: number[] } {
     const r = Math.max(0, Math.min(5, Math.round(rating)));
-    return { filled: r, empty: 5 - r };
+    return {
+      filled: Array(r).fill(0),
+      empty: Array(5 - r).fill(0),
+    };
   }
 
-  range(n: number): number[] {
-    return Array.from({ length: n }, (_, i) => i);
-  }
+  goBack() { this.router.navigate(['/account']); }
 }
