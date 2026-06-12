@@ -1,31 +1,43 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CrudService } from '../../../services/crud.service';
+import { CommonModule } from '@angular/common';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
-import { Products } from '../../../class/products';
-
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import {
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+} from '../../../shared/data/enterprise';
+
+interface ProductRow extends Record<string, unknown> {
+  id: number;
+  name: string;
+  label: string;
+  category: string;
+  price: string;
+  quantity: number;
+  stock_status: string;
+}
+
 @Component({
   selector: 'app-store-products',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
   templateUrl: './store-products.component.html',
   styleUrl: './store-products.component.css',
 })
 export class StoreProductsComponent implements OnInit {
-  products?: Products[];
+  store_name = '';
+  private storeId = 0;
 
-  ui_controls = {
-    is_loading: false,
-    no_data: false,
-    nav_open: false,
-  };
-
-  session_data: any = '';
-  store_name: any = '';
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',
@@ -33,84 +45,97 @@ export class StoreProductsComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  product = { token: '', id: 0, store: 0 };
+  config!: AxDataTableConfig<ProductRow>;
+  dataSource!: AxServerDataSource<ProductRow>;
 
   constructor(
     private router: Router,
-    private crudService: CrudService,
     private route: ActivatedRoute,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
   ngOnInit() {
-    this.session_data = sessionStorage.getItem('SESSION');
-    this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    const storeId = Number(this.route.snapshot.queryParamMap.get('id'));
-    this.store_name = this.route.snapshot.queryParamMap.get('name');
-
-    this.product.token = this.user_session.token;
-    this.product.id = this.user_session.id;
-    this.product.store = storeId;
-    this.get_vendor_product();
+    this.user_session = GlobalComponent.decodeBase64(
+      sessionStorage.getItem('SESSION') ?? '',
+    );
+    this.storeId = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.store_name = this.route.snapshot.queryParamMap.get('name') ?? '';
+    this.buildTable();
   }
 
-  goBack() {
-    this.router.navigate(['/stores']).then(r => console.log(r));
+  private buildTable() {
+    this.dataSource = new AxServerDataSource<ProductRow>((q) => this.fetchProducts(q));
+    this.config = {
+      tableId: 'store-products',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: true,
+      searchPlaceholder: 'Search products…',
+      stickyHeader: true,
+      hover: true,
+      emptyTitle: 'No products',
+      emptyDescription: 'This store has no products listed.',
+      export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'store-products' },
+      columns: [
+        { key: 'name', label: 'Name', sortable: true, sticky: 'left', width: '16rem' },
+        { key: 'label', label: 'Label', hideOnMobile: true },
+        { key: 'category', label: 'Category', hideOnMobile: true },
+        { key: 'price', label: 'Price', align: 'right',
+          format: (v) => (v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—') },
+        { key: 'quantity', label: 'Qty', align: 'center', hideOnMobile: true },
+        { key: 'stock_status', label: 'Stock', align: 'center' },
+      ],
+      rowActions: [{ id: 'view', label: 'View product', icon: 'visibility' }],
+    };
   }
 
-  error_notification(message: string) {
-    this.toast.error(message);
+  private fetchProducts(query: AxQueryState) {
+    const q: any = {
+      limit: query.pageSize,
+      offset: query.pageIndex * query.pageSize,
+    };
+    if (query.search) q.search = query.search;
+    return this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', {
+      params: { id: String(this.storeId) },
+      query: q,
+    }).pipe(
+      map((response: any): AxServerFetchResult<ProductRow> => {
+        const raw: any[] = response?.data ?? response?.products ?? [];
+        return { rows: raw as ProductRow[], total: response?.meta?.total ?? raw.length };
+      }),
+      catchError(() => {
+        this.toast.error('Unable to load store products.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<ProductRow>);
+      }),
+    );
   }
 
-  success_notification(message: string) {
-    this.toast.success(message);
-  }
-
-  get_vendor_product() {
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_data = false;
-    const spId = this.product.store ?? this.product.id;
-    this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(spId) }, query: { limit: 50, offset: 0 } }).subscribe({
-      next: (response: any) => {
-        if (response) {
-          this.products = response.data ?? response.products ?? [];
-          this.ui_controls.no_data = !this.products || this.products.length === 0;
-        } else {
-          this.ui_controls.no_data = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_data = true;
-      },
-    });
-  }
-
-  openProduct(id: number, _name: string) {
-    this.router
-      .navigate(['/', 'adminviewproduct'], { queryParams: { id } })
-      .then(r => console.log(r));
+  onRowAction(e: { action: { id: string }; row: ProductRow }) {
+    if (e.action.id === 'view') {
+      this.router.navigate(['/', 'adminviewproduct'], { queryParams: { id: e.row.id } });
+    }
   }
 
   stockBadge(status: string): string {
     switch (status) {
-      case 'in_stock':     return 'ax-badge ax-badge-success';
+      case 'in_stock': return 'ax-badge ax-badge-success';
       case 'out_of_stock': return 'ax-badge ax-badge-danger';
       case 'on_backorder': return 'ax-badge ax-badge-warning';
-      default:             return 'ax-badge ax-badge-neutral';
+      default: return 'ax-badge ax-badge-neutral';
     }
   }
 
   stockLabel(status: string): string {
     switch (status) {
-      case 'in_stock':     return 'In stock';
+      case 'in_stock': return 'In stock';
       case 'out_of_stock': return 'Out of stock';
       case 'on_backorder': return 'On backorder';
-      default:             return status;
+      default: return status;
     }
   }
+
+  goBack() { this.router.navigate(['/stores']); }
 }

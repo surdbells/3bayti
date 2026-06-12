@@ -1,31 +1,43 @@
 import { Component, OnInit } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
-import { Orders } from '../../../class/orders';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CrudService } from '../../../services/crud.service';
+import { CommonModule } from '@angular/common';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import {
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+} from '../../../shared/data/enterprise';
+
+interface OrderRow extends Record<string, unknown> {
+  id: number;
+  created: string;
+  product: string;
+  name: string;
+  quantity: number;
+  total_price: string;
+  status: string;
+}
+
 @Component({
   selector: 'app-store-orders',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
   templateUrl: './store-orders.component.html',
   styleUrl: './store-orders.component.css',
 })
 export class StoreOrdersComponent implements OnInit {
-  orders?: Orders[];
+  store_name = '';
+  private storeId = 0;
 
-  ui_controls = {
-    is_loading: false,
-    no_orders: false,
-    nav_open: false,
-  };
-
-  session_data: any = '';
-  store_name: any = '';
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',
@@ -33,110 +45,78 @@ export class StoreOrdersComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  order = { token: '', id: 0, store: 0 };
-  singleStatus = { id: 0, token: '', store: 0, status: 'Accepted' };
+  config!: AxDataTableConfig<OrderRow>;
+  dataSource!: AxServerDataSource<OrderRow>;
 
   constructor(
     private router: Router,
-    private crudService: CrudService,
-    private adapter: PortalCrudAdapter,
     private route: ActivatedRoute,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
   ngOnInit() {
-    this.session_data = sessionStorage.getItem('SESSION');
-    this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    const storeId = Number(this.route.snapshot.queryParamMap.get('id'));
-    this.store_name = this.route.snapshot.queryParamMap.get('name');
-
-    this.order.token = this.user_session.token;
-    this.order.id = this.user_session.id;
-    this.order.store = storeId || 0;
-
-    this.singleStatus.store = storeId || 0;
-    this.singleStatus.token = this.user_session.token;
-    this.singleStatus.id = this.user_session.id;
-
-    this.get_vendor_orders();
+    this.user_session = GlobalComponent.decodeBase64(
+      sessionStorage.getItem('SESSION') ?? '',
+    );
+    this.storeId = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.store_name = this.route.snapshot.queryParamMap.get('name') ?? '';
+    this.buildTable();
   }
 
-  goBack() {
-    this.router.navigate(['/stores']).then(r => console.log(r));
+  private buildTable() {
+    this.dataSource = new AxServerDataSource<OrderRow>((q) => this.fetchOrders(q));
+    this.config = {
+      tableId: 'store-orders',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: true,
+      searchPlaceholder: 'Search orders…',
+      stickyHeader: true,
+      hover: true,
+      emptyTitle: 'No orders',
+      emptyDescription: 'This store has no orders yet.',
+      export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'store-orders' },
+      columns: [
+        { key: 'created', label: 'Date', sortable: true, sticky: 'left', width: '11rem',
+          format: (v) => (v ? new Date(String(v)).toLocaleDateString() : '—') },
+        { key: 'product', label: 'Product' },
+        { key: 'name', label: 'Customer', hideOnMobile: true },
+        { key: 'quantity', label: 'Qty', align: 'center', hideOnMobile: true },
+        { key: 'total_price', label: 'Total', align: 'right',
+          format: (v) => (v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—') },
+        { key: 'status', label: 'Status', align: 'center' },
+      ],
+      rowActions: [{ id: 'view', label: 'View order', icon: 'visibility' }],
+    };
   }
 
-  error_notification(message: string) {
-    this.toast.error(message);
+  private fetchOrders(query: AxQueryState) {
+    const q: any = {
+      limit: query.pageSize,
+      offset: query.pageIndex * query.pageSize,
+      vendor: this.storeId,
+    };
+    if (query.search) q.search = query.search;
+    return this.adapter.get_v3('GET /admin/orders', { query: q }).pipe(
+      map((response: any): AxServerFetchResult<OrderRow> => {
+        const raw: any[] = response?.orders ?? (Array.isArray(response?.data) ? response.data : response?.data?.items ?? []);
+        return { rows: raw as OrderRow[], total: response?.pagination?.total ?? response?.meta?.total ?? raw.length };
+      }),
+      catchError(() => {
+        this.toast.error('Unable to load store orders.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<OrderRow>);
+      }),
+    );
   }
 
-  success_notification(message: string) {
-    this.toast.success(message);
-  }
-
-  get_vendor_orders() {
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_orders = false;
-    this.adapter.get_v3('GET /admin/orders', { query: { limit: 50, offset: 0 } }).subscribe({
-      next: (response: any) => {
-        if (response?.data) {
-          this.orders = response.orders ?? (Array.isArray(response.data) ? response.data : response.data?.items ?? []);
-          this.ui_controls.no_orders = !this.orders || this.orders.length === 0;
-        } else {
-          this.ui_controls.no_orders = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_orders = true;
-      },
-    });
-  }
-
-  open_order(id: number, name: string) {
-    this.router
-      .navigate(['/', 'admin_order'], { queryParams: { id, name } })
-      .then(r => console.log(r));
-  }
-
-  get_vendor_orders_status(event: Event) {
-    this.singleStatus.status = (event.target as HTMLSelectElement).value;
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_orders = false;
-    this.orders = [];
-    const statusFilter = this.singleStatus.status;
-    this.adapter.get_v3('GET /admin/orders', { query: { limit: 50, offset: 0, status: statusFilter } }).subscribe({
-      next: (response: any) => {
-        if (response?.data) {
-          this.orders = response.orders ?? (Array.isArray(response.data) ? response.data : response.data?.items ?? []);
-          this.ui_controls.no_orders = !this.orders || this.orders.length === 0;
-        } else {
-          this.ui_controls.no_orders = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_orders = true;
-      },
-    });
-  }
-
-  statusBadgeClass(status: string): string {
-    switch (status) {
-      case 'pending':            return 'ax-badge ax-badge-warning';
-      case 'Accepted':           return 'ax-badge ax-badge-brand';
-      case 'Ready for Delivery': return 'ax-badge ax-badge-info';
-      case 'Delivered':          return 'ax-badge ax-badge-success';
-      case 'Return Requested':   return 'ax-badge ax-badge-warning';
-      case 'Returned':           return 'ax-badge ax-badge-neutral';
-      case 'Cancelled':          return 'ax-badge ax-badge-neutral';
-      case 'Refunded':           return 'ax-badge ax-badge-neutral';
-      default:                   return 'ax-badge ax-badge-neutral';
+  onRowAction(e: { action: { id: string }; row: OrderRow }) {
+    if (e.action.id === 'view') {
+      this.router.navigate(['/', 'admin_order'], { queryParams: { id: e.row.id, name: e.row.product } });
     }
   }
+
+  goBack() { this.router.navigate(['/stores']); }
 }

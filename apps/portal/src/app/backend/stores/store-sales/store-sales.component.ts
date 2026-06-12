@@ -1,28 +1,33 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CrudService } from '../../../services/crud.service';
+import { CommonModule } from '@angular/common';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
-export interface Sales {
+import {
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+  type AxDateRange,
+} from '../../../shared/data/enterprise';
+
+interface SaleRow extends Record<string, unknown> {
   id: number;
   order_ref: string;
   product_name: string;
   transaction_ref: string;
   quantity: number;
-  price: number;
   total_price: string;
-  delivery: string;
-  total_paid: string;
-  noon: string;
   commission: string;
   charges: string;
   vendor_pay: string;
-  customer_email: string;
   customer_name: string;
   status: string;
   created: string;
@@ -31,21 +36,14 @@ export interface Sales {
 @Component({
   selector: 'app-store-sales',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
   templateUrl: './store-sales.component.html',
   styleUrl: './store-sales.component.css',
 })
 export class StoreSalesComponent implements OnInit {
-  sales?: Sales[];
+  store_name = '';
+  private storeId = 0;
 
-  ui_controls = {
-    is_loading: false,
-    no_data: false,
-    nav_open: false,
-  };
-
-  session_data: any = '';
-  store_name: any = '';
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',
@@ -53,90 +51,81 @@ export class StoreSalesComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  get_store_s = { id: 0, token: '', store: 0 };
-  get_store_range = {
-    id: 0, token: '',
-    start_date: '', end_date: '', storeId: 0,
-  };
+  config!: AxDataTableConfig<SaleRow>;
+  dataSource!: AxServerDataSource<SaleRow>;
 
   constructor(
     private router: Router,
-    private crudService: CrudService,
     private route: ActivatedRoute,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
   ngOnInit() {
-    this.session_data = sessionStorage.getItem('SESSION');
-    this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    const storeId = Number(this.route.snapshot.queryParamMap.get('id'));
-    this.store_name = this.route.snapshot.queryParamMap.get('name');
-
-    this.get_store_s.token = this.user_session.token;
-    this.get_store_s.id = this.user_session.id;
-    this.get_store_s.store = storeId;
-
-    this.get_store_range.token = this.user_session.token;
-    this.get_store_range.id = this.user_session.id;
-    this.get_store_range.storeId = storeId;
-
-    this.get_sales();
+    this.user_session = GlobalComponent.decodeBase64(
+      sessionStorage.getItem('SESSION') ?? '',
+    );
+    this.storeId = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.store_name = this.route.snapshot.queryParamMap.get('name') ?? '';
+    this.buildTable();
   }
 
-  goBack() {
-    this.router.navigate(['/backend']).then(r => console.log(r));
+  private money = (v: unknown) =>
+    v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—';
+
+  private buildTable() {
+    this.dataSource = new AxServerDataSource<SaleRow>((q) => this.fetchSales(q));
+    this.config = {
+      tableId: 'store-sales',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: true,
+      searchPlaceholder: 'Search sales…',
+      stickyHeader: true,
+      hover: true,
+      compact: true,
+      emptyTitle: 'No sales',
+      emptyDescription: 'This store has no sales in the selected range.',
+      export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'store-sales' },
+      filters: [{ key: 'date', label: 'Date', type: 'date-range' }],
+      columns: [
+        { key: 'order_ref', label: 'Order ref', sortable: true, sticky: 'left', width: '12rem' },
+        { key: 'product_name', label: 'Product' },
+        { key: 'customer_name', label: 'Customer', hideOnMobile: true },
+        { key: 'quantity', label: 'Qty', align: 'center', hideOnMobile: true },
+        { key: 'total_price', label: 'Total', align: 'right', format: (v) => this.money(v) },
+        { key: 'commission', label: 'Commission', align: 'right', hideOnMobile: true, format: (v) => this.money(v) },
+        { key: 'vendor_pay', label: 'Vendor pay', align: 'right', format: (v) => this.money(v) },
+        { key: 'status', label: 'Status', align: 'center' },
+        { key: 'created', label: 'Date', hideOnMobile: true,
+          format: (v) => (v ? new Date(String(v)).toLocaleDateString() : '—') },
+      ],
+    };
   }
 
-  error_notification(message: string) {
-    this.toast.error(message);
+  private fetchSales(query: AxQueryState) {
+    const q: any = {
+      limit: query.pageSize,
+      offset: query.pageIndex * query.pageSize,
+      vendor: this.storeId,
+    };
+    if (query.search) q.search = query.search;
+    const range = query.filters['date'] as AxDateRange | undefined;
+    if (range?.from) q.since = range.from;
+    if (range?.to) q.until = range.to;
+    return this.adapter.get_v3('GET /admin/transactions', { query: q }).pipe(
+      map((response: any): AxServerFetchResult<SaleRow> => {
+        const raw: any[] = Array.isArray(response?.data) ? response.data : response?.data?.items ?? [];
+        return { rows: raw as SaleRow[], total: response?.meta?.total ?? raw.length };
+      }),
+      catchError(() => {
+        this.toast.error('Unable to load store sales.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<SaleRow>);
+      }),
+    );
   }
 
-  success_notification(message: string) {
-    this.toast.success(message);
-  }
-
-  get_sales() {
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 50, offset: 0 } }).subscribe({
-      next: (response: any) => {
-        if (response?.data) {
-          this.sales = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
-          this.ui_controls.no_data = !this.sales || this.sales.length === 0;
-        } else {
-          this.ui_controls.no_data = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_data = true;
-      },
-    });
-  }
-
-  get_range_sales() {
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /admin/transactions', { query: { limit: 50, offset: 0, since: this.get_store_range.start_date, until: this.get_store_range.end_date } }).subscribe({
-      next: (response: any) => {
-        if (response?.data) {
-          this.sales = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
-          this.ui_controls.no_data = !this.sales || this.sales.length === 0;
-        } else {
-          this.ui_controls.no_data = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_data = true;
-      },
-    });
-  }
+  goBack() { this.router.navigate(['/stores']); }
 }

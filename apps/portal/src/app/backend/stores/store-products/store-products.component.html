@@ -1,81 +1,22 @@
 <app-admin-shell>
   <div class="ax-container">
-      <header class="ax-page-header">
-        <div class="ax-page-header-content">
-          <button
-            type="button"
-            (click)="goBack()"
-            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
-            style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-            Back to stores
-          </button>
-          <span class="ax-page-header-eyebrow">{{ store_name }}</span>
-          <h1 class="ax-page-title">Store products</h1>
-          <p *ngIf="products && products.length > 0" class="ax-page-subtitle">
-            {{ products.length }} product{{ products.length !== 1 ? 's' : '' }} listed at this store.
-          </p>
-        </div>
-      </header>
-
-      <!-- Loading -->
-      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-        <span class="ax-spinner ax-spinner-lg" aria-label="Loading products"></span>
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to stores
+        </button>
+        <span class="ax-page-header-eyebrow">Store</span>
+        <h1 class="ax-page-title">{{ store_name || 'Store' }} — Products</h1>
+        <p class="ax-page-subtitle">Products listed by this store.</p>
       </div>
+    </header>
 
-      <!-- Table -->
-      <section
-        *ngIf="!ui_controls.is_loading && !ui_controls.no_data"
-        class="ax-card ax-p-0">
-        <div class="ax-table-wrapper">
-          <table class="ax-table ax-table-hover">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Label</th>
-                <th>Category</th>
-                <th style="text-align: center;">Qty</th>
-                <th style="text-align: right;">Price</th>
-                <th>Stock</th>
-                <th style="width: 7rem; text-align: right;"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let a_products of products; let i = index">
-                <td><span class="ax-font-medium ax-text-primary">{{ a_products.name }}</span></td>
-                <td><span class="ax-text-sm ax-text-secondary">{{ a_products.label }}</span></td>
-                <td><span class="ax-text-sm ax-text-secondary">{{ a_products.category }}</span></td>
-                <td style="text-align: center;"><span class="ax-numeric">{{ a_products.quantity }}</span></td>
-                <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ a_products.price }}</span></td>
-                <td>
-                  <span [ngClass]="stockBadge(a_products.stock_status)">{{ stockLabel(a_products.stock_status) }}</span>
-                </td>
-                <td style="text-align: right;">
-                  <button
-                    type="button"
-                    class="ax-btn ax-btn-ghost ax-btn-sm"
-                    (click)="openProduct(a_products.id, a_products.name)">
-                    <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
-                    View
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Empty state -->
-      <section *ngIf="!ui_controls.is_loading && ui_controls.no_data" class="ax-page-section">
-        <div class="ax-card ax-p-8 ax-text-center">
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
-            aria-hidden="true">inventory_2</span>
-          <h3 class="ax-h4 ax-m-0 ax-mt-3">No products yet</h3>
-          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-            This vendor hasn't listed any products yet.
-          </p>
-        </div>
-      </section>  </div>
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="stock_status" let-row>
+          <span [ngClass]="stockBadge(row.stock_status)">{{ stockLabel(row.stock_status) }}</span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
 </app-admin-shell>
