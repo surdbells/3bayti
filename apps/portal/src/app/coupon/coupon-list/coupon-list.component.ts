@@ -10,15 +10,20 @@ import { Subject } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 
 import {
-  AxDropdownDirective,
-  AxDropdownItemDirective,
-} from '../../shared/overlays';
-import { AxPaginationComponent } from '../../shared/data';
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+} from '../../shared/data/enterprise';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
-interface CouponListItem {
+interface CouponListItem extends Record<string, unknown> {
   coupon_id: number;
   code: string;
   name: string;
@@ -54,14 +59,86 @@ interface Pagination {
     VendorShellComponent,
     AdminShellComponent,
     CommonModule, FormsModule, RouterLink,
-    AxDropdownDirective, AxDropdownItemDirective,
-    AxPaginationComponent,
+    AxDataTableComponent, AxCellDirective,
   ],
   templateUrl: './coupon-list.component.html',
   styleUrl: './coupon-list.component.css',
 })
 export class CouponListComponent implements OnInit, OnDestroy {
   coupons: CouponListItem[] = [];
+
+  // ── Enterprise table ───────────────────────────────────────────
+  tableDataSource!: AxServerDataSource<CouponListItem>;
+  readonly tableConfig: AxDataTableConfig<CouponListItem> = {
+    tableId: 'coupons',
+    mode: 'server',
+    rowId: 'coupon_id',
+    pageSize: 20,
+    pageSizeOptions: [20, 50, 100],
+    globalSearch: true,
+    searchPlaceholder: 'Search coupons by code or name…',
+    stickyHeader: true,
+    hover: true,
+    emptyTitle: 'No coupons yet',
+    emptyDescription: 'Create your first coupon to start driving sales.',
+    export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'coupons' },
+    filters: [
+      {
+        key: 'status', label: 'Status', type: 'select',
+        options: [
+          { label: 'Active', value: 'active' },
+          { label: 'Inactive', value: 'inactive' },
+          { label: 'Expired', value: 'expired' },
+        ],
+      },
+    ],
+    columns: [
+      { key: 'code', label: 'Code', sortable: true, sticky: 'left', width: '12rem' },
+      { key: 'name', label: 'Name', hideOnMobile: true },
+      { key: 'discount_type', label: 'Discount', align: 'center' },
+      { key: 'discount_value', label: 'Value', align: 'right',
+        value: (c) => (c.discount_type === 'percentage' ? `${c.discount_value}%` : `AED ${Number(c.discount_value).toFixed(2)}`) },
+      { key: 'times_used', label: 'Used', align: 'center', hideOnMobile: true,
+        value: (c) => (c.max_uses ? `${c.times_used} / ${c.max_uses}` : `${c.times_used} / ∞`) },
+      { key: 'expires_at', label: 'Expires', hideOnMobile: true,
+        format: (v) => (v ? new Date(String(v)).toLocaleDateString() : 'Never') },
+      { key: 'status', label: 'Status', align: 'center' },
+    ],
+    rowActions: [
+      { id: 'edit', label: 'Edit', icon: 'edit' },
+      { id: 'analytics', label: 'Analytics', icon: 'bar_chart' },
+      { id: 'toggle', label: 'Toggle status', icon: 'toggle_on' },
+      { id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger' },
+    ],
+  };
+
+  onTableRowAction(e: { action: { id: string }; row: CouponListItem }): void {
+    const { action, row } = e;
+    switch (action.id) {
+      case 'edit': return this.editCoupon(row.coupon_id);
+      case 'analytics': return this.viewAnalytics(row.coupon_id);
+      case 'toggle': return this.toggleStatus(row);
+      case 'delete': return this.startDelete(row);
+    }
+  }
+
+  private buildTableSource(): void {
+    this.tableDataSource = new AxServerDataSource<CouponListItem>((q: AxQueryState) => {
+      const query: any = { limit: q.pageSize, offset: q.pageIndex * q.pageSize };
+      if (q.search) query.search = q.search;
+      if (q.filters['status']) query.status = q.filters['status'];
+      return this.adapter.get_v3('GET /vendor/coupons', { query }).pipe(
+        map((response: any): AxServerFetchResult<CouponListItem> => {
+          const rows: CouponListItem[] = response?.data ?? [];
+          return { rows, total: response?.meta?.total ?? rows.length };
+        }),
+        catchError(() => {
+          this.toast.error('Unable to load coupons at this time.');
+          return of({ rows: [], total: 0 } as AxServerFetchResult<CouponListItem>);
+        }),
+      );
+    });
+  }
   pagination: Pagination = { page: 1, per_page: 10, total: 0, total_pages: 0 };
 
   private readonly confirm = inject(AxConfirmService);
@@ -114,6 +191,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
       this.fetchCoupons();
     });
 
+    this.buildTableSource();
     this.fetchCoupons();
   }
 
@@ -248,10 +326,9 @@ export class CouponListComponent implements OnInit, OnDestroy {
       next: (response: any) => {
         this.ui.toggling = false;
         if (response) {
-          this.toast.success(response.message);
+          this.toast.success(response.message ?? 'Coupon updated.');
           this.fetchCoupons();
-        } else {
-          this.toast.error(response.message);
+          this.tableDataSource?.retry();
         }
       },
       error: () => {
@@ -290,8 +367,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
         if (response) {
           this.toast.success('Coupon deleted successfully.');
           this.fetchCoupons();
-        } else {
-          this.toast.error(response.message);
+          this.tableDataSource?.retry();
         }
       },
       error: () => {
