@@ -1,130 +1,31 @@
 <app-admin-shell>
   <div class="ax-container">
-      <!-- Page header -->
-      <header class="ax-page-header">
-        <div class="ax-page-header-content">
-          <button
-            type="button"
-            (click)="goBack()"
-            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
-            style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-            Back to dashboard
-          </button>
-          <span class="ax-page-header-eyebrow">Catalog oversight</span>
-          <h1 class="ax-page-title">Products</h1>
-          <p *ngIf="products && products.length > 0" class="ax-page-subtitle">
-            {{ products.length }} product{{ products.length !== 1 ? 's' : '' }} across all stores.
-          </p>
-        </div>
-
-        <div class="ax-flex ax-gap-2 ax-items-center">
-          <label class="ax-label ax-text-2xs" style="margin: 0; white-space: nowrap;">Status</label>
-          <select
-            class="ax-select ax-input-sm"
-            style="width: auto;"
-            (change)="get_product_status($event)"
-            [(ngModel)]="product_S.status"
-            name="status_filter">
-            <option value="">All</option>
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-            <option value="deleted">Deleted</option>
-          </select>
-        </div>
-      </header>
-
-      <!-- Loading -->
-      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-        <span class="ax-spinner ax-spinner-lg" aria-label="Loading products"></span>
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Catalog</span>
+        <h1 class="ax-page-title">Products</h1>
+        <p class="ax-page-subtitle">All products listed across vendor stores.</p>
       </div>
+    </header>
 
-      <!-- Table -->
-      <section
-        *ngIf="!ui_controls.is_loading && !ui_controls.no_data"
-        class="ax-card ax-p-0">
-        <div class="ax-table-wrapper">
-          <table class="ax-table ax-table-hover">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Category</th>
-                <th>Store</th>
-                <th style="text-align: center;">Qty</th>
-                <th style="text-align: right;">Price</th>
-                <th>Stock</th>
-                <th>Timestamp</th>
-                <th>Colours</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let a_products of products; let i = index">
-                <td>
-                  <span class="ax-font-medium ax-text-primary">{{ a_products.name }}</span>
-                </td>
-                <td>
-                  <span class="ax-text-sm ax-text-secondary">{{ a_products.category }}</span>
-                </td>
-                <td>
-                  <button
-                    type="button"
-                    class="ax-btn ax-btn-ghost ax-btn-sm"
-                    style="padding-left: 0; padding-right: 0.5rem; text-align: left;"
-                    (click)="manage_store(a_products.store, a_products.store_name)"
-                    [attr.aria-label]="'Manage store ' + a_products.store_name">
-                    <div style="min-width: 0;">
-                      <div class="ax-text-sm ax-text-primary">
-                        {{ a_products.first_name }} {{ a_products.last_name }}
-                      </div>
-                      <div class="ax-text-2xs ax-text-tertiary">{{ a_products.store_name }}</div>
-                    </div>
-                  </button>
-                </td>
-                <td style="text-align: center;">
-                  <span class="ax-numeric">{{ a_products.quantity }}</span>
-                </td>
-                <td style="text-align: right;">
-                  <span class="ax-font-semibold ax-numeric">{{ a_products.price }}</span>
-                </td>
-                <td>
-                  <span [ngClass]="stockBadge(a_products.stock_status)">
-                    {{ stockLabel(a_products.stock_status) }}
-                  </span>
-                </td>
-                <td>
-                  <div class="ax-text-2xs ax-text-tertiary">{{ a_products.created }}</div>
-                  <div class="ax-text-2xs ax-text-tertiary">Updated: {{ a_products.updated }}</div>
-                </td>
-                <td>
-                  <span *ngIf="a_products.colors.length == 0" class="ax-badge ax-badge-danger">
-                    No colours
-                  </span>
-                  <span *ngIf="a_products.colors.length > 0" class="ax-badge ax-badge-success">
-                    {{ a_products.colors.length }} colour{{ a_products.colors.length !== 1 ? 's' : '' }}
-                  </span>
-                </td>
-                <td>
-                  <span [ngClass]="statusBadge(a_products.status)">{{ a_products.status }}</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Empty state -->
-      <section *ngIf="!ui_controls.is_loading && ui_controls.no_data" class="ax-page-section">
-        <div class="ax-card ax-p-8 ax-text-center">
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
-            aria-hidden="true">inventory_2</span>
-          <h3 class="ax-h4 ax-m-0 ax-mt-3">No products found</h3>
-          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-            <span *ngIf="product_S.status">No products match the '{{ product_S.status }}' status filter.</span>
-            <span *ngIf="!product_S.status">There are no products listed on the platform yet.</span>
-          </p>
-        </div>
-      </section>  </div>
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="store_name" let-row>
+          <div>
+            <div class="ax-text-sm">{{ row.first_name }} {{ row.last_name }}</div>
+            <div class="ax-text-2xs ax-text-tertiary">{{ row.store_name }}</div>
+          </div>
+        </ng-template>
+        <ng-template axCell="stock_status" let-row>
+          <span [ngClass]="stockBadge(row.stock_status)">{{ stockLabel(row.stock_status) }}</span>
+        </ng-template>
+        <ng-template axCell="status" let-row>
+          <span [ngClass]="statusBadge(row.status)">{{ row.status | titlecase }}</span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
 </app-admin-shell>

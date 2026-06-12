@@ -1,32 +1,45 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Products } from '../../class/products';
-import { ActivatedRoute, Router } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
+import { Router } from '@angular/router';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
-import { FormsModule } from '@angular/forms';
-
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import {
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+} from '../../shared/data/enterprise';
+
+interface ProductRow extends Record<string, unknown> {
+  id: number;
+  name: string;
+  category_name: string;
+  store: number;
+  store_name: string;
+  first_name: string;
+  last_name: string;
+  price: string;
+  stock_status: string;
+  created_at: string;
+  colours: string[];
+  status: string;
+}
+
 @Component({
   selector: 'app-admin-products',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
   templateUrl: './admin-products.component.html',
   styleUrl: './admin-products.component.css',
 })
 export class AdminProductsComponent implements OnInit {
-  products?: Products[];
-
-  ui_controls = {
-    is_loading: false,
-    no_data: false,
-    nav_open: false,
-  };
-
-  session_data: any = '';
-  store_name: any = '';
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',
@@ -34,116 +47,128 @@ export class AdminProductsComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  product = { token: '', id: 0 };
-  product_S = { token: '', id: 0, status: '' };
+  config!: AxDataTableConfig<ProductRow>;
+  dataSource!: AxServerDataSource<ProductRow>;
 
   constructor(
     private router: Router,
-    private crudService: CrudService,
-    private route: ActivatedRoute,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
   ngOnInit() {
-    this.session_data = sessionStorage.getItem('SESSION');
-    this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    this.product.token = this.user_session.token;
-    this.product.id = this.user_session.id;
-    this.product_S.token = this.user_session.token;
-    this.product_S.id = this.user_session.id;
-    this.get_product();
+    this.user_session = GlobalComponent.decodeBase64(
+      sessionStorage.getItem('SESSION') ?? '',
+    );
+    this.buildTable();
   }
 
-  goBack() {
-    this.router.navigate(['/backend']).then(r => console.log(r));
+  private buildTable() {
+    this.dataSource = new AxServerDataSource<ProductRow>((q) => this.fetchProducts(q));
+    this.config = {
+      tableId: 'admin-products',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: true,
+      searchPlaceholder: 'Search products by name…',
+      stickyHeader: true,
+      hover: true,
+      emptyTitle: 'No products found',
+      emptyDescription: 'No products match your current filters.',
+      export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'products' },
+      filters: [
+        {
+          key: 'status', label: 'Status', type: 'select',
+          options: [
+            { label: 'Published', value: 'published' },
+            { label: 'Draft', value: 'draft' },
+            { label: 'Deleted', value: 'deleted' },
+          ],
+        },
+        {
+          key: 'stock', label: 'Stock', type: 'select',
+          options: [
+            { label: 'In stock', value: 'in_stock' },
+            { label: 'Out of stock', value: 'out_of_stock' },
+            { label: 'On backorder', value: 'on_backorder' },
+          ],
+        },
+      ],
+      columns: [
+        { key: 'name', label: 'Product', sortable: true, sticky: 'left', width: '16rem' },
+        { key: 'category_name', label: 'Category', hideOnMobile: true },
+        { key: 'store_name', label: 'Store', hideOnMobile: true },
+        { key: 'price', label: 'Price', align: 'right',
+          format: (v) => (v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—') },
+        { key: 'stock_status', label: 'Stock', align: 'center' },
+        { key: 'created_at', label: 'Created', hideOnMobile: true,
+          format: (v) => (v ? new Date(String(v)).toLocaleDateString() : '—') },
+        { key: 'status', label: 'Status', align: 'center' },
+      ],
+      rowActions: [
+        { id: 'manage-store', label: 'Manage store', icon: 'storefront' },
+      ],
+    };
   }
 
-  error_notification(message: string) {
-    this.toast.error(message);
+  private fetchProducts(query: AxQueryState) {
+    const q: any = {
+      limit: query.pageSize,
+      offset: query.pageIndex * query.pageSize,
+    };
+    if (query.search) q.search = query.search;
+    if (query.filters['status']) q.status = query.filters['status'];
+    if (query.filters['stock']) q.stock_status = query.filters['stock'];
+
+    return this.adapter.get_v3('GET /products', { query: q }).pipe(
+      map((response: any): AxServerFetchResult<ProductRow> => {
+        const raw: any[] = response?.data ?? [];
+        return { rows: raw as ProductRow[], total: response?.meta?.total ?? raw.length };
+      }),
+      catchError(() => {
+        this.toast.error('Unable to load products at this time.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<ProductRow>);
+      }),
+    );
   }
 
-  success_notification(message: string) {
-    this.toast.success(message);
+  onRowAction(e: { action: { id: string }; row: ProductRow }) {
+    if (e.action.id === 'manage-store') {
+      const urlTree = this.router.createUrlTree(['/manage_store'], {
+        queryParams: { id: e.row.store, name: e.row.store_name },
+      });
+      window.open(this.router.serializeUrl(urlTree), '_blank');
+    }
   }
 
-  get_product() {
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /products', { query: { limit: 20, offset: 0 } }).subscribe({
-      next: (response: any) => {
-        if (response) {
-          this.products = response.data ?? [];
-          this.ui_controls.no_data = !this.products || this.products.length === 0;
-        } else {
-          this.ui_controls.no_data = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_data = true;
-      },
-    });
-  }
-
-  get_product_status(event: Event) {
-    this.product_S.status = (event.target as HTMLSelectElement).value;
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_data = false;
-    this.products = [];
-    this.adapter.get_v3('GET /products', { query: { limit: 20, offset: 0, vendor: this.product_S.id } }).subscribe({
-      next: (response: any) => {
-        if (response) {
-          this.products = response.data ?? [];
-          this.ui_controls.no_data = !this.products || this.products.length === 0;
-        } else {
-          this.ui_controls.no_data = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_data = true;
-      },
-    });
-  }
-
-  manage_store(id: number, name: string) {
-    const urlTree = this.router.createUrlTree(['/manage_store'], { queryParams: { id, name } });
-    const fullUrl = this.router.serializeUrl(urlTree);
-    window.open(fullUrl, '_blank');
-  }
-
-  // Status / stock badge helpers
   stockBadge(status: string): string {
     switch (status) {
-      case 'in_stock':     return 'ax-badge ax-badge-success';
+      case 'in_stock': return 'ax-badge ax-badge-success';
       case 'out_of_stock': return 'ax-badge ax-badge-danger';
       case 'on_backorder': return 'ax-badge ax-badge-warning';
-      default:             return 'ax-badge ax-badge-neutral';
+      default: return 'ax-badge ax-badge-neutral';
     }
   }
 
   stockLabel(status: string): string {
     switch (status) {
-      case 'in_stock':     return 'In stock';
+      case 'in_stock': return 'In stock';
       case 'out_of_stock': return 'Out of stock';
       case 'on_backorder': return 'On backorder';
-      default:             return status;
+      default: return status;
     }
   }
 
   statusBadge(status: string): string {
     switch (status) {
       case 'published': return 'ax-badge ax-badge-info';
-      case 'draft':     return 'ax-badge ax-badge-warning';
-      case 'deleted':   return 'ax-badge ax-badge-danger';
-      default:          return 'ax-badge ax-badge-neutral';
+      case 'draft': return 'ax-badge ax-badge-warning';
+      case 'deleted': return 'ax-badge ax-badge-danger';
+      default: return 'ax-badge ax-badge-neutral';
     }
   }
+
+  goBack() { this.router.navigate(['/backend']); }
 }

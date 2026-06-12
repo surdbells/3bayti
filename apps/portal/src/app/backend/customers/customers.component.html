@@ -1,112 +1,27 @@
 <app-admin-shell>
   <div class="ax-container">
-      <!-- Page header -->
-      <header class="ax-page-header">
-        <div class="ax-page-header-content">
-          <button
-            type="button"
-            (click)="goBack()"
-            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
-            style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-            Back to dashboard
-          </button>
-          <span class="ax-page-header-eyebrow">Platform users</span>
-          <h1 class="ax-page-title">Customers</h1>
-          <p *ngIf="customers && customers.length > 0" class="ax-page-subtitle">
-            {{ customers.length }} customer{{ customers.length !== 1 ? 's' : '' }} registered.
-          </p>
-        </div>
-
-        <div class="ax-flex ax-gap-2 ax-items-center">
-          <button
-            type="button"
-            class="ax-btn ax-btn-outline ax-btn-sm"
-            (click)="get_customer()"
-            [disabled]="ui_controls.is_loading">
-            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
-            Refresh
-          </button>
-        </div>
-      </header>
-
-      <!-- Loading -->
-      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-        <span class="ax-spinner ax-spinner-lg" aria-label="Loading customers"></span>
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Platform</span>
+        <h1 class="ax-page-title">Customers</h1>
+        <p class="ax-page-subtitle">All registered customers across the platform.</p>
       </div>
+    </header>
 
-      <!-- Table -->
-      <section
-        *ngIf="!ui_controls.is_loading && !ui_controls.no_data"
-        class="ax-card ax-p-0">
-        <div class="ax-table-wrapper">
-          <table class="ax-table ax-table-hover">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th style="text-align: center;">Orders</th>
-                <th>Last login</th>
-                <th>Status</th>
-                <th style="text-align: right; width: 10rem;">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let a_customer of customers; let i = index">
-                <td>
-                  <span class="ax-font-medium ax-text-primary">{{ a_customer.name }}</span>
-                </td>
-                <td>
-                  <span class="ax-text-sm ax-text-secondary">{{ a_customer.email }}</span>
-                </td>
-                <td>
-                  <span class="ax-text-sm ax-text-secondary">{{ a_customer.phone }}</span>
-                </td>
-                <td style="text-align: center;">
-                  <span class="ax-numeric">{{ a_customer.orders }}</span>
-                </td>
-                <td>
-                  <span class="ax-text-2xs ax-text-tertiary">{{ a_customer.last_login }}</span>
-                </td>
-                <td>
-                  <span *ngIf="a_customer.status" class="ax-badge ax-badge-success">Active</span>
-                  <span *ngIf="!a_customer.status" class="ax-badge ax-badge-danger">Inactive</span>
-                </td>
-                <td style="text-align: right;">
-                  <button
-                    *ngIf="!a_customer.status"
-                    type="button"
-                    class="ax-btn ax-btn-primary ax-btn-sm"
-                    (click)="start_activate(a_customer.id, a_customer.name)">
-                    Activate
-                  </button>
-                  <button
-                    *ngIf="a_customer.status"
-                    type="button"
-                    class="ax-btn ax-btn-outline ax-btn-sm"
-                    style="color: var(--ax-color-text-danger); border-color: var(--ax-color-border-base);"
-                    (click)="start_deactivate(a_customer.id, a_customer.name)">
-                    Deactivate
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Empty state -->
-      <section *ngIf="!ui_controls.is_loading && ui_controls.no_data" class="ax-page-section">
-        <div class="ax-card ax-p-8 ax-text-center">
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
-            aria-hidden="true">group</span>
-          <h3 class="ax-h4 ax-m-0 ax-mt-3">No customers yet</h3>
-          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-            Customer accounts will appear here as shoppers register on the platform.
-          </p>
-        </div>
-      </section>  </div>
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="name" let-row>
+          <span class="ax-font-medium ax-text-primary">{{ row.first_name }} {{ row.last_name }}</span>
+        </ng-template>
+        <ng-template axCell="status" let-row>
+          <span class="ax-badge" [class.ax-badge-success]="row.status" [class.ax-badge-danger]="!row.status">
+            {{ row.status ? 'Active' : 'Inactive' }}
+          </span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
 </app-admin-shell>
