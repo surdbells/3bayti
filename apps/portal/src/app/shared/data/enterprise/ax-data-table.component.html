@@ -1,0 +1,296 @@
+<!-- Enterprise data table -->
+<div class="axdt" [class.axdt-compact]="config.compact">
+
+  <!-- ── Toolbar: search · filters · column manager · export ──────────── -->
+  <div class="axdt-toolbar" *ngIf="config.globalSearch || config.filters?.length || config.export?.enabled">
+    <div class="axdt-toolbar-left">
+      <div class="axdt-search" *ngIf="config.globalSearch">
+        <span class="material-symbols-outlined axdt-search-icon" aria-hidden="true">search</span>
+        <input
+          type="search"
+          class="ax-input ax-input-sm"
+          [placeholder]="config.searchPlaceholder || 'Search…'"
+          [ngModel]="query().search"
+          (ngModelChange)="onSearch($event)"
+          [attr.aria-label]="config.searchPlaceholder || 'Search'" />
+      </div>
+
+      <!-- Filters -->
+      <ng-container *ngFor="let f of config.filters">
+        <!-- text -->
+        <input
+          *ngIf="f.type === 'text'"
+          type="text"
+          class="ax-input ax-input-sm"
+          [placeholder]="f.placeholder || f.label"
+          [ngModel]="$any(query().filters[f.key])"
+          (ngModelChange)="onFilterChange(f.key, $event)"
+          [attr.aria-label]="f.label" />
+
+        <!-- select -->
+        <select
+          *ngIf="f.type === 'select'"
+          class="ax-input ax-input-sm"
+          [ngModel]="$any(query().filters[f.key])"
+          (ngModelChange)="onFilterChange(f.key, $event)"
+          [attr.aria-label]="f.label">
+          <option [ngValue]="null">{{ f.placeholder || f.label }}</option>
+          <option *ngFor="let o of f.options" [ngValue]="o.value">{{ o.label }}</option>
+        </select>
+
+        <!-- boolean -->
+        <select
+          *ngIf="f.type === 'boolean'"
+          class="ax-input ax-input-sm"
+          [ngModel]="$any(query().filters[f.key])"
+          (ngModelChange)="onFilterChange(f.key, $event === 'true' ? true : $event === 'false' ? false : null)"
+          [attr.aria-label]="f.label">
+          <option [ngValue]="null">{{ f.label }}: All</option>
+          <option value="true">{{ f.label }}: Yes</option>
+          <option value="false">{{ f.label }}: No</option>
+        </select>
+
+        <!-- date-range -->
+        <span *ngIf="f.type === 'date-range'" class="axdt-daterange">
+          <input type="date" class="ax-input ax-input-sm"
+            [ngModel]="$any(query().filters[f.key])?.from"
+            (ngModelChange)="onFilterChange(f.key, { from: $event || null, to: $any(query().filters[f.key])?.to ?? null })"
+            [attr.aria-label]="f.label + ' from'" />
+          <span class="axdt-daterange-sep">→</span>
+          <input type="date" class="ax-input ax-input-sm"
+            [ngModel]="$any(query().filters[f.key])?.to"
+            (ngModelChange)="onFilterChange(f.key, { from: $any(query().filters[f.key])?.from ?? null, to: $event || null })"
+            [attr.aria-label]="f.label + ' to'" />
+        </span>
+      </ng-container>
+
+      <button
+        *ngIf="config.filters?.length"
+        type="button"
+        class="ax-btn ax-btn-ghost ax-btn-sm"
+        (click)="clearFilters()">
+        Clear
+      </button>
+    </div>
+
+    <div class="axdt-toolbar-right">
+      <!-- Column manager -->
+      <div class="axdt-colmgr">
+        <button type="button" class="ax-btn ax-btn-outline ax-btn-sm"
+          (click)="toggleColumnManager()" [attr.aria-expanded]="columnManagerOpen()">
+          <span class="material-symbols-outlined" aria-hidden="true">view_column</span>
+          Columns
+        </button>
+        <div class="axdt-colmgr-panel" *ngIf="columnManagerOpen()">
+          <div class="axdt-colmgr-item" *ngFor="let cv of columnViews(); trackBy: trackColView">
+            <ng-container *ngIf="!cv.def.pinned">
+              <label class="ax-check">
+                <input type="checkbox" [checked]="cv.visible" (change)="toggleColumnVisible(cv.def.key)" />
+                <span class="ax-check-box"></span>
+                <span class="axdt-colmgr-label">{{ cv.def.label }}</span>
+              </label>
+              <span class="axdt-colmgr-move">
+                <button type="button" class="ax-icon-btn ax-icon-btn-xs" (click)="moveColumn(cv.def.key, -1)" aria-label="Move up">
+                  <span class="material-symbols-outlined">arrow_upward</span>
+                </button>
+                <button type="button" class="ax-icon-btn ax-icon-btn-xs" (click)="moveColumn(cv.def.key, 1)" aria-label="Move down">
+                  <span class="material-symbols-outlined">arrow_downward</span>
+                </button>
+              </span>
+            </ng-container>
+          </div>
+        </div>
+      </div>
+
+      <!-- Export -->
+      <div class="axdt-export" *ngIf="config.export?.enabled">
+        <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" [disabled]="exporting()">
+          <span class="material-symbols-outlined" aria-hidden="true">download</span>
+          {{ exporting() ? 'Exporting…' : 'Export' }}
+        </button>
+        <div class="axdt-export-menu">
+          <ng-container *ngFor="let fmt of exportFormats">
+            <button type="button" class="axdt-export-item" (click)="doExport(fmt, hasSelection() ? 'selected' : 'all')">
+              {{ fmt | uppercase }} <span class="axdt-export-scope">{{ hasSelection() ? '(selected)' : '(all)' }}</span>
+            </button>
+          </ng-container>
+          <button type="button" class="axdt-export-item" (click)="doExport('csv', 'page')">CSV <span class="axdt-export-scope">(this page)</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Bulk action bar ──────────────────────────────────────────────── -->
+  <div class="axdt-bulkbar" *ngIf="config.selectable && hasSelection()">
+    <span class="axdt-bulkbar-count">{{ selection().length }} selected</span>
+    <div class="axdt-bulkbar-actions">
+      <button
+        *ngFor="let a of availableBulkActions()"
+        type="button"
+        class="ax-btn ax-btn-sm"
+        [class.ax-btn-danger]="a.variant === 'danger'"
+        [class.ax-btn-outline]="a.variant !== 'danger'"
+        (click)="onBulkAction(a)">
+        <span *ngIf="a.icon" class="material-symbols-outlined" aria-hidden="true">{{ a.icon }}</span>
+        {{ a.label }}
+      </button>
+      <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="clearSelection()">Clear</button>
+    </div>
+  </div>
+
+  <!-- ── Table ────────────────────────────────────────────────────────── -->
+  <div class="axdt-scroll" [class.axdt-sticky-header]="config.stickyHeader !== false">
+    <table class="ax-table" [class.ax-table-hover]="config.hover !== false" role="grid">
+      <thead>
+        <tr>
+          <th *ngIf="config.selectable" class="ax-th-select" scope="col">
+            <label class="ax-check" aria-label="Select all rows on this page">
+              <input type="checkbox"
+                [checked]="allPageSelected()"
+                [indeterminate]="somePageSelected()"
+                (change)="toggleAllPage($any($event.target).checked)" />
+              <span class="ax-check-box"></span>
+            </label>
+          </th>
+          <th *ngIf="config.expandable" class="axdt-th-expand" scope="col"></th>
+          <th
+            *ngFor="let col of visibleColumns(); trackBy: trackColKey"
+            scope="col"
+            [style.width]="col.width || null"
+            [class.ax-th-sortable]="col.sortable"
+            [class.axdt-hide-mobile]="col.hideOnMobile"
+            [class.axdt-sticky-left]="col.sticky === 'left'"
+            [class.axdt-sticky-right]="col.sticky === 'right'"
+            [style.text-align]="col.align || 'left'"
+            [attr.aria-sort]="sortDirFor(col.key) === 'asc' ? 'ascending' : sortDirFor(col.key) === 'desc' ? 'descending' : 'none'"
+            (click)="onSort(col, $event.shiftKey)">
+            <span class="axdt-th-inner">
+              {{ col.label }}
+              <span *ngIf="col.sortable" class="axdt-sort-ind" [attr.data-dir]="sortDirFor(col.key)">
+                <span class="material-symbols-outlined">
+                  {{ sortDirFor(col.key) === 'asc' ? 'arrow_upward' : sortDirFor(col.key) === 'desc' ? 'arrow_downward' : 'unfold_more' }}
+                </span>
+                <span class="axdt-sort-order" *ngIf="sortIndexFor(col.key) >= 0 && query().sort.length > 1">{{ sortIndexFor(col.key) + 1 }}</span>
+              </span>
+            </span>
+          </th>
+          <th *ngIf="config.rowActions?.length" class="axdt-th-actions" scope="col" aria-label="Actions"></th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <!-- Skeleton loading -->
+        <ng-container *ngIf="loading() && page().rows.length === 0">
+          <tr *ngFor="let _ of [1,2,3,4,5,6,7,8]" class="axdt-skeleton-row">
+            <td *ngIf="config.selectable"></td>
+            <td *ngIf="config.expandable"></td>
+            <td *ngFor="let col of visibleColumns(); trackBy: trackColKey"><span class="axdt-skeleton-bar"></span></td>
+            <td *ngIf="config.rowActions?.length"></td>
+          </tr>
+        </ng-container>
+
+        <!-- Rows -->
+        <ng-container *ngFor="let row of page().rows; trackBy: trackRow; let i = index">
+          <tr
+            class="axdt-row"
+            [class.axdt-row-selected]="isSelected(row)"
+            [class.axdt-row-interactive]="rowClick.observed"
+            (click)="rowClick.emit(row)">
+            <td *ngIf="config.selectable" class="ax-td-select" (click)="$event.stopPropagation()">
+              <label class="ax-check" [attr.aria-label]="'Select row ' + (i + 1)">
+                <input type="checkbox" [checked]="isSelected(row)" (change)="toggleRow(row, $any($event.target).checked)" />
+                <span class="ax-check-box"></span>
+              </label>
+            </td>
+            <td *ngIf="config.expandable" class="axdt-td-expand" (click)="$event.stopPropagation(); toggleExpand(row)">
+              <button type="button" class="ax-icon-btn ax-icon-btn-xs" [attr.aria-label]="isExpanded(row) ? 'Collapse' : 'Expand'">
+                <span class="material-symbols-outlined">{{ isExpanded(row) ? 'expand_less' : 'expand_more' }}</span>
+              </button>
+            </td>
+            <td
+              *ngFor="let col of visibleColumns(); trackBy: trackColKey"
+              [class.axdt-hide-mobile]="col.hideOnMobile"
+              [class.axdt-sticky-left]="col.sticky === 'left'"
+              [class.axdt-sticky-right]="col.sticky === 'right'"
+              [style.text-align]="col.align || 'left'">
+              <ng-container *ngIf="cellTemplateFor(col.key) as tpl; else plainCell">
+                <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row, index: i }"></ng-container>
+              </ng-container>
+              <ng-template #plainCell>{{ renderCell(row, col) }}</ng-template>
+            </td>
+            <td *ngIf="config.rowActions?.length" class="axdt-td-actions" (click)="$event.stopPropagation()">
+              <div class="axdt-row-actions">
+                <button
+                  *ngFor="let a of visibleRowActions(row)"
+                  type="button"
+                  class="ax-icon-btn ax-icon-btn-sm"
+                  [class.axdt-action-danger]="a.variant === 'danger'"
+                  [disabled]="a.disabled?.(row)"
+                  [attr.title]="a.label"
+                  [attr.aria-label]="a.label"
+                  (click)="onRowAction(a, row, $event)">
+                  <span class="material-symbols-outlined">{{ a.icon || 'more_horiz' }}</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+          <!-- Expanded detail -->
+          <tr *ngIf="config.expandable && isExpanded(row)" class="axdt-expand-row">
+            <td [attr.colspan]="999">
+              <div class="axdt-expand-content">
+                <ng-container *ngTemplateOutlet="expandTemplate(); context: { $implicit: row }"></ng-container>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Error state ──────────────────────────────────────────────────── -->
+  <div class="axdt-state axdt-error" *ngIf="error() && !loading()">
+    <span class="material-symbols-outlined axdt-state-icon" aria-hidden="true">error</span>
+    <h3 class="ax-h4 ax-m-0">Something went wrong</h3>
+    <p class="ax-text-secondary ax-mt-1">We couldn't load this data.</p>
+    <button type="button" class="ax-btn ax-btn-outline ax-btn-sm ax-mt-3" (click)="retry()">
+      <span class="material-symbols-outlined" aria-hidden="true">refresh</span> Retry
+    </button>
+  </div>
+
+  <!-- ── Empty state ──────────────────────────────────────────────────── -->
+  <div class="axdt-state axdt-empty" *ngIf="!loading() && !error() && page().rows.length === 0">
+    <span class="material-symbols-outlined axdt-state-icon" aria-hidden="true">inbox</span>
+    <h3 class="ax-h4 ax-m-0">{{ config.emptyTitle || 'No results' }}</h3>
+    <p class="ax-text-secondary ax-mt-1">{{ config.emptyDescription || 'Nothing to show here yet.' }}</p>
+  </div>
+
+  <!-- ── Footer / pagination ──────────────────────────────────────────── -->
+  <div class="axdt-footer" *ngIf="page().total > 0">
+    <div class="axdt-footer-info">
+      <span class="ax-text-sm ax-text-secondary">
+        {{ pageStart() }}–{{ pageEnd() }} of {{ page().total | number }}
+      </span>
+      <select class="ax-input ax-input-sm axdt-pagesize"
+        [ngModel]="query().pageSize"
+        (ngModelChange)="setPageSize(+$event)"
+        aria-label="Rows per page">
+        <option *ngFor="let s of pageSizeOptions()" [ngValue]="s">{{ s }} / page</option>
+      </select>
+    </div>
+    <div class="axdt-footer-pager">
+      <button type="button" class="ax-icon-btn ax-icon-btn-sm" (click)="goToPage(0)" [disabled]="query().pageIndex === 0" aria-label="First page">
+        <span class="material-symbols-outlined">first_page</span>
+      </button>
+      <button type="button" class="ax-icon-btn ax-icon-btn-sm" (click)="prevPage()" [disabled]="query().pageIndex === 0" aria-label="Previous page">
+        <span class="material-symbols-outlined">chevron_left</span>
+      </button>
+      <span class="ax-text-sm axdt-pageno">{{ query().pageIndex + 1 }} / {{ totalPages() }}</span>
+      <button type="button" class="ax-icon-btn ax-icon-btn-sm" (click)="nextPage()" [disabled]="query().pageIndex >= totalPages() - 1" aria-label="Next page">
+        <span class="material-symbols-outlined">chevron_right</span>
+      </button>
+      <button type="button" class="ax-icon-btn ax-icon-btn-sm" (click)="goToPage(totalPages() - 1)" [disabled]="query().pageIndex >= totalPages() - 1" aria-label="Last page">
+        <span class="material-symbols-outlined">last_page</span>
+      </button>
+    </div>
+  </div>
+</div>

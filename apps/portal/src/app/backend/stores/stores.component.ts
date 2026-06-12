@@ -1,18 +1,34 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
+import { CommonModule } from '@angular/common';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-import { Stores } from '../../class/stores';
 import { GlobalComponent } from '../../global-component';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import {
-  AxDropdownDirective,
-  AxDropdownItemDirective,
-} from '../../shared/overlays';
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+} from '../../shared/data/enterprise';
+
+/** Row shape surfaced to the enterprise table (mapped from v3 vendor). */
+interface VendorRow extends Record<string, unknown> {
+  id: number;
+  store_name: string;
+  store_email: string;
+  store_phone: string;
+  country: string;
+  last_login: string;
+  status: boolean;
+  approved: boolean;
+}
 
 @Component({
   selector: 'app-stores',
@@ -20,24 +36,17 @@ import {
   imports: [
     AdminShellComponent,
     CommonModule,
-    FormsModule,
-    AxDropdownDirective,
-    AxDropdownItemDirective,
+    AxDataTableComponent,
+    AxCellDirective,
   ],
   templateUrl: './stores.component.html',
   styleUrl: './stores.component.css',
 })
 export class StoresComponent implements OnInit {
-  stores?: Stores[];
   private readonly confirm = inject(AxConfirmService);
 
-  ui_controls = {
-    is_loading: false,
-    no_data: false,
-    nav_open: false,
-  };
+  ui_controls = { is_loading: false, no_data: false, nav_open: false };
 
-  session_data: any = '';
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',
@@ -45,213 +54,178 @@ export class StoresComponent implements OnInit {
     is_vendor: false, is_store: false,
   };
 
-  get_data = { id: 0, token: '' };
-  activate = { id: 0, token: '', store: 0, status: true };
-  delete = { id: 0, token: '', store: 0, status: false };
-  deactivate = { id: 0, token: '', store: 0, status: false };
+  /** Enterprise-table config + data source. */
+  config!: AxDataTableConfig<VendorRow>;
+  dataSource!: AxServerDataSource<VendorRow>;
 
   constructor(
     private router: Router,
-    private crudService: CrudService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
   ngOnInit() {
-    this.session_data = sessionStorage.getItem('SESSION');
-    this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    this.get_data.id = this.user_session.id;
-    this.get_data.token = this.user_session.token;
-
-    this.activate.id = this.user_session.id;
-    this.activate.token = this.user_session.token;
-
-    this.deactivate.id = this.user_session.id;
-    this.deactivate.token = this.user_session.token;
-
-    this.delete.id = this.user_session.id;
-    this.delete.token = this.user_session.token;
-    this.get_store();
+    this.user_session = GlobalComponent.decodeBase64(
+      sessionStorage.getItem('SESSION') ?? '',
+    );
+    this.buildTable();
   }
 
-  goBack() {
-    this.router.navigate(['/backend']).then(r => console.log(r));
+  private buildTable() {
+    this.dataSource = new AxServerDataSource<VendorRow>((query: AxQueryState) =>
+      this.fetchVendors(query),
+    );
+
+    this.config = {
+      tableId: 'admin-stores',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: true,
+      searchPlaceholder: 'Search stores by name, email…',
+      selectable: true,
+      stickyHeader: true,
+      hover: true,
+      emptyTitle: 'No stores found',
+      emptyDescription: 'No vendor stores match your current filters.',
+      export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'stores' },
+      columns: [
+        { key: 'store_name', label: 'Store', sortable: true, sticky: 'left', width: '16rem' },
+        { key: 'store_email', label: 'Email', hideOnMobile: true },
+        { key: 'store_phone', label: 'Phone', hideOnMobile: true },
+        { key: 'country', label: 'Country', align: 'center', hideOnMobile: true },
+        {
+          key: 'last_login', label: 'Updated', hideOnMobile: true,
+          format: (v) => (v ? new Date(String(v)).toLocaleDateString() : '—'),
+        },
+        { key: 'status', label: 'Status', align: 'center' },
+        { key: 'approved', label: 'Approval', align: 'center' },
+      ],
+      rowActions: [
+        { id: 'orders', label: 'Orders', icon: 'receipt_long' },
+        { id: 'products', label: 'Products', icon: 'inventory_2' },
+        { id: 'sales', label: 'Sales', icon: 'payments' },
+        { id: 'manage', label: 'Manage', icon: 'settings' },
+        { id: 'approve', label: 'Approve', icon: 'check_circle', hidden: (r) => r.approved },
+        { id: 'suspend', label: 'Suspend', icon: 'block', variant: 'danger', hidden: (r) => !r.status },
+        { id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger' },
+      ],
+      bulkActions: [
+        { id: 'bulk-approve', label: 'Approve', icon: 'check_circle' },
+        { id: 'bulk-suspend', label: 'Suspend', icon: 'block', variant: 'danger' },
+      ],
+    };
   }
 
-  error_notification(message: string) {
-    this.toast.error(message);
-  }
+  /** v3 fetch → AxServerFetchResult. Maps vendor fields to VendorRow. */
+  private fetchVendors(query: AxQueryState) {
+    const q: any = {
+      limit: query.pageSize,
+      offset: query.pageIndex * query.pageSize,
+    };
+    if (query.search) q.search = query.search;
+    // Single-column server sort (the API currently orders by name).
+    if (query.sort.length > 0) {
+      q.sort = query.sort[0].key;
+      q.dir = query.sort[0].direction;
+    }
 
-  success_notification(message: string) {
-    this.toast.success(message);
-  }
-
-  // Pagination & search state
-  total = 0;
-  pageSize = 20;
-  pageIndex = 0;
-  search = '';
-
-  get_store(page = 0, search = '') {
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_data = false;
-    this.pageIndex = page;
-    this.search = search;
-    const query: any = { limit: this.pageSize, offset: page * this.pageSize };
-    if (search) query['search'] = search;
-    this.adapter.get_v3('GET /admin/vendors', { query }).subscribe({
-      next: (response: any) => {
-        // v3 returns { vendors: [...], meta: { total, limit, offset } }
-        // or { data: [...], meta: ... } depending on endpoint version
+    return this.adapter.get_v3('GET /admin/vendors', { query: q }).pipe(
+      map((response: any): AxServerFetchResult<VendorRow> => {
         const raw: any[] = response?.vendors ?? response?.data ?? [];
-        this.total = response?.meta?.total ?? raw.length;
-        // Map v3 vendor fields to the legacy shape expected by the template
-        this.stores = raw.map((v: any) => ({
-          id:            v.id,
-          token:         '',
-          store_name:    v.name,
-          store_email:   v.contact_email,
-          store_phone:   v.contact_phone,
-          store_address: v.country_code ?? '',
-          last_login:    v.updated_at ?? '',
-          status:        v.is_active === true,
-          approved:      v.status === 'approved',
+        const rows: VendorRow[] = raw.map((v: any) => ({
+          id: v.id,
+          store_name: v.name,
+          store_email: v.contact_email ?? '',
+          store_phone: v.contact_phone ?? '',
+          country: v.country_code ?? '',
+          last_login: v.updated_at ?? '',
+          status: v.is_active === true,
+          approved: v.status === 'approved',
         }));
-        this.ui_controls.no_data = this.stores.length === 0;
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_data = true;
-      },
-    });
+        return { rows, total: response?.meta?.total ?? rows.length };
+      }),
+      catchError(() => {
+        this.toast.error('Unable to load stores at this time.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<VendorRow>);
+      }),
+    );
   }
 
-  get totalPages(): number { return Math.ceil(this.total / this.pageSize); }
-  prevPage() { if (this.pageIndex > 0) this.get_store(this.pageIndex - 1, this.search); }
-  nextPage() { if (this.pageIndex < this.totalPages - 1) this.get_store(this.pageIndex + 1, this.search); }
-  onSearch(e: Event) { this.get_store(0, (e.target as HTMLInputElement).value); }
-
-  start_activate(store: number, name: string) {
-    this.confirm
-      .confirm({
-        title: 'Confirm',
-        message: `${name} account will be activated?`,
-        confirmLabel: 'Activate',
-        cancelLabel: 'Cancel'
-      })
-      .then((response) => {
-        if (response) this.activate_store(store, name);
-      });
+  // ── Table event handlers ─────────────────────────────────────────────
+  onRowAction(e: { action: { id: string }; row: VendorRow }) {
+    const { action, row } = e;
+    switch (action.id) {
+      case 'orders': return this.openTab('/store_orders', row.id, row.store_name);
+      case 'products': return this.openTab('/store_products', row.id, row.store_name);
+      case 'sales': return this.openTab('/store_sales', row.id, row.store_name);
+      case 'manage': return this.openTab('/manage_store', row.id, row.store_name);
+      case 'approve': return this.confirmApprove(row);
+      case 'suspend': return this.confirmSuspend(row);
+      case 'delete': return this.confirmDelete(row);
+    }
   }
 
-  activate_store(store: number, _name: string) {
-    this.ui_controls.is_loading = true;
-    this.activate.store = store;
-    const actVId = this.activate.store ?? this.activate.id;
-    this.adapter.post_v3('POST /admin/vendors/:id/approve', {}, { params: { id: String(actVId) } }).subscribe({
-      next: (response: any) => {
-        if (response) {
-          this.success_notification(response.message);
-          this.get_store();
-        }
-        this.ui_controls.is_loading = false;
-      },
-    });
+  onBulkAction(e: { action: { id: string }; selection: VendorRow[] }) {
+    const ids = e.selection.map((r) => r.id);
+    if (e.action.id === 'bulk-approve') {
+      this.confirm.confirm({
+        title: 'Approve stores',
+        message: `Approve ${ids.length} selected store(s)?`,
+        confirmLabel: 'Approve', cancelLabel: 'Cancel',
+      }).then((ok) => { if (ok) ids.forEach((id) => this.approve(id)); });
+    } else if (e.action.id === 'bulk-suspend') {
+      this.confirm.confirm({
+        title: 'Suspend stores',
+        message: `Suspend ${ids.length} selected store(s)?`,
+        confirmLabel: 'Suspend', cancelLabel: 'Cancel', variant: 'danger',
+      }).then((ok) => { if (ok) ids.forEach((id) => this.suspend(id)); });
+    }
   }
 
-  start_deactivate(store: number, name: string) {
-    this.confirm
-      .confirm({
-        title: 'Confirm',
-        message: `${name} will be deactivated?`,
-        confirmLabel: 'Deactivate',
-        cancelLabel: 'Cancel',
-        variant: 'danger'
-      })
-      .then((response) => {
-        if (response) this.deactivate_store(store, name);
-      });
+  private confirmApprove(row: VendorRow) {
+    this.confirm.confirm({
+      title: 'Approve store', message: `${row.store_name} will be approved.`,
+      confirmLabel: 'Approve', cancelLabel: 'Cancel',
+    }).then((ok) => { if (ok) this.approve(row.id); });
   }
 
-  deactivate_store(store: number, _name: string) {
-    this.ui_controls.is_loading = true;
-    this.deactivate.store = store;
-    const deactVId = this.deactivate.store ?? this.deactivate.id;
-    this.adapter.post_v3('POST /admin/vendors/:id/suspend', {}, { params: { id: String(deactVId) } }).subscribe({
-      next: (response: any) => {
-        if (response) {
-          this.success_notification(response.message);
-          this.get_store();
-        }
-        this.ui_controls.is_loading = false;
-      },
-    });
+  private confirmSuspend(row: VendorRow) {
+    this.confirm.confirm({
+      title: 'Suspend store', message: `${row.store_name} will be suspended.`,
+      confirmLabel: 'Suspend', cancelLabel: 'Cancel', variant: 'danger',
+    }).then((ok) => { if (ok) this.suspend(row.id); });
   }
 
-  start_delete(store: number, name: string) {
-    this.confirm
-      .confirm({
-        title: 'Confirm',
-        message: `${name} will be deleted?`,
-        confirmLabel: 'Delete',
-        cancelLabel: 'Cancel',
-        variant: 'danger'
-      })
-      .then((response) => {
-        if (response) this.delete_store(store, name);
-      });
+  private confirmDelete(row: VendorRow) {
+    this.confirm.confirm({
+      title: 'Delete store', message: `${row.store_name} will be deleted.`,
+      confirmLabel: 'Delete', cancelLabel: 'Cancel', variant: 'danger',
+    }).then((ok) => { if (ok) this.remove(row.id); });
   }
 
-  delete_store(store: number, _name: string) {
-    this.ui_controls.is_loading = true;
-    this.delete.store = store;
-    const delVId = this.delete.store ?? this.delete.id;
-    this.adapter.delete_v3('DELETE /admin/vendors/:id', { params: { id: String(delVId) } }).subscribe({
-      next: (response: any) => {
-        if (response) {
-          this.success_notification(response.message);
-          this.get_store();
-        }
-        this.ui_controls.is_loading = false;
-      },
-    });
+  private approve(id: number) {
+    this.adapter.post_v3('POST /admin/vendors/:id/approve', {}, { params: { id: String(id) } })
+      .subscribe({ next: (r: any) => { if (r) { this.toast.success('Store approved.'); this.refresh(); } } });
   }
 
-  store_orders(id: number, name: string) {
-    const urlTree = this.router.createUrlTree(['/store_orders'], { queryParams: { id, name } });
+  private suspend(id: number) {
+    this.adapter.post_v3('POST /admin/vendors/:id/suspend', {}, { params: { id: String(id) } })
+      .subscribe({ next: (r: any) => { if (r) { this.toast.success('Store suspended.'); this.refresh(); } } });
+  }
+
+  private remove(id: number) {
+    this.adapter.delete_v3('DELETE /admin/vendors/:id', { params: { id: String(id) } })
+      .subscribe({ next: (r: any) => { if (r) { this.toast.success('Store deleted.'); this.refresh(); } } });
+  }
+
+  private refresh() { this.dataSource.retry(); }
+
+  private openTab(path: string, id: number, name: string) {
+    const urlTree = this.router.createUrlTree([path], { queryParams: { id, name } });
     window.open(this.router.serializeUrl(urlTree), '_blank');
   }
 
-  store_messages(id: number, name: string) {
-    const urlTree = this.router.createUrlTree(['/store_messages'], { queryParams: { id, name } });
-    window.open(this.router.serializeUrl(urlTree), '_blank');
-  }
-
-  manage_store(id: number, name: string) {
-    const urlTree = this.router.createUrlTree(['/manage_store'], { queryParams: { id, name } });
-    window.open(this.router.serializeUrl(urlTree), '_blank');
-  }
-
-  store_tickets(id: number, name: string) {
-    const urlTree = this.router.createUrlTree(['/store_tickets'], { queryParams: { id, name } });
-    window.open(this.router.serializeUrl(urlTree), '_blank');
-  }
-
-  store_reviews(id: number, name: string) {
-    const urlTree = this.router.createUrlTree(['/store_reviews'], { queryParams: { id, name } });
-    window.open(this.router.serializeUrl(urlTree), '_blank');
-  }
-
-  store_products(id: number, name: string) {
-    const urlTree = this.router.createUrlTree(['/store_products'], { queryParams: { id, name } });
-    window.open(this.router.serializeUrl(urlTree), '_blank');
-  }
-
-  store_sales(id: number, name: string) {
-    const urlTree = this.router.createUrlTree(['/store_sales'], { queryParams: { id, name } });
-    window.open(this.router.serializeUrl(urlTree), '_blank');
-  }
+  goBack() { this.router.navigate(['/backend']); }
 }

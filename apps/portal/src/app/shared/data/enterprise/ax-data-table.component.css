@@ -1,0 +1,146 @@
+/* Enterprise data table — composed from ax-* design tokens.
+   Inherits .ax-table base styles; adds toolbar, bulk bar, sticky columns,
+   column manager, export menu, states, and pagination. */
+
+.axdt { display: flex; flex-direction: column; gap: 0.75rem; }
+
+/* ── Toolbar ─────────────────────────────────────────────────────────── */
+.axdt-toolbar {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 0.75rem; flex-wrap: wrap;
+}
+.axdt-toolbar-left,
+.axdt-toolbar-right { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+
+.axdt-search { position: relative; display: inline-flex; align-items: center; }
+.axdt-search-icon {
+  position: absolute; left: 0.5rem; font-size: 1.1rem;
+  color: var(--ax-color-text-tertiary); pointer-events: none;
+}
+.axdt-search .ax-input { padding-left: 2rem; min-width: 14rem; }
+
+.axdt-daterange { display: inline-flex; align-items: center; gap: 0.35rem; }
+.axdt-daterange-sep { color: var(--ax-color-text-tertiary); }
+
+/* ── Column manager ──────────────────────────────────────────────────── */
+.axdt-colmgr { position: relative; }
+.axdt-colmgr-panel {
+  position: absolute; right: 0; top: calc(100% + 0.35rem); z-index: 30;
+  min-width: 16rem; max-height: 22rem; overflow: auto;
+  background: var(--ax-color-bg-raised);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+  box-shadow: var(--ax-shadow-lg); padding: 0.5rem;
+}
+.axdt-colmgr-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.25rem 0.35rem; border-radius: var(--ax-radius-md);
+}
+.axdt-colmgr-item:hover { background: var(--ax-color-bg-subtle); }
+.axdt-colmgr-label { margin-left: 0.4rem; font-size: 0.875rem; }
+.axdt-colmgr-move { display: inline-flex; gap: 0.15rem; }
+
+/* ── Export ──────────────────────────────────────────────────────────── */
+.axdt-export { position: relative; }
+.axdt-export-menu {
+  position: absolute; right: 0; top: calc(100% + 0.35rem); z-index: 30;
+  min-width: 12rem; display: none; flex-direction: column;
+  background: var(--ax-color-bg-raised);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg); box-shadow: var(--ax-shadow-lg);
+  padding: 0.35rem;
+}
+.axdt-export:hover .axdt-export-menu,
+.axdt-export:focus-within .axdt-export-menu { display: flex; }
+.axdt-export-item {
+  text-align: left; background: none; border: none; cursor: pointer;
+  padding: 0.5rem 0.6rem; border-radius: var(--ax-radius-md);
+  font-size: 0.875rem; color: var(--ax-color-text-primary);
+}
+.axdt-export-item:hover { background: var(--ax-color-bg-subtle); }
+.axdt-export-scope { color: var(--ax-color-text-tertiary); font-size: 0.8rem; }
+
+/* ── Bulk bar ────────────────────────────────────────────────────────── */
+.axdt-bulkbar {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; padding: 0.5rem 0.75rem;
+  background: var(--ax-color-accent-subtle, var(--ax-color-bg-subtle));
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+}
+.axdt-bulkbar-count { font-weight: 600; font-size: 0.875rem; }
+.axdt-bulkbar-actions { display: flex; gap: 0.4rem; align-items: center; }
+
+/* ── Scroll / sticky ─────────────────────────────────────────────────── */
+.axdt-scroll { overflow: auto; border-radius: var(--ax-radius-lg); position: relative; }
+.axdt-sticky-header thead th {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--ax-color-bg-raised);
+}
+.axdt-sticky-left { position: sticky; left: 0; z-index: 5; background: var(--ax-color-bg-raised); }
+.axdt-sticky-right { position: sticky; right: 0; z-index: 5; background: var(--ax-color-bg-raised); }
+
+/* ── Sort indicator ──────────────────────────────────────────────────── */
+.ax-th-sortable { cursor: pointer; user-select: none; }
+.axdt-th-inner { display: inline-flex; align-items: center; gap: 0.25rem; }
+.axdt-sort-ind {
+  display: inline-flex; align-items: center;
+  color: var(--ax-color-text-tertiary);
+}
+.axdt-sort-ind .material-symbols-outlined { font-size: 1rem; }
+.axdt-sort-ind[data-dir='asc'], .axdt-sort-ind[data-dir='desc'] { color: var(--ax-color-text-primary); }
+.axdt-sort-order {
+  font-size: 0.7rem; font-weight: 700; margin-left: 0.1rem;
+  color: var(--ax-color-accent, var(--ax-color-text-primary));
+}
+
+/* ── Rows ────────────────────────────────────────────────────────────── */
+.axdt-row-interactive { cursor: pointer; }
+.axdt-row-selected { background: var(--ax-color-accent-subtle, var(--ax-color-bg-subtle)); }
+.axdt-td-actions, .axdt-th-actions { width: 1%; white-space: nowrap; }
+.axdt-row-actions { display: inline-flex; gap: 0.15rem; justify-content: flex-end; }
+.axdt-action-danger { color: var(--ax-color-danger, #dc2626); }
+
+.axdt-th-expand, .axdt-td-expand { width: 1%; }
+
+/* ── Expansion ───────────────────────────────────────────────────────── */
+.axdt-expand-row > td { background: var(--ax-color-bg-subtle); padding: 0; }
+.axdt-expand-content { padding: 0.75rem 1rem; }
+
+/* ── Skeleton ────────────────────────────────────────────────────────── */
+.axdt-skeleton-bar {
+  display: block; height: 0.85rem; border-radius: var(--ax-radius-sm);
+  background: linear-gradient(90deg,
+    var(--ax-color-bg-subtle) 25%,
+    var(--ax-color-border-subtle) 37%,
+    var(--ax-color-bg-subtle) 63%);
+  background-size: 400% 100%;
+  animation: axdt-shimmer 1.4s ease infinite;
+}
+@keyframes axdt-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+
+/* ── States ──────────────────────────────────────────────────────────── */
+.axdt-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 3rem 1rem;
+}
+.axdt-state-icon { font-size: 3rem; color: var(--ax-color-text-tertiary); }
+.axdt-error .axdt-state-icon { color: var(--ax-color-danger, #dc2626); }
+
+/* ── Footer / pagination ─────────────────────────────────────────────── */
+.axdt-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.75rem; flex-wrap: wrap;
+  padding-top: 0.5rem; border-top: 1px solid var(--ax-color-border-subtle);
+}
+.axdt-footer-info { display: flex; align-items: center; gap: 0.6rem; }
+.axdt-pagesize { width: auto; }
+.axdt-footer-pager { display: flex; align-items: center; gap: 0.15rem; }
+.axdt-pageno { padding: 0 0.5rem; white-space: nowrap; }
+
+/* ── Responsive ──────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .axdt-hide-mobile { display: none !important; }
+  .axdt-search .ax-input { min-width: 10rem; }
+  .axdt-toolbar { flex-direction: column; align-items: stretch; }
+}
