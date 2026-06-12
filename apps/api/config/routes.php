@@ -257,7 +257,9 @@ return function (App $app): void {
     // Admin/internal — activate after payment confirmation:
     $app->post('/v3/gift-cards/{id:[0-9]+}/activate',
         \Bayti\Api\Http\Controllers\GiftCard\ActivateGiftCardController::class
-    )->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class);
+    )
+        ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
+        ->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
 
     // ===================================================================
     // M3.1.6e — Orders (authenticated read-only customer view)
