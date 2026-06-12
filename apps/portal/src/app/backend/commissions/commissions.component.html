@@ -1,163 +1,28 @@
 <app-admin-shell>
   <div class="ax-container">
-      <header class="ax-page-header">
-        <div class="ax-page-header-content">
-          <button
-            type="button"
-            (click)="goBack()"
-            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
-            style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-            Back to dashboard
-          </button>
-          <span class="ax-page-header-eyebrow">Finance</span>
-          <h1 class="ax-page-title">Commissions</h1>
-          <p *ngIf="sales && sales.length > 0" class="ax-page-subtitle">
-            {{ sales.length }} commission record{{ sales.length !== 1 ? 's' : '' }} in the current range.
-          </p>
-        </div>
-
-        <div class="ax-flex ax-gap-2 ax-items-center">
-          <button
-            type="button"
-            class="ax-btn ax-btn-outline ax-btn-sm"
-            (click)="get_sales()"
-            [disabled]="ui_controls.is_loading">
-            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
-            Refresh
-          </button>
-        </div>
-      </header>
-
-      <!-- Stat cards -->
-      <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
-        <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
-          <div class="ax-stat-card">
-            <div class="ax-flex ax-gap-3 ax-items-center">
-              <span class="material-symbols-outlined ax-text-brand" aria-hidden="true" style="font-size: 2rem;">account_balance_wallet</span>
-              <div>
-                <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Commissions</div>
-                <div class="ax-h4 ax-m-0 ax-numeric ax-font-semibold ax-mt-1">AED {{ stats.commissions || '0.00' }}</div>
-              </div>
-            </div>
-          </div>
-          <div class="ax-stat-card">
-            <div class="ax-flex ax-gap-3 ax-items-center">
-              <span class="material-symbols-outlined" aria-hidden="true" style="font-size: 2rem; color: var(--ax-color-text-tertiary);">paid</span>
-              <div>
-                <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Charges</div>
-                <div class="ax-h4 ax-m-0 ax-numeric ax-font-semibold ax-mt-1">AED {{ stats.charges || '0.00' }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <!-- Date range filter -->
-      <section class="ax-page-section">
-        <div class="ax-card ax-p-4">
-          <div class="ax-flex ax-gap-3 ax-flex-wrap ax-items-end">
-            <div class="ax-form-field" style="flex: 1; min-width: 10rem;">
-              <label class="ax-label ax-text-2xs" for="start_date">Start date</label>
-              <input
-                id="start_date"
-                type="date"
-                class="ax-input ax-input-sm"
-                name="start_date"
-                [(ngModel)]="get_sale_range.start_date" />
-            </div>
-            <div class="ax-form-field" style="flex: 1; min-width: 10rem;">
-              <label class="ax-label ax-text-2xs" for="end_date">End date</label>
-              <input
-                id="end_date"
-                type="date"
-                class="ax-input ax-input-sm"
-                name="end_date"
-                [(ngModel)]="get_sale_range.end_date" />
-            </div>
-            <button
-              type="button"
-              class="ax-btn ax-btn-primary ax-btn-sm"
-              (click)="get_range_sales()"
-              [disabled]="ui_controls.is_loading">
-              <span class="material-symbols-outlined" aria-hidden="true">filter_list</span>
-              Filter
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <!-- Loading -->
-      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-        <span class="ax-spinner ax-spinner-lg" aria-label="Loading commissions"></span>
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Finance</span>
+        <h1 class="ax-page-title">Commissions</h1>
+        <p class="ax-page-subtitle">Platform commission and vendor settlement breakdown.</p>
       </div>
+    </header>
 
-      <!-- Table -->
-      <section
-        *ngIf="!ui_controls.is_loading && !ui_controls.no_data"
-        class="ax-card ax-p-0">
-        <div class="ax-table-wrapper">
-          <table class="ax-table ax-table-hover">
-            <thead>
-              <tr>
-                <th style="width: 3rem;">#</th>
-                <th>Order ref</th>
-                <th>Product</th>
-                <th>Transaction</th>
-                <th style="text-align: center;">Qty</th>
-                <th style="text-align: right;">Price</th>
-                <th style="text-align: right;">Total</th>
-                <th style="text-align: right;">Delivery</th>
-                <th style="text-align: right;">Paid</th>
-                <th style="text-align: right;">Noon</th>
-                <th style="text-align: right;">Commission</th>
-                <th style="text-align: right;">Charges</th>
-                <th style="text-align: right;">Vendor pay</th>
-                <th>Customer</th>
-                <th>Email</th>
-                <th>Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let a_sale of sales; let i = index">
-                <td><span class="ax-text-2xs ax-text-tertiary">{{ i + 1 }}</span></td>
-                <td><span class="ax-font-medium">{{ a_sale.order_ref }}</span></td>
-                <td><span class="ax-text-sm ax-text-secondary">{{ a_sale.product_name }}</span></td>
-                <td><span class="ax-text-2xs ax-text-tertiary">{{ a_sale.transaction_ref }}</span></td>
-                <td style="text-align: center;"><span class="ax-numeric">{{ a_sale.quantity }}</span></td>
-                <td style="text-align: right;"><span class="ax-numeric">{{ a_sale.price }}</span></td>
-                <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ a_sale.total_price }}</span></td>
-                <td style="text-align: right;"><span class="ax-numeric">{{ a_sale.delivery }}</span></td>
-                <td style="text-align: right;"><span class="ax-numeric">{{ a_sale.total_paid }}</span></td>
-                <td style="text-align: right;"><span class="ax-numeric">{{ a_sale.noon }}</span></td>
-                <td style="text-align: right;"><span class="ax-numeric ax-text-brand">{{ a_sale.commission }}</span></td>
-                <td style="text-align: right;"><span class="ax-numeric">{{ a_sale.charges }}</span></td>
-                <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ a_sale.vendor_pay }}</span></td>
-                <td><span class="ax-text-sm ax-text-secondary">{{ a_sale.customer_name }}</span></td>
-                <td><span class="ax-text-2xs ax-text-tertiary">{{ a_sale.customer_email }}</span></td>
-                <td>
-                  <span *ngIf="a_sale.status === 'paid'" class="ax-badge ax-badge-success">Completed</span>
-                  <span *ngIf="a_sale.status !== 'paid'" class="ax-badge ax-badge-warning">Pending</span>
-                </td>
-                <td><span class="ax-text-2xs ax-text-tertiary">{{ a_sale.created }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Empty state -->
-      <section *ngIf="!ui_controls.is_loading && ui_controls.no_data" class="ax-page-section">
-        <div class="ax-card ax-p-8 ax-text-center">
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
-            aria-hidden="true">account_balance_wallet</span>
-          <h3 class="ax-h4 ax-m-0 ax-mt-3">No commissions in this range</h3>
-          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-            Platform commission earnings will appear here once sales complete.
-          </p>
-        </div>
-      </section>  </div>
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource">
+        <ng-template axCell="status" let-row>
+          <span class="ax-badge"
+            [class.ax-badge-success]="row.status === 'delivered' || row.status === 'paid'"
+            [class.ax-badge-info]="row.status === 'shipped'"
+            [class.ax-badge-warning]="row.status === 'pending'"
+            [class.ax-badge-danger]="row.status === 'cancelled' || row.status === 'returned'">
+            {{ row.status | titlecase }}
+          </span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
 </app-admin-shell>

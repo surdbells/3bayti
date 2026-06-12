@@ -1,14 +1,24 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
+import { CommonModule } from '@angular/common';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
-import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
-
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
-export interface Transaction {
+import {
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+  type AxDateRange,
+} from '../../shared/data/enterprise';
+
+export interface Transaction extends Record<string, unknown> {
   id: number;
   order_id: string;
   transaction_id: string;
@@ -23,21 +33,11 @@ export interface Transaction {
 @Component({
   selector: 'app-processing',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
   templateUrl: './processing.component.html',
   styleUrl: './processing.component.css',
 })
 export class ProcessingComponent implements OnInit {
-  transaction?: Transaction[];
-  total = 0;
-
-  ui_controls = {
-    is_loading: false,
-    no_data: false,
-    nav_open: false,
-  };
-
-  session_data: any = '';
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',
@@ -45,122 +45,101 @@ export class ProcessingComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  get_processing_s = { id: 0, token: '' };
-  get_processing_r = { id: 0, token: '', start_date: '', end_date: '' };
-  getProcessingById = { id: 0, token: '', order: '' };
+  config!: AxDataTableConfig<Transaction>;
+  dataSource!: AxServerDataSource<Transaction>;
 
   constructor(
     private router: Router,
-    private crudService: CrudService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
   ngOnInit() {
-    this.session_data = sessionStorage.getItem('SESSION');
-    this.user_session = GlobalComponent.decodeBase64(this.session_data);
-
-    this.get_processing_s.id = this.user_session.id;
-    this.get_processing_s.token = this.user_session.token;
-    this.get_processing_r.id = this.user_session.id;
-    this.get_processing_r.token = this.user_session.token;
-    this.getProcessingById.id = this.user_session.id;
-    this.getProcessingById.token = this.user_session.token;
-
-    this.get_processing();
+    this.user_session = GlobalComponent.decodeBase64(
+      sessionStorage.getItem('SESSION') ?? '',
+    );
+    this.buildTable();
   }
 
-  goBack() {
-    this.router.navigate(['/backend']).then(r => console.log(r));
+  private buildTable() {
+    this.dataSource = new AxServerDataSource<Transaction>((q) => this.fetchOrders(q));
+    this.config = {
+      tableId: 'admin-processing',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: true,
+      searchPlaceholder: 'Search orders by reference or customer…',
+      stickyHeader: true,
+      hover: true,
+      emptyTitle: 'No orders found',
+      emptyDescription: 'No orders match your current filters.',
+      export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'orders-processing' },
+      filters: [
+        { key: 'date', label: 'Date', type: 'date-range' },
+        {
+          key: 'status', label: 'Status', type: 'select',
+          options: [
+            { label: 'Pending', value: 'pending' },
+            { label: 'Accepted', value: 'accepted' },
+            { label: 'Preparing', value: 'preparing' },
+            { label: 'Shipped', value: 'shipped' },
+            { label: 'Delivered', value: 'delivered' },
+            { label: 'Returned', value: 'returned' },
+            { label: 'Cancelled', value: 'cancelled' },
+          ],
+        },
+      ],
+      columns: [
+        { key: 'order_id', label: 'Order ID', sortable: true, sticky: 'left', width: '13rem' },
+        { key: 'transaction_id', label: 'Transaction ID', hideOnMobile: true },
+        { key: 'merchantReference', label: 'Merchant ref', hideOnMobile: true },
+        { key: 'customer', label: 'Customer' },
+        { key: 'total_paid', label: 'Total', align: 'right',
+          format: (v) => (v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—') },
+        { key: 'status', label: 'Status', align: 'center' },
+        { key: 'created', label: 'Date', hideOnMobile: true,
+          format: (v) => (v ? new Date(String(v)).toLocaleString() : '—') },
+      ],
+      rowActions: [
+        { id: 'view', label: 'View order', icon: 'visibility' },
+      ],
+    };
   }
 
-  error_notification(message: string) {
-    this.toast.error(message);
+  private fetchOrders(query: AxQueryState) {
+    const q: any = {
+      limit: query.pageSize,
+      offset: query.pageIndex * query.pageSize,
+    };
+    if (query.search) q.search = query.search;
+    if (query.filters['status']) q.status = query.filters['status'];
+    const range = query.filters['date'] as AxDateRange | undefined;
+    if (range?.from) q.since = range.from;
+    if (range?.to) q.until = range.to;
+
+    return this.adapter.get_v3('GET /admin/orders', { query: q }).pipe(
+      map((response: any): AxServerFetchResult<Transaction> => {
+        const raw: any[] = response?.orders ?? response?.data ?? [];
+        return { rows: raw as Transaction[], total: response?.pagination?.total ?? response?.meta?.total ?? raw.length };
+      }),
+      catchError(() => {
+        this.toast.error('Unable to load orders at this time.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<Transaction>);
+      }),
+    );
   }
 
-  success_notification(message: string) {
-    this.toast.success(message);
+  onRowAction(e: { action: { id: string }; row: Transaction }) {
+    if (e.action.id === 'view') {
+      this.openPopup('/single?order=' + e.row.id);
+    }
   }
 
-  get_processing() {
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /admin/orders', { query: { limit: 20, offset: 0 } }).subscribe({
-      next: (response: any) => {
-        if (response) {
-          const rows = response.orders ?? response.data ?? [];
-          this.transaction = rows;
-          this.total = response.pagination?.total ?? rows.length;
-          this.ui_controls.no_data = rows.length === 0;
-        } else {
-          this.ui_controls.no_data = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_data = true;
-      },
-    });
+  openPopup(path: string) {
+    window.open(path, '_blank', 'width=900,height=800');
   }
 
-  get_processingById(order: string) {
-    this.getProcessingById.order = order;
-    this.ui_controls.is_loading = true;
-    const orderId = this.getProcessingById.order ?? this.getProcessingById.id;
-    this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(orderId) } }).subscribe({
-      next: (response: any) => {
-        if (response) {
-          this.transaction = response.data;
-        }
-        this.ui_controls.is_loading = false;
-      },
-    });
-  }
-
-  get_processing_range() {
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_data = false;
-    const procStatus = (this.get_processing_r as any).status ?? '';
-    this.adapter.get_v3('GET /admin/orders', { query: { status: procStatus, limit: 20, offset: 0 } }).subscribe({
-      next: (response: any) => {
-        if (response) {
-          const rows = response.orders ?? response.data ?? [];
-          this.transaction = rows;
-          this.total = response.pagination?.total ?? rows.length;
-          this.ui_controls.no_data = rows.length === 0;
-        } else {
-          this.ui_controls.no_data = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_data = true;
-      },
-    });
-  }
-
-  openPopup(route: string) {
-    const baseUrl = window.location.origin;
-    const fullUrl = `${baseUrl}/${route.replace(/^\/+/, '')}`;
-    const screenWidth = window.screen.availWidth;
-    const screenHeight = window.screen.availHeight;
-    const width = screenWidth * 0.8;
-    const height = screenHeight * 0.8;
-    const left = (screenWidth - width) / 2;
-    const top = (screenHeight - height) / 2;
-    const features = `
-    width=${width},
-    height=${height},
-    left=${left},
-    top=${top},
-    scrollbars=yes,
-    resizable=yes`.replace(/\s+/g, '');
-    window.open(fullUrl, 'popupWindow', features);
-  }
+  goBack() { this.router.navigate(['/backend']); }
 }
