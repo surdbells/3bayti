@@ -1,18 +1,24 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 import { HotToastService } from '../../shared/toast/toast.service';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { GlobalComponent } from '../../global-component';
 import {
-  AxTableComponent, AxColumnComponent,
-  AxEmptyStateComponent, AxSkeletonComponent, AxPaginationComponent,
-} from '../../shared/data';
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+} from '../../shared/data/enterprise';
 
 const V3 = 'https://api-v3.3bayti.ae';
 
-interface NotificationLog {
+interface NotificationLog extends Record<string, unknown> {
   id: number;
   order_id: number | null;
   template: string;
@@ -27,64 +33,84 @@ interface NotificationLog {
 @Component({
   selector: 'app-notification-logs',
   standalone: true,
-  imports: [
-    CommonModule, FormsModule,
-    AdminShellComponent,
-    AxTableComponent, AxColumnComponent,
-    AxEmptyStateComponent, AxSkeletonComponent, AxPaginationComponent,
-  ],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
   templateUrl: './notification-logs.component.html',
   styleUrl: './notification-logs.component.css',
 })
 export class NotificationLogsComponent implements OnInit {
-  logs: NotificationLog[] = [];
-  total = 0;
-  loading = false;
-  error = '';
-
-  filters = { status: '', template: '', order_id: '' };
-  pageSize = 20;
-  pageIndex = 0;
-
-  get totalPages(): number { return Math.ceil(this.total / this.pageSize); }
-
   private token = '';
+
+  config!: AxDataTableConfig<NotificationLog>;
+  dataSource!: AxServerDataSource<NotificationLog>;
 
   constructor(private http: HttpClient, private toast: HotToastService) {}
 
   ngOnInit(): void {
     const raw = sessionStorage.getItem('SESSION');
     if (raw) this.token = GlobalComponent.decodeBase64(raw)?.token ?? '';
-    this.load();
+    this.buildTable();
   }
 
-  load(): void {
-    this.loading = true; this.error = '';
+  private buildTable(): void {
+    this.dataSource = new AxServerDataSource<NotificationLog>((q) => this.fetchLogs(q));
+    this.config = {
+      tableId: 'admin-notification-logs',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: true,
+      searchPlaceholder: 'Search by recipient or template…',
+      stickyHeader: true,
+      hover: true,
+      compact: true,
+      emptyTitle: 'No notification logs',
+      emptyDescription: 'No notification delivery records match your filters.',
+      export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'notification-logs' },
+      filters: [
+        {
+          key: 'status', label: 'Status', type: 'select',
+          options: [
+            { label: 'Sent', value: 'sent' },
+            { label: 'Failed', value: 'failed' },
+          ],
+        },
+      ],
+      columns: [
+        { key: 'id', label: 'ID', sortable: true, sticky: 'left', width: '6rem' },
+        { key: 'template', label: 'Template' },
+        { key: 'recipient', label: 'Recipient', hideOnMobile: true },
+        { key: 'status', label: 'Status', align: 'center' },
+        { key: 'order_id', label: 'Order ID', align: 'center', hideOnMobile: true,
+          format: (v) => (v != null ? String(v) : '—') },
+        { key: 'sent_at', label: 'Sent at', hideOnMobile: true,
+          format: (v) => (v ? new Date(String(v)).toLocaleString() : '—') },
+        { key: 'error_message', label: 'Error', hideOnMobile: true,
+          format: (v) => (v ? String(v) : '—') },
+      ],
+    };
+  }
+
+  private fetchLogs(query: AxQueryState) {
     const params = new URLSearchParams({
-      limit: String(this.pageSize),
-      offset: String(this.pageIndex * this.pageSize),
+      limit: String(query.pageSize),
+      offset: String(query.pageIndex * query.pageSize),
     });
-    if (this.filters.status)   params.set('status',   this.filters.status);
-    if (this.filters.template) params.set('template', this.filters.template);
-    if (this.filters.order_id) params.set('order_id', this.filters.order_id);
+    if (query.filters['status']) params.set('status', String(query.filters['status']));
+    if (query.search) params.set('search', query.search);
     const headers = new HttpHeaders({ Authorization: `Bearer ${this.token}` });
-    this.http.get<{ data: NotificationLog[]; meta: { total: number } }>(
-      `${V3}/v3/admin/notification-logs?${params}`, { headers }
-    ).subscribe({
-      next: (res) => {
-        this.logs = res.data ?? [];
-        this.total = res.meta?.total ?? 0;
-        this.loading = false;
-      },
-      error: () => {
-        this.error = 'Could not load notification logs.';
-        this.loading = false;
-        this.toast.error('Failed to load logs');
-      },
-    });
-  }
 
-  applyFilters(): void { this.pageIndex = 0; this.load(); }
-  clearFilters(): void { this.filters = { status: '', template: '', order_id: '' }; this.pageIndex = 0; this.load(); }
-  onPage(index: number): void { this.pageIndex = index; this.load(); }
+    return this.http.get<{ data: NotificationLog[]; meta: { total: number } }>(
+      `${V3}/v3/admin/notification-logs?${params}`, { headers },
+    ).pipe(
+      map((res): AxServerFetchResult<NotificationLog> => ({
+        rows: res.data ?? [],
+        total: res.meta?.total ?? (res.data?.length ?? 0),
+      })),
+      catchError(() => {
+        this.toast.error('Failed to load logs');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<NotificationLog>);
+      }),
+    );
+  }
 }

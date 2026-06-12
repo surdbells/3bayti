@@ -1,55 +1,23 @@
 <app-admin-shell>
-  <div class="ax-page">
-
-    <div class="ax-page-header">
-      <div>
-        <h1 class="ax-page-title">Notification Logs</h1>
-        <p class="ax-page-subtitle">Email delivery history for order lifecycle notifications</p>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">System</span>
+        <h1 class="ax-page-title">Notification logs</h1>
+        <p class="ax-page-subtitle">Delivery records for transactional notifications.</p>
       </div>
-    </div>
+    </header>
 
-    <!-- Filters -->
-    <div class="logs-filters">
-      <select class="ax-select" [(ngModel)]="filters.status">
-        <option value="">All statuses</option>
-        <option value="sent">Sent</option>
-        <option value="failed">Failed</option>
-      </select>
-      <input class="ax-input" [(ngModel)]="filters.template"
-        placeholder="Filter by template (e.g. order_paid)" />
-      <input class="ax-input" [(ngModel)]="filters.order_id"
-        type="number" placeholder="Order ID" />
-      <button class="ax-btn ax-btn--primary" (click)="applyFilters()">Apply</button>
-      <button class="ax-btn ax-btn--ghost"   (click)="clearFilters()">Clear</button>
-    </div>
-
-    @if (loading) {
-      <app-ax-skeleton />
-    } @else if (error) {
-      <app-ax-empty-state [title]="error" description="Check your connection and try again." />
-    } @else {
-      <app-ax-table [data]="logs" [loading]="false"
-        emptyTitle="No logs found"
-        emptyDescription="No notification logs match the current filters.">
-        <app-ax-column key="id"            label="ID"         />
-        <app-ax-column key="template"      label="Template"   />
-        <app-ax-column key="recipient"     label="Recipient"  />
-        <app-ax-column key="status"        label="Status"     />
-        <app-ax-column key="order_id"      label="Order ID"   />
-        <app-ax-column key="sent_at"       label="Sent at"    />
-        <app-ax-column key="error_message" label="Error"      />
-      </app-ax-table>
-
-      @if (total > pageSize) {
-        <div class="logs-pagination">
-          <app-ax-pagination
-            [pageIndex]="pageIndex"
-            [pageSize]="pageSize"
-            [totalCount]="total"
-            (pageIndexChange)="onPage($event)" />
-          <span class="logs-count">{{ total }} total</span>
-        </div>
-      }
-    }
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource">
+        <ng-template axCell="status" let-row>
+          <span class="ax-badge"
+            [class.ax-badge-success]="row.status === 'sent'"
+            [class.ax-badge-danger]="row.status === 'failed'">
+            {{ row.status | titlecase }}
+          </span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
   </div>
 </app-admin-shell>

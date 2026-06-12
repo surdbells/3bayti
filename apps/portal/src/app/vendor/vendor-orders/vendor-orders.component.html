@@ -1,108 +1,22 @@
 <app-vendor-shell>
   <div class="ax-container">
-
     <header class="ax-page-header">
       <div class="ax-page-header-content">
-        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-          Back to dashboard
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to account
         </button>
         <span class="ax-page-header-eyebrow">Orders</span>
-        <h1 class="ax-page-title">Manage orders</h1>
-        <p class="ax-page-subtitle">Track every order through fulfilment.</p>
-      </div>
-      <div class="ax-flex ax-gap-2 ax-items-center">
-        <label class="ax-label ax-m-0">Filter by status</label>
-        <select
-          class="ax-select"
-          [(ngModel)]="selectedStatus"
-          (change)="onStatusChange($event)"
-          aria-label="Filter orders by status">
-          <option *ngFor="let s of statusOptions" [value]="s.value">{{ s.label }}</option>
-        </select>
+        <h1 class="ax-page-title">Orders</h1>
+        <p class="ax-page-subtitle">All orders placed with your store.</p>
       </div>
     </header>
 
-    <!-- Loading -->
-    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-      <span class="ax-spinner ax-spinner-lg" aria-label="Loading orders"></span>
-    </div>
-
-    <!-- Orders table -->
-    <section *ngIf="!ui_controls.is_loading && !ui_controls.no_orders" class="ax-card ax-p-0">
-      <app-ax-table
-        [data]="orders || []"
-        [pageSize]="10"
-        [interactive]="false"
-        [responsive]="true"
-        trackBy="id">
-        <app-ax-column key="created" label="Date" sortable>
-          <ng-template axCell let-row>
-            <span class="ax-text-secondary">{{ row.created }}</span>
-          </ng-template>
-        </app-ax-column>
-
-        <app-ax-column key="product" label="Product" sortable>
-          <ng-template axCell let-row>
-            <span class="ax-font-medium ax-text-primary">{{ row.product }}</span>
-          </ng-template>
-        </app-ax-column>
-
-        <app-ax-column key="quantity" label="Qty" sortable align="right">
-          <ng-template axCell let-row>
-            <span class="ax-numeric">{{ row.quantity }}</span>
-          </ng-template>
-        </app-ax-column>
-
-        <app-ax-column key="name" label="Customer" sortable>
-          <ng-template axCell let-row>
-            <div class="ax-flex ax-items-center ax-gap-2">
-              <span class="ax-avatar ax-avatar-xs">{{ row.name?.charAt(0) || '?' }}</span>
-              <span>{{ row.name }}</span>
-            </div>
-          </ng-template>
-        </app-ax-column>
-
-        <app-ax-column key="total_price" label="Total" sortable align="right">
-          <ng-template axCell let-row>
-            <span class="ax-font-semibold ax-numeric">{{ row.total_price }}</span>
-          </ng-template>
-        </app-ax-column>
-
-        <app-ax-column key="status" label="Status">
-          <ng-template axCell let-row>
-            <span class="ax-badge" [ngClass]="statusBadgeClass(row.status)">
-              {{ statusLabel(row.status) }}
-            </span>
-          </ng-template>
-        </app-ax-column>
-
-        <app-ax-column key="actions" label="" align="right">
-          <ng-template axCell let-row>
-            <button
-              type="button"
-              class="ax-btn ax-btn-outline ax-btn-sm"
-              (click)="open_order(row.id, row.product)"
-              aria-label="Manage order">
-              Manage
-              <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
-            </button>
-          </ng-template>
-        </app-ax-column>
-      </app-ax-table>
-    </section>
-
-    <!-- Empty state -->
-    <section *ngIf="!ui_controls.is_loading && ui_controls.no_orders" class="ax-card ax-p-0">
-      <app-ax-empty-state
-        icon="shopping_bag"
-        title="Off to a fresh start"
-        description="Every big shop starts at zero — your first sale is close.">
-        <a routerLink="/products" class="ax-btn ax-btn-primary">
-          <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
-          Review products
-        </a>
-      </app-ax-empty-state>
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="status" let-row>
+          <span [ngClass]="statusBadgeClass(row.status)">{{ row.status | titlecase }}</span>
+        </ng-template>
+      </app-ax-data-table>
     </section>
   </div>
 </app-vendor-shell>
