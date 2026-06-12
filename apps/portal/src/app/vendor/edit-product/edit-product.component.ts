@@ -242,7 +242,7 @@ export class EditProductComponent implements OnInit {
     const productId = this.single_product.product;
     this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(productId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.update = response.data;
 
           // Seed multiselect from server shape [{id, collection}]
@@ -271,7 +271,7 @@ export class EditProductComponent implements OnInit {
   fetchCategory(): void {
     this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.category = response.data;
         }
       },
@@ -305,7 +305,7 @@ export class EditProductComponent implements OnInit {
     this.adapter.post_v3('POST /vendor/labels', this.vendor_label_create).subscribe({
       next: (response: any) => {
         this.ui.creating_label = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.vendor_label_create.label = '';
           this.toast.success(response.message);
           this.fetchVendorLabels();

@@ -100,7 +100,7 @@ export class LabelComponent implements OnInit {
     this.ui_controls.is_creating_label = true;
     this.adapter.post_v3('POST /vendor/labels', this.vendor_label_create).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.vendor_label_create.label = '';
           this.success_notification(response.message);
           this.get_vendor_labels();
@@ -128,7 +128,7 @@ export class LabelComponent implements OnInit {
     const lid = this.update.label_id ?? this.update.id;
     this.adapter.put_v3('PUT /vendor/labels/:id', this.update, { params: { id: String(lid) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_vendor_labels();
         } else if (response.status === 'failed') {
@@ -163,7 +163,7 @@ export class LabelComponent implements OnInit {
     const dlid = this.delete.label_id ?? this.delete.id;
     this.adapter.delete_v3('DELETE /vendor/labels/:id', { params: { id: String(dlid) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_vendor_labels();
         }

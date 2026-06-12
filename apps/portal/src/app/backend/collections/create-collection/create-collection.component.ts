@@ -65,10 +65,10 @@ export class CreateCollectionComponent implements OnInit {
     this.adapter.post_v3('POST /admin/collections', { name: this.create.collection }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_loading = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.router.navigate(['/collections']).then(r => console.log(r));
-        } else if ((response.response_code === 200 || response.response_code === 400) && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
         }
       },

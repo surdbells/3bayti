@@ -166,7 +166,7 @@ export class UsersComponent implements OnInit {
     const uid = this.activate.customer ?? this.activate.id;
     this.adapter.post_v3('POST /admin/users/:id/activate', {}, { params: { id: String(uid) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_users(0, '', 'customer');
         }
@@ -195,7 +195,7 @@ export class UsersComponent implements OnInit {
     const uid2 = this.deactivate.customer ?? this.deactivate.id;
     this.adapter.post_v3('POST /admin/users/:id/deactivate', {}, { params: { id: String(uid2) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_users(0, '', 'customer');
         }
@@ -216,7 +216,7 @@ export class UsersComponent implements OnInit {
     this.ui_controls.is_registering = true;
     this.adapter.post_v3('POST /admin/users/create', this.register).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.register = {
             first_name: '', last_name: '', email: '',
@@ -261,7 +261,7 @@ export class UsersComponent implements OnInit {
     const pwUId = this.password_c.user ?? this.password_c.id;
     this.adapter.patch_v3('PATCH /admin/users/:id/password', this.password_c, { params: { id: String(pwUId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.password_c.password = '';
           this.open.set(false);

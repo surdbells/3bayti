@@ -153,7 +153,7 @@ export class StoresComponent implements OnInit {
     const actVId = this.activate.store ?? this.activate.id;
     this.adapter.post_v3('POST /admin/vendors/:id/approve', {}, { params: { id: String(actVId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_store();
         }
@@ -182,7 +182,7 @@ export class StoresComponent implements OnInit {
     const deactVId = this.deactivate.store ?? this.deactivate.id;
     this.adapter.post_v3('POST /admin/vendors/:id/suspend', {}, { params: { id: String(deactVId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_store();
         }
@@ -211,7 +211,7 @@ export class StoresComponent implements OnInit {
     const delVId = this.delete.store ?? this.delete.id;
     this.adapter.delete_v3('DELETE /admin/vendors/:id', { params: { id: String(delVId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_store();
         }

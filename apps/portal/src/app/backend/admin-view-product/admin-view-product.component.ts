@@ -258,9 +258,9 @@ export class AdminViewProductComponent implements OnInit {
     this.adapter.put_v3('PUT /admin/products/:id', this.update, { params: { id: String(avp2Id) } }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_loading = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
-        } else if ((response.response_code === 200 || response.response_code === 400) && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
         }
       },
@@ -281,11 +281,11 @@ export class AdminViewProductComponent implements OnInit {
     this.adapter.post_v3('POST /vendor/labels', this.vendor_label_create).subscribe({
       next: (response: any) => {
         this.ui_controls.is_creating_label = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.vendor_label_create.label = '';
           this.success_notification(response.message);
           this.get_vendor_labels();
-        } else if ((response.response_code === 200 || response.response_code === 400) && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
         }
       },
@@ -312,7 +312,7 @@ export class AdminViewProductComponent implements OnInit {
     this.ui_controls.page_loading = true;
     this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.category = response.data;
           this.get_vendor_labels();
         }
@@ -343,7 +343,7 @@ export class AdminViewProductComponent implements OnInit {
     const avp2GId = this.single_product.product ?? this.single_product.id;
     this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(avp2GId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.update = response.data;
 
           // Seed multiselect from server shape [{id, collection}]

@@ -136,7 +136,7 @@ export class UserComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.adapter.get_v3('GET /vendor/analytics', { query: { days: 30 } }).subscribe({
       next: (response) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.ui_controls.is_loading = false;
           this.total_products = response.total_products;
           this.total_orders = response.total_orders;

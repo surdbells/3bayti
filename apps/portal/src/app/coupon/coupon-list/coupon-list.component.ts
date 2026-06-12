@@ -138,7 +138,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
 
     this.adapter.get_v3('GET /vendor/coupons', { query: { limit: 50, offset: 0 } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.coupons = response.data ?? [];
           this.pagination = response.pagination ?? this.pagination;
           this.ui.no_coupons = this.coupons.length === 0;
@@ -240,7 +240,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
     this.adapter.put_v3('PUT /vendor/coupons/:id', toggleBody, { params: { id: String(toggleId) } }).subscribe({
       next: (response: any) => {
         this.ui.toggling = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.toast.success(response.message);
           this.fetchCoupons();
         } else {
@@ -280,7 +280,7 @@ export class CouponListComponent implements OnInit, OnDestroy {
     this.adapter.delete_v3('DELETE /vendor/coupons/:id', { params: { id: String(deleteId) } }).subscribe({
       next: (response: any) => {
         this.ui.deleting = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.toast.success('Coupon deleted successfully.');
           this.fetchCoupons();
         } else {

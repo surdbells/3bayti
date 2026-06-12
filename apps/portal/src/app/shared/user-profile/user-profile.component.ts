@@ -85,7 +85,7 @@ export class UserProfileComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.adapter.get_v3('GET /me/profile').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.user_single = response.data;
         } else if (response.status === 'failed') {
           this.error_notification(response.message);
@@ -111,7 +111,7 @@ export class UserProfileComponent implements OnInit {
     this.ui_controls.is_saving = true;
     this.adapter.patch_v3('PATCH /me/profile', this.update_single).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_data();
         } else if (response.status === 'failed') {

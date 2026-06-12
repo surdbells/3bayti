@@ -87,10 +87,10 @@ export class EditCollectionComponent implements OnInit {
     this.adapter.put_v3('PUT /admin/collections/:id', this.update, { params: { id: String(ecUpdId) } }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_loading = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.router.navigate(['/collections']).then(r => console.log(r));
-        } else if ((response.response_code === 200 || response.response_code === 400) && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
         }
       },
@@ -107,7 +107,7 @@ export class EditCollectionComponent implements OnInit {
     const ecId = this.read.collection ?? this.read.id;
     this.adapter.get_v3('GET /admin/collections/:id', { params: { id: String(ecId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.update = response.data;
         }
         this.ui_controls.is_loading = false;

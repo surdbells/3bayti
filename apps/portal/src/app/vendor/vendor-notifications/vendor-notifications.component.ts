@@ -98,9 +98,9 @@ export class VendorNotificationsComponent implements OnInit {
       next: (response: any) => {
         if (response?.data) {
           this.store_single = response.data;
-        } else if (response.response_code === 200 && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
-        } else if (response.response_code === 400 && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
         }
         this.ui_controls.is_loading = false;
@@ -134,9 +134,9 @@ export class VendorNotificationsComponent implements OnInit {
         if (response?.data) {
           this.get_data();
           this.success_notification('Notification preferences saved.');
-        } else if (response.response_code === 200 && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
-        } else if (response.response_code === 400 && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
         }
         this.ui_controls.is_saving = false;

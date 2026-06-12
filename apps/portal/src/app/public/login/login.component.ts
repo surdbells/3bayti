@@ -85,7 +85,7 @@ export class LoginComponent implements OnInit {
     this.authService.login(this.login.email, this.login.password).subscribe({
       next: (response) => {
         this.loading = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.user_session = response.data;
           this.success_notification(response.message);
           // SESSION already written by PortalAuthService — just navigate.
@@ -103,8 +103,6 @@ export class LoginComponent implements OnInit {
           sessionStorage.clear();
           return;
         }
-        // Explicit failure response from the service
-        this.error_notification(response.message ?? 'Login failed. Please try again.');
       },
       error: (e) => {
         this.loading = false;

@@ -128,7 +128,7 @@ export class ReceiptComponent   implements OnInit{
     this.crudService.post_request(this.single, GlobalComponent.getOrderById)
       .subscribe(({
         next: (response) => {
-          if (response.response_code === 200 && response.status === "success") {
+          if (response) {
             this.data =  response.data;
             this.ui_controls.is_loading = false;
           }
@@ -194,7 +194,7 @@ export class ReceiptComponent   implements OnInit{
     this.crudService.post_request(this.update_order, GlobalComponent.updateOrderStatus)
       .subscribe(({
         next: (response) => {
-          if (response.response_code === 200 && response.status === "success") {
+          if (response) {
             this.ui_controls.updating_order = false;
             this.success_notification(response.message);
             this.get_order_by_id();

@@ -105,7 +105,7 @@ export class TicketMessageComponent implements OnInit {
     const tmSendId = this.add_message.ticket ?? this.add_message.id;
     this.adapter.post_v3('POST /admin/tickets/:id/messages', this.add_message, { params: { id: String(tmSendId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.add_message.message = '';
           this.success_notification(response.message);
           this.get_ticket_messages();

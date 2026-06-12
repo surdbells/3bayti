@@ -99,7 +99,7 @@ export class DeliveriesComponent implements OnInit {
     const vendorIdForDel = this.getProductsByVendor.vendor ?? this.getProductsByVendor.id;
     this.adapter.get_v3('GET /admin/vendors/:id', { params: { id: String(vendorIdForDel) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.items = response.data;
         }
         this.ui_controls.is_loading = false;

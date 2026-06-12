@@ -73,7 +73,7 @@ export class VendorPaymentComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.adapter.get_v3('GET /vendor/store/payment').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.store_single = response.data;
         } else if (response.status === 'failed') {
           this.error_notification(response.message);
@@ -97,7 +97,7 @@ export class VendorPaymentComponent implements OnInit {
     this.ui_controls.is_saving = true;
     this.adapter.patch_v3('PATCH /vendor/store/payment', this.update_payment).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_data();
         } else if (response.status === 'failed') {

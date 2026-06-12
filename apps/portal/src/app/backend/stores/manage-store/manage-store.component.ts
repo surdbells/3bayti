@@ -138,7 +138,7 @@ export class ManageStoreComponent implements OnInit {
     const storeVid = this.get_data.store ?? this.message.id;
     this.adapter.post_v3('POST /admin/vendors/:id/messages', this.message, { params: { id: String(storeVid) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.message.subject = '';
           this.message.message = '';
           this.success_notification(response.message);

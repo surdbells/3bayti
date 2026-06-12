@@ -115,7 +115,7 @@ export class AdminViewOrderComponent implements OnInit {
     const avOId = this.single.order ?? this.single.id;
     this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(avOId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.data = response.data;
         }
         this.ui_controls.is_loading = false;
@@ -184,7 +184,7 @@ export class AdminViewOrderComponent implements OnInit {
     this.adapter.patch_v3('PATCH /admin/orders/:orderId/items/:itemId/status', { status: this.update_order.status }, { params: { orderId: String(avuOId), itemId: String(avuItemId) } }).subscribe({
       next: (response: any) => {
         this.ui_controls.updating_order = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.success_notification(response.message);
           this.get_order_by_id();
         }

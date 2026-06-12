@@ -76,7 +76,7 @@ export class PluralComponent implements OnInit {
     const pluralOId = this.getProcessingById.id;
     this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(pluralOId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.vendor = response.data;
           this.get_vendorProducts();
         } else {
@@ -94,7 +94,7 @@ export class PluralComponent implements OnInit {
     const pluralVId = this.getProductsByVendor.vendor ?? this.getProductsByVendor.id;
     this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(pluralVId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.items = response.data;
         }
         this.ui_controls.is_loading = false;

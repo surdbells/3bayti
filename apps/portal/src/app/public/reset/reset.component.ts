@@ -69,7 +69,7 @@ export class ResetComponent implements OnInit{
     this.crudService.post_request(this.reset, GlobalComponent.UserConfirm)
       .subscribe(({
         next: (response) => {
-          if (response.response_code === 200 && response.status === "success") {
+          if (response) {
             this.ui_controls.loading = false;
             this.ui_controls.confirmed = true;
             this.success_notification(response.message);
@@ -106,7 +106,7 @@ export class ResetComponent implements OnInit{
     this.crudService.post_request(this.confirm, GlobalComponent.UserValidate)
       .subscribe(({
         next: (response) => {
-          if (response.response_code === 200 && response.status === "success") {
+          if (response) {
             this.ui_controls.loading = false;
             this.ui_controls.validated = true;
             this.r_password.email = this.reset.email;
@@ -148,7 +148,7 @@ export class ResetComponent implements OnInit{
     this.crudService.post_request(this.r_password, GlobalComponent.UserReset)
       .subscribe(({
         next: (response) => {
-          if (response.response_code === 200 && response.status === "success") {
+          if (response) {
             this.ui_controls.loading = false;
             this.success_notification(response.message);
             this.router.navigate(['/']).then(r => console.log(r));

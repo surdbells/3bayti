@@ -104,7 +104,7 @@ export class EditCouponComponent implements OnInit {
     const couponId = payload.coupon_id ?? payload.id;
     this.adapter.get_v3('GET /vendor/coupons/:id', { params: { id: String(couponId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           const d = response.data;
           this.coupon_code = d.code;
 

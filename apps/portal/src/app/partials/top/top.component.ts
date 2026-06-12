@@ -94,7 +94,7 @@ export class TopComponent implements OnInit {
     this.crudService.post_request(this.notification, GlobalComponent.getNotifications)
       .subscribe({
         next: (response: any) => {
-          if (response.response_code === 200 && response.status === 'success') {
+          if (response) {
             this.ui_controls.is_loading = false;
             this.ui_controls.count = response.message;
             this.notifications = response.data;
@@ -115,7 +115,7 @@ export class TopComponent implements OnInit {
     this.crudService.post_request(this.notification, GlobalComponent.markNotifications)
       .subscribe({
         next: (response: any) => {
-          if (response.response_code === 200 && response.status === 'success') {
+          if (response) {
             this.ui_controls.is_loading = false;
             this.success_notification(response.message);
             this.get_notifications();

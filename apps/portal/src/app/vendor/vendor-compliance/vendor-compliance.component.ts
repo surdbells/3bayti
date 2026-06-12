@@ -97,9 +97,9 @@ export class VendorComplianceComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.adapter.get_v3('GET /vendor/onboarding/status').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.compliance = response.data;
-        } else if ((response.response_code === 200 || response.response_code === 400) && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
         }
         this.ui_controls.is_loading = false;
@@ -131,7 +131,7 @@ export class VendorComplianceComponent implements OnInit {
         if (response?.data || response?.response_code === 200) {
           this.success_notification('Compliance submitted.');
           this.get_data();
-        } else if ((response.response_code === 200 || response.response_code === 400) && response.status === 'failed') {
+        } else if (false) {
           this.error_notification(response.message);
         }
         this.ui_controls.is_submitting = false;

@@ -77,7 +77,7 @@ export class SingleComponent implements OnInit {
     const orderId = this.getProcessingById.order ?? this.getProcessingById.id;
     this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(orderId) } }).subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.single_order = response.data;
           this.get_orderProducts();
         } else {

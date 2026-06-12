@@ -228,7 +228,7 @@ export class CreateProductComponent implements OnInit {
     this.ui.page_loading = true;
     this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (response: any) => {
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.category = response.data;
           this.fetchVendorLabels();
           this.ui.page_loading = false;
@@ -264,7 +264,7 @@ export class CreateProductComponent implements OnInit {
     this.adapter.post_v3('POST /vendor/labels', this.vendor_label_create).subscribe({
       next: (response: any) => {
         this.ui.creating_label = false;
-        if (response.response_code === 200 && response.status === 'success') {
+        if (response) {
           this.vendor_label_create.label = '';
           this.toast.success(response.message);
           this.fetchVendorLabels();
