@@ -136,10 +136,13 @@ Shipped and building clean on `main`:
 
 **Characteristics:** standalone, OnPush + signals, generic `<T>`, server/client modes, multi-sort, request cancellation (`switchMap`), debounce, retry, WCAG `aria-sort`/`grid`, dark-mode via `ax-*` tokens, i18n-ready, permission predicates, audit hooks, lazy-loaded export libs (xlsx/jspdf/file-saver never enter the initial bundle).
 
-### Testing strategy (proposed, not yet implemented)
+### Testing strategy (portal — proposed, not yet implemented)
 - **Unit:** `axApplyMultiSort` / `axApplyGlobalSearch` pure-function tests; `AxServerDataSource` marble tests for debounce + switchMap cancellation + error→empty-page; `AxExportService` CSV escaping + column-respect tests with mocked dynamic imports.
 - **Component:** harness tests for selection (page/all/indeterminate), column visibility/reorder, sort cycling, pagination boundaries, empty/error/retry states.
 - **E2E (Playwright):** per migrated screen — search debounce, filter→re-fetch, export download, row + bulk actions, keyboard navigation/focus order.
+
+### API testing (implemented + verified)
+The two new admin endpoints (`POST /v3/admin/users`, `PATCH /v3/admin/users/:id/password`) ship with `AdminUserControllersTest` — 10 cases / 25 assertions covering persist+roles+email-verified+hash, 409 duplicate email, 422 validation, 403 non-admin, 401 unauthenticated, and (for reset) rehash + revoke-all-sessions, 404 unknown, 422 short password, 403 non-admin. **Verified green** against PHP 8.3.6. Full API suite re-run after all API changes: **1,473 tests / 4,974 assertions passing, zero regressions.**
 
 ### API improvement recommendations
 1. **Uniform envelope.** Standardize all list endpoints on `{ data, meta:{total,limit,offset} }`. Today the mix (`{orders,pagination}`, `{vendors,meta}`, `{data,meta}`, `{user}`) forces per-endpoint client mapping.
