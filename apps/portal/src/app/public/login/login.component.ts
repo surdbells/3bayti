@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CrudService } from '../../services/crud.service';
 import { PortalAuthService } from '../../services/portal-auth.service';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { CookieService } from 'ngx-cookie-service';
 import { GlobalComponent } from '../../global-component';
@@ -28,6 +28,7 @@ export class LoginComponent implements OnInit {
     private crudService: CrudService,
     private authService: PortalAuthService,
     private router: Router,
+    private route: ActivatedRoute,
     private cookieService: CookieService,
     private toast: HotToastService,
   ) {}
@@ -89,13 +90,25 @@ export class LoginComponent implements OnInit {
           this.user_session = response.data;
           this.success_notification(response.message);
           // SESSION already written by PortalAuthService — just navigate.
-          if (this.user_session.is_admin || this.user_session.is_finance ||
-              this.user_session.is_support || this.user_session._sub_admin) {
-            this.router.navigate(['/', 'backend']);
+          const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+          const isAdminTier = this.user_session.is_admin || this.user_session.is_finance ||
+            this.user_session.is_support || this.user_session._sub_admin;
+
+          if (isAdminTier) {
+            // Honour returnUrl only if it points into the admin area.
+            if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+              this.router.navigateByUrl(returnUrl);
+            } else {
+              this.router.navigate(['/', 'backend']);
+            }
             return;
           }
           if (this.user_session.is_vendor) {
-            this.router.navigate(['/', 'account']);
+            if (returnUrl && returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+              this.router.navigateByUrl(returnUrl);
+            } else {
+              this.router.navigate(['/', 'account']);
+            }
             return;
           }
           // Fallback — role not recognised for portal access
