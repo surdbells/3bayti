@@ -94,84 +94,9 @@
       </section>
 
       <!-- List (when not empty) -->
-      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-        <span class="ax-spinner ax-spinner-lg" aria-label="Loading measurements"></span>
-      </div>
-
-      <section
-        *ngIf="!ui_controls.is_empty && !ui_controls.is_loading"
-        class="ax-page-section">
-        <div class="ax-card ax-p-0" style="max-width: 56rem;">
-          <div class="ax-table-wrapper">
-            <table class="ax-table ax-table-hover">
-              <thead>
-                <tr>
-                  <th>{{ 'table_size' | translate }}</th>
-                  <th style="text-align: right;">{{ 'table_bust' | translate }}</th>
-                  <th style="text-align: right;">{{ 'table_waist' | translate }}</th>
-                  <th style="text-align: right;">{{ 'table_hip' | translate }}</th>
-                  <th style="text-align: right;">{{ 'table_length' | translate }}</th>
-                  <th style="text-align: right;">{{ 'table_neck' | translate }}</th>
-                  <th style="text-align: right;">{{ 'table_arm' | translate }}</th>
-                  <th style="text-align: right;">{{ 'table_armhole' | translate }}</th>
-                  <th style="text-align: right;">{{ 'table_shoulder' | translate }}</th>
-                  <th style="text-align: right; width: 9rem;">{{ 'table_actions' | translate }}</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (m of measurements; track m.measurement) {
-                  <tr>
-                    <td>
-                      <span class="ax-badge ax-badge-brand">{{ m.size }}</span>
-                    </td>
-                    <td style="text-align: right;"><span class="ax-numeric">{{ m.bust }}</span></td>
-                    <td style="text-align: right;"><span class="ax-numeric">{{ m.waist }}</span></td>
-                    <td style="text-align: right;"><span class="ax-numeric">{{ m.hip }}</span></td>
-                    <td style="text-align: right;"><span class="ax-numeric">{{ m.length }}</span></td>
-                    <td style="text-align: right;"><span class="ax-numeric">{{ m.neck }}</span></td>
-                    <td style="text-align: right;"><span class="ax-numeric">{{ m.arm }}</span></td>
-                    <td style="text-align: right;"><span class="ax-numeric">{{ m.armhole }}</span></td>
-                    <td style="text-align: right;"><span class="ax-numeric">{{ m.shoulder }}</span></td>
-                    <td style="text-align: right;">
-                      <div class="ax-flex ax-gap-1" style="justify-content: flex-end;">
-                        <button
-                          type="button"
-                          class="ax-btn ax-btn-ghost ax-btn-sm"
-                          (click)="edit_measurement(m.size, m.measurement, m.bust, m.waist, m.hip, m.length, m.neck, m.arm, m.armhole, m.shoulder)"
-                          aria-label="Edit measurement">
-                          <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                        </button>
-                        <button
-                          type="button"
-                          class="ax-btn ax-btn-ghost ax-btn-sm"
-                          style="color: var(--ax-color-text-danger);"
-                          (click)="start_delete_measurement(m.measurement)"
-                          aria-label="Delete measurement">
-                          <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      <!-- Empty state -->
-      <section
-        *ngIf="ui_controls.is_empty && !ui_controls.is_loading"
-        class="ax-page-section">
-        <div class="ax-card ax-p-8 ax-text-center" style="max-width: 56rem;">
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
-            aria-hidden="true">straighten</span>
-          <h3 class="ax-h4 ax-m-0 ax-mt-3">{{ 'no_measurements_found' | translate }}</h3>
-          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-            Add your first size entry using the form above. You can add one size at a time.
-          </p>
+      <section class="ax-page-section">
+        <div class="ax-card ax-p-0">
+          <app-ax-data-table [config]="tableConfig" [dataSource]="dataSource" (rowAction)="onRowAction($event)"></app-ax-data-table>
         </div>
       </section>
     }

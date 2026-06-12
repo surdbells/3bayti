@@ -10,7 +10,13 @@ import { TranslatePipe } from '../../translate.pipe';
 
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
-export interface Measurements {
+import { CommonModule } from '@angular/common';
+import {
+  AxDataTableComponent,
+  AxClientDataSource,
+  type AxDataTableConfig,
+} from '../../shared/data/enterprise';
+export interface Measurements extends Record<string, unknown> {
   id: number;
   token: number;
   measurement: number;
@@ -28,13 +34,57 @@ export interface Measurements {
 @Component({
   selector: 'app-measurements',
   standalone: true,
-  imports: [VendorShellComponent, FormsModule, NgIf, TranslatePipe],
+  imports: [VendorShellComponent, FormsModule, NgIf, CommonModule, TranslatePipe, AxDataTableComponent],
   templateUrl: './measurements.component.html',
   styleUrl: './measurements.component.css',
 })
 export class MeasurementsComponent implements OnInit {
   measurements?: Measurements[];
   private readonly confirm = inject(AxConfirmService);
+
+  // Enterprise table (client mode — full set returned in one call)
+  readonly dataSource = new AxClientDataSource<Measurements>([
+    { key: 'size', label: 'Size', sortable: true, sticky: 'left', width: '8rem' },
+    { key: 'bust', label: 'Bust', align: 'center' },
+    { key: 'waist', label: 'Waist', align: 'center' },
+    { key: 'hip', label: 'Hip', align: 'center' },
+    { key: 'length', label: 'Length', align: 'center' },
+    { key: 'neck', label: 'Neck', align: 'center', hideOnMobile: true },
+    { key: 'arm', label: 'Arm', align: 'center', hideOnMobile: true },
+    { key: 'armhole', label: 'Armhole', align: 'center', hideOnMobile: true },
+    { key: 'shoulder', label: 'Shoulder', align: 'center', hideOnMobile: true },
+  ]);
+
+  readonly tableConfig: AxDataTableConfig<Measurements> = {
+    tableId: 'vendor-measurements',
+    mode: 'client',
+    rowId: 'id',
+    pageSize: 20,
+    pageSizeOptions: [20, 50, 100],
+    globalSearch: true,
+    searchPlaceholder: 'Search sizes…',
+    stickyHeader: true,
+    hover: true,
+    emptyTitle: 'No measurements',
+    emptyDescription: 'Add your first size measurement using the form above.',
+    export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'measurements' },
+    columns: [
+      { key: 'size', label: 'Size', sortable: true, sticky: 'left', width: '8rem' },
+      { key: 'bust', label: 'Bust', align: 'center' },
+      { key: 'waist', label: 'Waist', align: 'center' },
+      { key: 'hip', label: 'Hip', align: 'center' },
+      { key: 'length', label: 'Length', align: 'center' },
+      { key: 'neck', label: 'Neck', align: 'center', hideOnMobile: true },
+      { key: 'arm', label: 'Arm', align: 'center', hideOnMobile: true },
+      { key: 'armhole', label: 'Armhole', align: 'center', hideOnMobile: true },
+      { key: 'shoulder', label: 'Shoulder', align: 'center', hideOnMobile: true },
+    ],
+    rowActions: [{ id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger' }],
+  };
+
+  onRowAction(e: { action: { id: string }; row: Measurements }) {
+    if (e.action.id === 'delete') this.start_delete_measurement(e.row.measurement);
+  }
 
   constructor(
     private router: Router,
@@ -142,6 +192,7 @@ export class MeasurementsComponent implements OnInit {
       next: (response: any) => {
         if (response?.data) {
           this.measurements = Array.isArray(response.data) ? response.data : [];
+          this.dataSource.setData(this.measurements ?? []);
           this.ui_controls.is_empty = !this.measurements || this.measurements.length === 0;
         } else if ([503, 401, 400].includes(response.response_code) && response.status === 'failed') {
           this.ui_controls.is_empty = true;
