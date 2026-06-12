@@ -1,88 +1,29 @@
 <app-admin-shell>
   <div class="ax-container">
-      <!-- Page header -->
-      <header class="ax-page-header">
-        <div class="ax-page-header-content">
-          <button
-            type="button"
-            (click)="goBack()"
-            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
-            style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-            Back to dashboard
-          </button>
-          <span class="ax-page-header-eyebrow">Catalog</span>
-          <h1 class="ax-page-title">Collections</h1>
-          <p *ngIf="collections && collections.length > 0" class="ax-page-subtitle">
-            {{ collections.length }} collection{{ collections.length !== 1 ? 's' : '' }} available for product grouping.
-          </p>
-        </div>
-
-        <div class="ax-flex ax-gap-2 ax-items-center">
-          <a routerLink="/create_collections" class="ax-btn ax-btn-primary">
-            <span class="material-symbols-outlined" aria-hidden="true">add</span>
-            New collection
-          </a>
-        </div>
-      </header>
-
-      <!-- Loading -->
-      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-        <span class="ax-spinner ax-spinner-lg" aria-label="Loading collections"></span>
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Catalog</span>
+        <h1 class="ax-page-title">Collections</h1>
+        <p class="ax-page-subtitle">Curated groups of products.</p>
       </div>
+      <div class="ax-flex ax-gap-2 ax-items-center">
+        <a routerLink="/create_collections" class="ax-btn ax-btn-primary ax-btn-sm">
+          <span class="material-symbols-outlined" aria-hidden="true">add</span> New collection
+        </a>
+      </div>
+    </header>
 
-      <!-- Table -->
-      <section
-        *ngIf="!ui_controls.is_loading && !ui_controls.no_data"
-        class="ax-card ax-p-0">
-        <div class="ax-table-wrapper">
-          <table class="ax-table ax-table-hover">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Status</th>
-                <th style="text-align: right; width: 8rem;"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let a_collection of collections; let i = index">
-                <td>
-                  <span class="ax-font-medium ax-text-primary">{{ a_collection.label }}</span>
-                </td>
-                <td>
-                  <span *ngIf="a_collection.is_active" class="ax-badge ax-badge-success">Active</span>
-                  <span *ngIf="!a_collection.is_active" class="ax-badge ax-badge-neutral">Inactive</span>
-                </td>
-                <td style="text-align: right;">
-                  <button
-                    type="button"
-                    class="ax-btn ax-btn-outline ax-btn-sm"
-                    (click)="edit_collection(a_collection.id, a_collection.label, a_collection.is_active)">
-                    <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Empty state -->
-      <section *ngIf="!ui_controls.is_loading && ui_controls.no_data" class="ax-page-section">
-        <div class="ax-card ax-p-8 ax-text-center">
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
-            aria-hidden="true">collections_bookmark</span>
-          <h3 class="ax-h4 ax-m-0 ax-mt-3">No collections yet</h3>
-          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-            Collections let you group products for seasonal campaigns, curations, or landing pages.
-          </p>
-          <a routerLink="/create_collections" class="ax-btn ax-btn-primary ax-mt-4">
-            <span class="material-symbols-outlined" aria-hidden="true">add</span>
-            Create first collection
-          </a>
-        </div>
-      </section>  </div>
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="is_active" let-row>
+          <span class="ax-badge" [class.ax-badge-success]="row.is_active" [class.ax-badge-neutral]="!row.is_active">
+            {{ row.is_active ? 'Active' : 'Inactive' }}
+          </span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
 </app-admin-shell>

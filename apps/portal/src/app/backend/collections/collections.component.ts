@@ -1,29 +1,36 @@
 import { Component, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
+import { CommonModule } from '@angular/common';
+import { of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
-import { Labels } from '../../class/labels';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import {
+  AxDataTableComponent,
+  AxCellDirective,
+  AxServerDataSource,
+  type AxDataTableConfig,
+  type AxQueryState,
+  type AxServerFetchResult,
+} from '../../shared/data/enterprise';
+
+interface CollectionRow extends Record<string, unknown> {
+  id: number;
+  label: string;
+  is_active: boolean;
+}
+
 @Component({
   selector: 'app-collections',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, RouterLink],
+  imports: [AdminShellComponent, CommonModule, RouterLink, AxDataTableComponent, AxCellDirective],
   templateUrl: './collections.component.html',
   styleUrl: './collections.component.css',
 })
 export class CollectionsComponent implements OnInit {
-  collections?: Labels[];
-
-  ui_controls = {
-    is_loading: false,
-    no_data: false,
-    nav_open: false,
-  };
-
-  session_data: any = '';
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',
@@ -31,61 +38,70 @@ export class CollectionsComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  collection = { id: 0, token: '' };
+  config!: AxDataTableConfig<CollectionRow>;
+  dataSource!: AxServerDataSource<CollectionRow>;
 
   constructor(
     private router: Router,
-    private crudService: CrudService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
   ngOnInit() {
-    this.session_data = sessionStorage.getItem('SESSION');
-    this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    this.collection.id = this.user_session.id;
-    this.collection.token = this.user_session.token;
-    this.get_collections();
+    this.user_session = GlobalComponent.decodeBase64(
+      sessionStorage.getItem('SESSION') ?? '',
+    );
+    this.buildTable();
   }
 
-  goBack() {
-    this.router.navigate(['/backend']).then(r => console.log(r));
+  private buildTable() {
+    this.dataSource = new AxServerDataSource<CollectionRow>((q) => this.fetchCollections(q));
+    this.config = {
+      tableId: 'admin-collections',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: true,
+      searchPlaceholder: 'Search collections…',
+      stickyHeader: true,
+      hover: true,
+      emptyTitle: 'No collections',
+      emptyDescription: 'Create your first collection to group products.',
+      export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'collections' },
+      columns: [
+        { key: 'label', label: 'Name', sortable: true, sticky: 'left', width: '20rem' },
+        { key: 'is_active', label: 'Status', align: 'center', value: (r) => (r.is_active ? 'Active' : 'Inactive') },
+      ],
+      rowActions: [{ id: 'edit', label: 'Edit', icon: 'edit' }],
+    };
   }
 
-  error_notification(message: string) {
-    this.toast.error(message);
+  private fetchCollections(query: AxQueryState) {
+    const q: any = {
+      limit: query.pageSize,
+      offset: query.pageIndex * query.pageSize,
+    };
+    if (query.search) q.search = query.search;
+    return this.adapter.get_v3('GET /admin/collections', { query: q }).pipe(
+      map((response: any): AxServerFetchResult<CollectionRow> => {
+        const raw: any[] = Array.isArray(response?.data) ? response.data : response?.data?.items ?? [];
+        return { rows: raw as CollectionRow[], total: response?.meta?.total ?? raw.length };
+      }),
+      catchError(() => {
+        this.toast.error('Unable to load collections at this time.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<CollectionRow>);
+      }),
+    );
   }
 
-  success_notification(message: string) {
-    this.toast.success(message);
+  onRowAction(e: { action: { id: string }; row: CollectionRow }) {
+    if (e.action.id === 'edit') {
+      this.router.navigate(['/edit_collection'], {
+        queryParams: { id: e.row.id, label: e.row.label, active: e.row.is_active },
+      });
+    }
   }
 
-  get_collections() {
-    this.ui_controls.is_loading = true;
-    this.ui_controls.no_data = false;
-    this.adapter.get_v3('GET /admin/collections', { query: { limit: 50, offset: 0 } }).subscribe({
-      next: (response: any) => {
-        if (response?.data) {
-          this.collections = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
-          this.ui_controls.no_data = !this.collections || this.collections.length === 0;
-        } else {
-          this.ui_controls.no_data = true;
-        }
-        this.ui_controls.is_loading = false;
-      },
-      error: (e: any) => {
-        console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
-        this.ui_controls.is_loading = false;
-        this.ui_controls.no_data = true;
-      },
-    });
-  }
-
-  edit_collection(id: number, label: string, is_active: boolean) {
-    localStorage.setItem('ID', String(id));
-    localStorage.setItem('NAME', label);
-    localStorage.setItem('STATUS', String(is_active));
-    this.router.navigate(['/edit_collection']).then(r => console.log(r));
-  }
+  goBack() { this.router.navigate(['/backend']); }
 }

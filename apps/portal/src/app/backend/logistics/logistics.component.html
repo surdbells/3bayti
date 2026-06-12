@@ -1,95 +1,18 @@
 <app-admin-shell>
   <div class="ax-container">
-      <header class="ax-page-header">
-        <div class="ax-page-header-content">
-          <button
-            type="button"
-            (click)="goBack()"
-            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
-            style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
-            Back to dashboard
-          </button>
-          <span class="ax-page-header-eyebrow">Operations</span>
-          <h1 class="ax-page-title">Logistics</h1>
-          <p *ngIf="logistic && logistic.length > 0" class="ax-page-subtitle">
-            {{ logistic.length }} store{{ logistic.length !== 1 ? 's' : '' }} with items in the '{{ get_del_status.status }}' state.
-          </p>
-        </div>
-
-        <div class="ax-flex ax-gap-2 ax-items-center">
-          <label class="ax-label ax-text-2xs" style="margin: 0; white-space: nowrap;">Status</label>
-          <select
-            class="ax-select ax-input-sm"
-            style="width: auto;"
-            (change)="get_status_logistics($event)"
-            [(ngModel)]="get_del_status.status"
-            name="status_filter">
-            <option value="Ready for Delivery">Ready for Delivery</option>
-            <option value="Delivered">Delivered</option>
-          </select>
-          <button
-            type="button"
-            class="ax-btn ax-btn-outline ax-btn-sm"
-            (click)="get_logistics()"
-            [disabled]="ui_controls.is_loading">
-            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
-            Refresh
-          </button>
-        </div>
-      </header>
-
-      <!-- Loading -->
-      <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-        <span class="ax-spinner ax-spinner-lg" aria-label="Loading logistics"></span>
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Operations</span>
+        <h1 class="ax-page-title">Logistics</h1>
+        <p class="ax-page-subtitle">Stores with orders awaiting delivery.</p>
       </div>
+    </header>
 
-      <!-- Table -->
-      <section
-        *ngIf="!ui_controls.is_loading && !ui_controls.no_data"
-        class="ax-card ax-p-0">
-        <div class="ax-table-wrapper">
-          <table class="ax-table ax-table-hover">
-            <thead>
-              <tr>
-                <th>Store</th>
-                <th>Location</th>
-                <th>Email</th>
-                <th>Phone</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let a_logistic of logistic; let i = index">
-                <td>
-                  <button
-                    type="button"
-                    class="ax-btn ax-btn-ghost ax-btn-sm"
-                    style="padding-left: 0; padding-right: 0.5rem;"
-                    (click)="openPopup('/deliveries?vendor=' + a_logistic.store)"
-                    [attr.aria-label]="'Open deliveries for ' + a_logistic.store_name">
-                    <span class="ax-font-medium ax-text-brand">{{ a_logistic.store_name }}</span>
-                  </button>
-                </td>
-                <td><span class="ax-text-sm ax-text-secondary">{{ a_logistic.store_address }}</span></td>
-                <td><span class="ax-text-sm ax-text-secondary">{{ a_logistic.store_email }}</span></td>
-                <td><span class="ax-text-sm ax-text-secondary">{{ a_logistic.store_phone }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
-
-      <!-- Empty state -->
-      <section *ngIf="!ui_controls.is_loading && ui_controls.no_data" class="ax-page-section">
-        <div class="ax-card ax-p-8 ax-text-center">
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
-            aria-hidden="true">local_shipping</span>
-          <h3 class="ax-h4 ax-m-0 ax-mt-3">No stores in this state</h3>
-          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-            Try switching to another status filter.
-          </p>
-        </div>
-      </section>  </div>
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)"></app-ax-data-table>
+    </section>
+  </div>
 </app-admin-shell>
