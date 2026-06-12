@@ -45,6 +45,7 @@ import { FormsModule } from '@angular/forms';
 import { BehaviorSubject } from 'rxjs';
 
 import { AxCellDirective, AxRowExpandDirective } from './ax-cell.directive';
+import { AxDropdownDirective, AxDropdownItemDirective } from '../../overlays/ax-dropdown.directive';
 import { AxDataSource } from './ax-data-source';
 import { AxExportService } from './ax-export.service';
 import {
@@ -73,7 +74,7 @@ interface ColumnView<T> {
 @Component({
   selector: 'app-ax-data-table',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, AxDropdownDirective, AxDropdownItemDirective],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './ax-data-table.component.html',
   styleUrl: './ax-data-table.component.css',
@@ -360,6 +361,23 @@ export class AxDataTableComponent<T extends Record<string, unknown> = Record<str
     return (this.config.rowActions ?? []).filter(
       (a) => !(a.hidden?.(row) ?? false) && (a.can?.(row) ?? true),
     );
+  }
+
+  /** Actions shown inline as icon buttons (first N of the visible set). */
+  inlineRowActions(row: T): AxRowAction<T>[] {
+    const max = this.config.maxInlineActions ?? 2;
+    const visible = this.visibleRowActions(row);
+    // If only one would overflow, show it inline rather than a 1-item menu.
+    if (visible.length <= max + 1) return visible;
+    return visible.slice(0, max);
+  }
+
+  /** Actions collapsed into the "⋯" overflow menu (remainder). */
+  overflowRowActions(row: T): AxRowAction<T>[] {
+    const max = this.config.maxInlineActions ?? 2;
+    const visible = this.visibleRowActions(row);
+    if (visible.length <= max + 1) return [];
+    return visible.slice(max);
   }
 
   onRowAction(action: AxRowAction<T>, row: T, ev: Event): void {

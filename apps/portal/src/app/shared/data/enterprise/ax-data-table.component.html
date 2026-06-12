@@ -221,7 +221,7 @@
             <td *ngIf="config.rowActions?.length" class="axdt-td-actions" (click)="$event.stopPropagation()">
               <div class="axdt-row-actions">
                 <button
-                  *ngFor="let a of visibleRowActions(row)"
+                  *ngFor="let a of inlineRowActions(row)"
                   type="button"
                   class="ax-icon-btn ax-icon-btn-sm"
                   [class.axdt-action-danger]="a.variant === 'danger'"
@@ -231,6 +231,33 @@
                   (click)="onRowAction(a, row, $event)">
                   <span class="material-symbols-outlined">{{ a.icon || 'more_horiz' }}</span>
                 </button>
+
+                <ng-container *ngIf="overflowRowActions(row).length">
+                  <button
+                    type="button"
+                    class="ax-icon-btn ax-icon-btn-sm"
+                    [axDropdown]="rowMenu"
+                    axDropdownAlign="end"
+                    title="More actions"
+                    aria-label="More actions">
+                    <span class="material-symbols-outlined">more_horiz</span>
+                  </button>
+                  <ng-template #rowMenu>
+                    <div class="axdt-action-menu">
+                      <button
+                        *ngFor="let a of overflowRowActions(row)"
+                        type="button"
+                        class="ax-dropdown-item"
+                        [class.axdt-menu-item-danger]="a.variant === 'danger'"
+                        [disabled]="a.disabled?.(row)"
+                        axDropdownItem
+                        (click)="onRowAction(a, row, $event)">
+                        <span class="material-symbols-outlined axdt-menu-icon">{{ a.icon || 'chevron_right' }}</span>
+                        <span>{{ a.label }}</span>
+                      </button>
+                    </div>
+                  </ng-template>
+                </ng-container>
               </div>
             </td>
           </tr>

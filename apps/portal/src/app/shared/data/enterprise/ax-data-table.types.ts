@@ -238,6 +238,12 @@ export interface AxDataTableConfig<T = unknown> {
   readonly searchPlaceholder?: string;
   readonly filters?: readonly AxFilterDef[];
   readonly rowActions?: readonly AxRowAction<T>[];
+  /**
+   * How many row actions to show inline before collapsing the rest into a
+   * "⋯" overflow menu. Default 2. Keeps rows uncluttered when a screen has
+   * many per-row actions. Set to a high number to force all inline.
+   */
+  readonly maxInlineActions?: number;
   readonly bulkActions?: readonly AxBulkAction<T>[];
   readonly export?: {
     readonly enabled: boolean;

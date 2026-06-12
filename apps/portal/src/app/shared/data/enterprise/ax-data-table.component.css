@@ -97,9 +97,27 @@
 /* ── Rows ────────────────────────────────────────────────────────────── */
 .axdt-row-interactive { cursor: pointer; }
 .axdt-row-selected { background: var(--ax-color-accent-subtle, var(--ax-color-bg-subtle)); }
-.axdt-td-actions, .axdt-th-actions { width: 1%; white-space: nowrap; }
-.axdt-row-actions { display: inline-flex; gap: 0.15rem; justify-content: flex-end; }
+.axdt-td-actions, .axdt-th-actions { width: 1%; white-space: nowrap; padding-right: 1rem; }
+.axdt-row-actions { display: inline-flex; gap: 0.25rem; justify-content: flex-end; align-items: center; }
 .axdt-action-danger { color: var(--ax-color-danger, #dc2626); }
+
+/* Overflow action menu — the CDK pane (.ax-dropdown-menu) supplies the
+   surface chrome (bg/border/shadow/padding); this just lays out the items. */
+.axdt-action-menu { display: flex; flex-direction: column; gap: 0.0625rem; min-width: 10rem; }
+.axdt-action-menu .ax-dropdown-item {
+  display: flex; align-items: center; gap: 0.625rem;
+  width: 100%; padding: 0.5rem 0.625rem;
+  font-size: 0.8125rem; text-align: left;
+  border-radius: var(--ax-radius-md, 8px);
+  color: var(--ax-color-text-primary, #1a1a1a);
+  background: transparent; border: 0; cursor: pointer;
+}
+.axdt-action-menu .ax-dropdown-item:hover { background: var(--ax-color-surface-hover, #f4f1ec); }
+.axdt-action-menu .ax-dropdown-item:disabled { opacity: 0.45; pointer-events: none; }
+.axdt-menu-icon { font-size: 1.125rem; color: var(--ax-color-text-tertiary, #8a8378); }
+.axdt-menu-item-danger { color: var(--ax-color-danger, #dc2626); }
+.axdt-menu-item-danger .axdt-menu-icon { color: var(--ax-color-danger, #dc2626); }
+.axdt-menu-item-danger:hover { background: var(--ax-color-danger-subtle, #fef2f2); }
 
 .axdt-th-expand, .axdt-td-expand { width: 1%; }
 
