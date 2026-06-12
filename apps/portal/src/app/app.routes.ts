@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, adminGuard, vendorGuard } from './core/auth/auth.guard';
+import { adminDashboardResolver } from './core/resolvers/admin-dashboard.resolver';
 export const routes: Routes = [
   {
     path: '',
@@ -34,6 +35,7 @@ export const routes: Routes = [
     path: 'backend',
     loadComponent: () => import('./backend/admin/admin.component').then(m => m.AdminComponent),
     canActivate: [adminGuard],
+    resolve: { dashboard: adminDashboardResolver },
     title: 'Account'
   },
   {

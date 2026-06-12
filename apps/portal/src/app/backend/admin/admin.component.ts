@@ -1,5 +1,5 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -98,6 +98,7 @@ export class AdminComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private crudService: CrudService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
@@ -136,7 +137,16 @@ export class AdminComponent implements OnInit {
   ngOnInit(): void {
     this.session_data = sessionStorage.getItem('SESSION');
     this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    this.get_dashboard();
+
+    // Prefer data pre-fetched by adminDashboardResolver (no spinner flash).
+    // Falls back to an in-component fetch if the resolver returned null
+    // (e.g. analytics was temporarily unavailable at navigation time).
+    const resolved = this.route.snapshot.data['dashboard'];
+    if (resolved) {
+      this.applyDashboard(resolved);
+    } else {
+      this.get_dashboard();
+    }
   }
 
   error_notification(message: string) { this.toast.error(message); }
@@ -177,78 +187,86 @@ export class AdminComponent implements OnInit {
         next: (response) => {
           this.ui_controls.is_loading = false;
           if (response) {
-            this.ui_controls.is_loading = false;
-            this.total_products = response.total_products;
-            this.total_orders = response.total_orders;
-            this.products_sold = response.products_sold;
-            this.return_orders = response.return_orders;
-            this.total_products_stats = response.total_products_stats;
-            this.total_orders_stats = response.total_orders_stats;
-            this.products_sold_stats = response.products_sold_stats;
-            this.return_orders_stats = response.return_orders_stats;
-
-            this.chartOptions = {
-              series: [
-                { name: 'Products sold', data: this.total_products_stats },
-                { name: 'Total orders',  data: this.total_orders_stats }
-              ],
-              chart: {
-                type: 'bar',
-                height: 350,
-                toolbar: { show: false },
-                fontFamily: 'Inter, system-ui, sans-serif',
-                foreColor: '#5a554a'
-              },
-              colors: ['#906952', '#c9a227'],
-              plotOptions: {
-                bar: {
-                  horizontal: false,
-                  columnWidth: '52%',
-                  borderRadius: 6,
-                  borderRadiusApplication: 'end'
-                }
-              },
-              dataLabels: { enabled: false },
-              stroke: { show: true, width: 2, colors: ['transparent'] },
-              xaxis: {
-                categories: [
-                  'Jan','Feb','March','April','May','June',
-                  'July','August','September','October','November','December'
-                ],
-                labels: { style: { colors: '#7d7669', fontSize: '12px' } },
-                axisBorder: { color: '#e4ddd3' },
-                axisTicks: { color: '#e4ddd3' }
-              },
-              yaxis: {
-                labels: { style: { colors: '#7d7669', fontSize: '12px' } }
-              },
-              grid: {
-                borderColor: '#efe2cf',
-                strokeDashArray: 4
-              },
-              fill: { opacity: 1 },
-              legend: {
-                position: 'top',
-                horizontalAlign: 'right',
-                fontSize: '12px',
-                fontWeight: 500,
-                markers: { size: 6 },
-                itemMargin: { horizontal: 12 }
-              },
-              tooltip: {
-                theme: 'light',
-                y: { formatter: (val) => '' + val }
-              }
-            } as Partial<ChartOptions>;
-
-            this.recent = response.data;
-            this.pageIndex = 0;
-            if (response.message === 0) {
-              this.ui_controls.no_recent = true;
-            }
+            this.applyDashboard(response);
           }
-        }
+        },
+        error: () => {
+          this.ui_controls.is_loading = false;
+        },
       });
+  }
+
+  /** Apply an analytics payload to the dashboard view (KPIs + chart + recent). */
+  private applyDashboard(response: any): void {
+    this.ui_controls.is_loading = false;
+    this.total_products = response.total_products;
+    this.total_orders = response.total_orders;
+    this.products_sold = response.products_sold;
+    this.return_orders = response.return_orders;
+    this.total_products_stats = response.total_products_stats;
+    this.total_orders_stats = response.total_orders_stats;
+    this.products_sold_stats = response.products_sold_stats;
+    this.return_orders_stats = response.return_orders_stats;
+
+    this.chartOptions = {
+      series: [
+        { name: 'Products sold', data: this.total_products_stats },
+        { name: 'Total orders',  data: this.total_orders_stats }
+      ],
+      chart: {
+        type: 'bar',
+        height: 350,
+        toolbar: { show: false },
+        fontFamily: 'Inter, system-ui, sans-serif',
+        foreColor: '#5a554a'
+      },
+      colors: ['#906952', '#c9a227'],
+      plotOptions: {
+        bar: {
+          horizontal: false,
+          columnWidth: '52%',
+          borderRadius: 6,
+          borderRadiusApplication: 'end'
+        }
+      },
+      dataLabels: { enabled: false },
+      stroke: { show: true, width: 2, colors: ['transparent'] },
+      xaxis: {
+        categories: [
+          'Jan','Feb','March','April','May','June',
+          'July','August','September','October','November','December'
+        ],
+        labels: { style: { colors: '#7d7669', fontSize: '12px' } },
+        axisBorder: { color: '#e4ddd3' },
+        axisTicks: { color: '#e4ddd3' }
+      },
+      yaxis: {
+        labels: { style: { colors: '#7d7669', fontSize: '12px' } }
+      },
+      grid: {
+        borderColor: '#efe2cf',
+        strokeDashArray: 4
+      },
+      fill: { opacity: 1 },
+      legend: {
+        position: 'top',
+        horizontalAlign: 'right',
+        fontSize: '12px',
+        fontWeight: 500,
+        markers: { size: 6 },
+        itemMargin: { horizontal: 12 }
+      },
+      tooltip: {
+        theme: 'light',
+        y: { formatter: (val) => '' + val }
+      }
+    } as Partial<ChartOptions>;
+
+    this.recent = response.data;
+    this.pageIndex = 0;
+    if (response.message === 0) {
+      this.ui_controls.no_recent = true;
+    }
   }
 
 
