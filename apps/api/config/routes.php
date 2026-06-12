@@ -512,6 +512,11 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\User\ActivateUserController::class);
         $group->post('/users/{id:[0-9]+}/deactivate',
             \Bayti\Api\Http\Controllers\Admin\User\DeactivateUserController::class);
+        // M5.1 — Admin-initiated staff creation + password reset.
+        $group->post('/users',
+            \Bayti\Api\Http\Controllers\Admin\User\CreateUserController::class);
+        $group->patch('/users/{id:[0-9]+}/password',
+            \Bayti\Api\Http\Controllers\Admin\User\AdminResetPasswordController::class);
 
         // M3.4-H — Product collection CRUD (admin).
         $group->get('/collections',
