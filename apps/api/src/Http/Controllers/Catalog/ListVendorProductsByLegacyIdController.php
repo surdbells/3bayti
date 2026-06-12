@@ -86,11 +86,17 @@ final class ListVendorProductsByLegacyIdController
         $productRepo = $this->em->getRepository(Product::class);
         $result = $productRepo->findActivePaginated($filters);
 
-        return $this->ok(PaginatedEnvelope::build(
+        $envelope = PaginatedEnvelope::build(
             $this->serializer->configureFromRequest($request)->listShapeMany($result['items']),
             $result['total'],
             $limit,
             $offset,
-        ));
+        );
+        // Expose the resolved v3 vendor id so admin tooling (e.g. the store
+        // products manager) can create products for this store without a
+        // second lookup. The list itself is keyed by legacy id.
+        $envelope['meta']['vendor_id'] = $vendor->getId();
+
+        return $this->ok($envelope);
     }
 }

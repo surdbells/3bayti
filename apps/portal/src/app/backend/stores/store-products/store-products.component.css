@@ -1,0 +1,10 @@
+
+.spd-preview {
+  width: 100%; max-width: 12rem; height: auto;
+  border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);
+  object-fit: cover;
+}
+
+.ax-drawer-body .ax-form-field { margin-bottom: 1rem; }
+.ax-drawer-body .ax-grid .ax-form-field { margin-bottom: 0; }
+.ax-drawer-body .ax-grid { margin-bottom: 1rem; }
