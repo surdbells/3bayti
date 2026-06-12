@@ -20,7 +20,30 @@ class CategoryRepository extends EntityRepository
 
     public function findBySlug(string $slug): ?Category
     {
-        return $this->findOneBy(['slug' => $slug]);
+        // Exact match first.
+        $category = $this->findOneBy(['slug' => $slug]);
+        if ($category !== null) {
+            return $category;
+        }
+
+        // The web app uses a "<slug>-<id>" convention (e.g. "abayas-1")
+        // while migrated categories store the bare slug ("abayas"). The
+        // numeric suffix is the LEGACY category id, not the v3 id, so we
+        // must not blindly match it against the v3 primary key.
+        // Resolution order: (a) bare slug, then (b) legacy_category_id.
+        if (preg_match('/^(.*)-(\d+)$/', $slug, $m) === 1) {
+            $bareSlug = $m[1];
+            $legacyId = (int) $m[2];
+
+            $byBareSlug = $this->findOneBy(['slug' => $bareSlug]);
+            if ($byBareSlug !== null) {
+                return $byBareSlug;
+            }
+
+            return $this->findOneBy(['legacyCategoryId' => $legacyId]);
+        }
+
+        return null;
     }
 
     /**
