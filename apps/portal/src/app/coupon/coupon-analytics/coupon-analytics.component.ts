@@ -115,7 +115,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
   fetchOverview(): void {
     this.adapter.get_v3('GET /vendor/coupons/:id/analytics', { params: { id: String(this.coupon_id) }, query: { period: 'overview' } }).subscribe({
       next: (r: any) => {
-        if (r.response_code === 200) this.overview = r.data;
+        if (r) this.overview = r.data;
         this.ui.loading = false;
       },
     });
@@ -125,7 +125,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
     const payload = { token: this.user_session.token, id: this.user_session.id, coupon_id: this.coupon_id };
     this.adapter.get_v3('GET /vendor/coupons/:id', { params: { id: String(this.coupon_id) } }).subscribe({
       next: (r: any) => {
-        if (r.response_code === 200 && r.status === 'success') {
+        if (r) {
           this.coupon_code = r.data.code;
           this.coupon_name = r.data.name;
         }
@@ -139,7 +139,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
       GlobalComponent.couponAnalytics,
     ).subscribe({
       next: (r: any) => {
-        if (r.response_code === 200) this.coupon_stats = r.data;
+        if (r) this.coupon_stats = r.data;
         this.ui.loading = false;
       },
     });
@@ -151,7 +151,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
       GlobalComponent.couponAnalytics,
     ).subscribe({
       next: (r: any) => {
-        if (r.response_code === 200) this.top_coupons = r.data;
+        if (r) this.top_coupons = r.data;
       },
     });
   }
@@ -166,7 +166,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
       GlobalComponent.couponAnalytics,
     ).subscribe({
       next: (r: any) => {
-        if (r.response_code === 200) {
+        if (r) {
           this.usage_series = r.data;
           this.chart_max_uses = Math.max(1, ...this.usage_series.map(s => s.uses));
         }
@@ -187,7 +187,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
       GlobalComponent.couponAnalytics,
     ).subscribe({
       next: (r: any) => {
-        if (r.response_code === 200) {
+        if (r) {
           this.usage_log = r.data;
           this.log_pagination = r.pagination ?? this.log_pagination;
         }
@@ -207,7 +207,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
       ),
     ).subscribe({
       next: (r: any) => {
-        if (r.response_code === 200) this.live_count = r.data.times_used;
+        if (r) this.live_count = r.data.times_used;
       },
     });
   }

@@ -153,7 +153,7 @@ export class EditCouponComponent implements OnInit {
   fetchLookupData(): void {
     this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (r: any) => {
-        if (r.response_code === 200 && r.status === 'success') {
+        if (r) {
           this.categories = (r.data || []).map((c: any) => ({ id: c.id ?? c.category_id, name: c.name ?? c.category_name }));
         }
       },
@@ -163,7 +163,7 @@ export class EditCouponComponent implements OnInit {
       const payload = { token: this.user_session.token, id: this.user_session.id, store: this.user_session.id };
       this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(payload.id ?? 0) }, query: { limit: 100 } }).subscribe({
         next: (r: any) => {
-          if (r.response_code === 200 && r.status === 'success') {
+          if (r) {
             this.products = (r.data || []).map((p: any) => ({ id: p.id, name: p.name }));
           }
         },
@@ -173,7 +173,7 @@ export class EditCouponComponent implements OnInit {
     if (this.user_session.is_admin) {
       this.adapter.get_v3('GET /utility/stores').subscribe({
         next: (r: any) => {
-          if (r.response_code === 200 && r.status === 'success') {
+          if (r) {
             this.stores = (r.data || []).map((s: any) => ({ id: s.user_id ?? s.id, store_name: s.store_name }));
           }
         },

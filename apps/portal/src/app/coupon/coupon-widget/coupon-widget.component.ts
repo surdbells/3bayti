@@ -47,7 +47,7 @@ export class CouponWidgetComponent implements OnInit {
     // Overview
     this.adapter.get_v3('GET /vendor/coupons/:id/analytics', { params: { id: String(0) }, query: { period: 'overview' } }).subscribe({
       next: (r: any) => {
-        if (r.response_code === 200) {
+        if (r) {
           this.stats = r.data;
         }
         this.loaded = true;
@@ -57,7 +57,7 @@ export class CouponWidgetComponent implements OnInit {
     // Top 3
     this.adapter.get_v3('GET /vendor/coupons/:id/analytics', { params: { id: String(0) }, query: { period: 'overview' } }).subscribe({
       next: (r: any) => {
-        if (r.response_code === 200) this.top_coupons = r.data;
+        if (r) this.top_coupons = r.data;
       },
     });
   }
