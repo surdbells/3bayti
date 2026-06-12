@@ -140,7 +140,14 @@ export class CouponListComponent implements OnInit, OnDestroy {
       next: (response: any) => {
         if (response) {
           this.coupons = response.data ?? [];
-          this.pagination = response.pagination ?? this.pagination;
+          // v3 returns { data, meta:{total,limit,offset} } not pagination
+          if (response.meta) {
+            this.pagination = {
+              ...this.pagination,
+              total: response.meta.total ?? 0,
+              total_pages: Math.ceil((response.meta.total ?? 0) / (response.meta.limit || this.pagination.per_page)),
+            };
+          }
           this.ui.no_coupons = this.coupons.length === 0;
         } else {
           this.coupons = [];

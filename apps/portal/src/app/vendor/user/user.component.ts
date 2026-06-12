@@ -138,19 +138,28 @@ export class UserComponent implements OnInit {
       next: (response) => {
         if (response) {
           this.ui_controls.is_loading = false;
-          this.total_products = response.total_products;
-          this.total_orders = response.total_orders;
-          this.products_sold = response.products_sold;
-          this.return_orders = response.return_orders;
-          this.total_products_stats = response.total_products_stats;
-          this.total_orders_stats = response.total_orders_stats;
-          this.products_sold_stats = response.products_sold_stats;
-          this.return_orders_stats = response.return_orders_stats;
+          // v3 returns { data: { vendor, totals, revenue_series,
+          // status_mix, customer_mix, top_products_* }, meta }
+          const a = response.data ?? {};
+          const totals = a.totals ?? {};
+          const statusMix = a.status_mix ?? {};
+
+          this.total_orders = totals.orders ?? 0;
+          this.products_sold = totals.items ?? 0;
+          this.return_orders = statusMix.returned ?? 0;
+          this.total_products = a.top_products_by_units?.length ?? 0;
+
+          // Revenue time-series → chart (one point per day in window)
+          const series: Array<{ date: string; revenue: number }> =
+            a.revenue_series ?? [];
+          const revenueData = series.map((p) => Number(p.revenue ?? 0));
+          const orderData = series.map((p: any) => Number(p.orders ?? 0));
+          const categories = series.map((p) => p.date);
 
           this.chartOptions = themedChart({
             series: [
-              { name: 'PRODUCTS SOLD', data: this.total_products_stats },
-              { name: 'TOTAL ORDERS', data: this.total_orders_stats },
+              { name: 'REVENUE (AED)', data: revenueData },
+              { name: 'ORDERS', data: orderData },
             ],
             chart: {
               type: 'bar',
@@ -166,12 +175,7 @@ export class UserComponent implements OnInit {
             },
             dataLabels: { enabled: false },
             stroke: { show: true, width: 2, colors: ['transparent'] },
-            xaxis: {
-              categories: [
-                'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-              ],
-            },
+            xaxis: { categories },
             yaxis: { title: { text: '' } },
             fill: { opacity: 1, type: 'solid' },
             tooltip: {
@@ -183,10 +187,11 @@ export class UserComponent implements OnInit {
             },
           });
 
-          this.recent = response.data;
-          if (response.message === 0) {
-            this.ui_controls.no_recent = true;
-          }
+          // Recent orders surfaced from top products (v3 has no recent-orders
+          // block in analytics; populated separately if needed)
+          const recentRows = a.top_products_by_revenue ?? [];
+          this.recent = recentRows;
+          this.ui_controls.no_recent = recentRows.length === 0;
         }
       },
     });

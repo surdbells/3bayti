@@ -86,9 +86,7 @@ export class UserProfileComponent implements OnInit {
     this.adapter.get_v3('GET /me/profile').subscribe({
       next: (response: any) => {
         if (response) {
-          this.user_single = response.data;
-        } else if (response.status === 'failed') {
-          this.error_notification(response.message);
+          this.user_single = response.user ?? response.data ?? {};
         }
         this.ui_controls.is_loading = false;
       },
@@ -112,10 +110,8 @@ export class UserProfileComponent implements OnInit {
     this.adapter.patch_v3('PATCH /me/profile', this.update_single).subscribe({
       next: (response: any) => {
         if (response) {
-          this.success_notification(response.message);
+          this.success_notification('Profile updated successfully.');
           this.get_data();
-        } else if (response.status === 'failed') {
-          this.error_notification(response.message);
         }
         this.ui_controls.is_saving = false;
       },
