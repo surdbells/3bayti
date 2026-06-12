@@ -12,36 +12,9 @@
           </button>
           <span class="ax-page-header-eyebrow">Access control</span>
           <h1 class="ax-page-title">Platform users</h1>
-          <p *ngIf="total > 0" class="ax-page-subtitle">
-            {{ total | number }} {{ roleFilter }} users on the platform.
+          <p class="ax-page-subtitle">
+            Manage platform staff and customer accounts.
           </p>
-        </div>
-
-        <div class="ax-flex ax-gap-2 ax-items-center">
-          <select class="ax-input ax-input-sm" style="width:90px" (change)="pageSize=+$any($event.target).value; get_users(0, searchQuery, roleFilter)">
-            <option value="20">20 / page</option>
-            <option value="50">50 / page</option>
-            <option value="100">100 / page</option>
-          </select>
-          <input
-            type="search"
-            class="ax-input ax-input-sm"
-            placeholder="Search users..."
-            style="width:200px"
-            (input)="onSearch($event)" />
-          <select class="ax-input ax-input-sm" style="width:130px" (change)="onRoleFilter($any($event.target).value)">
-            <option value="customer">Customers</option>
-            <option value="vendor">Vendors</option>
-            <option value="admin">Admins</option>
-          </select>
-          <button
-            type="button"
-            class="ax-btn ax-btn-outline ax-btn-sm"
-            (click)="get_users(0, searchQuery, roleFilter)"
-            [disabled]="ui_controls.is_loading">
-            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
-            Refresh
-          </button>
         </div>
       </header>
 
@@ -106,98 +79,45 @@
             </button>
           </div>
 
-          <!-- Users table -->
+          <!-- Users table (enterprise) -->
           <div style="grid-column: span 3;">
-            <!-- Loading -->
-            <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-              <span class="ax-spinner ax-spinner-lg" aria-label="Loading users"></span>
+            <div class="ax-flex ax-gap-2 ax-mb-3 ax-items-center">
+              <label class="ax-text-sm ax-text-secondary">Role</label>
+              <select class="ax-input ax-input-sm" style="width:12rem"
+                [ngModel]="roleFilter" (ngModelChange)="onRoleFilter($event)" aria-label="Filter by role">
+                <option value="customer">Customers</option>
+                <option value="finance">Finance</option>
+                <option value="support">Support</option>
+                <option value="sub_admin">Sub-admins</option>
+                <option value="">All roles</option>
+              </select>
             </div>
 
-            <div *ngIf="!ui_controls.is_loading" class="ax-card ax-p-0">
-              <div class="ax-table-wrapper">
-                <table class="ax-table ax-table-hover">
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Last login</th>
-                      <th>Roles</th>
-                      <th>Status</th>
-                      <th style="width: 11rem; text-align: right;"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let a_customer of customers; let i = index">
-                      <td>
-                        <span class="ax-font-medium ax-text-primary">{{ a_customer.first_name }} {{ a_customer.last_name }}</span>
-                      </td>
-                      <td><span class="ax-text-sm ax-text-secondary">{{ a_customer.email }}</span></td>
-                      <td><span class="ax-text-2xs ax-text-tertiary">{{ a_customer.last_login }}</span></td>
-                      <td>
-                        <div class="ax-flex ax-gap-1 ax-flex-wrap">
-                          <span *ngIf="a_customer.is_finance" class="ax-badge ax-badge-info">Finance</span>
-                          <span *ngIf="a_customer.is_sub_admin" class="ax-badge ax-badge-brand">Sub-admin</span>
-                          <span *ngIf="a_customer.is_support" class="ax-badge ax-badge-neutral">Support</span>
-                          <span *ngIf="!a_customer.is_finance && !a_customer.is_sub_admin && !a_customer.is_support" class="ax-text-2xs ax-text-tertiary">—</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span *ngIf="a_customer.status" class="ax-badge ax-badge-success">Active</span>
-                        <span *ngIf="!a_customer.status" class="ax-badge ax-badge-danger">Inactive</span>
-                      </td>
-                      <td style="text-align: right;">
-                        <div class="ax-flex ax-gap-1 ax-justify-end">
-                          <button
-                            *ngIf="!a_customer.status"
-                            type="button"
-                            class="ax-btn ax-btn-ghost ax-btn-sm"
-                            (click)="start_activate(a_customer.id, a_customer.first_name)">
-                            Activate
-                          </button>
-                          <button
-                            *ngIf="a_customer.status"
-                            type="button"
-                            class="ax-btn ax-btn-ghost ax-btn-sm"
-                            (click)="start_deactivate(a_customer.id, a_customer.first_name)">
-                            Deactivate
-                          </button>
-                          <button
-                            type="button"
-                            class="ax-btn ax-btn-outline ax-btn-sm"
-                            (click)="start_edit(a_customer)">
-                            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-                            Edit
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-              <!-- Pagination -->
-              <div *ngIf="totalPages > 1" class="ax-flex ax-justify-between ax-items-center ax-p-3" style="border-top:1px solid var(--ax-color-border-subtle)">
-                <span class="ax-text-sm ax-text-secondary">{{ total | number }} total users &mdash; page {{ pageIndex + 1 }} / {{ totalPages }}</span>
-                <div class="ax-flex ax-gap-2">
-                  <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="prevPage()" [disabled]="pageIndex === 0">
-                    <span class="material-symbols-outlined">chevron_left</span>
-                  </button>
-                  <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="nextPage()" [disabled]="pageIndex >= totalPages - 1">
-                    <span class="material-symbols-outlined">chevron_right</span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <div class="ax-card ax-p-0">
+              <app-ax-data-table
+                [config]="config"
+                [dataSource]="dataSource"
+                (rowAction)="onRowAction($event)">
 
-            <!-- Empty state -->
-            <div *ngIf="!ui_controls.is_loading && (!customers || customers.length === 0)" class="ax-card ax-p-8 ax-text-center ax-mt-3">
-              <span
-                class="material-symbols-outlined"
-                style="font-size: 3rem; color: var(--ax-color-text-tertiary);"
-                aria-hidden="true">group</span>
-              <h3 class="ax-h4 ax-m-0 ax-mt-3">No platform users yet</h3>
-              <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-                Use the form on the left to add your first admin user.
-              </p>
+                <ng-template axCell="name" let-row>
+                  <span class="ax-font-medium ax-text-primary">{{ row.first_name }} {{ row.last_name }}</span>
+                </ng-template>
+
+                <ng-template axCell="roles" let-row>
+                  <div class="ax-flex ax-gap-1 ax-flex-wrap">
+                    <span *ngIf="row.is_finance" class="ax-badge ax-badge-info">Finance</span>
+                    <span *ngIf="row.is_sub_admin" class="ax-badge ax-badge-brand">Sub-admin</span>
+                    <span *ngIf="row.is_support" class="ax-badge ax-badge-neutral">Support</span>
+                    <span *ngIf="!row.is_finance && !row.is_sub_admin && !row.is_support" class="ax-text-2xs ax-text-tertiary">—</span>
+                  </div>
+                </ng-template>
+
+                <ng-template axCell="status" let-row>
+                  <span class="ax-badge" [class.ax-badge-success]="row.status" [class.ax-badge-danger]="!row.status">
+                    {{ row.status ? 'Active' : 'Inactive' }}
+                  </span>
+                </ng-template>
+              </app-ax-data-table>
             </div>
           </div>
         </div>
