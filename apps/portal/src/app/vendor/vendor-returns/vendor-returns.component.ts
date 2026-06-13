@@ -98,13 +98,35 @@ export class VendorReturnsComponent implements OnInit {
     return this.adapter.get_v3('GET /vendor/returns', { query: q }).pipe(
       map((response: any): AxServerFetchResult<ReturnRow> => {
         const raw: any[] = response?.data ?? [];
-        return { rows: raw as ReturnRow[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((r) => this.mapReturn(r));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load returns at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<ReturnRow>);
       }),
     );
+  }
+
+  /** Flatten a return request (items[], no customer name) into the row. */
+  private mapReturn(r: any): ReturnRow {
+    const items: any[] = r.items ?? [];
+    const first = items[0] ?? {};
+    const qty = items.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+    const productLabel = items.length > 1
+      ? `${first.product_name ?? 'Item'} +${items.length - 1} more`
+      : (first.product_name ?? `Return ${r.order_reference ?? r.id}`);
+    const total = items.reduce((s, i) => s + (Number(i.line_subtotal) || 0), 0);
+    return {
+      ...r,
+      id: r.id,
+      name: r.order_reference ?? `#${r.id}`,
+      product: productLabel,
+      quantity: qty,
+      total_price: String(total),
+      status: r.status ?? '',
+      created: r.requested_at ?? r.created_at ?? '',
+    } as ReturnRow;
   }
 
   onRowAction(e: { action: { id: string }; row: ReturnRow }) {

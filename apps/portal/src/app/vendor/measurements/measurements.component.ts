@@ -189,7 +189,8 @@ export class MeasurementsComponent implements OnInit {
     this.adapter.get_v3('GET /vendor/measurements').subscribe({
       next: (response: any) => {
         if (response?.data) {
-          this.measurements = Array.isArray(response.data) ? response.data : [];
+          const raw = Array.isArray(response.data) ? response.data : [];
+          this.measurements = raw.map((m: any) => this.mapMeasurement(m));
           this.dataSource.setData(this.measurements ?? []);
           this.ui_controls.is_empty = !this.measurements || this.measurements.length === 0;
         } else if ([503, 401, 400].includes(response.response_code) && response.status === 'failed') {
@@ -205,6 +206,26 @@ export class MeasurementsComponent implements OnInit {
         this.ui_controls.is_empty = true;
       },
     });
+  }
+
+  /** Flatten the serialized measurement (numeric values nested under
+   *  `values`) into the flat row the table + edit form expect. */
+  private mapMeasurement(m: any): Measurements {
+    const v = m.values ?? {};
+    return {
+      ...m,
+      id: m.id,
+      measurement: m.id,
+      size: m.size ?? v.size ?? '',
+      bust: v.bust ?? 0,
+      waist: v.waist ?? 0,
+      hip: v.hip ?? 0,
+      length: v.length ?? 0,
+      neck: v.neck ?? 0,
+      arm: v.arm ?? 0,
+      armhole: v.armhole ?? 0,
+      shoulder: v.shoulder ?? 0,
+    } as Measurements;
   }
 
   edit_measurement(

@@ -128,7 +128,8 @@ export class CouponListComponent implements OnInit, OnDestroy {
       if (q.filters['status']) query.status = q.filters['status'];
       return this.adapter.get_v3('GET /vendor/coupons', { query }).pipe(
         map((response: any): AxServerFetchResult<CouponListItem> => {
-          const rows: CouponListItem[] = response?.data ?? [];
+          const raw: any[] = response?.data ?? [];
+          const rows = raw.map((c) => this.mapCoupon(c));
           return { rows, total: response?.meta?.total ?? rows.length };
         }),
         catchError(() => {
@@ -137,6 +138,28 @@ export class CouponListComponent implements OnInit, OnDestroy {
         }),
       );
     });
+  }
+
+  /** Map the promo-code shape into the coupon list row. */
+  private mapCoupon(c: any): CouponListItem {
+    return {
+      ...c,
+      coupon_id: c.id,
+      code: c.code ?? '',
+      name: c.description ?? c.code ?? '',
+      discount_type: c.discount_type ?? '',
+      discount_value: c.discount_value ?? 0,
+      max_discount_amount: c.max_discount_amount ?? null,
+      max_uses: c.usage_limit_global ?? null,
+      max_uses_per_customer: c.usage_limit_per_user ?? null,
+      times_used: c.redemption_count ?? 0,
+      min_order_amount: c.min_subtotal ?? 0,
+      starts_at: c.valid_from ?? null,
+      expires_at: c.valid_until ?? null,
+      status: c.is_active ? 'active' : 'inactive',
+      store_id: c.vendor_id ?? null,
+      created_at: c.created_at ?? '',
+    } as CouponListItem;
   }
   pagination: Pagination = { page: 1, per_page: 10, total: 0, total_pages: 0 };
 

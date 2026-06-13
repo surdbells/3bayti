@@ -121,13 +121,31 @@ export class TransactionsComponent implements OnInit {
         const raw: any[] = Array.isArray(response?.data)
           ? response.data
           : response?.data?.items ?? [];
-        return { rows: raw as Transactions[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((o) => this.mapRow(o));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load transactions at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<Transactions>);
       }),
     );
+  }
+
+  /** Map the /admin/transactions order shape into the row. */
+  private mapRow(o: any): Transactions {
+    const customer = o.customer ?? {};
+    const name = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim();
+    return {
+      ...o,
+      id: o.id,
+      order_id: o.order_reference ?? o.id,
+      transaction_id: o.order_reference ?? '',
+      cart_code: o.cart_code ?? o.order_reference ?? '',
+      amount: o.subtotal ?? o.total ?? '0',
+      customer: name || customer.email || '—',
+      status: o.status ?? '',
+      created: o.created_at ?? o.date ?? '',
+    } as Transactions;
   }
 
   goBack() { this.router.navigate(['/backend']); }

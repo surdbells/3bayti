@@ -105,7 +105,16 @@ export class VendorReviewsComponent implements OnInit {
     return this.adapter.get_v3('GET /vendor/reviews', { query: q }).pipe(
       map((response: any): AxServerFetchResult<ReviewRow> => {
         const raw: any[] = response?.data ?? [];
-        return { rows: raw as ReviewRow[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((r) => ({
+          ...r,
+          id: r.id,
+          product_name: r.product_name ?? '—',
+          customer_name: r.reviewer ?? r.customer_name ?? '—',
+          rating: r.star ?? r.rating ?? 0,
+          comment: r.comment ?? r.title ?? '',
+          created: r.created_at ?? '',
+        } as ReviewRow));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load reviews at this time.');

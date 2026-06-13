@@ -97,13 +97,36 @@ export class VendorDeliveryComponent implements OnInit {
     return this.adapter.get_v3('GET /vendor/orders', { query: q }).pipe(
       map((response: any): AxServerFetchResult<DeliveryRow> => {
         const raw: any[] = response?.data ?? response?.orders ?? [];
-        return { rows: raw as DeliveryRow[], total: response?.meta?.total ?? response?.pagination?.total ?? raw.length };
+        const rows = raw.map((o) => this.mapRow(o));
+        return { rows, total: response?.meta?.total ?? response?.pagination?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load deliveries at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<DeliveryRow>);
       }),
     );
+  }
+
+  /** Flatten the vendor order shape into the delivery row. */
+  private mapRow(o: any): DeliveryRow {
+    const items: any[] = o.items ?? [];
+    const first = items[0] ?? {};
+    const qty = items.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+    const productLabel = items.length > 1
+      ? `${first.product_name ?? 'Item'} +${items.length - 1} more`
+      : (first.product_name ?? `Order ${o.order_reference ?? o.id}`);
+    const customer = o.customer ?? {};
+    const name = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim();
+    return {
+      ...o,
+      id: o.id,
+      name: name || customer.email || '—',
+      product: productLabel,
+      quantity: qty,
+      total_price: o.subtotal ?? o.total ?? '0',
+      status: o.status ?? '',
+      created: o.created_at ?? o.date ?? '',
+    } as DeliveryRow;
   }
 
   onRowAction(e: { action: { id: string }; row: DeliveryRow }) {

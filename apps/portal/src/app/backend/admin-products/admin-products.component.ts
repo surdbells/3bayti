@@ -125,13 +125,36 @@ export class AdminProductsComponent implements OnInit {
     return this.adapter.get_v3('GET /products', { query: q }).pipe(
       map((response: any): AxServerFetchResult<ProductRow> => {
         const raw: any[] = response?.data ?? [];
-        return { rows: raw as ProductRow[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((p) => this.mapProduct(p));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load products at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<ProductRow>);
       }),
     );
+  }
+
+  /** Map the catalog product shape into the flat admin row. */
+  private mapProduct(p: any): ProductRow {
+    const catSlug: string = p.category_slug ?? p.category?.slug ?? '';
+    const category = p.category?.name
+      ?? (catSlug ? catSlug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : '—');
+    const inStock = p.in_stock === true;
+    return {
+      id: p.id,
+      name: p.name ?? '—',
+      category_name: category,
+      store: p.vendor?.id ?? 0,
+      store_name: p.vendor?.name ?? '—',
+      first_name: '',
+      last_name: '',
+      price: String(p.price?.amount ?? p.price ?? 0),
+      stock_status: p.stock_status ?? (inStock ? 'in_stock' : 'out_of_stock'),
+      created_at: p.created_at ?? '',
+      colours: [],
+      status: p.status ?? (p.is_published === false ? 'draft' : 'published'),
+    } as ProductRow;
   }
 
   onRowAction(e: { action: { id: string }; row: ProductRow }) {

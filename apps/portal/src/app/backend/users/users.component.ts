@@ -142,13 +142,32 @@ export class UsersComponent implements OnInit {
     return this.adapter.get_v3('GET /admin/users', { query: q }).pipe(
       map((response: any): AxServerFetchResult<User> => {
         const raw: any[] = response?.data ?? [];
-        return { rows: raw as User[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((u) => this.mapUser(u));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load users at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<User>);
       }),
     );
+  }
+
+  /** Map publicProfile (roles[] array, last_login_at) into the flat row. */
+  private mapUser(u: any): User {
+    const roles: string[] = Array.isArray(u.roles) ? u.roles : [];
+    return {
+      ...u,
+      id: u.id,
+      first_name: u.first_name ?? '',
+      last_name: u.last_name ?? '',
+      email: u.email ?? '',
+      last_login: u.last_login_at ?? u.last_login ?? '',
+      is_finance: roles.includes('finance'),
+      is_support: roles.includes('support'),
+      is_sub_admin: roles.includes('sub_admin'),
+      is_admin: roles.includes('admin'),
+      status: u.is_store_active ?? u.is_active ?? true,
+    } as User;
   }
 
   onRoleFilter(role: string) {

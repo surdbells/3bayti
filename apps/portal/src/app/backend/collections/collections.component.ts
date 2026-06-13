@@ -86,7 +86,13 @@ export class CollectionsComponent implements OnInit {
     return this.adapter.get_v3('GET /admin/collections', { query: q }).pipe(
       map((response: any): AxServerFetchResult<CollectionRow> => {
         const raw: any[] = Array.isArray(response?.data) ? response.data : response?.data?.items ?? [];
-        return { rows: raw as CollectionRow[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((c) => ({
+          ...c,
+          id: c.id,
+          label: c.name ?? c.collection ?? '—',
+          is_active: c.is_active ?? false,
+        } as CollectionRow));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load collections at this time.');

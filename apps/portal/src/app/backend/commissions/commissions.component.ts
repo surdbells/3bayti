@@ -92,13 +92,9 @@ export class CommissionsComponent implements OnInit {
         { key: 'date', label: 'Date', type: 'date-range' },
       ],
       columns: [
-        { key: 'order_ref', label: 'Order ref', sortable: true, sticky: 'left', width: '12rem' },
-        { key: 'product_name', label: 'Product' },
-        { key: 'customer_name', label: 'Customer', hideOnMobile: true },
-        { key: 'quantity', label: 'Qty', align: 'center', hideOnMobile: true },
-        { key: 'total_paid', label: 'Total paid', align: 'right', format: (v) => this.money(v) },
+        { key: 'order_ref', label: 'Order ref', sortable: true, sticky: 'left', width: '14rem' },
+        { key: 'total_paid', label: 'Order total', align: 'right', format: (v) => this.money(v) },
         { key: 'commission', label: 'Commission', align: 'right', format: (v) => this.money(v) },
-        { key: 'charges', label: 'Charges', align: 'right', hideOnMobile: true, format: (v) => this.money(v) },
         { key: 'vendor_pay', label: 'Vendor pay', align: 'right', format: (v) => this.money(v) },
         { key: 'status', label: 'Status', align: 'center' },
         { key: 'created', label: 'Date', hideOnMobile: true,
@@ -120,13 +116,29 @@ export class CommissionsComponent implements OnInit {
     return this.adapter.get_v3('GET /admin/commissions', { query: q }).pipe(
       map((response: any): AxServerFetchResult<Sales> => {
         const raw: any[] = response?.data ?? response?.commissions ?? [];
-        return { rows: raw as Sales[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((o) => this.mapRow(o));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load commissions at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<Sales>);
       }),
     );
+  }
+
+  /** Map the /admin/commissions order shape into the row. Commission and
+   *  vendor-pay values are computed server-side; null until that lands. */
+  private mapRow(o: any): Sales {
+    return {
+      ...o,
+      id: o.id,
+      order_ref: o.order_reference ?? o.id,
+      total_paid: o.subtotal ?? o.total ?? '0',
+      commission: o.commission_aed ?? null,
+      vendor_pay: o.vendor_pay_aed ?? null,
+      status: o.status ?? '',
+      created: o.created_at ?? o.date ?? '',
+    } as Sales;
   }
 
   goBack() { this.router.navigate(['/backend']); }

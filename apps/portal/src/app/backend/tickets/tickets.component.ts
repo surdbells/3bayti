@@ -129,13 +129,30 @@ export class TicketsComponent implements OnInit {
     return this.adapter.get_v3('GET /admin/tickets', { query: q }).pipe(
       map((response: any): AxServerFetchResult<Tickets> => {
         const raw: any[] = response?.data ?? [];
-        return { rows: raw as Tickets[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((t) => this.mapRow(t));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load tickets at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<Tickets>);
       }),
     );
+  }
+
+  /** Map the /admin/tickets shape into the row. */
+  private mapRow(t: any): Tickets {
+    return {
+      ...t,
+      ticket_id: t.id,
+      ticket_ref: t.reference ?? `#${t.id}`,
+      store_name: t.vendor_name ?? (t.vendor_id ? `Store #${t.vendor_id}` : '—'),
+      subject: t.subject ?? '',
+      priority: t.priority ?? '',
+      status: t.status ?? '',
+      messages: t.message_count ?? 0,
+      created: t.created_at ?? '',
+      updated: t.updated_at ?? '',
+    } as Tickets;
   }
 
   onRowAction(e: { action: { id: string }; row: Tickets }) {

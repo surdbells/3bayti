@@ -82,36 +82,36 @@ export class LogisticsComponent implements OnInit {
 
   private fetchLogistics(query: AxQueryState) {
     const q: any = {
-      status: 'shipped',
       limit: query.pageSize,
       offset: query.pageIndex * query.pageSize,
     };
     if (query.search) q.search = query.search;
-    return this.adapter.get_v3('GET /admin/orders', { query: q }).pipe(
+    // Logistics needs per-store delivery contacts. /admin/orders carries
+    // none of that (store data is per-item vendor_id only); /admin/vendors
+    // has the store name + contact email/phone.
+    return this.adapter.get_v3('GET /admin/vendors', { query: q }).pipe(
       map((response: any): AxServerFetchResult<LogisticRow> => {
-        const raw: any[] = response?.orders ?? response?.data ?? [];
-        // Group by store so each store appears once.
-        const byStore = new Map<number, LogisticRow>();
-        for (const o of raw) {
-          const sid = o.store ?? o.vendor_id;
-          if (sid != null && !byStore.has(sid)) {
-            byStore.set(sid, {
-              store: sid,
-              store_name: o.store_name ?? '',
-              store_address: o.store_address ?? o.country_code ?? '',
-              store_email: o.store_email ?? o.contact_email ?? '',
-              store_phone: o.store_phone ?? o.contact_phone ?? '',
-            });
-          }
-        }
-        const rows = [...byStore.values()];
-        return { rows, total: response?.pagination?.total ?? response?.meta?.total ?? rows.length };
+        const raw: any[] = response?.vendors ?? response?.data ?? [];
+        const rows = raw.map((v) => this.mapRow(v));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load logistics at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<LogisticRow>);
       }),
     );
+  }
+
+  /** Map the admin vendor shape into a per-store logistics row. No street
+   *  address field exists on the vendor; contact email/phone are shown. */
+  private mapRow(v: any): LogisticRow {
+    return {
+      store: v.id,
+      store_name: v.name ?? '—',
+      store_address: v.address ?? '—',
+      store_email: v.contact_email ?? '—',
+      store_phone: v.contact_phone ?? '—',
+    } as LogisticRow;
   }
 
   onRowAction(e: { action: { id: string }; row: LogisticRow }) {

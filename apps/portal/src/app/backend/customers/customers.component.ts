@@ -103,13 +103,27 @@ export class CustomersComponent implements OnInit {
     return this.adapter.get_v3('GET /admin/users', { query: q }).pipe(
       map((response: any): AxServerFetchResult<CustomerRow> => {
         const raw: any[] = Array.isArray(response?.data) ? response.data : response?.data?.items ?? [];
-        return { rows: raw as CustomerRow[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((u) => this.mapCustomer(u));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load customers at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<CustomerRow>);
       }),
     );
+  }
+
+  /** Map publicProfile (last_login_at, is_store_active) into the row. */
+  private mapCustomer(u: any): CustomerRow {
+    return {
+      id: u.id,
+      first_name: u.first_name ?? '',
+      last_name: u.last_name ?? '',
+      email: u.email ?? '',
+      phone: u.phone ? `${u.country_code ?? ''}${u.phone}` : '',
+      last_login: u.last_login_at ?? u.last_login ?? '',
+      status: u.is_active ?? u.is_store_active ?? true,
+    } as CustomerRow;
   }
 
   onRowAction(e: { action: { id: string }; row: CustomerRow }) {

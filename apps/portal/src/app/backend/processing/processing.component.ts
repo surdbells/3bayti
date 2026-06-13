@@ -122,13 +122,31 @@ export class ProcessingComponent implements OnInit {
     return this.adapter.get_v3('GET /admin/orders', { query: q }).pipe(
       map((response: any): AxServerFetchResult<Transaction> => {
         const raw: any[] = response?.orders ?? response?.data ?? [];
-        return { rows: raw as Transaction[], total: response?.pagination?.total ?? response?.meta?.total ?? raw.length };
+        const rows = raw.map((o) => this.mapRow(o));
+        return { rows, total: response?.pagination?.total ?? response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load orders at this time.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<Transaction>);
       }),
     );
+  }
+
+  /** Flatten the admin order shape into the processing row. */
+  private mapRow(o: any): Transaction {
+    const customer = o.customer ?? {};
+    const name = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim();
+    return {
+      ...o,
+      id: o.id,
+      order_id: o.order_reference ?? o.id,
+      transaction_id: o.order_reference ?? '',
+      customer: name || customer.email || '—',
+      total_paid: o.total ?? o.subtotal ?? '0',
+      delivery_fee: o.delivery_fee ?? '0',
+      status: o.status ?? '',
+      created: o.date ?? o.created_at ?? '',
+    } as Transaction;
   }
 
   onRowAction(e: { action: { id: string }; row: Transaction }) {
