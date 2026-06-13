@@ -19,16 +19,43 @@
         <div class="ax-flex ax-gap-2 ax-items-center">
           <span *ngIf="store.approved" class="ax-badge ax-badge-success">Approved</span>
           <span *ngIf="!store.approved" class="ax-badge ax-badge-warning">Pending approval</span>
-          <button
-            type="button"
-            class="ax-btn ax-btn-outline ax-btn-sm"
-            (click)="get_store()"
-            [disabled]="ui_controls.is_loading">
+          <span *ngIf="isActive" class="ax-badge ax-badge-info">Active</span>
+          <span *ngIf="!isActive" class="ax-badge ax-badge-neutral">Inactive</span>
+
+          <button *ngIf="!store.approved" type="button" class="ax-btn ax-btn-primary ax-btn-sm"
+            (click)="approveStore()" [disabled]="ui_controls.acting">
+            <span class="material-symbols-outlined" aria-hidden="true">check_circle</span> Approve
+          </button>
+          <button *ngIf="isActive" type="button" class="ax-btn ax-btn-outline ax-btn-danger ax-btn-sm"
+            (click)="suspendStore()" [disabled]="ui_controls.acting">
+            <span class="material-symbols-outlined" aria-hidden="true">block</span> Suspend
+          </button>
+          <button *ngIf="!isActive" type="button" class="ax-btn ax-btn-outline ax-btn-sm"
+            (click)="reactivateStore()" [disabled]="ui_controls.acting">
+            <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span> Reactivate
+          </button>
+          <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm"
+            (click)="get_store()" [disabled]="ui_controls.is_loading" aria-label="Refresh">
             <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
-            Refresh
           </button>
         </div>
       </header>
+
+      <!-- Quick links to this store's operational screens -->
+      <nav *ngIf="!ui_controls.is_loading" class="ms-quicklinks" aria-label="Store sections">
+        <button type="button" class="ms-quicklink" (click)="openOrders()">
+          <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+          <span><span class="ms-quicklink-title">Orders</span><span class="ms-quicklink-sub">Lifecycle &amp; fulfilment</span></span>
+        </button>
+        <button type="button" class="ms-quicklink" (click)="openProducts()">
+          <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+          <span><span class="ms-quicklink-title">Products</span><span class="ms-quicklink-sub">Catalogue &amp; stock</span></span>
+        </button>
+        <button type="button" class="ms-quicklink" (click)="openSales()">
+          <span class="material-symbols-outlined" aria-hidden="true">insights</span>
+          <span><span class="ms-quicklink-title">Sales</span><span class="ms-quicklink-sub">Performance &amp; revenue</span></span>
+        </button>
+      </nav>
 
       <!-- Loading -->
       <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">

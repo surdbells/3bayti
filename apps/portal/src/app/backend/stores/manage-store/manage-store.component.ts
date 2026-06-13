@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
@@ -10,7 +10,7 @@ import { AccountSetupComponent } from '../account-setup/account-setup.component'
 
 // Ax design system
 import { AxRichEditorComponent } from '../../../shared/rich/ax-rich-editor.component';
-import { AxTabsComponent, AxTabComponent } from '../../../shared/overlays';
+import { AxTabsComponent, AxTabComponent, AxConfirmService } from '../../../shared/overlays';
 
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 @Component({
@@ -29,12 +29,17 @@ import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.c
   styleUrl: './manage-store.component.css',
 })
 export class ManageStoreComponent implements OnInit {
+  private readonly confirm = inject(AxConfirmService);
+
   ui_controls = {
     is_loading: false,
     no_data: false,
     sending_message: false,
     nav_open: false,
+    acting: false,
   };
+
+  private storeId = 0;
 
   session_data: any = '';
   store_name: any = '';
@@ -80,6 +85,7 @@ export class ManageStoreComponent implements OnInit {
     this.user_session = GlobalComponent.decodeBase64(this.session_data);
     const storeId = Number(this.route.snapshot.queryParamMap.get('id'));
     this.store_name = this.route.snapshot.queryParamMap.get('name');
+    this.storeId = storeId || 0;
 
     this.store.id = this.user_session.id;
     this.store.token = this.user_session.token;
@@ -147,5 +153,68 @@ export class ManageStoreComponent implements OnInit {
         this.ui_controls.sending_message = false;
       },
     });
+  }
+
+  // ── Quick navigation to this store's sub-screens ───────────────────
+  private openTab(path: string) {
+    this.router.navigate([path], {
+      queryParams: { id: this.storeId, name: this.store.store_name || this.store_name },
+    });
+  }
+  openOrders()   { this.openTab('/store_orders'); }
+  openProducts() { this.openTab('/store_products'); }
+  openSales()    { this.openTab('/store_sales'); }
+
+  // ── Store status actions ───────────────────────────────────────────
+  approveStore() {
+    this.confirm.confirm({
+      title: 'Approve store',
+      message: `${this.store.store_name || 'This store'} will be approved and made visible.`,
+      confirmLabel: 'Approve', cancelLabel: 'Cancel',
+    }).then((ok) => {
+      if (!ok) return;
+      this.ui_controls.acting = true;
+      this.adapter.post_v3('POST /admin/vendors/:id/approve', {}, { params: { id: String(this.storeId) } })
+        .subscribe({
+          next: (r: any) => { if (r) { this.toast.success('Store approved.'); this.get_store(); } this.ui_controls.acting = false; },
+          error: () => { this.toast.error('Unable to approve store.'); this.ui_controls.acting = false; },
+        });
+    });
+  }
+
+  suspendStore() {
+    this.confirm.confirm({
+      title: 'Suspend store',
+      message: `${this.store.store_name || 'This store'} will be suspended and hidden from customers.`,
+      confirmLabel: 'Suspend', cancelLabel: 'Cancel', variant: 'danger',
+    }).then((ok) => {
+      if (!ok) return;
+      this.ui_controls.acting = true;
+      this.adapter.post_v3('POST /admin/vendors/:id/suspend', {}, { params: { id: String(this.storeId) } })
+        .subscribe({
+          next: (r: any) => { if (r) { this.toast.success('Store suspended.'); this.get_store(); } this.ui_controls.acting = false; },
+          error: () => { this.toast.error('Unable to suspend store.'); this.ui_controls.acting = false; },
+        });
+    });
+  }
+
+  reactivateStore() {
+    this.confirm.confirm({
+      title: 'Reactivate store',
+      message: `${this.store.store_name || 'This store'} will be reactivated.`,
+      confirmLabel: 'Reactivate', cancelLabel: 'Cancel',
+    }).then((ok) => {
+      if (!ok) return;
+      this.ui_controls.acting = true;
+      this.adapter.post_v3('POST /admin/vendors/:id/reactivate', {}, { params: { id: String(this.storeId) } })
+        .subscribe({
+          next: (r: any) => { if (r) { this.toast.success('Store reactivated.'); this.get_store(); } this.ui_controls.acting = false; },
+          error: () => { this.toast.error('Unable to reactivate store.'); this.ui_controls.acting = false; },
+        });
+    });
+  }
+
+  get isActive(): boolean {
+    return this.store.store_status === true || String(this.store.is_active) === 'true' || String(this.store.is_active) === '1';
   }
 }

@@ -1,0 +1,28 @@
+
+/* Quick links to store sub-screens */
+.ms-quicklinks {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.ms-quicklink {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--ax-color-bg-surface, #fff);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg, 12px);
+  cursor: pointer; text-align: left;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+}
+.ms-quicklink:hover {
+  border-color: var(--ax-color-brand, #906952);
+  background: var(--ax-color-bg-muted, #faf7f2);
+}
+.ms-quicklink:active { transform: scale(0.99); }
+.ms-quicklink .material-symbols-outlined {
+  font-size: 1.6rem; color: var(--ax-color-brand, #906952); flex-shrink: 0;
+}
+.ms-quicklink > span:last-child { display: flex; flex-direction: column; }
+.ms-quicklink-title { font-weight: 600; color: var(--ax-color-text-primary); font-size: 0.95rem; }
+.ms-quicklink-sub { font-size: 0.75rem; color: var(--ax-color-text-tertiary); }
