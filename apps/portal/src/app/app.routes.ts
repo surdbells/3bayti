@@ -260,6 +260,18 @@ export const routes: Routes = [
     title: 'Products'
   },
   {
+    path: 'admin_create_product',
+    loadComponent: () => import('./vendor/create-product/create-product.component').then(m => m.CreateProductComponent),
+    canActivate: [adminGuard],
+    title: 'Create product'
+  },
+  {
+    path: 'admin_edit_product',
+    loadComponent: () => import('./vendor/edit-product/edit-product.component').then(m => m.EditProductComponent),
+    canActivate: [adminGuard],
+    title: 'Edit product'
+  },
+  {
     path: 'adminviewproduct',
     loadComponent: () => import('./backend/admin-view-product/admin-view-product.component').then(m => m.AdminViewProductComponent),
     canActivate: [adminGuard],

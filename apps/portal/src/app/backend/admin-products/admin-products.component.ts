@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { of } from 'rxjs';
@@ -8,6 +8,7 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { AxConfirmService } from '../../shared/overlays';
 import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
@@ -20,6 +21,7 @@ import {
 
 interface ProductRow extends Record<string, unknown> {
   id: number;
+  slug: string;
   name: string;
   category_name: string;
   store: number;
@@ -50,6 +52,7 @@ export class AdminProductsComponent implements OnInit {
 
   config!: AxDataTableConfig<ProductRow>;
   dataSource!: AxServerDataSource<ProductRow>;
+  private readonly confirm = inject(AxConfirmService);
 
   constructor(
     private router: Router,
@@ -109,7 +112,9 @@ export class AdminProductsComponent implements OnInit {
         { key: 'status', label: 'Status', align: 'center' },
       ],
       rowActions: [
+        { id: 'edit', label: 'Edit', icon: 'edit' },
         { id: 'manage-store', label: 'Manage store', icon: 'storefront' },
+        { id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger' },
       ],
     };
   }
@@ -144,6 +149,7 @@ export class AdminProductsComponent implements OnInit {
     const inStock = p.in_stock === true;
     return {
       id: p.id,
+      slug: p.slug ?? '',
       name: p.name ?? '—',
       category_name: category,
       store: p.vendor?.id ?? 0,
@@ -159,12 +165,48 @@ export class AdminProductsComponent implements OnInit {
   }
 
   onRowAction(e: { action: { id: string }; row: ProductRow }) {
-    if (e.action.id === 'manage-store') {
-      const urlTree = this.router.createUrlTree(['/manage_store'], {
-        queryParams: { id: e.row.store, name: e.row.store_name },
-      });
-      window.open(this.router.serializeUrl(urlTree), '_blank');
+    const row = e.row;
+    switch (e.action.id) {
+      case 'edit':
+        // Admin edit: pass the v3 id (for the PUT) + slug (for load).
+        this.router.navigate(['/admin_edit_product'], {
+          queryParams: { id: row.id, slug: row.slug },
+        });
+        return;
+      case 'manage-store': {
+        const urlTree = this.router.createUrlTree(['/manage_store'], {
+          queryParams: { id: row.store, name: row.store_name },
+        });
+        window.open(this.router.serializeUrl(urlTree), '_blank');
+        return;
+      }
+      case 'delete':
+        return this.confirmDelete(row);
     }
+  }
+
+  newProduct(): void {
+    this.router.navigate(['/admin_create_product']);
+  }
+
+  private confirmDelete(row: ProductRow): void {
+    this.confirm.confirm({
+      title: 'Delete product',
+      message: `"${row.name}" will be removed from ${row.store_name || 'the store'}. This cannot be undone.`,
+      confirmLabel: 'Delete',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    }).then((ok) => { if (ok) this.deleteProduct(row.id); });
+  }
+
+  private deleteProduct(id: number): void {
+    this.adapter.delete_v3('DELETE /admin/products/:id', { params: { id: String(id) } }).subscribe({
+      next: () => {
+        this.toast.success('Product deleted.');
+        this.dataSource.retry();
+      },
+      error: () => this.toast.error('Unable to delete the product.'),
+    });
   }
 
   stockBadge(status: string): string {
