@@ -1,1 +1,22 @@
-<p>returns works!</p>
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back"></app-icon> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Operations</span>
+        <h1 class="ax-page-title">Returns</h1>
+        <p class="ax-page-subtitle">Return requests across all stores.</p>
+      </div>
+    </header>
+
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="status" let-row>
+          <span [ngClass]="statusBadgeClass(row.status)">{{ statusLabel(row.status) }}</span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
+</app-admin-shell>

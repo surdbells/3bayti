@@ -284,6 +284,12 @@ export const routes: Routes = [
     title: 'View commission'
   },
   {
+    path: 'adminreturns',
+    loadComponent: () => import('./backend/returns/returns.component').then(m => m.ReturnsComponent),
+    canActivate: [adminGuard],
+    title: 'Returns'
+  },
+  {
     path: 'adminlogistics',
     loadComponent: () => import('./backend/logistics/logistics.component').then(m => m.LogisticsComponent),
     canActivate: [adminGuard],

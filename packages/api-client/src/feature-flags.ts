@@ -1021,6 +1021,9 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/commissions': {
     target: 'new', oldPath: '/admin/common/commissions', newPath: '/v3/admin/commissions', shape: 'v3-envelope',
   },
+  'GET /admin/returns': {
+    target: 'new', oldPath: '/admin/common/get-returns', newPath: '/v3/admin/returns', shape: 'v3-envelope',
+  },
   'GET /admin/customers': {
     target: 'new', oldPath: '/admin/common/get-customers', newPath: '/v3/admin/users?role=customer', shape: 'v3-envelope',
   },
