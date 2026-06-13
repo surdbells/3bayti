@@ -331,3 +331,12 @@
   width: 400px !important;
   max-width: 95vw !important;
 }
+
+.ax-drawer-body .vp-field { margin-bottom: 1rem; }
+.ax-drawer-body .vp-grid { margin-bottom: 1rem; }
+.ax-drawer-body .vp-grid .ax-form-field { margin-bottom: 0; }
+.vp-preview-img {
+  width: 100%; max-width: 12rem; height: auto;
+  border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);
+  object-fit: cover;
+}
