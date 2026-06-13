@@ -124,7 +124,7 @@ final class ImageStorageService
         try {
             fwrite($tmp, $bytes);
             rewind($tmp);
-            $this->filesystem->writeStream($storagePath, $tmp);
+            $this->filesystem->writeStream($storagePath, $tmp, ['visibility' => \League\Flysystem\Visibility::PUBLIC]);
         } finally {
             fclose($tmp);
         }
@@ -238,7 +238,7 @@ final class ImageStorageService
         }
 
         try {
-            $this->filesystem->writeStream($path, $resource);
+            $this->filesystem->writeStream($path, $resource, ['visibility' => \League\Flysystem\Visibility::PUBLIC]);
         } finally {
             if (is_resource($resource)) {
                 fclose($resource);

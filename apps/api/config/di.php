@@ -708,11 +708,19 @@ return [
      */
     \League\Flysystem\FilesystemOperator::class => static function (ContainerInterface $c): \League\Flysystem\FilesystemOperator {
         $uploadsRoot = dirname(__DIR__) . '/var/uploads';
-        // LocalFilesystemAdapter creates the root dir on demand at
-        // first write; no need to mkdir ahead of time. The default
-        // visibility settings (0644 file, 0755 dir) are appropriate
-        // for upload content.
-        $adapter = new \League\Flysystem\Local\LocalFilesystemAdapter($uploadsRoot);
+        // Public visibility: 0644 files, 0755 dirs, and crucially the
+        // default for NEW directories is PUBLIC (0755) — Flysystem's own
+        // default is PRIVATE (0700), which makes created subdirectories
+        // un-traversable by the web-server user and yields 403s on served
+        // uploads. Files inherit 0644 so the web server can read them.
+        $visibility = new \League\Flysystem\UnixVisibility\PortableVisibilityConverter(
+            0644, // file, public
+            0600, // file, private
+            0755, // dir, public
+            0700, // dir, private
+            \League\Flysystem\Visibility::PUBLIC, // default for directories
+        );
+        $adapter = new \League\Flysystem\Local\LocalFilesystemAdapter($uploadsRoot, $visibility);
         return new \League\Flysystem\Filesystem($adapter);
     },
 
