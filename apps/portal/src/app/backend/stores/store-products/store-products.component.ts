@@ -94,8 +94,17 @@ export class StoreProductsComponent implements OnInit {
     );
     this.storeId = Number(this.route.snapshot.queryParamMap.get('id'));
     this.store_name = this.route.snapshot.queryParamMap.get('name') ?? '';
+    this.resolveVendor();
     this.loadCategories();
     this.buildTable();
+  }
+
+  /** Resolve legacy store id → v3 vendor id (needed to create products). */
+  private resolveVendor() {
+    this.adapter.get_v3('GET /vendors/by-legacy-id/:id', { params: { id: String(this.storeId) } }).subscribe({
+      next: (res: any) => { this.vendorV3Id = res?.data?.id ?? this.vendorV3Id; },
+      error: () => { /* falls back to meta.vendor_id from the list */ },
+    });
   }
 
   private loadCategories() {
