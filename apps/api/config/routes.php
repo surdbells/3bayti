@@ -675,6 +675,11 @@ return function (App $app): void {
         $group->delete('/coupons/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Vendor\Coupon\DeleteVendorCouponController::class,
         );
+        // F3 — vendor coupon detail + usage analytics.
+        $group->get('/coupons/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Vendor\Coupon\VendorCouponAnalyticsController::class, 'detail']);
+        $group->get('/coupons/{id:[0-9]+}/analytics',
+            [\Bayti\Api\Http\Controllers\Vendor\Coupon\VendorCouponAnalyticsController::class, 'analytics']);
 
         // Vendor read-only collections list (for the product form picker).
         // Reuses the admin controller's list method — read-only, no writes

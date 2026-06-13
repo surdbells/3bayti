@@ -134,14 +134,15 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   fetchCouponStats(): void {
-    this.crudService.post_request(
-      this.analyticsRequest('coupon_stats', { coupon_id: this.coupon_id }),
-      GlobalComponent.couponAnalytics,
-    ).subscribe({
+    if (this.coupon_id <= 0) { this.ui.loading = false; return; }
+    this.adapter.get_v3('GET /vendor/coupons/:id/analytics', {
+      params: { id: String(this.coupon_id) }, query: { period: 'coupon_stats' },
+    }).subscribe({
       next: (r: any) => {
-        if (r) this.coupon_stats = r.data;
+        if (r?.data) this.coupon_stats = r.data;
         this.ui.loading = false;
       },
+      error: () => { this.ui.loading = false; },
     });
   }
 
@@ -157,16 +158,14 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   fetchUsageOverTime(): void {
-    this.crudService.post_request(
-      this.analyticsRequest('usage_over_time', {
-        coupon_id: this.coupon_id || undefined,
-        group_by: this.chart_group_by,
-        days_back: this.chart_days_back,
-      }),
-      GlobalComponent.couponAnalytics,
-    ).subscribe({
+    // The v3 vendor analytics endpoint serves the per-coupon daily series.
+    if (this.coupon_id <= 0) return;
+    this.adapter.get_v3('GET /vendor/coupons/:id/analytics', {
+      params: { id: String(this.coupon_id) },
+      query: { period: 'usage_over_time', days_back: this.chart_days_back },
+    }).subscribe({
       next: (r: any) => {
-        if (r) {
+        if (r?.data) {
           this.usage_series = r.data;
           this.chart_max_uses = Math.max(1, ...this.usage_series.map(s => s.uses));
         }

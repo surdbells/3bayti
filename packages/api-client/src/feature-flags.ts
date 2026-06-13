@@ -897,7 +897,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/coupons/get-coupon-by-id', newPath: '/v3/vendor/coupons/:id', shape: 'v3-envelope',
   },
   'GET /vendor/coupons/:id/analytics': {
-    target: 'old', oldPath: '/vendors/coupons/coupon-analytics', newPath: '/v3/vendor/coupons/:id/analytics', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/coupons/coupon-analytics', newPath: '/v3/vendor/coupons/:id/analytics', shape: 'v3-envelope',
   },
   'GET /vendor/collections': {
     target: 'new', oldPath: '/admin/collections', newPath: '/v3/vendor/collections', shape: 'v3-envelope',
