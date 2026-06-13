@@ -26,8 +26,6 @@ interface SaleRow extends Record<string, unknown> {
   customer_name: string;
   quantity: number;
   total_price: string;
-  commission: string;
-  vendor_pay: string;
   status: string;
   created: string;
 }
@@ -178,8 +176,14 @@ export class StoreSalesComponent implements OnInit {
     this.adapter.get_v3('GET /vendors/by-legacy-id/:id', { params: { id: String(this.storeId) } }).subscribe({
       next: (res: any) => {
         this.vendorV3Id = res?.data?.id ?? 0;
-        if (this.vendorV3Id) this.loadAnalytics();
-        else { this.loadingAnalytics.set(false); }
+        if (this.vendorV3Id) {
+          this.loadAnalytics();
+          // The table was built before resolution; re-run its fetch now
+          // that we have the vendor id to scope by.
+          this.dataSource?.retry();
+        } else {
+          this.loadingAnalytics.set(false);
+        }
       },
       error: () => { this.loadingAnalytics.set(false); },
     });
@@ -231,13 +235,11 @@ export class StoreSalesComponent implements OnInit {
       export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'store-sales' },
       filters: [{ key: 'date', label: 'Date', type: 'date-range' }],
       columns: [
-        { key: 'order_ref', label: 'Order ref', sortable: true, sticky: 'left', width: '12rem' },
+        { key: 'order_ref', label: 'Order ref', sortable: true, sticky: 'left', width: '14rem' },
         { key: 'product_name', label: 'Product' },
         { key: 'customer_name', label: 'Customer', hideOnMobile: true },
         { key: 'quantity', label: 'Qty', align: 'center', hideOnMobile: true },
         { key: 'total_price', label: 'Total', align: 'right', format: (v) => this.money(v) },
-        { key: 'commission', label: 'Commission', align: 'right', hideOnMobile: true, format: (v) => this.money(v) },
-        { key: 'vendor_pay', label: 'Vendor pay', align: 'right', format: (v) => this.money(v) },
         { key: 'status', label: 'Status', align: 'center' },
         { key: 'created', label: 'Date', hideOnMobile: true,
           format: (v) => (v ? new Date(String(v)).toLocaleDateString() : '—') },
@@ -246,25 +248,55 @@ export class StoreSalesComponent implements OnInit {
   }
 
   private fetchSales(query: AxQueryState) {
+    // Scope the list to THIS store. /admin/transactions has no vendor
+    // filter (it's global) — using it showed every store the same list.
+    // /admin/orders filters by the resolved v3 vendor_id and carries the
+    // product/line-item data this table needs.
+    if (!this.vendorV3Id) {
+      return of({ rows: [], total: 0 } as AxServerFetchResult<SaleRow>);
+    }
     const q: any = {
       limit: query.pageSize,
       offset: query.pageIndex * query.pageSize,
-      vendor: this.storeId,
+      vendor_id: this.vendorV3Id,
     };
     if (query.search) q.search = query.search;
     const range = query.filters['date'] as AxDateRange | undefined;
     if (range?.from) q.since = range.from;
     if (range?.to) q.until = range.to;
-    return this.adapter.get_v3('GET /admin/transactions', { query: q }).pipe(
+    return this.adapter.get_v3('GET /admin/orders', { query: q }).pipe(
       map((response: any): AxServerFetchResult<SaleRow> => {
-        const raw: any[] = Array.isArray(response?.data) ? response.data : response?.data?.items ?? [];
-        return { rows: raw as SaleRow[], total: response?.meta?.total ?? raw.length };
+        const raw: any[] = response?.orders ?? (Array.isArray(response?.data) ? response.data : []);
+        const rows = raw.map((o) => this.mapSale(o));
+        return { rows, total: response?.pagination?.total ?? response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load store sales.');
         return of({ rows: [], total: 0 } as AxServerFetchResult<SaleRow>);
       }),
     );
+  }
+
+  /** Flatten an admin order into a sales row. */
+  private mapSale(o: any): SaleRow {
+    const items: any[] = o.items ?? [];
+    const first = items[0] ?? {};
+    const qty = items.reduce((s, i) => s + (Number(i.quantity) || 0), 0);
+    const productLabel = items.length > 1
+      ? `${first.product_name ?? 'Item'} +${items.length - 1} more`
+      : (first.product_name ?? `Order ${o.order_reference ?? o.id}`);
+    const customer = o.customer ?? {};
+    const name = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim();
+    return {
+      id: o.id,
+      order_ref: o.order_reference ?? '',
+      product_name: productLabel,
+      customer_name: name || customer.email || '—',
+      quantity: qty,
+      total_price: o.total ?? o.subtotal ?? '0',
+      status: o.status ?? '',
+      created: o.date ?? o.created_at ?? '',
+    };
   }
 
   // ── Display helpers ────────────────────────────────────────────────

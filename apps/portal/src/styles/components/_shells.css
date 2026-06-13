@@ -132,6 +132,31 @@
   max-width: 100vw;
 }
 
+/* Backdrop + fixed anchoring for drawers used as direct template markup
+   (i.e. not opened via AxDrawerService's CDK overlay, which supplies its
+   own positioning). Without these a raw <aside class="ax-drawer"> would
+   sit in normal document flow at the bottom of the page. */
+.ax-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(46, 36, 28, 0.45);
+  z-index: var(--ax-z-drawer);
+  animation: ax-drawer-overlay-fade var(--ax-duration-fast, 150ms) ease;
+}
+@keyframes ax-drawer-overlay-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.ax-drawer-overlay + .ax-drawer-right,
+.ax-drawer-overlay + .ax-drawer-left,
+.ax-drawer-overlay + .ax-drawer-bottom {
+  position: fixed;
+  z-index: calc(var(--ax-z-drawer) + 1);
+}
+.ax-drawer-overlay + .ax-drawer-right  { top: 0; right: 0; }
+.ax-drawer-overlay + .ax-drawer-left   { top: 0; left: 0; }
+.ax-drawer-overlay + .ax-drawer-bottom { left: 0; right: 0; bottom: 0; }
+
 .ax-drawer-sm { width: 20rem; }
 .ax-drawer-lg { width: 36rem; }
 .ax-drawer-xl { width: 48rem; }

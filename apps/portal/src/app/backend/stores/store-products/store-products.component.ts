@@ -124,12 +124,10 @@ export class StoreProductsComponent implements OnInit {
       emptyDescription: 'This store has no products listed.',
       export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'store-products' },
       columns: [
-        { key: 'name', label: 'Name', sortable: true, sticky: 'left', width: '16rem' },
-        { key: 'label', label: 'Label', hideOnMobile: true },
+        { key: 'name', label: 'Name', sortable: true, sticky: 'left', width: '18rem' },
         { key: 'category', label: 'Category', hideOnMobile: true },
         { key: 'price', label: 'Price', align: 'right',
           format: (v) => (v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—') },
-        { key: 'quantity', label: 'Qty', align: 'center', hideOnMobile: true },
         { key: 'stock_status', label: 'Stock', align: 'center' },
       ],
       rowActions: [
@@ -153,7 +151,8 @@ export class StoreProductsComponent implements OnInit {
         // Capture the resolved v3 vendor id for create operations.
         if (response?.meta?.vendor_id) this.vendorV3Id = response.meta.vendor_id;
         const raw: any[] = response?.data ?? response?.products ?? [];
-        return { rows: raw as ProductRow[], total: response?.meta?.total ?? raw.length };
+        const rows = raw.map((p) => this.mapProduct(p));
+        return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
         this.toast.error('Unable to load store products.');
@@ -165,6 +164,27 @@ export class StoreProductsComponent implements OnInit {
   onRowAction(e: { action: { id: string }; row: ProductRow }) {
     if (e.action.id === 'edit') this.openEdit(e.row);
     else if (e.action.id === 'delete') this.confirmDelete(e.row);
+  }
+
+  /** Map the catalog product shape (price.amount, in_stock, category_slug)
+   *  into the flat row the table renders. */
+  private mapProduct(p: any): ProductRow {
+    const price = p.price?.amount ?? p.price ?? 0;
+    const inStock = p.in_stock === true;
+    const catSlug: string = p.category_slug ?? p.category?.slug ?? '';
+    const category = p.category?.name
+      ?? (catSlug ? catSlug.replace(/-/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : '—');
+    return {
+      id: p.id,
+      name: p.name ?? '—',
+      label: p.vendor?.name ?? '',
+      category,
+      price: String(price),
+      quantity: p.stock_quantity ?? 0,
+      stock_status: p.stock_status ?? (inStock ? 'in_stock' : 'out_of_stock'),
+      image: p.primary_image?.url ?? p.image ?? '',
+      slug: p.slug ?? '',
+    } as ProductRow;
   }
 
   // ── Create / Edit drawer ───────────────────────────────────────────
