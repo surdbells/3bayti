@@ -911,8 +911,11 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /vendor/measurements/:id': {
     target: 'old', oldPath: '/vendors/measurement/getMeasurementById', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
   },
+  'POST /vendor/messages/:id/read': {
+    target: 'new', oldPath: '/vendors/common/mark_message', newPath: '/v3/vendor/messages/:id/read', shape: 'v3-envelope',
+  },
   'GET /vendor/messages': {
-    target: 'old', oldPath: '/admin/message-vendor', newPath: '/v3/vendor/messages', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/message-vendor', newPath: '/v3/vendor/messages', shape: 'v3-envelope',
   },
   'GET /vendor/metrics': {
     target: 'new', oldPath: '/vendors/common/dashboard-activity', newPath: '/v3/vendor/metrics', shape: 'v3-envelope',

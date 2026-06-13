@@ -700,6 +700,12 @@ return function (App $app): void {
         $group->delete('/measurements/{id:[0-9]+}',
             [\Bayti\Api\Http\Controllers\Vendor\VendorSizeChartController::class, 'delete']);
 
+        // F3 — Vendor message inbox (read-side of admin→vendor messages).
+        $group->get('/messages',
+            [\Bayti\Api\Http\Controllers\Vendor\VendorMessagesController::class, 'list']);
+        $group->post('/messages/{id:[0-9]+}/read',
+            [\Bayti\Api\Http\Controllers\Vendor\VendorMessagesController::class, 'markRead']);
+
         // M3.3.1-D — Vendor store settings
         $group->get('/store',
             \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorStoreController::class,

@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 195 route keys.
+ * 196 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -187,6 +187,7 @@ export type V3RouteKey =
   | 'POST /vendor/labels'
   | 'POST /vendor/measurements'
   | 'POST /vendor/messages'
+  | 'POST /vendor/messages/:id/read'
   | 'POST /vendor/notifications/mark-read'
   | 'POST /vendor/onboarding/submit'
   | 'POST /vendor/products'
@@ -385,6 +386,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /vendor/labels',
   'POST /vendor/measurements',
   'POST /vendor/messages',
+  'POST /vendor/messages/:id/read',
   'POST /vendor/notifications/mark-read',
   'POST /vendor/onboarding/submit',
   'POST /vendor/products',

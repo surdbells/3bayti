@@ -1,29 +1,47 @@
 <app-vendor-shell>
   <div class="ax-container">
-    <!-- Page header -->
     <header class="ax-page-header">
       <div class="ax-page-header-content">
-        <button
-          type="button"
-          (click)="goBack()"
-          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
-          style="align-self: flex-start;">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self: flex-start;">
           <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back
         </button>
         <span class="ax-page-header-eyebrow">Communications</span>
         <h1 class="ax-page-title">Messages</h1>
-        <p class="ax-page-subtitle">Direct conversations with your customers will appear here.</p>
+        <p class="ax-page-subtitle">
+          Messages from the 3bayti team<span *ngIf="unread > 0"> · <strong>{{ unread }}</strong> unread</span>.
+        </p>
       </div>
     </header>
 
+    <!-- Loading -->
+    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading messages"></span>
+    </div>
+
+    <!-- List -->
+    <section class="ax-page-section" *ngIf="!ui_controls.is_loading && messages.length">
+      <ul class="vm-list">
+        <li *ngFor="let m of messages" class="vm-item" [class.vm-unread]="!m.is_read" (click)="markRead(m)">
+          <div class="vm-dot" [class.vm-dot-on]="!m.is_read" aria-hidden="true"></div>
+          <div class="vm-body">
+            <div class="vm-row">
+              <span class="vm-subject">{{ m.subject || 'Message' }}</span>
+              <span class="vm-date">{{ m.created ? (m.created | date:'mediumDate') : '' }}</span>
+            </div>
+            <p class="vm-text">{{ m.message }}</p>
+          </div>
+        </li>
+      </ul>
+    </section>
+
     <!-- Empty state -->
-    <section class="ax-page-section">
+    <section class="ax-page-section" *ngIf="!ui_controls.is_loading && !messages.length">
       <div class="ax-card ax-p-8 ax-text-center">
         <app-icon name="forum" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
         <h3 class="ax-h4 ax-m-0 ax-mt-3">No messages yet</h3>
         <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-          Customer messages, order questions, and custom-order requests will appear here when they reach out.
+          Messages from the 3bayti team will appear here.
         </p>
       </div>
     </section>

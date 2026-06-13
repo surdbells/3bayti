@@ -1,0 +1,16 @@
+.vm-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+.vm-item {
+  display: flex; gap: 0.75rem; align-items: flex-start;
+  padding: 1rem 1.1rem; border-radius: var(--ax-radius-lg);
+  background: var(--ax-color-surface); border: 1px solid var(--ax-color-border-subtle);
+  cursor: pointer; transition: border-color .15s, background .15s;
+}
+.vm-item:hover { border-color: var(--ax-color-border-strong, #c8c2b8); }
+.vm-unread { background: var(--ax-color-brand-subtle, #eef6f2); border-color: var(--ax-color-brand, #1f6f54); }
+.vm-dot { width: 0.5rem; height: 0.5rem; border-radius: 50%; margin-top: 0.45rem; flex-shrink: 0; background: transparent; }
+.vm-dot-on { background: var(--ax-color-brand, #1f6f54); }
+.vm-body { flex: 1; min-width: 0; }
+.vm-row { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; }
+.vm-subject { font-weight: 600; font-size: 0.95rem; color: var(--ax-color-text-primary); }
+.vm-date { font-size: 0.75rem; color: var(--ax-color-text-tertiary); white-space: nowrap; }
+.vm-text { margin: 0.3rem 0 0; font-size: 0.875rem; color: var(--ax-color-text-secondary); white-space: pre-wrap; overflow-wrap: anywhere; }
