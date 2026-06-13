@@ -223,8 +223,7 @@ export class StoresComponent implements OnInit {
   private refresh() { this.dataSource.retry(); }
 
   private openTab(path: string, id: number, name: string) {
-    const urlTree = this.router.createUrlTree([path], { queryParams: { id, name } });
-    window.open(this.router.serializeUrl(urlTree), '_blank');
+    this.router.navigate([path], { queryParams: { id, name } });
   }
 
   goBack() { this.router.navigate(['/backend']); }
