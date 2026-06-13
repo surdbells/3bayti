@@ -67,6 +67,12 @@ foreach ($argv as $arg) {
     if (str_starts_with($arg, '--ssh-copy='))   $sshCopy   = substr($arg, 11);
 }
 
+// A single-id test should stay scoped to its own section: --product-id
+// alone implies products-only, --vendor-id alone implies vendors-only.
+// (Passing both processes both single items.)
+if ($productId !== null && $vendorId === null) $productsOnly = true;
+if ($vendorId !== null && $productId === null) $vendorsOnly  = true;
+
 echo "============================================================\n";
 echo " 3bayti image migration → local Flysystem storage\n";
 echo "============================================================\n\n";
@@ -194,7 +200,7 @@ function migrateUrl(
     string $uploadsBase,
     ?string $diskBase,
     bool $dryRun,
-): string|false {
+): string|false|null {
     // Already on new storage
     if (str_starts_with($url, $uploadsBase)) {
         return null; // null = skip (already done)
