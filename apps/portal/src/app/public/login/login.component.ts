@@ -9,6 +9,7 @@ import { CommonModule } from '@angular/common';
 import { LanguageSwitcherComponent } from '../../language-switcher.component';
 import { TranslatePipe } from '../../translate.pipe';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-login',
   standalone: true,
@@ -17,8 +18,7 @@ import { TranslatePipe } from '../../translate.pipe';
     FormsModule,
     RouterLink,
     LanguageSwitcherComponent,
-    TranslatePipe,
-  ],
+    TranslatePipe, IconComponent],
   templateUrl: './login.component.html',
   styleUrl: './login.component.css',
 })

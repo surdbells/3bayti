@@ -17,6 +17,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
 
+import { IconComponent } from '../icon/icon.component';
 /**
  * Individual collapsible panel inside an <app-ax-accordion>.
  *
@@ -31,7 +32,7 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-ax-accordion-item',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="ax-accordion-item" [class.ax-accordion-item-open]="expanded">
@@ -44,11 +45,11 @@ import { Subscription } from 'rxjs';
         [disabled]="disabled"
         (click)="toggle()"
       >
-        <span *ngIf="icon" class="material-symbols-outlined" aria-hidden="true">{{ icon }}</span>
+        <app-icon [name]="icon" *ngIf="icon" aria-hidden="true"></app-icon>
         <span class="ax-accordion-title">{{ title }}</span>
         <span *ngIf="badge != null" class="ax-tab-badge">{{ badge }}</span>
         <span class="ax-accordion-caret">
-          <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+          <app-icon name="expand_more" aria-hidden="true"></app-icon>
         </span>
       </button>
       <div

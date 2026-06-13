@@ -9,6 +9,7 @@ import { TranslatePipe } from '../../translate.pipe';
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../icon/icon.component';
 @Component({
   selector: 'app-user-security',
   standalone: true,
@@ -17,8 +18,7 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
     AdminShellComponent,
     CommonModule,
     FormsModule,
-    TranslatePipe,
-  ],
+    TranslatePipe, IconComponent],
   templateUrl: './user-security.component.html',
   styleUrl: './user-security.component.css',
 })

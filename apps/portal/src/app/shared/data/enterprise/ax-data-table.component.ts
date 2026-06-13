@@ -48,6 +48,7 @@ import { AxCellDirective, AxRowExpandDirective } from './ax-cell.directive';
 import { AxDropdownDirective, AxDropdownItemDirective } from '../../overlays/ax-dropdown.directive';
 import { AxDataSource } from './ax-data-source';
 import { AxExportService } from './ax-export.service';
+import { IconComponent } from '../../icon/icon.component';
 import {
   AX_EMPTY_QUERY,
   AxAuditEvent,
@@ -74,7 +75,7 @@ interface ColumnView<T> {
 @Component({
   selector: 'app-ax-data-table',
   standalone: true,
-  imports: [CommonModule, FormsModule, AxDropdownDirective, AxDropdownItemDirective],
+  imports: [CommonModule, FormsModule, AxDropdownDirective, AxDropdownItemDirective, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './ax-data-table.component.html',
   styleUrl: './ax-data-table.component.css',

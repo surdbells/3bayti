@@ -7,7 +7,7 @@
             (click)="goBack()"
             class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
             style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            <app-icon name="arrow_back" aria-hidden="true"></app-icon>
             Back to tickets
           </button>
           <span class="ax-page-header-eyebrow">Support</span>
@@ -20,7 +20,7 @@
             class="ax-btn ax-btn-outline ax-btn-sm"
             (click)="get_ticket_messages()"
             [disabled]="ui_controls.is_loading">
-            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+            <app-icon name="refresh" aria-hidden="true"></app-icon>
             Refresh
           </button>
         </div>
@@ -42,10 +42,7 @@
 
               <!-- Empty -->
               <div *ngIf="!ui_controls.is_loading && ui_controls.no_data" class="ax-text-center ax-py-5">
-                <span
-                  class="material-symbols-outlined"
-                  style="font-size: 2.5rem; color: var(--ax-color-text-tertiary);"
-                  aria-hidden="true">forum</span>
+                <app-icon name="forum" style="font-size: 2.5rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
                 <h4 class="ax-h6 ax-m-0 ax-mt-2">No messages yet</h4>
                 <p class="ax-text-2xs ax-text-tertiary ax-mt-1">Start the conversation by sending the first message.</p>
               </div>
@@ -93,7 +90,7 @@
               (click)="send_messages()"
               [disabled]="ui_controls.sending">
               <span *ngIf="ui_controls.sending" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-              <span *ngIf="!ui_controls.sending" class="material-symbols-outlined" aria-hidden="true">send</span>
+              <app-icon name="send" *ngIf="!ui_controls.sending" aria-hidden="true"></app-icon>
               Send reply
             </button>
           </div>

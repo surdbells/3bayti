@@ -7,10 +7,11 @@ import { CommonModule } from '@angular/common';
 import { GlobalComponent } from '../../global-component';
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-vendor-tax',
   standalone: true,
-  imports: [VendorShellComponent, FormsModule, CommonModule],
+  imports: [VendorShellComponent, FormsModule, CommonModule, IconComponent],
   templateUrl: './vendor-tax.component.html',
   styleUrl: './vendor-tax.component.css',
 })

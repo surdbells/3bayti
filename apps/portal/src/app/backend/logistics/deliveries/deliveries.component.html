@@ -20,7 +20,7 @@
               [href]="'mailto:' + vendor.email"
               class="ax-text-sm ax-text-secondary ax-mt-2 ax-flex ax-items-center ax-gap-1 ax-justify-center"
               style="text-decoration: none;">
-              <span class="material-symbols-outlined" style="font-size: 1rem;" aria-hidden="true">mail</span>
+              <app-icon name="mail" style="font-size: 1rem;" aria-hidden="true"></app-icon>
               {{ vendor.email }}
             </a>
           </div>
@@ -28,7 +28,7 @@
           <!-- Store info column -->
           <div class="ax-p-5" style="grid-column: span 2;">
             <h4 class="ax-h6 ax-m-0 ax-mb-3 ax-flex ax-items-center ax-gap-2">
-              <span class="material-symbols-outlined" style="font-size: 1.25rem;" aria-hidden="true">storefront</span>
+              <app-icon name="storefront" style="font-size: 1.25rem;" aria-hidden="true"></app-icon>
               Store information
             </h4>
             <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
@@ -101,7 +101,7 @@
                   <td><span [ngClass]="itemStatusClass(a_item.status)">{{ a_item.status }}</span></td>
                   <td style="text-align: right;">
                     <button type="button" class="ax-btn ax-btn-primary ax-btn-sm">
-                      <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                      <app-icon name="check" aria-hidden="true"></app-icon>
                       Done
                     </button>
                   </td>

@@ -15,6 +15,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { AxColumnComponent } from './ax-column.component';
 
+import { IconComponent } from '../icon/icon.component';
 export type AxSortDirection = 'asc' | 'desc' | null;
 export interface AxSortState {
   key: string | null;
@@ -50,7 +51,7 @@ export interface AxSortState {
 @Component({
   selector: 'app-ax-table',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="ax-table-wrapper">
@@ -91,7 +92,7 @@ export interface AxSortState {
             >
               {{ col.resolvedLabel }}
               <span *ngIf="col.isSortable" class="ax-th-sort-icon" aria-hidden="true">
-                <span class="material-symbols-outlined">{{ sortIconFor(col.key) }}</span>
+                <app-icon [name]="sortIconFor(col.key)"></app-icon>
               </span>
             </th>
           </tr>
@@ -129,7 +130,7 @@ export interface AxSortState {
             <td [attr.colspan]="columnSpan" class="ax-table-empty">
               <div class="ax-empty">
                 <span class="ax-empty-icon">
-                  <span class="material-symbols-outlined" aria-hidden="true">inbox</span>
+                  <app-icon name="inbox" aria-hidden="true"></app-icon>
                 </span>
                 <h3 class="ax-empty-title">{{ emptyTitle }}</h3>
                 <p class="ax-empty-description">{{ emptyDescription }}</p>

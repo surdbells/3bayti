@@ -20,7 +20,7 @@
           (click)="goBack()"
           class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
           style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back
         </button>
         <span class="ax-page-header-eyebrow">Catalog</span>
@@ -35,7 +35,7 @@
           class="ax-btn ax-btn-outline"
           (click)="startSave()"
           [disabled]="ui.loading">
-          <span class="material-symbols-outlined" aria-hidden="true">save</span>
+          <app-icon name="save" aria-hidden="true"></app-icon>
           Save as draft
         </button>
         <button
@@ -44,7 +44,7 @@
           (click)="startPublish()"
           [disabled]="ui.loading">
           <span *ngIf="ui.loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-          <span *ngIf="!ui.loading" class="material-symbols-outlined" aria-hidden="true">publish</span>
+          <app-icon name="publish" *ngIf="!ui.loading" aria-hidden="true"></app-icon>
           Publish
         </button>
       </div>

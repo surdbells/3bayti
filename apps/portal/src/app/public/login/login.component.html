@@ -9,7 +9,7 @@
     <!-- Form panel -->
     <div>
       <a routerLink="/" class="ax-auth-back">
-        <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        <app-icon name="arrow_back" aria-hidden="true"></app-icon>
         {{ 'back_to_website' | translate }}
       </a>
 
@@ -29,7 +29,7 @@
             <div class="ax-form-field">
               <label for="email" class="ax-label ax-label-required">{{ 'email' | translate }}</label>
               <div class="ax-input-group">
-                <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">mail</span>
+                <app-icon name="mail" aria-hidden="true" class="ax-input-group-prefix"></app-icon>
                 <input
                   type="email"
                   id="email"
@@ -45,7 +45,7 @@
             <div class="ax-form-field">
               <label for="password" class="ax-label ax-label-required">{{ 'password' | translate }}</label>
               <div class="ax-input-group">
-                <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">lock</span>
+                <app-icon name="lock" aria-hidden="true" class="ax-input-group-prefix"></app-icon>
                 <input
                   [type]="fieldTextType ? 'text' : 'password'"
                   id="password"
@@ -61,9 +61,7 @@
                   (click)="toggleFieldTextType()"
                   [attr.aria-label]="fieldTextType ? 'Hide password' : 'Show password'"
                   tabindex="-1">
-                  <span class="material-symbols-outlined" aria-hidden="true">
-                    {{ fieldTextType ? 'visibility_off' : 'visibility' }}
-                  </span>
+                  <app-icon [name]="fieldTextType ? 'visibility_off' : 'visibility'" aria-hidden="true"></app-icon>
                 </button>
               </div>
             </div>

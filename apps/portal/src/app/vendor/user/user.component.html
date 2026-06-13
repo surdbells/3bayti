@@ -12,7 +12,7 @@
       </div>
       <div class="ax-page-header-actions">
         <button type="button" class="ax-btn ax-btn-outline" (click)="get_dashboard()" aria-label="Refresh dashboard">
-          <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+          <app-icon name="refresh" aria-hidden="true"></app-icon>
           Refresh
         </button>
       </div>
@@ -30,7 +30,7 @@
           <div class="ax-stat-card-header">
             <span class="ax-stat-card-label">{{ 'dashboard_products' | translate }}</span>
             <span class="ax-stat-card-icon">
-              <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+              <app-icon name="inventory_2" aria-hidden="true"></app-icon>
             </span>
           </div>
           <div class="ax-stat-card-value">{{ total_products }}</div>
@@ -40,7 +40,7 @@
           <div class="ax-stat-card-header">
             <span class="ax-stat-card-label">{{ 'dashboard_orders' | translate }}</span>
             <span class="ax-stat-card-icon">
-              <span class="material-symbols-outlined" aria-hidden="true">shopping_bag</span>
+              <app-icon name="shopping_bag" aria-hidden="true"></app-icon>
             </span>
           </div>
           <div class="ax-stat-card-value">{{ total_orders }}</div>
@@ -50,7 +50,7 @@
           <div class="ax-stat-card-header">
             <span class="ax-stat-card-label">{{ 'sold' | translate }}</span>
             <span class="ax-stat-card-icon">
-              <span class="material-symbols-outlined" aria-hidden="true">payments</span>
+              <app-icon name="payments" aria-hidden="true"></app-icon>
             </span>
           </div>
           <div class="ax-stat-card-value">{{ products_sold }}</div>
@@ -105,7 +105,7 @@
             </div>
             <a routerLink="/orders" class="ax-btn ax-btn-outline ax-btn-sm">
               {{ 'browse_all' | translate }}
-              <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+              <app-icon name="arrow_forward" aria-hidden="true"></app-icon>
             </a>
           </div>
         </div>
@@ -171,7 +171,7 @@
           [title]="'off_to_a_fresh_start_title' | translate"
           [description]="'off_to_a_fresh_start_body' | translate">
           <a routerLink="/create-product" class="ax-btn ax-btn-primary">
-            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            <app-icon name="add" aria-hidden="true"></app-icon>
             {{ 'create_product' | translate }}
           </a>
         </app-ax-empty-state>

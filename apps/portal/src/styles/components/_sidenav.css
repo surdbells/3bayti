@@ -138,7 +138,7 @@
   color: var(--ax-color-text-on-sidenav);
 }
 
-.ax-sidenav-link .material-symbols-outlined {
+.ax-sidenav-link app-icon {
   font-size: 1.25rem;
   line-height: 1;
   flex-shrink: 0;
@@ -147,7 +147,7 @@
   transition: opacity var(--ax-duration-fast) var(--ax-ease-out),
               color var(--ax-duration-fast) var(--ax-ease-out);
 }
-.ax-sidenav-link:hover .material-symbols-outlined {
+.ax-sidenav-link:hover app-icon {
   opacity: 1;
 }
 
@@ -174,8 +174,8 @@
   background-color: var(--ax-color-bg-sidenav-active);
   color: var(--ax-color-text-on-brand);
 }
-.ax-sidenav-link.ax-sidenav-link-active .material-symbols-outlined,
-.ax-sidenav-link.active .material-symbols-outlined {
+.ax-sidenav-link.ax-sidenav-link-active app-icon,
+.ax-sidenav-link.active app-icon {
   color: var(--ax-color-text-on-brand);
   opacity: 1;
 }
@@ -188,7 +188,7 @@
   background-color: rgba(209, 84, 63, 0.16);
   color: #f5c9bf;
 }
-.ax-sidenav-link-danger .material-symbols-outlined {
+.ax-sidenav-link-danger app-icon {
   color: #e5a99c;
 }
 

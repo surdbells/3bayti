@@ -7,7 +7,7 @@
           (click)="goBack()"
           class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
           style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back to account
         </button>
         <span class="ax-page-header-eyebrow">Settings</span>
@@ -29,15 +29,15 @@
           <h3 class="ax-h6 ax-m-0 ax-mb-2">How labels help</h3>
           <div class="ax-text-sm ax-text-secondary" style="display: grid; gap: 0.5rem;">
             <div class="ax-flex ax-gap-2 ax-items-start">
-              <span class="material-symbols-outlined ax-text-brand" aria-hidden="true" style="font-size: 1.125rem;">storefront</span>
+              <app-icon name="storefront" aria-hidden="true" style="font-size: 1.125rem;" class="ax-text-brand"></app-icon>
               Highlight featured or best-selling products.
             </div>
             <div class="ax-flex ax-gap-2 ax-items-start">
-              <span class="material-symbols-outlined ax-text-brand" aria-hidden="true" style="font-size: 1.125rem;">category</span>
+              <app-icon name="category" aria-hidden="true" style="font-size: 1.125rem;" class="ax-text-brand"></app-icon>
               Target specific customer interests — "Summer Collection", "New Arrivals", "Festive Deals".
             </div>
             <div class="ax-flex ax-gap-2 ax-items-start">
-              <span class="material-symbols-outlined ax-text-brand" aria-hidden="true" style="font-size: 1.125rem;">folder_open</span>
+              <app-icon name="folder_open" aria-hidden="true" style="font-size: 1.125rem;" class="ax-text-brand"></app-icon>
               Keep your store organised and visually appealing.
             </div>
           </div>
@@ -61,7 +61,7 @@
               (click)="create_vendor_labels()"
               [disabled]="ui_controls.is_creating_label">
               <span *ngIf="ui_controls.is_creating_label" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-              <span *ngIf="!ui_controls.is_creating_label" class="material-symbols-outlined" aria-hidden="true">add</span>
+              <app-icon name="add" *ngIf="!ui_controls.is_creating_label" aria-hidden="true"></app-icon>
               Create
             </button>
           </div>
@@ -87,7 +87,7 @@
                 (click)="update_label(a_label.id)"
                 [disabled]="ui_controls.is_saving_label_id === a_label.id">
                 <span *ngIf="ui_controls.is_saving_label_id === a_label.id" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-                <span *ngIf="ui_controls.is_saving_label_id !== a_label.id" class="material-symbols-outlined" aria-hidden="true">save</span>
+                <app-icon name="save" *ngIf="ui_controls.is_saving_label_id !== a_label.id" aria-hidden="true"></app-icon>
                 Save
               </button>
 
@@ -96,7 +96,7 @@
                 class="ax-btn ax-btn-ghost ax-btn-sm"
                 style="color: var(--ax-color-text-danger);"
                 (click)="start_delete_label(a_label.id, a_label.label)">
-                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                <app-icon name="delete" aria-hidden="true"></app-icon>
                 Delete
               </button>
             </div>
@@ -105,10 +105,7 @@
 
         <!-- Empty state -->
         <div *ngIf="!labels || labels.length === 0" class="ax-card ax-p-5 ax-text-center" style="background: var(--ax-color-bg-canvas); border-style: dashed;">
-          <span
-            class="material-symbols-outlined"
-            style="font-size: 2.5rem; color: var(--ax-color-text-tertiary);"
-            aria-hidden="true">sell</span>
+          <app-icon name="sell" style="font-size: 2.5rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
           <h4 class="ax-h6 ax-m-0 ax-mt-2">No labels yet</h4>
           <p class="ax-text-2xs ax-text-tertiary ax-mt-1">Create your first label above to start organising your products.</p>
         </div>

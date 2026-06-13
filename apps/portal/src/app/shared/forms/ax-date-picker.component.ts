@@ -22,6 +22,7 @@ import {
 } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 
+import { IconComponent } from '../icon/icon.component';
 export type AxDatePickerMode = 'single' | 'range';
 export type AxDateRange = { start: Date | null; end: Date | null };
 type AxDatePickerValue = Date | AxDateRange | null;
@@ -49,7 +50,7 @@ type ViewMode = 'days' | 'months' | 'years';
 @Component({
   selector: 'app-ax-date-picker',
   standalone: true,
-  imports: [CommonModule, FormsModule, OverlayModule],
+  imports: [CommonModule, FormsModule, OverlayModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -73,7 +74,7 @@ type ViewMode = 'days' | 'months' | 'years';
       (click)="toggle()"
       (keydown)="onTriggerKey($event)"
     >
-      <span class="material-symbols-outlined ax-text-tertiary ax-mr-1" style="font-size: 1.125rem;" aria-hidden="true">calendar_today</span>
+      <app-icon name="calendar_today" style="font-size: 1.125rem;" aria-hidden="true" class="ax-text-tertiary ax-mr-1"></app-icon>
       <span class="ax-select-trigger-content">
         <ng-container *ngIf="displayLabel(); else placeholderTpl">
           <span>{{ displayLabel() }}</span>
@@ -91,7 +92,7 @@ type ViewMode = 'days' | 'months' | 'years';
       >
         ×
       </button>
-      <span class="ax-select-trigger-caret material-symbols-outlined" aria-hidden="true">expand_more</span>
+      <app-icon name="expand_more" aria-hidden="true" class="ax-select-trigger-caret"></app-icon>
     </button>
 
     <ng-template #panelTpl>
@@ -101,7 +102,7 @@ type ViewMode = 'days' | 'months' | 'years';
             <div class="ax-calendar">
               <div class="ax-calendar-header">
                 <button type="button" class="ax-calendar-nav" (click)="prevMonth()" aria-label="Previous month">
-                  <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                  <app-icon name="chevron_left" aria-hidden="true"></app-icon>
                 </button>
                 <div class="ax-calendar-title">
                   <button type="button" class="ax-calendar-title-btn" (click)="setView('months')">{{ monthName(viewMonth) }}</button>
@@ -119,7 +120,7 @@ type ViewMode = 'days' | 'months' | 'years';
                   <span class="ax-calendar-title-btn">{{ nextViewYear }}</span>
                 </div>
                 <button type="button" class="ax-calendar-nav" (click)="nextMonth()" aria-label="Next month">
-                  <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                  <app-icon name="chevron_right" aria-hidden="true"></app-icon>
                 </button>
               </div>
               <ng-container *ngTemplateOutlet="gridTpl; context: { month: nextViewMonth, year: nextViewYear }"></ng-container>
@@ -137,14 +138,14 @@ type ViewMode = 'days' | 'months' | 'years';
         <div *ngIf="mode === 'single'" class="ax-calendar">
           <div class="ax-calendar-header">
             <button type="button" class="ax-calendar-nav" (click)="prevMonth()" aria-label="Previous month">
-              <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+              <app-icon name="chevron_left" aria-hidden="true"></app-icon>
             </button>
             <div class="ax-calendar-title">
               <button type="button" class="ax-calendar-title-btn" (click)="setView('months')">{{ monthName(viewMonth) }}</button>
               <button type="button" class="ax-calendar-title-btn" (click)="setView('years')">{{ viewYear }}</button>
             </div>
             <button type="button" class="ax-calendar-nav" (click)="nextMonth()" aria-label="Next month">
-              <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+              <app-icon name="chevron_right" aria-hidden="true"></app-icon>
             </button>
           </div>
           <ng-container *ngIf="viewMode === 'days'">

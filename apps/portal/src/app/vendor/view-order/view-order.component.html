@@ -5,7 +5,7 @@
     <header class="ax-page-header">
       <div class="ax-page-header-content">
         <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back to orders
         </button>
         <span class="ax-page-header-eyebrow">Order detail</span>
@@ -24,7 +24,7 @@
           class="ax-btn ax-btn-primary"
           (click)="startStatusChange(data.order, 'Ready for Delivery', data.customer_email)"
           [disabled]="ui_controls.updating_order">
-          <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+          <app-icon name="local_shipping" aria-hidden="true"></app-icon>
           Ready for delivery
         </button>
         <button
@@ -33,14 +33,14 @@
           class="ax-btn ax-btn-primary"
           (click)="startStatusChange(data.order, 'Delivered', data.customer_email)"
           [disabled]="ui_controls.updating_order">
-          <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+          <app-icon name="check_circle" aria-hidden="true"></app-icon>
           Mark as delivered
         </button>
         <button
           type="button"
           class="ax-btn ax-btn-outline"
           (click)="downloadPdf()">
-          <span class="material-symbols-outlined" aria-hidden="true">download</span>
+          <app-icon name="download" aria-hidden="true"></app-icon>
           Download PDF
         </button>
       </div>
@@ -70,7 +70,7 @@
                   class="ax-btn ax-btn-ghost ax-btn-sm"
                   [axCopyToClipboard]="(data.order_ref || data.order).toString()"
                   aria-label="Copy order reference">
-                  <span class="material-symbols-outlined" style="font-size: 1rem;" aria-hidden="true">content_copy</span>
+                  <app-icon name="content_copy" style="font-size: 1rem;" aria-hidden="true"></app-icon>
                 </button>
               </div>
               <div *ngIf="data.merchantReference" class="ax-text-xs ax-text-tertiary ax-mt-1">
@@ -91,11 +91,11 @@
               <div class="ax-font-medium">{{ data.customer_name }}</div>
               <div class="ax-text-secondary ax-mt-1">
                 <div class="ax-flex ax-items-center ax-gap-1">
-                  <span class="material-symbols-outlined" style="font-size: 0.9rem;" aria-hidden="true">mail</span>
+                  <app-icon name="mail" style="font-size: 0.9rem;" aria-hidden="true"></app-icon>
                   {{ data.customer_email }}
                 </div>
                 <div class="ax-flex ax-items-center ax-gap-1 ax-mt-1">
-                  <span class="material-symbols-outlined" style="font-size: 0.9rem;" aria-hidden="true">call</span>
+                  <app-icon name="call" style="font-size: 0.9rem;" aria-hidden="true"></app-icon>
                   {{ data.delivery_phone }}
                 </div>
               </div>

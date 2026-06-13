@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../icon/icon.component';
 export type AxActivityVariant = 'default' | 'brand' | 'success' | 'warning' | 'danger' | 'info';
 
 export interface AxActivityItem {
@@ -28,7 +29,7 @@ export interface AxActivityItem {
 @Component({
   selector: 'app-ax-activity-feed',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ul class="ax-activity">
@@ -40,7 +41,7 @@ export interface AxActivityItem {
               [class.ax-activity-dot-danger]="item.variant === 'danger'"
               [class.ax-activity-dot-info]="item.variant === 'info'"
               aria-hidden="true">
-          <span *ngIf="item.icon" class="material-symbols-outlined">{{ item.icon }}</span>
+          <app-icon [name]="item.icon" *ngIf="item.icon"></app-icon>
         </span>
         <div class="ax-activity-content">
           <p class="ax-activity-title">{{ item.title }}</p>

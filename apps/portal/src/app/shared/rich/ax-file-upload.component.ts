@@ -16,6 +16,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
+import { IconComponent } from '../icon/icon.component';
 /**
  * Metadata describing a file staged by the uploader. Not the native File
  * object — the component keeps both (the File on `file`, the preview URL on
@@ -64,7 +65,7 @@ export interface AxUploadFile {
 @Component({
   selector: 'app-ax-file-upload',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -90,7 +91,7 @@ export interface AxUploadFile {
           (change)="onInputChange($event)"
         />
         <span class="ax-uploader-icon">
-          <span class="material-symbols-outlined" aria-hidden="true">{{ isDragging ? 'download' : 'upload_file' }}</span>
+          <app-icon [name]="isDragging ? 'download' : 'upload_file'" aria-hidden="true"></app-icon>
         </span>
         <p class="ax-uploader-title">
           <ng-container *ngIf="!isDragging">
@@ -102,7 +103,7 @@ export interface AxUploadFile {
       </label>
 
       <div *ngIf="errorMessage" class="ax-uploader-error" role="alert">
-        <span class="material-symbols-outlined" aria-hidden="true">error</span>
+        <app-icon name="error" aria-hidden="true"></app-icon>
         {{ errorMessage }}
       </div>
 
@@ -113,16 +114,14 @@ export interface AxUploadFile {
         >
           <div class="ax-uploader-file-thumb">
             <img *ngIf="f.thumbUrl" [src]="f.thumbUrl" [alt]="f.name" />
-            <span *ngIf="!f.thumbUrl" class="material-symbols-outlined" aria-hidden="true">
-              {{ iconFor(f.type) }}
-            </span>
+            <app-icon [name]="iconFor(f.type)" *ngIf="!f.thumbUrl" aria-hidden="true"></app-icon>
             <button
               type="button"
               class="ax-uploader-file-remove"
               [attr.aria-label]="'Remove ' + f.name"
               (click)="remove(f, $event)"
             >
-              <span class="material-symbols-outlined" aria-hidden="true">close</span>
+              <app-icon name="close" aria-hidden="true"></app-icon>
             </button>
           </div>
           <div *ngIf="f.progress != null && f.progress < 100" class="ax-uploader-file-progress">

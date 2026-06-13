@@ -10,6 +10,7 @@ import { AxMultiselectComponent, AxMultiselectOption } from '../../shared/forms'
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 interface StoreOption { id: number; store_name: string; }
 interface NamedOption { id: number; name: string; }
 
@@ -20,8 +21,7 @@ interface NamedOption { id: number; name: string; }
     VendorShellComponent,
     AdminShellComponent,
     CommonModule, FormsModule,
-    AxMultiselectComponent,
-  ],
+    AxMultiselectComponent, IconComponent],
   templateUrl: './edit-coupon.component.html',
   styleUrl: './edit-coupon.component.css',
 })

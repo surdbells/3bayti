@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../translate.pipe';
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { CommonModule } from '@angular/common';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxClientDataSource,
@@ -33,7 +34,7 @@ export interface Measurements extends Record<string, unknown> {
 @Component({
   selector: 'app-measurements',
   standalone: true,
-  imports: [VendorShellComponent, FormsModule, NgIf, CommonModule, TranslatePipe, AxDataTableComponent],
+  imports: [VendorShellComponent, FormsModule, NgIf, CommonModule, TranslatePipe, AxDataTableComponent, IconComponent],
   templateUrl: './measurements.component.html',
   styleUrl: './measurements.component.css',
 })

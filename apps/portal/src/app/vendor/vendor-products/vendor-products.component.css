@@ -86,7 +86,7 @@
   border-radius: 50%;
   box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
-.phone-app-header .material-symbols-outlined {
+.phone-app-header app-icon {
   font-size: 22px;
   color: #555;
 }
@@ -120,7 +120,7 @@
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0,0,0,0.15);
 }
-.phone-img-nav .material-symbols-outlined { font-size: 18px; }
+.phone-img-nav app-icon { font-size: 18px; }
 .phone-img-nav-prev { left: 8px; }
 .phone-img-nav-next { right: 8px; }
 

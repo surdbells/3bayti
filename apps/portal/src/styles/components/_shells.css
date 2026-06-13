@@ -88,7 +88,7 @@
   outline: none;
   box-shadow: var(--ax-shadow-focus);
 }
-.ax-modal-close .material-symbols-outlined {
+.ax-modal-close app-icon {
   font-size: 1.25rem;
 }
 
@@ -235,7 +235,7 @@
   transition: background-color var(--ax-duration-fast) var(--ax-ease-out);
 }
 .ax-drawer-close:hover { background-color: var(--ax-color-bg-muted); color: var(--ax-color-text-primary); }
-.ax-drawer-close .material-symbols-outlined { font-size: 1.25rem; }
+.ax-drawer-close app-icon { font-size: 1.25rem; }
 
 .ax-drawer-body {
   flex: 1 1 auto;
@@ -329,7 +329,7 @@
   cursor: not-allowed;
 }
 
-.ax-tab .material-symbols-outlined {
+.ax-tab app-icon {
   font-size: 1.1em;
 }
 
@@ -428,7 +428,7 @@
   color: var(--ax-color-text-tertiary);
   transition: transform var(--ax-duration-base) var(--ax-ease-out);
 }
-.ax-accordion-caret .material-symbols-outlined {
+.ax-accordion-caret app-icon {
   font-size: 1.25rem;
 }
 .ax-accordion-item-open .ax-accordion-caret {

@@ -9,6 +9,7 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -31,7 +32,7 @@ interface CustomerRow extends Record<string, unknown> {
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css',
 })

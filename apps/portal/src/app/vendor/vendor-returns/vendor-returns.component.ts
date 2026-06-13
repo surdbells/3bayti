@@ -8,6 +8,7 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -30,7 +31,7 @@ interface ReturnRow extends Record<string, unknown> {
 @Component({
   selector: 'app-vendor-returns',
   standalone: true,
-  imports: [VendorShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
+  imports: [VendorShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './vendor-returns.component.html',
   styleUrl: './vendor-returns.component.css',
 })

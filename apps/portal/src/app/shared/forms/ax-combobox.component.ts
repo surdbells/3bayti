@@ -22,6 +22,7 @@ import {
 } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 
+import { IconComponent } from '../icon/icon.component';
 export interface AxComboboxOption {
   id: string | number;
   label: string;
@@ -46,7 +47,7 @@ export interface AxComboboxOption {
 @Component({
   selector: 'app-ax-combobox',
   standalone: true,
-  imports: [CommonModule, FormsModule, OverlayModule],
+  imports: [CommonModule, FormsModule, OverlayModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -89,14 +90,14 @@ export interface AxComboboxOption {
       >
         ×
       </button>
-      <span class="ax-select-trigger-caret material-symbols-outlined" aria-hidden="true">expand_more</span>
+      <app-icon name="expand_more" aria-hidden="true" class="ax-select-trigger-caret"></app-icon>
     </button>
 
     <ng-template #panelTpl>
       <div class="ax-select-panel" [style.width.px]="panelWidth" role="listbox">
         <div *ngIf="searchable" class="ax-select-panel-header">
           <div class="ax-select-panel-search">
-            <span class="material-symbols-outlined" aria-hidden="true">search</span>
+            <app-icon name="search" aria-hidden="true"></app-icon>
             <input
               #searchInput
               type="text"
@@ -125,7 +126,7 @@ export interface AxComboboxOption {
             >
               <span class="ax-select-panel-option-label">{{ opt.label }}</span>
               <span *ngIf="isSelected(opt)" class="ax-select-panel-option-check">
-                <span class="material-symbols-outlined" aria-hidden="true">check</span>
+                <app-icon name="check" aria-hidden="true"></app-icon>
               </span>
             </div>
           </ng-container>

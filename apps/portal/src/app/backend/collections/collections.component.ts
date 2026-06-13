@@ -8,6 +8,7 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -26,7 +27,7 @@ interface CollectionRow extends Record<string, unknown> {
 @Component({
   selector: 'app-collections',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, RouterLink, AxDataTableComponent, AxCellDirective],
+  imports: [AdminShellComponent, CommonModule, RouterLink, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './collections.component.html',
   styleUrl: './collections.component.css',
 })

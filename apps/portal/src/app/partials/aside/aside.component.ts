@@ -4,9 +4,10 @@ import { CommonModule } from '@angular/common';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-aside',
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, IconComponent],
   standalone: true,
   templateUrl: './aside.component.html',
   styleUrl: './aside.component.css'

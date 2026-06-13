@@ -15,6 +15,7 @@ import { AxRichEditorComponent } from '../../shared/rich/ax-rich-editor.componen
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxFileUploadComponent,
   AxUploadFile,
@@ -105,8 +106,7 @@ const SIZED_CATEGORIES = [1, 2, 3, 6, 7];
     AxFileUploadComponent,
     AxMultiselectComponent,
     AxAccordionComponent,
-    AxAccordionItemComponent,
-  ],
+    AxAccordionItemComponent, IconComponent],
   templateUrl: './create-product.component.html',
   styleUrl: './create-product.component.css',
 })

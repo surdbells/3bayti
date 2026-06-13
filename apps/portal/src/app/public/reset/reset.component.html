@@ -2,7 +2,7 @@
   <div class="ax-auth-shell-inner">
     <div>
       <a routerLink="/" class="ax-auth-back">
-        <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+        <app-icon name="arrow_back" aria-hidden="true"></app-icon>
         {{ 'back_to_website' | translate }}
       </a>
 
@@ -60,7 +60,7 @@
             <div class="ax-form-field">
               <label for="email" class="ax-label ax-label-required">{{ 'email' | translate }}</label>
               <div class="ax-input-group">
-                <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">mail</span>
+                <app-icon name="mail" aria-hidden="true" class="ax-input-group-prefix"></app-icon>
                 <input
                   type="email"
                   id="email"

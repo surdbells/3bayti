@@ -8,6 +8,7 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -35,7 +36,7 @@ interface ProductRow extends Record<string, unknown> {
 @Component({
   selector: 'app-admin-products',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './admin-products.component.html',
   styleUrl: './admin-products.component.css',
 })

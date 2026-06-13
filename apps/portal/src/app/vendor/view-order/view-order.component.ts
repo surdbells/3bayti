@@ -27,6 +27,7 @@ import { AxCopyToClipboardDirective } from '../../shared/rich/ax-copy-to-clipboa
 
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-view-order',
   standalone: true,
@@ -35,8 +36,7 @@ import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.c
     FormsModule,
     CommonModule,
     AxActivityFeedComponent,
-    AxCopyToClipboardDirective,
-  ],
+    AxCopyToClipboardDirective, IconComponent],
   templateUrl: './view-order.component.html',
   styleUrl: './view-order.component.css',
 })

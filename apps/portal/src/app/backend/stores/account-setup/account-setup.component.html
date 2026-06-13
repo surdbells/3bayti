@@ -17,7 +17,7 @@
             [href]="'https://wa.me/' + profile.phone + '?text=Hello%20I%20need%20support'"
             target="_blank"
             rel="noopener">
-            <span class="material-symbols-outlined" aria-hidden="true">chat</span>
+            <app-icon name="chat" aria-hidden="true"></app-icon>
             WhatsApp
           </a>
         </div>
@@ -80,13 +80,7 @@
             </div>
           </div>
 
-          <span
-            class="material-symbols-outlined"
-            [style.color]="f.filled ? 'var(--ax-color-text-success)' : 'var(--ax-color-text-tertiary)'"
-            style="font-size: 1.125rem; flex-shrink: 0;"
-            [attr.aria-label]="f.filled ? 'Completed' : 'Missing'">
-            {{ f.filled ? 'check_circle' : 'radio_button_unchecked' }}
-          </span>
+          <app-icon [name]="f.filled ? 'check_circle' : 'radio_button_unchecked'" [style.color]="f.filled ? 'var(--ax-color-text-success)' : 'var(--ax-color-text-tertiary)'" style="font-size: 1.125rem; flex-shrink: 0;" [attr.aria-label]="f.filled ? 'Completed' : 'Missing'"></app-icon>
         </div>
 
         <div class="ax-mt-2">

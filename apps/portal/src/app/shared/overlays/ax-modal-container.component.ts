@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../icon/icon.component';
 /**
  * Standard modal chrome. Slot content into [header], [body], and [footer]
  * selectors, or just wrap body content directly between the tags.
@@ -19,7 +20,7 @@ import { CommonModule } from '@angular/common';
 @Component({
   selector: 'app-ax-modal-container',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="ax-modal-header" *ngIf="title || subtitle || showClose">
@@ -34,7 +35,7 @@ import { CommonModule } from '@angular/common';
         aria-label="Close dialog"
         (click)="closed.emit()"
       >
-        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        <app-icon name="close" aria-hidden="true"></app-icon>
       </button>
     </header>
 

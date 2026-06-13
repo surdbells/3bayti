@@ -9,6 +9,7 @@ import {CommonModule} from '@angular/common';
 import {TranslatePipe} from '../../translate.pipe';
 import {LanguageSwitcherComponent} from '../../language-switcher.component';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-reset',
   imports: [
@@ -16,8 +17,7 @@ import {LanguageSwitcherComponent} from '../../language-switcher.component';
     CommonModule,
     RouterLink,
     TranslatePipe,
-    LanguageSwitcherComponent
-  ],
+    LanguageSwitcherComponent, IconComponent],
   standalone: true,
   templateUrl: './reset.component.html',
   styleUrl: './reset.component.css'

@@ -3,7 +3,7 @@
     <header class="ax-page-header">
       <div class="ax-page-header-content">
         <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to stores
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to stores
         </button>
         <span class="ax-page-header-eyebrow">Store</span>
         <h1 class="ax-page-title">{{ store_name || 'Store' }} — Products</h1>
@@ -11,7 +11,7 @@
       </div>
       <div class="ax-flex ax-gap-2 ax-items-center">
         <button type="button" class="ax-btn ax-btn-primary ax-btn-sm" (click)="openCreate()">
-          <span class="material-symbols-outlined" aria-hidden="true">add</span> New product
+          <app-icon name="add" aria-hidden="true"></app-icon> New product
         </button>
       </div>
     </header>
@@ -35,7 +35,7 @@
       <p class="ax-drawer-subtitle">{{ store_name }}</p>
     </div>
     <button type="button" class="ax-drawer-close" (click)="closeDrawer()" aria-label="Close">
-      <span class="material-symbols-outlined">close</span>
+      <app-icon name="close"></app-icon>
     </button>
   </header>
 
@@ -99,7 +99,7 @@
   <footer class="ax-drawer-footer">
     <button type="button" class="ax-btn ax-btn-ghost" (click)="closeDrawer()">Cancel</button>
     <button type="button" class="ax-btn ax-btn-primary" [disabled]="busy()" (click)="save()">
-      <span class="material-symbols-outlined" aria-hidden="true">{{ editing() ? 'save' : 'add' }}</span>
+      <app-icon [name]="editing() ? 'save' : 'add'" aria-hidden="true"></app-icon>
       {{ editing() ? 'Save changes' : 'Create product' }}
     </button>
   </footer>

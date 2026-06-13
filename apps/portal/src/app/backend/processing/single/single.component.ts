@@ -5,6 +5,7 @@ import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../../../shared/icon/icon.component';
 export interface Items {
   product_name: string;
   quantity: number;
@@ -17,7 +18,7 @@ export interface Items {
 @Component({
   selector: 'app-single',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   templateUrl: './single.component.html',
   styleUrl: './single.component.css',
 })

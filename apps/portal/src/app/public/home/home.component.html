@@ -5,7 +5,7 @@
   <div class="ax-home-hero-inner">
     <div>
       <span class="ax-home-hero-badge">
-        <span class="material-symbols-outlined" aria-hidden="true">waving_hand</span>
+        <app-icon name="waving_hand" aria-hidden="true"></app-icon>
         {{ 'welcome' | translate }}
       </span>
       <h1 class="ax-home-hero-title">{{ 'welcome_statement' | translate }}</h1>
@@ -14,7 +14,7 @@
       <div class="ax-home-hero-actions">
         <a routerLink="/register" class="ax-btn ax-btn-primary ax-btn-lg">
           {{ 'start_selling' | translate }}
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+          <app-icon name="arrow_forward" aria-hidden="true"></app-icon>
         </a>
         <a routerLink="/login" class="ax-btn ax-btn-outline ax-btn-lg">
           {{ 'sign_in' | translate }}
@@ -23,15 +23,15 @@
 
       <div class="ax-home-hero-trust">
         <span class="ax-home-hero-trust-item">
-          <span class="material-symbols-outlined">verified_user</span>
+          <app-icon name="verified_user"></app-icon>
           {{ 'no_setup' | translate }}
         </span>
         <span class="ax-home-hero-trust-item">
-          <span class="material-symbols-outlined">credit_card</span>
+          <app-icon name="credit_card"></app-icon>
           {{ 'secure_pay' | translate }}
         </span>
         <span class="ax-home-hero-trust-item">
-          <span class="material-symbols-outlined">rocket_launch</span>
+          <app-icon name="rocket_launch"></app-icon>
           {{ 'go_live' | translate }}
         </span>
       </div>
@@ -60,7 +60,7 @@
             <span class="ax-badge ax-badge-neutral">{{ 'vendor' | translate }}</span>
             <span class="ax-text-brand ax-font-semibold">{{ 'dashboard' | translate }}</span>
           </div>
-          <span class="material-symbols-outlined ax-text-tertiary" aria-hidden="true">more_vert</span>
+          <app-icon name="more_vert" aria-hidden="true" class="ax-text-tertiary"></app-icon>
         </div>
 
         <div class="ax-grid ax-grid-cols-4 ax-gap-2 ax-mb-4">
@@ -87,7 +87,7 @@
           <div class="ax-card ax-p-3">
             <div class="ax-flex ax-items-center ax-justify-between ax-mb-2">
               <small class="ax-text-2xs ax-font-semibold ax-text-secondary">{{ 'sales_performance' | translate }}</small>
-              <span class="material-symbols-outlined ax-text-tertiary" style="font-size: 1rem;">bar_chart</span>
+              <app-icon name="bar_chart" style="font-size: 1rem;" class="ax-text-tertiary"></app-icon>
             </div>
             <svg viewBox="0 0 240 80" preserveAspectRatio="none" style="width: 100%; height: 4rem;" aria-labelledby="sales-title">
               <title id="sales-title">{{ 'sales_performance_monthly_title' | translate }}</title>
@@ -106,7 +106,7 @@
           <div class="ax-card ax-p-3">
             <div class="ax-flex ax-items-center ax-justify-between ax-mb-2">
               <small class="ax-text-2xs ax-font-semibold ax-text-secondary">{{ 'top_selling_product' | translate }}</small>
-              <span class="material-symbols-outlined ax-text-tertiary" style="font-size: 1rem;">trending_up</span>
+              <app-icon name="trending_up" style="font-size: 1rem;" class="ax-text-tertiary"></app-icon>
             </div>
             <div class="ax-flex ax-items-center ax-gap-2 ax-mb-2">
               <svg viewBox="0 0 40 40" style="width: 3rem; height: 3rem; flex-shrink: 0;" aria-labelledby="pie-title">
@@ -138,32 +138,32 @@
 
   <div class="ax-home-features">
     <div class="ax-home-feature">
-      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">storefront</span></span>
+      <span class="ax-home-feature-icon"><app-icon name="storefront"></app-icon></span>
       <h3 class="ax-home-feature-title">{{ 'beautiful_storefront' | translate }}</h3>
       <p class="ax-home-feature-desc">{{ 'beautiful_storefront_desc' | translate }}</p>
     </div>
     <div class="ax-home-feature">
-      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">credit_card</span></span>
+      <span class="ax-home-feature-icon"><app-icon name="credit_card"></app-icon></span>
       <h3 class="ax-home-feature-title">{{ 'payments_and_payouts' | translate }}</h3>
       <p class="ax-home-feature-desc">{{ 'payments_and_payouts_desc' | translate }}</p>
     </div>
     <div class="ax-home-feature">
-      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">local_shipping</span></span>
+      <span class="ax-home-feature-icon"><app-icon name="local_shipping"></app-icon></span>
       <h3 class="ax-home-feature-title">{{ 'integrated_logistics' | translate }}</h3>
       <p class="ax-home-feature-desc">{{ 'integrated_logistics_desc' | translate }}</p>
     </div>
     <div class="ax-home-feature">
-      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">insights</span></span>
+      <span class="ax-home-feature-icon"><app-icon name="insights"></app-icon></span>
       <h3 class="ax-home-feature-title">{{ 'sales_analytics' | translate }}</h3>
       <p class="ax-home-feature-desc">{{ 'sales_analytics_desc' | translate }}</p>
     </div>
     <div class="ax-home-feature">
-      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">campaign</span></span>
+      <span class="ax-home-feature-icon"><app-icon name="campaign"></app-icon></span>
       <h3 class="ax-home-feature-title">{{ 'marketing_tools' | translate }}</h3>
       <p class="ax-home-feature-desc">{{ 'marketing_tools_desc' | translate }}</p>
     </div>
     <div class="ax-home-feature">
-      <span class="ax-home-feature-icon"><span class="material-symbols-outlined">shield</span></span>
+      <span class="ax-home-feature-icon"><app-icon name="shield"></app-icon></span>
       <h3 class="ax-home-feature-title">{{ 'trust_and_support' | translate }}</h3>
       <p class="ax-home-feature-desc">{{ 'trust_and_support_desc' | translate }}</p>
     </div>
@@ -195,7 +195,7 @@
   <div class="ax-text-center ax-mt-6">
     <a routerLink="/register" class="ax-btn ax-btn-primary ax-btn-lg">
       {{ 'register_now' | translate }}
-      <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+      <app-icon name="arrow_forward" aria-hidden="true"></app-icon>
     </a>
   </div>
 </section>
@@ -239,19 +239,19 @@
       </div>
       <ul class="ax-home-plan-features">
         <li>
-          <span class="material-symbols-outlined">check_circle</span>
+          <app-icon name="check_circle"></app-icon>
           {{ 'zero_monthly_subscription' | translate }}
         </li>
         <li>
-          <span class="material-symbols-outlined">check_circle</span>
+          <app-icon name="check_circle"></app-icon>
           {{ 'automated_payouts_weekly' | translate }}
         </li>
         <li>
-          <span class="material-symbols-outlined">check_circle</span>
+          <app-icon name="check_circle"></app-icon>
           {{ 'unlimited_products' | translate }}
         </li>
         <li>
-          <span class="material-symbols-outlined">check_circle</span>
+          <app-icon name="check_circle"></app-icon>
           {{ 'support_via_chat_email' | translate }}
         </li>
       </ul>
@@ -283,11 +283,11 @@
           <span class="ax-home-testimonial-author-role">{{ 'testimonial_1_title' | translate }}</span>
         </div>
         <span class="ax-ml-auto" style="color: var(--ax-palette-gold-500);">
-          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
-          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
-          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
-          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
-          <span class="material-symbols-outlined" style="font-size: 1rem;">star_half</span>
+          <app-icon name="star" style="font-size: 1rem; font-variation-settings: 'FILL' 1;"></app-icon>
+          <app-icon name="star" style="font-size: 1rem; font-variation-settings: 'FILL' 1;"></app-icon>
+          <app-icon name="star" style="font-size: 1rem; font-variation-settings: 'FILL' 1;"></app-icon>
+          <app-icon name="star" style="font-size: 1rem; font-variation-settings: 'FILL' 1;"></app-icon>
+          <app-icon name="star_half" style="font-size: 1rem;"></app-icon>
         </span>
       </div>
     </div>
@@ -301,11 +301,11 @@
           <span class="ax-home-testimonial-author-role">{{ 'testimonial_2_title' | translate }}</span>
         </div>
         <span class="ax-ml-auto" style="color: var(--ax-palette-gold-500);">
-          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
-          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
-          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
-          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
-          <span class="material-symbols-outlined" style="font-size: 1rem; font-variation-settings: 'FILL' 1;">star</span>
+          <app-icon name="star" style="font-size: 1rem; font-variation-settings: 'FILL' 1;"></app-icon>
+          <app-icon name="star" style="font-size: 1rem; font-variation-settings: 'FILL' 1;"></app-icon>
+          <app-icon name="star" style="font-size: 1rem; font-variation-settings: 'FILL' 1;"></app-icon>
+          <app-icon name="star" style="font-size: 1rem; font-variation-settings: 'FILL' 1;"></app-icon>
+          <app-icon name="star" style="font-size: 1rem; font-variation-settings: 'FILL' 1;"></app-icon>
         </span>
       </div>
     </div>
@@ -390,7 +390,7 @@
     <div class="ax-flex ax-gap-2 ax-justify-center ax-flex-wrap">
       <a routerLink="/register" class="ax-btn ax-btn-primary ax-btn-lg">
         {{ 'register_button' | translate }}
-        <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+        <app-icon name="arrow_forward" aria-hidden="true"></app-icon>
       </a>
       <a routerLink="/login" class="ax-btn ax-btn-outline ax-btn-lg" style="border-color: rgba(245, 241, 235, 0.3); color: var(--ax-color-text-inverse);">
         {{ 'login_button' | translate }}

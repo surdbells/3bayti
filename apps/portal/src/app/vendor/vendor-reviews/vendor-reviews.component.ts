@@ -8,6 +8,7 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -29,7 +30,7 @@ interface ReviewRow extends Record<string, unknown> {
 @Component({
   selector: 'app-vendor-reviews',
   standalone: true,
-  imports: [VendorShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
+  imports: [VendorShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './vendor-reviews.component.html',
   styleUrl: './vendor-reviews.component.css',
 })

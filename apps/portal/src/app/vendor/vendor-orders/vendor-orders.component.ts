@@ -10,6 +10,7 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -94,7 +95,7 @@ const ITEM_TRANSITIONS: Record<string, string[]> = {
 @Component({
   selector: 'app-vendor-orders',
   standalone: true,
-  imports: [VendorShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective],
+  imports: [VendorShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './vendor-orders.component.html',
   styleUrl: './vendor-orders.component.css',
 })

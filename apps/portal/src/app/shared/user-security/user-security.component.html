@@ -16,7 +16,7 @@
           (click)="goBack()"
           class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
           style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back
         </button>
         <span class="ax-page-header-eyebrow">Account</span>
@@ -81,7 +81,7 @@
             (click)="password_change()"
             [disabled]="ui_controls.is_saving">
             <span *ngIf="ui_controls.is_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-            <span *ngIf="!ui_controls.is_saving" class="material-symbols-outlined" aria-hidden="true">save</span>
+            <app-icon name="save" *ngIf="!ui_controls.is_saving" aria-hidden="true"></app-icon>
             {{ 'save_changes' | translate }}
           </button>
         </div>

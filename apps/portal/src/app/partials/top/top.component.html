@@ -4,7 +4,7 @@
           class="ax-topbar-menu-toggle"
           (click)="menuToggle.emit()"
           aria-label="Open navigation">
-    <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+    <app-icon name="menu" aria-hidden="true"></app-icon>
   </button>
 
   <div class="ax-topbar-brand">
@@ -15,7 +15,7 @@
   <!-- Search slot (reserved for Phase 2 search wiring) -->
   <div class="ax-topbar-search">
     <div class="ax-input-group ax-w-full">
-      <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">search</span>
+      <app-icon name="search" aria-hidden="true" class="ax-input-group-prefix"></app-icon>
       <input type="search"
              class="ax-input ax-input-sm"
              placeholder="Search your store…"
@@ -36,7 +36,7 @@
               aria-label="Notifications"
               aria-haspopup="true"
               [attr.aria-expanded]="ui_controls.notif_open">
-        <span class="material-symbols-outlined" aria-hidden="true">notifications</span>
+        <app-icon name="notifications" aria-hidden="true"></app-icon>
       </button>
       <div class="ax-dropdown-menu"
            [class.ax-dropdown-menu-open]="ui_controls.notif_open"
@@ -47,7 +47,7 @@
           <button type="button"
                   class="ax-btn ax-btn-link ax-btn-sm"
                   (click)="mark_notifications()">
-            <span class="material-symbols-outlined" aria-hidden="true">done_all</span>
+            <app-icon name="done_all" aria-hidden="true"></app-icon>
             Mark all read
           </button>
         </div>
@@ -59,7 +59,7 @@
 
         <div *ngIf="!ui_controls.is_loading && (!notifications || notifications.length === 0)"
              class="ax-empty ax-py-6">
-          <span class="ax-empty-icon"><span class="material-symbols-outlined" aria-hidden="true">notifications_off</span></span>
+          <span class="ax-empty-icon"><app-icon name="notifications_off" aria-hidden="true"></app-icon></span>
           <p class="ax-text-sm ax-text-secondary ax-m-0">You're all caught up</p>
         </div>
 
@@ -92,7 +92,7 @@
         <span class="ax-hidden ax-md-inline ax-text-sm ax-font-medium">
           {{ user_session.first_name }}
         </span>
-        <span class="material-symbols-outlined ax-text-tertiary" style="font-size: 1rem;" aria-hidden="true">expand_more</span>
+        <app-icon name="expand_more" style="font-size: 1rem;" aria-hidden="true" class="ax-text-tertiary"></app-icon>
       </button>
       <div class="ax-dropdown-menu" [class.ax-dropdown-menu-open]="ui_controls.profile_open">
         <div class="ax-px-3 ax-py-2">
@@ -101,16 +101,16 @@
         </div>
         <div class="ax-dropdown-divider"></div>
         <a routerLink="/profile" class="ax-dropdown-item" (click)="close_all()">
-          <span class="material-symbols-outlined" aria-hidden="true">account_circle</span>
+          <app-icon name="account_circle" aria-hidden="true"></app-icon>
           Profile
         </a>
         <a routerLink="/security" class="ax-dropdown-item" (click)="close_all()">
-          <span class="material-symbols-outlined" aria-hidden="true">shield</span>
+          <app-icon name="shield" aria-hidden="true"></app-icon>
           Security
         </a>
         <div class="ax-dropdown-divider"></div>
         <button type="button" class="ax-dropdown-item ax-dropdown-item-danger" (click)="sign_out()">
-          <span class="material-symbols-outlined" aria-hidden="true">logout</span>
+          <app-icon name="logout" aria-hidden="true"></app-icon>
           Sign out
         </button>
       </div>

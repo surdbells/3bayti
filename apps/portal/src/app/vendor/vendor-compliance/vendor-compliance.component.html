@@ -8,7 +8,7 @@
           (click)="goBack()"
           class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
           style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back
         </button>
         <span class="ax-page-header-eyebrow">Account</span>
@@ -131,7 +131,7 @@
           (click)="upload_id()"
           [disabled]="ui_controls.is_submitting">
           <span *ngIf="ui_controls.is_submitting" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-          <span *ngIf="!ui_controls.is_submitting" class="material-symbols-outlined" aria-hidden="true">verified</span>
+          <app-icon name="verified" *ngIf="!ui_controls.is_submitting" aria-hidden="true"></app-icon>
           {{ 'submit' | translate }}
         </button>
       </section>

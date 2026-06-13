@@ -14,6 +14,7 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../icon/icon.component';
 /**
  * Individual tab panel. Declared as a child of <app-ax-tabs>.
  *
@@ -53,7 +54,7 @@ export class AxTabComponent {
 @Component({
   selector: 'app-ax-tabs',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="ax-tabs" [attr.aria-label]="ariaLabel">
@@ -72,7 +73,7 @@ export class AxTabComponent {
           (click)="selectTab(i)"
           (keydown)="onKeydown($event, i)"
         >
-          <span *ngIf="tab.icon" class="material-symbols-outlined" aria-hidden="true">{{ tab.icon }}</span>
+          <app-icon [name]="tab.icon" *ngIf="tab.icon" aria-hidden="true"></app-icon>
           {{ tab.label }}
           <span *ngIf="tab.badge != null" class="ax-tab-badge">{{ tab.badge }}</span>
         </button>

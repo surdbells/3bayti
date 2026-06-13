@@ -16,7 +16,7 @@
           (click)="goBack()"
           class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
           style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back to coupons
         </button>
         <span class="ax-page-header-eyebrow">Promotions</span>
@@ -50,7 +50,7 @@
                   name="code"
                   [(ngModel)]="form.code" />
                 <button type="button" class="ax-btn ax-btn-outline ax-input-group-action" (click)="generateCode()">
-                  <span class="material-symbols-outlined" aria-hidden="true">casino</span>
+                  <app-icon name="casino" aria-hidden="true"></app-icon>
                   Generate
                 </button>
               </div>
@@ -232,7 +232,7 @@
             (click)="startCreate()"
             [disabled]="ui.loading">
             <span *ngIf="ui.loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-            <span *ngIf="!ui.loading" class="material-symbols-outlined" aria-hidden="true">add_circle</span>
+            <app-icon name="add_circle" *ngIf="!ui.loading" aria-hidden="true"></app-icon>
             Create coupon
           </button>
 

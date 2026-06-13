@@ -11,6 +11,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/forms';
 
+import { IconComponent } from '../icon/icon.component';
 /**
  * Number input with increment/decrement buttons.
  *
@@ -24,7 +25,7 @@ import { FormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/f
 @Component({
   selector: 'app-ax-number-stepper',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -42,7 +43,7 @@ import { FormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/f
         (click)="decrement()"
         aria-label="Decrease"
       >
-        <span class="material-symbols-outlined" aria-hidden="true">remove</span>
+        <app-icon name="remove" aria-hidden="true"></app-icon>
       </button>
       <input
         type="number"
@@ -63,7 +64,7 @@ import { FormsModule, ControlValueAccessor, NG_VALUE_ACCESSOR } from '@angular/f
         (click)="increment()"
         aria-label="Increase"
       >
-        <span class="material-symbols-outlined" aria-hidden="true">add</span>
+        <app-icon name="add" aria-hidden="true"></app-icon>
       </button>
     </div>
   `,

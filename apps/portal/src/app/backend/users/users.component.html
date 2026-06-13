@@ -7,7 +7,7 @@
             (click)="goBack()"
             class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
             style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            <app-icon name="arrow_back" aria-hidden="true"></app-icon>
             Back to dashboard
           </button>
           <span class="ax-page-header-eyebrow">Access control</span>
@@ -74,7 +74,7 @@
               (click)="user_register()"
               [disabled]="ui_controls.is_registering">
               <span *ngIf="ui_controls.is_registering" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-              <span *ngIf="!ui_controls.is_registering" class="material-symbols-outlined" aria-hidden="true">person_add</span>
+              <app-icon name="person_add" *ngIf="!ui_controls.is_registering" aria-hidden="true"></app-icon>
               Add user
             </button>
           </div>
@@ -141,7 +141,7 @@
       <p class="ax-drawer-subtitle">{{ single.first_name }} {{ single.last_name }}</p>
     </div>
     <button type="button" class="ax-drawer-close" (click)="onCloseDrawer()" aria-label="Close">
-      <span class="material-symbols-outlined" aria-hidden="true">close</span>
+      <app-icon name="close" aria-hidden="true"></app-icon>
     </button>
   </header>
 
@@ -194,7 +194,7 @@
         (click)="update_password()"
         [disabled]="ui_controls.is_updating_password">
         <span *ngIf="ui_controls.is_updating_password" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-        <span *ngIf="!ui_controls.is_updating_password" class="material-symbols-outlined" aria-hidden="true">key</span>
+        <app-icon name="key" *ngIf="!ui_controls.is_updating_password" aria-hidden="true"></app-icon>
         Update password
       </button>
     </div>

@@ -16,7 +16,7 @@
           (click)="goBack()"
           class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
           style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back to coupons
         </button>
         <span class="ax-page-header-eyebrow">Promotions</span>
@@ -46,22 +46,22 @@
       <section *ngIf="coupon_id === 0" class="ax-page-section">
         <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-3">
           <div class="ax-stat-card">
-            <span class="material-symbols-outlined ax-text-brand" style="font-size: 1.5rem;" aria-hidden="true">confirmation_number</span>
+            <app-icon name="confirmation_number" style="font-size: 1.5rem;" aria-hidden="true" class="ax-text-brand"></app-icon>
             <div class="ax-h4 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">{{ overview.active_coupons }}</div>
             <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Active coupons</div>
           </div>
           <div class="ax-stat-card">
-            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-success);" aria-hidden="true">receipt_long</span>
+            <app-icon name="receipt_long" style="font-size: 1.5rem; color: var(--ax-color-text-success);" aria-hidden="true"></app-icon>
             <div class="ax-h4 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">{{ overview.total_redemptions }}</div>
             <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Total redemptions</div>
           </div>
           <div class="ax-stat-card">
-            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-warning);" aria-hidden="true">sell</span>
+            <app-icon name="sell" style="font-size: 1.5rem; color: var(--ax-color-text-warning);" aria-hidden="true"></app-icon>
             <div class="ax-h5 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">AED {{ overview.total_discount_given | number:'1.0-0' }}</div>
             <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Discount given</div>
           </div>
           <div class="ax-stat-card">
-            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-brand);" aria-hidden="true">trending_up</span>
+            <app-icon name="trending_up" style="font-size: 1.5rem; color: var(--ax-color-text-brand);" aria-hidden="true"></app-icon>
             <div class="ax-h5 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">AED {{ overview.total_revenue_with_coupons | number:'1.0-0' }}</div>
             <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Revenue w/ coupons</div>
           </div>
@@ -72,22 +72,22 @@
       <section *ngIf="coupon_id > 0" class="ax-page-section">
         <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-3">
           <div class="ax-stat-card">
-            <span class="material-symbols-outlined ax-text-brand" style="font-size: 1.5rem;" aria-hidden="true">receipt_long</span>
+            <app-icon name="receipt_long" style="font-size: 1.5rem;" aria-hidden="true" class="ax-text-brand"></app-icon>
             <div class="ax-h4 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">{{ coupon_stats.total_uses }}</div>
             <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Total uses</div>
           </div>
           <div class="ax-stat-card">
-            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-success);" aria-hidden="true">group</span>
+            <app-icon name="group" style="font-size: 1.5rem; color: var(--ax-color-text-success);" aria-hidden="true"></app-icon>
             <div class="ax-h4 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">{{ coupon_stats.unique_customers }}</div>
             <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Unique customers</div>
           </div>
           <div class="ax-stat-card">
-            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-warning);" aria-hidden="true">sell</span>
+            <app-icon name="sell" style="font-size: 1.5rem; color: var(--ax-color-text-warning);" aria-hidden="true"></app-icon>
             <div class="ax-h5 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">AED {{ coupon_stats.total_discount_given | number:'1.2-2' }}</div>
             <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Discount given</div>
           </div>
           <div class="ax-stat-card">
-            <span class="material-symbols-outlined" style="font-size: 1.5rem; color: var(--ax-color-text-brand);" aria-hidden="true">trending_up</span>
+            <app-icon name="trending_up" style="font-size: 1.5rem; color: var(--ax-color-text-brand);" aria-hidden="true"></app-icon>
             <div class="ax-h5 ax-m-0 ax-mt-2 ax-numeric ax-font-semibold">AED {{ coupon_stats.total_revenue_generated | number:'1.2-2' }}</div>
             <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.06em;">Revenue generated</div>
           </div>
@@ -175,7 +175,7 @@
                       class="ax-btn ax-btn-ghost ax-btn-sm"
                       (click)="viewCouponAnalytics(tc.coupon_id)"
                       title="View details">
-                      <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                      <app-icon name="arrow_forward" aria-hidden="true"></app-icon>
                     </button>
                   </td>
                 </tr>
@@ -239,7 +239,7 @@
               class="ax-btn ax-btn-ghost ax-btn-sm"
               (click)="goToLogPage(log_pagination.page - 1)"
               [disabled]="log_pagination.page === 1">
-              <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+              <app-icon name="chevron_left" aria-hidden="true"></app-icon>
             </button>
             <span class="ax-text-sm ax-text-secondary" style="display: inline-flex; align-items: center;">
               {{ log_pagination.page }} / {{ log_pagination.total_pages }}
@@ -249,7 +249,7 @@
               class="ax-btn ax-btn-ghost ax-btn-sm"
               (click)="goToLogPage(log_pagination.page + 1)"
               [disabled]="log_pagination.page === log_pagination.total_pages">
-              <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+              <app-icon name="chevron_right" aria-hidden="true"></app-icon>
             </button>
           </div>
         </div>

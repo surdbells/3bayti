@@ -7,9 +7,10 @@ import { CommonModule } from '@angular/common';
 import { Notifications } from '../../class/notifications';
 import { LanguageSwitcherComponent } from '../../language-switcher.component';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-top',
-  imports: [CommonModule, RouterLink, LanguageSwitcherComponent],
+  imports: [CommonModule, RouterLink, LanguageSwitcherComponent, IconComponent],
   standalone: true,
   templateUrl: './top.component.html',
   styleUrl: './top.component.css'

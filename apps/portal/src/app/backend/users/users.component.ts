@@ -11,6 +11,7 @@ import { GlobalComponent } from '../../global-component';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { TranslatePipe } from '../../translate.pipe';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -42,8 +43,7 @@ export interface User extends Record<string, unknown> {
     FormsModule,
     AxDataTableComponent,
     AxCellDirective,
-    TranslatePipe,
-  ],
+    TranslatePipe, IconComponent],
   templateUrl: './users.component.html',
   styleUrl: './users.component.css',
 })

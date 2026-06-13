@@ -16,7 +16,7 @@ import { HotToastService } from '../toast/toast.service';
  *   <button class="ax-btn ax-btn-outline"
  *           axCopyToClipboard="ORDER-240098"
  *           axCopyLabel="Order reference">
- *     <span class="material-symbols-outlined">content_copy</span>
+ *     <app-icon name="content_copy"></app-icon>
  *     Copy order number
  *   </button>
  *

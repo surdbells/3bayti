@@ -8,10 +8,11 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-admin-view-order',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule],
+  imports: [AdminShellComponent, CommonModule, IconComponent],
   templateUrl: './admin-view-order.component.html',
   styleUrl: './admin-view-order.component.css',
 })

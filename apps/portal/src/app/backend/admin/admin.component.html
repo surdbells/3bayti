@@ -11,11 +11,11 @@
 
       <div class="ax-page-actions">
         <button type="button" class="ax-btn ax-btn-outline" aria-label="Refresh" (click)="get_dashboard()">
-          <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+          <app-icon name="refresh" aria-hidden="true"></app-icon>
           Refresh
         </button>
         <button type="button" class="ax-btn ax-btn-primary" (click)="open_products()">
-          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          <app-icon name="add" aria-hidden="true"></app-icon>
           New action
         </button>
       </div>
@@ -29,7 +29,7 @@
               [class.ax-segment-item-active]="ui_controls.viewing_dashboard"
               [attr.aria-selected]="ui_controls.viewing_dashboard"
               (click)="show_dashboard()">
-        <span class="material-symbols-outlined" aria-hidden="true">analytics</span>
+        <app-icon name="analytics" aria-hidden="true"></app-icon>
         Overview
       </button>
 
@@ -39,7 +39,7 @@
               [class.ax-segment-item-active]="ui_controls.viewing_menu"
               [attr.aria-selected]="ui_controls.viewing_menu"
               (click)="show_menu()">
-        <span class="material-symbols-outlined" aria-hidden="true">apps</span>
+        <app-icon name="apps" aria-hidden="true"></app-icon>
         Quick actions
       </button>
 
@@ -49,7 +49,7 @@
               [class.ax-segment-item-active]="ui_controls.viewing_recent_orders"
               [attr.aria-selected]="ui_controls.viewing_recent_orders"
               (click)="show_recent()">
-        <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+        <app-icon name="receipt_long" aria-hidden="true"></app-icon>
         Recent sales
       </button>
     </div>
@@ -74,13 +74,13 @@
             <div class="ax-stat-card-header">
               <span class="ax-stat-card-label">Products</span>
               <span class="ax-stat-card-icon">
-                <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+                <app-icon name="inventory_2" aria-hidden="true"></app-icon>
               </span>
             </div>
             <div class="ax-stat-card-value">{{ total_products | number }}</div>
             <div class="ax-stat-card-footer">
               <span class="ax-stat-card-caption">Live across the platform</span>
-              <span class="material-symbols-outlined ax-text-on-brand ax-opacity-75" aria-hidden="true">arrow_forward</span>
+              <app-icon name="arrow_forward" aria-hidden="true" class="ax-text-on-brand ax-opacity-75"></app-icon>
             </div>
           </div>
 
@@ -94,7 +94,7 @@
             <div class="ax-stat-card-header">
               <span class="ax-stat-card-label">Orders</span>
               <span class="ax-stat-card-icon">
-                <span class="material-symbols-outlined" aria-hidden="true">shopping_cart</span>
+                <app-icon name="shopping_cart" aria-hidden="true"></app-icon>
               </span>
             </div>
             <div class="ax-stat-card-value">{{ total_orders | number }}</div>
@@ -113,7 +113,7 @@
             <div class="ax-stat-card-header">
               <span class="ax-stat-card-label">Products sold</span>
               <span class="ax-stat-card-icon">
-                <span class="material-symbols-outlined" aria-hidden="true">sell</span>
+                <app-icon name="sell" aria-hidden="true"></app-icon>
               </span>
             </div>
             <div class="ax-stat-card-value">{{ products_sold | number }}</div>
@@ -167,7 +167,7 @@
                [attr.title]="a.title">
               <div class="ax-flex ax-items-start ax-justify-between ax-mb-3">
                 <span class="ax-stat-card-icon">
-                  <span class="material-symbols-outlined" aria-hidden="true">{{ getIcon(a.icon) }}</span>
+                  <app-icon [name]="getIcon(a.icon)" aria-hidden="true"></app-icon>
                 </span>
                 <span *ngIf="a.badge" class="ax-badge ax-badge-danger">{{ a.badge }}</span>
               </div>
@@ -186,7 +186,7 @@
                  [attr.title]="a.title">
                 <div class="ax-flex ax-items-start ax-justify-between ax-mb-3">
                   <span class="ax-stat-card-icon">
-                    <span class="material-symbols-outlined" aria-hidden="true">{{ getIcon(a.icon) }}</span>
+                    <app-icon [name]="getIcon(a.icon)" aria-hidden="true"></app-icon>
                   </span>
                   <span *ngIf="a.badge" class="ax-badge ax-badge-danger">{{ a.badge }}</span>
                 </div>
@@ -204,7 +204,7 @@
                    [attr.title]="a.title">
                   <div class="ax-flex ax-items-start ax-justify-between ax-mb-3">
                     <span class="ax-stat-card-icon">
-                      <span class="material-symbols-outlined" aria-hidden="true">{{ getIcon(a.icon) }}</span>
+                      <app-icon [name]="getIcon(a.icon)" aria-hidden="true"></app-icon>
                     </span>
                     <span *ngIf="a.badge" class="ax-badge ax-badge-danger">{{ a.badge }}</span>
                   </div>
@@ -221,7 +221,7 @@
                    [attr.title]="a.title">
                   <div class="ax-flex ax-items-start ax-justify-between ax-mb-3">
                     <span class="ax-stat-card-icon">
-                      <span class="material-symbols-outlined" aria-hidden="true">{{ getIcon(a.icon) }}</span>
+                      <app-icon [name]="getIcon(a.icon)" aria-hidden="true"></app-icon>
                     </span>
                     <span *ngIf="a.badge" class="ax-badge ax-badge-danger">{{ a.badge }}</span>
                   </div>
@@ -286,7 +286,7 @@
         <div *ngIf="ui_controls.no_recent" class="ax-card">
           <div class="ax-empty">
             <span class="ax-empty-icon">
-              <span class="material-symbols-outlined" aria-hidden="true">shopping_bag</span>
+              <app-icon name="shopping_bag" aria-hidden="true"></app-icon>
             </span>
             <h3 class="ax-empty-title">No recent orders</h3>
             <p class="ax-empty-description">When new orders come in, they'll show up here for quick review.</p>

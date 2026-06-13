@@ -88,7 +88,7 @@
   display: inline-flex; align-items: center;
   color: var(--ax-color-text-tertiary);
 }
-.axdt-sort-ind .material-symbols-outlined { font-size: 1rem; }
+.axdt-sort-ind app-icon { font-size: 1rem; }
 .axdt-sort-ind[data-dir='asc'], .axdt-sort-ind[data-dir='desc'] { color: var(--ax-color-text-primary); }
 .axdt-sort-order {
   font-size: 0.7rem; font-weight: 700; margin-left: 0.1rem;

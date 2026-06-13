@@ -9,6 +9,7 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -34,7 +35,7 @@ export interface Tickets extends Record<string, unknown> {
 @Component({
   selector: 'app-tickets',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './tickets.component.html',
   styleUrl: './tickets.component.css',
 })

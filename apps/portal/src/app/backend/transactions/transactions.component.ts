@@ -8,6 +8,7 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -34,7 +35,7 @@ export interface Transactions extends Record<string, unknown> {
 @Component({
   selector: 'app-transactions',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './transactions.component.html',
   styleUrl: './transactions.component.css',
 })

@@ -56,7 +56,7 @@
   color: var(--ax-color-text-brand);
   flex-shrink: 0;
 }
-.ax-stat-card-icon .material-symbols-outlined {
+.ax-stat-card-icon app-icon {
   font-size: 1.25rem;
 }
 
@@ -259,7 +259,7 @@
   color: var(--ax-color-text-brand);
   margin-bottom: var(--ax-space-2);
 }
-.ax-empty-icon .material-symbols-outlined {
+.ax-empty-icon app-icon {
   font-size: 1.75rem;
 }
 
@@ -357,7 +357,7 @@
   background-color: var(--ax-color-bg-muted);
   color: var(--ax-color-text-primary);
 }
-.ax-dropdown-item .material-symbols-outlined {
+.ax-dropdown-item app-icon {
   font-size: 1.1rem;
   color: var(--ax-color-text-tertiary);
 }
@@ -369,7 +369,7 @@
   background-color: var(--ax-color-bg-danger-subtle);
   color: var(--ax-color-text-danger);
 }
-.ax-dropdown-item-danger .material-symbols-outlined {
+.ax-dropdown-item-danger app-icon {
   color: var(--ax-color-text-danger);
 }
 

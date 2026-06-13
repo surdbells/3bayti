@@ -6,10 +6,11 @@ import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 @Component({
   selector: 'app-edit-collection',
   standalone: true,
-  imports: [AdminShellComponent, NgIf, ReactiveFormsModule, FormsModule],
+  imports: [AdminShellComponent, NgIf, ReactiveFormsModule, FormsModule, IconComponent],
   templateUrl: './edit-collection.component.html',
   styleUrl: './edit-collection.component.css',
 })

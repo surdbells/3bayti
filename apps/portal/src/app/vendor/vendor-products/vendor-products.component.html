@@ -16,7 +16,7 @@
     <header class="ax-page-header">
       <div class="ax-page-header-content">
         <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back
         </button>
         <span class="ax-page-header-eyebrow">Catalog</span>
@@ -36,7 +36,7 @@
             [class.ax-btn-primary]="ui.list_view"
             [class.ax-btn-outline]="!ui.list_view"
             aria-label="List view">
-            <span class="material-symbols-outlined" aria-hidden="true">list</span>
+            <app-icon name="list" aria-hidden="true"></app-icon>
           </button>
           <button
             type="button"
@@ -45,7 +45,7 @@
             [class.ax-btn-primary]="ui.grid_view"
             [class.ax-btn-outline]="!ui.grid_view"
             aria-label="Grid view">
-            <span class="material-symbols-outlined" aria-hidden="true">grid_view</span>
+            <app-icon name="grid_view" aria-hidden="true"></app-icon>
           </button>
         </div>
 
@@ -55,14 +55,14 @@
           (click)="toggleFilters()"
           class="ax-btn ax-btn-sm ax-btn-outline"
           [class.ax-btn-primary]="ui.filters_open">
-          <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+          <app-icon name="tune" aria-hidden="true"></app-icon>
           Filters
           <span *ngIf="activeFilterCount > 0" class="ax-badge ax-badge-danger ax-ml-1">{{ activeFilterCount }}</span>
         </button>
 
         <!-- Add product -->
         <button *ngIf="user_session.is_vendor" type="button" (click)="openCreate()" class="ax-btn ax-btn-primary ax-btn-sm">
-          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          <app-icon name="add" aria-hidden="true"></app-icon>
           New product
         </button>
       </div>
@@ -71,7 +71,7 @@
     <!-- Search bar -->
     <div class="ax-page-section">
       <div class="ax-input-group">
-        <span class="ax-input-group-prefix material-symbols-outlined" aria-hidden="true">search</span>
+        <app-icon name="search" aria-hidden="true" class="ax-input-group-prefix"></app-icon>
         <input
           type="text"
           class="ax-input"
@@ -85,7 +85,7 @@
           class="ax-input-group-suffix ax-input-group-action"
           (click)="filters.search = ''; onSearchInput()"
           aria-label="Clear search">
-          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          <app-icon name="close" aria-hidden="true"></app-icon>
         </button>
       </div>
     </div>
@@ -165,11 +165,11 @@
             type="button"
             class="ax-btn ax-btn-ghost"
             (click)="clearFilters()">
-            <span class="material-symbols-outlined" aria-hidden="true">filter_list_off</span>
+            <app-icon name="filter_list_off" aria-hidden="true"></app-icon>
             Clear filters
           </button>
           <button type="button" class="ax-btn ax-btn-primary" (click)="applyFilters()">
-            <span class="material-symbols-outlined" aria-hidden="true">filter_list</span>
+            <app-icon name="filter_list" aria-hidden="true"></app-icon>
             Apply filters
           </button>
         </div>
@@ -240,14 +240,14 @@
                 class="ax-btn ax-btn-ghost ax-btn-sm"
                 (click)="preview(p.id)"
                 aria-label="Preview">
-                <span class="material-symbols-outlined" aria-hidden="true">visibility</span>
+                <app-icon name="visibility" aria-hidden="true"></app-icon>
               </button>
               <button
                 type="button"
                 class="ax-btn ax-btn-ghost ax-btn-sm"
                 (click)="editProduct(p.id)"
                 aria-label="Edit">
-                <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+                <app-icon name="edit" aria-hidden="true"></app-icon>
               </button>
               <button
                 type="button"
@@ -255,7 +255,7 @@
                 (click)="startDelete(p.id, p.name)"
                 aria-label="Delete"
                 style="color: var(--ax-color-text-danger);">
-                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+                <app-icon name="delete" aria-hidden="true"></app-icon>
               </button>
             </div>
             <span class="ax-text-2xs ax-text-tertiary">Qty: {{ p.quantity }}</span>
@@ -281,11 +281,11 @@
       <div class="ax-card ax-p-0">
         <!-- No filters: first-time empty -->
         <div *ngIf="!hasActiveFilters" class="ax-p-8 ax-text-center">
-          <span class="material-symbols-outlined" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true">inventory_2</span>
+          <app-icon name="inventory_2" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
           <h3 class="ax-h4 ax-m-0 ax-mt-3">No products yet</h3>
           <p class="ax-text-secondary ax-mt-2">Add your first product to open your storefront.</p>
           <button type="button" (click)="openCreate()" class="ax-btn ax-btn-primary ax-mt-4">
-            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            <app-icon name="add" aria-hidden="true"></app-icon>
             Add first product
           </button>
           <div class="ax-text-xs ax-text-tertiary ax-mt-5" style="border-top: 1px solid var(--ax-color-border-subtle); padding-top: var(--ax-space-3); max-width: 24rem; margin-left: auto; margin-right: auto;">
@@ -295,11 +295,11 @@
 
         <!-- Active filters: no matches -->
         <div *ngIf="hasActiveFilters" class="ax-p-8 ax-text-center">
-          <span class="material-symbols-outlined" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true">search_off</span>
+          <app-icon name="search_off" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
           <h3 class="ax-h4 ax-m-0 ax-mt-3">No matching products</h3>
           <p class="ax-text-secondary ax-mt-2">Try adjusting your search or filter criteria.</p>
           <button type="button" class="ax-btn ax-btn-outline ax-mt-4" (click)="clearFilters()">
-            <span class="material-symbols-outlined" aria-hidden="true">filter_list_off</span>
+            <app-icon name="filter_list_off" aria-hidden="true"></app-icon>
             Clear filters
           </button>
         </div>
@@ -326,7 +326,7 @@
         <p class="ax-drawer-subtitle">How this product appears in the shopper app</p>
       </div>
       <button type="button" class="ax-drawer-close" (click)="closePreview()" aria-label="Close preview">
-        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        <app-icon name="close" aria-hidden="true"></app-icon>
       </button>
     </header>
 
@@ -342,19 +342,19 @@
           <div class="phone-status-bar">
             <span class="ax-text-sm">1:37</span>
             <div class="ax-flex ax-gap-1 ax-items-center">
-              <span class="material-symbols-outlined" style="font-size: 14px;">signal_cellular_alt</span>
-              <span class="material-symbols-outlined" style="font-size: 14px;">wifi</span>
-              <span class="material-symbols-outlined" style="font-size: 14px;">battery_5_bar</span>
+              <app-icon name="signal_cellular_alt" style="font-size: 14px;"></app-icon>
+              <app-icon name="wifi" style="font-size: 14px;"></app-icon>
+              <app-icon name="battery_5_bar" style="font-size: 14px;"></app-icon>
             </div>
           </div>
 
           <div class="phone-app-header">
             <span class="phone-back-btn">
-              <span class="material-symbols-outlined">arrow_back</span>
+              <app-icon name="arrow_back"></app-icon>
             </span>
             <div class="ax-flex ax-gap-3">
-              <span class="material-symbols-outlined">favorite_border</span>
-              <span class="material-symbols-outlined">shopping_cart</span>
+              <app-icon name="favorite_border"></app-icon>
+              <app-icon name="shopping_cart"></app-icon>
             </div>
           </div>
 
@@ -366,7 +366,7 @@
               class="phone-img-nav phone-img-nav-prev"
               (click)="prevImage()"
               aria-label="Previous image">
-              <span class="material-symbols-outlined">chevron_left</span>
+              <app-icon name="chevron_left"></app-icon>
             </button>
             <button
               *ngIf="previewImageIndex < previewImages.length - 1"
@@ -374,7 +374,7 @@
               class="phone-img-nav phone-img-nav-next"
               (click)="nextImage()"
               aria-label="Next image">
-              <span class="material-symbols-outlined">chevron_right</span>
+              <app-icon name="chevron_right"></app-icon>
             </button>
           </div>
 
@@ -402,7 +402,7 @@
             <div class="phone-description" [innerHTML]="single_product.description"></div>
 
             <div *ngIf="previewDeliveryTime" class="phone-delivery-badge">
-              <span class="material-symbols-outlined" style="font-size: 16px;">local_shipping</span>
+              <app-icon name="local_shipping" style="font-size: 16px;"></app-icon>
               Delivery Time: {{ previewDeliveryTime }}
             </div>
 
@@ -438,7 +438,7 @@
               <div class="phone-total-price">{{ formatCurrency(single_product.price, 'en', 'AED ') }}</div>
             </div>
             <div class="phone-add-to-cart">
-              <span class="material-symbols-outlined ax-mr-1" style="font-size: 18px;">shopping_cart</span>
+              <app-icon name="shopping_cart" style="font-size: 18px;" class="ax-mr-1"></app-icon>
               Add to Cart
             </div>
           </div>
@@ -457,7 +457,7 @@
       <p class="ax-drawer-subtitle">Your store</p>
     </div>
     <button type="button" class="ax-drawer-close" (click)="closeEditor()" aria-label="Close">
-      <span class="material-symbols-outlined">close</span>
+      <app-icon name="close"></app-icon>
     </button>
   </header>
 
@@ -527,7 +527,7 @@
   <footer class="ax-drawer-footer">
     <button type="button" class="ax-btn ax-btn-ghost" (click)="closeEditor()">Cancel</button>
     <button type="button" class="ax-btn ax-btn-primary" [disabled]="editorBusy()" (click)="saveProduct()">
-      <span class="material-symbols-outlined" aria-hidden="true">{{ editorEditing() ? 'save' : 'add' }}</span>
+      <app-icon [name]="editorEditing() ? 'save' : 'add'" aria-hidden="true"></app-icon>
       {{ editorEditing() ? 'Save changes' : 'Create product' }}
     </button>
   </footer>

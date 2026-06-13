@@ -8,7 +8,7 @@
             (click)="goBack()"
             class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
             style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            <app-icon name="arrow_back" aria-hidden="true"></app-icon>
             Back
           </button>
           <span class="ax-page-header-eyebrow">Catalog oversight</span>
@@ -25,7 +25,7 @@
             (click)="start_update()"
             [disabled]="ui_controls.is_loading">
             <span *ngIf="ui_controls.is_loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-            <span *ngIf="!ui_controls.is_loading" class="material-symbols-outlined" aria-hidden="true">save</span>
+            <app-icon name="save" *ngIf="!ui_controls.is_loading" aria-hidden="true"></app-icon>
             Save changes
           </button>
         </div>

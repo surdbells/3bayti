@@ -8,7 +8,7 @@
             (click)="goBack()"
             class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
             style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            <app-icon name="arrow_back" aria-hidden="true"></app-icon>
             Back
           </button>
           <span class="ax-page-header-eyebrow">Order management</span>
@@ -25,7 +25,7 @@
             class="ax-btn ax-btn-primary ax-btn-sm"
             (click)="startStatusChange(data.order, 'Ready for Delivery', data.customer_email)"
             [disabled]="ui_controls.updating_order">
-            <span class="material-symbols-outlined" aria-hidden="true">local_shipping</span>
+            <app-icon name="local_shipping" aria-hidden="true"></app-icon>
             Mark ready for delivery
           </button>
           <button
@@ -34,14 +34,14 @@
             class="ax-btn ax-btn-primary ax-btn-sm"
             (click)="startStatusChange(data.order, 'Delivered', data.customer_email)"
             [disabled]="ui_controls.updating_order">
-            <span class="material-symbols-outlined" aria-hidden="true">task_alt</span>
+            <app-icon name="task_alt" aria-hidden="true"></app-icon>
             Mark as delivered
           </button>
           <button
             type="button"
             class="ax-btn ax-btn-outline ax-btn-sm"
             (click)="downloadPdf()">
-            <span class="material-symbols-outlined" aria-hidden="true">download</span>
+            <app-icon name="download" aria-hidden="true"></app-icon>
             Download PDF
           </button>
         </div>

@@ -7,10 +7,11 @@ import { CrudService } from '../../services/crud.service';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-admin-top',
   standalone: true,
-  imports: [LanguageSwitcherComponent, RouterLink, CommonModule],
+  imports: [LanguageSwitcherComponent, RouterLink, CommonModule, IconComponent],
   templateUrl: './admin-top.component.html',
   styleUrl: './admin-top.component.css'
 })

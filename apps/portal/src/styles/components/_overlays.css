@@ -168,7 +168,7 @@
 .ax-select-panel-search {
   position: relative;
 }
-.ax-select-panel-search .material-symbols-outlined {
+.ax-select-panel-search app-icon {
   position: absolute;
   top: 50%;
   left: 0.625rem;
@@ -271,7 +271,7 @@
   justify-content: center;
   color: var(--ax-color-text-brand);
 }
-.ax-select-panel-option-check .material-symbols-outlined {
+.ax-select-panel-option-check app-icon {
   font-size: 1rem;
 }
 
@@ -337,7 +337,7 @@
   color: var(--ax-color-text-disabled);
   cursor: not-allowed;
 }
-.ax-calendar-nav .material-symbols-outlined {
+.ax-calendar-nav app-icon {
   font-size: 1.25rem;
 }
 

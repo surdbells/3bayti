@@ -10,6 +10,7 @@ import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { AxConfirmService } from '../../../shared/overlays';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -52,7 +53,7 @@ const EMPTY_FORM: ProductForm = {
 @Component({
   selector: 'app-store-products',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective],
+  imports: [AdminShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './store-products.component.html',
   styleUrl: './store-products.component.css',
 })

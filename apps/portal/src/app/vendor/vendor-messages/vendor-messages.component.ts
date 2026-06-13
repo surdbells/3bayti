@@ -3,9 +3,10 @@ import { Router } from '@angular/router';
 import { HotToastService } from '../../shared/toast/toast.service';
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-vendor-messages',
-  imports: [VendorShellComponent],
+  imports: [VendorShellComponent, IconComponent],
   standalone: true,
   templateUrl: './vendor-messages.component.html',
   styleUrl: './vendor-messages.component.css',

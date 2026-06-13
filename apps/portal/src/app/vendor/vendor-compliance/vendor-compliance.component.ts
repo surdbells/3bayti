@@ -9,6 +9,7 @@ import { TranslatePipe } from '../../translate.pipe';
 import imageCompression from 'browser-image-compression';
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxAccordionComponent,
   AxAccordionItemComponent,
@@ -23,8 +24,7 @@ import {
     CommonModule,
     TranslatePipe,
     AxAccordionComponent,
-    AxAccordionItemComponent,
-  ],
+    AxAccordionItemComponent, IconComponent],
   templateUrl: './vendor-compliance.component.html',
   styleUrl: './vendor-compliance.component.css',
 })

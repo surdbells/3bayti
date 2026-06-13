@@ -9,6 +9,7 @@ import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -47,7 +48,7 @@ interface SvgPoint { x: number; y: number; raw: RevenuePoint; }
 @Component({
   selector: 'app-store-sales',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective],
+  imports: [AdminShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './store-sales.component.html',
   styleUrl: './store-sales.component.css',
 })

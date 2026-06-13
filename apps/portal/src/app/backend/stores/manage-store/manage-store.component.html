@@ -8,7 +8,7 @@
             (click)="goBack()"
             class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
             style="align-self: flex-start;">
-            <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+            <app-icon name="arrow_back" aria-hidden="true"></app-icon>
             Back to stores
           </button>
           <span class="ax-page-header-eyebrow">Store management</span>
@@ -24,19 +24,19 @@
 
           <button *ngIf="!store.approved" type="button" class="ax-btn ax-btn-primary ax-btn-sm"
             (click)="approveStore()" [disabled]="ui_controls.acting">
-            <span class="material-symbols-outlined" aria-hidden="true">check_circle</span> Approve
+            <app-icon name="check_circle" aria-hidden="true"></app-icon> Approve
           </button>
           <button *ngIf="isActive" type="button" class="ax-btn ax-btn-outline ax-btn-danger ax-btn-sm"
             (click)="suspendStore()" [disabled]="ui_controls.acting">
-            <span class="material-symbols-outlined" aria-hidden="true">block</span> Suspend
+            <app-icon name="block" aria-hidden="true"></app-icon> Suspend
           </button>
           <button *ngIf="!isActive" type="button" class="ax-btn ax-btn-outline ax-btn-sm"
             (click)="reactivateStore()" [disabled]="ui_controls.acting">
-            <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span> Reactivate
+            <app-icon name="restart_alt" aria-hidden="true"></app-icon> Reactivate
           </button>
           <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm"
             (click)="get_store()" [disabled]="ui_controls.is_loading" aria-label="Refresh">
-            <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+            <app-icon name="refresh" aria-hidden="true"></app-icon>
           </button>
         </div>
       </header>
@@ -44,15 +44,15 @@
       <!-- Quick links to this store's operational screens -->
       <nav *ngIf="!ui_controls.is_loading" class="ms-quicklinks" aria-label="Store sections">
         <button type="button" class="ms-quicklink" (click)="openOrders()">
-          <span class="material-symbols-outlined" aria-hidden="true">receipt_long</span>
+          <app-icon name="receipt_long" aria-hidden="true"></app-icon>
           <span><span class="ms-quicklink-title">Orders</span><span class="ms-quicklink-sub">Lifecycle &amp; fulfilment</span></span>
         </button>
         <button type="button" class="ms-quicklink" (click)="openProducts()">
-          <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+          <app-icon name="inventory_2" aria-hidden="true"></app-icon>
           <span><span class="ms-quicklink-title">Products</span><span class="ms-quicklink-sub">Catalogue &amp; stock</span></span>
         </button>
         <button type="button" class="ms-quicklink" (click)="openSales()">
-          <span class="material-symbols-outlined" aria-hidden="true">insights</span>
+          <app-icon name="insights" aria-hidden="true"></app-icon>
           <span><span class="ms-quicklink-title">Sales</span><span class="ms-quicklink-sub">Performance &amp; revenue</span></span>
         </button>
       </nav>
@@ -324,7 +324,7 @@
                     (click)="send_message()"
                     [disabled]="ui_controls.sending_message">
                     <span *ngIf="ui_controls.sending_message" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-                    <span *ngIf="!ui_controls.sending_message" class="material-symbols-outlined" aria-hidden="true">send</span>
+                    <app-icon name="send" *ngIf="!ui_controls.sending_message" aria-hidden="true"></app-icon>
                     Send message
                   </button>
                 </div>

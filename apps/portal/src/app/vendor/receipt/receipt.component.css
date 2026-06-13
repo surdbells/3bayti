@@ -24,7 +24,7 @@
   transition: background-color var(--ax-duration-fast, 150ms) var(--ax-ease-out, ease-out);
 }
 .invoice-back-btn:hover { background-color: var(--ax-color-bg-muted); }
-.invoice-back-btn .material-symbols-outlined { font-size: 1.25rem; }
+.invoice-back-btn app-icon { font-size: 1.25rem; }
 
 /* Status badge — solid black variant for the "ORDER STATUS" pill */
 .status-badge {

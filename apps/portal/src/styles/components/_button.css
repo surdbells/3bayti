@@ -58,7 +58,7 @@
 }
 
 /* Icon sizing inside button */
-.ax-btn .material-symbols-outlined,
+.ax-btn app-icon,
 .ax-btn .ax-btn-icon {
   font-size: 1.15em;
   line-height: 1;

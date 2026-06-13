@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 
+import { IconComponent } from '../icon/icon.component';
 export interface AxBreadcrumbItem {
   /** Text shown in the trail. */
   label: string;
@@ -25,7 +26,7 @@ export interface AxBreadcrumbItem {
 @Component({
   selector: 'app-ax-breadcrumb',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nav class="ax-breadcrumb" aria-label="Breadcrumb">
@@ -35,18 +36,18 @@ export interface AxBreadcrumbItem {
           class="ax-breadcrumb-item"
           [routerLink]="item.link"
         >
-          <span *ngIf="item.icon" class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+          <app-icon [name]="item.icon" *ngIf="item.icon" aria-hidden="true"></app-icon>
           {{ item.label }}
         </a>
         <ng-template #currentItem>
           <span class="ax-breadcrumb-item" [attr.aria-current]="last ? 'page' : null">
-            <span *ngIf="item.icon" class="material-symbols-outlined" aria-hidden="true">{{ item.icon }}</span>
+            <app-icon [name]="item.icon" *ngIf="item.icon" aria-hidden="true"></app-icon>
             {{ item.label }}
           </span>
         </ng-template>
 
         <span *ngIf="!last" class="ax-breadcrumb-separator" aria-hidden="true">
-          <span class="material-symbols-outlined">chevron_right</span>
+          <app-icon name="chevron_right"></app-icon>
         </span>
       </ng-container>
     </nav>

@@ -22,6 +22,7 @@ import {
 } from '@angular/cdk/overlay';
 import { TemplatePortal } from '@angular/cdk/portal';
 
+import { IconComponent } from '../icon/icon.component';
 export interface AxMultiselectOption {
   id: string | number;
   label: string;
@@ -49,7 +50,7 @@ export interface AxMultiselectOption {
 @Component({
   selector: 'app-ax-multiselect',
   standalone: true,
-  imports: [CommonModule, FormsModule, OverlayModule],
+  imports: [CommonModule, FormsModule, OverlayModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -109,7 +110,7 @@ export interface AxMultiselectOption {
       >
         ×
       </button>
-      <span class="ax-select-trigger-caret material-symbols-outlined" aria-hidden="true">expand_more</span>
+      <app-icon name="expand_more" aria-hidden="true" class="ax-select-trigger-caret"></app-icon>
     </button>
 
     <ng-template #panelTpl>
@@ -121,7 +122,7 @@ export interface AxMultiselectOption {
       >
         <div *ngIf="searchable" class="ax-select-panel-header">
           <div class="ax-select-panel-search">
-            <span class="material-symbols-outlined" aria-hidden="true">search</span>
+            <app-icon name="search" aria-hidden="true"></app-icon>
             <input
               #searchInput
               type="text"

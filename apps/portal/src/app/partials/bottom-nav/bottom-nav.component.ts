@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AxDrawerService } from '../../shared/overlays/ax-drawer.service';
 import { MoreSheetComponent } from './more-sheet.component';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 /**
  * Bottom navigation for vendor users on mobile (≤ 768px).
  *
@@ -17,7 +18,7 @@ import { MoreSheetComponent } from './more-sheet.component';
 @Component({
   selector: 'app-bottom-nav',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterLink, RouterLinkActive, IconComponent],
   template: `
     <nav class="ax-bottom-nav" aria-label="Primary navigation">
       <a
@@ -26,7 +27,7 @@ import { MoreSheetComponent } from './more-sheet.component';
         [routerLinkActiveOptions]="{ exact: true }"
         class="ax-bottom-nav-item"
         aria-label="Dashboard">
-        <span class="material-symbols-outlined" aria-hidden="true">dashboard</span>
+        <app-icon name="dashboard" aria-hidden="true"></app-icon>
         <span class="ax-bottom-nav-label">Home</span>
       </a>
 
@@ -35,7 +36,7 @@ import { MoreSheetComponent } from './more-sheet.component';
         routerLinkActive="ax-bottom-nav-item-active"
         class="ax-bottom-nav-item"
         aria-label="Products">
-        <span class="material-symbols-outlined" aria-hidden="true">inventory_2</span>
+        <app-icon name="inventory_2" aria-hidden="true"></app-icon>
         <span class="ax-bottom-nav-label">Products</span>
       </a>
 
@@ -44,7 +45,7 @@ import { MoreSheetComponent } from './more-sheet.component';
         routerLinkActive="ax-bottom-nav-item-active"
         class="ax-bottom-nav-item"
         aria-label="Orders">
-        <span class="material-symbols-outlined" aria-hidden="true">shopping_bag</span>
+        <app-icon name="shopping_bag" aria-hidden="true"></app-icon>
         <span class="ax-bottom-nav-label">Orders</span>
       </a>
 
@@ -53,7 +54,7 @@ import { MoreSheetComponent } from './more-sheet.component';
         routerLinkActive="ax-bottom-nav-item-active"
         class="ax-bottom-nav-item"
         aria-label="Coupons">
-        <span class="material-symbols-outlined" aria-hidden="true">local_offer</span>
+        <app-icon name="local_offer" aria-hidden="true"></app-icon>
         <span class="ax-bottom-nav-label">Coupons</span>
       </a>
 
@@ -62,7 +63,7 @@ import { MoreSheetComponent } from './more-sheet.component';
         class="ax-bottom-nav-item"
         (click)="openMoreSheet()"
         aria-label="More options">
-        <span class="material-symbols-outlined" aria-hidden="true">menu</span>
+        <app-icon name="menu" aria-hidden="true"></app-icon>
         <span class="ax-bottom-nav-label">More</span>
       </button>
     </nav>

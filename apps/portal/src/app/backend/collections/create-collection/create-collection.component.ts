@@ -6,10 +6,11 @@ import { HotToastService } from '../../../shared/toast/toast.service';
 import { FormsModule } from '@angular/forms';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 @Component({
   selector: 'app-create-collection',
   standalone: true,
-  imports: [AdminShellComponent, NgIf, FormsModule],
+  imports: [AdminShellComponent, NgIf, FormsModule, IconComponent],
   templateUrl: './create-collection.component.html',
   styleUrl: './create-collection.component.css',
 })

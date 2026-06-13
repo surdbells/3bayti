@@ -20,7 +20,7 @@
   background: var(--ax-color-bg-muted, #faf7f2);
 }
 .ms-quicklink:active { transform: scale(0.99); }
-.ms-quicklink .material-symbols-outlined {
+.ms-quicklink app-icon {
   font-size: 1.6rem; color: var(--ax-color-brand, #906952); flex-shrink: 0;
 }
 .ms-quicklink > span:last-child { display: flex; flex-direction: column; }

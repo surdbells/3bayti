@@ -14,6 +14,7 @@ import { AxRichEditorComponent } from '../../shared/rich/ax-rich-editor.componen
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { CfImagePipe } from '../../shared/cf-image.pipe';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxMultiselectComponent,
   AxMultiselectOption,
@@ -39,8 +40,7 @@ interface ColorOption {
     AxRichEditorComponent,
     AxMultiselectComponent,
     AxAccordionComponent,
-    AxAccordionItemComponent,
-  ],
+    AxAccordionItemComponent, IconComponent],
   templateUrl: './admin-view-product.component.html',
   styleUrl: './admin-view-product.component.css',
 })

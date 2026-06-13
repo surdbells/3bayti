@@ -5,6 +5,7 @@ import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../../../shared/icon/icon.component';
 export interface Items {
   product_name: string;
   quantity: number;
@@ -18,7 +19,7 @@ export interface Items {
 @Component({
   selector: 'app-plural',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   templateUrl: './plural.component.html',
   styleUrl: './plural.component.css',
 })

@@ -9,10 +9,11 @@ import { AxRichEditorComponent } from '../../shared/rich/ax-rich-editor.componen
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { CfImagePipe } from '../../shared/cf-image.pipe';
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-vendor-store',
   standalone: true,
-  imports: [CfImagePipe, VendorShellComponent, CommonModule, FormsModule, AxRichEditorComponent],
+  imports: [CfImagePipe, VendorShellComponent, CommonModule, FormsModule, AxRichEditorComponent, IconComponent],
   templateUrl: './vendor-store.component.html',
   styleUrl: './vendor-store.component.css',
 })

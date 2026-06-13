@@ -24,6 +24,7 @@ import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { CfImagePipe } from '../../shared/cf-image.pipe';
+import { IconComponent } from '../../shared/icon/icon.component';
 // ── Color map for preview drawer ─────────────────────────────────
 const COLOR_HEX_MAP: Record<string, string> = {
   'black': '#000000', 'white': '#FFFFFF', 'off-white': '#FAF9F6',
@@ -95,8 +96,7 @@ const EMPTY_PRODUCT_FORM: ProductForm = {
     FormsModule,
     AxPaginationComponent,
     AxDataTableComponent,
-    AxCellDirective,
-  ],
+    AxCellDirective, IconComponent],
   templateUrl: './vendor-products.component.html',
   styleUrl: './vendor-products.component.css',
 })

@@ -7,17 +7,18 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-gift-cards-admin',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule],
+  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent],
   template: `
 <app-admin-shell>
   <div class="ax-container">
     <header class="ax-page-header">
       <div class="ax-page-header-content">
         <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
-          <span class="material-symbols-outlined">arrow_back</span> Back to dashboard
+          <app-icon name="arrow_back"></app-icon> Back to dashboard
         </button>
         <span class="ax-page-header-eyebrow">Platform</span>
         <h1 class="ax-page-title">Gift Cards</h1>
@@ -25,7 +26,7 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
       </div>
       <div class="ax-flex ax-gap-2 ax-items-center">
         <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="load()" [disabled]="loading">
-          <span class="material-symbols-outlined">refresh</span> Refresh
+          <app-icon name="refresh"></app-icon> Refresh
         </button>
       </div>
     </header>
@@ -76,7 +77,7 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 
     <section *ngIf="!loading && themes.length === 0" class="ax-page-section">
       <div class="ax-card ax-p-8 ax-text-center">
-        <span class="material-symbols-outlined" style="font-size:3rem;color:var(--ax-color-text-tertiary)">card_giftcard</span>
+        <app-icon name="card_giftcard" style="font-size:3rem;color:var(--ax-color-text-tertiary)"></app-icon>
         <h3 class="ax-h4 ax-m-0 ax-mt-3">No gift card themes</h3>
       </div>
     </section>

@@ -30,6 +30,7 @@ import { themedChart } from '../../shared/rich/ax-chart-theme';
 import { CouponWidgetComponent } from '../../coupon/coupon-widget/coupon-widget.component';
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 export type ChartOptions = {
   series: ApexAxisChartSeries;
   chart: ApexChart;
@@ -57,8 +58,7 @@ export type ChartOptions = {
     AxTableComponent,
     AxColumnComponent,
     AxEmptyStateComponent,
-    CouponWidgetComponent,
-  ],
+    CouponWidgetComponent, IconComponent],
   styleUrl: './user.component.css',
 })
 export class UserComponent implements OnInit {

@@ -118,7 +118,7 @@
   color: var(--ax-color-text-primary);
 }
 
-.ax-breadcrumb-item .material-symbols-outlined {
+.ax-breadcrumb-item app-icon {
   font-size: 0.95rem;
   line-height: 1;
 }
@@ -128,7 +128,7 @@
   display: inline-flex;
   align-items: center;
 }
-.ax-breadcrumb-separator .material-symbols-outlined {
+.ax-breadcrumb-separator app-icon {
   font-size: 1rem;
 }
 
@@ -197,7 +197,7 @@
   cursor: not-allowed;
 }
 
-.ax-pagination-btn .material-symbols-outlined {
+.ax-pagination-btn app-icon {
   font-size: 1.1rem;
 }
 
@@ -267,7 +267,7 @@
   opacity: 1;
   color: var(--ax-color-text-brand);
 }
-.ax-table th.ax-th-sortable .material-symbols-outlined {
+.ax-table th.ax-th-sortable app-icon {
   font-size: 1rem;
 }
 

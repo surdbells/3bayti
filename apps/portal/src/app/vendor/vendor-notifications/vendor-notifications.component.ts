@@ -8,9 +8,10 @@ import { GlobalComponent } from '../../global-component';
 import { TranslatePipe } from '../../translate.pipe';
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-vendor-notifications',
-  imports: [VendorShellComponent, FormsModule, CommonModule, TranslatePipe],
+  imports: [VendorShellComponent, FormsModule, CommonModule, TranslatePipe, IconComponent],
   standalone: true,
   templateUrl: './vendor-notifications.component.html',
   styleUrl: './vendor-notifications.component.css',

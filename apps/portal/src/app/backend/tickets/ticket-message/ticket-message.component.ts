@@ -7,6 +7,7 @@ import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 export interface Message {
   id: number;
   ticket: number;
@@ -18,7 +19,7 @@ export interface Message {
 @Component({
   selector: 'app-ticket-message',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule],
+  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent],
   templateUrl: './ticket-message.component.html',
   styleUrl: './ticket-message.component.css',
 })

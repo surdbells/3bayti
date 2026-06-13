@@ -11,14 +11,14 @@ import { takeUntil, switchMap } from 'rxjs/operators';
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-coupon-analytics',
   standalone: true,
   imports: [
     VendorShellComponent,
     AdminShellComponent,
-    CommonModule, FormsModule,
-  ],
+    CommonModule, FormsModule, IconComponent],
   templateUrl: './coupon-analytics.component.html',
   styleUrl: './coupon-analytics.component.css',
 })

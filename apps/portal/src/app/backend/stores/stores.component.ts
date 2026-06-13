@@ -9,6 +9,7 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -37,8 +38,7 @@ interface VendorRow extends Record<string, unknown> {
     AdminShellComponent,
     CommonModule,
     AxDataTableComponent,
-    AxCellDirective,
-  ],
+    AxCellDirective, IconComponent],
   templateUrl: './stores.component.html',
   styleUrl: './stores.component.css',
 })

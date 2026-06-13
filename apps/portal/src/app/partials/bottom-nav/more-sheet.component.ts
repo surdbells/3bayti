@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { AxDrawerRef } from '../../shared/overlays/ax-drawer.service';
 import { TranslatePipe } from '../../translate.pipe';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 interface MoreSheetLink {
   route: string;
   icon: string;
@@ -24,7 +25,7 @@ interface MoreSheetSection {
 @Component({
   selector: 'app-more-sheet',
   standalone: true,
-  imports: [CommonModule, RouterLink, RouterLinkActive, TranslatePipe],
+  imports: [CommonModule, RouterLink, RouterLinkActive, TranslatePipe, IconComponent],
   template: `
     <div class="ax-drawer-header">
       <div class="ax-drawer-header-content">
@@ -35,7 +36,7 @@ interface MoreSheetSection {
         class="ax-drawer-close"
         (click)="close()"
         aria-label="Close menu">
-        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        <app-icon name="close" aria-hidden="true"></app-icon>
       </button>
     </div>
 
@@ -49,9 +50,9 @@ interface MoreSheetSection {
               routerLinkActive="more-sheet-item-active"
               class="more-sheet-item"
               (click)="close()">
-              <span class="material-symbols-outlined more-sheet-icon" aria-hidden="true">{{ link.icon }}</span>
+              <app-icon [name]="link.icon" aria-hidden="true" class="more-sheet-icon"></app-icon>
               <span class="more-sheet-item-label">{{ link.labelKey | translate }}</span>
-              <span class="material-symbols-outlined more-sheet-chevron" aria-hidden="true">chevron_right</span>
+              <app-icon name="chevron_right" aria-hidden="true" class="more-sheet-chevron"></app-icon>
             </a>
           </li>
         </ul>
@@ -62,7 +63,7 @@ interface MoreSheetSection {
           type="button"
           class="more-sheet-item more-sheet-item-danger"
           (click)="signOut()">
-          <span class="material-symbols-outlined more-sheet-icon" aria-hidden="true">logout</span>
+          <app-icon name="logout" aria-hidden="true" class="more-sheet-icon"></app-icon>
           <span class="more-sheet-item-label">{{ 'sign_out' | translate }}</span>
         </button>
       </div>

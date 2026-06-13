@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../icon/icon.component';
 /**
  * Standard drawer chrome. Same slot pattern as AxModalContainer.
  */
 @Component({
   selector: 'app-ax-drawer-container',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <header class="ax-drawer-header" *ngIf="title || subtitle || showClose">
@@ -22,7 +23,7 @@ import { CommonModule } from '@angular/common';
         aria-label="Close drawer"
         (click)="closed.emit()"
       >
-        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        <app-icon name="close" aria-hidden="true"></app-icon>
       </button>
     </header>
 

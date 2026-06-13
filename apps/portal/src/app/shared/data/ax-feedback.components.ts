@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../icon/icon.component';
 /**
  * Linear progress bar. Determinate when [value] is set, indeterminate
  * otherwise.
@@ -82,12 +83,12 @@ export class AxSkeletonComponent {
 @Component({
   selector: 'app-ax-empty-state',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="ax-empty">
       <span class="ax-empty-icon" *ngIf="icon">
-        <span class="material-symbols-outlined" aria-hidden="true">{{ icon }}</span>
+        <app-icon [name]="icon" aria-hidden="true"></app-icon>
       </span>
       <h3 class="ax-empty-title" *ngIf="title">{{ title }}</h3>
       <p class="ax-empty-description" *ngIf="description">{{ description }}</p>

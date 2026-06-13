@@ -52,11 +52,11 @@
             </div>
             <div>
               <div *ngIf="single_order.delivery_phone" class="ax-text-sm ax-text-secondary ax-flex ax-items-center ax-gap-2">
-                <span class="material-symbols-outlined" style="font-size: 1rem;" aria-hidden="true">phone</span>
+                <app-icon name="phone" style="font-size: 1rem;" aria-hidden="true"></app-icon>
                 {{ single_order.delivery_phone }}
               </div>
               <div *ngIf="single_order.delivery_email" class="ax-text-sm ax-text-secondary ax-flex ax-items-center ax-gap-2 ax-mt-2">
-                <span class="material-symbols-outlined" style="font-size: 1rem;" aria-hidden="true">email</span>
+                <app-icon name="email" style="font-size: 1rem;" aria-hidden="true"></app-icon>
                 {{ single_order.delivery_email }}
               </div>
             </div>

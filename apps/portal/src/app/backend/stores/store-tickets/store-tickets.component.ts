@@ -4,10 +4,11 @@ import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 @Component({
   selector: 'app-store-tickets',
   standalone: true,
-  imports: [AdminShellComponent, ],
+  imports: [AdminShellComponent, IconComponent],
   templateUrl: './store-tickets.component.html',
   styleUrl: './store-tickets.component.css',
 })

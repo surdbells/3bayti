@@ -22,6 +22,7 @@ import { map, catchError } from 'rxjs/operators';
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 interface CouponListItem extends Record<string, unknown> {
   coupon_id: number;
   code: string;
@@ -58,8 +59,7 @@ interface Pagination {
     VendorShellComponent,
     AdminShellComponent,
     CommonModule, FormsModule, RouterLink,
-    AxDataTableComponent, AxCellDirective,
-  ],
+    AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './coupon-list.component.html',
   styleUrl: './coupon-list.component.css',
 })

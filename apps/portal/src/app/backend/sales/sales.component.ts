@@ -8,6 +8,7 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -35,7 +36,7 @@ interface SaleRow extends Record<string, unknown> {
 @Component({
   selector: 'app-sales',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './sales.component.html',
   styleUrl: './sales.component.css',
 })

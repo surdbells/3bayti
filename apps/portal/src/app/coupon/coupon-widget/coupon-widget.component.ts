@@ -4,10 +4,11 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { GlobalComponent } from '../../global-component';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-coupon-widget',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   templateUrl: './coupon-widget.component.html',
   styleUrl: './coupon-widget.component.css',
 })

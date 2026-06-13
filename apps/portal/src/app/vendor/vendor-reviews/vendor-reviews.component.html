@@ -3,7 +3,7 @@
     <header class="ax-page-header">
       <div class="ax-page-header-content">
         <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to account
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to account
         </button>
         <span class="ax-page-header-eyebrow">Feedback</span>
         <h1 class="ax-page-title">Reviews</h1>
@@ -15,8 +15,8 @@
       <app-ax-data-table [config]="config" [dataSource]="dataSource">
         <ng-template axCell="rating" let-row>
           <span class="ax-flex ax-gap-0" style="color:#f5a623" [attr.aria-label]="row.rating + ' out of 5'">
-            <span class="material-symbols-outlined" *ngFor="let s of ratingStars(row.rating).filled" style="font-size:1rem;font-variation-settings:'FILL' 1">star</span>
-            <span class="material-symbols-outlined" *ngFor="let s of ratingStars(row.rating).empty" style="font-size:1rem;color:var(--ax-color-border-subtle)">star</span>
+            <app-icon name="star" *ngFor="let s of ratingStars(row.rating).filled" style="font-size:1rem;font-variation-settings:'FILL' 1"></app-icon>
+            <app-icon name="star" *ngFor="let s of ratingStars(row.rating).empty" style="font-size:1rem;color:var(--ax-color-border-subtle)"></app-icon>
           </span>
         </ng-template>
         <ng-template axCell="comment" let-row>

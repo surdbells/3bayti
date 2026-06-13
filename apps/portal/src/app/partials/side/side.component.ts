@@ -5,14 +5,14 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { TranslatePipe } from '../../translate.pipe';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-side',
   imports: [
     CommonModule,
     RouterLink,
     RouterLinkActive,
-    TranslatePipe,
-  ],
+    TranslatePipe, IconComponent],
   standalone: true,
   templateUrl: './side.component.html',
   styleUrl: './side.component.css',

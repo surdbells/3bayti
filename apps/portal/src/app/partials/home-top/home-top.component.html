@@ -12,7 +12,7 @@
       aria-controls="ax-home-top-menu"
       [attr.aria-label]="menuOpen ? 'Close menu' : 'Open menu'"
     >
-      <span class="material-symbols-outlined" aria-hidden="true">{{ menuOpen ? 'close' : 'menu' }}</span>
+      <app-icon [name]="menuOpen ? 'close' : 'menu'" aria-hidden="true"></app-icon>
     </button>
 
     <nav

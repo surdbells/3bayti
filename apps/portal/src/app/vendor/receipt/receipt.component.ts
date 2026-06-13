@@ -8,13 +8,13 @@ import {GlobalComponent} from '../../global-component';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { AxConfirmService } from '../../shared/overlays';
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-receipt',
   standalone: true,
     imports: [
         NgIf,
-        VendorShellComponent
-    ],
+        VendorShellComponent, IconComponent],
   templateUrl: './receipt.component.html',
   styleUrl: './receipt.component.css'
 })

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HomeTopComponent } from '../../partials/home-top/home-top.component';
 import { TranslatePipe } from '../../translate.pipe';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxAccordionComponent,
   AxAccordionItemComponent,
@@ -21,8 +22,7 @@ import {
     AxAccordionComponent,
     AxAccordionItemComponent,
     AxTabsComponent,
-    AxTabComponent,
-  ],
+    AxTabComponent, IconComponent],
   templateUrl: './home.component.html',
   styleUrl: './home.component.css',
 })

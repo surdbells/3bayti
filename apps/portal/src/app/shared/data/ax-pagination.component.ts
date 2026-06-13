@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../icon/icon.component';
 type PageItem = number | 'ellipsis';
 
 /**
@@ -18,7 +19,7 @@ type PageItem = number | 'ellipsis';
 @Component({
   selector: 'app-ax-pagination',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nav class="ax-pagination" aria-label="Pagination">
@@ -34,7 +35,7 @@ type PageItem = number | 'ellipsis';
           aria-label="Previous page"
           (click)="goTo(pageIndex - 1)"
         >
-          <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+          <app-icon name="chevron_left" aria-hidden="true"></app-icon>
         </button>
 
         <ng-container *ngFor="let item of pageItems; let i = index">
@@ -59,7 +60,7 @@ type PageItem = number | 'ellipsis';
           aria-label="Next page"
           (click)="goTo(pageIndex + 1)"
         >
-          <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+          <app-icon name="chevron_right" aria-hidden="true"></app-icon>
         </button>
       </div>
 

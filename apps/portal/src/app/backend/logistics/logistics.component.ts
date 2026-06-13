@@ -8,6 +8,7 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
   AxServerDataSource,
@@ -27,7 +28,7 @@ interface LogisticRow extends Record<string, unknown> {
 @Component({
   selector: 'app-logistics',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, AxDataTableComponent],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, IconComponent],
   templateUrl: './logistics.component.html',
   styleUrl: './logistics.component.css',
 })

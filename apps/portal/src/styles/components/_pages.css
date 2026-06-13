@@ -60,7 +60,7 @@
   opacity: 0.9;
   color: var(--ax-color-text-on-brand);
 }
-.ax-auth-back .material-symbols-outlined { font-size: 1rem; }
+.ax-auth-back app-icon { font-size: 1rem; }
 
 .ax-auth-panel {
   background-color: var(--ax-color-bg-raised);
@@ -264,7 +264,7 @@
   align-items: center;
   gap: var(--ax-space-1);
 }
-.ax-home-hero-trust-item .material-symbols-outlined {
+.ax-home-hero-trust-item app-icon {
   font-size: 1rem;
   color: var(--ax-color-text-brand);
 }
@@ -378,7 +378,7 @@
   color: var(--ax-color-text-brand);
   margin-bottom: var(--ax-space-3);
 }
-.ax-home-feature-icon .material-symbols-outlined { font-size: 1.5rem; }
+.ax-home-feature-icon app-icon { font-size: 1.5rem; }
 
 .ax-home-feature-title {
   font-family: var(--ax-font-display);
@@ -526,7 +526,7 @@
   color: var(--ax-color-text-primary);
   line-height: var(--ax-lh-snug);
 }
-.ax-home-plan-features li .material-symbols-outlined {
+.ax-home-plan-features li app-icon {
   color: var(--ax-color-text-success);
   font-size: 1.1rem;
   flex-shrink: 0;

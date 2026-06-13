@@ -8,10 +8,11 @@ import { Labels } from '../../class/labels';
 import { FormsModule } from '@angular/forms';
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-labels',
   standalone: true,
-  imports: [VendorShellComponent, CommonModule, FormsModule],
+  imports: [VendorShellComponent, CommonModule, FormsModule, IconComponent],
   templateUrl: './label-component.html',
   styleUrl: './label.component.css',
 })

@@ -15,6 +15,7 @@ import {
 } from '../../shared/overlays';
 import { AxEmptyStateComponent } from '../../shared/data';
 
+import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-register',
   standalone: true,
@@ -26,8 +27,7 @@ import { AxEmptyStateComponent } from '../../shared/data';
     TranslatePipe,
     AxDropdownDirective,
     AxDropdownItemDirective,
-    AxEmptyStateComponent,
-  ],
+    AxEmptyStateComponent, IconComponent],
   templateUrl: './register.component.html',
   styleUrl: './register.component.css',
 })

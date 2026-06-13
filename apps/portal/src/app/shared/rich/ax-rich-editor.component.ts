@@ -21,6 +21,7 @@ import Underline from '@tiptap/extension-underline';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 
+import { IconComponent } from '../icon/icon.component';
 /**
  * Tiptap-based rich text editor. Text formatting only — no images, no
  * uploads. Outputs HTML. Replaces @kolkov/angular-editor usages in the app.
@@ -47,7 +48,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 @Component({
   selector: 'app-ax-rich-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [
     {
@@ -64,28 +65,28 @@ import Placeholder from '@tiptap/extension-placeholder';
           [disabled]="!editor || disabled"
           (click)="run('toggleBold')"
           title="Bold (⌘B)" aria-label="Bold">
-          <span class="material-symbols-outlined" aria-hidden="true">format_bold</span>
+          <app-icon name="format_bold" aria-hidden="true"></app-icon>
         </button>
         <button type="button" class="ax-editor-btn"
           [class.ax-editor-btn-active]="isActive('italic')"
           [disabled]="!editor || disabled"
           (click)="run('toggleItalic')"
           title="Italic (⌘I)" aria-label="Italic">
-          <span class="material-symbols-outlined" aria-hidden="true">format_italic</span>
+          <app-icon name="format_italic" aria-hidden="true"></app-icon>
         </button>
         <button type="button" class="ax-editor-btn"
           [class.ax-editor-btn-active]="isActive('underline')"
           [disabled]="!editor || disabled"
           (click)="run('toggleUnderline')"
           title="Underline (⌘U)" aria-label="Underline">
-          <span class="material-symbols-outlined" aria-hidden="true">format_underlined</span>
+          <app-icon name="format_underlined" aria-hidden="true"></app-icon>
         </button>
         <button type="button" class="ax-editor-btn"
           [class.ax-editor-btn-active]="isActive('strike')"
           [disabled]="!editor || disabled"
           (click)="run('toggleStrike')"
           title="Strikethrough" aria-label="Strikethrough">
-          <span class="material-symbols-outlined" aria-hidden="true">format_strikethrough</span>
+          <app-icon name="format_strikethrough" aria-hidden="true"></app-icon>
         </button>
 
         <span class="ax-editor-divider" aria-hidden="true"></span>
@@ -95,21 +96,21 @@ import Placeholder from '@tiptap/extension-placeholder';
           [disabled]="!editor || disabled"
           (click)="toggleHeading(1)"
           title="Heading 1" aria-label="Heading 1">
-          <span class="material-symbols-outlined" aria-hidden="true">format_h1</span>
+          <app-icon name="format_h1" aria-hidden="true"></app-icon>
         </button>
         <button type="button" class="ax-editor-btn"
           [class.ax-editor-btn-active]="isActive('heading', { level: 2 })"
           [disabled]="!editor || disabled"
           (click)="toggleHeading(2)"
           title="Heading 2" aria-label="Heading 2">
-          <span class="material-symbols-outlined" aria-hidden="true">format_h2</span>
+          <app-icon name="format_h2" aria-hidden="true"></app-icon>
         </button>
         <button type="button" class="ax-editor-btn"
           [class.ax-editor-btn-active]="isActive('heading', { level: 3 })"
           [disabled]="!editor || disabled"
           (click)="toggleHeading(3)"
           title="Heading 3" aria-label="Heading 3">
-          <span class="material-symbols-outlined" aria-hidden="true">format_h3</span>
+          <app-icon name="format_h3" aria-hidden="true"></app-icon>
         </button>
 
         <span class="ax-editor-divider" aria-hidden="true"></span>
@@ -119,14 +120,14 @@ import Placeholder from '@tiptap/extension-placeholder';
           [disabled]="!editor || disabled"
           (click)="run('toggleBulletList')"
           title="Bulleted list" aria-label="Bulleted list">
-          <span class="material-symbols-outlined" aria-hidden="true">format_list_bulleted</span>
+          <app-icon name="format_list_bulleted" aria-hidden="true"></app-icon>
         </button>
         <button type="button" class="ax-editor-btn"
           [class.ax-editor-btn-active]="isActive('orderedList')"
           [disabled]="!editor || disabled"
           (click)="run('toggleOrderedList')"
           title="Numbered list" aria-label="Numbered list">
-          <span class="material-symbols-outlined" aria-hidden="true">format_list_numbered</span>
+          <app-icon name="format_list_numbered" aria-hidden="true"></app-icon>
         </button>
 
         <span class="ax-editor-divider" aria-hidden="true"></span>
@@ -136,21 +137,21 @@ import Placeholder from '@tiptap/extension-placeholder';
           [disabled]="!editor || disabled"
           (click)="addLink()"
           title="Add link" aria-label="Add link">
-          <span class="material-symbols-outlined" aria-hidden="true">link</span>
+          <app-icon name="link" aria-hidden="true"></app-icon>
         </button>
         <button type="button" class="ax-editor-btn"
           [class.ax-editor-btn-active]="isActive('blockquote')"
           [disabled]="!editor || disabled"
           (click)="run('toggleBlockquote')"
           title="Blockquote" aria-label="Blockquote">
-          <span class="material-symbols-outlined" aria-hidden="true">format_quote</span>
+          <app-icon name="format_quote" aria-hidden="true"></app-icon>
         </button>
         <button type="button" class="ax-editor-btn"
           [class.ax-editor-btn-active]="isActive('code')"
           [disabled]="!editor || disabled"
           (click)="run('toggleCode')"
           title="Inline code" aria-label="Inline code">
-          <span class="material-symbols-outlined" aria-hidden="true">code</span>
+          <app-icon name="code" aria-hidden="true"></app-icon>
         </button>
 
         <span class="ax-editor-divider" aria-hidden="true"></span>
@@ -159,13 +160,13 @@ import Placeholder from '@tiptap/extension-placeholder';
           [disabled]="!editor || disabled || !canUndo"
           (click)="run('undo')"
           title="Undo (⌘Z)" aria-label="Undo">
-          <span class="material-symbols-outlined" aria-hidden="true">undo</span>
+          <app-icon name="undo" aria-hidden="true"></app-icon>
         </button>
         <button type="button" class="ax-editor-btn"
           [disabled]="!editor || disabled || !canRedo"
           (click)="run('redo')"
           title="Redo (⌘⇧Z)" aria-label="Redo">
-          <span class="material-symbols-outlined" aria-hidden="true">redo</span>
+          <app-icon name="redo" aria-hidden="true"></app-icon>
         </button>
       </div>
 

@@ -1,11 +1,12 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
+import { IconComponent } from '../../../shared/icon/icon.component';
 @Component({
   selector: 'app-account-setup',
   templateUrl: './account-setup.component.html',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, IconComponent],
   styleUrls: ['./account-setup.component.css'],
 })
 export class AccountSetupComponent implements OnInit {

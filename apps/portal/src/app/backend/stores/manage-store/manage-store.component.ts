@@ -13,6 +13,7 @@ import { AxRichEditorComponent } from '../../../shared/rich/ax-rich-editor.compo
 import { AxTabsComponent, AxTabComponent, AxConfirmService } from '../../../shared/overlays';
 
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
 @Component({
   selector: 'app-manage-store',
   standalone: true,
@@ -23,8 +24,7 @@ import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.c
     AccountSetupComponent,
     AxRichEditorComponent,
     AxTabsComponent,
-    AxTabComponent,
-  ],
+    AxTabComponent, IconComponent],
   templateUrl: './manage-store.component.html',
   styleUrl: './manage-store.component.css',
 })

@@ -17,7 +17,7 @@
           (click)="goBack()"
           class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
           style="align-self: flex-start;">
-          <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back
         </button>
         <span class="ax-page-header-eyebrow">Promotions</span>
@@ -33,12 +33,12 @@
           class="ax-btn ax-btn-outline ax-btn-sm"
           (click)="toggleFilters()"
           style="position: relative;">
-          <span class="material-symbols-outlined" aria-hidden="true">tune</span>
+          <app-icon name="tune" aria-hidden="true"></app-icon>
           Filters
           <span *ngIf="activeFilterCount > 0" class="ax-badge ax-badge-solid-brand" style="margin-left: 0.25rem;">{{ activeFilterCount }}</span>
         </button>
         <a routerLink="/create-coupon" class="ax-btn ax-btn-primary ax-btn-sm">
-          <span class="material-symbols-outlined" aria-hidden="true">add</span>
+          <app-icon name="add" aria-hidden="true"></app-icon>
           New coupon
         </a>
       </div>
@@ -48,7 +48,7 @@
     <section class="ax-page-section">
       <div class="ax-input-group">
         <span class="ax-input-group-prefix">
-          <span class="material-symbols-outlined" aria-hidden="true" style="color: var(--ax-color-text-tertiary);">search</span>
+          <app-icon name="search" aria-hidden="true" style="color: var(--ax-color-text-tertiary);"></app-icon>
         </span>
         <input
           type="text"
@@ -62,7 +62,7 @@
           type="button"
           class="ax-btn ax-btn-ghost ax-input-group-action"
           (click)="filters.search = ''; onSearchInput()">
-          <span class="material-symbols-outlined" aria-hidden="true">close</span>
+          <app-icon name="close" aria-hidden="true"></app-icon>
         </button>
       </div>
     </section>
@@ -93,7 +93,7 @@
             type="button"
             class="ax-btn ax-btn-primary ax-btn-sm"
             (click)="applyFilters()">
-            <span class="material-symbols-outlined" aria-hidden="true">filter_list</span>
+            <app-icon name="filter_list" aria-hidden="true"></app-icon>
             Apply
           </button>
           <button
@@ -101,7 +101,7 @@
             type="button"
             class="ax-btn ax-btn-ghost ax-btn-sm"
             (click)="clearFilters()">
-            <span class="material-symbols-outlined" aria-hidden="true">filter_list_off</span>
+            <app-icon name="filter_list_off" aria-hidden="true"></app-icon>
             Clear
           </button>
         </div>

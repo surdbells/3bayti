@@ -66,7 +66,7 @@
   background-color: var(--ax-color-bg-brand-subtle);
   color: var(--ax-color-text-brand);
 }
-.ax-uploader-icon .material-symbols-outlined {
+.ax-uploader-icon app-icon {
   font-size: 1.5rem;
 }
 
@@ -100,7 +100,7 @@
   align-items: center;
   gap: var(--ax-space-2);
 }
-.ax-uploader-error .material-symbols-outlined { font-size: 1rem; }
+.ax-uploader-error app-icon { font-size: 1rem; }
 
 .ax-uploader-files {
   display: grid;
@@ -141,7 +141,7 @@
   object-fit: cover;
   display: block;
 }
-.ax-uploader-file-thumb .material-symbols-outlined {
+.ax-uploader-file-thumb app-icon {
   font-size: 2rem;
 }
 
@@ -191,7 +191,7 @@
 .ax-uploader-file-remove:hover {
   background-color: var(--ax-color-bg-danger);
 }
-.ax-uploader-file-remove .material-symbols-outlined {
+.ax-uploader-file-remove app-icon {
   font-size: 1rem;
 }
 
@@ -267,7 +267,7 @@
   color: var(--ax-color-text-disabled);
   cursor: not-allowed;
 }
-.ax-editor-btn .material-symbols-outlined {
+.ax-editor-btn app-icon {
   font-size: 1.1rem;
 }
 
@@ -471,7 +471,7 @@
 .ax-input-stepper-btn:last-child {
   border-left: 1px solid var(--ax-color-border-subtle);
 }
-.ax-input-stepper-btn .material-symbols-outlined {
+.ax-input-stepper-btn app-icon {
   font-size: 1.1rem;
 }
 
@@ -542,7 +542,7 @@
   color: var(--ax-color-text-secondary);
   z-index: 1;
 }
-.ax-activity-dot .material-symbols-outlined { font-size: 1rem; }
+.ax-activity-dot app-icon { font-size: 1rem; }
 
 .ax-activity-dot-brand   { background-color: var(--ax-color-bg-brand-subtle); border-color: var(--ax-color-border-brand); color: var(--ax-color-text-brand); }
 .ax-activity-dot-success { background-color: var(--ax-color-bg-success-subtle); border-color: var(--ax-color-bg-success); color: var(--ax-color-text-success); }

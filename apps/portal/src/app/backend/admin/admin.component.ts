@@ -24,6 +24,7 @@ import { TranslatePipe } from '../../translate.pipe';
 import { AxPaginationComponent } from '../../shared/data';
 
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../shared/icon/icon.component';
 export type ChartOptions = {
   series: ApexAxisChartSeries;
   chart: ApexChart;
@@ -69,8 +70,7 @@ const ICON_MAP: Record<string, string> = {
     ChartComponent,
     AxPaginationComponent,
     TranslatePipe,
-    RouterLink,
-  ],
+    RouterLink, IconComponent],
   standalone: true,
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
