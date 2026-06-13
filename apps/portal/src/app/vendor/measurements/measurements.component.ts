@@ -163,14 +163,12 @@ export class MeasurementsComponent implements OnInit {
     this.adapter.post_v3('POST /vendor/measurements', { values: msValues }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_creating = false;
-        if (response?.data?.id || response?.response_code === 200) {
+        if (response?.data?.id) {
           this.ui_controls.is_empty = false;
           this.success_notification('Measurement saved');
           this.read_measurements();
-        } else if ([503, 401, 402, 400].includes(response.response_code) && response.status === 'failed') {
-          this.ui_controls.is_empty = true;
-          this.error_notification(response.message);
-          if (response.response_code === 402) this.read_measurements();
+        } else {
+          this.error_notification('Unable to save measurement.');
         }
       },
       error: (e: any) => {
@@ -194,9 +192,10 @@ export class MeasurementsComponent implements OnInit {
           this.measurements = raw.map((m: any) => this.mapMeasurement(m));
           this.dataSource.setData(this.measurements ?? []);
           this.ui_controls.is_empty = !this.measurements || this.measurements.length === 0;
-        } else if ([503, 401, 400].includes(response.response_code) && response.status === 'failed') {
+        } else {
+          this.measurements = [];
+          this.dataSource.setData([]);
           this.ui_controls.is_empty = true;
-          this.error_notification(response.message);
         }
         this.ui_controls.is_loading = false;
       },
@@ -265,7 +264,7 @@ export class MeasurementsComponent implements OnInit {
     const delMid = this.delete_measure.measurement ?? this.delete_measure.id;
     this.adapter.delete_v3('DELETE /vendor/measurements/:id', { params: { id: String(delMid) } }).subscribe({
       next: (response: any) => {
-        if (response?.data || response?.response_code === 200) {
+        if (response?.data) {
           this.success_notification('Measurement deleted');
           this.read_measurements();
         }
@@ -284,13 +283,12 @@ export class MeasurementsComponent implements OnInit {
     this.adapter.put_v3('PUT /vendor/measurements/:id', { values: updValues }, { params: { id: String(updMid) } }).subscribe({
       next: (response: any) => {
         this.ui_controls.is_updating = false;
-        if (response?.data?.id || response?.response_code === 200) {
+        if (response?.data?.id) {
           this.ui_controls.editing = false;
           this.success_notification('Measurement updated');
           this.read_measurements();
-        } else if ([401, 400].includes(response.response_code) && response.status === 'failed') {
-          this.ui_controls.editing = false;
-          this.error_notification(response.message);
+        } else {
+          this.error_notification('Unable to update measurement.');
         }
       },
       error: (e: any) => {

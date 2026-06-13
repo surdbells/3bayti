@@ -126,11 +126,11 @@ export class VendorComplianceComponent implements OnInit {
     this.ui_controls.is_submitting = true;
     this.adapter.post_v3('POST /vendor/onboarding/submit', this.compliance).subscribe({
       next: (response: any) => {
-        if (response?.data || response?.response_code === 200) {
+        if (response?.data) {
           this.success_notification('Compliance submitted.');
           this.get_data();
-        } else if (false) {
-          this.error_notification(response.message);
+        } else {
+          this.error_notification('Unable to submit compliance.');
         }
         this.ui_controls.is_submitting = false;
       },

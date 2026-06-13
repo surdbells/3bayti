@@ -1,5 +1,6 @@
 import {Component, OnInit} from '@angular/core';
 import {CrudService} from '../../services/crud.service';
+import {PortalCrudAdapter} from '../../services/portal-crud-adapter';
 import {Router, RouterLink} from '@angular/router';
 import {CookieService} from 'ngx-cookie-service';
 import {HotToastService} from '../../shared/toast/toast.service';
@@ -25,11 +26,15 @@ import { IconComponent } from '../../shared/icon/icon.component';
 export class ResetComponent implements OnInit{
   constructor(
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private router: Router,
     private cookieService: CookieService,
     private toast: HotToastService
   ) {}
   fieldTextType: boolean = false;
+  /** v3 reset is 2-step: POST /auth/reset returns this id; POST
+   *  /auth/reset/confirm consumes it with the OTP + new password. */
+  private verificationId = '';
   ui_controls = {
     loading: false,
     confirmed: false,
@@ -66,70 +71,38 @@ export class ResetComponent implements OnInit{
       return;
     }
     this.ui_controls.loading = true;
-    this.crudService.post_request(this.reset, GlobalComponent.UserConfirm)
-      .subscribe(({
-        next: (response) => {
-          if (response) {
-            this.ui_controls.loading = false;
-            this.ui_controls.confirmed = true;
-            this.success_notification(response.message);
-            this.r_response = response.data;
-            this.confirm.otp = this.r_response.otp;
-            this.confirm.expires_at = this.r_response.expires_at;
+    this.adapter.post_v3('POST /auth/reset', { email: this.reset.email })
+      .subscribe({
+        next: (response: any) => {
+          this.ui_controls.loading = false;
+          // v3 always returns 200 with a verification_id (anti-enumeration).
+          const vid = response?.data?.verification_id ?? response?.verification_id;
+          if (vid) {
+            this.verificationId = vid;
             this.confirm.email = this.reset.email;
-          }
-          if (response.response_code == 200 && response.status === "failed") {
-            this.ui_controls.loading = false;
-            this.error_notification(response.message);
-          }
-          if (response.response_code == 400 && response.status === "failed") {
-            this.ui_controls.loading = false;
-            this.error_notification(response.message);
+            this.ui_controls.confirmed = true;
+            this.success_notification('If that email is registered, a reset code has been sent.');
+          } else {
+            this.error_notification('Unable to start password reset. Please try again.');
           }
         },
         error: (e) => {
           console.error(e);
-          this.error_notification("Unable to complete your request at this time.");
+          this.error_notification('Unable to complete your request at this time.');
           this.ui_controls.loading = false;
         },
-        complete: () => {
-          console.info('complete');
-        }
-      }))
+      });
   }
   user_validate() {
     if (this.confirm.input_otp.length === 0) {
       this.error_notification("OTP is required");
       return;
     }
-    this.ui_controls.loading = true;
-    this.crudService.post_request(this.confirm, GlobalComponent.UserValidate)
-      .subscribe(({
-        next: (response) => {
-          if (response) {
-            this.ui_controls.loading = false;
-            this.ui_controls.validated = true;
-            this.r_password.email = this.reset.email;
-            this.success_notification(response.message);
-          }
-          if (response.response_code == 200 && response.status === "failed") {
-            this.ui_controls.loading = false;
-            this.error_notification(response.message);
-          }
-          if (response.response_code == 400 && response.status === "failed") {
-            this.ui_controls.loading = false;
-            this.error_notification(response.message);
-          }
-        },
-        error: (e) => {
-          console.error(e);
-          this.error_notification("Unable to complete your request at this time.");
-          this.ui_controls.loading = false;
-        },
-        complete: () => {
-          console.info('complete');
-        }
-      }))
+    // v3 verifies the OTP atomically during /auth/reset/confirm (together
+    // with the new password), so this step only captures the code and
+    // advances the UI. An invalid code surfaces at the final step.
+    this.r_password.email = this.reset.email;
+    this.ui_controls.validated = true;
   }
   reset_password() {
     if (this.r_password.password.length === 0) {
@@ -145,32 +118,29 @@ export class ResetComponent implements OnInit{
       return;
     }
     this.ui_controls.loading = true;
-    this.crudService.post_request(this.r_password, GlobalComponent.UserReset)
-      .subscribe(({
-        next: (response) => {
-          if (response) {
-            this.ui_controls.loading = false;
-            this.success_notification(response.message);
-            this.router.navigate(['/']).then(r => console.log(r));
-          }
-          if (response.response_code == 200 && response.status === "failed") {
-            this.ui_controls.loading = false;
-            this.error_notification(response.message);
-          }
-          if (response.response_code == 400 && response.status === "failed") {
-            this.ui_controls.loading = false;
-            this.error_notification(response.message);
-          }
-        },
-        error: (e) => {
-          console.error(e);
-          this.error_notification("Unable to complete your request at this time.");
-          this.ui_controls.loading = false;
-        },
-        complete: () => {
-          console.info('complete');
+    this.adapter.post_v3('POST /auth/reset/confirm', {
+      verification_id: this.verificationId,
+      code: this.confirm.input_otp,
+      new_password: this.r_password.password,
+    }).subscribe({
+      next: (response: any) => {
+        this.ui_controls.loading = false;
+        if (response?.data || response?.access_token) {
+          this.success_notification('Your password has been reset. Please sign in.');
+          this.router.navigate(['/login']);
+        } else {
+          this.error_notification('Unable to reset password. Please try again.');
         }
-      }))
+      },
+      error: (e) => {
+        console.error(e);
+        // 400/422 here usually means a wrong/expired OTP.
+        const msg = e?.error?.error?.message
+          ?? 'The code may be invalid or expired. Please request a new one.';
+        this.error_notification(msg);
+        this.ui_controls.loading = false;
+      },
+    });
   }
   toggleFieldTextType() {
     this.fieldTextType = !this.fieldTextType;
