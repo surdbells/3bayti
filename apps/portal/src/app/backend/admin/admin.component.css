@@ -1,0 +1,26 @@
+
+/* Top-selling products list */
+.adm-top-list { list-style: none; margin: 0; padding: 0; }
+.adm-top-row {
+  display: flex; align-items: center; gap: 0.75rem;
+  padding: 0.6rem 0; border-bottom: 1px solid var(--ax-color-border-subtle);
+}
+.adm-top-row:last-child { border-bottom: 0; }
+.adm-top-rank {
+  width: 1.5rem; height: 1.5rem; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%; background: var(--ax-color-bg-muted, #f0ece5);
+  font-size: 0.75rem; font-weight: 600; color: var(--ax-color-text-secondary);
+}
+.adm-top-img {
+  width: 40px; height: 40px; object-fit: cover; object-position: top center;
+  border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);
+  flex-shrink: 0;
+}
+.adm-top-body { flex: 1; min-width: 0; }
+.adm-top-name {
+  font-size: 0.875rem; font-weight: 500; color: var(--ax-color-text-primary);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.adm-top-meta { font-size: 0.75rem; color: var(--ax-color-text-tertiary); }
+.adm-top-rev { font-size: 0.875rem; font-weight: 600; color: var(--ax-color-text-primary); white-space: nowrap; }

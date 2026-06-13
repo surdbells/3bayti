@@ -154,6 +154,27 @@
           </div>
         </div>
       </section>
+
+      <!-- Top-selling products (last 30 days) -->
+      <section class="ax-page-section" *ngIf="user_session.is_admin && topProducts.length">
+        <div class="ax-card">
+          <div class="ax-card-header">
+            <h2 class="ax-card-title">Top-selling products</h2>
+            <span class="ax-text-2xs ax-text-tertiary">Last 30 days</span>
+          </div>
+          <ul class="adm-top-list">
+            <li *ngFor="let p of topProducts; let i = index" class="adm-top-row">
+              <span class="adm-top-rank">{{ i + 1 }}</span>
+              <img *ngIf="p.image" [src]="p.image" alt="" class="adm-top-img" />
+              <div class="adm-top-body">
+                <div class="adm-top-name" [title]="p.name">{{ p.name }}</div>
+                <div class="adm-top-meta">{{ p.units_sold | number }} sold</div>
+              </div>
+              <div class="adm-top-rev">AED {{ p.revenue | number:'1.2-2' }}</div>
+            </li>
+          </ul>
+        </div>
+      </section>
     </ng-container>
 
     <!-- ============== QUICK ACTIONS TAB ============== -->

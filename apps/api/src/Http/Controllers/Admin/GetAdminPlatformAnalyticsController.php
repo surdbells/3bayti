@@ -169,6 +169,27 @@ final class GetAdminPlatformAnalyticsController
              LIMIT 20"
         );
 
+        // ── Top-selling products (by units sold in window) ──────────
+        // Parity with legacy admin/common/top-selling.php — a ranked
+        // product list for the admin dashboard.
+        $topProducts = $conn->fetchAllAssociative(
+            "SELECT
+               p.id,
+               p.name,
+               p.slug,
+               p.primary_image_url                       AS image,
+               COALESCE(SUM(oi.quantity), 0)::int         AS units_sold,
+               COALESCE(SUM(oi.subtotal), 0)              AS revenue
+             FROM order_items oi
+             JOIN products p ON p.id = oi.product_id
+             JOIN orders o   ON o.id = oi.order_id
+             WHERE o.created_at >= ?
+             GROUP BY p.id, p.name, p.slug, p.primary_image_url
+             ORDER BY units_sold DESC
+             LIMIT 5",
+            [$since]
+        );
+
         return $this->ok([
             'response_code'       => 200,
             'status'              => 'success',
@@ -181,6 +202,7 @@ final class GetAdminPlatformAnalyticsController
             'total_orders_stats'  => array_values($ordersBy12Month),
             'products_sold_stats' => array_values($soldBy12Month),
             'return_orders_stats' => array_values($returnBy12Month),
+            'top_products'        => $topProducts,
             'data'                => $recentRows,
         ]);
     }

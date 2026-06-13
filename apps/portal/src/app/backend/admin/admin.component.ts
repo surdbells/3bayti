@@ -83,7 +83,7 @@ export class AdminComponent implements OnInit {
   pageIndex = 0;
   pageSize = 10;
   recent?: ROrders[];
-  topProducts?: Products[];
+  topProducts: { id: number; name: string; image: string; units_sold: number; revenue: number }[] = [];
 
   total_products = 0;
   total_orders = 0;
@@ -205,6 +205,13 @@ export class AdminComponent implements OnInit {
     this.total_orders_stats = response.total_orders_stats;
     this.products_sold_stats = response.products_sold_stats;
     this.return_orders_stats = response.return_orders_stats;
+    this.topProducts = (response.top_products ?? []).map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      image: p.image,
+      units_sold: p.units_sold ?? 0,
+      revenue: p.revenue ?? 0,
+    }));
 
     this.chartOptions = {
       series: [
