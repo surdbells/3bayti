@@ -113,14 +113,18 @@ $stats = ['product_images' => 0, 'product_skipped' => 0,
 function fetchBytes(string $url, ?string $diskBase): string|false
 {
     if ($diskBase !== null) {
-        // Extract filename from URL and read from local disk
+        // Extract filename from URL and read from local disk. Legacy
+        // product images live under products_images/, so check both the
+        // given base and that subdir.
         $filename = basename(parse_url($url, PHP_URL_PATH) ?? '');
-        $path     = rtrim($diskBase, '/') . '/' . $filename;
-        if (!file_exists($path)) {
-            fwrite(STDERR, "    disk file not found: {$path}\n");
-            return false;
+        $base     = rtrim($diskBase, '/');
+        foreach ([$base . '/' . $filename, $base . '/products_images/' . $filename] as $path) {
+            if (file_exists($path)) {
+                return file_get_contents($path);
+            }
         }
-        return file_get_contents($path);
+        fwrite(STDERR, "    disk file not found: {$filename} (under {$base})\n");
+        return false;
     }
 
     $ctx = stream_context_create([
@@ -131,11 +135,45 @@ function fetchBytes(string $url, ?string $diskBase): string|false
         'ssl' => ['verify_peer' => true],
     ]);
     $bytes = @file_get_contents($url, false, $ctx);
-    if ($bytes === false) {
-        fwrite(STDERR, "    HTTP fetch failed: {$url}\n");
-        return false;
+    if ($bytes !== false) {
+        return $bytes;
     }
-    return $bytes;
+
+    // The product import dropped the 'products_images/' path segment when
+    // building legacy URLs (it assumed the host already contained it — it
+    // doesn't), so many stored URLs 404 as
+    //   …/vendors/products/<file>           (broken)
+    // while the file actually lives at
+    //   …/vendors/products/products_images/<file>   (correct).
+    // Retry once with the segment reinserted before giving up.
+    $fixed = fixLegacyImageUrl($url);
+    if ($fixed !== $url) {
+        $bytes = @file_get_contents($fixed, false, $ctx);
+        if ($bytes !== false) {
+            return $bytes;
+        }
+    }
+
+    fwrite(STDERR, "    HTTP fetch failed: {$url}\n");
+    return false;
+}
+
+/**
+ * Reinsert the dropped 'products_images/' segment.
+ *   https://host/vendors/products/<file>
+ *     → https://host/vendors/products/products_images/<file>
+ * No-op if the segment is already present or the path doesn't match.
+ */
+function fixLegacyImageUrl(string $url): string
+{
+    if (str_contains($url, '/products_images/')) {
+        return $url; // already correct
+    }
+    // Only rewrite the legacy product path; leave anything else untouched.
+    if (preg_match('#^(https?://[^/]+/vendors/products/)([^/].*)$#', $url, $m) === 1) {
+        return $m[1] . 'products_images/' . $m[2];
+    }
+    return $url;
 }
 
 // ── Helper: determine storage extension from URL or bytes ────────────────────

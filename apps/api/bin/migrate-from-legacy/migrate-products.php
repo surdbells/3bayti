@@ -221,13 +221,13 @@ try {
         $primaryImage = trim((string) ($row['image_1'] ?? ''));
         $primaryImageUrl = null;
         if ($primaryImage !== '' && !str_starts_with($primaryImage, 'assets/img/placeholder')) {
+            // Legacy stores a relative path like 'products_images/<file>'.
+            // The host base is '…/vendors/products/', which does NOT contain
+            // 'products_images', so the segment must be KEPT (a prior version
+            // wrongly stripped it, producing 404 URLs).
             $primaryImageUrl = isAbsolute($primaryImage)
                 ? $primaryImage
                 : LEGACY_PRODUCT_IMAGE_HOST . ltrim($primaryImage, '/');
-            // Strip products_images/ prefix if present since host already contains it
-            if (str_starts_with($primaryImage, 'products_images/')) {
-                $primaryImageUrl = LEGACY_PRODUCT_IMAGE_HOST . substr($primaryImage, strlen('products_images/'));
-            }
         }
 
         // Gallery images
@@ -245,9 +245,9 @@ try {
                     }
                     if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
                         $imageUrls[] = $path;
-                    } elseif (str_starts_with($path, 'products_images/')) {
-                        $imageUrls[] = LEGACY_PRODUCT_IMAGE_HOST . substr($path, strlen('products_images/'));
                     } else {
+                        // Keep the relative path as-is (incl. any
+                        // 'products_images/' segment) under the host base.
                         $imageUrls[] = LEGACY_PRODUCT_IMAGE_HOST . ltrim($path, '/');
                     }
                 }
