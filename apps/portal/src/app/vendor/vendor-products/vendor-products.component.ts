@@ -68,24 +68,6 @@ interface ProductListItem extends Record<string, unknown> {
   store_name: string;
 }
 
-interface ProductForm {
-  id: number | null;
-  name: string;
-  description: string;
-  price: string;
-  stock_status: string;
-  stock_quantity: number | null;
-  category_id: number | null;
-  status: string;
-  primary_image_url: string;
-}
-
-const EMPTY_PRODUCT_FORM: ProductForm = {
-  id: null, name: '', description: '', price: '',
-  stock_status: 'in_stock', stock_quantity: 0,
-  category_id: null, status: 'published', primary_image_url: '',
-};
-
 @Component({
   selector: 'app-vendor-products',
   standalone: true,
@@ -171,11 +153,10 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
   protected readonly open = signal(false);
   private readonly confirm = inject(AxConfirmService);
 
-  // ── Create / edit drawer ───────────────────────────────────────
-  readonly editorOpen = signal(false);
-  readonly editorBusy = signal(false);
-  readonly editorEditing = signal(false);
-  form: ProductForm = { ...EMPTY_PRODUCT_FORM };
+  // ── Mobile preview drawer state lives below; product create/edit
+  //    navigate to the standalone full-page form. ──────────────────
+  /** Category options for the list filter dropdown. */
+  categories: { id: number; name: string }[] = [];
 
   image_url = 'https://api.3bayti.ae/vendors/products/';
   single_product: any = {
@@ -225,7 +206,6 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     price_max: null as number | null,
   };
   price_preset = '';
-  categories: { id: number; name: string }[] = [];
 
   // ── Per-page options ───────────────────────────────────────────
   per_page_options = [10, 25, 50, 100];
@@ -259,9 +239,9 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
       this.fetchProducts();
     });
 
-    this.fetchCategories();
     this.buildTableSource();
     this.fetchProducts();
+    this.fetchCategories();
   }
 
   ngOnDestroy(): void {
@@ -316,6 +296,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     };
   }
 
+  /** Loads category options used by the list filter. */
   fetchCategories(): void {
     this.adapter.get_v3('GET /utility/categories').subscribe({
       next: (response: any) => {
@@ -402,77 +383,16 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     this.ui.filters_open = !this.ui.filters_open;
   }
 
-  // ── Create / edit drawer ───────────────────────────────────────
+  // ── Create / edit → standalone full-page editor ────────────────
+  // The table routes to the full product form pages (the same shared
+  // <app-product-form> used everywhere) rather than a partial drawer,
+  // so vendors get the complete field set in one consistent place.
   openCreate(): void {
-    this.form = { ...EMPTY_PRODUCT_FORM };
-    this.editorEditing.set(false);
-    this.editorOpen.set(true);
+    this.router.navigate(['/create-product']);
   }
 
   editProduct(id: number): void {
-    this.editorEditing.set(true);
-    this.editorBusy.set(true);
-    this.editorOpen.set(true);
-    this.form = { ...EMPTY_PRODUCT_FORM, id };
-    // Vendor has GET /vendor/products/:id for accurate edit population.
-    this.adapter.get_v3('GET /vendor/products/:id', { params: { id: String(id) } }).subscribe({
-      next: (res: any) => {
-        const p = res?.data ?? res?.product ?? {};
-        this.form = {
-          id: p.id ?? id,
-          name: p.name ?? '',
-          description: p.description ?? '',
-          price: String(p.price?.amount ?? p.price ?? ''),
-          stock_status: p.stock_status ?? 'in_stock',
-          stock_quantity: p.stock_quantity ?? p.quantity ?? 0,
-          category_id: p.category?.id ?? p.category_id ?? null,
-          status: p.status ?? 'published',
-          primary_image_url: p.primary_image?.url ?? p.primary_image_url ?? '',
-        };
-        this.editorBusy.set(false);
-      },
-      error: () => {
-        this.toast.error('Unable to load product details.');
-        this.editorBusy.set(false);
-      },
-    });
-  }
-
-  closeEditor(): void { this.editorOpen.set(false); }
-
-  saveProduct(): void {
-    if (!this.form.name.trim()) { this.toast.error('Product name is required.'); return; }
-    if (!this.form.price || Number(this.form.price) < 0) { this.toast.error('A valid price is required.'); return; }
-
-    const body: any = {
-      name: this.form.name.trim(),
-      description: this.form.description,
-      price: this.form.price,
-      stock_status: this.form.stock_status,
-      stock_quantity: this.form.stock_quantity,
-      category_id: this.form.category_id,
-      status: this.form.status,
-      primary_image_url: this.form.primary_image_url || undefined,
-    };
-
-    this.editorBusy.set(true);
-    if (this.editorEditing() && this.form.id) {
-      this.adapter.put_v3('PUT /vendor/products/:id', body, { params: { id: String(this.form.id) } }).subscribe({
-        next: (r: any) => {
-          if (r) { this.toast.success('Product updated.'); this.editorOpen.set(false); this.refreshLists(); }
-          this.editorBusy.set(false);
-        },
-        error: () => { this.toast.error('Unable to update product.'); this.editorBusy.set(false); },
-      });
-    } else {
-      this.adapter.post_v3('POST /vendor/products', body).subscribe({
-        next: (r: any) => {
-          if (r) { this.toast.success('Product created.'); this.editorOpen.set(false); this.refreshLists(); }
-          this.editorBusy.set(false);
-        },
-        error: () => { this.toast.error('Unable to create product.'); this.editorBusy.set(false); },
-      });
-    }
+    this.router.navigate(['/edit-product'], { queryParams: { id } });
   }
 
   private refreshLists(): void {
