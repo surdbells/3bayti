@@ -1,0 +1,51 @@
+.sss-window .ax-btn { min-width: 3rem; }
+
+/* KPI cards */
+.sss-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.sss-kpi {
+  background: var(--ax-color-bg-muted, #f7f4ef);
+  border-radius: var(--ax-radius-lg, 12px);
+  padding: 1rem 1.1rem;
+}
+.sss-kpi-label {
+  font-size: 0.75rem; color: var(--ax-color-text-tertiary);
+  text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.35rem;
+}
+.sss-kpi-value { font-size: 1.35rem; font-weight: 600; color: var(--ax-color-text-primary); }
+
+/* Chart cards */
+.sss-chart-card { padding: 1.25rem; margin-bottom: 1rem; }
+.sss-chart-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.75rem; }
+.sss-empty { color: var(--ax-color-text-tertiary); font-size: 0.85rem; padding: 1.5rem 0; text-align: center; }
+
+.sss-svg { width: 100%; height: auto; display: block; }
+.sss-grid line { stroke: var(--ax-color-border-subtle, #ece7df); stroke-width: 1; }
+.sss-axis-label { font-size: 10px; fill: var(--ax-color-text-tertiary); }
+
+.sss-two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+@media (max-width: 760px) { .sss-two-col { grid-template-columns: 1fr; } }
+
+/* Donut */
+.sss-donut-wrap { display: flex; align-items: center; gap: 1.25rem; flex-wrap: wrap; }
+.sss-donut { width: 140px; height: 140px; flex-shrink: 0; }
+.sss-donut-total { font-size: 20px; font-weight: 600; fill: var(--ax-color-text-primary); }
+.sss-donut-sub { font-size: 10px; fill: var(--ax-color-text-tertiary); }
+.sss-legend { list-style: none; margin: 0; padding: 0; font-size: 0.8125rem; }
+.sss-legend li { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; }
+.sss-legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* Top product bars */
+.sss-bars { list-style: none; margin: 0; padding: 0; }
+.sss-bars li { margin-bottom: 0.85rem; }
+.sss-bar-head { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.8125rem; margin-bottom: 0.3rem; }
+.sss-bar-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 60%; }
+.sss-bar-val { font-weight: 600; color: var(--ax-color-text-primary); white-space: nowrap; }
+.sss-bar-track { height: 8px; background: var(--ax-color-bg-muted, #f0ece5); border-radius: 999px; overflow: hidden; }
+.sss-bar-fill { height: 100%; background: var(--ax-color-brand, #906952); border-radius: 999px; transition: width 0.4s ease; }
+
+.sss-table-head { padding: 1rem 1.25rem 0; }

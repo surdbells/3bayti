@@ -6,21 +6,130 @@
           <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span> Back to stores
         </button>
         <span class="ax-page-header-eyebrow">Store</span>
-        <h1 class="ax-page-title">{{ store_name || 'Store' }} — Sales</h1>
-        <p class="ax-page-subtitle">Sales and settlement breakdown for this store.</p>
+        <h1 class="ax-page-title">{{ store_name || 'Store' }} — Sales &amp; performance</h1>
+        <p class="ax-page-subtitle">Revenue, orders, and product performance for this store.</p>
+      </div>
+      <div class="ax-flex ax-gap-1 ax-items-center sss-window">
+        <button type="button" class="ax-btn ax-btn-sm" [class.ax-btn-primary]="windowDays()===7" [class.ax-btn-outline]="windowDays()!==7" (click)="setWindow(7)">7d</button>
+        <button type="button" class="ax-btn ax-btn-sm" [class.ax-btn-primary]="windowDays()===30" [class.ax-btn-outline]="windowDays()!==30" (click)="setWindow(30)">30d</button>
+        <button type="button" class="ax-btn ax-btn-sm" [class.ax-btn-primary]="windowDays()===90" [class.ax-btn-outline]="windowDays()!==90" (click)="setWindow(90)">90d</button>
       </div>
     </header>
 
-    <section class="ax-card ax-p-0">
+    <!-- Loading -->
+    <div *ngIf="loadingAnalytics()" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading analytics"></span>
+    </div>
+
+    <ng-container *ngIf="!loadingAnalytics() && analytics() as a">
+      <!-- KPI cards -->
+      <section class="sss-kpis">
+        <div class="sss-kpi">
+          <div class="sss-kpi-label">Revenue</div>
+          <div class="sss-kpi-value">{{ aed(a.totals.revenue_aed) }}</div>
+        </div>
+        <div class="sss-kpi">
+          <div class="sss-kpi-label">Orders</div>
+          <div class="sss-kpi-value">{{ a.totals.orders | number }}</div>
+        </div>
+        <div class="sss-kpi">
+          <div class="sss-kpi-label">Items sold</div>
+          <div class="sss-kpi-value">{{ a.totals.items | number }}</div>
+        </div>
+        <div class="sss-kpi">
+          <div class="sss-kpi-label">Avg order value</div>
+          <div class="sss-kpi-value">{{ aed(a.totals.aov_aed) }}</div>
+        </div>
+        <div class="sss-kpi">
+          <div class="sss-kpi-label">Customers</div>
+          <div class="sss-kpi-value">{{ a.totals.unique_customers | number }}</div>
+        </div>
+      </section>
+
+      <!-- Revenue trend (SVG area chart) -->
+      <section class="ax-card sss-chart-card">
+        <div class="sss-chart-head">
+          <h3 class="ax-h6 ax-m-0">Revenue trend</h3>
+          <span class="ax-text-2xs ax-text-tertiary">Last {{ windowDays() }} days</span>
+        </div>
+        <div *ngIf="revenuePoints().length === 0" class="sss-empty">No revenue in this window.</div>
+        <svg *ngIf="revenuePoints().length" [attr.viewBox]="'0 0 ' + CHART_W + ' ' + CHART_H" class="sss-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Revenue trend line chart">
+          <defs>
+            <linearGradient id="sssRevFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--ax-color-brand, #906952)" stop-opacity="0.22" />
+              <stop offset="100%" stop-color="var(--ax-color-brand, #906952)" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <!-- gridlines + y labels -->
+          <g class="sss-grid">
+            <line *ngFor="let t of revenueYTicks()" [attr.x1]="48" [attr.x2]="CHART_W - 16" [attr.y1]="t.y" [attr.y2]="t.y"></line>
+            <text *ngFor="let t of revenueYTicks()" [attr.x]="42" [attr.y]="t.y + 3" text-anchor="end" class="sss-axis-label">{{ t.label }}</text>
+          </g>
+          <!-- area + line -->
+          <path [attr.d]="revenueAreaPath()" fill="url(#sssRevFill)"></path>
+          <path [attr.d]="revenueLinePath()" fill="none" stroke="var(--ax-color-brand, #906952)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+          <!-- points -->
+          <circle *ngFor="let p of revenuePoints()" [attr.cx]="p.x" [attr.cy]="p.y" r="2.5" fill="var(--ax-color-brand, #906952)">
+            <title>{{ pointLabel(p) }}</title>
+          </circle>
+        </svg>
+      </section>
+
+      <div class="sss-two-col">
+        <!-- Status mix donut -->
+        <section class="ax-card sss-chart-card">
+          <h3 class="ax-h6 ax-mb-3">Order status mix</h3>
+          <div *ngIf="!statusSegments().length" class="sss-empty">No completed orders yet.</div>
+          <div *ngIf="statusSegments().length" class="sss-donut-wrap">
+            <svg viewBox="0 0 140 140" class="sss-donut" role="img" aria-label="Order status mix donut chart">
+              <circle cx="70" cy="70" [attr.r]="DONUT_R" fill="none" stroke="var(--ax-color-border-subtle, #eee)" stroke-width="16"></circle>
+              <circle *ngFor="let s of statusSegments()"
+                cx="70" cy="70" [attr.r]="DONUT_R" fill="none"
+                [attr.stroke]="s.color" stroke-width="16"
+                [attr.stroke-dasharray]="s.dash" [attr.stroke-dashoffset]="s.offset"
+                transform="rotate(-90 70 70)" stroke-linecap="butt">
+                <title>{{ s.label }}: {{ s.value }} ({{ s.pct }}%)</title>
+              </circle>
+              <text x="70" y="66" text-anchor="middle" class="sss-donut-total">{{ a.status_mix.total | number }}</text>
+              <text x="70" y="82" text-anchor="middle" class="sss-donut-sub">orders</text>
+            </svg>
+            <ul class="sss-legend">
+              <li *ngFor="let s of statusSegments()">
+                <span class="sss-legend-dot" [style.background]="s.color"></span>
+                {{ s.label }} <span class="ax-text-tertiary">{{ s.value }} ({{ s.pct }}%)</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Top products by revenue (SVG bars) -->
+        <section class="ax-card sss-chart-card">
+          <h3 class="ax-h6 ax-mb-3">Top products by revenue</h3>
+          <div *ngIf="!topByRevenue().length" class="sss-empty">No product sales yet.</div>
+          <ul class="sss-bars" *ngIf="topByRevenue().length">
+            <li *ngFor="let p of topByRevenue()">
+              <div class="sss-bar-head">
+                <span class="sss-bar-name" [title]="p.name">{{ p.name }}</span>
+                <span class="sss-bar-val">{{ aed(p.revenue_aed) }}</span>
+              </div>
+              <div class="sss-bar-track">
+                <div class="sss-bar-fill" [style.width.%]="p.pct"></div>
+              </div>
+              <div class="ax-text-2xs ax-text-tertiary">{{ p.units }} units</div>
+            </li>
+          </ul>
+        </section>
+      </div>
+    </ng-container>
+
+    <!-- Transactions list -->
+    <section class="ax-card ax-p-0 ax-mt-4">
+      <div class="sss-table-head">
+        <h3 class="ax-h6 ax-m-0">Transactions</h3>
+      </div>
       <app-ax-data-table [config]="config" [dataSource]="dataSource">
         <ng-template axCell="status" let-row>
-          <span class="ax-badge"
-            [class.ax-badge-success]="row.status === 'delivered' || row.status === 'paid'"
-            [class.ax-badge-info]="row.status === 'shipped'"
-            [class.ax-badge-warning]="row.status === 'pending'"
-            [class.ax-badge-danger]="row.status === 'cancelled' || row.status === 'returned'">
-            {{ row.status | titlecase }}
-          </span>
+          <span [ngClass]="statusBadge(row.status)">{{ statusLabel(row.status) }}</span>
         </ng-template>
       </app-ax-data-table>
     </section>

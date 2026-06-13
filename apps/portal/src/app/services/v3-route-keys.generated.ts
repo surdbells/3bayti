@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 191 route keys.
+ * 192 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -117,6 +117,7 @@ export type V3RouteKey =
   | 'GET /vendors'
   | 'GET /vendors/:slug'
   | 'GET /vendors/:slug/products'
+  | 'GET /vendors/by-legacy-id/:id'
   | 'GET /vendors/by-legacy-id/:id/products'
   | 'GET /wishlist'
   | 'PATCH /admin/orders/:id/status'
@@ -311,6 +312,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendors',
   'GET /vendors/:slug',
   'GET /vendors/:slug/products',
+  'GET /vendors/by-legacy-id/:id',
   'GET /vendors/by-legacy-id/:id/products',
   'GET /wishlist',
   'PATCH /admin/orders/:id/status',

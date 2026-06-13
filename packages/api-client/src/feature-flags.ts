@@ -1155,6 +1155,9 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/utility/stores', newPath: '/v3/vendors', shape: 'v3-envelope',
   },
 
+  'GET /vendors/by-legacy-id/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/vendors/by-legacy-id/:id', shape: 'v3-envelope',
+  },
   'GET /vendors/by-legacy-id/:id/products': {
     target: 'new', oldPath: '', newPath: '/v3/vendors/by-legacy-id/:id/products', shape: 'v3-envelope',
   },
