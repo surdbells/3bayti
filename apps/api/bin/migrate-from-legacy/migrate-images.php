@@ -303,7 +303,7 @@ if (!$vendorsOnly) {
 if (!$productsOnly) {
     echo "----- Vendors -----\n";
 
-    $where  = 'WHERE (logo_url IS NOT NULL OR cover_image_url IS NOT NULL OR legacy_logo_data_url IS NOT NULL)';
+    $where  = 'WHERE (logo_url IS NOT NULL OR cover_image_url IS NOT NULL OR legacy_logo_data_url IS NOT NULL OR legacy_cover_data_url IS NOT NULL)';
     $params = [];
     if ($vendorId !== null) {
         $where .= ' AND id = :vid';
@@ -312,7 +312,7 @@ if (!$productsOnly) {
     $limitSql = $limit !== null ? "LIMIT {$limit}" : '';
 
     $rows = $conn->fetchAllAssociative(
-        "SELECT id, slug, logo_url, cover_image_url, legacy_logo_data_url
+        "SELECT id, slug, logo_url, cover_image_url, legacy_logo_data_url, legacy_cover_data_url
          FROM vendors {$where} ORDER BY id {$limitSql}",
         $params
     );
@@ -322,6 +322,10 @@ if (!$productsOnly) {
     foreach ($rows as $row) {
         $vid  = (int) $row['id'];
         $slug = preg_replace('/[^a-z0-9\-]/', '-', strtolower((string) ($row['slug'] ?? "vendor-{$vid}")));
+        // When a base64 blob is migrated, the legacy URL column (a stale
+        // snapshot in $row) must not be re-migrated over the top.
+        $logoFromBlob  = false;
+        $coverFromBlob = false;
 
         // ── Logo from legacy_logo_data_url (base64 blob) ──────────────────
         $blobCol = (string) ($row['legacy_logo_data_url'] ?? '');
@@ -344,6 +348,7 @@ if (!$productsOnly) {
                         );
                         echo "  ✓ vendor {$vid} logo (from blob) → {$newLogoUrl}\n";
                         $stats['vendor_images']++;
+                        $logoFromBlob = true;
                     } catch (\Throwable $e) {
                         fwrite(STDERR, "  ✗ vendor {$vid} logo blob write failed: {$e->getMessage()}\n");
                         $stats['errors']++;
@@ -354,9 +359,41 @@ if (!$productsOnly) {
             }
         }
 
+        // ── Cover from legacy_cover_data_url (base64 blob) ────────────────
+        $coverBlob = (string) ($row['legacy_cover_data_url'] ?? '');
+        if ($coverBlob !== '' && str_starts_with($coverBlob, 'data:image/')) {
+            $commaPos = strpos($coverBlob, ',');
+            if ($commaPos !== false) {
+                $meta      = substr($coverBlob, 0, $commaPos);
+                $b64data   = substr($coverBlob, $commaPos + 1);
+                $bytes     = base64_decode($b64data, true);
+                $ext       = str_contains($meta, 'png') ? 'png' : 'jpg';
+                $sPath     = "vendors/{$slug}/cover.{$ext}";
+
+                if ($bytes !== false && strlen($bytes) > 0 && !$dryRun) {
+                    try {
+                        $stored = $storage->storeRaw($bytes, $sPath);
+                        $newCoverUrl = $stored->publicUrl();
+                        $conn->executeStatement(
+                            "UPDATE vendors SET cover_image_url = :url, legacy_cover_data_url = NULL WHERE id = :id",
+                            ['url' => $newCoverUrl, 'id' => $vid]
+                        );
+                        echo "  ✓ vendor {$vid} cover (from blob) → {$newCoverUrl}\n";
+                        $stats['vendor_images']++;
+                        $coverFromBlob = true;
+                    } catch (\Throwable $e) {
+                        fwrite(STDERR, "  ✗ vendor {$vid} cover blob write failed: {$e->getMessage()}\n");
+                        $stats['errors']++;
+                    }
+                } elseif ($dryRun) {
+                    echo "  [DRY] vendor {$vid} cover blob → vendors/{$slug}/cover.{$ext}\n";
+                }
+            }
+        }
+
         // ── Logo from legacy URL ──────────────────────────────────────────
         $logoUrl = (string) ($row['logo_url'] ?? '');
-        if ($logoUrl !== '' && !str_starts_with($logoUrl, $uploadsBase)) {
+        if (!$logoFromBlob && $logoUrl !== '' && !str_starts_with($logoUrl, $uploadsBase)) {
             $ext   = extFromUrl($logoUrl);
             $sPath = "vendors/{$slug}/logo.{$ext}";
             $result = migrateUrl($logoUrl, $sPath, $storage, $uploadsBase, $sshCopy, $dryRun);
@@ -376,7 +413,7 @@ if (!$productsOnly) {
 
         // ── Cover image from legacy URL ───────────────────────────────────
         $coverUrl = (string) ($row['cover_image_url'] ?? '');
-        if ($coverUrl !== '' && !str_starts_with($coverUrl, $uploadsBase)) {
+        if (!$coverFromBlob && $coverUrl !== '' && !str_starts_with($coverUrl, $uploadsBase)) {
             $ext   = extFromUrl($coverUrl);
             $sPath = "vendors/{$slug}/cover.{$ext}";
             $result = migrateUrl($coverUrl, $sPath, $storage, $uploadsBase, $sshCopy, $dryRun);
