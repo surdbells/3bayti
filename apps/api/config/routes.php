@@ -719,6 +719,11 @@ return function (App $app): void {
         // M3.3.1-C — Vendor product write (create / update / soft-delete).
         // Read is handled by the public GET /v3/vendors/{slug}/products +
         // GET /v3/vendors/by-legacy-id/{id}/products catalog endpoints.
+        // Self-scoped list (the vendor's OWN catalog, all states) for the
+        // portal — resolves the vendor from the authenticated user.
+        $group->get('/products',
+            \Bayti\Api\Http\Controllers\Vendor\Product\ListVendorOwnProductsController::class,
+        );
         $group->post('/products',
             \Bayti\Api\Http\Controllers\Vendor\Product\CreateVendorProductController::class,
         );

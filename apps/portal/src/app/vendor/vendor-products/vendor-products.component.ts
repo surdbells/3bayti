@@ -132,10 +132,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     this.tableDataSource = new AxServerDataSource<ProductListItem>((q: AxQueryState) => {
       const query: any = { limit: q.pageSize, offset: q.pageIndex * q.pageSize };
       if (q.search) query.search = q.search;
-      return this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', {
-        params: { id: String(vendorId) },
-        query,
-      }).pipe(
+      return this.adapter.get_v3('GET /vendor/products', { query }).pipe(
         map((response: any): AxServerFetchResult<ProductListItem> => {
           const rows = (response?.data ?? []).map((p: any) => this.mapProduct(p));
           return { rows, total: response?.meta?.total ?? rows.length };
@@ -258,10 +255,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
       limit: perPage,
       offset: (page - 1) * perPage,
     };
-    this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', {
-      params: { id: String(vendorId) },
-      query,
-    }).subscribe({
+    this.adapter.get_v3('GET /vendor/products', { query }).subscribe({
       next: (response: any) => {
         if (response?.data) {
           this.products = (response.data ?? []).map((p: any) => this.mapProduct(p));

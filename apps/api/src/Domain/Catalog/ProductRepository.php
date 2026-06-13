@@ -83,6 +83,45 @@ class ProductRepository extends EntityRepository
      *
      * @return array{items: list<Product>, total: int}
      */
+    /**
+     * Vendor-owned product list for the seller's own catalog management.
+     *
+     * Unlike findActivePaginated (storefront — active products only), this
+     * returns the vendor's products in ALL states (draft, inactive,
+     * out-of-stock) so the vendor can see and edit everything they own.
+     * Scoped strictly to the given v3 vendor id.
+     *
+     * @param array{vendorId:int, limit?:int, offset?:int, search?:string} $filters
+     * @return array{items: list<Product>, total: int}
+     */
+    public function findForVendorPaginated(array $filters): array
+    {
+        $limit  = max(1, min(100, (int) ($filters['limit'] ?? 24)));
+        $offset = max(0, (int) ($filters['offset'] ?? 0));
+
+        $qb = $this->createQueryBuilder('p')
+            ->where('p.vendor = :vendorId')
+            ->setParameter('vendorId', $filters['vendorId']);
+
+        $search = $filters['search'] ?? null;
+        if (is_string($search) && trim($search) !== '') {
+            $qb->andWhere('LOWER(p.name) LIKE :q')
+               ->setParameter('q', '%' . strtolower(trim($search)) . '%');
+        }
+
+        $countQb = clone $qb;
+        $countQb->select('COUNT(p.id)');
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        $items = $qb->orderBy('p.createdAt', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+
+        return ['items' => $items, 'total' => $total];
+    }
+
     public function findActivePaginated(array $filters = []): array
     {
         $qb = $this->createQueryBuilder('p')
