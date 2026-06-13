@@ -676,6 +676,12 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Vendor\Coupon\DeleteVendorCouponController::class,
         );
 
+        // Vendor read-only collections list (for the product form picker).
+        // Reuses the admin controller's list method — read-only, no writes
+        // exposed under the vendor group.
+        $group->get('/collections',
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'list']);
+
         // M3.3.1-D — Vendor store settings
         $group->get('/store',
             \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorStoreController::class,

@@ -241,7 +241,7 @@ export class ProductFormComponent implements OnInit {
   }
 
   fetchCollections(): void {
-    this.adapter.get_v3('GET /admin/collections', { query: { limit: 100, offset: 0 } }).subscribe({
+    this.adapter.get_v3('GET /vendor/collections', { query: { limit: 100, offset: 0 } }).subscribe({
       next: (res: any) => {
         this.dropdownList = (Array.isArray(res?.data) ? res.data : res?.data?.items ?? [])
           .map((col: any) => ({ id: col.id, collection: col.collection ?? col.name }));

@@ -899,6 +899,9 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /vendor/coupons/:id/analytics': {
     target: 'old', oldPath: '/vendors/coupons/coupon-analytics', newPath: '/v3/vendor/coupons/:id/analytics', shape: 'v3-envelope',
   },
+  'GET /vendor/collections': {
+    target: 'new', oldPath: '/admin/collections', newPath: '/v3/vendor/collections', shape: 'v3-envelope',
+  },
   'GET /vendor/labels': {
     target: 'new', oldPath: '/vendors/labels/read-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
   },
@@ -921,10 +924,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/common/compliance', newPath: '/v3/vendor/onboarding/status', shape: 'v3-envelope',
   },
   'GET /vendor/products': {
-    target: 'old', oldPath: '/vendors/products/get-products', newPath: '/v3/vendor/products', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/products/get-products', newPath: '/v3/vendor/products', shape: 'v3-envelope',
   },
   'GET /vendor/products/:id': {
-    target: 'old', oldPath: '/vendors/products/getProductById', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/products/getProductById', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
   },
   'GET /vendor/returns': {
     target: 'new', oldPath: '/vendors/orders/get-return-orders', newPath: '/v3/vendor/returns', shape: 'v3-envelope',
