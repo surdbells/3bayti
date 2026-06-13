@@ -1,0 +1,88 @@
+<app-admin-shell>
+  <div class="ax-container ax-container-narrow">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back"></app-icon> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Engagement</span>
+        <h1 class="ax-page-title">Push notification</h1>
+        <p class="ax-page-subtitle">Broadcast a message to your app users' devices.</p>
+      </div>
+    </header>
+
+    <section class="ax-card">
+      <div class="ax-field">
+        <label class="ax-label" for="notif-title">Title</label>
+        <input id="notif-title" type="text" class="ax-input"
+               [(ngModel)]="form.title" [maxlength]="TITLE_MAX"
+               placeholder="e.g. Eid weekend sale" />
+        <div class="ax-field-hint ax-text-right">{{ form.title.length }}/{{ TITLE_MAX }}</div>
+      </div>
+
+      <div class="ax-field">
+        <label class="ax-label" for="notif-body">Message</label>
+        <textarea id="notif-body" class="ax-input ax-textarea" rows="4"
+                  [(ngModel)]="form.body" [maxlength]="BODY_MAX"
+                  placeholder="What do you want to tell them?"></textarea>
+        <div class="ax-field-hint ax-text-right">{{ form.body.length }}/{{ BODY_MAX }}</div>
+      </div>
+
+      <div class="ax-field">
+        <label class="ax-label">Audience</label>
+        <div class="notif-audience-grid">
+          <button *ngFor="let a of audiences" type="button"
+                  class="notif-audience-card"
+                  [class.notif-audience-card-active]="form.audience === a.value"
+                  (click)="form.audience = a.value">
+            <span class="notif-audience-label">{{ a.label }}</span>
+            <span class="notif-audience-hint">{{ a.hint }}</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="notif-preview" *ngIf="form.title || form.body">
+        <span class="notif-preview-eyebrow">Preview</span>
+        <div class="notif-preview-card">
+          <div class="notif-preview-icon"><app-icon name="notifications"></app-icon></div>
+          <div class="notif-preview-body">
+            <div class="notif-preview-title">{{ form.title || 'Notification title' }}</div>
+            <div class="notif-preview-text">{{ form.body || 'Your message will appear here.' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ax-card-footer ax-flex ax-justify-end ax-gap-3">
+        <button type="button" class="ax-btn ax-btn-primary"
+                [disabled]="!canSend" (click)="submit()">
+          <app-icon name="send"></app-icon>
+          {{ sending ? 'Sending…' : 'Send broadcast' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- Last delivery summary -->
+    <section class="ax-card ax-mt-5" *ngIf="lastResult">
+      <h2 class="ax-card-title ax-mb-3">Last broadcast</h2>
+      <div class="notif-summary">
+        <div class="notif-summary-stat">
+          <span class="notif-summary-value">{{ lastResult.recipients | number }}</span>
+          <span class="notif-summary-label">Recipients</span>
+        </div>
+        <div class="notif-summary-stat">
+          <span class="notif-summary-value ax-text-success">{{ lastResult.sent | number }}</span>
+          <span class="notif-summary-label">Delivered</span>
+        </div>
+        <div class="notif-summary-stat">
+          <span class="notif-summary-value" [class.ax-text-danger]="lastResult.failed > 0">{{ lastResult.failed | number }}</span>
+          <span class="notif-summary-label">Failed</span>
+        </div>
+        <div class="notif-summary-stat">
+          <span class="notif-summary-value ax-text-capitalize">{{ lastResult.audience }}</span>
+          <span class="notif-summary-label">Audience</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</app-admin-shell>

@@ -38,6 +38,38 @@ class DeviceTokenRepository extends EntityRepository
     }
 
     /**
+     * Every active device token across all users — for admin broadcast.
+     * Optionally narrowed to an audience by user role flag.
+     *
+     * @param 'all'|'customers'|'vendors'|'admins' $audience
+     * @return list<string>
+     */
+    public function findAllActiveTokenStrings(string $audience = 'all'): array
+    {
+        $qb = $this->createQueryBuilder('d')
+            ->select('DISTINCT d.token')
+            ->where('d.isActive = true');
+
+        if ($audience !== 'all') {
+            $qb->innerJoin('d.user', 'u');
+            $flag = match ($audience) {
+                'customers' => 'u.isCustomer',
+                'vendors'   => 'u.isVendor',
+                'admins'    => 'u.isAdmin',
+                default     => null,
+            };
+            if ($flag !== null) {
+                $qb->andWhere($flag . ' = true');
+            }
+        }
+
+        /** @var list<array{token:string}> $rows */
+        $rows = $qb->getQuery()->getResult();
+
+        return array_map(static fn (array $row): string => $row['token'], $rows);
+    }
+
+    /**
      * The full active DeviceToken entities for a user. Used where the
      * caller needs to act on the rows (e.g. mark dead tokens inactive
      * after a send). Newest-seen first.

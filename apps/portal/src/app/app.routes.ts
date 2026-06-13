@@ -290,6 +290,12 @@ export const routes: Routes = [
     title: 'Returns'
   },
   {
+    path: 'adminnotifications',
+    loadComponent: () => import('./backend/notifications/notifications.component').then(m => m.NotificationsComponent),
+    canActivate: [adminGuard],
+    title: 'Push notification'
+  },
+  {
     path: 'adminlogistics',
     loadComponent: () => import('./backend/logistics/logistics.component').then(m => m.LogisticsComponent),
     canActivate: [adminGuard],

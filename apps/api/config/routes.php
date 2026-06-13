@@ -554,6 +554,10 @@ return function (App $app): void {
         $group->post('/vendors/{id:[0-9]+}/messages',
             \Bayti\Api\Http\Controllers\Admin\Vendor\SendVendorMessageController::class);
 
+        // Admin push broadcast (real implementation of legacy send_notifications).
+        $group->post('/notifications',
+            \Bayti\Api\Http\Controllers\Admin\Notification\SendBroadcastNotificationController::class);
+
         // M3.3.2-F — Admin product write (admin can create/update/delete any product).
         $group->post('/products',
             \Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController::class);
