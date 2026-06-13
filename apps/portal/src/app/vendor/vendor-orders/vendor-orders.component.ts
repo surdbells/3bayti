@@ -1,12 +1,14 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
+import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import {
   AxDataTableComponent,
@@ -31,14 +33,74 @@ interface OrderRow extends Record<string, unknown> {
   status: string;
 }
 
+interface OrderItem {
+  id: number;
+  product_id: number;
+  product_name: string;
+  product_image: string;
+  quantity: number;
+  unit_price: string;
+  subtotal: string;
+  size: string | null;
+  color: string | null;
+  item_status: string;
+}
+
+interface OrderDetail {
+  id: number;
+  order_reference: string;
+  status: string;
+  date: string;
+  subtotal: string;
+  delivery_fee: string;
+  discount: string;
+  total: string;
+  currency: string;
+  paid_at: string | null;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  items: OrderItem[];
+}
+
+interface TimelineEntry {
+  status?: string;
+  action?: string;
+  label?: string;
+  at?: string;
+  created_at?: string;
+  note?: string;
+}
+
+/**
+ * Client-side mirror of the server's OrderItem transition state machine
+ * (src/Domain/Order/OrderItem.php). Lets the drawer show only valid next
+ * statuses per item; the server re-validates, so this is UX-only. Shared
+ * shape with the admin store-orders screen.
+ */
+const ITEM_TRANSITIONS: Record<string, string[]> = {
+  pending: ['accepted', 'rejected', 'cancelled'],
+  accepted: ['preparing', 'cancelled'],
+  preparing: ['shipped', 'cancelled'],
+  shipped: ['delivered', 'returned'],
+  delivered: ['returned'],
+  rejected: [],
+  cancelled: ['refunded'],
+  returned: ['refunded'],
+  refunded: [],
+};
+
 @Component({
   selector: 'app-vendor-orders',
   standalone: true,
-  imports: [VendorShellComponent, CommonModule, AxDataTableComponent, AxCellDirective],
+  imports: [VendorShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective],
   templateUrl: './vendor-orders.component.html',
   styleUrl: './vendor-orders.component.css',
 })
 export class VendorOrdersComponent implements OnInit {
+  private readonly confirm = inject(AxConfirmService);
+
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',
@@ -48,6 +110,13 @@ export class VendorOrdersComponent implements OnInit {
 
   config!: AxDataTableConfig<OrderRow>;
   dataSource!: AxServerDataSource<OrderRow>;
+
+  // Drawer state
+  readonly drawerOpen = signal(false);
+  readonly loadingDetail = signal(false);
+  readonly busy = signal(false);
+  readonly order = signal<OrderDetail | null>(null);
+  readonly timeline = signal<TimelineEntry[]>([]);
 
   constructor(
     private router: Router,
@@ -99,7 +168,7 @@ export class VendorOrdersComponent implements OnInit {
         { key: 'total_price', label: 'Total', align: 'right' },
         { key: 'status', label: 'Status', align: 'center' },
       ],
-      rowActions: [{ id: 'view', label: 'View order', icon: 'visibility' }],
+      rowActions: [{ id: 'manage', label: 'Manage order', icon: 'tune' }],
     };
   }
 
@@ -143,9 +212,72 @@ export class VendorOrdersComponent implements OnInit {
   }
 
   onRowAction(e: { action: { id: string }; row: OrderRow }) {
-    if (e.action.id === 'view') {
-      this.router.navigate(['/', 'order'], { queryParams: { id: e.row.id } });
-    }
+    if (e.action.id === 'manage') this.openOrder(e.row.id);
+  }
+
+  // ── Drawer / detail ────────────────────────────────────────────────
+  openOrder(id: number) {
+    this.drawerOpen.set(true);
+    this.loadingDetail.set(true);
+    this.order.set(null);
+    this.timeline.set([]);
+
+    this.adapter.get_v3('GET /vendor/orders/:id', { params: { id: String(id) } }).subscribe({
+      next: (res: any) => {
+        this.order.set(res?.order ?? res?.data ?? null);
+        this.loadingDetail.set(false);
+      },
+      error: () => {
+        this.toast.error('Unable to load order.');
+        this.loadingDetail.set(false);
+        this.drawerOpen.set(false);
+      },
+    });
+
+    this.adapter.get_v3('GET /vendor/orders/:id/timeline', { params: { id: String(id) } }).subscribe({
+      next: (res: any) => this.timeline.set(res?.data ?? res?.timeline ?? []),
+      error: () => { /* timeline is non-critical */ },
+    });
+  }
+
+  closeDrawer() { this.drawerOpen.set(false); }
+
+  /** Valid next statuses for an item per the server state machine. */
+  nextStatuses(item: OrderItem): string[] {
+    return ITEM_TRANSITIONS[item.item_status] ?? [];
+  }
+
+  changeItemStatus(item: OrderItem, status: string) {
+    const ord = this.order();
+    if (!ord) return;
+    this.confirm.confirm({
+      title: 'Update item status',
+      message: `Move "${item.product_name}" to ${this.statusLabel(status)}?`,
+      confirmLabel: 'Update', cancelLabel: 'Cancel',
+      variant: status === 'cancelled' || status === 'rejected' ? 'danger' : 'default',
+    }).then((ok) => {
+      if (!ok) return;
+      this.busy.set(true);
+      this.adapter.patch_v3('PATCH /vendor/orders/:orderId/items/:itemId/status',
+        { status },
+        { params: { orderId: String(ord.id), itemId: String(item.id) } },
+      ).subscribe({
+        next: (r: any) => {
+          if (r) { this.toast.success('Item status updated.'); this.openOrder(ord.id); this.dataSource.retry(); }
+          this.busy.set(false);
+        },
+        error: () => { this.toast.error('Unable to update item status.'); this.busy.set(false); },
+      });
+    });
+  }
+
+  // ── Display helpers ────────────────────────────────────────────────
+  money(v: unknown): string {
+    return v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—';
+  }
+
+  statusLabel(s: string): string {
+    return (s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   statusBadgeClass(status: string): string {
@@ -153,9 +285,14 @@ export class VendorOrdersComponent implements OnInit {
       case 'paid':
       case 'delivered': return 'ax-badge ax-badge-success';
       case 'fulfilling':
+      case 'preparing':
+      case 'accepted':
       case 'shipped': return 'ax-badge ax-badge-info';
+      case 'pending': return 'ax-badge ax-badge-warning';
       case 'failed':
-      case 'cancelled': return 'ax-badge ax-badge-danger';
+      case 'rejected':
+      case 'cancelled':
+      case 'returned': return 'ax-badge ax-badge-danger';
       case 'refunded': return 'ax-badge ax-badge-warning';
       default: return 'ax-badge ax-badge-neutral';
     }

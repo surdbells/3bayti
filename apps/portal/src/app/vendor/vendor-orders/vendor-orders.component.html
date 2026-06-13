@@ -7,16 +7,104 @@
         </button>
         <span class="ax-page-header-eyebrow">Orders</span>
         <h1 class="ax-page-title">Orders</h1>
-        <p class="ax-page-subtitle">All orders placed with your store.</p>
+        <p class="ax-page-subtitle">Manage and fulfil orders placed with your store.</p>
       </div>
     </header>
 
     <section class="ax-card ax-p-0">
       <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
         <ng-template axCell="status" let-row>
-          <span [ngClass]="statusBadgeClass(row.status)">{{ row.status | titlecase }}</span>
+          <span [ngClass]="statusBadgeClass(row.status)">{{ statusLabel(row.status) }}</span>
         </ng-template>
       </app-ax-data-table>
     </section>
   </div>
 </app-vendor-shell>
+
+<!-- Order management drawer -->
+<div *ngIf="drawerOpen()" class="ax-drawer-overlay" (click)="closeDrawer()"></div>
+<aside *ngIf="drawerOpen()" class="ax-drawer ax-drawer-right ax-drawer-lg" role="dialog" aria-label="Order management">
+  <header class="ax-drawer-header">
+    <div class="ax-drawer-header-content">
+      <h2 class="ax-drawer-title">{{ order()?.order_reference || 'Order' }}</h2>
+      <p class="ax-drawer-subtitle" *ngIf="order() as o">
+        <span [ngClass]="statusBadgeClass(o.status)">{{ statusLabel(o.status) }}</span>
+        <span class="ax-text-tertiary ax-ml-2">{{ o.date | date:'medium' }}</span>
+      </p>
+    </div>
+    <button type="button" class="ax-drawer-close" (click)="closeDrawer()" aria-label="Close">
+      <span class="material-symbols-outlined">close</span>
+    </button>
+  </header>
+
+  <div class="ax-drawer-body">
+    <div *ngIf="loadingDetail()" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner" aria-label="Loading"></span>
+    </div>
+
+    <ng-container *ngIf="!loadingDetail() && order() as o">
+      <!-- Customer -->
+      <section class="ax-mb-5">
+        <h3 class="ax-h6 ax-mb-2">Customer</h3>
+        <div class="ax-text-sm ax-text-secondary">
+          <div class="ax-font-medium ax-text-primary">{{ o.first_name }} {{ o.last_name }}</div>
+          <div>{{ o.email }}</div>
+          <div *ngIf="o.phone">{{ o.phone }}</div>
+        </div>
+      </section>
+
+      <!-- Line items with per-item status control -->
+      <section class="ax-mb-5">
+        <h3 class="ax-h6 ax-mb-2">Items</h3>
+        <div class="voi-item" *ngFor="let item of o.items">
+          <img *ngIf="item.product_image" [src]="item.product_image" alt="" class="voi-item-img" />
+          <div class="voi-item-body">
+            <div class="ax-font-medium ax-text-sm">{{ item.product_name }}</div>
+            <div class="ax-text-2xs ax-text-tertiary">
+              Qty {{ item.quantity }} · {{ money(item.unit_price) }}
+              <span *ngIf="item.size"> · {{ item.size }}</span>
+              <span *ngIf="item.color"> · {{ item.color }}</span>
+            </div>
+            <div class="ax-mt-1">
+              <span [ngClass]="statusBadgeClass(item.item_status)">{{ statusLabel(item.item_status) }}</span>
+            </div>
+          </div>
+          <div class="voi-item-actions" *ngIf="nextStatuses(item).length">
+            <select class="ax-input ax-input-sm" [disabled]="busy()"
+              (change)="changeItemStatus(item, $any($event.target).value); $any($event.target).value=''">
+              <option value="" selected>Move to…</option>
+              <option *ngFor="let s of nextStatuses(item)" [value]="s">{{ statusLabel(s) }}</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Totals -->
+      <section class="ax-mb-5 voi-totals">
+        <div class="voi-total-row"><span>Subtotal</span><span>{{ money(o.subtotal) }}</span></div>
+        <div class="voi-total-row"><span>Delivery</span><span>{{ money(o.delivery_fee) }}</span></div>
+        <div class="voi-total-row" *ngIf="o.discount && +o.discount > 0"><span>Discount</span><span>−{{ money(o.discount) }}</span></div>
+        <div class="voi-total-row voi-total-grand"><span>Total</span><span>{{ money(o.total) }}</span></div>
+      </section>
+
+      <!-- Timeline -->
+      <section class="ax-mb-5" *ngIf="timeline().length">
+        <h3 class="ax-h6 ax-mb-2">Timeline</h3>
+        <ol class="voi-timeline">
+          <li *ngFor="let t of timeline()">
+            <span class="voi-timeline-dot"></span>
+            <div>
+              <div class="ax-text-sm">{{ statusLabel(t.status || t.action || t.label || '') }}</div>
+              <div class="ax-text-2xs ax-text-tertiary">{{ (t.at || t.created_at) | date:'medium' }}</div>
+              <div *ngIf="t.note" class="ax-text-2xs ax-text-secondary">{{ t.note }}</div>
+            </div>
+          </li>
+        </ol>
+      </section>
+    </ng-container>
+  </div>
+
+  <footer class="ax-drawer-footer">
+    <button type="button" class="ax-btn ax-btn-ghost" (click)="closeDrawer()">Close</button>
+  </footer>
+</aside>
