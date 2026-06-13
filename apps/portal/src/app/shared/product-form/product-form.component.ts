@@ -128,6 +128,9 @@ export class ProductFormComponent implements OnInit {
   @Input() mode: 'create' | 'edit' = 'create';
   @Input() adminMode = false;
   @Input() productId = 0;
+  /** Optional slug — preferred edit-load key when present (admin list
+   *  exposes slug + v3 id but not the legacy id). */
+  @Input() productSlug = '';
   /** Where to navigate after a successful save (defaults per role). */
   @Input() returnTo: string | null = null;
   @Output() saved = new EventEmitter<void>();
@@ -215,7 +218,7 @@ export class ProductFormComponent implements OnInit {
     this.fetchCollections();
     this.fetchVendorLabels();
     if (this.adminMode) this.fetchVendors();
-    if (this.mode === 'edit' && this.productId) this.fetchProductById();
+    if (this.mode === 'edit' && (this.productId || this.productSlug)) this.fetchProductById();
   }
 
   get isEdit(): boolean { return this.mode === 'edit'; }
@@ -267,7 +270,12 @@ export class ProductFormComponent implements OnInit {
 
   fetchProductById(): void {
     this.ui.page_loading = true;
-    this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(this.productId) } }).subscribe({
+    // Prefer slug (GET /products/{slug}) when provided — the admin list
+    // exposes slug + v3 id; vendor pages pass the legacy id.
+    const req = this.productSlug
+      ? this.adapter.get_v3('GET /products/:slug', { params: { slug: this.productSlug } })
+      : this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(this.productId) } });
+    req.subscribe({
       next: (response: any) => {
         const p = response?.data;
         if (!p) { this.ui.page_loading = false; return; }
