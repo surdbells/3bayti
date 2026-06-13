@@ -682,6 +682,19 @@ return function (App $app): void {
         $group->get('/collections',
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'list']);
 
+        // F2 — Vendor size chart (the store's published size guide).
+        // Named "measurements" for portal/legacy continuity; this is the
+        // vendor's size chart, NOT a customer's body measurements
+        // (/v3/me/measurements).
+        $group->get('/measurements',
+            [\Bayti\Api\Http\Controllers\Vendor\VendorSizeChartController::class, 'list']);
+        $group->post('/measurements',
+            [\Bayti\Api\Http\Controllers\Vendor\VendorSizeChartController::class, 'create']);
+        $group->put('/measurements/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Vendor\VendorSizeChartController::class, 'update']);
+        $group->delete('/measurements/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Vendor\VendorSizeChartController::class, 'delete']);
+
         // M3.3.1-D — Vendor store settings
         $group->get('/store',
             \Bayti\Api\Http\Controllers\Vendor\Settings\GetVendorStoreController::class,

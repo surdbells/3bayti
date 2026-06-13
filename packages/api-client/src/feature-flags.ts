@@ -882,7 +882,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/labels/delete-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',
   },
   'DELETE /vendor/measurements/:id': {
-    target: 'old', oldPath: '/vendors/measurement/delete-measurement', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/measurement/delete-measurement', newPath: '/v3/vendor/measurements/:id', shape: 'v3-envelope',
   },
   'DELETE /vendor/products/:id': {
     target: 'new', oldPath: '/vendors/products/delete-product', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
@@ -906,7 +906,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/labels/read-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
   },
   'GET /vendor/measurements': {
-    target: 'old', oldPath: '/vendors/measurement/get-measurements', newPath: '/v3/me/measurements', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/measurement/get-measurements', newPath: '/v3/vendor/measurements', shape: 'v3-envelope',
   },
   'GET /vendor/measurements/:id': {
     target: 'old', oldPath: '/vendors/measurement/getMeasurementById', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
@@ -978,7 +978,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/labels/create-label', newPath: '/v3/vendor/labels', shape: 'v3-envelope',
   },
   'POST /vendor/measurements': {
-    target: 'old', oldPath: '/vendors/measurement/create-measurement', newPath: '/v3/me/measurements', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/measurement/create-measurement', newPath: '/v3/vendor/measurements', shape: 'v3-envelope',
   },
   'POST /vendor/messages': {
     target: 'old', oldPath: '/admin/message-vendor', newPath: '/v3/vendor/messages', shape: 'v3-envelope',
@@ -1002,7 +1002,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/labels/update-label', newPath: '/v3/vendor/labels/:id', shape: 'v3-envelope',
   },
   'PUT /vendor/measurements/:id': {
-    target: 'old', oldPath: '/vendors/measurement/update-measurement', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/measurement/update-measurement', newPath: '/v3/vendor/measurements/:id', shape: 'v3-envelope',
   },
   'PUT /vendor/products/:id': {
     target: 'new', oldPath: '/vendors/products/update-product', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
