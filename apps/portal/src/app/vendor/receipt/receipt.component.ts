@@ -2,7 +2,7 @@ import {Component, inject, OnInit} from '@angular/core';
 import {NgIf} from "@angular/common";
 import {VendorShellComponent} from "../../partials/vendor-shell/vendor-shell.component";
 import {ActivatedRoute, Router} from '@angular/router';
-import {CrudService} from '../../services/crud.service';
+import {PortalCrudAdapter} from '../../services/portal-crud-adapter';
 import {HotToastService} from '../../shared/toast/toast.service';
 import {GlobalComponent} from '../../global-component';
 import html2canvas from 'html2canvas';
@@ -20,10 +20,10 @@ import { IconComponent } from '../../shared/icon/icon.component';
 })
 export class ReceiptComponent   implements OnInit{
   private readonly confirm = inject(AxConfirmService);
+  private readonly adapter = inject(PortalCrudAdapter);
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private crudService: CrudService,
     private toast: HotToastService,
   ) {}
   ui_controls = {
@@ -88,14 +88,6 @@ export class ReceiptComponent   implements OnInit{
     cart_code: "",
     status: ""
   };
-  update_order = {
-    id: 0,
-    order: 0,
-    token: "",
-    status: "",
-    email: ""
-  };
-
   single = {
     id: 0,
     token: "",
@@ -108,8 +100,6 @@ export class ReceiptComponent   implements OnInit{
     this.single.id = this.user_session.id;
     this.single.token = this.user_session.token;
 
-    this.update_order.id = this.user_session.id;
-    this.update_order.token = this.user_session.token;
     this.single.order =  Number(this.route.snapshot.queryParamMap.get('id'));
     this.single.product =  String(this.route.snapshot.queryParamMap.get('name'));
     this.get_order_by_id();
@@ -125,15 +115,54 @@ export class ReceiptComponent   implements OnInit{
   }
   get_order_by_id() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.single, GlobalComponent.getOrderById)
-      .subscribe(({
-        next: (response) => {
-          if (response) {
-            this.data =  response.data;
-            this.ui_controls.is_loading = false;
-          }
+    const orderId = this.single.order;
+    this.adapter.get_v3('GET /vendor/orders/:id', { params: { id: String(orderId) } }).subscribe({
+      next: (response: any) => {
+        if (response?.data) {
+          this.data = this.mapV3Order(response.data);
         }
-      }))
+        this.ui_controls.is_loading = false;
+      },
+      error: () => {
+        this.ui_controls.is_loading = false;
+        this.error_notification('Failed to load order.');
+      },
+    });
+  }
+
+  /** Flatten a v3 order into the flat fields the invoice template reads. */
+  private mapV3Order(o: any): any {
+    const items = o.items ?? [];
+    const first = items[0] ?? {};
+    const ship = o.shipping_address ?? o.billing_address ?? {};
+    const customer = o.customer ?? {};
+    return {
+      ...o,
+      order_ref: o.order_reference ?? o.order_ref,
+      order: o.id,
+      merchant: o.merchant_reference ?? o.merchantReference ?? '',
+      merchantReference: o.merchant_reference ?? '',
+      cart_code: o.cart_code ?? o.order_reference ?? '',
+      status: o.status,
+      // Primary line item (the invoice lists items via data.items too).
+      name: first.product_name ?? '',
+      size: first.size ?? '',
+      color: first.color ?? '',
+      quantity: items.reduce((s: number, i: any) => s + (i.quantity ?? 1), 0),
+      price: first.unit_price ?? '',
+      total: o.total ?? o.subtotal ?? '',
+      note: first.note ?? '',
+      // Delivery address (flattened from v3 shipping_address).
+      delivery_name: `${ship.first_name ?? ''} ${ship.last_name ?? ''}`.trim() ||
+        `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim(),
+      delivery_street_address: ship.street ?? '',
+      villa_number: ship.villa_number ?? '',
+      delivery_area: ship.state_province ?? '',
+      delivery_city: ship.city ?? '',
+      delivery_phone: ship.phone ?? customer.phone ?? '',
+      delivery_email: ship.email ?? customer.email ?? '',
+      items,
+    };
   }
   printInvoice() {
     window.print();
@@ -171,35 +200,5 @@ export class ReceiptComponent   implements OnInit{
       console.error('PDF generation failed', err);
       alert('Could not generate PDF. Please try again or check console for details.');
     }
-  }
-  startStatusChange(order: number, status: string, email: string) {
-    this.confirm
-      .confirm({
-        title: 'Confirm status',
-        message: 'Your order will be sent to delivery partner for pickup and delivery and customer will be notified',
-        confirmLabel: 'Proceed',
-        cancelLabel: 'Cancel'
-      })
-      .then((response) => {
-        if (response){
-        this.updateOrderStatus(order, status, email);
-        }
-      });
-  }
-  updateOrderStatus(order: number, status: string, email: string){
-    this.ui_controls.updating_order = true;
-    this.update_order.order = order;
-    this.update_order.status = status;
-    this.update_order.email = email;
-    this.crudService.post_request(this.update_order, GlobalComponent.updateOrderStatus)
-      .subscribe(({
-        next: (response) => {
-          if (response) {
-            this.ui_controls.updating_order = false;
-            this.success_notification(response.message);
-            this.get_order_by_id();
-          }
-        }
-      }))
   }
 }
