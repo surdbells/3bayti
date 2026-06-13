@@ -1,127 +1,131 @@
 <app-vendor-shell>
-  <div class="ax-page">
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">Analytics</span>
+        <h1 class="ax-page-title">Sales &amp; performance</h1>
+        <p class="ax-page-subtitle">Revenue, orders, and product performance for your store.</p>
+      </div>
+      <div class="ax-flex ax-gap-1 ax-items-center va-window">
+        <button type="button" class="ax-btn ax-btn-sm" [class.ax-btn-primary]="windowDays()===7" [class.ax-btn-outline]="windowDays()!==7" (click)="setWindow(7)">7d</button>
+        <button type="button" class="ax-btn ax-btn-sm" [class.ax-btn-primary]="windowDays()===30" [class.ax-btn-outline]="windowDays()!==30" (click)="setWindow(30)">30d</button>
+        <button type="button" class="ax-btn ax-btn-sm" [class.ax-btn-primary]="windowDays()===90" [class.ax-btn-outline]="windowDays()!==90" (click)="setWindow(90)">90d</button>
+      </div>
+    </header>
 
-    <!-- Header -->
-    <div class="ax-page-header">
-      <div>
-        <h1 class="ax-page-title">Sales Analytics</h1>
-        <p class="ax-page-subtitle">Revenue, orders and product performance for your store</p>
-      </div>
-      <div class="ax-page-actions">
-        <select class="ax-select" [(ngModel)]="days" (change)="onDaysChange()">
-          @for (d of dayOptions; track d) {
-            <option [value]="d">Last {{ d }} days</option>
-          }
-        </select>
-      </div>
+    <div *ngIf="loading()" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading analytics"></span>
     </div>
 
-    @if (loading) {
-      <app-ax-skeleton />
-    } @else if (error) {
-      <app-ax-empty-state [title]="error" description="Check your connection and try again." />
-    } @else if (data) {
-
-      <!-- Window -->
-      <p class="ax-caption">
-        {{ data.window.since | date:'mediumDate' }} – {{ data.window.until | date:'mediumDate' }}
-      </p>
-
+    <ng-container *ngIf="!loading() && analytics() as a">
       <!-- KPI cards -->
-      <div class="analytics-kpis">
-        <div class="kpi-card">
-          <span class="kpi-label">Revenue</span>
-          <span class="kpi-value">{{ fmt(data.totals.revenue_aed) }}</span>
+      <section class="va-kpis">
+        <div class="va-kpi">
+          <div class="va-kpi-label">Revenue</div>
+          <div class="va-kpi-value">{{ aed(a.totals.revenue_aed) }}</div>
         </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Orders</span>
-          <span class="kpi-value">{{ data.totals.orders }}</span>
+        <div class="va-kpi">
+          <div class="va-kpi-label">Orders</div>
+          <div class="va-kpi-value">{{ a.totals.orders | number }}</div>
         </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Items sold</span>
-          <span class="kpi-value">{{ data.totals.items }}</span>
+        <div class="va-kpi">
+          <div class="va-kpi-label">Items sold</div>
+          <div class="va-kpi-value">{{ a.totals.items | number }}</div>
         </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Avg. order value</span>
-          <span class="kpi-value">{{ fmt(data.totals.aov_aed) }}</span>
+        <div class="va-kpi">
+          <div class="va-kpi-label">Avg order value</div>
+          <div class="va-kpi-value">{{ aed(a.totals.aov_aed) }}</div>
         </div>
-        <div class="kpi-card">
-          <span class="kpi-label">Unique customers</span>
-          <span class="kpi-value">{{ data.totals.unique_customers }}</span>
+        <div class="va-kpi">
+          <div class="va-kpi-label">Customers</div>
+          <div class="va-kpi-value">{{ a.totals.unique_customers | number }}</div>
         </div>
+      </section>
+
+      <!-- Revenue trend -->
+      <section class="ax-card va-chart-card">
+        <div class="va-chart-head">
+          <h3 class="ax-h6 ax-m-0">Revenue trend</h3>
+          <span class="ax-text-2xs ax-text-tertiary">Last {{ windowDays() }} days</span>
+        </div>
+        <div *ngIf="revenuePoints().length === 0" class="va-empty">No revenue in this window.</div>
+        <svg *ngIf="revenuePoints().length" [attr.viewBox]="'0 0 ' + CHART_W + ' ' + CHART_H" class="va-svg" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Revenue trend line chart">
+          <defs>
+            <linearGradient id="vaRevFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="var(--ax-color-brand, #906952)" stop-opacity="0.22" />
+              <stop offset="100%" stop-color="var(--ax-color-brand, #906952)" stop-opacity="0" />
+            </linearGradient>
+          </defs>
+          <g class="va-grid">
+            <line *ngFor="let t of revenueYTicks()" [attr.x1]="48" [attr.x2]="CHART_W - 16" [attr.y1]="t.y" [attr.y2]="t.y"></line>
+            <text *ngFor="let t of revenueYTicks()" [attr.x]="42" [attr.y]="t.y + 3" text-anchor="end" class="va-axis-label">{{ t.label }}</text>
+          </g>
+          <path [attr.d]="revenueAreaPath()" fill="url(#vaRevFill)"></path>
+          <path [attr.d]="revenueLinePath()" fill="none" stroke="var(--ax-color-brand, #906952)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"></path>
+          <circle *ngFor="let p of revenuePoints()" [attr.cx]="p.x" [attr.cy]="p.y" r="2.5" fill="var(--ax-color-brand, #906952)">
+            <title>{{ pointLabel(p) }}</title>
+          </circle>
+        </svg>
+      </section>
+
+      <div class="va-two-col">
+        <!-- Status mix donut -->
+        <section class="ax-card va-chart-card">
+          <h3 class="ax-h6 ax-mb-3">Order status mix</h3>
+          <div *ngIf="!statusSegments().length" class="va-empty">No completed orders yet.</div>
+          <div *ngIf="statusSegments().length" class="va-donut-wrap">
+            <svg viewBox="0 0 140 140" class="va-donut" role="img" aria-label="Order status mix donut chart">
+              <circle cx="70" cy="70" [attr.r]="DONUT_R" fill="none" stroke="var(--ax-color-border-subtle, #eee)" stroke-width="16"></circle>
+              <circle *ngFor="let s of statusSegments()"
+                cx="70" cy="70" [attr.r]="DONUT_R" fill="none"
+                [attr.stroke]="s.color" stroke-width="16"
+                [attr.stroke-dasharray]="s.dash" [attr.stroke-dashoffset]="s.offset"
+                transform="rotate(-90 70 70)" stroke-linecap="butt">
+                <title>{{ s.label }}: {{ s.value }} ({{ s.pct }}%)</title>
+              </circle>
+              <text x="70" y="66" text-anchor="middle" class="va-donut-total">{{ a.status_mix.total | number }}</text>
+              <text x="70" y="82" text-anchor="middle" class="va-donut-sub">orders</text>
+            </svg>
+            <ul class="va-legend">
+              <li *ngFor="let s of statusSegments()">
+                <span class="va-legend-dot" [style.background]="s.color"></span>
+                {{ s.label }} <span class="ax-text-tertiary">{{ s.value }} ({{ s.pct }}%)</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
+        <!-- Top products by revenue -->
+        <section class="ax-card va-chart-card">
+          <h3 class="ax-h6 ax-mb-3">Top products by revenue</h3>
+          <div *ngIf="!topByRevenue().length" class="va-empty">No product sales yet.</div>
+          <ul class="va-bars" *ngIf="topByRevenue().length">
+            <li *ngFor="let p of topByRevenue()">
+              <div class="va-bar-head">
+                <span class="va-bar-name" [title]="p.name">{{ p.name }}</span>
+                <span class="va-bar-val">{{ aed(p.revenue_aed) }}</span>
+              </div>
+              <div class="va-bar-track"><div class="va-bar-fill" [style.width.%]="p.pct"></div></div>
+              <div class="ax-text-2xs ax-text-tertiary">{{ p.units }} units</div>
+            </li>
+          </ul>
+        </section>
       </div>
 
-      <!-- Revenue series -->
-      <div class="analytics-section">
-        <h2 class="analytics-section__title">Daily revenue</h2>
-        <app-ax-table [data]="data.revenue_series" [loading]="false">
-          <app-ax-column key="date"        label="Date"        />
-          <app-ax-column key="revenue_aed" label="Revenue (AED)"/>
-          <app-ax-column key="orders"      label="Orders"      />
-        </app-ax-table>
-      </div>
-
-      <!-- Top products by units -->
-      <div class="analytics-section">
-        <h2 class="analytics-section__title">Top products by units sold</h2>
-        <app-ax-table [data]="data.top_products_by_units" [loading]="false">
-          <app-ax-column key="name"        label="Product"      />
-          <app-ax-column key="units"       label="Units sold"   />
-          <app-ax-column key="revenue_aed" label="Revenue (AED)"/>
-        </app-ax-table>
-      </div>
-
-      <!-- Top products by revenue -->
-      <div class="analytics-section">
-        <h2 class="analytics-section__title">Top products by revenue</h2>
-        <app-ax-table [data]="data.top_products_by_revenue" [loading]="false">
-          <app-ax-column key="name"        label="Product"      />
-          <app-ax-column key="revenue_aed" label="Revenue (AED)"/>
-          <app-ax-column key="units"       label="Units sold"   />
-        </app-ax-table>
-      </div>
-
-      <!-- Customer mix + status mix -->
-      <div class="analytics-two-col">
-        <div class="analytics-section">
-          <h2 class="analytics-section__title">Customer mix</h2>
-          <div class="mix-grid">
-            <div class="mix-item">
-              <span class="mix-label">New</span>
-              <span class="mix-value">{{ data.customer_mix.new }}
-                <span class="mix-pct">({{ pct(data.customer_mix.new, data.customer_mix.total) }}%)</span>
-              </span>
-            </div>
-            <div class="mix-item">
-              <span class="mix-label">Returning</span>
-              <span class="mix-value">{{ data.customer_mix.returning }}
-                <span class="mix-pct">({{ pct(data.customer_mix.returning, data.customer_mix.total) }}%)</span>
-              </span>
-            </div>
+      <!-- Customer mix -->
+      <section class="ax-card va-chart-card" *ngIf="customerMix() as cm">
+        <h3 class="ax-h6 ax-mb-3">Customer mix</h3>
+        <div class="va-custmix">
+          <div class="va-custmix-bar">
+            <div class="va-custmix-seg va-custmix-new" [style.width.%]="cm.newPct" [title]="'New: ' + cm.new"></div>
+            <div class="va-custmix-seg va-custmix-ret" [style.width.%]="cm.returningPct" [title]="'Returning: ' + cm.returning"></div>
+          </div>
+          <div class="va-custmix-legend">
+            <span><span class="va-legend-dot va-dot-new"></span>New <strong>{{ cm.new | number }}</strong> ({{ cm.newPct }}%)</span>
+            <span><span class="va-legend-dot va-dot-ret"></span>Returning <strong>{{ cm.returning | number }}</strong> ({{ cm.returningPct }}%)</span>
           </div>
         </div>
-        <div class="analytics-section">
-          <h2 class="analytics-section__title">Order outcomes</h2>
-          <div class="mix-grid">
-            <div class="mix-item">
-              <span class="mix-label">Delivered</span>
-              <span class="mix-value">{{ data.status_mix.delivered }}</span>
-            </div>
-            <div class="mix-item">
-              <span class="mix-label">Cancelled</span>
-              <span class="mix-value">{{ data.status_mix.cancelled }}</span>
-            </div>
-            <div class="mix-item">
-              <span class="mix-label">Returned</span>
-              <span class="mix-value">{{ data.status_mix.returned }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    } @else {
-      <app-ax-empty-state title="No analytics yet" description="Your analytics will appear here once you have orders." />
-    }
-
+      </section>
+    </ng-container>
   </div>
 </app-vendor-shell>
