@@ -273,6 +273,15 @@ class Vendor
     #[ORM\Column(name: 'compliance_status', type: 'string', length: 20, options: ['default' => 'pending'])]
     private string $complianceStatus = 'pending';
 
+    #[ORM\Column(name: 'compliance_reviewed_at', type: 'datetime_immutable', nullable: true)]
+    private ?\DateTimeImmutable $complianceReviewedAt = null;
+
+    #[ORM\Column(name: 'compliance_reviewed_by', type: 'bigint', nullable: true)]
+    private ?int $complianceReviewedBy = null;
+
+    #[ORM\Column(name: 'compliance_review_note', type: 'text', nullable: true)]
+    private ?string $complianceReviewNote = null;
+
     #[ORM\Column(name: 'licensing_authority', type: 'string', length: 50, nullable: true)]
     private ?string $licensingAuthority = null;
 
@@ -365,6 +374,27 @@ class Vendor
     public function getIdBack(): ?string { return $this->idBack; }
     public function getLicenseDoc(): ?string { return $this->licenseDoc; }
     public function getComplianceStatus(): string { return $this->complianceStatus; }
+    public function getComplianceReviewedAt(): ?\DateTimeImmutable { return $this->complianceReviewedAt; }
+    public function getComplianceReviewedBy(): ?int { return $this->complianceReviewedBy; }
+    public function getComplianceReviewNote(): ?string { return $this->complianceReviewNote; }
+
+    /** Admin approves the vendor's KYC submission. */
+    public function approveCompliance(int $adminUserId): void
+    {
+        $this->complianceStatus = 'approved';
+        $this->complianceReviewedBy = $adminUserId;
+        $this->complianceReviewedAt = new \DateTimeImmutable();
+        $this->complianceReviewNote = null;
+    }
+
+    /** Admin rejects the vendor's KYC submission, with an optional reason. */
+    public function rejectCompliance(int $adminUserId, ?string $note): void
+    {
+        $this->complianceStatus = 'rejected';
+        $this->complianceReviewedBy = $adminUserId;
+        $this->complianceReviewedAt = new \DateTimeImmutable();
+        $this->complianceReviewNote = $note;
+    }
 
     /**
      * Store/replace the KYC documents and move compliance to 'submitted'.

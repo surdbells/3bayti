@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 201 route keys.
+ * 204 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -47,6 +47,7 @@ export type V3RouteKey =
   | 'GET /admin/vendors'
   | 'GET /admin/vendors/:id'
   | 'GET /admin/vendors/:id/analytics'
+  | 'GET /admin/vendors/:id/compliance'
   | 'GET /admin/vendors/:id/metrics'
   | 'GET /auth/me'
   | 'GET /cart'
@@ -160,6 +161,8 @@ export type V3RouteKey =
   | 'POST /admin/users/:id/deactivate'
   | 'POST /admin/vendors'
   | 'POST /admin/vendors/:id/approve'
+  | 'POST /admin/vendors/:id/compliance/approve'
+  | 'POST /admin/vendors/:id/compliance/reject'
   | 'POST /admin/vendors/:id/messages'
   | 'POST /admin/vendors/:id/reactivate'
   | 'POST /admin/vendors/:id/suspend'
@@ -251,6 +254,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/vendors',
   'GET /admin/vendors/:id',
   'GET /admin/vendors/:id/analytics',
+  'GET /admin/vendors/:id/compliance',
   'GET /admin/vendors/:id/metrics',
   'GET /auth/me',
   'GET /cart',
@@ -364,6 +368,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/users/:id/deactivate',
   'POST /admin/vendors',
   'POST /admin/vendors/:id/approve',
+  'POST /admin/vendors/:id/compliance/approve',
+  'POST /admin/vendors/:id/compliance/reject',
   'POST /admin/vendors/:id/messages',
   'POST /admin/vendors/:id/reactivate',
   'POST /admin/vendors/:id/suspend',

@@ -1165,6 +1165,15 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'POST /admin/vendors/:id/suspend': {
     target: 'new', oldPath: '/admin/common/deactivate-store', newPath: '/v3/admin/vendors/:id/suspend', shape: 'v3-envelope',
   },
+  'GET /admin/vendors/:id/compliance': {
+    target: 'new', oldPath: '/admin/common/getSingleStore', newPath: '/v3/admin/vendors/:id/compliance', shape: 'v3-envelope',
+  },
+  'POST /admin/vendors/:id/compliance/approve': {
+    target: 'new', oldPath: '/admin/common/activate-store', newPath: '/v3/admin/vendors/:id/compliance/approve', shape: 'v3-envelope',
+  },
+  'POST /admin/vendors/:id/compliance/reject': {
+    target: 'new', oldPath: '/admin/common/deactivate-store', newPath: '/v3/admin/vendors/:id/compliance/reject', shape: 'v3-envelope',
+  },
   'PUT /admin/collections/:id': {
     target: 'new', oldPath: '/admin/collections/update-collection', newPath: '/v3/admin/collections/:id', shape: 'v3-envelope',
   },

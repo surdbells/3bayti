@@ -449,6 +449,13 @@ return function (App $app): void {
         // M3.2.X.6-C — Vendor lifecycle state transitions
         $group->post('/vendors/{id:[0-9]+}/approve',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ApproveVendorController::class);
+        // Admin KYC compliance review.
+        $group->get('/vendors/{id:[0-9]+}/compliance',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\Compliance\GetAdminVendorComplianceController::class);
+        $group->post('/vendors/{id:[0-9]+}/compliance/approve',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\Compliance\ApproveVendorComplianceController::class);
+        $group->post('/vendors/{id:[0-9]+}/compliance/reject',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\Compliance\RejectVendorComplianceController::class);
         $group->post('/vendors/{id:[0-9]+}/suspend',
             \Bayti\Api\Http\Controllers\Admin\Vendor\SuspendVendorController::class);
         $group->post('/vendors/{id:[0-9]+}/reactivate',

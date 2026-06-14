@@ -256,30 +256,61 @@
                 </ng-container>
               </section>
 
-              <!-- Compliance images -->
+              <!-- KYC compliance review -->
               <section class="ax-card ax-p-5">
-                <h3 class="ax-h5 ax-m-0 ax-mb-4">Compliance documents</h3>
+                <div class="ax-flex ax-items-center ax-justify-between ax-mb-4">
+                  <h3 class="ax-h5 ax-m-0">Compliance review</h3>
+                  <span class="ax-badge"
+                        [class.ax-badge-success]="compliance.compliance_status === 'approved'"
+                        [class.ax-badge-warning]="compliance.compliance_status === 'submitted'"
+                        [class.ax-badge-danger]="compliance.compliance_status === 'rejected'"
+                        [class.ax-badge-muted]="compliance.compliance_status === 'pending'">
+                    {{ compliance.compliance_status | titlecase }}
+                  </span>
+                </div>
+
                 <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-3">
                   <div class="ax-card ax-p-4">
                     <div class="ax-font-medium ax-text-primary ax-mb-3">ID (Front)</div>
-                    <img
-                      [src]="store.id_front || 'assets/img/placeholder-1.png'"
-                      alt="ID front"
+                    <img [src]="compliance.front || 'assets/img/placeholder-1.png'" alt="ID front"
                       style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+                    <a *ngIf="compliance.front" [href]="compliance.front" target="_blank" rel="noopener"
+                       class="ax-text-sm ax-text-link ax-mt-2 ax-inline-block">Open document</a>
                   </div>
                   <div class="ax-card ax-p-4">
                     <div class="ax-font-medium ax-text-primary ax-mb-3">ID (Back)</div>
-                    <img
-                      [src]="store.id_back || 'assets/img/placeholder-1.png'"
-                      alt="ID back"
+                    <img [src]="compliance.back || 'assets/img/placeholder-1.png'" alt="ID back"
                       style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+                    <a *ngIf="compliance.back" [href]="compliance.back" target="_blank" rel="noopener"
+                       class="ax-text-sm ax-text-link ax-mt-2 ax-inline-block">Open document</a>
                   </div>
                   <div class="ax-card ax-p-4">
                     <div class="ax-font-medium ax-text-primary ax-mb-3">License document</div>
-                    <img
-                      [src]="store.license_doc || 'assets/img/placeholder-1.png'"
-                      alt="License document"
+                    <img [src]="compliance.license_doc || 'assets/img/placeholder-1.png'" alt="License document"
                       style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+                    <a *ngIf="compliance.license_doc" [href]="compliance.license_doc" target="_blank" rel="noopener"
+                       class="ax-text-sm ax-text-link ax-mt-2 ax-inline-block">Open document</a>
+                  </div>
+                </div>
+
+                <!-- Prior review outcome -->
+                <p *ngIf="compliance.reviewed_at" class="ax-text-sm ax-text-secondary ax-mt-4 ax-mb-0">
+                  Last reviewed {{ compliance.reviewed_at | date:'medium' }}<span *ngIf="compliance.review_note">
+                  — “{{ compliance.review_note }}”</span>
+                </p>
+
+                <!-- Review actions -->
+                <div class="ax-mt-4 ax-pt-4" style="border-top: 1px solid var(--ax-color-border-subtle);">
+                  <label class="ax-label" for="reject_note">Rejection note (optional)</label>
+                  <textarea id="reject_note" class="ax-input" rows="2" [(ngModel)]="reject_note"
+                            placeholder="Reason shown to the vendor if you reject (e.g. ID photo is blurry)"></textarea>
+                  <div class="ax-flex ax-gap-2 ax-mt-3">
+                    <button class="ax-btn ax-btn-success" type="button"
+                            [disabled]="ui_controls.acting || compliance.compliance_status === 'approved'"
+                            (click)="approveCompliance()">Approve</button>
+                    <button class="ax-btn ax-btn-danger-outline" type="button"
+                            [disabled]="ui_controls.acting || compliance.compliance_status === 'rejected'"
+                            (click)="rejectCompliance()">Reject</button>
                   </div>
                 </div>
               </section>

@@ -127,6 +127,55 @@ export class ManageStoreComponent implements OnInit {
         this.ui_controls.is_loading = false;
       },
     });
+    this.loadCompliance();
+  }
+
+  // ── KYC compliance review ───────────────────────────────────────────
+  compliance: any = {
+    front: null, back: null, license_doc: null,
+    compliance_status: 'pending', reviewed_at: null, reviewed_by: null, review_note: null,
+  };
+  reject_note = '';
+
+  loadCompliance() {
+    if (!this.storeId) return;
+    this.adapter.get_v3('GET /admin/vendors/:id/compliance', { params: { id: String(this.storeId) } })
+      .subscribe({
+        next: (r: any) => { if (r?.data) this.compliance = r.data; },
+        error: () => { /* non-fatal — section just stays empty */ },
+      });
+  }
+
+  approveCompliance() {
+    this.confirm.confirm({
+      title: 'Approve compliance',
+      message: `Approve ${this.store.store_name || 'this vendor'}'s KYC documents?`,
+      confirmLabel: 'Approve', cancelLabel: 'Cancel',
+    }).then((ok) => {
+      if (!ok) return;
+      this.ui_controls.acting = true;
+      this.adapter.post_v3('POST /admin/vendors/:id/compliance/approve', {}, { params: { id: String(this.storeId) } })
+        .subscribe({
+          next: (r: any) => { if (r) { this.toast.success('Compliance approved.'); this.loadCompliance(); } this.ui_controls.acting = false; },
+          error: () => { this.toast.error('Unable to approve compliance.'); this.ui_controls.acting = false; },
+        });
+    });
+  }
+
+  rejectCompliance() {
+    this.confirm.confirm({
+      title: 'Reject compliance',
+      message: 'Reject this submission? The vendor will be able to re-upload.',
+      confirmLabel: 'Reject', cancelLabel: 'Cancel', variant: 'danger',
+    }).then((ok) => {
+      if (!ok) return;
+      this.ui_controls.acting = true;
+      this.adapter.post_v3('POST /admin/vendors/:id/compliance/reject', { note: this.reject_note }, { params: { id: String(this.storeId) } })
+        .subscribe({
+          next: (r: any) => { if (r) { this.toast.success('Compliance rejected.'); this.reject_note = ''; this.loadCompliance(); } this.ui_controls.acting = false; },
+          error: () => { this.toast.error('Unable to reject compliance.'); this.ui_controls.acting = false; },
+        });
+    });
   }
 
   send_message() {
