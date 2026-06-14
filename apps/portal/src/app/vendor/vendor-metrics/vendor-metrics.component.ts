@@ -1,92 +1,112 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
-import {
-  AxEmptyStateComponent, AxSkeletonComponent,
-} from '../../shared/data';
+import { AxSkeletonComponent } from '../../shared/data';
+import { IconComponent } from '../../shared/icon/icon.component';
 
-interface MetricValue { value: number | null; [k: string]: unknown; }
-interface VendorMetrics {
-  vendor_id: number;
-  vendor_slug: string;
-  vendor_name: string;
-  window: { days: number; since: string; until: string };
-  metrics: Record<string, MetricValue>;
+interface SeriesPoint { day: string; revenue: number; orders: number; }
+interface TopProduct { product_id: number; name: string; units: number; revenue: number; }
+interface RecentOrder {
+  order_reference: string;
+  status: string;
+  created_at: string;
+  item_count: number;
+  vendor_total: number;
+}
+interface DashboardData {
+  window: { days: number };
+  catalog: { total_products: number; active: number; draft: number; out_of_stock: number; low_stock: number };
+  sales: {
+    period_days: number;
+    revenue: number; revenue_formatted: string;
+    orders: number; units: number; aov: number;
+    all_time_revenue: number; all_time_revenue_formatted: string;
+    all_time_orders: number; all_time_units: number;
+  };
+  operations: { awaiting_acceptance: number; to_ship: number };
+  revenue_series: SeriesPoint[];
+  top_products: TopProduct[];
+  recent_orders: RecentOrder[];
 }
 
-const METRIC_LABELS: Record<string, string> = {
-  fulfillment_rate:     'Fulfillment rate',
-  cancellation_rate:    'Cancellation rate',
-  on_time_dispatch_rate:'On-time dispatch rate',
-  return_rate:          'Return rate',
-  review_score_avg:     'Avg. review score',
-  review_count:         'Total reviews',
-  response_time_hours:  'Avg. response time (hrs)',
-  repeat_customer_rate: 'Repeat customer rate',
-};
-
+/**
+ * Insightful vendor dashboard — a balanced view of sales (revenue, orders,
+ * AOV, trend) and operations (items awaiting action, low stock), plus
+ * catalog health, top products, and recent orders. Reads
+ * GET /vendor/dashboard.
+ */
 @Component({
   selector: 'app-vendor-metrics',
   standalone: true,
-  imports: [
-    CommonModule, FormsModule,
-    VendorShellComponent,
-    AxEmptyStateComponent, AxSkeletonComponent,
-  ],
+  imports: [CommonModule, FormsModule, VendorShellComponent, AxSkeletonComponent, IconComponent],
   templateUrl: './vendor-metrics.component.html',
   styleUrl: './vendor-metrics.component.css',
 })
 export class VendorMetricsComponent implements OnInit {
-  data: VendorMetrics | null = null;
+  private adapter = inject(PortalCrudAdapter);
+  private toast = inject(HotToastService);
+  private router = inject(Router);
+
+  data: DashboardData | null = null;
   days = 30;
   loading = false;
   error = '';
   readonly dayOptions = [7, 14, 30, 90];
-  readonly metricKeys = Object.keys(METRIC_LABELS);
-
-
-  constructor(private adapter: PortalCrudAdapter, private toast: HotToastService) {}
 
   ngOnInit(): void {
     this.load();
   }
 
   load(): void {
-    this.loading = true; this.error = '';
-    this.adapter.get_v3('GET /vendor/metrics', { query: { days: this.days } }).subscribe({
-      next: (res: any) => { this.data = res?.data ?? res; this.loading = false; },
-      error: () => {
-        this.error = 'Could not load metrics.';
+    this.loading = true;
+    this.error = '';
+    this.adapter.get_v3('GET /vendor/dashboard', { query: { days: this.days } }).subscribe({
+      next: (res: any) => {
+        this.data = res?.data ?? res;
         this.loading = false;
-        this.toast.error('Failed to load metrics');
+      },
+      error: () => {
+        this.error = 'Could not load your dashboard.';
+        this.loading = false;
+        this.toast.error('Failed to load dashboard');
       },
     });
   }
 
-  onDaysChange(): void { this.load(); }
-
-  label(key: string): string { return METRIC_LABELS[key] ?? key; }
-
-  metricValue(key: string): string {
-    const m = this.data?.metrics?.[key];
-    if (!m || m.value == null) return '—';
-    const v = m.value;
-    if (key.endsWith('_rate') || key.endsWith('_avg')) {
-      return `${(v * 100).toFixed(1)}%`;
-    }
-    return String(v);
+  onDaysChange(): void {
+    this.load();
   }
 
-  metricDetail(key: string): string {
-    const m = this.data?.metrics?.[key];
-    if (!m) return '';
-    if (key === 'fulfillment_rate')
-      return `${m['fulfilled_items']} of ${m['total_items']} items`;
-    if (key === 'cancellation_rate')
-      return `${m['rejected_items']} rejected of ${m['total_items']} items`;
-    return '';
+  // ── Revenue trend (SVG bars) ─────────────────────────────────────
+  get series(): SeriesPoint[] {
+    return this.data?.revenue_series ?? [];
+  }
+  get chartMaxRevenue(): number {
+    return Math.max(1, ...this.series.map((p) => p.revenue));
+  }
+  barHeight(p: SeriesPoint): number {
+    return Math.max(2, Math.round((p.revenue / this.chartMaxRevenue) * 100));
+  }
+
+  statusBadgeClass(status: string): string {
+    const map: Record<string, string> = {
+      delivered: 'ax-badge ax-badge-success',
+      shipped: 'ax-badge ax-badge-info',
+      fulfilling: 'ax-badge ax-badge-warning',
+      paid: 'ax-badge ax-badge-neutral',
+    };
+    return map[status] ?? 'ax-badge ax-badge-neutral';
+  }
+
+  // ── Actionable navigation ────────────────────────────────────────
+  goToOrders(status?: string): void {
+    this.router.navigate(['/orders'], status ? { queryParams: { status } } : {});
+  }
+  goToProducts(): void {
+    this.router.navigate(['/products']);
   }
 }

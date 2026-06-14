@@ -642,6 +642,11 @@ return function (App $app): void {
             '/analytics',
             \Bayti\Api\Http\Controllers\Vendor\GetVendorSelfAnalyticsController::class,
         );
+        // F7a — insightful vendor dashboard (catalog + sales + operations).
+        $group->get(
+            '/dashboard',
+            \Bayti\Api\Http\Controllers\Vendor\GetVendorDashboardController::class,
+        );
 
         // M3.4-C — Vendor product reviews (read-only).
         $group->get('/reviews',

@@ -1,38 +1,156 @@
 <app-vendor-shell>
-  <div class="ax-page">
-    <div class="ax-page-header">
-      <div>
-        <h1 class="ax-page-title">Store Metrics</h1>
-        <p class="ax-page-subtitle">Performance indicators for your store</p>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">Dashboard</span>
+        <h1 class="ax-page-title">Store overview</h1>
+        <p class="ax-page-subtitle">Your sales, operations and catalogue at a glance.</p>
       </div>
-      <div class="ax-page-actions">
-        <select class="ax-select" [(ngModel)]="days" (change)="onDaysChange()">
-          @for (d of dayOptions; track d) {
-            <option [value]="d">Last {{ d }} days</option>
-          }
-        </select>
+      <div class="ax-page-header-actions">
+        <label class="ax-field ax-field-inline">
+          <span class="ax-field-label">Period</span>
+          <select class="ax-select" [(ngModel)]="days" (ngModelChange)="onDaysChange()">
+            <option *ngFor="let d of dayOptions" [value]="d">Last {{ d }} days</option>
+          </select>
+        </label>
+      </div>
+    </header>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="ax-page-section">
+      <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-4">
+        <app-ax-skeleton *ngFor="let i of [1,2,3,4]" kind="rect" height="92px"></app-ax-skeleton>
       </div>
     </div>
 
-    @if (loading) { <app-ax-skeleton /> }
-    @else if (error) { <app-ax-empty-state [title]="error" description="Check your connection." /> }
-    @else if (data) {
-      <p class="ax-caption">
-        {{ data.window.since | date:'mediumDate' }} – {{ data.window.until | date:'mediumDate' }}
-      </p>
-      <div class="metrics-grid">
-        @for (key of metricKeys; track key) {
-          <div class="metric-card" [class.metric-card--highlight]="metricValue(key) !== '—'">
-            <span class="metric-label">{{ label(key) }}</span>
-            <span class="metric-value">{{ metricValue(key) }}</span>
-            @if (metricDetail(key)) {
-              <span class="metric-detail">{{ metricDetail(key) }}</span>
-            }
+    <!-- Error -->
+    <div *ngIf="error && !loading" class="ax-card ax-p-6 ax-text-center">
+      <p class="ax-text-secondary ax-m-0">{{ error }}</p>
+      <button type="button" class="ax-btn ax-btn-secondary ax-btn-sm ax-mt-3" (click)="load()">Retry</button>
+    </div>
+
+    <ng-container *ngIf="data && !loading">
+      <!-- Sales KPIs -->
+      <section class="ax-page-section">
+        <h2 class="ax-h6 ax-text-secondary ax-mb-3">Sales · last {{ data.sales.period_days }} days</h2>
+        <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-4">
+          <div class="ax-card ax-p-4 vm-kpi vm-kpi-accent">
+            <div class="vm-kpi-label">Revenue</div>
+            <div class="vm-kpi-value">{{ data.sales.revenue_formatted }}</div>
+            <div class="vm-kpi-sub">{{ data.sales.all_time_revenue_formatted }} all-time</div>
           </div>
-        }
+          <div class="ax-card ax-p-4 vm-kpi">
+            <div class="vm-kpi-label">Orders</div>
+            <div class="vm-kpi-value">{{ data.sales.orders }}</div>
+            <div class="vm-kpi-sub">{{ data.sales.all_time_orders }} all-time</div>
+          </div>
+          <div class="ax-card ax-p-4 vm-kpi">
+            <div class="vm-kpi-label">Units sold</div>
+            <div class="vm-kpi-value">{{ data.sales.units }}</div>
+            <div class="vm-kpi-sub">{{ data.sales.all_time_units }} all-time</div>
+          </div>
+          <div class="ax-card ax-p-4 vm-kpi">
+            <div class="vm-kpi-label">Avg order value</div>
+            <div class="vm-kpi-value">AED {{ data.sales.aov | number:'1.2-2' }}</div>
+            <div class="vm-kpi-sub">in this period</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Operations + Catalogue -->
+      <section class="ax-page-section">
+        <h2 class="ax-h6 ax-text-secondary ax-mb-3">Operations &amp; catalogue</h2>
+        <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-4">
+          <button type="button" class="ax-card ax-p-4 vm-kpi vm-kpi-action"
+            [class.vm-kpi-alert]="data.operations.awaiting_acceptance > 0" (click)="goToOrders('paid')">
+            <div class="vm-kpi-label">Awaiting acceptance</div>
+            <div class="vm-kpi-value">{{ data.operations.awaiting_acceptance }}</div>
+            <div class="vm-kpi-sub">items need a response <app-icon name="arrow_forward" aria-hidden="true"></app-icon></div>
+          </button>
+          <button type="button" class="ax-card ax-p-4 vm-kpi vm-kpi-action"
+            [class.vm-kpi-warn]="data.operations.to_ship > 0" (click)="goToOrders('fulfilling')">
+            <div class="vm-kpi-label">To ship</div>
+            <div class="vm-kpi-value">{{ data.operations.to_ship }}</div>
+            <div class="vm-kpi-sub">accepted, not shipped <app-icon name="arrow_forward" aria-hidden="true"></app-icon></div>
+          </button>
+          <button type="button" class="ax-card ax-p-4 vm-kpi vm-kpi-action" (click)="goToProducts()">
+            <div class="vm-kpi-label">Active products</div>
+            <div class="vm-kpi-value">{{ data.catalog.active }}</div>
+            <div class="vm-kpi-sub">{{ data.catalog.draft }} draft · {{ data.catalog.total_products }} total</div>
+          </button>
+          <button type="button" class="ax-card ax-p-4 vm-kpi vm-kpi-action"
+            [class.vm-kpi-alert]="data.catalog.out_of_stock > 0" (click)="goToProducts()">
+            <div class="vm-kpi-label">Stock alerts</div>
+            <div class="vm-kpi-value">{{ data.catalog.out_of_stock + data.catalog.low_stock }}</div>
+            <div class="vm-kpi-sub">{{ data.catalog.out_of_stock }} out · {{ data.catalog.low_stock }} low</div>
+          </button>
+        </div>
+      </section>
+
+      <!-- Revenue trend -->
+      <section class="ax-page-section" *ngIf="series.length">
+        <div class="ax-card ax-p-5">
+          <h2 class="ax-h5 ax-m-0 ax-mb-4">Revenue trend</h2>
+          <div class="vm-chart">
+            <div *ngFor="let p of series" class="vm-bar-wrap"
+              [title]="p.day + ' · AED ' + (p.revenue | number:'1.2-2') + ' · ' + p.orders + ' orders'">
+              <div class="vm-bar" [style.height.%]="barHeight(p)"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="ax-grid ax-grid-cols-1 ax-lg-grid-cols-2 ax-gap-4 ax-page-section">
+        <!-- Top products -->
+        <div class="ax-card ax-p-0">
+          <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <h2 class="ax-h5 ax-m-0">Top products</h2>
+          </div>
+          <div *ngIf="data.top_products.length; else noTop">
+            <table class="vm-table">
+              <thead>
+                <tr><th>Product</th><th class="ax-text-center">Units</th><th class="ax-text-right">Revenue</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of data.top_products">
+                  <td class="ax-font-medium ax-truncate" style="max-width:220px;">{{ p.name }}</td>
+                  <td class="ax-text-center">{{ p.units }}</td>
+                  <td class="ax-text-right">AED {{ p.revenue | number:'1.2-2' }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #noTop>
+            <div class="ax-p-6 ax-text-center ax-text-secondary">No sales in this period yet.</div>
+          </ng-template>
+        </div>
+
+        <!-- Recent orders -->
+        <div class="ax-card ax-p-0">
+          <div class="ax-p-4 ax-flex ax-items-center ax-justify-between" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <h2 class="ax-h5 ax-m-0">Recent orders</h2>
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-xs" (click)="goToOrders()">View all</button>
+          </div>
+          <div *ngIf="data.recent_orders.length; else noOrders">
+            <table class="vm-table">
+              <thead>
+                <tr><th>Order</th><th>Date</th><th class="ax-text-right">Total</th><th class="ax-text-center">Status</th></tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let o of data.recent_orders">
+                  <td class="ax-font-medium">{{ o.order_reference }}</td>
+                  <td>{{ o.created_at | date:'mediumDate' }}</td>
+                  <td class="ax-text-right">AED {{ o.vendor_total | number:'1.2-2' }}</td>
+                  <td class="ax-text-center"><span [ngClass]="statusBadgeClass(o.status)">{{ o.status | titlecase }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <ng-template #noOrders>
+            <div class="ax-p-6 ax-text-center ax-text-secondary">No orders yet.</div>
+          </ng-template>
+        </div>
       </div>
-    } @else {
-      <app-ax-empty-state title="No metrics yet" description="Metrics appear once you have order activity." />
-    }
+    </ng-container>
   </div>
 </app-vendor-shell>
