@@ -827,6 +827,23 @@ return function (App $app): void {
         ->add(\Bayti\Api\Http\Middleware\VendorAuthMiddleware::class)
         ->add(AuthMiddleware::class);
 
+    // Order-scoped customer↔vendor chat (vendor side). Same guard as the
+    // rest of the vendor surface; conversations are scoped to the stores
+    // the authenticated vendor owns.
+    $app->group('/v3/vendor/chat', function (RouteCollectorProxy $group): void {
+        $group->get('/conversations', \Bayti\Api\Http\Controllers\Chat\Vendor\ListConversationsController::class);
+        $group->get(
+            '/conversations/{uuid}/messages',
+            \Bayti\Api\Http\Controllers\Chat\Vendor\GetMessagesController::class,
+        );
+        $group->post(
+            '/conversations/{uuid}/read',
+            \Bayti\Api\Http\Controllers\Chat\Vendor\MarkReadController::class,
+        );
+    })
+        ->add(\Bayti\Api\Http\Middleware\VendorAuthMiddleware::class)
+        ->add(AuthMiddleware::class);
+
     // M3.2.X.6-D — Vendor self-serve onboarding endpoints.
     //
     // SEPARATE route group with AuthMiddleware ONLY (no
