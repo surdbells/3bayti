@@ -150,3 +150,31 @@
   color: var(--ax-color-text-secondary);
   font-size: 13px;
 }
+
+/* ── Profile picture ─────────────────────────────────────────── */
+.profile-avatar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+.profile-avatar {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--ion-color-light, #f1f1f1);
+  background: var(--ion-color-light, #f1f1f1);
+}
+.profile-avatar-btn {
+  appearance: none;
+  background: none;
+  border: none;
+  color: var(--ion-color-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+}
+.profile-avatar-btn[disabled] { opacity: 0.5; }

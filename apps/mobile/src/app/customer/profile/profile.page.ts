@@ -1,6 +1,7 @@
 import {Component, HostListener, OnDestroy, OnInit} from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import {
     IonButton,
     IonButtons,
@@ -29,6 +30,9 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+
+const V3_BASE = 'https://api-v3.3bayti.ae';
+
 @Component({
   selector: 'app-profile',
   templateUrl: './profile.page.html',
@@ -74,6 +78,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
+    private http: HttpClient,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -86,7 +91,8 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
   ui_controls = {
     is_loading: false,
-    is_updating: false
+    is_updating: false,
+    avatar_uploading: false
   }
   single_user = {
     id: 0,
@@ -172,6 +178,9 @@ export class ProfilePage implements OnInit, OnDestroy {
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.update = response.data;
+            if (response.data?.avatar_url) {
+              this.single_user.avatar = response.data.avatar_url;
+            }
             this.ui_controls.is_loading = false;
           }
         }
@@ -220,6 +229,52 @@ export class ProfilePage implements OnInit, OnDestroy {
       this.error_notification(this.i18n.t('text_offline_check_connection'))
     }
   }
+  onAvatarPicked(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files[0];
+    input.value = ''; // allow re-picking the same file
+    if (!file) {
+      return;
+    }
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      this.error_notification(this.i18n.t('text_avatar_invalid_type'));
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.error_notification(this.i18n.t('text_avatar_too_large'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => this.uploadAvatar(String(reader.result));
+    reader.onerror = () => this.error_notification(this.i18n.t('text_avatar_upload_failed'));
+    reader.readAsDataURL(file);
+  }
+
+  private uploadAvatar(dataUrl: string) {
+    if (!this.isOnline) {
+      this.error_notification(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+    const token = this.single_user.token || '';
+    const headers = new HttpHeaders(token ? { Authorization: `Bearer ${token}` } : {});
+    this.ui_controls.avatar_uploading = true;
+    this.http.post(`${V3_BASE}/v3/me/avatar`, { image: dataUrl }, { headers }).subscribe({
+      next: async (response: any) => {
+        const url = response?.data?.avatar_url;
+        if (url) {
+          this.single_user.avatar = url;
+          await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+          this.success_notification(this.i18n.t('text_avatar_updated'));
+        }
+        this.ui_controls.avatar_uploading = false;
+      },
+      error: () => {
+        this.ui_controls.avatar_uploading = false;
+        this.error_notification(this.i18n.t('text_avatar_upload_failed'));
+      },
+    });
+  }
+
   error_notification(message: string) {
     this.toast.error(message, {
       position: "top-center"

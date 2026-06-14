@@ -13,6 +13,25 @@
     <ion-card>
       @if (!ui_controls.is_loading || !ui_controls.is_updating) {
         <ion-card-header>
+          <div class="profile-avatar-wrap">
+            <img
+              class="profile-avatar"
+              [src]="single_user.avatar || 'assets/images/avatar.png'"
+              alt="Profile picture" />
+            <button
+              type="button"
+              class="profile-avatar-btn"
+              (click)="avatarInput.click()"
+              [disabled]="ui_controls.avatar_uploading">
+              {{ (ui_controls.avatar_uploading ? 'text_uploading' : 'button_change_photo') | translate }}
+            </button>
+            <input
+              #avatarInput
+              type="file"
+              accept="image/png,image/jpeg,image/webp"
+              hidden
+              (change)="onAvatarPicked($event)" />
+          </div>
           <ion-card-title class="ion-text-center">
             {{ 'title_user_profile' | translate }}
           </ion-card-title>

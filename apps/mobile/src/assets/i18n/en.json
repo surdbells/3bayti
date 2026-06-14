@@ -578,5 +578,11 @@
   "text_chat_blocked": "Message blocked: please don't share contact or payment details here",
   "text_message_send_failed": "Couldn't send your message. Please try again.",
   "text_not_delivered": "Not delivered",
-  "text_chat_closed": "This conversation is closed"
+  "text_chat_closed": "This conversation is closed",
+  "button_change_photo": "Change photo",
+  "text_uploading": "Uploading…",
+  "text_avatar_invalid_type": "Please choose a JPEG, PNG, or WebP image.",
+  "text_avatar_too_large": "Image is too large (max 5 MB).",
+  "text_avatar_updated": "Profile picture updated.",
+  "text_avatar_upload_failed": "Couldn't update your profile picture. Please try again."
 }
