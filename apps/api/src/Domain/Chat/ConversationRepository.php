@@ -89,4 +89,33 @@ class ConversationRepository extends EntityRepository
 
         return ['items' => $items, 'total' => $total, 'unread' => $unread];
     }
+
+    /**
+     * Total unread messages for a customer across all their conversations.
+     * Cheap aggregate for badge polling (no row hydration).
+     */
+    public function unreadCountForCustomer(int $customerId): int
+    {
+        return (int) $this->createQueryBuilder('c')
+            ->select('COALESCE(SUM(c.customerUnreadCount), 0)')
+            ->where('c.customer = :cid')->setParameter('cid', $customerId)
+            ->getQuery()->getSingleScalarResult();
+    }
+
+    /**
+     * Total unread messages for a vendor across all their stores.
+     *
+     * @param list<int> $vendorIds
+     */
+    public function unreadCountForVendor(array $vendorIds): int
+    {
+        if ($vendorIds === []) {
+            return 0;
+        }
+        return (int) $this->createQueryBuilder('c')
+            ->select('COALESCE(SUM(c.vendorUnreadCount), 0)')
+            ->where('c.vendor IN (:vids)')
+            ->setParameter('vids', $vendorIds, ArrayParameterType::INTEGER)
+            ->getQuery()->getSingleScalarResult();
+    }
 }

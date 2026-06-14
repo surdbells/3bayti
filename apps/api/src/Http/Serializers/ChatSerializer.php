@@ -50,6 +50,7 @@ final class ChatSerializer
     public function messageShape(Message $message): array
     {
         return [
+            'id'          => $message->getId(),
             'uuid'        => $message->getUuid(),
             'sender_type' => $message->getSenderType(),
             'type'        => $message->getType(),

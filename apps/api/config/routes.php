@@ -289,6 +289,7 @@ return function (App $app): void {
     // carries the conversation meta so the screen opens in one call.
     $app->group('/v3/chat', function (RouteCollectorProxy $group): void {
         $group->get('/conversations', \Bayti\Api\Http\Controllers\Chat\Customer\ListConversationsController::class);
+        $group->get('/unread-count', \Bayti\Api\Http\Controllers\Chat\Customer\GetUnreadCountController::class);
         $group->get(
             '/conversations/{uuid}/messages',
             \Bayti\Api\Http\Controllers\Chat\Customer\GetMessagesController::class,
@@ -846,6 +847,7 @@ return function (App $app): void {
     // the authenticated vendor owns.
     $app->group('/v3/vendor/chat', function (RouteCollectorProxy $group): void {
         $group->get('/conversations', \Bayti\Api\Http\Controllers\Chat\Vendor\ListConversationsController::class);
+        $group->get('/unread-count', \Bayti\Api\Http\Controllers\Chat\Vendor\GetUnreadCountController::class);
         $group->get(
             '/conversations/{uuid}/messages',
             \Bayti\Api\Http\Controllers\Chat\Vendor\GetMessagesController::class,
