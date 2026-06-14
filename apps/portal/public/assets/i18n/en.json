@@ -309,7 +309,11 @@
   "profile_preview": "Profile Preview",
   "email_address": "Email address",
   "email_edit_notice": "For security reasons, your name and email can’t be edited here. Please contact Support to request an update: support@3bayti.ae.",
-  "delivery_list":  "Delivery list",
-  "sold":  "Sold"
-
+  "delivery_list": "Delivery list",
+  "sold": "Sold",
+  "notifications_inbox_tab": "Inbox",
+  "notifications_prefs_tab": "Preferences",
+  "notifications_inbox_heading": "Notifications",
+  "notifications_mark_all_read": "Mark all read",
+  "notifications_empty": "You're all caught up — no notifications yet."
 }

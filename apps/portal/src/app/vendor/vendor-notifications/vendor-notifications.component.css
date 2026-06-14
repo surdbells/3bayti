@@ -7,3 +7,50 @@
 .ax-notification-row:last-child {
   border-bottom: 0;
 }
+
+/* ── Inbox feed + tabs ───────────────────────────────────────── */
+.vn-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid var(--ax-color-border-subtle, #e2e5e9);
+  margin-bottom: 1.25rem;
+}
+.vn-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.6rem 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  color: var(--ax-color-text-secondary, #6b7280);
+  cursor: pointer;
+}
+.vn-tab:hover { color: var(--ax-color-text-primary, #1a1a1a); }
+.vn-tab-active {
+  color: var(--ax-color-text-primary, #1a1a1a);
+  border-bottom-color: var(--ax-color-primary, #c8a04a);
+}
+.vn-feed-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.9rem 1.25rem;
+  border-bottom: 1px solid var(--ax-color-border-subtle, #e2e5e9);
+  cursor: pointer;
+}
+.vn-feed-row:last-child { border-bottom: 0; }
+.vn-feed-row:hover { background: var(--ax-color-bg-canvas, #f6f7f9); }
+.vn-unread { background: color-mix(in srgb, var(--ax-color-primary, #c8a04a) 7%, transparent); }
+.vn-feed-icon { flex-shrink: 0; color: var(--ax-color-text-secondary, #6b7280); }
+.vn-feed-body { flex: 1; min-width: 0; }
+.vn-feed-message { color: var(--ax-color-text-primary, #1a1a1a); font-size: 0.9rem; }
+.vn-feed-time { color: var(--ax-color-text-secondary, #6b7280); font-size: 0.75rem; margin-top: 0.15rem; }
+.vn-feed-dot {
+  flex-shrink: 0;
+  align-self: center;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--ax-color-primary, #c8a04a);
+}

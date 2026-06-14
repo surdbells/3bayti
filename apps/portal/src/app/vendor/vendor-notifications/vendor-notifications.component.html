@@ -16,7 +16,7 @@
         <p class="ax-page-subtitle">{{ 'notifications_subtext' | translate }}</p>
       </div>
 
-      <div class="ax-flex ax-gap-2 ax-items-center">
+      <div class="ax-flex ax-gap-2 ax-items-center" *ngIf="active_tab === 'preferences'">
         <button
           type="button"
           class="ax-btn ax-btn-primary"
@@ -29,13 +29,64 @@
       </div>
     </header>
 
-    <!-- Loading -->
-    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+    <!-- Tabs -->
+    <div class="vn-tabs" role="tablist">
+      <button type="button" class="vn-tab" [class.vn-tab-active]="active_tab === 'inbox'" (click)="setTab('inbox')">
+        {{ 'notifications_inbox_tab' | translate }}
+        <span *ngIf="feed_unread > 0" class="ax-badge ax-badge-primary ax-ml-1">{{ feed_unread }}</span>
+      </button>
+      <button type="button" class="vn-tab" [class.vn-tab-active]="active_tab === 'preferences'" (click)="setTab('preferences')">
+        {{ 'notifications_prefs_tab' | translate }}
+      </button>
+    </div>
+
+    <!-- Inbox feed -->
+    <section *ngIf="active_tab === 'inbox'" class="ax-page-section">
+      <div class="ax-card ax-p-0" style="max-width: 56rem;">
+        <div class="ax-p-5 ax-flex ax-items-center ax-justify-between" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+          <h3 class="ax-h5 ax-m-0">{{ 'notifications_inbox_heading' | translate }}</h3>
+          <button
+            type="button"
+            class="ax-btn ax-btn-ghost ax-btn-sm"
+            (click)="markAllRead()"
+            [disabled]="feed_unread === 0 || feed_marking">
+            {{ 'notifications_mark_all_read' | translate }}
+          </button>
+        </div>
+
+        <div *ngIf="feed_loading" class="ax-flex ax-justify-center ax-py-8">
+          <span class="ax-spinner ax-spinner-lg" aria-label="Loading notifications"></span>
+        </div>
+
+        <div *ngIf="!feed_loading && feed.length === 0" class="ax-text-center ax-py-8 ax-text-secondary">
+          <app-icon name="notifications" aria-hidden="true"></app-icon>
+          <p class="ax-mt-2 ax-m-0">{{ 'notifications_empty' | translate }}</p>
+        </div>
+
+        <ul *ngIf="!feed_loading && feed.length > 0" style="list-style: none; margin: 0; padding: 0;">
+          <li
+            *ngFor="let n of feed"
+            class="vn-feed-row"
+            [class.vn-unread]="!n.is_read"
+            (click)="openNotification(n)">
+            <span class="vn-feed-icon"><app-icon [name]="iconFor(n.template)" aria-hidden="true"></app-icon></span>
+            <div class="vn-feed-body">
+              <div class="vn-feed-message">{{ n.message }}</div>
+              <div class="vn-feed-time">{{ timeAgo(n.sent_at) }}</div>
+            </div>
+            <span *ngIf="!n.is_read" class="vn-feed-dot" aria-label="Unread"></span>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Loading (preferences) -->
+    <div *ngIf="active_tab === 'preferences' && ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
       <span class="ax-spinner ax-spinner-lg" aria-label="Loading preferences"></span>
     </div>
 
     <!-- Preferences list -->
-    <section *ngIf="!ui_controls.is_loading" class="ax-page-section">
+    <section *ngIf="active_tab === 'preferences' && !ui_controls.is_loading" class="ax-page-section">
       <div class="ax-card ax-p-0" style="max-width: 56rem;">
         <div class="ax-p-5" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
           <h3 class="ax-h5 ax-m-0">{{ 'notifications_heading' | translate }}</h3>

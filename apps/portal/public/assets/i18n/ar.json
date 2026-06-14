@@ -309,6 +309,11 @@
   "email_edit_notice": "لأسباب أمنية، لا يمكن تعديل الاسم أو البريد الإلكتروني هنا. يرجى الاتصال بالدعم لطلب التحديث: support@3bayti.ae.",
   "product": "المنتج",
   "quantity": "الكمية",
-  "delivery_list":  "قائمة التسليم",
-  "sold":  "مُباع"
+  "delivery_list": "قائمة التسليم",
+  "sold": "مُباع",
+  "notifications_inbox_tab": "الوارد",
+  "notifications_prefs_tab": "التفضيلات",
+  "notifications_inbox_heading": "الإشعارات",
+  "notifications_mark_all_read": "تعليم الكل كمقروء",
+  "notifications_empty": "لا توجد إشعارات بعد."
 }
