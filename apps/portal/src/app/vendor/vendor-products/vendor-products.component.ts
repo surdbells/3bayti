@@ -467,7 +467,12 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
 
   getImageUrl(src: string): string {
     if (!src) return 'assets/img/placeholder-1.png';
-    return src.length > 100 ? src : this.image_url + src;
+    // Absolute URLs (incl. migrated api-v3 uploads), local assets, and
+    // browser previews are used as-is; only bare legacy filenames get the
+    // legacy host prepended. (Was a fragile length>100 heuristic that
+    // mangled short absolute URLs.)
+    if (/^(https?:|blob:|data:)/.test(src) || src.startsWith('assets/')) return src;
+    return this.image_url + src;
   }
 
   prevImage(): void {
