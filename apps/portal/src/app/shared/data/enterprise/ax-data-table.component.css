@@ -127,16 +127,47 @@
 .axdt-expand-content { padding: 0.75rem 1rem; }
 
 /* ── Skeleton ────────────────────────────────────────────────────────── */
+.axdt-skeleton-row > td { padding-top: 0.85rem; padding-bottom: 0.85rem; }
 .axdt-skeleton-bar {
-  display: block; height: 0.85rem; border-radius: var(--ax-radius-sm);
-  background: linear-gradient(90deg,
-    var(--ax-color-bg-subtle) 25%,
-    var(--ax-color-border-subtle) 37%,
-    var(--ax-color-bg-subtle) 63%);
-  background-size: 400% 100%;
-  animation: axdt-shimmer 1.4s ease infinite;
+  display: block;
+  width: 70%;
+  height: 0.72rem;
+  border-radius: 999px;
+  position: relative;
+  overflow: hidden;
+  /* Solid track from a DEFINED token (the old gradient referenced an
+     undefined --ax-color-bg-subtle, so the whole background was dropped
+     and the bars were invisible). */
+  background-color: var(--ax-color-bg-muted, #ece7df);
 }
-@keyframes axdt-shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0 50%; } }
+/* Moving highlight band — the actual shimmer. Lighter sweep reads as a
+   highlight on both light and dark tracks. */
+.axdt-skeleton-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 20%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0.08) 80%,
+    transparent 100%
+  );
+  animation: axdt-shimmer 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+/* Varied widths across columns so it reads as real content, not uniform
+   lines. Leading select/expand cells carry no bar, so these are harmless. */
+.axdt-skeleton-row td:nth-child(2n) .axdt-skeleton-bar { width: 52%; }
+.axdt-skeleton-row td:nth-child(3n) .axdt-skeleton-bar { width: 80%; }
+.axdt-skeleton-row td:nth-child(4n) .axdt-skeleton-bar { width: 44%; }
+.axdt-skeleton-row td:nth-child(5n) .axdt-skeleton-bar { width: 64%; }
+.axdt-skeleton-row td:last-child .axdt-skeleton-bar { width: 38%; }
+@keyframes axdt-shimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .axdt-skeleton-bar::after { animation: none; }
+}
 
 /* ── States ──────────────────────────────────────────────────────────── */
 .axdt-state {
