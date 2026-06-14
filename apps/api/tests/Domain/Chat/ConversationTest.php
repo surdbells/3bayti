@@ -95,4 +95,42 @@ final class ConversationTest extends TestCase
         self::assertFalse($c->isActive());
         self::assertSame(Conversation::STATUS_CLOSED, $c->getStatus());
     }
+
+    #[Test]
+    public function shouldNotifyWhenNeverNotified(): void
+    {
+        $c = $this->conversation();
+        $now = new \DateTimeImmutable();
+        self::assertTrue($c->shouldNotify(Conversation::PARTY_VENDOR, $now, 600));
+        self::assertTrue($c->shouldNotify(Conversation::PARTY_CUSTOMER, $now, 600));
+    }
+
+    #[Test]
+    public function debounceSuppressesWithinWindowAndAllowsAfter(): void
+    {
+        $c = $this->conversation();
+        $t0 = new \DateTimeImmutable('2026-06-14 10:00:00');
+        $c->markNotified(Conversation::PARTY_VENDOR, $t0);
+
+        // 5 minutes later — still inside a 10-minute window.
+        self::assertFalse($c->shouldNotify(Conversation::PARTY_VENDOR, $t0->modify('+5 minutes'), 600));
+        // 10 minutes later — window elapsed.
+        self::assertTrue($c->shouldNotify(Conversation::PARTY_VENDOR, $t0->modify('+10 minutes'), 600));
+        // The other party is unaffected.
+        self::assertTrue($c->shouldNotify(Conversation::PARTY_CUSTOMER, $t0->modify('+1 minute'), 600));
+    }
+
+    #[Test]
+    public function readingReArmsNotification(): void
+    {
+        $c = $this->conversation();
+        $t0 = new \DateTimeImmutable('2026-06-14 10:00:00');
+        $c->markNotified(Conversation::PARTY_VENDOR, $t0);
+        self::assertFalse($c->shouldNotify(Conversation::PARTY_VENDOR, $t0->modify('+1 minute'), 600));
+
+        // Vendor reads the thread → timer cleared → next message notifies.
+        $c->markReadFor(Conversation::PARTY_VENDOR);
+        self::assertNull($c->getVendorLastNotifiedAt());
+        self::assertTrue($c->shouldNotify(Conversation::PARTY_VENDOR, $t0->modify('+1 minute'), 600));
+    }
 }

@@ -73,6 +73,15 @@ class Conversation
     #[ORM\Column(name: 'last_message_preview', type: 'string', length: 200, nullable: true)]
     private ?string $lastMessagePreview = null;
 
+    // Debounce anchors for unread notifications (email/push). Set when a
+    // party is notified; reset to null when they read the thread, so the
+    // next message re-arms an immediate ping.
+    #[ORM\Column(name: 'customer_last_notified_at', type: 'datetimetz_immutable', nullable: true)]
+    private ?\DateTimeImmutable $customerLastNotifiedAt = null;
+
+    #[ORM\Column(name: 'vendor_last_notified_at', type: 'datetimetz_immutable', nullable: true)]
+    private ?\DateTimeImmutable $vendorLastNotifiedAt = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -137,11 +146,41 @@ class Conversation
     {
         if ($party === self::PARTY_CUSTOMER) {
             $this->customerUnreadCount = 0;
+            $this->customerLastNotifiedAt = null;
         } elseif ($party === self::PARTY_VENDOR) {
             $this->vendorUnreadCount = 0;
+            $this->vendorLastNotifiedAt = null;
         }
         $this->touch();
     }
+
+    /**
+     * Whether the given recipient party should be notified now: never
+     * notified since their last read, or the debounce window has elapsed.
+     */
+    public function shouldNotify(string $recipientParty, \DateTimeImmutable $now, int $windowSeconds): bool
+    {
+        $last = $recipientParty === self::PARTY_CUSTOMER
+            ? $this->customerLastNotifiedAt
+            : $this->vendorLastNotifiedAt;
+
+        if ($last === null) {
+            return true;
+        }
+        return ($now->getTimestamp() - $last->getTimestamp()) >= $windowSeconds;
+    }
+
+    public function markNotified(string $recipientParty, \DateTimeImmutable $now): void
+    {
+        if ($recipientParty === self::PARTY_CUSTOMER) {
+            $this->customerLastNotifiedAt = $now;
+        } elseif ($recipientParty === self::PARTY_VENDOR) {
+            $this->vendorLastNotifiedAt = $now;
+        }
+    }
+
+    public function getCustomerLastNotifiedAt(): ?\DateTimeImmutable { return $this->customerLastNotifiedAt; }
+    public function getVendorLastNotifiedAt(): ?\DateTimeImmutable { return $this->vendorLastNotifiedAt; }
 
     public function unreadFor(string $party): int
     {
