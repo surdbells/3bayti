@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 198 route keys.
+ * 200 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -31,6 +31,7 @@ export type V3RouteKey =
   | 'GET /admin/collections/:id'
   | 'GET /admin/commissions'
   | 'GET /admin/customers'
+  | 'GET /admin/notifications'
   | 'GET /admin/orders'
   | 'GET /admin/orders/:id'
   | 'GET /admin/orders/:id/timeline'
@@ -148,6 +149,7 @@ export type V3RouteKey =
   | 'POST /admin/categories'
   | 'POST /admin/collections'
   | 'POST /admin/notifications'
+  | 'POST /admin/notifications/mark-read'
   | 'POST /admin/orders/:id/cancel'
   | 'POST /admin/orders/:id/refund'
   | 'POST /admin/products'
@@ -232,6 +234,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/collections/:id',
   'GET /admin/commissions',
   'GET /admin/customers',
+  'GET /admin/notifications',
   'GET /admin/orders',
   'GET /admin/orders/:id',
   'GET /admin/orders/:id/timeline',
@@ -349,6 +352,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/categories',
   'POST /admin/collections',
   'POST /admin/notifications',
+  'POST /admin/notifications/mark-read',
   'POST /admin/orders/:id/cancel',
   'POST /admin/orders/:id/refund',
   'POST /admin/products',

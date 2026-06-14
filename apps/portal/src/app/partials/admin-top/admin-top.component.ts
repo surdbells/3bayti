@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { Notifications } from '../../class/notifications';
 import { CrudService } from '../../services/crud.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 
@@ -24,6 +25,7 @@ export class AdminTopComponent implements OnInit {
   constructor(
     private router: Router,
     private crudService: CrudService,
+    private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
@@ -93,16 +95,12 @@ export class AdminTopComponent implements OnInit {
 
   get_notifications() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.notification, GlobalComponent.getNotifications)
+    this.adapter.get_v3('GET /admin/notifications')
       .subscribe({
         next: (response: any) => {
-          if (response) {
-            this.ui_controls.is_loading = false;
-            this.ui_controls.count = response.message;
-            this.notifications = response.data;
-          } else {
-            this.ui_controls.is_loading = false;
-          }
+          this.ui_controls.is_loading = false;
+          this.notifications = response?.data ?? [];
+          this.ui_controls.count = response?.meta?.unread ?? 0;
         },
         error: (e: any) => {
           console.error(e);
@@ -114,17 +112,11 @@ export class AdminTopComponent implements OnInit {
 
   mark_notifications() {
     this.ui_controls.is_loading = true;
-    this.crudService.post_request(this.notification, GlobalComponent.markNotifications)
+    this.adapter.post_v3('POST /admin/notifications/mark-read', {})
       .subscribe({
-        next: (response: any) => {
-          if (response) {
-            this.ui_controls.is_loading = false;
-            this.success_notification(response.message);
-            this.get_notifications();
-          } else {
-            this.error_notification(response.message);
-            this.ui_controls.is_loading = false;
-          }
+        next: () => {
+          this.ui_controls.is_loading = false;
+          this.get_notifications();
         },
         error: (e: any) => {
           console.error(e);

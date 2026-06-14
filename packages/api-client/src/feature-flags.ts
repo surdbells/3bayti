@@ -924,7 +924,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/common/dashboard-activity', newPath: '/v3/vendor/metrics', shape: 'v3-envelope',
   },
   'GET /vendor/notifications': {
-    target: 'old', oldPath: '/vendors/common/notifications', newPath: '/v3/vendor/notifications', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/common/notifications', newPath: '/v3/vendor/notifications', shape: 'v3-envelope',
   },
   'GET /vendor/onboarding/status': {
     target: 'new', oldPath: '/vendors/common/compliance', newPath: '/v3/vendor/onboarding/status', shape: 'v3-envelope',
@@ -993,7 +993,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'old', oldPath: '/admin/message-vendor', newPath: '/v3/vendor/messages', shape: 'v3-envelope',
   },
   'POST /vendor/notifications/mark-read': {
-    target: 'old', oldPath: '/vendors/common/mark_notifications', newPath: '/v3/vendor/notifications/mark-read', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/common/mark_notifications', newPath: '/v3/vendor/notifications/mark-read', shape: 'v3-envelope',
   },
   'POST /vendor/onboarding/submit': {
     target: 'new', oldPath: '/vendors/common/compliance', newPath: '/v3/vendor/onboarding/submit', shape: 'v3-envelope',
@@ -1038,6 +1038,12 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'POST /admin/notifications': {
     target: 'new', oldPath: '/admin/send_notifications', newPath: '/v3/admin/notifications', shape: 'v3-envelope',
+  },
+  'GET /admin/notifications': {
+    target: 'new', oldPath: '/vendors/common/notifications', newPath: '/v3/admin/notifications', shape: 'v3-envelope',
+  },
+  'POST /admin/notifications/mark-read': {
+    target: 'new', oldPath: '/vendors/common/mark_notifications', newPath: '/v3/admin/notifications/mark-read', shape: 'v3-envelope',
   },
   'GET /admin/customers': {
     target: 'new', oldPath: '/admin/common/get-customers', newPath: '/v3/admin/users?role=customer', shape: 'v3-envelope',

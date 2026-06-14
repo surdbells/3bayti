@@ -423,6 +423,17 @@ return function (App $app): void {
     // So: add(AdminAuth) THEN add(Auth) — Auth is added last, runs first.
 
     $app->group('/v3/admin', function (RouteCollectorProxy $group): void {
+        // Admin in-app notification feed (admin top-bar bell) — replaces the
+        // legacy /vendors/common/notifications call for admins.
+        $group->get(
+            '/notifications',
+            \Bayti\Api\Http\Controllers\Admin\Notification\ListAdminNotificationsController::class,
+        );
+        $group->post(
+            '/notifications/mark-read',
+            \Bayti\Api\Http\Controllers\Admin\Notification\MarkAdminNotificationsReadController::class,
+        );
+
         // Brand admin
         $group->get('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\ListBrandsAdminController::class);
         $group->post('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\CreateBrandController::class);
@@ -646,6 +657,16 @@ return function (App $app): void {
         $group->get(
             '/dashboard',
             \Bayti\Api\Http\Controllers\Vendor\GetVendorDashboardController::class,
+        );
+        // Vendor in-app notification feed (top-bar bell) — replaces the
+        // legacy /vendors/common/notifications.
+        $group->get(
+            '/notifications',
+            \Bayti\Api\Http\Controllers\Vendor\Notification\ListVendorNotificationsController::class,
+        );
+        $group->post(
+            '/notifications/mark-read',
+            \Bayti\Api\Http\Controllers\Vendor\Notification\MarkVendorNotificationsReadController::class,
         );
 
         // M3.4-C — Vendor product reviews (read-only).

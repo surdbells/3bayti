@@ -57,6 +57,77 @@ class NotificationLogRepository extends EntityRepository
      *
      * @return array{items: list<NotificationLog>, total: int}
      */
+    /**
+     * In-app notification feed: successfully-sent notifications addressed
+     * to any of the given recipient emails, optionally restricted to a
+     * template LIKE pattern. Most-recent first.
+     *
+     * @param list<string> $recipients
+     * @return array{items: list<NotificationLog>, total: int, unread: int}
+     */
+    public function findFeed(array $recipients, int $limit, int $offset, ?string $templateLike = null): array
+    {
+        if ($recipients === []) {
+            return ['items' => [], 'total' => 0, 'unread' => 0];
+        }
+
+        $base = $this->createQueryBuilder('nl')
+            ->where('nl.recipient IN (:recipients)')
+            ->andWhere('nl.status = :sent')
+            ->setParameter('recipients', $recipients)
+            ->setParameter('sent', NotificationLog::STATUS_SENT);
+        if ($templateLike !== null) {
+            $base->andWhere('nl.template LIKE :tpl')->setParameter('tpl', $templateLike);
+        }
+
+        $total = (int) (clone $base)->select('COUNT(nl.id)')->getQuery()->getSingleScalarResult();
+        $unread = (int) (clone $base)->select('COUNT(nl.id)')
+            ->andWhere('nl.isRead = false')->getQuery()->getSingleScalarResult();
+
+        /** @var list<NotificationLog> $items */
+        $items = $base
+            ->orderBy('nl.sentAt', 'DESC')->addOrderBy('nl.id', 'DESC')
+            ->setMaxResults($limit)->setFirstResult($offset)
+            ->getQuery()->getResult();
+
+        return ['items' => $items, 'total' => $total, 'unread' => $unread];
+    }
+
+    /**
+     * Mark feed notifications read for the recipient set (optionally a
+     * template LIKE pattern and/or a specific id list). Returns the number
+     * newly marked.
+     *
+     * @param list<string> $recipients
+     * @param list<int>|null $ids
+     */
+    public function markFeedRead(array $recipients, ?array $ids, ?string $templateLike = null): int
+    {
+        if ($recipients === []) {
+            return 0;
+        }
+
+        $qb = $this->getEntityManager()->createQueryBuilder()
+            ->update(NotificationLog::class, 'nl')
+            ->set('nl.isRead', ':true')
+            ->set('nl.readAt', ':now')
+            ->where('nl.recipient IN (:recipients)')
+            ->andWhere('nl.status = :sent')
+            ->andWhere('nl.isRead = false')
+            ->setParameter('true', true)
+            ->setParameter('now', new \DateTimeImmutable())
+            ->setParameter('recipients', $recipients)
+            ->setParameter('sent', NotificationLog::STATUS_SENT);
+        if ($templateLike !== null) {
+            $qb->andWhere('nl.template LIKE :tpl')->setParameter('tpl', $templateLike);
+        }
+        if ($ids !== null && $ids !== []) {
+            $qb->andWhere('nl.id IN (:ids)')->setParameter('ids', $ids);
+        }
+
+        return (int) $qb->getQuery()->execute();
+    }
+
     public function findFilteredPaginated(array $filters = []): array
     {
         $qb = $this->createQueryBuilder('nl');

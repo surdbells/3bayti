@@ -167,6 +167,16 @@ final class NotificationLog
     private DateTimeImmutable $updatedAt;
 
     /**
+     * Feed read-state — separate from the audit fact. Lets the
+     * sent-notification log double as the vendor's in-app feed.
+     */
+    #[ORM\Column(name: 'is_read', type: 'boolean', options: ['default' => false])]
+    private bool $isRead = false;
+
+    #[ORM\Column(name: 'read_at', type: 'datetime_immutable', nullable: true)]
+    private ?DateTimeImmutable $readAt = null;
+
+    /**
      * Construct a log row with the minimum required fields. Use the
      * static factories below for the three status variants to ensure
      * the right error fields are populated for each.
@@ -264,8 +274,7 @@ final class NotificationLog
     public function getTemplate(): string { return $this->template; }
     public function getRecipient(): string { return $this->recipient; }
     public function getStatus(): string { return $this->status; }
-    public function getSentAt(): DateTimeImmutable { return $this->sentAt; }
-    public function getErrorKind(): ?string { return $this->errorKind; }
+    public function getSentAt(): DateTimeImmutable { return $this->sentAt; }    public function getErrorKind(): ?string { return $this->errorKind; }
     public function getErrorMessage(): ?string { return $this->errorMessage; }
 
     /**
@@ -274,6 +283,20 @@ final class NotificationLog
     public function getRawEvent(): ?array { return $this->rawEvent; }
 
     public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
+
+    public function isRead(): bool { return $this->isRead; }
+    public function getReadAt(): ?DateTimeImmutable { return $this->readAt; }
+
+    /** Mark this notification read (idempotent). */
+    public function markRead(): void
+    {
+        if ($this->isRead) {
+            return;
+        }
+        $this->isRead = true;
+        $this->readAt = new DateTimeImmutable();
+        $this->updatedAt = $this->readAt;
+    }
     public function getUpdatedAt(): DateTimeImmutable { return $this->updatedAt; }
 
     /**
