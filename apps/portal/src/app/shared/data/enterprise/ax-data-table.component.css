@@ -99,7 +99,7 @@
 .axdt-row-interactive { cursor: pointer; }
 .axdt-row-selected { background: var(--ax-color-accent-subtle, var(--ax-color-bg-subtle)); }
 .axdt-td-actions, .axdt-th-actions { width: 1%; white-space: nowrap; padding-right: 1rem; }
-.axdt-row-actions { display: inline-flex; gap: 0.25rem; justify-content: flex-end; align-items: center; }
+.axdt-row-actions { display: inline-flex; gap: 0.5rem; justify-content: flex-end; align-items: center; }
 .axdt-action-danger { color: var(--ax-color-danger, #dc2626); }
 
 /* Overflow action menu — the CDK pane (.ax-dropdown-menu) supplies the
