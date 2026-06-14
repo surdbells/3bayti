@@ -18,17 +18,16 @@ import {
   type AxServerFetchResult,
   type AxDateRange,
 } from '../../shared/data/enterprise';
+import { ORDER_STATUS_OPTIONS, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
 
 interface SaleRow extends Record<string, unknown> {
   id: number;
+  order_ref: string;
   product_name: string;
   customer_name: string;
   store: number;
   quantity: number;
   price: string;
-  commission: string;
-  charges: string;
-  noon: string;
   status: string;
   created: string;
 }
@@ -83,7 +82,11 @@ export class SalesComponent implements OnInit {
       emptyTitle: 'No sales found',
       emptyDescription: 'No sales match your current filters.',
       export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'sales' },
-      filters: [{ key: 'date', label: 'Date', type: 'date-range' }],
+      filters: [
+        { key: 'date', label: 'Date', type: 'date-range' },
+        { key: 'status', label: 'Status', type: 'select', options: ORDER_STATUS_OPTIONS },
+        { key: 'vendor', label: 'Store', type: 'select', optionsLoader: () => loadAdminVendorOptions(this.adapter) },
+      ],
       columns: [
         { key: 'order_ref', label: 'Order ref', sortable: true, sticky: 'left', width: '14rem' },
         { key: 'product_name', label: 'Product' },
@@ -104,6 +107,8 @@ export class SalesComponent implements OnInit {
       offset: query.pageIndex * query.pageSize,
     };
     if (query.search) q.search = query.search;
+    if (query.filters['status']) q.status = query.filters['status'];
+    if (query.filters['vendor']) q.vendor_id = query.filters['vendor'];
     const range = query.filters['date'] as AxDateRange | undefined;
     if (range?.from) q.since = range.from;
     if (range?.to) q.until = range.to;
@@ -136,6 +141,7 @@ export class SalesComponent implements OnInit {
       order_ref: o.order_reference ?? o.id,
       product_name: productLabel,
       customer_name: name || customer.email || '—',
+      store: first.vendor_id ?? first.store ?? 0,
       quantity: qty,
       price: o.total ?? o.subtotal ?? '0',
       status: o.status ?? '',
@@ -143,10 +149,13 @@ export class SalesComponent implements OnInit {
     } as SaleRow;
   }
 
-  onRowAction(e: { action: { id: string }; row: SaleRow }) {
-    if (e.action.id === 'store') {
+  onRowAction(e: { action: { id: string }; row: SaleRow }) {    if (e.action.id === 'store') {
       window.open('/plural?vendor=' + e.row.store, '_blank', 'width=900,height=800');
     }
+  }
+
+  prettyStatus(status: string): string {
+    return prettyOrderStatus(status);
   }
 
   goBack() { this.router.navigate(['/backend']); }

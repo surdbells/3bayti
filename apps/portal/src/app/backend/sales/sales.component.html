@@ -15,11 +15,11 @@
       <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
         <ng-template axCell="status" let-row>
           <span class="ax-badge"
-            [class.ax-badge-success]="row.status === 'delivered' || row.status === 'paid'"
-            [class.ax-badge-info]="row.status === 'shipped'"
-            [class.ax-badge-warning]="row.status === 'pending'"
-            [class.ax-badge-danger]="row.status === 'cancelled' || row.status === 'returned'">
-            {{ row.status | titlecase }}
+            [class.ax-badge-success]="row.status === 'delivered'"
+            [class.ax-badge-info]="row.status === 'paid' || row.status === 'fulfilling' || row.status === 'shipped'"
+            [class.ax-badge-warning]="row.status === 'pending_payment'"
+            [class.ax-badge-danger]="row.status === 'cancelled' || row.status === 'refunded' || row.status === 'failed'">
+            {{ prettyStatus(row.status) }}
           </span>
         </ng-template>
       </app-ax-data-table>
