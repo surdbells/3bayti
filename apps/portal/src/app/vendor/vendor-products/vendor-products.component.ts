@@ -94,7 +94,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     rowId: 'id',
     pageSize: 20,
     pageSizeOptions: [20, 50, 100],
-    globalSearch: true,
+    globalSearch: false,
     searchPlaceholder: 'Search products by name…',
     stickyHeader: true,
     hover: true,
@@ -128,10 +128,9 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
   }
 
   private buildTableSource(): void {
-    const vendorId = this.user_session.id;
     this.tableDataSource = new AxServerDataSource<ProductListItem>((q: AxQueryState) => {
       const query: any = { limit: q.pageSize, offset: q.pageIndex * q.pageSize };
-      if (q.search) query.search = q.search;
+      this.applyFilterQuery(query);
       return this.adapter.get_v3('GET /vendor/products', { query }).pipe(
         map((response: any): AxServerFetchResult<ProductListItem> => {
           const rows = (response?.data ?? []).map((p: any) => this.mapProduct(p));
@@ -143,6 +142,28 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
         }),
       );
     });
+  }
+
+  /** Merge the active filter panel + search into an API query object. */
+  private applyFilterQuery(query: Record<string, any>): void {
+    const f = this.filters;
+    if (f.search && f.search.trim() !== '') query['search'] = f.search.trim();
+    if (f.status) query['status'] = f.status;
+    if (f.stock_status) query['stock_status'] = f.stock_status;
+    if (f.category_id != null) query['category_id'] = f.category_id;
+    if (f.price_min != null) query['price_min'] = f.price_min;
+    if (f.price_max != null) query['price_max'] = f.price_max;
+  }
+
+  /**
+   * Re-fetch both views (list = AxDataTable, grid = manual) with the
+   * current filters. Rebuilding the data source instance makes the table
+   * re-connect and re-query from page 1.
+   */
+  private reloadProducts(): void {
+    this.pagination.page = 1;
+    this.buildTableSource();
+    this.fetchProducts();
   }
   pagination: Pagination = { page: 1, per_page: 10, total: 0, total_pages: 0 };
 
@@ -232,8 +253,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
       distinctUntilChanged(),
       takeUntil(this.destroy$),
     ).subscribe(() => {
-      this.pagination.page = 1;
-      this.fetchProducts();
+      this.reloadProducts();
     });
 
     this.buildTableSource();
@@ -255,6 +275,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
       limit: perPage,
       offset: (page - 1) * perPage,
     };
+    this.applyFilterQuery(query);
     this.adapter.get_v3('GET /vendor/products', { query }).subscribe({
       next: (response: any) => {
         if (response?.data) {
@@ -309,8 +330,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
   }
 
   applyFilters(): void {
-    this.pagination.page = 1;
-    this.fetchProducts();
+    this.reloadProducts();
   }
 
   clearFilters(): void {
@@ -319,8 +339,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
       category_id: null, price_min: null, price_max: null,
     };
     this.price_preset = '';
-    this.pagination.page = 1;
-    this.fetchProducts();
+    this.reloadProducts();
   }
 
   onPricePresetChange(): void {
