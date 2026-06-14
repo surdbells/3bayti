@@ -2,379 +2,75 @@
   <ion-toolbar class="m7-toolbar ion-no-border">
     <ion-buttons slot="start">
       <ion-button class="m7-header-back" (click)="goBack()" aria-label="Back">
-        <ax-icon name="arrow-left" />
+        <ax-icon name="arrow-back" slot="icon-only"></ax-icon>
       </ion-button>
     </ion-buttons>
     <ion-title class="m7-title">
-      @if(orderContext){
-        <span class="vendor-name">{{ orderContext.store_name }}</span>
-      }
+      <div class="chat-head">
+        <span class="chat-head-name">{{ conversation?.counterparty?.name || ('text_chat' | translate) }}</span>
+        <span class="chat-head-sub" *ngIf="conversation as c">{{ c.order_reference }}<ng-container *ngIf="c.item.name"> · {{ c.item.name }}</ng-container></span>
+      </div>
     </ion-title>
   </ion-toolbar>
-
-
-  <!-- Pinned Order Header (NON-DISMISSIBLE) -->
-  @if(orderContext){
-    <button type="button" class="pinned-order" (click)="openOrderDetails()">
-      <div class="pinned-image">
-        @if(!imageLoaded){
-          <div class="img-skeleton"></div>
-        }
-        <img
-          [src]="orderContext.product_image"
-          [alt]="orderContext.product_name"
-          [class.loaded]="imageLoaded"
-          (load)="onPinnedImageLoad()"
-          (error)="onPinnedImageError($event)"
-          loading="eager">
-      </div>
-      <div class="pinned-info">
-        <p class="pinned-name">{{ orderContext.product_name }}</p>
-        <div class="pinned-meta">
-          <span class="order-id">#{{ orderContext.order_id }}</span>
-          <span class="order-status" [class]="getStatusClass(orderContext.status)">
-            {{ orderContext.status }}
-          </span>
-        </div>
-        <div class="pinned-details">
-          @if(orderContext.size){
-            <span class="detail-chip">{{ orderContext.size }}</span>
-          }
-          @if(orderContext.color){
-            <span class="detail-chip">{{ orderContext.color }}</span>
-          }
-          <span class="detail-chip">{{ 'label_qty' | translate }}: {{ orderContext.quantity }}</span>
-        </div>
-      </div>
-      <ax-icon name="chevron-right" class="pinned-arrow"></ax-icon>
-    </button>
-  }
 </ion-header>
 
+<ion-content class="chat-content" [scrollEvents]="false">
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="loading-messages">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
 
-<ion-content class="chat-content" #chatContent [scrollEvents]="true" (ionScroll)="onScroll($event)">
-  <!-- Prompt Categories (show when few messages) -->
-  @if(promptCategories.length > 0 && messages.length < 5 && canSend){
-    <div class="prompts-section">
-      <p class="prompts-title">{{ 'quick_actions' | translate }}</p>
-
-      <!-- Category Tabs -->
-      <div class="prompt-categories">
-        @for(category of promptCategories; track category.category_id){
-          <button
-            type="button"
-            class="category-tab"
-            [class.active]="selectedCategory?.category_id === category.category_id"
-            (click)="selectCategory(category)">
-            <ax-icon [name]="category.icon"></ax-icon>
-            <span>{{ category.name }}</span>
-          </button>
-        }
+  <!-- Messages -->
+  <div *ngIf="!isLoading" class="messages-container">
+    <ng-container *ngFor="let m of messages; let i = index; trackBy: trackByMessage">
+      <div *ngIf="shouldShowDateSeparator(m, i)" class="date-separator">
+        <span>{{ formatDateSeparator(m.created_at) }}</span>
       </div>
 
-      <!-- Prompts for Selected Category -->
-      @if(selectedCategory){
-        <div class="prompt-buttons">
-          @for(prompt of selectedCategory.prompts; track prompt.prompt_id){
-            <button
-              type="button"
-              class="prompt-btn"
-              (click)="sendPrompt(prompt)"
-              [disabled]="!canSend || isSending">
-              {{ prompt.text }}
-            </button>
-          }
-        </div>
-      }
-    </div>
-  }
-
-  <!-- Messages Container -->
-  <div class="messages-container">
-    <!-- Load More Indicator -->
-    @if(isLoadingMore){
-      <div class="load-more-indicator">
-        <ion-spinner name="dots"></ion-spinner>
+      <!-- System (order details / notices) -->
+      <div *ngIf="isSystem(m)" class="system-row">
+        <pre class="system-text">{{ m.content }}</pre>
       </div>
-    }
 
-    <!-- Messages List -->
-    @for(message of messages; track message.message_id; let i = $index){
-      <!-- Date Separator -->
-      @if(shouldShowDateSeparator(message, i)){
-        <div class="date-separator">
-          <span>{{ formatDateSeparator(message.created_at) }}</span>
-        </div>
-      }
-
-      <!-- System Message -->
-      @if(message.sender_type === 'system'){
-        <div class="system-message">
-          <span>{{ currentLang === 'ar' && message.content_ar ? message.content_ar : message.content }}</span>
-        </div>
-      }
-
-      <!-- User Message (Customer or Vendor) -->
-      @if(message.sender_type !== 'system'){
-        <div class="message-wrapper" [class.own-message]="isOwnMessage(message)">
-          <div class="message-bubble" [class.image-message]="message.message_type === 'image'">
-            <!-- Text Content -->
-            @if(message.content){
-              <p class="message-text">{{ message.content }}</p>
-            }
-
-            <!-- Image Attachments -->
-            @if(message.has_attachments && message.attachments && message.attachments.length > 0){
-              <div class="message-images">
-                @for(attachment of message.attachments; track attachment.attachment_id){
-                  <div class="image-wrapper" (click)="openImageViewer(attachment)">
-                    <img
-                      [src]="attachment.thumbnail_path || attachment.file_path"
-                      [alt]="attachment.file_name"
-                      loading="lazy">
-                  </div>
-                }
-              </div>
-            }
-
-            <!-- Message Meta -->
-            <div class="message-meta">
-              <span class="message-time">{{ message.created_at | date:'shortTime' }}</span>
-              @if(isOwnMessage(message)){
-                <span class="message-status">
-                  @switch(message.status){
-                    @case('sending'){
-                      <ax-icon name="clock"></ax-icon>
-                    }
-                    @case('sent'){
-                      <ax-icon name="check"></ax-icon>
-                    }
-                    @case('delivered'){
-                      <ax-icon name="check-check"></ax-icon>
-                    }
-                    @case('read'){
-                      <ax-icon name="check-line"></ax-icon>
-                    }
-                    @case('failed'){
-                      <ax-icon name="circle-alert"></ax-icon>
-                    }
-                  }
-                </span>
-              }
-            </div>
+      <!-- Party message -->
+      <div *ngIf="!isSystem(m)" class="message-wrapper" [class.own]="isOwnMessage(m)">
+        <div class="message-bubble" [class.own]="isOwnMessage(m)" [class.blocked]="isBlocked(m)">
+          <div class="message-text">{{ m.content }}</div>
+          <div class="message-meta">
+            <span *ngIf="isBlocked(m)" class="message-blocked">
+              <ax-icon name="alert-circle"></ax-icon> {{ 'text_not_delivered' | translate }}
+            </span>
+            <span class="message-time">{{ formatTime(m.created_at) }}</span>
+            <span *ngIf="m.status === 'sending'" class="message-status">
+              <ion-spinner name="dots"></ion-spinner>
+            </span>
           </div>
         </div>
-      }
-    }
-
-    <!-- Initial Loading State -->
-    @if(isLoading){
-      <div class="loading-messages">
-        @for(skeleton of [1,2,3]; track skeleton){
-          <div class="message-skeleton" [class.own]="skeleton % 2 === 0">
-            <div class="skeleton-bubble">
-              <div class="skeleton-text"></div>
-              <div class="skeleton-text short"></div>
-            </div>
-          </div>
-        }
       </div>
-    }
-
-    <!-- Empty State -->
-    @if(!isLoading && messages.length === 0){
-      <div class="empty-chat">
-        <div class="empty-icon">
-          <ax-icon name="message-circle"></ax-icon>
-        </div>
-        <p>{{ 'start_conversation' | translate }}</p>
-        <span class="empty-hint">{{ 'use_prompts_or_type' | translate }}</span>
-      </div>
-    }
+    </ng-container>
   </div>
 </ion-content>
 
-<!-- Input Footer -->
-<ion-footer class="chat-footer" [class.disabled]="!canSend">
-  <div class="input-container">
-    <!-- Image Upload Button -->
-    <button
-      type="button"
-      class="upload-btn"
-      (click)="triggerImageUpload()"
-      [disabled]="!canSend || isUploading"
-      aria-label="Upload image">
-      @if(isUploading){
-        <ion-spinner name="crescent"></ion-spinner>
-      } @else {
-        <ax-icon name="image"></ax-icon>
-      }
-    </button>
-    <input
-      type="file"
-      #fileInput
-      accept="image/jpeg,image/png,image/webp,image/gif"
-      (change)="onImageSelected($event)"
-      hidden>
-
-    <!-- Text Input -->
-    <div class="text-input-wrapper">
-      <textarea
-        #messageInput
-        [(ngModel)]="messageText"
-        [placeholder]="canSend ? ('type_message' | translate) : ('chat_disabled' | translate)"
-        [disabled]="!canSend"
-        (keydown)="onKeyDown($event)"
-        (input)="autoGrow()"
-        rows="1"
-        maxlength="2000"
-        [dir]="currentLang === 'ar' ? 'rtl' : 'ltr'">
-      </textarea>
-    </div>
-
-    <!-- Send Button -->
+<ion-footer class="chat-footer ion-no-border">
+  <div *ngIf="!canSend" class="disabled-notice">{{ 'text_chat_closed' | translate }}</div>
+  <div class="input-container" *ngIf="canSend">
+    <textarea
+      #messageInput
+      class="chat-input"
+      [(ngModel)]="messageText"
+      (input)="autoGrow()"
+      (keydown)="onKeyDown($event)"
+      [placeholder]="'text_type_message' | translate"
+      rows="1"
+      [disabled]="isSending"></textarea>
     <button
       type="button"
       class="send-btn"
-      [disabled]="!canSend || (!messageText.trim() && !isUploading) || isSending"
       (click)="sendMessage()"
-      aria-label="Send message">
-      @if(isSending){
-        <ion-spinner name="crescent"></ion-spinner>
-      } @else {
-        <ax-icon name="send"></ax-icon>
-      }
+      [disabled]="!messageText.trim() || isSending"
+      aria-label="Send">
+      <ax-icon name="send" *ngIf="!isSending"></ax-icon>
+      <ion-spinner name="crescent" *ngIf="isSending"></ion-spinner>
     </button>
   </div>
-
-  <!-- Disabled Notice -->
-  @if(!canSend){
-    <div class="disabled-notice">
-      <ax-icon name="info"></ax-icon>
-      <span>{{ 'chat_disabled_notice' | translate }}</span>
-    </div>
-  }
 </ion-footer>
-
-<!-- Order Details sheet -->
-<ax-bottom-sheet
-  [isOpen]="isOrderModalOpen"
-  (didDismiss)="isOrderModalOpen = false"
-  [snapPoints]="[0.75, 1]"
-  [initialSnap]="0"
-  [title]="'order_details' | translate">
-
-  @if(orderContext){
-    <!-- Product Image -->
-    <div class="modal-product-image">
-      <img [src]="orderContext.product_image" [alt]="orderContext.product_name">
-    </div>
-
-    <!-- Product Info -->
-    <div class="modal-section">
-      <h3>{{ orderContext.product_name }}</h3>
-      <p class="store-name">{{ orderContext.store_name }}</p>
-    </div>
-
-    <!-- Order Info -->
-    <div class="modal-section">
-      <div class="info-row">
-        <span class="label">{{ 'order_id' | translate }}</span>
-        <span class="value">#{{ orderContext.order_id }}</span>
-      </div>
-      <div class="info-row">
-        <span class="label">{{ 'status' | translate }}</span>
-        <span class="value status-badge" [class]="getStatusClass(orderContext.status)">
-          {{ orderContext.status }}
-        </span>
-      </div>
-      <div class="info-row">
-        <span class="label">{{ 'order_date' | translate }}</span>
-        <span class="value">{{ orderContext.order_date | date:'mediumDate' }}</span>
-      </div>
-      @if(orderContext.delivery_time){
-        <div class="info-row">
-          <span class="label">{{ 'delivery_time' | translate }}</span>
-          <span class="value">{{ orderContext.delivery_time }}</span>
-        </div>
-      }
-    </div>
-
-    <!-- Variant Info -->
-    <div class="modal-section">
-      <h4>{{ 'selected_options' | translate }}</h4>
-      <div class="variant-chips">
-        @if(orderContext.size){
-          <span class="variant-chip">
-            <strong>{{ 'size' | translate }}:</strong> {{ orderContext.size }}
-          </span>
-        }
-        @if(orderContext.color){
-          <span class="variant-chip">
-            <strong>{{ 'color' | translate }}:</strong> {{ orderContext.color }}
-          </span>
-        }
-        <span class="variant-chip">
-          <strong>{{ 'quantity' | translate }}:</strong> {{ orderContext.quantity }}
-        </span>
-      </div>
-    </div>
-
-    <!-- Custom Measurements -->
-    @if(orderContext.is_custom && orderContext.measurement_parsed){
-      <div class="modal-section">
-        <h4>{{ 'custom_measurements' | translate }}</h4>
-        <div class="measurements-grid">
-          @for(item of getMeasurementEntries(); track item.key){
-            <div class="measurement-item">
-              <span class="measure-label">{{ item.key }}</span>
-              <span class="measure-value">{{ item.value }}</span>
-            </div>
-          }
-        </div>
-        @if(orderContext.extra_measurement){
-          <p class="extra-note">{{ orderContext.extra_measurement }}</p>
-        }
-      </div>
-    }
-
-    <!-- Price Breakdown -->
-    <div class="modal-section price-section">
-      <h4>{{ 'price_details' | translate }}</h4>
-      <div class="price-row">
-        <span>{{ 'unit_price' | translate }}</span>
-        <span>Ð{{ orderContext.price | number }}</span>
-      </div>
-      <div class="price-row">
-        <span>{{ 'quantity' | translate }}</span>
-        <span>× {{ orderContext.quantity }}</span>
-      </div>
-      @if(orderContext.discount > 0){
-        <div class="price-row discount">
-          <span>{{ 'discount' | translate }}</span>
-          <span>-Ð{{ orderContext.discount | number }}</span>
-        </div>
-      }
-      <div class="price-row total">
-        <span>{{ 'total' | translate }}</span>
-        <span>Ð{{ orderContext.total_price | number }}</span>
-      </div>
-    </div>
-
-    <!-- Note -->
-    @if(orderContext.note){
-      <div class="modal-section">
-        <h4>{{ 'note' | translate }}</h4>
-        <p class="order-note">{{ orderContext.note }}</p>
-      </div>
-    }
-  }
-</ax-bottom-sheet>
-
-<!-- Image Viewer (ax-lightbox) -->
-<ax-lightbox
-  [isOpen]="isImageViewerOpen"
-  [src]="viewingImage?.file_path"
-  [alt]="viewingImage?.file_name"
-  (closed)="closeImageViewer()">
-</ax-lightbox>

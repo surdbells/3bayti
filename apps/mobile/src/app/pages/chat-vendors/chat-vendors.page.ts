@@ -1,94 +1,105 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonButtons, IonRefresher, IonRefresherContent, NavController } from '@ionic/angular/standalone';
+import {
+  IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonButtons,
+  IonRefresher, IonRefresherContent, IonSpinner, NavController,
+} from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
-import { ChatService } from '../../service/chat.service';
-import { ChatVendor } from '../../models/chat.models';
-import {TranslatePipe} from "../../translate.pipe";
 
+import { ChatService } from '../../service/chat.service';
+import { ChatConversationSummary } from '../../models/chat.models';
+import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
+
+/**
+ * Customer conversation list (v3). A flat list of the customer's order chats;
+ * tapping a row opens the thread by uuid. Replaces the legacy vendor->orders
+ * drill-down (the order details now live in each thread's system message).
+ */
 @Component({
   selector: 'app-chat-vendors',
   templateUrl: './chat-vendors.page.html',
   styleUrls: ['./chat-vendors.page.scss'],
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [CommonModule, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonButtons, IonRefresher, IonRefresherContent, TranslatePipe, AxIconComponent]
+  imports: [
+    CommonModule, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonButtons,
+    IonRefresher, IonRefresherContent, IonSpinner, TranslatePipe, AxIconComponent,
+  ],
 })
 export class ChatVendorsPage implements OnInit, OnDestroy {
-  vendors: ChatVendor[] = [];
+  conversations: ChatConversationSummary[] = [];
   isLoading = true;
 
-  private userId = 0;
-  private userToken = '';
   private subscriptions: Subscription[] = [];
 
   constructor(
     private chatService: ChatService,
     private router: Router,
     private nav: NavController,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {}
 
-  ngOnInit() {
-    this.loadUserAndVendors();
+  ngOnInit(): void {
+    this.bootstrap();
   }
 
-  ngOnDestroy() {
-    this.subscriptions.forEach(sub => sub.unsubscribe());
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((s) => s.unsubscribe());
   }
 
-  async loadUserAndVendors() {
+  private async bootstrap(): Promise<void> {
     const userData = await Preferences.get({ key: 'user' });
     if (!userData.value) {
       this.router.navigate(['/login']);
       return;
     }
-
-    const user = JSON.parse(userData.value);
-    this.userId = user.id;
-    this.userToken = user.token;
-    this.loadVendors();
+    this.load();
   }
 
-  loadVendors() {
-    this.isLoading = true;
-    this.cdr.markForCheck();
-
-    const sub = this.chatService.getVendorsWithOrders(this.userId, this.userToken).subscribe({
-      next: (vendors) => {
-        this.vendors = vendors;
+  load(event?: CustomEvent): void {
+    if (!event) {
+      this.isLoading = true;
+      this.cdr.markForCheck();
+    }
+    const sub = this.chatService.listConversations('customer').subscribe({
+      next: (list) => {
+        this.conversations = list;
         this.isLoading = false;
+        (event?.target as { complete?: () => void } | null)?.complete?.();
         this.cdr.markForCheck();
       },
       error: () => {
-        this.vendors = [];
         this.isLoading = false;
+        (event?.target as { complete?: () => void } | null)?.complete?.();
         this.cdr.markForCheck();
-      }
+      },
     });
-
     this.subscriptions.push(sub);
   }
 
-  selectVendor(vendor: ChatVendor) {
-    this.router.navigate(['/chat-orders'], {
-      queryParams: { vendor_id: vendor.vendor_id, store_name: vendor.store_name }
-    });
+  openConversation(c: ChatConversationSummary): void {
+    this.router.navigate(['/chat'], { queryParams: { uuid: c.uuid } });
   }
 
-  handleRefresh(event: any) {
-    this.loadVendors();
-    setTimeout(() => event.target.complete(), 500);
+  trackByUuid(_: number, c: ChatConversationSummary): string {
+    return c.uuid;
   }
 
-  goBack() {
-    this.nav.back();
+  formatTime(iso: string | null): string {
+    if (!iso) {
+      return '';
+    }
+    const d = new Date(iso);
+    const sameDay = d.toDateString() === new Date().toDateString();
+    return sameDay
+      ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : d.toLocaleDateString([], { day: '2-digit', month: 'short' });
   }
 
-  goToShop() {
+  goBack(): void {
     this.router.navigate(['/account']);
   }
 }

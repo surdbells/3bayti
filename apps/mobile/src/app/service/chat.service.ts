@@ -1,261 +1,210 @@
 import { Injectable } from '@angular/core';
-import { Observable, BehaviorSubject, of } from 'rxjs';
-import { map, tap, catchError } from 'rxjs/operators';
-import { GlobalComponent } from '../global-component';
-import {
-  ChatVendor,
-  Conversation,
-  OrderContext,
-  ChatMessage,
-  PromptCategory,
-  ChatOrdersResponse,
-  ConversationResponse,
-  MessagesResponse,
-  SendMessageResponse,
-  VendorConversationsResponse,
-  UnreadCountResponse
-} from '../models/chat.models';
-import {NetworkService} from "../service/network.service";
-import {MobileNetworkAdapter} from "../core/http/mobile-network-adapter";
+import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse } from '@angular/common/http';
+import { Observable, BehaviorSubject, from, throwError } from 'rxjs';
+import { map, switchMap, catchError, tap } from 'rxjs/operators';
+import { Preferences } from '@capacitor/preferences';
 
-@Injectable({
-  providedIn: 'root'
-})
+import { ChatMessage, ChatConversationSummary } from '../models/chat.models';
+
+const V3_BASE = 'https://api-v3.3bayti.ae';
+const CUSTOMER_BASE = '/v3/chat';
+const VENDOR_BASE = '/v3/vendor/chat';
+
+export type ChatRole = 'customer' | 'vendor';
+
+/**
+ * Order-scoped customer<->vendor chat, wired to the v3 API.
+ *
+ * v3 is uuid-keyed, Bearer-authenticated, text-only, and auto-provisions a
+ * conversation per order item when the order is paid (there is no
+ * get-or-create-by-order endpoint). New messages are fetched with an
+ * `after_id` cursor. PII-bearing sends are rejected 422 CHAT_MESSAGE_BLOCKED
+ * by the server; the HttpErrorResponse propagates so the page can surface the
+ * warning.
+ */
+@Injectable({ providedIn: 'root' })
 export class ChatService {
-  private currentConversation$ = new BehaviorSubject<Conversation | null>(null);
-  private orderContext$ = new BehaviorSubject<OrderContext | null>(null);
   private messages$ = new BehaviorSubject<ChatMessage[]>([]);
-  private promptCategories$ = new BehaviorSubject<PromptCategory[]>([]);
-  private unreadCount$ = new BehaviorSubject<UnreadCountResponse>({ customer_unread: 0, vendor_unread: 0, total: 0 });
+  private unreadCount$ = new BehaviorSubject<number>(0);
 
-  constructor(private networkService: NetworkService, private networkAdapter: MobileNetworkAdapter) {}
+  constructor(private http: HttpClient) {}
 
-  // ========================================
-  // Customer: Vendor Discovery
-  // ========================================
+  // ── Conversation list ───────────────────────────────────────
 
-  getVendorsWithOrders(userId: number, token: string): Observable<ChatVendor[]> {
-    return this.networkAdapter.post_request(
-      { id: userId, token },
-      GlobalComponent.chat_get_vendors
-    ).pipe(
-      map((response: any) => response.status === 'success' ? response.data : []),
-      catchError(() => of([]))
-    );
-  }
-
-  getVendorOrders(userId: number, token: string, vendorId: number): Observable<ChatOrdersResponse> {
-    return this.networkAdapter.post_request(
-      { id: userId, token, vendor_id: vendorId },
-      GlobalComponent.chat_get_vendor_orders
-    ).pipe(
-      map((response: any) => response.status === 'success' ? response.data : { orders: [], total_count: 0, skip_selection: false }),
-      catchError(() => of({ orders: [], total_count: 0, skip_selection: false }))
-    );
-  }
-
-  // ========================================
-  // Conversation Management
-  // ========================================
-
-  getOrCreateConversation(userId: number, token: string, orderItemId: number): Observable<ConversationResponse> {
-    return this.networkAdapter.post_request(
-      { id: userId, token, order_item_id: orderItemId },
-      GlobalComponent.chat_get_conversation
-    ).pipe(
-      tap((response: any) => {
-        if (response.status === 'success') {
-          this.currentConversation$.next(response.data.conversation);
-          this.orderContext$.next(response.data.order_context);
+  listConversations(role: ChatRole = 'customer', limit = 50, offset = 0): Observable<ChatConversationSummary[]> {
+    return this.authedGet(`${this.base(role)}/conversations`, { limit, offset }).pipe(
+      tap((r: any) => {
+        if (typeof r?.unread_total === 'number') {
+          this.unreadCount$.next(r.unread_total);
         }
       }),
-      map((response: any) => {
-        if (response.status === 'success') return response.data;
-        throw new Error(response.message || 'Failed to load conversation');
-      })
+      map((r: any) => ((r?.conversations ?? []) as any[]).map((c) => this.mapConversation(c))),
+      catchError(() => from([[] as ChatConversationSummary[]])),
     );
   }
 
-  getVendorConversations(userId: number, token: string, limit = 50, offset = 0): Observable<VendorConversationsResponse> {
-    return this.networkAdapter.post_request(
-      { id: userId, token, limit, offset },
-      GlobalComponent.chat_get_vendor_conversations
-    ).pipe(
-      map((response: any) => response.status === 'success' ? response.data : { conversations: [], total_unread: 0, has_more: false }),
-      catchError(() => of({ conversations: [], total_unread: 0, has_more: false }))
-    );
-  }
+  // ── Messages ────────────────────────────────────────────────
 
-  // ========================================
-  // Messages
-  // ========================================
-
-  getMessages(userId: number, token: string, conversationId: number, beforeId?: number, limit = 50): Observable<MessagesResponse> {
-    const params: any = { id: userId, token, conversation_id: conversationId, limit };
-    if (beforeId) params.before_id = beforeId;
-
-    return this.networkAdapter.post_request(params, GlobalComponent.chat_get_messages).pipe(
-      tap((response: any) => {
-        if (response.status === 'success') {
-          if (!beforeId) {
-            this.messages$.next(response.data.messages);
-          } else {
-            const current = this.messages$.value;
-            this.messages$.next([...response.data.messages, ...current]);
-          }
+  /**
+   * Fetch messages for a conversation. Omit `afterId` for the initial load
+   * (replaces the buffer); pass the highest seen id to fetch only newer
+   * messages (appended). Returns the conversation meta alongside.
+   */
+  getMessages(
+    uuid: string,
+    role: ChatRole = 'customer',
+    afterId?: number,
+    limit = 50,
+  ): Observable<{ messages: ChatMessage[]; conversation: ChatConversationSummary | null }> {
+    const query: Record<string, number> = { limit };
+    if (afterId && afterId > 0) {
+      query['after_id'] = afterId;
+    }
+    return this.authedGet(`${this.base(role)}/conversations/${uuid}/messages`, query).pipe(
+      map((r: any) => {
+        const messages = ((r?.messages ?? []) as any[]).map((m) => this.mapMessage(m));
+        const conversation = r?.conversation ? this.mapConversation(r.conversation) : null;
+        if (!afterId) {
+          this.messages$.next(messages);
+        } else if (messages.length) {
+          this.messages$.next([...this.messages$.value, ...messages]);
         }
+        return { messages, conversation };
       }),
-      map((response: any) => response.status === 'success' ? response.data : { messages: [], has_more: false }),
-      catchError(() => of({ messages: [], has_more: false }))
-    );
-  }
-
-  sendMessage(userId: number, token: string, conversationId: number, content: string, promptId?: number): Observable<SendMessageResponse> {
-    const params: any = {
-      id: userId,
-      token,
-      conversation_id: conversationId,
-      content,
-      message_type: promptId ? 'prompt' : 'text'
-    };
-    if (promptId) params.prompt_id = promptId;
-
-    return this.networkAdapter.post_request(params, GlobalComponent.chat_send_message).pipe(
-      tap((response: any) => {
-        if (response.status === 'success') {
-          const current = this.messages$.value;
-          this.messages$.next([...current, response.data.message]);
-        }
-      }),
-      map((response: any) => {
-        if (response.status === 'success') return response.data;
-        throw new Error(response.message || 'Failed to send message');
-      })
     );
   }
 
   /**
-   * Upload image attachment
-   * Note: post_request works with FormData - Angular HttpClient
-   * automatically sets Content-Type: multipart/form-data when FormData is passed
+   * Send a text message. On a 422 CHAT_MESSAGE_BLOCKED the HttpErrorResponse
+   * is re-thrown so the caller can read `error.error.code` / `.message`.
    */
-  uploadImage(userId: number, token: string, conversationId: number, file: File): Observable<SendMessageResponse> {
-    const formData = new FormData();
-    formData.append('id', userId.toString());
-    formData.append('token', token);
-    formData.append('conversation_id', conversationId.toString());
-    formData.append('image', file);
-
-    return this.networkAdapter.post_request(formData, GlobalComponent.chat_upload_image).pipe(
-      tap((response: any) => {
-        if (response.status === 'success') {
-          const current = this.messages$.value;
-          this.messages$.next([...current, response.data.message]);
-        }
+  sendMessage(uuid: string, content: string, role: ChatRole = 'customer'): Observable<ChatMessage> {
+    return this.authedPost(`${this.base(role)}/conversations/${uuid}/messages`, { content }).pipe(
+      map((r: any) => {
+        const message = this.mapMessage(r?.message);
+        this.messages$.next([...this.messages$.value, message]);
+        return message;
       }),
-      map((response: any) => {
-        if (response.status === 'success') return response.data;
-        throw new Error(response.message || 'Failed to upload image');
-      })
+      catchError((err: HttpErrorResponse) => throwError(() => err)),
     );
   }
 
-  // ========================================
-  // Mark as Read (call when user views messages)
-  // ========================================
-
-  /** Marks all messages in conversation as read - call this when user opens a conversation */
-  markAsRead(userId: number, token: string, conversationId: number): Observable<boolean> {
-    return this.networkAdapter.post_request(
-      { id: userId, token, conversation_id: conversationId },
-      GlobalComponent.chat_mark_read
-    ).pipe(
-      map((response: any) => response.status === 'success'),
-      catchError(() => of(false))
+  markAsRead(uuid: string, role: ChatRole = 'customer'): Observable<boolean> {
+    return this.authedPost(`${this.base(role)}/conversations/${uuid}/read`, {}).pipe(
+      map(() => true),
+      catchError(() => from([false])),
     );
   }
 
-  // ========================================
-  // Prompts
-  // ========================================
-
-  getPrompts(lang = 'en'): Observable<PromptCategory[]> {
-    return this.networkAdapter.post_request({ lang }, GlobalComponent.chat_get_prompts).pipe(
-      tap((response: any) => {
-        if (response.status === 'success') {
-          this.promptCategories$.next(response.data);
-        }
-      }),
-      map((response: any) => response.status === 'success' ? response.data : []),
-      catchError(() => of([]))
+  getUnreadCount(role: ChatRole = 'customer'): Observable<number> {
+    return this.authedGet(`${this.base(role)}/unread-count`, {}).pipe(
+      map((r: any) => (typeof r?.unread_count === 'number' ? r.unread_count : 0)),
+      tap((n) => this.unreadCount$.next(n)),
+      catchError(() => from([0])),
     );
   }
 
-  // ========================================
-  // Unread Count (for badge display)
-  // ========================================
+  // ── Reactive getters ────────────────────────────────────────
 
-  /** Get unread message counts - useful for displaying badges in tab bar or navigation */
-  getUnreadCount(userId: number, token: string): Observable<UnreadCountResponse> {
-    return this.networkAdapter.post_request(
-      { id: userId, token },
-      GlobalComponent.chat_get_unread_count
-    ).pipe(
-      tap((response: any) => {
-        if (response.status === 'success') {
-          this.unreadCount$.next(response.data);
-        }
-      }),
-      map((response: any) => response.status === 'success' ? response.data : { customer_unread: 0, vendor_unread: 0, total: 0 }),
-      catchError(() => of({ customer_unread: 0, vendor_unread: 0, total: 0 }))
-    );
-  }
-
-  // ========================================
-  // Observable Getters (for reactive templates)
-  // These can be used with async pipe in templates
-  // ========================================
-
-  /** Observable for current conversation - use with async pipe */
-  get conversation$(): Observable<Conversation | null> {
-    return this.currentConversation$.asObservable();
-  }
-
-  /** Observable for order context - use with async pipe */
-  get order$(): Observable<OrderContext | null> {
-    return this.orderContext$.asObservable();
-  }
-
-  /** Observable for messages - use with async pipe */
   get messageList$(): Observable<ChatMessage[]> {
     return this.messages$.asObservable();
   }
 
-  /** Observable for prompt categories - use with async pipe */
-  get prompts$(): Observable<PromptCategory[]> {
-    return this.promptCategories$.asObservable();
-  }
-
-  /** Observable for unread count - use with async pipe for badges */
-  get unread$(): Observable<UnreadCountResponse> {
+  get unread$(): Observable<number> {
     return this.unreadCount$.asObservable();
   }
 
-  // ========================================
-  // State Management Utilities
-  // ========================================
+  // ── State ───────────────────────────────────────────────────
 
-  /** Clear current chat state when leaving chat page */
   clearChat(): void {
-    this.currentConversation$.next(null);
-    this.orderContext$.next(null);
     this.messages$.next([]);
   }
 
-  /** Reset all chat service state - call on logout */
   resetState(): void {
     this.clearChat();
-    this.promptCategories$.next([]);
-    this.unreadCount$.next({ customer_unread: 0, vendor_unread: 0, total: 0 });
+    this.unreadCount$.next(0);
+  }
+
+  // ── HTTP plumbing ───────────────────────────────────────────
+
+  private base(role: ChatRole): string {
+    return role === 'vendor' ? VENDOR_BASE : CUSTOMER_BASE;
+  }
+
+  private authedGet(path: string, query: Record<string, number>): Observable<unknown> {
+    let params = new HttpParams();
+    for (const [k, v] of Object.entries(query)) {
+      params = params.set(k, String(v));
+    }
+    return from(this.authHeaders()).pipe(
+      switchMap((headers) => this.http.get<unknown>(`${V3_BASE}${path}`, { headers, params })),
+    );
+  }
+
+  private authedPost(path: string, body: unknown): Observable<unknown> {
+    return from(this.authHeaders()).pipe(
+      switchMap((headers) => this.http.post<unknown>(`${V3_BASE}${path}`, body, { headers })),
+    );
+  }
+
+  private async authHeaders(): Promise<HttpHeaders> {
+    let token = '';
+    try {
+      const ret = await Preferences.get({ key: 'user' });
+      if (ret.value) {
+        token = JSON.parse(ret.value)?.token || '';
+      }
+    } catch {
+      token = '';
+    }
+    return new HttpHeaders(token ? { Authorization: `Bearer ${token}` } : {});
+  }
+
+  private mapConversation(c: any): ChatConversationSummary {
+    return {
+      uuid: c?.uuid ?? '',
+      status: c?.status ?? 'active',
+      order_reference: c?.order_reference ?? '',
+      unread_count: typeof c?.unread_count === 'number' ? c.unread_count : 0,
+      last_message_at: c?.last_message_at ?? null,
+      preview: c?.preview ?? null,
+      counterparty: {
+        type: c?.counterparty?.type ?? '',
+        name: c?.counterparty?.name ?? '',
+        slug: c?.counterparty?.slug,
+        logo_url: c?.counterparty?.logo_url ?? null,
+      },
+      item: {
+        name: c?.item?.name ?? '',
+        image: c?.item?.image ?? null,
+        size: c?.item?.size ?? null,
+        color: c?.item?.color ?? null,
+      },
+      created_at: c?.created_at ?? '',
+    };
+  }
+
+  private mapMessage(m: any): ChatMessage {
+    const rawStatus = m?.status ?? 'sent';
+    return {
+      message_id: typeof m?.id === 'number' ? m.id : 0,
+      uuid: m?.uuid ?? '',
+      conversation_id: 0,
+      sender_id: 0,
+      sender_type: m?.sender_type ?? 'system',
+      message_type: m?.type ?? 'text',
+      content: m?.content ?? null,
+      content_ar: m?.content_ar ?? null,
+      prompt_id: null,
+      prompt_category: null,
+      has_attachments: 0,
+      attachments: [],
+      status: rawStatus === 'blocked' ? 'failed' : rawStatus === 'redacted' ? 'sent' : rawStatus,
+      delivered_at: null,
+      read_at: null,
+      is_flagged: m?.is_flagged ?? false,
+      created_at: m?.created_at ?? '',
+      sender_name: '',
+    };
   }
 }

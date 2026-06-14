@@ -11,11 +11,6 @@ export const CHAT_ROUTES: Routes = [
     title: 'Messages'
   },
   {
-    path: 'chat-orders',
-    loadComponent: () => import('./pages/chat-orders/chat-orders.page').then(m => m.ChatOrdersPage),
-    title: 'Select Order'
-  },
-  {
     path: 'chat',
     loadComponent: () => import('./pages/chat/chat.page').then(m => m.ChatPage),
     title: 'Chat'

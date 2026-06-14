@@ -1,216 +1,81 @@
-/* ============================================================================
-   Chat vendors page — M2 redesign (M24 Tier 3)
-   ============================================================================ */
+.cv-toolbar { --background: var(--ion-background-color, #fff); }
+.cv-back { --color: var(--ion-text-color, #1a1a1a); }
+.cv-title { font-weight: 600; }
+.cv-content { --background: var(--ion-color-step-50, #f6f7f9); }
 
-ion-content.page-content {
-  --background: var(--ax-color-bg-canvas);
-}
-/* ----- Vendor list ------------------------------------ */
+.cv-loading { display: flex; justify-content: center; padding-top: 3rem; }
 
-.vendor-list {
+.cv-empty {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding-bottom: 12px;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 4rem 2rem;
+  text-align: center;
+  color: var(--ion-color-medium, #8a8a8a);
+
+  ax-icon { font-size: 2.5rem; opacity: 0.6; }
+  p { margin: 0; font-size: 0.9rem; }
 }
 
-.vendor-card {
+.cv-list { list-style: none; margin: 0; padding: 0.5rem 0; }
+.cv-item {
   display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
-  background: var(--ax-color-bg-surface);
+  align-items: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.85rem 1rem;
   border: none;
-  border-radius: var(--ax-radius-lg);
-  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06),
-              0 4px 12px rgba(46, 36, 28, 0.04);
+  border-bottom: 1px solid var(--ion-color-step-100, #eceef1);
+  background: var(--ion-background-color, #fff);
+  text-align: left;
   cursor: pointer;
-  text-align: start;
-  width: 100%;
-  transition: transform 120ms ease;
-  -webkit-tap-highlight-color: transparent;
-
-  &:active {
-    transform: scale(0.99);
-  }
-
-  > ax-icon {
-    color: var(--ax-color-text-tertiary);
-    font-size: 16px;
-    flex-shrink: 0;
-  }
 }
-
-.vendor-logo {
-  width: 48px;
-  height: 48px;
+.cv-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
   flex-shrink: 0;
-  border-radius: var(--ax-radius-md);
-  overflow: hidden;
-  background: var(--ax-color-bg-brand-subtle);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: center;
-  }
+  border-radius: 50%;
+  background: var(--ion-color-primary-tint, #e7d9b8);
+  color: var(--ion-color-primary-shade, #a07d2e);
+  font-weight: 700;
+  text-transform: uppercase;
 }
-
-.logo-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  ax-icon {
-    color: var(--ax-color-text-brand);
-    font-size: 20px;
-  }
+.cv-body { flex: 1; min-width: 0; }
+.cv-top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.cv-name {
+  font-weight: 600;
+  color: var(--ion-text-color, #1a1a1a);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-
-.vendor-info {
-  flex: 1;
-  min-width: 0;
+.cv-time { font-size: 0.7rem; color: var(--ion-color-medium, #8a8a8a); flex-shrink: 0; }
+.cv-meta {
+  font-size: 0.72rem;
+  color: var(--ion-color-medium, #8a8a8a);
+  margin-top: 0.1rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-
-.vendor-name {
-  margin: 0 0 2px;
-  font-family: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--ax-color-text-primary);
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.cv-preview {
+  font-size: 0.8rem;
+  color: var(--ion-color-step-600, #5a5a5a);
+  margin-top: 0.2rem;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-
-.vendor-meta {
-  margin: 0;
-  font-family: inherit;
-  font-size: 12px;
-  color: var(--ax-color-text-secondary);
-}
-
-.unread-badge {
+.cv-badge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
-  background: var(--ax-color-bg-brand);
-  color: var(--ax-palette-neutral-0);
-  border-radius: 999px;
-  font-family: inherit;
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
+  min-width: 1.3rem;
+  height: 1.3rem;
+  padding: 0 0.4rem;
+  align-self: center;
   flex-shrink: 0;
-}
-
-/* ----- Empty state ------------------------------------ */
-
-/* M38/M50: layout, icon-wrap, h3, p covered by global .empty-state.
-   This page keeps a .shop-btn custom child + small margin override. */
-.empty-state {
-  --empty-state-padding: 80px 20px;
-
-  .empty-icon-wrap ax-icon {
-    font-size: 36px;
-  }
-
-  h3 {
-    margin: 0 0 8px;
-  }
-
-  p {
-    margin: 0 0 20px;
-  }
-
-  .shop-btn {
-    padding: 12px 24px;
-    background: var(--ax-color-bg-brand);
-    color: var(--ax-palette-neutral-0);
-    border: none;
-    border-radius: 999px;
-    font-family: inherit;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-
-    &:active {
-      background: rgba(90, 58, 44, 0.85);
-    }
-  }
-}
-
-/* ----- Skeleton state -------------------------------- */
-
-.vendor-card.skeleton {
-  pointer-events: none;
-}
-
-.skeleton-box {
-  position: relative;
-  background: var(--ax-color-bg-brand-subtle);
-  overflow: hidden;
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.4) 50%,
-      transparent 100%
-    );
-    animation: shimmer 1.5s infinite;
-  }
-}
-
-.skeleton-text {
-  position: relative;
-  height: 12px;
-  border-radius: 4px;
-  background: var(--ax-color-bg-brand-subtle);
-  overflow: hidden;
-  margin-bottom: 6px;
-
-  &:last-child {
-    margin-bottom: 0;
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      90deg,
-      transparent 0%,
-      rgba(255, 255, 255, 0.4) 50%,
-      transparent 100%
-    );
-    animation: shimmer 1.5s infinite;
-  }
-
-  &.title-sk    { width: 70%; height: 13px; }
-  &.subtitle-sk { width: 50%; height: 11px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .skeleton-box::after,
-  .skeleton-text::after {
-    animation: none;
-  }
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ion-color-primary-contrast, #fff);
+  background: var(--ion-color-primary, #c8a04a);
+  border-radius: 999px;
 }

@@ -84,6 +84,23 @@ export interface OrderContext {
   delivery_time: string | null;
 }
 
+/**
+ * v3 conversation summary as returned by the chat list + message endpoints.
+ * uuid-keyed; `counterparty` is the other party (vendor for the customer view,
+ * customer for the vendor view).
+ */
+export interface ChatConversationSummary {
+  uuid: string;
+  status: string;
+  order_reference: string;
+  unread_count: number;
+  last_message_at: string | null;
+  preview: string | null;
+  counterparty: { type: string; name: string; slug?: string; logo_url?: string | null };
+  item: { name: string; image: string | null; size: string | null; color: string | null };
+  created_at: string;
+}
+
 export interface ChatMessage {
   message_id: number;
   uuid: string;

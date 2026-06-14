@@ -1,32 +1,22 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-  ChangeDetectorRef,
-  ChangeDetectionStrategy
-} from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import {
-  IonContent,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonButton,
-  IonButtons,
-  IonRefresher,
-  IonRefresherContent,
-  IonSpinner,
-  NavController
+  IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonButtons,
+  IonRefresher, IonRefresherContent, IonSpinner, NavController,
 } from '@ionic/angular/standalone';
 import { Subscription } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
 
 import { ChatService } from '../../service/chat.service';
-import { VendorConversation, OrderStatus } from '../../models/chat.models';
-import {TranslatePipe} from "../../translate.pipe";
-
+import { ChatConversationSummary } from '../../models/chat.models';
+import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
+
+/**
+ * Vendor conversation list (v3). The vendor's order chats with customers;
+ * tapping a row opens the shared thread by uuid in the vendor role.
+ */
 @Component({
   selector: 'app-vendor-chat-list',
   templateUrl: './vendor-chat-list.page.html',
@@ -34,189 +24,81 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
-    CommonModule,
-    IonContent,
-    IonHeader,
-    IonToolbar,
-    IonTitle,
-    IonButton,
-    IonButtons,
-    IonRefresher,
-    IonRefresherContent,
-    IonSpinner,
-    TranslatePipe, AxIconComponent]
+    CommonModule, IonContent, IonHeader, IonToolbar, IonTitle, IonButton, IonButtons,
+    IonRefresher, IonRefresherContent, IonSpinner, TranslatePipe, AxIconComponent,
+  ],
 })
 export class VendorChatListPage implements OnInit, OnDestroy {
-  conversations: VendorConversation[] = [];
+  conversations: ChatConversationSummary[] = [];
   isLoading = true;
-  isLoadingMore = false;
-  hasMore = false;
-  totalUnread = 0;
 
-  private userId = 0;
-  private userToken = '';
-  private offset = 0;
-  private limit = 20;
   private subscriptions: Subscription[] = [];
-  single_user = {
-    id: 0,
-    token: "",
-    first_name: "",
-    last_name: "",
-    user_type: "",
-    email: "",
-    phone: "",
-    avatar: "",
-    location: "",
-    is_2fa: false,
-    is_active: false,
-    is_admin: false,
-    is_vendor: false,
-    is_store_active: false,
-    is_store_approved: false,
-    is_customer: false
-  }
+
   constructor(
     private chatService: ChatService,
     private router: Router,
     private nav: NavController,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
   ) {}
 
-  ngOnInit() {
-    this.getObject();
-  }
-  async getObject() {
-    const ret: any = await Preferences.get({ key: 'user' });
-    if (ret.value == null){
-      this.router.navigate(['/', 'login']);
-      return;
-    }else{
-      this.single_user = JSON.parse(ret.value);
-      this.loadUserAndConversations();
-    }
-  }
-  ngOnDestroy() {
-    this.subscriptions.forEach(sub => sub.unsubscribe());
+  ngOnInit(): void {
+    this.bootstrap();
   }
 
-  async loadUserAndConversations() {
-    this.userId = this.single_user.id;
-    this.userToken = this.single_user.token;
-    // Check if user is a vendor
-    if (!this.single_user.is_vendor || !this.single_user.is_store_active) {
-      this.router.navigate(['/account']);
+  ngOnDestroy(): void {
+    this.subscriptions.forEach((s) => s.unsubscribe());
+  }
+
+  private async bootstrap(): Promise<void> {
+    const userData = await Preferences.get({ key: 'user' });
+    if (!userData.value) {
+      this.router.navigate(['/login']);
       return;
     }
-
-    this.loadConversations();
+    this.load();
   }
 
-  loadConversations(append = false) {
-    if (!append) {
+  load(event?: CustomEvent): void {
+    if (!event) {
       this.isLoading = true;
-      this.offset = 0;
-    } else {
-      this.isLoadingMore = true;
+      this.cdr.markForCheck();
     }
-    this.cdr.markForCheck();
-
-    const sub = this.chatService.getVendorConversations(
-      this.userId,
-      this.userToken,
-      this.limit,
-      this.offset
-    ).subscribe({
-      next: (response) => {
-        if (append) {
-          this.conversations = [...this.conversations, ...response.conversations];
-        } else {
-          this.conversations = response.conversations;
-        }
-
-        this.totalUnread = response.total_unread;
-        this.hasMore = response.has_more;
-        this.offset += response.conversations.length;
-
+    const sub = this.chatService.listConversations('vendor').subscribe({
+      next: (list) => {
+        this.conversations = list;
         this.isLoading = false;
-        this.isLoadingMore = false;
+        (event?.target as { complete?: () => void } | null)?.complete?.();
         this.cdr.markForCheck();
       },
-      error: (err) => {
-        console.error('Error loading conversations:', err);
+      error: () => {
         this.isLoading = false;
-        this.isLoadingMore = false;
+        (event?.target as { complete?: () => void } | null)?.complete?.();
         this.cdr.markForCheck();
-      }
+      },
     });
-
     this.subscriptions.push(sub);
   }
 
-  loadMore() {
-    if (!this.isLoadingMore && this.hasMore) {
-      this.loadConversations(true);
+  openConversation(c: ChatConversationSummary): void {
+    this.router.navigate(['/chat'], { queryParams: { uuid: c.uuid, role: 'vendor' } });
+  }
+
+  trackByUuid(_: number, c: ChatConversationSummary): string {
+    return c.uuid;
+  }
+
+  formatTime(iso: string | null): string {
+    if (!iso) {
+      return '';
     }
+    const d = new Date(iso);
+    const sameDay = d.toDateString() === new Date().toDateString();
+    return sameDay
+      ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : d.toLocaleDateString([], { day: '2-digit', month: 'short' });
   }
 
-  openConversation(conv: VendorConversation) {
-    this.router.navigate(['/chat'], {
-      queryParams: {
-        order_item_id: conv.order_item_id
-      }
-    });
-  }
-
-  getInitials(name: string): string {
-    if (!name) return '?';
-    const parts = name.trim().split(' ');
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  }
-
-  formatTime(dateString: string | null): string {
-    if (!dateString) return '';
-
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m`;
-    if (diffHours < 24) return `${diffHours}h`;
-    if (diffDays < 7) return `${diffDays}d`;
-
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  }
-
-  getStatusClass(status: OrderStatus): string {
-    const statusMap: Record<OrderStatus, string> = {
-      'Pending': 'status-pending',
-      'Accepted': 'status-processing',
-      'Processing': 'status-processing',
-      'Ready for Delivery': 'status-ready',
-      'Delivered': 'status-delivered',
-      'Return Requested': 'status-return',
-      'Returned': 'status-return',
-      'Cancelled': 'status-cancelled',
-      'Refunded': 'status-cancelled'
-    };
-    return statusMap[status] || 'status-pending';
-  }
-
-  handleRefresh(event: any) {
-    this.loadConversations();
-    setTimeout(() => {
-      event.target.complete();
-    }, 500);
-  }
-
-  goBack() {
+  goBack(): void {
     this.nav.back();
   }
 }

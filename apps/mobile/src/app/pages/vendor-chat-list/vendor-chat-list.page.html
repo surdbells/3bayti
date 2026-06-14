@@ -1,115 +1,42 @@
-<ion-header class="m7-header-shadow ion-no-border">
-  <ion-toolbar class="m7-toolbar ion-no-border">
+<ion-header class="ion-no-border">
+  <ion-toolbar class="cv-toolbar ion-no-border">
     <ion-buttons slot="start">
-      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
-        <ax-icon name="arrow-left" />
+      <ion-button class="cv-back" (click)="goBack()" aria-label="Back">
+        <ax-icon name="arrow-back" slot="icon-only"></ax-icon>
       </ion-button>
     </ion-buttons>
-    <ion-title class="m7-title">{{ 'customer_messages' | translate }}</ion-title>
-    @if(totalUnread > 0){
-      <ion-buttons slot="end">
-        <div class="m7-header-badge">{{ totalUnread }}</div>
-      </ion-buttons>
-    }
+    <ion-title class="cv-title">{{ 'text_customer_messages' | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="page-content">
-  <!-- Pull to Refresh -->
-  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+<ion-content class="cv-content">
+  <ion-refresher slot="fixed" (ionRefresh)="load($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
-  <!-- Loading State -->
-  @if(isLoading){
-    <div class="conversation-list ion-padding">
-      @for(skeleton of [1,2,3,4,5]; track skeleton){
-        <div class="conversation-card skeleton">
-          <div class="conv-avatar skeleton-box"></div>
-          <div class="conv-info">
-            <div class="skeleton-text title-sk"></div>
-            <div class="skeleton-text subtitle-sk"></div>
-            <div class="skeleton-text meta-sk"></div>
+  <div *ngIf="isLoading" class="cv-loading">
+    <ion-spinner name="crescent"></ion-spinner>
+  </div>
+
+  <div *ngIf="!isLoading && conversations.length === 0" class="cv-empty">
+    <ax-icon name="chatbubbles-outline"></ax-icon>
+    <p>{{ 'text_no_conversations' | translate }}</p>
+  </div>
+
+  <ul *ngIf="!isLoading && conversations.length > 0" class="cv-list">
+    <li *ngFor="let c of conversations; trackBy: trackByUuid">
+      <button type="button" class="cv-item" (click)="openConversation(c)">
+        <div class="cv-avatar">{{ (c.counterparty.name || '?').charAt(0) }}</div>
+        <div class="cv-body">
+          <div class="cv-top">
+            <span class="cv-name">{{ c.counterparty.name || ('text_customer' | translate) }}</span>
+            <span class="cv-time">{{ formatTime(c.last_message_at) }}</span>
           </div>
+          <div class="cv-meta">{{ c.order_reference }}<ng-container *ngIf="c.item.name"> · {{ c.item.name }}</ng-container></div>
+          <div class="cv-preview">{{ c.preview || ('text_no_messages_yet' | translate) }}</div>
         </div>
-      }
-    </div>
-  }
-
-  <!-- Conversations List -->
-  @if(!isLoading && conversations.length > 0){
-    <div class="conversation-list ion-padding">
-      @for(conv of conversations; track conv.conversation_id){
-        <button type="button" class="conversation-card" (click)="openConversation(conv)">
-          <!-- Customer Avatar -->
-          <div class="conv-avatar">
-            @if(conv.customer_avatar){
-              <img [src]="conv.customer_avatar" [alt]="conv.customer_name">
-            } @else {
-              <div class="avatar-placeholder">
-                {{ getInitials(conv.customer_name) }}
-              </div>
-            }
-            @if(conv.vendor_unread_count > 0){
-              <span class="unread-dot"></span>
-            }
-          </div>
-
-          <!-- Conversation Info -->
-          <div class="conv-info">
-            <div class="conv-header">
-              <h3 class="customer-name">{{ conv.customer_name }}</h3>
-              <span class="conv-time">{{ formatTime(conv.last_message_at) }}</span>
-            </div>
-
-            <p class="product-name">{{ conv.product_name }}</p>
-
-            <div class="conv-footer">
-              <p class="last-message" [class.unread]="conv.vendor_unread_count > 0">
-                @if(conv.last_message_sender === 'vendor'){
-                  <span class="you-prefix">{{ 'label_you' | translate }}: </span>
-                }
-                {{ conv.last_message_preview || ('text_no_messages_yet' | translate) }}
-              </p>
-
-              @if(conv.vendor_unread_count > 0){
-                <span class="unread-badge">{{ conv.vendor_unread_count }}</span>
-              }
-            </div>
-
-            <div class="order-meta">
-              <span class="order-id">#{{ conv.order_id }}</span>
-              <span class="order-status" [class]="getStatusClass(conv.order_status)">
-                {{ conv.order_status }}
-              </span>
-            </div>
-          </div>
-        </button>
-      }
-
-      <!-- Load More -->
-      @if(hasMore){
-        <div class="load-more">
-          <button type="button" class="load-more-btn" (click)="loadMore()" [disabled]="isLoadingMore">
-            @if(isLoadingMore){
-              <ion-spinner name="dots"></ion-spinner>
-            } @else {
-              {{ 'load_more' | translate }}
-            }
-          </button>
-        </div>
-      }
-    </div>
-  }
-
-  <!-- Empty State -->
-  @if(!isLoading && conversations.length === 0){
-    <div class="empty-state">
-      <div class="empty-icon-wrap">
-        <ax-icon name="message-circle"></ax-icon>
-      </div>
-      <h3>{{ 'no_customer_messages' | translate }}</h3>
-      <p>{{ 'no_customer_messages_description' | translate }}</p>
-    </div>
-  }
+        <span *ngIf="c.unread_count > 0" class="cv-badge">{{ c.unread_count }}</span>
+      </button>
+    </li>
+  </ul>
 </ion-content>
