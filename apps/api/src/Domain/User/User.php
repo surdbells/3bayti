@@ -160,6 +160,14 @@ class User
     private ?DateTimeImmutable $dob = null;
 
     /**
+     * Profile picture — the full public URL of the uploaded avatar
+     * (Flysystem public store under avatars/user-{id}/...). Null until the
+     * user uploads one; the API serves a placeholder URL in that case.
+     */
+    #[ORM\Column(name: 'avatar_url', type: 'string', length: 500, nullable: true)]
+    private ?string $avatarUrl = null;
+
+    /**
      * BCP 47 locale identifier — 'en', 'ar', 'ar-AE', etc. Used to:
      *   - Localise transactional emails (M3)
      *   - Pick SMS templates (M1.3 already supports per-locale)
@@ -403,6 +411,7 @@ class User
     public function getLastName(): ?string         { return $this->lastName; }
     public function getGender(): ?string           { return $this->gender; }
     public function getDob(): ?DateTimeImmutable   { return $this->dob; }
+    public function getAvatarUrl(): ?string        { return $this->avatarUrl; }
     public function getLocale(): string            { return $this->locale; }
     public function getTimezone(): string          { return $this->timezone; }
     public function getStoreLegalName(): ?string   { return $this->storeLegalName; }
@@ -467,6 +476,11 @@ class User
     public function setGender(?Gender $gender): void
     {
         $this->gender = $gender?->value;
+    }
+
+    public function setAvatarUrl(?string $avatarUrl): void
+    {
+        $this->avatarUrl = ($avatarUrl === null || $avatarUrl === '') ? null : $avatarUrl;
     }
 
     public function setDob(?DateTimeImmutable $dob): void

@@ -141,6 +141,9 @@ return function (App $app): void {
         // Empty body is a 200 no-op.
         $group->patch('/profile', UpdateProfileController::class);
 
+        // Workstream C — profile picture upload (mobile + portal).
+        $group->post('/avatar', \Bayti\Api\Http\Controllers\Me\UpdateMeAvatarController::class);
+
         // M3.2.X.12-G — Personalized "for-you" recommendations
         $group->get(
             '/recommendations',
