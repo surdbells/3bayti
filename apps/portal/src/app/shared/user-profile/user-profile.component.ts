@@ -83,9 +83,14 @@ export class UserProfileComponent implements OnInit {
     this.ui_controls.is_loading = true;
     this.adapter.get_v3('GET /me/profile').subscribe({
       next: (response: any) => {
-        if (response) {
-          this.user_single = response.user ?? response.data ?? {};
-        }
+        const u = response?.user ?? response?.data ?? {};
+        this.user_single = {
+          first_name: u.first_name ?? '',
+          last_name: u.last_name ?? '',
+          email: u.email ?? '',
+          phone: u.phone ?? '',
+          avatar: u.avatar_url ?? u.avatar ?? '',
+        };
         this.ui_controls.is_loading = false;
       },
       error: () => {
@@ -121,12 +126,41 @@ export class UserProfileComponent implements OnInit {
   }
 
   select_avatar(event: any) {
-    const file = event.target.files[0];
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files[0];
+    input.value = ''; // allow re-picking the same file
+    if (!file) {
+      return;
+    }
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      this.error_notification('Please choose a JPEG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      this.error_notification('Image is too large (max 5 MB).');
+      return;
+    }
     const reader = new FileReader();
-    reader.onloadend = () => {
-      this.base64String = reader.result as string;
-      this.user_single.avatar = this.base64String;
-    };
-    if (file) reader.readAsDataURL(file);
+    reader.onloadend = () => this.uploadAvatar(reader.result as string);
+    reader.onerror = () => this.error_notification('Could not read the selected image.');
+    reader.readAsDataURL(file);
+  }
+
+  uploadAvatar(dataUrl: string) {
+    this.ui_controls.is_saving = true;
+    this.adapter.post_v3('POST /me/avatar', { image: dataUrl }).subscribe({
+      next: (response: any) => {
+        const url = response?.data?.avatar_url ?? response?.avatar_url;
+        if (url) {
+          this.user_single.avatar = url;
+          this.success_notification('Profile picture updated.');
+        }
+        this.ui_controls.is_saving = false;
+      },
+      error: () => {
+        this.error_notification("Couldn't update your profile picture. Please try again.");
+        this.ui_controls.is_saving = false;
+      },
+    });
   }
 }

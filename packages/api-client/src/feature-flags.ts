@@ -436,6 +436,14 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     // (Y.5-B is the first profile-update consumer), so this is a safe
     // pre-consumer correction.
   },
+  // Workstream C — profile picture upload. New v3-only endpoint (no legacy
+  // route), so oldPath is empty; target is always 'new'.
+  'POST /me/avatar': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/avatar',
+    shape: 'v3-envelope',
+  },
   // M3.1.1f — change password (authenticated, current_password required).
   //
   // Method changed from PUT to PATCH to match the v3 controller's actual

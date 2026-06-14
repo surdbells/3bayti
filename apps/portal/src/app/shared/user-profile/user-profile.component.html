@@ -47,10 +47,11 @@
               id="profileUpload"
               type="file"
               class="ax-input ax-input-sm"
-              accept="image/*"
+              accept="image/png,image/jpeg,image/webp"
               (change)="select_avatar($event)"
+              [disabled]="ui_controls.is_saving"
               name="avatar_file" />
-            <span class="ax-hint">Square image, JPG or PNG.</span>
+            <span class="ax-hint">{{ ui_controls.is_saving ? 'Uploading…' : 'Square image, JPG, PNG, or WebP (max 5MB).' }}</span>
           </div>
         </div>
 

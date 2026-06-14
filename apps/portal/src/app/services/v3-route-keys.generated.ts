@@ -144,6 +144,7 @@ export type V3RouteKey =
   | 'PATCH /me/location'
   | 'PATCH /me/password'
   | 'PATCH /me/profile'
+  | 'POST /me/avatar'
   | 'PATCH /me/wishlist/:productId'
   | 'PATCH /me/wishlist/labels/:id'
   | 'PATCH /vendor/compliance'
@@ -361,6 +362,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PATCH /me/location',
   'PATCH /me/password',
   'PATCH /me/profile',
+  'POST /me/avatar',
   'PATCH /me/wishlist/:productId',
   'PATCH /me/wishlist/labels/:id',
   'PATCH /vendor/compliance',
