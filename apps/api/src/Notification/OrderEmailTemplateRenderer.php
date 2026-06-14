@@ -89,6 +89,15 @@ final class OrderEmailTemplateRenderer
             EmailTemplate::ORDER_PAYMENT_FAILED_CUSTOMER => $isArabic
                 ? $this->orderPaymentFailedCustomerAr($order)
                 : $this->orderPaymentFailedCustomerEn($order),
+            EmailTemplate::ORDER_ACCEPTED_CUSTOMER => $isArabic
+                ? $this->orderAcceptedCustomerAr($order, $extra)
+                : $this->orderAcceptedCustomerEn($order, $extra),
+            EmailTemplate::ORDER_PREPARING_CUSTOMER => $isArabic
+                ? $this->orderPreparingCustomerAr($order, $extra)
+                : $this->orderPreparingCustomerEn($order, $extra),
+            EmailTemplate::ORDER_REJECTED_CUSTOMER => $isArabic
+                ? $this->orderRejectedCustomerAr($order, $extra)
+                : $this->orderRejectedCustomerEn($order, $extra),
             EmailTemplate::ORDER_SHIPPED_CUSTOMER => $isArabic
                 ? $this->orderShippedCustomerAr($order, $extra)
                 : $this->orderShippedCustomerEn($order, $extra),
@@ -250,6 +259,186 @@ HTML,
     /**
      * @param array<string, mixed> $extra
      */
+    private function orderAcceptedCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $itemName = (string) ($extra['item_name'] ?? 'Your item');
+        $itemNameEsc = $this->esc($itemName);
+
+        return new RenderedEmail(
+            subject: "Your order {$ref} is confirmed by the seller — 3bayti",
+            textBody: <<<TXT
+Good news — the seller has accepted an item from your order and will begin preparing it.
+
+Order reference: {$ref}
+Item: {$itemName}
+
+We'll keep you posted as it moves through to shipping.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: "Order confirmed by the seller",
+                body: <<<HTML
+<p>Good news — the seller has accepted an item from your order and will begin preparing it.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Item:</strong> {$itemNameEsc}</p>
+<p>We'll keep you posted as it moves through to shipping.</p>
+HTML,
+            ),
+        );
+    }
+
+    private function orderAcceptedCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $itemName = (string) ($extra['item_name'] ?? 'منتجك');
+        $itemNameEsc = $this->esc($itemName);
+
+        return new RenderedEmail(
+            subject: "تم تأكيد طلبك {$ref} من قبل البائع — 3bayti",
+            textBody: <<<TXT
+خبر سار — قبل البائع أحد منتجات طلبك وسيبدأ في تجهيزه.
+
+رقم الطلب: {$ref}
+المنتج: {$itemName}
+
+سنبقيك على اطلاع حتى يتم الشحن.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: "تم تأكيد الطلب من قبل البائع",
+                body: <<<HTML
+<p>خبر سار — قبل البائع أحد منتجات طلبك وسيبدأ في تجهيزه.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>المنتج:</strong> {$itemNameEsc}</p>
+<p>سنبقيك على اطلاع حتى يتم الشحن.</p>
+HTML,
+            ),
+        );
+    }
+
+    private function orderPreparingCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $itemName = (string) ($extra['item_name'] ?? 'Your item');
+        $itemNameEsc = $this->esc($itemName);
+
+        return new RenderedEmail(
+            subject: "Your order {$ref} is being prepared — 3bayti",
+            textBody: <<<TXT
+An item from your order is now being prepared for shipment.
+
+Order reference: {$ref}
+Item: {$itemName}
+
+You'll receive a notification as soon as it ships.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: "Order being prepared",
+                body: <<<HTML
+<p>An item from your order is now being prepared for shipment.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Item:</strong> {$itemNameEsc}</p>
+<p>You'll receive a notification as soon as it ships.</p>
+HTML,
+            ),
+        );
+    }
+
+    private function orderPreparingCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $itemName = (string) ($extra['item_name'] ?? 'منتجك');
+        $itemNameEsc = $this->esc($itemName);
+
+        return new RenderedEmail(
+            subject: "جارٍ تجهيز طلبك {$ref} — 3bayti",
+            textBody: <<<TXT
+يتم الآن تجهيز أحد منتجات طلبك للشحن.
+
+رقم الطلب: {$ref}
+المنتج: {$itemName}
+
+ستصلك رسالة فور شحنه.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: "جارٍ تجهيز الطلب",
+                body: <<<HTML
+<p>يتم الآن تجهيز أحد منتجات طلبك للشحن.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>المنتج:</strong> {$itemNameEsc}</p>
+<p>ستصلك رسالة فور شحنه.</p>
+HTML,
+            ),
+        );
+    }
+
+    private function orderRejectedCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $itemName = (string) ($extra['item_name'] ?? 'An item');
+        $itemNameEsc = $this->esc($itemName);
+
+        return new RenderedEmail(
+            subject: "Update on your order {$ref} — 3bayti",
+            textBody: <<<TXT
+We're sorry — the seller is unable to fulfil an item from your order.
+
+Order reference: {$ref}
+Item: {$itemName}
+
+If you were charged for this item, a refund will be processed automatically. Any other items in your order are unaffected.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: "Update on your order",
+                body: <<<HTML
+<p>We're sorry — the seller is unable to fulfil an item from your order.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Item:</strong> {$itemNameEsc}</p>
+<p>If you were charged for this item, a refund will be processed automatically. Any other items in your order are unaffected.</p>
+HTML,
+            ),
+        );
+    }
+
+    private function orderRejectedCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $itemName = (string) ($extra['item_name'] ?? 'أحد المنتجات');
+        $itemNameEsc = $this->esc($itemName);
+
+        return new RenderedEmail(
+            subject: "تحديث بخصوص طلبك {$ref} — 3bayti",
+            textBody: <<<TXT
+نأسف — البائع غير قادر على تنفيذ أحد منتجات طلبك.
+
+رقم الطلب: {$ref}
+المنتج: {$itemName}
+
+إذا تم خصم قيمة هذا المنتج، فسيتم رد المبلغ تلقائيًا. باقي منتجات طلبك غير متأثرة.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: "تحديث بخصوص طلبك",
+                body: <<<HTML
+<p>نأسف — البائع غير قادر على تنفيذ أحد منتجات طلبك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>المنتج:</strong> {$itemNameEsc}</p>
+<p>إذا تم خصم قيمة هذا المنتج، فسيتم رد المبلغ تلقائيًا. باقي منتجات طلبك غير متأثرة.</p>
+HTML,
+            ),
+        );
+    }
+
     private function orderShippedCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();

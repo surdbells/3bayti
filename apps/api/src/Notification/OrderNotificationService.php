@@ -132,6 +132,38 @@ final class OrderNotificationService
     }
 
     /**
+     * A single item was accepted by its vendor (the seller confirmed it
+     * and will prepare it). Customer-only.
+     */
+    public function itemAccepted(Order $order, OrderItem $item): void
+    {
+        $this->sendToCustomer($order, EmailTemplate::ORDER_ACCEPTED_CUSTOMER, [
+            'item_name' => $item->getProductNameSnapshot(),
+        ]);
+    }
+
+    /**
+     * A single item moved into preparation. Customer-only.
+     */
+    public function itemPreparing(Order $order, OrderItem $item): void
+    {
+        $this->sendToCustomer($order, EmailTemplate::ORDER_PREPARING_CUSTOMER, [
+            'item_name' => $item->getProductNameSnapshot(),
+        ]);
+    }
+
+    /**
+     * A single item was rejected by its vendor (cannot be fulfilled).
+     * Customer-only.
+     */
+    public function itemRejected(Order $order, OrderItem $item): void
+    {
+        $this->sendToCustomer($order, EmailTemplate::ORDER_REJECTED_CUSTOMER, [
+            'item_name' => $item->getProductNameSnapshot(),
+        ]);
+    }
+
+    /**
      * A single item was marked shipped by its vendor.
      * Customer gets a per-item email (we don't wait for the whole
      * order to ship — they want to know as each piece moves).

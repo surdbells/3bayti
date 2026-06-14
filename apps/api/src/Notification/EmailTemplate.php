@@ -29,6 +29,9 @@ enum EmailTemplate: string
     case ORDER_PLACED_CUSTOMER = 'order.placed.customer';
     case ORDER_PAID_CUSTOMER = 'order.paid.customer';
     case ORDER_PAYMENT_FAILED_CUSTOMER = 'order.payment_failed.customer';
+    case ORDER_ACCEPTED_CUSTOMER = 'order.accepted.customer';
+    case ORDER_PREPARING_CUSTOMER = 'order.preparing.customer';
+    case ORDER_REJECTED_CUSTOMER = 'order.rejected.customer';
     case ORDER_SHIPPED_CUSTOMER = 'order.shipped.customer';
     case ORDER_DELIVERED_CUSTOMER = 'order.delivered.customer';
     case ORDER_CANCELLED_CUSTOMER = 'order.cancelled.customer';

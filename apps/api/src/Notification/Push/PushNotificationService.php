@@ -86,6 +86,33 @@ final class PushNotificationService
         ));
     }
 
+    /** An item in the order was accepted by the seller. */
+    public function itemAccepted(Order $order): void
+    {
+        $this->pushToCustomer($order, 'order.accepted', 'Order confirmed', sprintf(
+            'The seller has confirmed items from order %s and is preparing them.',
+            $order->getOrderReference(),
+        ));
+    }
+
+    /** An item in the order is being prepared. */
+    public function itemPreparing(Order $order): void
+    {
+        $this->pushToCustomer($order, 'order.preparing', 'Order being prepared', sprintf(
+            'Items from order %s are being prepared for shipment.',
+            $order->getOrderReference(),
+        ));
+    }
+
+    /** An item in the order was rejected by the seller. */
+    public function itemRejected(Order $order): void
+    {
+        $this->pushToCustomer($order, 'order.rejected', 'Order update', sprintf(
+            'There is an update on order %s.',
+            $order->getOrderReference(),
+        ));
+    }
+
     /** An item in the order was shipped. */
     public function itemShipped(Order $order): void
     {

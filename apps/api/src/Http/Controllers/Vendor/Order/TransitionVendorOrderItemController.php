@@ -219,10 +219,19 @@ final class TransitionVendorOrderItemController
             'vendor_note' => $input->note,
         ]);
 
-        // M3.1.7-H — notify customer of shipping/delivery milestones.
-        // Per-item notifications: customer wants to know as each piece
-        // moves, not just when the whole order completes.
-        if ($newStatus === OrderItem::ITEM_STATUS_SHIPPED) {
+        // Notify the customer of every line-item state change (email +
+        // push). Per-item: the customer wants to know as each piece moves
+        // — confirmed, preparing, shipped, delivered, or rejected.
+        if ($newStatus === OrderItem::ITEM_STATUS_ACCEPTED) {
+            $this->notifications->itemAccepted($order, $item);
+            $this->pushNotifications->itemAccepted($order);
+        } elseif ($newStatus === OrderItem::ITEM_STATUS_PREPARING) {
+            $this->notifications->itemPreparing($order, $item);
+            $this->pushNotifications->itemPreparing($order);
+        } elseif ($newStatus === OrderItem::ITEM_STATUS_REJECTED) {
+            $this->notifications->itemRejected($order, $item);
+            $this->pushNotifications->itemRejected($order);
+        } elseif ($newStatus === OrderItem::ITEM_STATUS_SHIPPED) {
             $this->notifications->itemShipped($order, $item);
             $this->pushNotifications->itemShipped($order);
         } elseif ($newStatus === OrderItem::ITEM_STATUS_DELIVERED) {
