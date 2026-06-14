@@ -40,6 +40,7 @@ final class UpdateVendorProductController
         private readonly RequestValidator $validator,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
+        private readonly \Bayti\Api\Domain\Media\ImageStorageService $imageStorage,
     ) {
     }
 
@@ -86,12 +87,45 @@ final class UpdateVendorProductController
             $category = $catRepo->find($input->category_id);
         }
 
+        // Snapshot the product's image URLs before mutation so we can
+        // delete any files orphaned by this update (bug 2: replaced images
+        // must be removed from storage). Only files we host are deleted;
+        // external/legacy URLs are left untouched.
+        $oldImageUrls = $this->collectImageUrls($product);
+
         $this->applyInput($product, $input, $category);
         $productRepo->save($product);
+
+        $this->deleteOrphanedImages($oldImageUrls, $this->collectImageUrls($product));
 
         return $this->ok(PaginatedEnvelope::single(
             $this->serializer->detailShape($product),
         ));
+    }
+
+    /** @return list<string> */
+    private function collectImageUrls(Product $product): array
+    {
+        $urls = $product->getImages();
+        $primary = $product->getPrimaryImageUrl();
+        if ($primary !== null && $primary !== '') {
+            $urls[] = $primary;
+        }
+        return array_values(array_unique(array_filter($urls)));
+    }
+
+    /**
+     * @param list<string> $oldUrls
+     * @param list<string> $newUrls
+     */
+    private function deleteOrphanedImages(array $oldUrls, array $newUrls): void
+    {
+        foreach (array_diff($oldUrls, $newUrls) as $url) {
+            $path = \Bayti\Api\Domain\Media\ImageStorageService::storagePathFromUrl($url);
+            if ($path !== null) {
+                $this->imageStorage->delete($path);
+            }
+        }
     }
 
     private function applyInput(Product $product, VendorProductInput $input, ?Category $category): void

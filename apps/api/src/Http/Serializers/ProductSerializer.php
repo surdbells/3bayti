@@ -154,6 +154,7 @@ final class ProductSerializer
             // Flat keys the management table + image cell read directly.
             'image'           => $primaryImage['url'] ?? null,
             'category'        => $category?->getName(),
+            'category_id'     => $category?->getId(),
             'category_slug'   => $category?->getSlug(),
             'status'          => $p->getStatus(),
             'price'           => $price,

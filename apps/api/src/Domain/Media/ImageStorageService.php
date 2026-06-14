@@ -170,6 +170,29 @@ final class ImageStorageService
         return $base . '/' . ltrim($storagePath, '/');
     }
 
+    /**
+     * The inverse of publicUrl(): given a public image URL, return the
+     * storage path relative to the uploads root — or null when the URL is
+     * not one we host (external/legacy URLs must never be deleted).
+     */
+    public static function storagePathFromUrl(?string $url): ?string
+    {
+        if ($url === null || $url === '') {
+            return null;
+        }
+        $base = rtrim($_ENV['UPLOADS_PUBLIC_URL'] ?? '', '/');
+        if ($base === '') {
+            $appUrl = rtrim($_ENV['APP_URL'] ?? 'http://localhost:8080', '/');
+            $base   = $appUrl . '/uploads';
+        }
+        $prefix = $base . '/';
+        if (!str_starts_with($url, $prefix)) {
+            return null;
+        }
+        $path = ltrim(substr($url, strlen($prefix)), '/');
+        return $path === '' ? null : $path;
+    }
+
     // ── private helpers ──────────────────────────────────────────────
 
     /**

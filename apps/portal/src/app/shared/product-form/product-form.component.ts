@@ -270,11 +270,15 @@ export class ProductFormComponent implements OnInit {
 
   fetchProductById(): void {
     this.ui.page_loading = true;
-    // Prefer slug (GET /products/{slug}) when provided — the admin list
-    // exposes slug + v3 id; vendor pages pass the legacy id.
+    // Admin pages pass slug (GET /products/{slug}); vendor pages pass the
+    // v3 id and must use the owner-scoped vendor endpoint, which returns
+    // products in ANY status (the storefront by-legacy-id/slug routes 404
+    // for v3-native products and for drafts).
     const req = this.productSlug
       ? this.adapter.get_v3('GET /products/:slug', { params: { slug: this.productSlug } })
-      : this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(this.productId) } });
+      : this.adminMode
+        ? this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(this.productId) } })
+        : this.adapter.get_v3('GET /vendor/products/:id', { params: { id: String(this.productId) } });
     req.subscribe({
       next: (response: any) => {
         const p = response?.data;
@@ -299,11 +303,13 @@ export class ProductFormComponent implements OnInit {
         this.model.status = p.status ?? 'active';
         if (this.adminMode) this.model.vendor_id = p.vendor?.id ?? p.vendor_id ?? null;
 
-        // Featured + gallery images.
-        const primary = p.primary_image?.url ?? p.primary_image_url ?? p.image_1 ?? '';
+        // Featured + gallery images. The vendor detail endpoint returns
+        // images as [{url, alt, ...}]; tolerate both that and bare strings.
+        const primary = p.primary_image?.url ?? p.primary_image_url ?? p.image ?? p.image_1 ?? '';
         if (primary && !String(primary).includes('placeholder')) this.model.image_1 = primary;
-        const imgs = p.image_urls ?? p.images ?? [];
-        this.existingImages = (Array.isArray(imgs) ? imgs : [])
+        const rawImgs = p.image_urls ?? p.images ?? [];
+        this.existingImages = (Array.isArray(rawImgs) ? rawImgs : [])
+          .map((img: any) => (typeof img === 'string' ? img : img?.url))
           .filter((src: string) => src && !src.includes('placeholder'));
         this.galleryUrls = [...this.existingImages];
 
@@ -313,17 +319,17 @@ export class ProductFormComponent implements OnInit {
           ? serverCollection.map((c: any) => (typeof c === 'object' ? c.id : c))
           : [];
 
-        // Sizes — accept either an array of labels or legacy flags.
+        // Sizes — v3 returns [{label, in_stock}]; tolerate bare strings/flags.
         const sizesArr: string[] = Array.isArray(p.sizes)
-          ? p.sizes.map((s: any) => String(s).toUpperCase())
+          ? p.sizes.map((s: any) => String(typeof s === 'string' ? s : s?.label ?? '').toUpperCase())
           : [];
         for (const [flag, label] of Object.entries(SIZE_MAP)) {
           if (sizesArr.includes(label)) (this.model as any)[flag] = true;
         }
 
-        // Colors — accept array or CSV.
+        // Colors — v3 returns [{label, hex_code}]; tolerate array of strings or CSV.
         const colorVals: string[] = Array.isArray(p.colors)
-          ? p.colors
+          ? p.colors.map((c: any) => (typeof c === 'string' ? c : c?.label)).filter(Boolean)
           : String(p.colors ?? '').split(',').map((s) => s.trim()).filter(Boolean);
         for (const c of colorVals) this.selected.add(c);
         this.model.colors = colorVals.join(',');
