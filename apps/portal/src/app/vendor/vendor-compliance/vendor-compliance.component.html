@@ -72,6 +72,17 @@
 
       <!-- Upload cards -->
       <section class="ax-page-section">
+        <!-- Review status banner -->
+        <div *ngIf="compliance_status === 'submitted'" class="ax-alert ax-alert-warning ax-mb-4">
+          Your documents have been submitted and are awaiting review.
+        </div>
+        <div *ngIf="compliance_status === 'approved'" class="ax-alert ax-alert-success ax-mb-4">
+          Your compliance documents have been approved.
+        </div>
+        <div *ngIf="compliance_status === 'rejected'" class="ax-alert ax-alert-danger ax-mb-4">
+          Your submission was rejected. Please re-upload.<span *ngIf="review_note"> Reason: “{{ review_note }}”</span>
+        </div>
+
         <h3 class="ax-h5 ax-m-0 ax-mb-3">{{ 'vendor_compliance_upload_title' | translate }}</h3>
 
         <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-4">

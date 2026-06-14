@@ -62,6 +62,7 @@ export class VendorComplianceComponent implements OnInit {
   };
 
   compliance_status = 'pending';
+  review_note: string | null = null;
 
   ngOnInit(): void {
     this.session_data = sessionStorage.getItem('SESSION');
@@ -100,6 +101,7 @@ export class VendorComplianceComponent implements OnInit {
         this.compliance.back = d.back || ph;
         this.compliance.license_doc = d.license_doc || ph;
         this.compliance_status = d.compliance_status ?? 'pending';
+        this.review_note = d.review_note ?? null;
         this.ui_controls.is_loading = false;
       },
       error: (e: any) => {

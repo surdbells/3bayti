@@ -60,6 +60,8 @@ final class GetVendorComplianceController
             'back'              => $this->docs->readAsDataUrl($vendor->getIdBack()),
             'license_doc'       => $this->docs->readAsDataUrl($vendor->getLicenseDoc()),
             'compliance_status' => $vendor->getComplianceStatus(),
+            'review_note'       => $vendor->getComplianceReviewNote(),
+            'reviewed_at'       => $vendor->getComplianceReviewedAt()?->format(\DateTimeInterface::ATOM),
             'is_active'         => $vendor->isApproved(),
         ]]);
     }
