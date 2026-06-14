@@ -18,15 +18,14 @@ import {
   type AxServerFetchResult,
   type AxDateRange,
 } from '../../shared/data/enterprise';
+import { ORDER_STATUS_OPTIONS, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
 
 export interface Transaction extends Record<string, unknown> {
   id: number;
   order_id: string;
-  transaction_id: string;
-  merchantReference: string;
   customer: string;
+  items_count: number;
   total_paid: string;
-  delivery_fee: string;
   status: string;
   created: string;
 }
@@ -79,24 +78,13 @@ export class ProcessingComponent implements OnInit {
       export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'orders-processing' },
       filters: [
         { key: 'date', label: 'Date', type: 'date-range' },
-        {
-          key: 'status', label: 'Status', type: 'select',
-          options: [
-            { label: 'Pending', value: 'pending' },
-            { label: 'Accepted', value: 'accepted' },
-            { label: 'Preparing', value: 'preparing' },
-            { label: 'Shipped', value: 'shipped' },
-            { label: 'Delivered', value: 'delivered' },
-            { label: 'Returned', value: 'returned' },
-            { label: 'Cancelled', value: 'cancelled' },
-          ],
-        },
+        { key: 'status', label: 'Status', type: 'select', options: ORDER_STATUS_OPTIONS },
+        { key: 'vendor', label: 'Store', type: 'select', optionsLoader: () => loadAdminVendorOptions(this.adapter) },
       ],
       columns: [
-        { key: 'order_id', label: 'Order ID', sortable: true, sticky: 'left', width: '13rem' },
-        { key: 'transaction_id', label: 'Transaction ID', hideOnMobile: true },
-        { key: 'merchantReference', label: 'Merchant ref', hideOnMobile: true },
+        { key: 'order_id', label: 'Order ref', sortable: true, sticky: 'left', width: '14rem' },
         { key: 'customer', label: 'Customer' },
+        { key: 'items_count', label: 'Items', align: 'center', hideOnMobile: true },
         { key: 'total_paid', label: 'Total', align: 'right',
           format: (v) => (v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—') },
         { key: 'status', label: 'Status', align: 'center' },
@@ -116,6 +104,7 @@ export class ProcessingComponent implements OnInit {
     };
     if (query.search) q.search = query.search;
     if (query.filters['status']) q.status = query.filters['status'];
+    if (query.filters['vendor']) q.vendor_id = query.filters['vendor'];
     const range = query.filters['date'] as AxDateRange | undefined;
     if (range?.from) q.since = range.from;
     if (range?.to) q.until = range.to;
@@ -137,17 +126,21 @@ export class ProcessingComponent implements OnInit {
   private mapRow(o: any): Transaction {
     const customer = o.customer ?? {};
     const name = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim();
+    const items: any[] = o.items ?? [];
     return {
       ...o,
       id: o.id,
       order_id: o.order_reference ?? o.id,
-      transaction_id: o.order_reference ?? '',
       customer: name || customer.email || '—',
+      items_count: items.reduce((s, i) => s + (Number(i.quantity) || 0), 0) || items.length,
       total_paid: o.total ?? o.subtotal ?? '0',
-      delivery_fee: o.delivery_fee ?? '0',
       status: o.status ?? '',
       created: o.date ?? o.created_at ?? '',
     } as Transaction;
+  }
+
+  prettyStatus(status: string): string {
+    return prettyOrderStatus(status);
   }
 
   onRowAction(e: { action: { id: string }; row: Transaction }) {
