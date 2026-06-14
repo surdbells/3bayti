@@ -62,6 +62,12 @@ final class VendorProductInput
     #[Assert\Positive(message: 'category_id must be a positive integer.')]
     public readonly ?int $category_id;
 
+    #[Assert\Positive(message: 'collection_id must be a positive integer.')]
+    public readonly ?int $collection_id;
+
+    #[Assert\Positive(message: 'label_id must be a positive integer.')]
+    public readonly ?int $label_id;
+
     #[Assert\Choice(
         choices: ['draft', 'active', 'inactive', 'published'],
         message: 'status must be draft, active, inactive, or published.',
@@ -104,6 +110,8 @@ final class VendorProductInput
         ?bool    $is_sale          = null,
         ?bool    $requires_extra_msmt = null,
         ?string  $extra_msmt       = null,
+        ?int     $collection_id    = null,
+        ?int     $label_id         = null,
     ) {
         $this->name              = $name;
         $this->description       = $description;
@@ -126,5 +134,7 @@ final class VendorProductInput
         $this->is_sale           = $is_sale;
         $this->requires_extra_msmt = $requires_extra_msmt;
         $this->extra_msmt        = $extra_msmt;
+        $this->collection_id     = $collection_id;
+        $this->label_id          = $label_id;
     }
 }

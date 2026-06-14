@@ -155,6 +155,12 @@ final class CreateVendorProductController
         if ($input->status !== null) {
             $product->setStatus($input->status);
         }
+        if ($input->collection_id !== null) {
+            $product->setCollectionId($input->collection_id);
+        }
+        if ($input->label_id !== null) {
+            $product->setLabelId($input->label_id);
+        }
         if ($category !== null) {
             $product->setCategory($category);
         }

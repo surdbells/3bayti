@@ -313,11 +313,14 @@ export class ProductFormComponent implements OnInit {
           .filter((src: string) => src && !src.includes('placeholder'));
         this.galleryUrls = [...this.existingImages];
 
-        // Collections multiselect.
-        const serverCollection = p.collection ?? [];
+        // Collections multiselect — the product holds a single collection_id;
+        // tolerate a legacy `collection` array too.
+        const serverCollection = p.collection ?? (p.collection_id != null ? [p.collection_id] : []);
         this.selectedCollectionIds = Array.isArray(serverCollection)
           ? serverCollection.map((c: any) => (typeof c === 'object' ? c.id : c))
           : [];
+        // Label (single).
+        if (p.label_id != null) this.model.label = p.label_id;
 
         // Sizes — v3 returns [{label, in_stock}]; tolerate bare strings/flags.
         const sizesArr: string[] = Array.isArray(p.sizes)
@@ -474,6 +477,12 @@ export class ProductFormComponent implements OnInit {
       extra_msmt: d.extra_msmt || null,
       status,
     };
+    // Collection + label assignment. The product schema holds a SINGLE
+    // collection and a single label, so we persist the first selected
+    // collection (the picker stays a multiselect for UX) and the chosen label.
+    const firstCollection = this.selectedCollectionIds.length ? Number(this.selectedCollectionIds[0]) : null;
+    if (firstCollection) payload['collection_id'] = firstCollection;
+    if (d.label) payload['label_id'] = Number(d.label);
     // Admin writes specify which vendor the product belongs to.
     if (this.adminMode && d.vendor_id) payload['vendor_id'] = d.vendor_id;
     return payload;

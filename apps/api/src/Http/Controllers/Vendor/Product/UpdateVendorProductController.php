@@ -150,6 +150,8 @@ final class UpdateVendorProductController
         if ($input->requires_extra_msmt !== null) $product->setRequiresExtraMsmt($input->requires_extra_msmt);
         if ($input->extra_msmt !== null)          $product->setExtraMsmt($input->extra_msmt);
         if ($input->status !== null)              $product->setStatus($input->status);
+        if ($input->collection_id !== null)       $product->setCollectionId($input->collection_id);
+        if ($input->label_id !== null)            $product->setLabelId($input->label_id);
         if ($category !== null)                   $product->setCategory($category);
     }
 }
