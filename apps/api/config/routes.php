@@ -453,6 +453,16 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Notification\MarkAdminNotificationsReadController::class,
         );
 
+        // Chat moderation — feed of PII-flagged message attempts.
+        $group->get(
+            '/chat/flagged',
+            \Bayti\Api\Http\Controllers\Admin\Chat\ListFlaggedMessagesController::class,
+        );
+        $group->get(
+            '/chat/conversations/{uuid}',
+            \Bayti\Api\Http\Controllers\Admin\Chat\GetConversationController::class,
+        );
+
         // Brand admin
         $group->get('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\ListBrandsAdminController::class);
         $group->post('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\CreateBrandController::class);

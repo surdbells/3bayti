@@ -71,10 +71,74 @@ class MessageRepository extends EntityRepository
         return array_reverse($items);
     }
 
+    /**
+     * Every message in a conversation, oldest→newest, including blocked
+     * ones — for admin investigation only (no viewer filtering).
+     *
+     * @return list<Message>
+     */
+    public function findAllForConversation(int $conversationId, int $limit, ?int $beforeId = null, ?int $afterId = null): array
+    {
+        $qb = $this->createQueryBuilder('m')
+            ->where('m.conversation = :cid')->setParameter('cid', $conversationId);
+
+        if ($beforeId !== null) {
+            $qb->andWhere('m.id < :before')->setParameter('before', $beforeId);
+        }
+        if ($afterId !== null) {
+            $qb->andWhere('m.id > :after')->setParameter('after', $afterId);
+        }
+
+        $items = $qb->orderBy('m.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()->getResult();
+
+        return array_reverse($items);
+    }
+
     public function findByUuid(string $uuid): ?Message
     {
         return $this->createQueryBuilder('m')
             ->where('m.uuid = :u')->setParameter('u', $uuid)
             ->getQuery()->getOneOrNullResult();
+    }
+
+    /**
+     * Flagged messages (PII attempts) for admin oversight, newest first,
+     * with their conversation context eager-loaded to avoid N+1 in the
+     * serializer. Optional `flagType` is a substring match so a stored
+     * combination like "phone,email" matches a filter of either.
+     *
+     * @return array{items: list<Message>, total: int}
+     */
+    public function findFlagged(int $limit, int $offset, ?string $flagType = null): array
+    {
+        $items = $this->flaggedBaseQuery($flagType)
+            ->leftJoin('m.conversation', 'c')->addSelect('c')
+            ->leftJoin('c.order', 'o')->addSelect('o')
+            ->leftJoin('c.customer', 'cu')->addSelect('cu')
+            ->leftJoin('c.vendor', 'v')->addSelect('v')
+            ->leftJoin('c.orderItem', 'oi')->addSelect('oi')
+            ->orderBy('m.id', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit)
+            ->getQuery()->getResult();
+
+        $total = (int) $this->flaggedBaseQuery($flagType)
+            ->select('COUNT(m.id)')
+            ->getQuery()->getSingleScalarResult();
+
+        return ['items' => $items, 'total' => $total];
+    }
+
+    private function flaggedBaseQuery(?string $flagType): \Doctrine\ORM\QueryBuilder
+    {
+        $qb = $this->createQueryBuilder('m')
+            ->where('m.isFlagged = :flagged')->setParameter('flagged', true);
+
+        if ($flagType !== null && $flagType !== '') {
+            $qb->andWhere('m.flagType LIKE :ft')->setParameter('ft', '%' . $flagType . '%');
+        }
+        return $qb;
     }
 }

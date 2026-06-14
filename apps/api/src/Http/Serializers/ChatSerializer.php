@@ -61,6 +61,44 @@ final class ChatSerializer
         ];
     }
 
+    /**
+     * Admin oversight view of a flagged message: the attempted content plus
+     * full conversation context (order, customer incl. email, vendor). Used
+     * only behind the admin guard.
+     *
+     * @return array<string, mixed>
+     */
+    public function flaggedMessageShape(Message $message): array
+    {
+        $conversation = $message->getConversation();
+        $customer = $conversation->getCustomer();
+        $vendor = $conversation->getVendor();
+        $item = $conversation->getOrderItem();
+        $customerName = trim(($customer->getFirstName() ?? '') . ' ' . ($customer->getLastName() ?? ''));
+
+        return [
+            'uuid'         => $message->getUuid(),
+            'sender_type'  => $message->getSenderType(),
+            'status'       => $message->getStatus(),
+            'flag_type'    => $message->getFlagType(),
+            'content'      => $message->getContent(),
+            'created_at'   => $message->getCreatedAt()->format(\DATE_ATOM),
+            'conversation' => [
+                'uuid'            => $conversation->getUuid(),
+                'order_reference' => $conversation->getOrder()->getOrderReference(),
+                'item_name'       => $item->getProductNameSnapshot(),
+                'customer'        => [
+                    'name'  => $customerName !== '' ? $customerName : 'Customer',
+                    'email' => $customer->getEmail(),
+                ],
+                'vendor'          => [
+                    'name' => $vendor->getName(),
+                    'slug' => $vendor->getSlug(),
+                ],
+            ],
+        ];
+    }
+
     /** @return array<string, mixed> */
     private function vendorShape(Vendor $vendor): array
     {
@@ -69,6 +107,36 @@ final class ChatSerializer
             'name'     => $vendor->getName(),
             'slug'     => $vendor->getSlug(),
             'logo_url' => $vendor->getLogoUrl(),
+        ];
+    }
+
+    /**
+     * Admin investigation view of a whole conversation — both parties named,
+     * no viewer scoping. Pair with messageShape over findAllForConversation.
+     *
+     * @return array<string, mixed>
+     */
+    public function adminConversationShape(Conversation $conversation): array
+    {
+        $customer = $conversation->getCustomer();
+        $vendor = $conversation->getVendor();
+        $item = $conversation->getOrderItem();
+        $customerName = trim(($customer->getFirstName() ?? '') . ' ' . ($customer->getLastName() ?? ''));
+
+        return [
+            'uuid'            => $conversation->getUuid(),
+            'status'          => $conversation->getStatus(),
+            'order_reference' => $conversation->getOrder()->getOrderReference(),
+            'item_name'       => $item->getProductNameSnapshot(),
+            'customer'        => [
+                'name'  => $customerName !== '' ? $customerName : 'Customer',
+                'email' => $customer->getEmail(),
+            ],
+            'vendor'          => [
+                'name' => $vendor->getName(),
+                'slug' => $vendor->getSlug(),
+            ],
+            'created_at'      => $conversation->getCreatedAt()->format(\DATE_ATOM),
         ];
     }
 
