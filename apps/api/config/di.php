@@ -731,12 +731,15 @@ return [
     // (AwsS3V3Adapter); this binding needs no change.
     \Bayti\Api\Domain\Media\ImageStorageService::class => \DI\autowire(),
     \Bayti\Api\Domain\Compliance\ComplianceDocumentService::class => \DI\autowire(),
-    \Bayti\Api\Domain\Compliance\ComplianceNotificationService::class => \DI\autowire(),
+    \Bayti\Api\Domain\Compliance\ComplianceNotificationService::class => \DI\autowire()
+        ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
     \Bayti\Api\Domain\Chat\ModerationService::class => \DI\autowire(),
     \Bayti\Api\Domain\Chat\OrderDetailsMessageBuilder::class => \DI\autowire(),
-    \Bayti\Api\Domain\Chat\OrderChatProvisioner::class => \DI\autowire(),
+    \Bayti\Api\Domain\Chat\OrderChatProvisioner::class => \DI\autowire()
+        ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
     \Bayti\Api\Domain\Chat\ChatMessageSender::class => \DI\autowire(),
-    \Bayti\Api\Notification\ChatNotificationService::class => \DI\autowire(),
+    \Bayti\Api\Notification\ChatNotificationService::class => \DI\autowire()
+        ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
     \Bayti\Api\Http\Serializers\ChatSerializer::class => \DI\autowire(),
 
     // Gift card repositories (M3.5) — autowire suffices; all deps are
