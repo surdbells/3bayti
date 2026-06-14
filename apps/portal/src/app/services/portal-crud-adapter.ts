@@ -6,7 +6,7 @@ import {
   HttpErrorResponse,
 } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { catchError, finalize, map, shareReplay, switchMap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
 import { resolveUrl } from '@3bayti/api-client';
@@ -72,47 +72,66 @@ export interface V3RequestOptions {
 export class PortalCrudAdapter {
   constructor(private readonly http: HttpClient, private readonly router: Router) {}
 
+  /**
+   * Single in-flight refresh, shared across all requests that 401 at the
+   * same time. Critical: the API rotates refresh tokens single-use and
+   * treats a re-presented (already-rotated) token as theft — revoking the
+   * whole family. Deduping to one refresh keeps concurrent 401s from
+   * tripping that and logging the user out everywhere.
+   */
+  private refresh$: Observable<string> | null = null;
+
   // ── Read ────────────────────────────────────────────────────────────
 
   get_v3(routeKey: V3RouteKey, opts?: V3RequestOptions): Observable<any> {
     const url = this.url(routeKey, opts);
-    return this.http
-      .get<any>(url, { headers: this.headers(opts?.authToken), params: this.qp(opts?.query) })
-      .pipe(catchError(this.handleError));
+    return this.send(
+      routeKey,
+      (token) => this.http.get<any>(url, { headers: this.headersFor(token), params: this.qp(opts?.query) }),
+      opts?.authToken,
+    );
   }
 
   // ── Write ───────────────────────────────────────────────────────────
 
   post_v3(routeKey: V3RouteKey, body: any, opts?: V3RequestOptions): Observable<any> {
     const url = this.url(routeKey, opts);
-    return this.http
-      .post<any>(url, body, { headers: this.headers(opts?.authToken), params: this.qp(opts?.query) })
-      .pipe(catchError(this.handleError));
+    return this.send(
+      routeKey,
+      (token) => this.http.post<any>(url, body, { headers: this.headersFor(token), params: this.qp(opts?.query) }),
+      opts?.authToken,
+    );
   }
 
   put_v3(routeKey: V3RouteKey, body: any, opts?: V3RequestOptions): Observable<any> {
     const url = this.url(routeKey, opts);
-    return this.http
-      .put<any>(url, body, { headers: this.headers(opts?.authToken), params: this.qp(opts?.query) })
-      .pipe(catchError(this.handleError));
+    return this.send(
+      routeKey,
+      (token) => this.http.put<any>(url, body, { headers: this.headersFor(token), params: this.qp(opts?.query) }),
+      opts?.authToken,
+    );
   }
 
   patch_v3(routeKey: V3RouteKey, body: any, opts?: V3RequestOptions): Observable<any> {
     const url = this.url(routeKey, opts);
-    return this.http
-      .patch<any>(url, body, { headers: this.headers(opts?.authToken), params: this.qp(opts?.query) })
-      .pipe(catchError(this.handleError));
+    return this.send(
+      routeKey,
+      (token) => this.http.patch<any>(url, body, { headers: this.headersFor(token), params: this.qp(opts?.query) }),
+      opts?.authToken,
+    );
   }
 
   delete_v3(routeKey: V3RouteKey, opts?: V3RequestOptions & { body?: any }): Observable<any> {
     const url = this.url(routeKey, opts);
-    return this.http
-      .delete<any>(url, {
-        headers: this.headers(opts?.authToken),
+    return this.send(
+      routeKey,
+      (token) => this.http.delete<any>(url, {
+        headers: this.headersFor(token),
         params: this.qp(opts?.query),
         body: opts?.body ?? null,
-      })
-      .pipe(catchError(this.handleError));
+      }),
+      opts?.authToken,
+    );
   }
 
   // ── Helpers ─────────────────────────────────────────────────────────
@@ -156,11 +175,125 @@ export class PortalCrudAdapter {
   }
 
   private headers(overrideToken?: string): HttpHeaders {
-    const token = overrideToken ?? this.getToken();
+    return this.headersFor(overrideToken ?? this.getToken());
+  }
+
+  private headersFor(token: string): HttpHeaders {
     return new HttpHeaders({
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     });
+  }
+
+  /**
+   * Issue a request and, on a 401 (expired/invalid access token),
+   * transparently refresh the token and retry once before giving up.
+   * Auth endpoints (login/refresh/confirm/reset) are exempt so their own
+   * 401s (e.g. bad credentials) surface to the caller instead of
+   * triggering a refresh or logout redirect.
+   *
+   * @param makeReq builds the HTTP call for a given bearer token, so the
+   *                retry can re-issue it with the freshly-minted token.
+   */
+  private send(
+    routeKey: string,
+    makeReq: (token: string) => Observable<any>,
+    authToken?: string,
+  ): Observable<any> {
+    const isAuthRoute = routeKey.includes('/auth/');
+    const firstToken = authToken ?? this.getToken();
+
+    return makeReq(firstToken).pipe(
+      catchError((err: HttpErrorResponse) => {
+        if (err.status !== 401 || isAuthRoute) {
+          return this.logAndRethrow(err);
+        }
+        // Access token rejected — try the refresh token, then retry once.
+        return this.refreshAccessToken().pipe(
+          switchMap((newToken) => makeReq(newToken)),
+          catchError(() => {
+            // Refresh failed (no/expired/revoked refresh token) — log out.
+            this.terminate();
+            return throwError(() => err);
+          }),
+        );
+      }),
+    );
+  }
+
+  /**
+   * Exchange the stored refresh token for a fresh access+refresh pair,
+   * persisting both back to the session. Shares one in-flight call across
+   * concurrent callers (see `refresh$`).
+   */
+  private refreshAccessToken(): Observable<string> {
+    if (this.refresh$) {
+      return this.refresh$;
+    }
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      return throwError(() => new Error('no_refresh_token'));
+    }
+
+    const url = this.url('POST /auth/refresh');
+    this.refresh$ = this.http
+      .post<any>(url, { refresh_token: refreshToken }, { headers: this.headersFor('') })
+      .pipe(
+        map((res: any) => {
+          const body = res?.data ?? res;
+          const access = body?.access_token;
+          if (!access) {
+            throw new Error('refresh_failed');
+          }
+          this.updateSessionTokens(access, body?.refresh_token);
+          return access as string;
+        }),
+        shareReplay(1),
+        finalize(() => {
+          this.refresh$ = null;
+        }),
+      );
+    return this.refresh$;
+  }
+
+  private getRefreshToken(): string {
+    const raw = sessionStorage.getItem('SESSION');
+    if (!raw) return '';
+    try {
+      return GlobalComponent.decodeBase64<any>(raw)?.refresh_token ?? '';
+    } catch {
+      return '';
+    }
+  }
+
+  /** Patch the access token (and rotated refresh token) into the session. */
+  private updateSessionTokens(accessToken: string, refreshToken?: string): void {
+    const raw = sessionStorage.getItem('SESSION');
+    if (!raw) return;
+    try {
+      const session = GlobalComponent.decodeBase64<any>(raw) ?? {};
+      session.token = accessToken;
+      if (refreshToken) {
+        session.refresh_token = refreshToken;
+      }
+      sessionStorage.setItem('SESSION', GlobalComponent.encodeBase64(session));
+    } catch {
+      /* leave the session untouched on encode failure */
+    }
+  }
+
+  private terminate(): void {
+    sessionStorage.removeItem('SESSION');
+    this.router.navigate(['/login']).catch(() => {});
+  }
+
+  private logAndRethrow(err: HttpErrorResponse): Observable<never> {
+    const message =
+      err.error instanceof ErrorEvent
+        ? err.error.message
+        : `Error ${err.status}: ${err.message}`;
+    console.error('[PortalCrudAdapter]', message, err);
+    return throwError(() => err);
   }
 
   private qp(
@@ -175,18 +308,4 @@ export class PortalCrudAdapter {
     }
     return p;
   }
-
-  private handleError = (err: HttpErrorResponse): Observable<never> => {
-    // 401 = token expired or invalid — clear session and redirect to login
-    if (err.status === 401) {
-      sessionStorage.removeItem('SESSION');
-      this.router.navigate(['/login']).catch(() => {});
-    }
-    const message =
-      err.error instanceof ErrorEvent
-        ? err.error.message
-        : `Error ${err.status}: ${err.message}`;
-    console.error('[PortalCrudAdapter]', message, err);
-    return throwError(() => err);
-  };
 }
