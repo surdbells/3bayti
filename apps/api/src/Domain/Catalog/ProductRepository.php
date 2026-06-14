@@ -94,6 +94,18 @@ class ProductRepository extends EntityRepository
      * @param array{vendorId:int, limit?:int, offset?:int, search?:string} $filters
      * @return array{items: list<Product>, total: int}
      */
+    /**
+     * A single product owned by the vendor, regardless of status (draft,
+     * inactive, etc.) — for the vendor's own detail/preview view.
+     */
+    public function findOneByIdForVendor(int $id, int $vendorId): ?Product
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.id = :id')->andWhere('p.vendor = :vid')
+            ->setParameter('id', $id)->setParameter('vid', $vendorId)
+            ->getQuery()->getOneOrNullResult();
+    }
+
     public function findForVendorPaginated(array $filters): array
     {
         $limit  = max(1, min(100, (int) ($filters['limit'] ?? 24)));

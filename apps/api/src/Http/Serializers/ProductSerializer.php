@@ -112,6 +112,34 @@ final class ProductSerializer
      * price, price_formatted) the table columns + image cell read
      * directly. Used by GET /v3/vendor/products.
      */
+    /**
+     * Vendor product DETAIL shape — the management shape plus the rich
+     * fields the vendor preview drawer needs (description, gallery, sizes,
+     * colors). Works for any status (drafts included). Used by
+     * GET /v3/vendor/products/{id}.
+     */
+    public function vendorDetailShape(Product $p): array
+    {
+        $inStock = $p->getStockQuantity() > 0 || $p->getAllowOversell();
+
+        return array_merge($this->vendorManageShape($p), [
+            'description' => $p->getDescription() ?? '',
+            'images'      => $this->imagesArray($p),
+            'sizes'       => array_map(
+                static fn (string $label) => ['label' => $label, 'in_stock' => $inStock],
+                $p->getAvailableSizes(),
+            ),
+            'colors'      => array_map(
+                static fn (string $label) => ['label' => $label, 'hex_code' => null, 'in_stock' => $inStock],
+                $p->getAvailableColors(),
+            ),
+            'delivery_info' => $p->getDeliveryInfo(),
+            'min_order_quantity' => $p->getMinOrderQty(),
+            'max_order_quantity' => $p->getMaxOrderQty(),
+            'allow_oversell'     => $p->getAllowOversell(),
+        ]);
+    }
+
     public function vendorManageShape(Product $p): array
     {
         $primaryImage = $this->primaryImage($p);

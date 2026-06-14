@@ -111,7 +111,7 @@ export const routes: Routes = [
     title: 'Create product'
   },
   {
-    path: 'edit',
+    path: 'edit-product',
     loadComponent: () => import('./vendor/edit-product/edit-product.component').then(m => m.EditProductComponent),
     canActivate: [vendorGuard],
     title: 'Edit product'

@@ -424,13 +424,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     this.ui.loaded_preview = false;
     this.previewImageIndex = 0;
 
-    const payload = {
-      token: this.user_session.token,
-      id: this.user_session.id,
-      product: id,
-    };
-
-    this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(id) } }).subscribe({
+    this.adapter.get_v3('GET /vendor/products/:id', { params: { id: String(id) } }).subscribe({
       next: (response: any) => {
         if (response?.data) {
           const p = response.data;
@@ -438,14 +432,22 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
             ...p,
             product_id: p.id,
             product_name: p.name,
-            product_price: p.price?.amount ?? p.price,
-            image_1: p.primary_image?.url ?? '',
+            product_price: typeof p.price === 'number' ? p.price : (p.price?.amount ?? 0),
+            price_formatted: p.price_formatted,
+            image_1: p.image ?? p.primary_image?.url ?? '',
+            // v3 detail arrays: images [{url}], sizes [{label}], colors [{label, hex_code}]
             images: (p.images ?? []).map((i: any) => i?.url ?? i),
-            category_name: p.category?.name ?? '',
+            sizes: (p.sizes ?? []).map((s: any) => (typeof s === 'string' ? s : s?.label)).filter(Boolean),
+            colors: (p.colors ?? []).map((c: any) => (typeof c === 'string' ? c : c?.label)).filter(Boolean),
+            category_name: p.category ?? '',
             product_status: p.status,
           };
           this.ui.loaded_preview = true;
         }
+      },
+      error: () => {
+        this.toast.error('Unable to load the product preview.');
+        this.ui.loaded_preview = true;
       },
     });
   }
@@ -483,24 +485,14 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
   }
 
   get previewColors(): { id: string; hex: string }[] {
-    if (!this.single_product.colors) return [];
-    return this.single_product.colors.split(',').map((c: string) => c.trim()).filter(Boolean)
-      .map((id: string) => ({ id, hex: COLOR_HEX_MAP[id] || '#CCCCCC' }));
+    const colors = this.single_product.colors;
+    if (!Array.isArray(colors)) return [];
+    return colors.filter(Boolean).map((id: string) => ({ id, hex: COLOR_HEX_MAP[id] || '#CCCCCC' }));
   }
 
   get previewSizes(): string[] {
-    const sizes: string[] = [];
-    const sizeMap: Record<string, string> = {
-      size_xs: 'XS', size_s: 'S', size_m: 'M', size_l: 'L',
-      size_xl: 'XL', size_xxl: 'XXL',
-      size_50: '50', size_52: '52', size_54: '54', size_56: '56',
-      size_58: '58', size_60: '60', size_62: '62',
-      size_custom: 'Custom',
-    };
-    for (const [key, label] of Object.entries(sizeMap)) {
-      if (this.single_product[key]) sizes.push(label);
-    }
-    return sizes;
+    const sizes = this.single_product.sizes;
+    return Array.isArray(sizes) ? sizes.filter(Boolean) : [];
   }
 
   get previewDeliveryTime(): string {

@@ -748,6 +748,10 @@ return function (App $app): void {
         $group->get('/products',
             \Bayti\Api\Http\Controllers\Vendor\Product\ListVendorOwnProductsController::class,
         );
+        // Single product (any status) for the vendor's preview/detail.
+        $group->get('/products/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Vendor\Product\GetVendorOwnProductController::class,
+        );
         $group->post('/products',
             \Bayti\Api\Http\Controllers\Vendor\Product\CreateVendorProductController::class,
         );
