@@ -124,7 +124,7 @@ final class ImageStorageService
         try {
             fwrite($tmp, $bytes);
             rewind($tmp);
-            $this->filesystem->writeStream($storagePath, $tmp, ['visibility' => \League\Flysystem\Visibility::PUBLIC]);
+            $this->writeStreamPublic($storagePath, $tmp);
         } finally {
             fclose($tmp);
         }
@@ -238,11 +238,34 @@ final class ImageStorageService
         }
 
         try {
-            $this->filesystem->writeStream($path, $resource, ['visibility' => \League\Flysystem\Visibility::PUBLIC]);
+            $this->writeStreamPublic($path, $resource);
         } finally {
             if (is_resource($resource)) {
                 fclose($resource);
             }
+        }
+    }
+
+    /**
+     * Write a stream with public visibility, forcing a 0022 umask for the
+     * duration so any directories Flysystem creates via mkdir() come out
+     * 0755 (world-traversable) rather than being clipped by a restrictive
+     * server umask (e.g. 0077 → 0700, which makes served uploads 403/404).
+     * Flysystem's LocalFilesystemAdapter does NOT chmod directories after
+     * mkdir, so the umask is the only lever for directory mode. The file
+     * itself is also chmod'd to 0644 by the 'public' visibility option.
+     *
+     * @param resource $resource
+     */
+    private function writeStreamPublic(string $path, $resource): void
+    {
+        $previousUmask = umask(0022);
+        try {
+            $this->filesystem->writeStream($path, $resource, [
+                'visibility' => \League\Flysystem\Visibility::PUBLIC,
+            ]);
+        } finally {
+            umask($previousUmask);
         }
     }
 
