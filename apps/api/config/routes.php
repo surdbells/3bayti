@@ -284,6 +284,21 @@ return function (App $app): void {
         );
     })->add(AuthMiddleware::class);
 
+    // Order-scoped customer↔vendor chat (customer side). One thread per
+    // order item; messages endpoint doubles as the polling source and
+    // carries the conversation meta so the screen opens in one call.
+    $app->group('/v3/chat', function (RouteCollectorProxy $group): void {
+        $group->get('/conversations', \Bayti\Api\Http\Controllers\Chat\Customer\ListConversationsController::class);
+        $group->get(
+            '/conversations/{uuid}/messages',
+            \Bayti\Api\Http\Controllers\Chat\Customer\GetMessagesController::class,
+        );
+        $group->post(
+            '/conversations/{uuid}/read',
+            \Bayti\Api\Http\Controllers\Chat\Customer\MarkReadController::class,
+        );
+    })->add(AuthMiddleware::class);
+
     // M3.2.X.18-D — Customer return detail/cancel + photo serve.
     // Separate /v3/returns group so customers can address returns
     // directly by id (matches mobile UX of "my returns" tab).
