@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 209 route keys.
+ * 214 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -53,6 +53,9 @@ export type V3RouteKey =
   | 'GET /cart'
   | 'GET /categories'
   | 'GET /categories/:slug'
+  | 'GET /chat/conversations'
+  | 'GET /chat/conversations/:uuid/messages'
+  | 'GET /chat/unread-count'
   | 'GET /checkout/status/:order_reference'
   | 'GET /featured-vendors'
   | 'GET /gift-cards/balance'
@@ -182,6 +185,8 @@ export type V3RouteKey =
   | 'POST /auth/validate-phone'
   | 'POST /cart/items'
   | 'POST /cart/merge'
+  | 'POST /chat/conversations/:uuid/messages'
+  | 'POST /chat/conversations/:uuid/read'
   | 'POST /checkout/initiate'
   | 'POST /gift-cards/:id/activate'
   | 'POST /gift-cards/purchase'
@@ -265,6 +270,9 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /cart',
   'GET /categories',
   'GET /categories/:slug',
+  'GET /chat/conversations',
+  'GET /chat/conversations/:uuid/messages',
+  'GET /chat/unread-count',
   'GET /checkout/status/:order_reference',
   'GET /featured-vendors',
   'GET /gift-cards/balance',
@@ -394,6 +402,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /auth/validate-phone',
   'POST /cart/items',
   'POST /cart/merge',
+  'POST /chat/conversations/:uuid/messages',
+  'POST /chat/conversations/:uuid/read',
   'POST /checkout/initiate',
   'POST /gift-cards/:id/activate',
   'POST /gift-cards/purchase',

@@ -933,6 +933,22 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'POST /vendor/chat/conversations/:uuid/read': {
     target: 'new', oldPath: '/vendors/common/chat-read', newPath: '/v3/vendor/chat/conversations/:uuid/read', shape: 'v3-envelope',
   },
+  // Order-scoped customer<->vendor chat (customer side).
+  'GET /chat/conversations': {
+    target: 'new', oldPath: '/chat/get_conversation', newPath: '/v3/chat/conversations', shape: 'v3-envelope',
+  },
+  'GET /chat/unread-count': {
+    target: 'new', oldPath: '/chat/get_unread_count', newPath: '/v3/chat/unread-count', shape: 'v3-envelope',
+  },
+  'GET /chat/conversations/:uuid/messages': {
+    target: 'new', oldPath: '/chat/get_messages', newPath: '/v3/chat/conversations/:uuid/messages', shape: 'v3-envelope',
+  },
+  'POST /chat/conversations/:uuid/messages': {
+    target: 'new', oldPath: '/chat/send_message', newPath: '/v3/chat/conversations/:uuid/messages', shape: 'v3-envelope',
+  },
+  'POST /chat/conversations/:uuid/read': {
+    target: 'new', oldPath: '/chat/mark_read', newPath: '/v3/chat/conversations/:uuid/read', shape: 'v3-envelope',
+  },
   'GET /vendor/dashboard': {
     target: 'new', oldPath: '/vendors/common/dashboard-summary', newPath: '/v3/vendor/dashboard', shape: 'v3-envelope',
   },
