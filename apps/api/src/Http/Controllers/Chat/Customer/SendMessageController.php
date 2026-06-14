@@ -38,6 +38,7 @@ final class SendMessageController
         private readonly EntityManagerInterface $em,
         private readonly ChatMessageSender $sender,
         private readonly ChatSerializer $serializer,
+        private readonly \Bayti\Api\Notification\ChatNotificationService $notifier,
     ) {
     }
 
@@ -75,6 +76,13 @@ final class SendMessageController
                 'Your message wasn\'t sent because it looks like it contains a ' . $moderation?->labels()
                 . '. To stay protected, please keep contact details out of chat.',
             );
+        }
+
+        // Notify the vendor (debounced). Fire-and-forget — never block the 201.
+        try {
+            $this->notifier->maybeNotify($conversation, Conversation::PARTY_VENDOR, $result->message);
+        } catch (\Throwable) {
+            // logged inside the notifier; nothing actionable here
         }
 
         return $this->created(['message' => $this->serializer->messageShape($result->message)]);

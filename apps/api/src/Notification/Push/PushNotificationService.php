@@ -46,7 +46,7 @@ use Psr\Log\NullLogger;
  * 'order.paid') and `order_id`/`order_reference` so the mobile app can
  * deep-link from a tapped notification to the right order screen.
  */
-final class PushNotificationService
+class PushNotificationService
 {
     public function __construct(
         private readonly PushSenderInterface $sender,
@@ -189,6 +189,42 @@ final class PushNotificationService
             'event'   => 'gift_card.expiry_nudge',
             'card_id' => $card->getId(),
             'user_id' => $user->getId(),
+        ];
+
+        foreach ($tokens as $deviceToken) {
+            $this->sendOne($deviceToken, $message, $context);
+        }
+    }
+
+    /**
+     * Push a new-chat-message ping to the recipient's devices. Never throws.
+     */
+    public function chatMessage(
+        \Bayti\Api\Domain\User\User $recipient,
+        \Bayti\Api\Domain\Chat\Conversation $conversation,
+        string $counterpartyName,
+        string $preview,
+    ): void {
+        $tokens = $this->activeTokensFor($recipient);
+        if ($tokens === []) {
+            return;
+        }
+
+        $orderReference = $conversation->getOrder()->getOrderReference();
+        $message = new PushMessage(
+            title: $counterpartyName,
+            body: mb_substr($preview, 0, 140),
+            data: [
+                'type'              => 'chat.message',
+                'conversation_uuid' => $conversation->getUuid(),
+                'order_reference'   => $orderReference,
+            ],
+        );
+
+        $context = [
+            'event'             => 'chat.message',
+            'conversation_uuid' => $conversation->getUuid(),
+            'user_id'           => $recipient->getId(),
         ];
 
         foreach ($tokens as $deviceToken) {

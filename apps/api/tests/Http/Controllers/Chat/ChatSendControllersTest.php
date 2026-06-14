@@ -15,6 +15,7 @@ use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Chat\Customer\SendMessageController as CustomerSend;
 use Bayti\Api\Http\Controllers\Chat\Vendor\SendMessageController as VendorSend;
 use Bayti\Api\Infrastructure\Auth\JwtService;
+use Bayti\Api\Notification\ChatNotificationService;
 use Bayti\Api\Tests\Http\HttpTestCase;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -74,6 +75,7 @@ final class ChatSendControllersTest extends HttpTestCase
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(ChatNotificationService::class, $this->createMock(ChatNotificationService::class));
     }
 
     private function bindForVendor(User $authUser, Conversation $conv): void
@@ -94,6 +96,7 @@ final class ChatSendControllersTest extends HttpTestCase
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(ChatNotificationService::class, $this->createMock(ChatNotificationService::class));
     }
 
     private function post(User $user, string $uri, array $body): ResponseInterface
