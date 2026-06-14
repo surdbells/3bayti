@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 204 route keys.
+ * 209 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -95,6 +95,9 @@ export type V3RouteKey =
   | 'GET /utility/collections'
   | 'GET /utility/stores'
   | 'GET /vendor/analytics'
+  | 'GET /vendor/chat/conversations'
+  | 'GET /vendor/chat/conversations/:uuid/messages'
+  | 'GET /vendor/chat/unread-count'
   | 'GET /vendor/collections'
   | 'GET /vendor/compliance'
   | 'GET /vendor/coupons'
@@ -190,6 +193,8 @@ export type V3RouteKey =
   | 'POST /me/wishlist/labels'
   | 'POST /orders/:id/cancel'
   | 'POST /payment/webhook/noon'
+  | 'POST /vendor/chat/conversations/:uuid/messages'
+  | 'POST /vendor/chat/conversations/:uuid/read'
   | 'POST /vendor/coupons'
   | 'POST /vendor/coupons/:id/toggle'
   | 'POST /vendor/labels'
@@ -302,6 +307,9 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /utility/collections',
   'GET /utility/stores',
   'GET /vendor/analytics',
+  'GET /vendor/chat/conversations',
+  'GET /vendor/chat/conversations/:uuid/messages',
+  'GET /vendor/chat/unread-count',
   'GET /vendor/collections',
   'GET /vendor/compliance',
   'GET /vendor/coupons',
@@ -397,6 +405,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /me/wishlist/labels',
   'POST /orders/:id/cancel',
   'POST /payment/webhook/noon',
+  'POST /vendor/chat/conversations/:uuid/messages',
+  'POST /vendor/chat/conversations/:uuid/read',
   'POST /vendor/coupons',
   'POST /vendor/coupons/:id/toggle',
   'POST /vendor/labels',

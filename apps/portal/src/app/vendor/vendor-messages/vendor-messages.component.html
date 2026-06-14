@@ -1,48 +1,147 @@
 <app-vendor-shell>
   <div class="ax-container">
+    <!-- Page header -->
     <header class="ax-page-header">
       <div class="ax-page-header-content">
-        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self: flex-start;">
+        <button
+          type="button"
+          (click)="goBack()"
+          class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
+          style="align-self: flex-start;">
           <app-icon name="arrow_back" aria-hidden="true"></app-icon>
           Back
         </button>
-        <span class="ax-page-header-eyebrow">Communications</span>
-        <h1 class="ax-page-title">Messages</h1>
-        <p class="ax-page-subtitle">
-          Messages from the 3bayti team<span *ngIf="unread > 0"> · <strong>{{ unread }}</strong> unread</span>.
-        </p>
+        <span class="ax-page-header-eyebrow">Orders</span>
+        <h1 class="ax-page-title">
+          Messages
+          <span *ngIf="unreadTotal > 0" class="chat-unread-pill">{{ unreadTotal }}</span>
+        </h1>
+        <p class="ax-page-subtitle">Chat with customers about their orders. Keep all conversations here — sharing personal contact details isn't allowed.</p>
       </div>
     </header>
 
-    <!-- Loading -->
-    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-      <span class="ax-spinner ax-spinner-lg" aria-label="Loading messages"></span>
-    </div>
-
-    <!-- List -->
-    <section class="ax-page-section" *ngIf="!ui_controls.is_loading && messages.length">
-      <ul class="vm-list">
-        <li *ngFor="let m of messages" class="vm-item" [class.vm-unread]="!m.is_read" (click)="markRead(m)">
-          <div class="vm-dot" [class.vm-dot-on]="!m.is_read" aria-hidden="true"></div>
-          <div class="vm-body">
-            <div class="vm-row">
-              <span class="vm-subject">{{ m.subject || 'Message' }}</span>
-              <span class="vm-date">{{ m.created ? (m.created | date:'mediumDate') : '' }}</span>
-            </div>
-            <p class="vm-text">{{ m.message }}</p>
+    <section class="ax-page-section">
+      <div class="chat-layout ax-card ax-p-0" [class.chat-thread-open]="selected">
+        <!-- ── Conversation list ─────────────────────────── -->
+        <aside class="chat-list">
+          <div class="chat-list-head">
+            <span class="ax-font-medium ax-text-primary">Conversations</span>
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="loadConversations()" [disabled]="ui.loadingList" aria-label="Refresh">
+              <app-icon name="refresh" aria-hidden="true"></app-icon>
+            </button>
           </div>
-        </li>
-      </ul>
-    </section>
 
-    <!-- Empty state -->
-    <section class="ax-page-section" *ngIf="!ui_controls.is_loading && !messages.length">
-      <div class="ax-card ax-p-8 ax-text-center">
-        <app-icon name="forum" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
-        <h3 class="ax-h4 ax-m-0 ax-mt-3">No messages yet</h3>
-        <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-          Messages from the 3bayti team will appear here.
-        </p>
+          <!-- Loading -->
+          <div *ngIf="ui.loadingList" class="ax-flex ax-justify-center ax-py-8">
+            <span class="ax-spinner ax-spinner-lg" aria-label="Loading conversations"></span>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="!ui.loadingList && ui.listError" class="chat-empty">
+            <app-icon name="error" aria-hidden="true"></app-icon>
+            <p>We couldn't load your conversations.</p>
+            <button type="button" class="ax-btn ax-btn-secondary ax-btn-sm" (click)="loadConversations()">Try again</button>
+          </div>
+
+          <!-- Empty -->
+          <div *ngIf="!ui.loadingList && !ui.listError && conversations.length === 0" class="chat-empty">
+            <app-icon name="chat_bubble" aria-hidden="true"></app-icon>
+            <p>No conversations yet. A thread opens automatically when a customer's order is paid.</p>
+          </div>
+
+          <!-- List -->
+          <ul *ngIf="!ui.loadingList && conversations.length > 0" class="chat-conv-list">
+            <li *ngFor="let c of conversations; trackBy: trackByUuid">
+              <button
+                type="button"
+                class="chat-conv-item"
+                [class.chat-conv-active]="selected?.uuid === c.uuid"
+                (click)="openConversation(c)">
+                <div class="chat-conv-avatar" aria-hidden="true">{{ (c.counterparty?.name || '?').charAt(0) }}</div>
+                <div class="chat-conv-body">
+                  <div class="chat-conv-top">
+                    <span class="chat-conv-name">{{ c.counterparty?.name || 'Customer' }}</span>
+                    <span class="chat-conv-time">{{ formatTime(c.last_message_at) }}</span>
+                  </div>
+                  <div class="chat-conv-meta">{{ c.order_reference }} · {{ c.item?.name }}</div>
+                  <div class="chat-conv-preview">{{ c.last_message_preview || 'No messages yet' }}</div>
+                </div>
+                <span *ngIf="c.unread_count > 0" class="chat-conv-badge">{{ c.unread_count }}</span>
+              </button>
+            </li>
+          </ul>
+        </aside>
+
+        <!-- ── Thread ────────────────────────────────────── -->
+        <section class="chat-thread">
+          <!-- No selection -->
+          <div *ngIf="!selected" class="chat-thread-placeholder">
+            <app-icon name="forum" aria-hidden="true"></app-icon>
+            <p>Select a conversation to view the order chat.</p>
+          </div>
+
+          <ng-container *ngIf="selected as conv">
+            <!-- Thread header -->
+            <header class="chat-thread-head">
+              <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm chat-thread-back" (click)="closeThread()" aria-label="Back to list">
+                <app-icon name="arrow_back" aria-hidden="true"></app-icon>
+              </button>
+              <div class="chat-thread-head-body">
+                <span class="chat-conv-name">{{ conv.counterparty?.name || 'Customer' }}</span>
+                <span class="chat-thread-sub">{{ conv.order_reference }} · {{ conv.item?.name }}</span>
+              </div>
+              <span *ngIf="conv.status === 'closed'" class="chat-closed-tag">Closed</span>
+            </header>
+
+            <!-- Messages -->
+            <div #threadScroll class="chat-thread-scroll">
+              <div *ngIf="ui.loadingThread" class="ax-flex ax-justify-center ax-py-8">
+                <span class="ax-spinner ax-spinner-lg" aria-label="Loading messages"></span>
+              </div>
+
+              <ng-container *ngIf="!ui.loadingThread">
+                <div *ngFor="let m of messages; trackBy: trackByUuid">
+                  <!-- System (order details / notices) -->
+                  <div *ngIf="isSystem(m)" class="chat-system">
+                    <pre class="chat-system-text">{{ m.content }}</pre>
+                  </div>
+
+                  <!-- Party message -->
+                  <div *ngIf="!isSystem(m)" class="chat-row" [class.chat-row-mine]="isMine(m)">
+                    <div class="chat-bubble" [class.chat-bubble-mine]="isMine(m)" [class.chat-bubble-blocked]="m.status === 'blocked'">
+                      <div class="chat-bubble-text">{{ m.content }}</div>
+                      <div class="chat-bubble-foot">
+                        <span *ngIf="m.status === 'blocked'" class="chat-blocked-tag">
+                          <app-icon name="block" aria-hidden="true"></app-icon> Not delivered
+                        </span>
+                        <span class="chat-bubble-time">{{ formatTime(m.created_at) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </ng-container>
+            </div>
+
+            <!-- Composer -->
+            <form class="chat-composer" (ngSubmit)="send()">
+              <textarea
+                class="chat-input"
+                [(ngModel)]="draft"
+                name="draft"
+                rows="1"
+                placeholder="Type a message…"
+                [disabled]="conv.status === 'closed' || ui.sending"
+                (keydown.enter)="$event.preventDefault(); send()"></textarea>
+              <button
+                type="submit"
+                class="ax-btn ax-btn-primary chat-send-btn"
+                [disabled]="!draft.trim() || conv.status === 'closed' || ui.sending">
+                <span *ngIf="ui.sending" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                <app-icon *ngIf="!ui.sending" name="send" aria-hidden="true"></app-icon>
+              </button>
+            </form>
+          </ng-container>
+        </section>
       </div>
     </section>
   </div>
