@@ -732,6 +732,7 @@ return [
     \Bayti\Api\Domain\Media\ImageStorageService::class => \DI\autowire(),
     \Bayti\Api\Domain\Compliance\ComplianceDocumentService::class => \DI\autowire(),
     \Bayti\Api\Domain\Compliance\ComplianceNotificationService::class => \DI\autowire(),
+    \Bayti\Api\Domain\Chat\ModerationService::class => \DI\autowire(),
 
     // Gift card repositories (M3.5) — autowire suffices; all deps are
     // EntityManagerInterface which is already bound above.
