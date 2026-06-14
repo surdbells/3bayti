@@ -52,7 +52,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity(repositoryClass: PromoRedemptionRepository::class)]
 #[ORM\Table(name: 'promo_redemptions')]
-final class PromoRedemption
+class PromoRedemption
 {
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]

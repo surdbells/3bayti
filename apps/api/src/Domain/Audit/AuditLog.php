@@ -39,7 +39,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(columns: ['subject_type', 'subject_id'], name: 'audit_log_subject_idx')]
 #[ORM\Index(columns: ['user_id', 'created_at'], name: 'audit_log_user_created_idx')]
 #[ORM\Index(columns: ['created_at'], name: 'audit_log_created_idx')]
-final class AuditLog
+class AuditLog
 {
     public const ACTION_CREATED = 'created';
     public const ACTION_UPDATED = 'updated';

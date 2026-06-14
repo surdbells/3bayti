@@ -18,7 +18,7 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'gift_card_transactions')]
-final class GiftCardTransaction
+class GiftCardTransaction
 {
     public const TYPE_DEBIT  = 'debit';
     public const TYPE_CREDIT = 'credit';

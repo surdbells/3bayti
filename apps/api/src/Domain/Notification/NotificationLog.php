@@ -59,7 +59,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Index(columns: ['sent_at'], name: 'idx_notification_logs_sent_at')]
 #[ORM\Index(columns: ['recipient'], name: 'idx_notification_logs_recipient')]
 #[ORM\Index(columns: ['status', 'sent_at'], name: 'idx_notification_logs_status_sent_at')]
-final class NotificationLog
+class NotificationLog
 {
     public const STATUS_SENT = 'sent';
     public const STATUS_FAILED = 'failed';
