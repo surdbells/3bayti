@@ -308,6 +308,14 @@ class Product
      */
     public function setStatus(string $status): void
     {
+        // Tolerate common API/client aliases before validating against the
+        // canonical set: 'published' is the customer-facing word for active,
+        // and 'inactive' is the word for a hidden (soft-deleted) listing.
+        $status = match ($status) {
+            'published' => self::STATUS_ACTIVE,
+            'inactive'  => self::STATUS_SOFT_DELETED,
+            default     => $status,
+        };
         $valid = [self::STATUS_ACTIVE, self::STATUS_DRAFT, self::STATUS_SOFT_DELETED];
         if (!in_array($status, $valid, true)) {
             throw new \InvalidArgumentException(

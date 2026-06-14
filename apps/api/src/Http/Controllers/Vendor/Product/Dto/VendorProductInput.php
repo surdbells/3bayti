@@ -63,8 +63,8 @@ final class VendorProductInput
     public readonly ?int $category_id;
 
     #[Assert\Choice(
-        choices: ['draft', 'active', 'inactive'],
-        message: 'status must be draft, active, or inactive.',
+        choices: ['draft', 'active', 'inactive', 'published'],
+        message: 'status must be draft, active, inactive, or published.',
     )]
     public readonly ?string $status;
 

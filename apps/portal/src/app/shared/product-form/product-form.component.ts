@@ -296,7 +296,7 @@ export class ProductFormComponent implements OnInit {
         this.model.is_sale = !!p.is_sale;
         this.model.require_extra_msmt = !!(p.requires_extra_msmt ?? p.require_extra_msmt);
         this.model.extra_msmt = p.extra_msmt ?? '';
-        this.model.status = p.status ?? 'published';
+        this.model.status = p.status ?? 'active';
         if (this.adminMode) this.model.vendor_id = p.vendor?.id ?? p.vendor_id ?? null;
 
         // Featured + gallery images.
@@ -426,7 +426,7 @@ export class ProductFormComponent implements OnInit {
         : 'Make this product live now. It will be visible to customers immediately. Please review price, stock, and images before publishing.',
       confirmLabel: this.isEdit ? 'Save' : 'Publish',
       cancelLabel: 'Cancel',
-    }).then((ok) => { if (ok) this.submit('published'); });
+    }).then((ok) => { if (ok) this.submit('active'); });
   }
 
   startSave(): void {
