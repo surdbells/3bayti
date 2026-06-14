@@ -189,6 +189,10 @@ export class SettingsPage implements OnInit, OnDestroy {
     this.router.navigate(['/ticketlist']);
   }
 
+  openGiftCards(): void {
+    this.router.navigate(['/gift-cards']);
+  }
+
   openHelp(): void {
     const phone = '971504559975';
     const msg = encodeURIComponent('Hello, I need assistance.');

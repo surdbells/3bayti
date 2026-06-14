@@ -1,4 +1,5 @@
 import {Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {DecimalPipe} from '@angular/common';
 import {Cart} from "../../class/cart";
 import {Labels} from "../../class/labels";
 import {Subscription} from "rxjs";
@@ -71,6 +72,7 @@ import { AddressService, SavedAddress } from '../../core/services/address.servic
     IonAccordionGroup,
     IonAccordion,
     FormsModule,
+    DecimalPipe,
     AxIconComponent,
     AxLoaderComponent,
     AxTextFieldComponent,
