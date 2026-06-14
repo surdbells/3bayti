@@ -68,6 +68,8 @@ final class ListAdminOrdersController
         $status = $this->parseStatus($query['status'] ?? null);
         $userIdFilter = $this->parsePositiveInt($query['user_id'] ?? null);
         $vendorIdFilter = $this->parsePositiveInt($query['vendor_id'] ?? null);
+        $since = $this->parseDate($query['since'] ?? null, false);
+        $until = $this->parseDate($query['until'] ?? null, true);
 
         /** @var OrderRepository $orders */
         $orders = $this->em->getRepository(Order::class);
@@ -77,6 +79,8 @@ final class ListAdminOrdersController
             $status,
             $userIdFilter,
             $vendorIdFilter,
+            $since,
+            $until,
         );
 
         // Audit the listing access. Subject is the admin User
@@ -103,7 +107,7 @@ final class ListAdminOrdersController
         );
 
         $items = array_map(
-            fn (Order $o): array => $this->serializer->listShape($o),
+            fn (Order $o): array => $this->serializer->adminListShape($o),
             $list,
         );
 
@@ -160,5 +164,28 @@ final class ListAdminOrdersController
         }
         $n = (int) $raw;
         return $n > 0 ? $n : null;
+    }
+
+    /**
+     * Parse a date filter value into a DateTimeImmutable, or null. A bare
+     * date (YYYY-MM-DD) is snapped to the start of the day for the lower
+     * bound and the end of the day for the upper bound, so an inclusive
+     * [since, until] range covers whole days.
+     */
+    private function parseDate(mixed $raw, bool $endOfDay): ?\DateTimeImmutable
+    {
+        if (!is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+        $raw = trim($raw);
+        try {
+            $dt = new \DateTimeImmutable($raw);
+        } catch (\Exception) {
+            return null;
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw) === 1) {
+            $dt = $endOfDay ? $dt->setTime(23, 59, 59) : $dt->setTime(0, 0, 0);
+        }
+        return $dt;
     }
 }

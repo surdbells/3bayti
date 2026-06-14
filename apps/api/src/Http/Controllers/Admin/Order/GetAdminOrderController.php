@@ -90,6 +90,6 @@ final class GetAdminOrderController
             $returns = [];
         }
 
-        return $this->ok(['order' => $this->serializer->detailShape($order, $returns)]);
+        return $this->ok(['order' => $this->serializer->adminDetailShape($order, $returns)]);
     }
 }

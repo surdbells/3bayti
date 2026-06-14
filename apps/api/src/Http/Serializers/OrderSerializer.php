@@ -8,6 +8,7 @@ use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderAddress;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\Order\OrderReturnRequest;
+use Bayti\Api\Domain\User\User;
 
 /**
  * Convert Order entities into mobile-friendly response shapes.
@@ -101,6 +102,44 @@ final class OrderSerializer
         $shape['billing_address'] = $this->addressShape($order->getBillingAddress());
         $shape['shipping_address'] = $this->addressShape($order->getShippingAddress());
         return $shape;
+    }
+
+    /**
+     * Admin list row — the standard list shape plus the customer
+     * (account holder) block. Admin-only: vendors deliberately do not
+     * receive customer contact in their order list. The caller eagerly
+     * loads o.user (OrderRepository::paginatedForAdmin) so this does not
+     * trigger an N+1.
+     */
+    public function adminListShape(Order $order, ?array $returns = null): array
+    {
+        $shape = $this->listShape($order, $returns);
+        $shape['customer'] = $this->customerShape($order->getUser());
+        return $shape;
+    }
+
+    /**
+     * Admin order detail — detail shape plus the customer block, so the
+     * order-management screen can show the account holder alongside the
+     * shipping recipient.
+     */
+    public function adminDetailShape(Order $order, ?array $returns = null): array
+    {
+        $shape = $this->detailShape($order, $returns);
+        $shape['customer'] = $this->customerShape($order->getUser());
+        return $shape;
+    }
+
+    /** @return array{id:int, first_name:string|null, last_name:string|null, email:string|null, phone:string|null} */
+    private function customerShape(User $user): array
+    {
+        return [
+            'id' => $user->getId() ?? 0,
+            'first_name' => $user->getFirstName(),
+            'last_name' => $user->getLastName(),
+            'email' => $user->getEmail(),
+            'phone' => $user->getPhone(),
+        ];
     }
 
     /**

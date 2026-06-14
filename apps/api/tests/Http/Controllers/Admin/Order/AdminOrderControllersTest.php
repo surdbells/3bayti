@@ -49,7 +49,7 @@ final class AdminOrderControllersTest extends HttpTestCase
         $orderRepo = $this->createMock(OrderRepository::class);
         $orderRepo->expects(self::once())
             ->method('paginatedForAdmin')
-            ->with(10, 0, Order::STATUS_PAID, 42, 5)
+            ->with(10, 0, Order::STATUS_PAID, 42, 5, null, null)
             ->willReturn([[], 0]);
 
         $this->bindEm($admin, $orderRepo);
@@ -61,6 +61,31 @@ final class AdminOrderControllersTest extends HttpTestCase
         $lastAudit = end($this->recordedAuditLogs);
         self::assertSame(AuditLog::ACTION_VIEWED, $lastAudit->getAction());
         self::assertSame('User', $lastAudit->getSubjectType()); // list view uses actor as subject
+    }
+
+    #[Test]
+    public function listForwardsDateRangeFilter(): void
+    {
+        $admin = $this->makeAdminUser(99);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->expects(self::once())
+            ->method('paginatedForAdmin')
+            ->with(
+                self::anything(),
+                self::anything(),
+                null,
+                null,
+                null,
+                self::isInstanceOf(\DateTimeImmutable::class),
+                self::isInstanceOf(\DateTimeImmutable::class),
+            )
+            ->willReturn([[], 0]);
+
+        $this->bindEm($admin, $orderRepo);
+        $response = $this->makeGet($admin, '/v3/admin/orders?since=2026-01-01&until=2026-01-31');
+
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
@@ -80,6 +105,9 @@ final class AdminOrderControllersTest extends HttpTestCase
 
         $body = $this->jsonBody($response);
         self::assertSame(100, $body['order']['id']);
+        // admin detail includes the customer (account holder) block
+        self::assertSame(42, $body['order']['customer']['id']);
+        self::assertArrayHasKey('email', $body['order']['customer']);
 
         // Audit row should be on the Order subject
         self::assertGreaterThan(0, count($this->recordedAuditLogs));

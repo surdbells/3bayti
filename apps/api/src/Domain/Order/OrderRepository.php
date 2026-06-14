@@ -206,6 +206,8 @@ class OrderRepository extends EntityRepository
         ?string $statusFilter = null,
         ?int $userIdFilter = null,
         ?int $vendorIdFilter = null,
+        ?\DateTimeImmutable $since = null,
+        ?\DateTimeImmutable $until = null,
     ): array {
         $limit = max(1, min($limit, 100));
         $offset = max(0, $offset);
@@ -225,6 +227,12 @@ class OrderRepository extends EntityRepository
         }
         if ($userIdFilter !== null) {
             $totalQb->andWhere('o.user = :user')->setParameter('user', $userIdFilter);
+        }
+        if ($since !== null) {
+            $totalQb->andWhere('o.createdAt >= :since')->setParameter('since', $since);
+        }
+        if ($until !== null) {
+            $totalQb->andWhere('o.createdAt <= :until')->setParameter('until', $until);
         }
         $total = (int) $totalQb->getQuery()->getSingleScalarResult();
 
@@ -248,6 +256,12 @@ class OrderRepository extends EntityRepository
         if ($userIdFilter !== null) {
             $idQb->andWhere('o.user = :user')->setParameter('user', $userIdFilter);
         }
+        if ($since !== null) {
+            $idQb->andWhere('o.createdAt >= :since')->setParameter('since', $since);
+        }
+        if ($until !== null) {
+            $idQb->andWhere('o.createdAt <= :until')->setParameter('until', $until);
+        }
         $idQb->orderBy('o.createdAt', 'DESC')
             ->setMaxResults($limit)
             ->setFirstResult($offset);
@@ -259,8 +273,9 @@ class OrderRepository extends EntityRepository
         }
 
         $orders = $this->createQueryBuilder('o')
-            ->select('o', 'i')
+            ->select('o', 'i', 'u')
             ->leftJoin('o.items', 'i')
+            ->leftJoin('o.user', 'u')
             ->where('o.id IN (:ids)')
             ->setParameter('ids', $ids)
             ->orderBy('o.createdAt', 'DESC')
