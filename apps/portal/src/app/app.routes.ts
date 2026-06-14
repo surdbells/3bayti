@@ -17,9 +17,9 @@ export const routes: Routes = [
   },
   {
     path: 'account',
-    loadComponent: () => import('./vendor/user/user.component').then(m => m.UserComponent),
+    loadComponent: () => import('./vendor/vendor-metrics/vendor-metrics.component').then(m => m.VendorMetricsComponent),
     canActivate: [vendorGuard],
-    title: 'Account'
+    title: 'Dashboard'
   },
   {
     path: 'reset',
