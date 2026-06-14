@@ -25,6 +25,14 @@ class ProductCollection
     #[ORM\Column(name: 'name', type: 'string', length: 200)]
     private string $name;
 
+    /**
+     * Legacy `collections.collections_id`, preserved so the migration is
+     * idempotent and legacy ids can be mapped to v3 ids. Null for
+     * collections created natively in v3.
+     */
+    #[ORM\Column(name: 'legacy_collection_id', type: 'integer', nullable: true, unique: true)]
+    private ?int $legacyCollectionId = null;
+
     #[ORM\Column(name: 'slug', type: 'string', length: 220, unique: true)]
     private string $slug;
 
@@ -59,6 +67,8 @@ class ProductCollection
 
     public function getId(): ?int             { return $this->id; }
     public function getName(): string         { return $this->name; }
+    public function getLegacyCollectionId(): ?int { return $this->legacyCollectionId; }
+    public function setLegacyCollectionId(?int $id): void { $this->legacyCollectionId = $id; }
     public function getSlug(): string         { return $this->slug; }
     public function getDescription(): ?string { return $this->description; }
     public function getCoverImageUrl(): ?string{ return $this->coverImageUrl; }
