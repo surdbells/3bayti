@@ -752,6 +752,10 @@ return function (App $app): void {
         $group->get('/products/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Vendor\Product\GetVendorOwnProductController::class,
         );
+        // Per-product sales (summary + daily series + recent orders).
+        $group->get('/products/{id:[0-9]+}/sales',
+            \Bayti\Api\Http\Controllers\Vendor\Product\GetVendorProductSalesController::class,
+        );
         $group->post('/products',
             \Bayti\Api\Http\Controllers\Vendor\Product\CreateVendorProductController::class,
         );

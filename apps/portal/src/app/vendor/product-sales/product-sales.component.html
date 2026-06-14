@@ -1,0 +1,92 @@
+<app-vendor-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self: flex-start;">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
+          Back to products
+        </button>
+        <span class="ax-page-header-eyebrow">Product sales</span>
+        <h1 class="ax-page-title">{{ productName || 'Product' }}</h1>
+        <p class="ax-page-subtitle">Realised sales (paid orders and beyond) for this product.</p>
+      </div>
+    </header>
+
+    <!-- Loading -->
+    <div *ngIf="loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading sales"></span>
+    </div>
+
+    <ng-container *ngIf="!loading">
+      <!-- KPI cards -->
+      <section class="ax-page-section">
+        <div class="ax-grid ax-grid-cols-2 ax-md-grid-cols-4 ax-gap-4">
+          <div class="ax-card ax-p-4">
+            <div class="ps-kpi-label">Units sold</div>
+            <div class="ps-kpi-value">{{ summary.units_sold }}</div>
+          </div>
+          <div class="ax-card ax-p-4">
+            <div class="ps-kpi-label">Revenue</div>
+            <div class="ps-kpi-value">{{ summary.revenue_formatted }}</div>
+          </div>
+          <div class="ax-card ax-p-4">
+            <div class="ps-kpi-label">Orders</div>
+            <div class="ps-kpi-value">{{ summary.order_count }}</div>
+          </div>
+          <div class="ax-card ax-p-4">
+            <div class="ps-kpi-label">Avg order value</div>
+            <div class="ps-kpi-value">AED {{ summary.avg_order_value | number:'1.2-2' }}</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Revenue chart -->
+      <section class="ax-page-section" *ngIf="series.length">
+        <div class="ax-card ax-p-5">
+          <h2 class="ax-h5 ax-m-0 ax-mb-4">Revenue over time</h2>
+          <div class="ps-chart">
+            <div *ngFor="let p of series" class="ps-bar-wrap" [title]="p.day + ' · AED ' + (p.revenue | number:'1.2-2') + ' · ' + p.units + ' units'">
+              <div class="ps-bar" [style.height.%]="barHeight(p)"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recent orders -->
+      <section class="ax-page-section">
+        <div class="ax-card ax-p-0">
+          <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+            <h2 class="ax-h5 ax-m-0">Recent orders</h2>
+          </div>
+
+          <div *ngIf="recentOrders.length; else noOrders">
+            <table class="ps-table">
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Date</th>
+                  <th class="ax-text-center">Qty</th>
+                  <th class="ax-text-right">Line total</th>
+                  <th class="ax-text-center">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let o of recentOrders">
+                  <td class="ax-font-medium">{{ o.order_reference }}</td>
+                  <td>{{ o.created_at | date:'mediumDate' }}</td>
+                  <td class="ax-text-center">{{ o.quantity }}</td>
+                  <td class="ax-text-right">AED {{ o.line_total | number:'1.2-2' }}</td>
+                  <td class="ax-text-center"><span [ngClass]="statusBadgeClass(o.status)">{{ o.status | titlecase }}</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <ng-template #noOrders>
+            <div class="ax-p-8 ax-text-center ax-text-secondary">No sales recorded for this product yet.</div>
+          </ng-template>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</app-vendor-shell>

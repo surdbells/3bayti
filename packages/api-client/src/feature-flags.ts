@@ -929,6 +929,9 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /vendor/products': {
     target: 'new', oldPath: '/vendors/products/get-products', newPath: '/v3/vendor/products', shape: 'v3-envelope',
   },
+  'GET /vendor/products/:id/sales': {
+    target: 'new', oldPath: '/vendors/products/product-sales', newPath: '/v3/vendor/products/:id/sales', shape: 'v3-envelope',
+  },
   'GET /vendor/products/:id': {
     target: 'new', oldPath: '/vendors/products/getProductById', newPath: '/v3/vendor/products/:id', shape: 'v3-envelope',
   },

@@ -1,0 +1,26 @@
+.ps-kpi-label { font-size: 0.8rem; color: var(--ax-color-text-secondary); margin-bottom: 0.35rem; }
+.ps-kpi-value { font-size: 1.5rem; font-weight: 700; color: var(--ax-color-text-primary); line-height: 1.1; }
+
+.ps-chart {
+  display: flex; align-items: flex-end; gap: 4px;
+  height: 120px; padding-top: 0.5rem;
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+}
+.ps-bar-wrap { flex: 1 1 0; display: flex; align-items: flex-end; height: 100%; min-width: 3px; }
+.ps-bar {
+  width: 100%; border-radius: 3px 3px 0 0;
+  background: var(--ax-color-brand, #1f6f54);
+  transition: opacity .15s;
+}
+.ps-bar-wrap:hover .ps-bar { opacity: 0.75; }
+
+.ps-table { width: 100%; border-collapse: collapse; }
+.ps-table th, .ps-table td {
+  padding: 0.7rem 1rem; text-align: left;
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+  font-size: 0.875rem;
+}
+.ps-table th { font-weight: 600; color: var(--ax-color-text-secondary); font-size: 0.8rem; }
+.ps-table tbody tr:last-child td { border-bottom: none; }
+.ps-table .ax-text-center { text-align: center; }
+.ps-table .ax-text-right { text-align: right; }

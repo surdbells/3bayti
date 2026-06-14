@@ -206,6 +206,12 @@ export const routes: Routes = [
     title: 'Product Sales'
   },
   {
+    path: 'vendor_product_sales',
+    loadComponent: () => import('./vendor/product-sales/product-sales.component').then(m => m.ProductSalesComponent),
+    canActivate: [vendorGuard],
+    title: 'Product Sales'
+  },
+  {
     path: 'measurements',
     loadComponent: () => import('./vendor/measurements/measurements.component').then(m => m.MeasurementsComponent),
     canActivate: [vendorGuard],

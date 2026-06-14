@@ -414,9 +414,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
   }
 
   productSales(id: number, name: string): void {
-    localStorage.setItem('PRODUCT_ID', String(id));
-    localStorage.setItem('PRODUCT_NAME', name);
-    this.router.navigate(['/product_sales']);
+    this.router.navigate(['/vendor_product_sales'], { queryParams: { id, name } });
   }
 
   preview(id: number): void {
