@@ -145,12 +145,8 @@ export class ProcessingComponent implements OnInit {
 
   onRowAction(e: { action: { id: string }; row: Transaction }) {
     if (e.action.id === 'view') {
-      this.openPopup('/single?order=' + e.row.id);
+      this.router.navigate(['/single'], { queryParams: { order: e.row.id } });
     }
-  }
-
-  openPopup(path: string) {
-    window.open(path, '_blank', 'width=900,height=800');
   }
 
   goBack() { this.router.navigate(['/backend']); }

@@ -1,5 +1,5 @@
-<main class="ax-main" style="padding: var(--ax-space-5);">
-  <div style="max-width: 68rem; margin: 0 auto;">
+<app-admin-shell>
+  <div class="ax-container" style="padding-top: var(--ax-space-5); padding-bottom: var(--ax-space-5);">
 
     <!-- Loading -->
     <div *ngIf="ui.loading" class="ax-flex ax-justify-center ax-py-8">
@@ -11,7 +11,7 @@
       <app-icon name="error_outline" aria-hidden="true"></app-icon>
       <h2 class="ax-h5 ax-mt-2 ax-mb-1">Order not found</h2>
       <p class="ax-text-secondary ax-m-0">We couldn't load this order. It may have been removed.</p>
-      <button type="button" class="ax-btn ax-btn-secondary ax-mt-4" (click)="close()">Close</button>
+      <button type="button" class="ax-btn ax-btn-secondary ax-mt-4" (click)="close()">Back to orders</button>
     </div>
 
     <!-- Content -->
@@ -31,7 +31,7 @@
           <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="loadOrder()" [disabled]="ui.loading">
             <app-icon name="refresh" aria-hidden="true"></app-icon> Refresh
           </button>
-          <button type="button" class="ax-btn ax-btn-secondary ax-btn-sm" (click)="close()">Close</button>
+          <button type="button" class="ax-btn ax-btn-secondary ax-btn-sm" (click)="close()"><app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to orders</button>
         </div>
       </div>
 
@@ -234,4 +234,4 @@
       </div>
     </ng-container>
   </div>
-</main>
+</app-admin-shell>

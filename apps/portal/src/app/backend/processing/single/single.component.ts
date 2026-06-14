@@ -7,6 +7,7 @@ import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 
 interface OrderItemRow {
   id: number;
@@ -44,7 +45,7 @@ const ITEM_STATUSES = [
 @Component({
   selector: 'app-single',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [CommonModule, FormsModule, IconComponent, AdminShellComponent],
   templateUrl: './single.component.html',
   styleUrl: './single.component.css',
 })
@@ -365,6 +366,6 @@ export class SingleComponent implements OnInit {
   }
 
   close() {
-    window.close();
+    this.router.navigate(['/processing']);
   }
 }

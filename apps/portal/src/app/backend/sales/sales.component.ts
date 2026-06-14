@@ -149,8 +149,9 @@ export class SalesComponent implements OnInit {
     } as SaleRow;
   }
 
-  onRowAction(e: { action: { id: string }; row: SaleRow }) {    if (e.action.id === 'store') {
-      window.open('/plural?vendor=' + e.row.store, '_blank', 'width=900,height=800');
+  onRowAction(e: { action: { id: string }; row: SaleRow }) {
+    if (e.action.id === 'store') {
+      this.router.navigate(['/plural'], { queryParams: { vendor: e.row.store } });
     }
   }
 
