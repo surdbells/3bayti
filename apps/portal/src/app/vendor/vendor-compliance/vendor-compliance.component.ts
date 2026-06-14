@@ -61,6 +61,8 @@ export class VendorComplianceComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
+  compliance_status = 'pending';
+
   ngOnInit(): void {
     this.session_data = sessionStorage.getItem('SESSION');
     this.user_session = GlobalComponent.decodeBase64(this.session_data);
@@ -70,10 +72,7 @@ export class VendorComplianceComponent implements OnInit {
       return;
     }
 
-    this.compliance.front = this.user_session.id_front;
-    this.compliance.back = this.user_session.id_back;
-    this.compliance.license_doc = this.user_session.license_doc;
-
+    // Documents are loaded fresh from v3 (get_data), not the session blob.
     this.get_single.id = this.user_session.id;
     this.get_single.token = this.user_session.token;
     this.get_data();
@@ -93,13 +92,14 @@ export class VendorComplianceComponent implements OnInit {
 
   get_data() {
     this.ui_controls.is_loading = true;
-    this.adapter.get_v3('GET /vendor/onboarding/status').subscribe({
+    this.adapter.get_v3('GET /vendor/compliance').subscribe({
       next: (response: any) => {
-        if (response) {
-          this.compliance = response.data;
-        } else if (false) {
-          this.error_notification(response.message);
-        }
+        const d = response?.data ?? {};
+        const ph = 'assets/img/placeholder-1.png';
+        this.compliance.front = d.front || ph;
+        this.compliance.back = d.back || ph;
+        this.compliance.license_doc = d.license_doc || ph;
+        this.compliance_status = d.compliance_status ?? 'pending';
         this.ui_controls.is_loading = false;
       },
       error: (e: any) => {
@@ -111,9 +111,6 @@ export class VendorComplianceComponent implements OnInit {
   }
 
   upload_id() {
-    this.compliance.id = this.user_session.id;
-    this.compliance.token = this.user_session.token;
-
     if (this.compliance.front.length < 40) {
       this.error_notification('ID Front is required');
       return;
@@ -124,7 +121,11 @@ export class VendorComplianceComponent implements OnInit {
     }
 
     this.ui_controls.is_submitting = true;
-    this.adapter.post_v3('POST /vendor/onboarding/submit', this.compliance).subscribe({
+    this.adapter.patch_v3('PATCH /vendor/compliance', {
+      front: this.compliance.front,
+      back: this.compliance.back,
+      license_doc: this.compliance.license_doc,
+    }).subscribe({
       next: (response: any) => {
         if (response?.data) {
           this.success_notification('Compliance submitted.');

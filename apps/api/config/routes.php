@@ -668,6 +668,16 @@ return function (App $app): void {
             '/notifications/mark-read',
             \Bayti\Api\Http\Controllers\Vendor\Notification\MarkVendorNotificationsReadController::class,
         );
+        // Vendor KYC compliance documents — replaces the legacy
+        // /vendors/settings/update-compliance + the misused onboarding submit.
+        $group->get(
+            '/compliance',
+            \Bayti\Api\Http\Controllers\Vendor\Compliance\GetVendorComplianceController::class,
+        );
+        $group->patch(
+            '/compliance',
+            \Bayti\Api\Http\Controllers\Vendor\Compliance\UpdateVendorComplianceController::class,
+        );
 
         // M3.4-C — Vendor product reviews (read-only).
         $group->get('/reviews',

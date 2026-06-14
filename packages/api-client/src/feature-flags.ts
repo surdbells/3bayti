@@ -960,7 +960,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/settings/vendor-store-tax', newPath: '/v3/vendor/store/tax', shape: 'v3-envelope',
   },
   'PATCH /vendor/compliance': {
-    target: 'old', oldPath: '/vendors/settings/update-compliance', newPath: '/v3/vendor/compliance', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/settings/update-compliance', newPath: '/v3/vendor/compliance', shape: 'v3-envelope',
+  },
+  'GET /vendor/compliance': {
+    target: 'new', oldPath: '/vendors/common/compliance', newPath: '/v3/vendor/compliance', shape: 'v3-envelope',
   },
   'PATCH /vendor/store': {
     target: 'new', oldPath: '/vendors/settings/update-vendor-store', newPath: '/v3/vendor/store', shape: 'v3-envelope',

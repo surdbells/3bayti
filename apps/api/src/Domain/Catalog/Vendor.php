@@ -255,6 +255,24 @@ class Vendor
     #[ORM\Column(name: 'trade_license_number', type: 'string', length: 255, nullable: true)]
     private ?string $tradeLicenseNumber = null;
 
+    /**
+     * KYC compliance documents (base64 data URLs, parity with the legacy
+     * store). Kept in the DB rather than on public storage; exposed only to
+     * the authenticated owner via GET /v3/vendor/compliance.
+     */
+    #[ORM\Column(name: 'id_front', type: 'text', nullable: true)]
+    private ?string $idFront = null;
+
+    #[ORM\Column(name: 'id_back', type: 'text', nullable: true)]
+    private ?string $idBack = null;
+
+    #[ORM\Column(name: 'license_doc', type: 'text', nullable: true)]
+    private ?string $licenseDoc = null;
+
+    /** 'pending' | 'submitted' | 'approved' | 'rejected'. */
+    #[ORM\Column(name: 'compliance_status', type: 'string', length: 20, options: ['default' => 'pending'])]
+    private string $complianceStatus = 'pending';
+
     #[ORM\Column(name: 'licensing_authority', type: 'string', length: 50, nullable: true)]
     private ?string $licensingAuthority = null;
 
@@ -323,8 +341,7 @@ class Vendor
     public function getDescription(): ?string { return $this->description; }
     public function getLogoUrl(): ?string { return $this->logoUrl; }
     public function getCoverImageUrl(): ?string { return $this->coverImageUrl; }
-    public function getContactEmail(): string { return $this->contactEmail; }
-    public function getContactPhone(): ?string { return $this->contactPhone; }
+    public function getContactEmail(): string { return $this->contactEmail; }    public function getContactPhone(): ?string { return $this->contactPhone; }
     public function isActive(): bool { return $this->isActive; }
     public function isVerified(): bool { return $this->isVerified; }
 
@@ -343,6 +360,29 @@ class Vendor
     public function setLogoUrl(?string $url): void { $this->logoUrl = $url; }
     public function setCoverImageUrl(?string $url): void { $this->coverImageUrl = $url; }
     public function setContactEmail(string $email): void { $this->contactEmail = $email; }
+
+    public function getIdFront(): ?string { return $this->idFront; }
+    public function getIdBack(): ?string { return $this->idBack; }
+    public function getLicenseDoc(): ?string { return $this->licenseDoc; }
+    public function getComplianceStatus(): string { return $this->complianceStatus; }
+
+    /**
+     * Store/replace the KYC documents and move compliance to 'submitted'.
+     * Null arguments leave the corresponding document unchanged.
+     */
+    public function submitCompliance(?string $idFront, ?string $idBack, ?string $licenseDoc): void
+    {
+        if ($idFront !== null) {
+            $this->idFront = $idFront;
+        }
+        if ($idBack !== null) {
+            $this->idBack = $idBack;
+        }
+        if ($licenseDoc !== null) {
+            $this->licenseDoc = $licenseDoc;
+        }
+        $this->complianceStatus = 'submitted';
+    }
     public function setContactPhone(?string $phone): void { $this->contactPhone = $phone; }
     public function setActive(bool $active): void { $this->isActive = $active; }
     public function setVerified(bool $verified): void { $this->isVerified = $verified; }
