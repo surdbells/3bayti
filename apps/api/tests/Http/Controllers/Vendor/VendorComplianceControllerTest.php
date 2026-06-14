@@ -6,6 +6,7 @@ namespace Bayti\Api\Tests\Http\Controllers\Vendor;
 
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
+use Bayti\Api\Domain\Compliance\ComplianceDocumentService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Vendor\Compliance\GetVendorComplianceController;
@@ -17,9 +18,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 
 /**
- * v3 vendor compliance (KYC) — GET loads the vendor's documents + status;
- * PATCH stores them and moves compliance to 'submitted'. Replaces the
- * legacy session-blob reliance + the misused onboarding submit.
+ * v3 vendor compliance (KYC) — documents are stored as PRIVATE files (the
+ * vendor row holds the path); GET reads them back as data URLs, PATCH
+ * stores new uploads and marks 'submitted'.
  */
 #[CoversClass(GetVendorComplianceController::class)]
 #[CoversClass(UpdateVendorComplianceController::class)]
@@ -55,6 +56,14 @@ final class VendorComplianceControllerTest extends HttpTestCase
             $this->saved = $v;
         });
 
+        $docs = $this->createMock(ComplianceDocumentService::class);
+        $docs->method('store')->willReturnCallback(
+            static fn (int $vid, string $type, string $url): string => "compliance/vendor-{$vid}/{$type}-x.png"
+        );
+        $docs->method('readAsDataUrl')->willReturnCallback(
+            static fn (?string $path): ?string => $path === null ? null : 'data:image/png;base64,AAAA'
+        );
+
         $em = $this->stubEm(function ($em) use ($userRepo, $vendorRepo): void {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
@@ -62,6 +71,7 @@ final class VendorComplianceControllerTest extends HttpTestCase
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(ComplianceDocumentService::class, $docs);
     }
 
     private function token(User $user): string
@@ -70,11 +80,11 @@ final class VendorComplianceControllerTest extends HttpTestCase
     }
 
     #[Test]
-    public function getReturnsDocumentsAndStatus(): void
+    public function getReturnsDocumentsAsDataUrlsAndStatus(): void
     {
         $user = $this->vendorUser(100);
         $vendor = $this->vendor(101);
-        $vendor->submitCompliance('data:image/png;base64,' . str_repeat('A', 60), null, null);
+        $vendor->submitCompliance('compliance/vendor-101/front-x.png', null, null);
         $this->bindDeps($user, $vendor);
 
         $res = $this->handle($this->jsonRequest('GET', '/v3/vendor/compliance', [], [
@@ -84,6 +94,7 @@ final class VendorComplianceControllerTest extends HttpTestCase
         self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
         $data = $this->jsonBody($res)['data'];
         self::assertStringStartsWith('data:image/png', $data['front']);
+        self::assertNull($data['back']);
         self::assertSame('submitted', $data['compliance_status']);
         self::assertTrue($data['is_active']);
     }
@@ -100,14 +111,18 @@ final class VendorComplianceControllerTest extends HttpTestCase
         $res = $this->handle($this->jsonRequest('PATCH', '/v3/vendor/compliance', [
             'front' => $front,
             'back' => $back,
-            'license_doc' => 'assets/img/placeholder-1.png', // unchanged placeholder → ignored
+            'license_doc' => 'assets/img/placeholder-1.png',
         ], ['Authorization' => 'Bearer ' . $this->token($user)]));
 
         self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
+        $data = $this->jsonBody($res)['data'];
+        self::assertTrue($data['has_front']);
+        self::assertTrue($data['has_back']);
+        self::assertFalse($data['has_license_doc']);
         self::assertNotNull($this->saved);
-        self::assertSame($front, $this->saved->getIdFront());
-        self::assertSame($back, $this->saved->getIdBack());
-        self::assertNull($this->saved->getLicenseDoc()); // placeholder ignored
+        self::assertSame('compliance/vendor-101/front-x.png', $this->saved->getIdFront());
+        self::assertSame('compliance/vendor-101/back-x.png', $this->saved->getIdBack());
+        self::assertNull($this->saved->getLicenseDoc());
         self::assertSame('submitted', $this->saved->getComplianceStatus());
     }
 

@@ -133,6 +133,43 @@ final class ImageStorageService
     }
 
     /**
+     * Store raw bytes with PRIVATE visibility (not web-reachable). Used for
+     * sensitive documents (KYC) that must only be served through
+     * authenticated endpoints.
+     */
+    public function storeRawPrivate(string $bytes, string $storagePath): StoredImage
+    {
+        $tmp = tmpfile();
+        if ($tmp === false) {
+            throw new \RuntimeException('Failed to allocate temp file for raw private write.');
+        }
+        try {
+            fwrite($tmp, $bytes);
+            rewind($tmp);
+            $this->writeStreamPrivate($storagePath, $tmp);
+        } finally {
+            fclose($tmp);
+        }
+        $mime = $this->mimeFromExtension(pathinfo($storagePath, PATHINFO_EXTENSION));
+        return new StoredImage($storagePath, $mime, strlen($bytes));
+    }
+
+    /**
+     * Read a stored file's raw bytes. Returns null when the file is absent.
+     */
+    public function read(string $storagePath): ?string
+    {
+        try {
+            if (!$this->filesystem->fileExists($storagePath)) {
+                return null;
+            }
+            return $this->filesystem->read($storagePath);
+        } catch (FilesystemException) {
+            return null;
+        }
+    }
+
+    /**
      * Delete a stored image. Idempotent.
      */
     public function delete(string $storagePath): void
@@ -286,6 +323,18 @@ final class ImageStorageService
         try {
             $this->filesystem->writeStream($path, $resource, [
                 'visibility' => \League\Flysystem\Visibility::PUBLIC,
+            ]);
+        } finally {
+            umask($previousUmask);
+        }
+    }
+
+    private function writeStreamPrivate(string $path, $resource): void
+    {
+        $previousUmask = umask(0077);
+        try {
+            $this->filesystem->writeStream($path, $resource, [
+                'visibility' => \League\Flysystem\Visibility::PRIVATE,
             ]);
         } finally {
             umask($previousUmask);

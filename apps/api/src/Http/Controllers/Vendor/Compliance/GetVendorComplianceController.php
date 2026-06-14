@@ -6,6 +6,7 @@ namespace Bayti\Api\Http\Controllers\Vendor\Compliance;
 
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
+use Bayti\Api\Domain\Compliance\ComplianceDocumentService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
@@ -19,9 +20,9 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * GET /v3/vendor/compliance
  *
- * The authenticated vendor's KYC documents + compliance status, for the
- * compliance page. Replaces the legacy reliance on the session blob's
- * id_front/id_back/license_doc fields.
+ * The authenticated vendor's KYC documents (read from PRIVATE storage and
+ * returned as base64 data URLs in this authenticated response only) plus
+ * compliance status. Replaces the legacy reliance on the session blob.
  */
 final class GetVendorComplianceController
 {
@@ -30,6 +31,7 @@ final class GetVendorComplianceController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly ComplianceDocumentService $docs,
     ) {
     }
 
@@ -54,9 +56,9 @@ final class GetVendorComplianceController
         $vendor = $vendors[0];
 
         return $this->ok(['data' => [
-            'front'             => $vendor->getIdFront(),
-            'back'              => $vendor->getIdBack(),
-            'license_doc'       => $vendor->getLicenseDoc(),
+            'front'             => $this->docs->readAsDataUrl($vendor->getIdFront()),
+            'back'              => $this->docs->readAsDataUrl($vendor->getIdBack()),
+            'license_doc'       => $this->docs->readAsDataUrl($vendor->getLicenseDoc()),
             'compliance_status' => $vendor->getComplianceStatus(),
             'is_active'         => $vendor->isApproved(),
         ]]);
