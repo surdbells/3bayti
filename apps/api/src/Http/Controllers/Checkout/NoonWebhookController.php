@@ -78,6 +78,7 @@ final class NoonWebhookController
         // M3.2.X.8-D's PromoCodeResolverService: `useAttributes=false` means
         // nullable+default parameters are not auto-injected from bindings.
         private readonly LoggerInterface $logger,
+        private readonly \Bayti\Api\Domain\Chat\OrderChatProvisioner $chatProvisioner,
     ) {
     }
 
@@ -263,6 +264,18 @@ final class NoonWebhookController
 
             $this->notifications->orderPaid($order);
             $this->pushNotifications->orderPaid($order);
+
+            // Auto-create the per-item customer<->vendor chat threads.
+            // Fire-and-forget: provisioning failure must never abort the
+            // webhook (the order is already paid). Idempotent on retry.
+            try {
+                $this->chatProvisioner->provisionForOrder($order);
+            } catch (\Throwable $e) {
+                $this->logger->error('order_chat.provision_failed', [
+                    'order_reference' => $order->getOrderReference(),
+                    'error'           => $e->getMessage(),
+                ]);
+            }
         } elseif ($transition === 'failed') {
             $this->notifications->orderPaymentFailed($order);
             $this->pushNotifications->orderPaymentFailed($order);

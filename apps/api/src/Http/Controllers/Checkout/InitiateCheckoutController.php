@@ -114,6 +114,7 @@ final class InitiateCheckoutController
         private readonly \Bayti\Api\Notification\OrderNotificationService $notifications,
         private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly PromoCodeResolverService $promoResolver,
+        private readonly \Bayti\Api\Domain\Chat\OrderChatProvisioner $chatProvisioner,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -385,6 +386,17 @@ final class InitiateCheckoutController
 
             $this->notifications->orderPlaced($order);
             $this->pushNotifications->orderPlaced($order);
+
+            // Order is paid (no gateway) — provision the per-item chats now.
+            // Fire-and-forget: must not abort the response.
+            try {
+                $this->chatProvisioner->provisionForOrder($order);
+            } catch (\Throwable $e) {
+                $this->logger->error('order_chat.provision_failed', [
+                    'order_reference' => $orderReference,
+                    'error'           => $e->getMessage(),
+                ]);
+            }
 
             $this->logger->info('checkout.initiate: gift-card full-cover — gateway skipped', [
                 'user_id'         => $user->getId(),
