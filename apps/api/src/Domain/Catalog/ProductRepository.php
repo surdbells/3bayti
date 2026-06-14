@@ -109,6 +109,31 @@ class ProductRepository extends EntityRepository
                ->setParameter('q', '%' . strtolower(trim($search)) . '%');
         }
 
+        $status = $filters['status'] ?? null;
+        if (is_string($status) && $status !== '') {
+            $qb->andWhere('p.status = :status')->setParameter('status', $status);
+        }
+
+        $stockStatus = $filters['stock_status'] ?? null;
+        if (is_string($stockStatus) && $stockStatus !== '') {
+            $qb->andWhere('p.stockStatus = :stockStatus')->setParameter('stockStatus', $stockStatus);
+        }
+
+        $categoryId = $filters['category_id'] ?? null;
+        if ($categoryId !== null && (int) $categoryId > 0) {
+            $qb->andWhere('IDENTITY(p.category) = :categoryId')->setParameter('categoryId', (int) $categoryId);
+        }
+
+        $priceMin = $filters['price_min'] ?? null;
+        if ($priceMin !== null && $priceMin !== '') {
+            $qb->andWhere('p.price >= :priceMin')->setParameter('priceMin', (float) $priceMin);
+        }
+
+        $priceMax = $filters['price_max'] ?? null;
+        if ($priceMax !== null && $priceMax !== '') {
+            $qb->andWhere('p.price <= :priceMax')->setParameter('priceMax', (float) $priceMax);
+        }
+
         $countQb = clone $qb;
         $countQb->select('COUNT(p.id)');
         $total = (int) $countQb->getQuery()->getSingleScalarResult();

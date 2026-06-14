@@ -104,6 +104,58 @@ final class ProductSerializer
     /**
      * @return array<string, mixed>
      */
+    /**
+     * Vendor product-management list shape. Unlike listShape (the
+     * customer-facing storefront shape), this surfaces the management
+     * fields the vendor catalog table needs — status, stock quantity,
+     * stock status, category NAME, and flat convenience keys (image,
+     * price, price_formatted) the table columns + image cell read
+     * directly. Used by GET /v3/vendor/products.
+     */
+    public function vendorManageShape(Product $p): array
+    {
+        $primaryImage = $this->primaryImage($p);
+        $price = (float) $p->getPrice();
+        $category = $p->getCategory();
+
+        return [
+            'id'              => $p->getId(),
+            'slug'            => $p->getSlug(),
+            'name'            => $p->getName(),
+            'sku'             => null,
+            // Flat keys the management table + image cell read directly.
+            'image'           => $primaryImage['url'] ?? null,
+            'category'        => $category?->getName(),
+            'category_slug'   => $category?->getSlug(),
+            'status'          => $p->getStatus(),
+            'price'           => $price,
+            'price_formatted' => 'AED ' . number_format($price, 2),
+            'quantity'        => $p->getStockQuantity(),
+            'stock_quantity'  => $p->getStockQuantity(),
+            'stock_status'    => $p->getStockStatus(),
+            // Nested forms kept for any consumer expecting the storefront shape.
+            'primary_image'   => $primaryImage,
+            'sale_price'      => $p->getSalePrice() !== null ? $this->money($p->getSalePrice()) : null,
+            'in_stock'        => $p->getStockQuantity() > 0 || $p->getAllowOversell(),
+            'label_id'        => $p->getLabelId(),
+            'collection_id'   => $p->getCollectionId(),
+            'created_at'      => $p->getCreatedAt()?->format(\DateTimeInterface::ATOM),
+        ];
+    }
+
+    /**
+     * @param iterable<Product> $products
+     * @return list<array<string, mixed>>
+     */
+    public function vendorManageShapeMany(iterable $products): array
+    {
+        $out = [];
+        foreach ($products as $p) {
+            $out[] = $this->vendorManageShape($p);
+        }
+        return $out;
+    }
+
     public function listShape(Product $p): array
     {
         $primaryImage = $this->primaryImage($p);
