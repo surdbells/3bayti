@@ -27,3 +27,14 @@
   font-size: 0.8rem;
   border-radius: 6px;
 }
+
+/* Soft danger button — lighter than solid ax-btn-danger, used to reveal the
+   cancel confirmation without shouting. Pairs with the global .ax-btn base. */
+.ax-btn-danger-soft {
+  background: color-mix(in srgb, var(--ax-color-danger, #d92d20) 10%, transparent);
+  color: var(--ax-color-danger, #d92d20);
+  border: 1px solid color-mix(in srgb, var(--ax-color-danger, #d92d20) 28%, transparent);
+}
+.ax-btn-danger-soft:hover {
+  background: color-mix(in srgb, var(--ax-color-danger, #d92d20) 16%, transparent);
+}

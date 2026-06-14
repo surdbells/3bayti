@@ -1,101 +1,237 @@
 <main class="ax-main" style="padding: var(--ax-space-5);">
-  <div style="max-width: 64rem; margin: 0 auto;">
+  <div style="max-width: 68rem; margin: 0 auto;">
 
     <!-- Loading -->
-    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
+    <div *ngIf="ui.loading" class="ax-flex ax-justify-center ax-py-8">
       <span class="ax-spinner ax-spinner-lg" aria-label="Loading order"></span>
     </div>
 
+    <!-- Not found -->
+    <div *ngIf="!ui.loading && ui.not_found" class="ax-card ax-p-6 ax-text-center">
+      <app-icon name="error_outline" aria-hidden="true"></app-icon>
+      <h2 class="ax-h5 ax-mt-2 ax-mb-1">Order not found</h2>
+      <p class="ax-text-secondary ax-m-0">We couldn't load this order. It may have been removed.</p>
+      <button type="button" class="ax-btn ax-btn-secondary ax-mt-4" (click)="close()">Close</button>
+    </div>
+
     <!-- Content -->
-    <ng-container *ngIf="!ui_controls.is_loading">
-      <!-- Order header card -->
-      <article class="ax-card ax-p-0" style="overflow: hidden;">
-        <!-- Header -->
-        <div class="ax-p-5 ax-flex ax-items-center ax-justify-between ax-flex-wrap ax-gap-3" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
-          <div>
-            <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Order</div>
-            <h2 class="ax-h4 ax-m-0 ax-mt-1">#{{ single_order.order_id || '—' }}</h2>
-          </div>
-          <span [ngClass]="statusBadgeClass(single_order.status)">{{ single_order.status || 'unknown' }}</span>
-        </div>
+    <ng-container *ngIf="!ui.loading && !ui.not_found && order">
 
-        <!-- Meta -->
-        <div class="ax-p-5" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
-          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
-            <div>
-              <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Transaction ID</div>
-              <div class="ax-font-medium ax-text-primary ax-mt-1">{{ single_order.transaction_id || '—' }}</div>
-            </div>
-            <div>
-              <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Merchant reference</div>
-              <div class="ax-font-medium ax-text-primary ax-mt-1">{{ single_order.merchantReference || '—' }}</div>
-            </div>
+      <!-- Header -->
+      <div class="ax-flex ax-items-center ax-justify-between ax-flex-wrap ax-gap-3 ax-mb-4">
+        <div>
+          <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Manage order</div>
+          <h1 class="ax-h3 ax-m-0 ax-mt-1">#{{ order.order_reference || order.id }}</h1>
+          <div class="ax-text-sm ax-text-secondary ax-mt-1">
+            <span [ngClass]="orderBadgeClass(order.status)">{{ prettyStatus(order.status) }}</span>
+            <span *ngIf="order.paid_at" class="ax-ml-2">Paid {{ timeAgo(order.paid_at) }}</span>
           </div>
         </div>
+        <div class="ax-flex ax-gap-2 ax-items-center">
+          <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="loadOrder()" [disabled]="ui.loading">
+            <app-icon name="refresh" aria-hidden="true"></app-icon> Refresh
+          </button>
+          <button type="button" class="ax-btn ax-btn-secondary ax-btn-sm" (click)="close()">Close</button>
+        </div>
+      </div>
 
-        <!-- Delivery -->
-        <div class="ax-p-5">
-          <h3 class="ax-h6 ax-m-0 ax-mb-3">Delivery</h3>
-          <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-5">
-            <div>
-              <div class="ax-font-medium ax-text-primary">{{ single_order.delivery_name || '—' }}</div>
-              <div class="ax-text-sm ax-text-secondary ax-mt-1">
-                <span *ngIf="single_order.delivery_city">{{ single_order.delivery_city }}</span>
-                <span *ngIf="single_order.delivery_area"> · {{ single_order.delivery_area }}</span>
+      <div class="ax-grid ax-grid-cols-1 ax-lg-grid-cols-3 ax-gap-4">
+
+        <!-- LEFT: order body (2 cols) -->
+        <div class="ax-lg-col-span-2 ax-flex ax-flex-col ax-gap-4">
+
+          <!-- Status management -->
+          <section class="ax-card ax-p-5">
+            <h3 class="ax-h6 ax-m-0 ax-mb-3">Order status</h3>
+            <div class="ax-flex ax-gap-3 ax-flex-wrap ax-items-end">
+              <div class="ax-form-field" style="min-width: 14rem; flex: 1;">
+                <label class="ax-label" for="orderStatus">Set status</label>
+                <select id="orderStatus" class="ax-input ax-select" [(ngModel)]="statusDraft">
+                  <option *ngFor="let s of orderStatuses" [value]="s">{{ prettyStatus(s) }}</option>
+                </select>
               </div>
-              <div class="ax-text-sm ax-text-secondary ax-mt-1">
-                {{ single_order.delivery_street_address || '—' }}
+              <div class="ax-form-field" style="flex: 2; min-width: 16rem;">
+                <label class="ax-label" for="orderStatusReason">Reason <span class="ax-text-danger">*</span></label>
+                <input id="orderStatusReason" type="text" class="ax-input" [(ngModel)]="statusReason"
+                  placeholder="Why is this status changing?" />
               </div>
-              <div class="ax-text-2xs ax-text-tertiary ax-mt-1" *ngIf="single_order.villa_number">
-                Villa: {{ single_order.villa_number }}
+              <button type="button" class="ax-btn ax-btn-primary"
+                (click)="updateOrderStatus()" [disabled]="!orderStatusDirty || ui.saving_status">
+                <span *ngIf="ui.saving_status" class="ax-spinner ax-spinner-sm ax-mr-1"></span>
+                {{ ui.saving_status ? 'Saving…' : 'Update status' }}
+              </button>
+            </div>
+            <p class="ax-text-2xs ax-text-tertiary ax-mt-2 ax-mb-0">
+              Admin override — applies regardless of the normal transition rules and is recorded on the order timeline.
+            </p>
+          </section>
+
+          <!-- Items -->
+          <section class="ax-card ax-p-0">
+            <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+              <h3 class="ax-h6 ax-m-0">Order items</h3>
+            </div>
+            <div class="ax-table-wrapper">
+              <table class="ax-table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th style="text-align: center;">Qty</th>
+                    <th style="text-align: right;">Unit</th>
+                    <th style="text-align: right;">Subtotal</th>
+                    <th style="min-width: 18rem;">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let item of items">
+                    <td>
+                      <span class="ax-font-medium ax-text-primary">{{ item.product_name }}</span>
+                      <div class="ax-text-2xs ax-text-tertiary ax-mt-1" *ngIf="item.size || item.color">
+                        <span *ngIf="item.size">Size: {{ item.size }}</span>
+                        <span *ngIf="item.color"> · {{ item.color }}</span>
+                      </div>
+                      <div class="ax-text-2xs ax-text-tertiary ax-mt-1" *ngIf="item.note">Note: {{ item.note }}</div>
+                    </td>
+                    <td style="text-align: center;"><span class="ax-numeric">{{ item.quantity }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ money(item.unit_price) }}</span></td>
+                    <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ money(item.subtotal) }}</span></td>
+                    <td>
+                      <div class="ax-flex ax-items-center ax-gap-2 ax-flex-wrap">
+                        <span [ngClass]="itemBadgeClass(item.item_status)">{{ prettyStatus(item.item_status) }}</span>
+                        <select class="ax-input ax-select ax-input-sm" style="width: auto;" [(ngModel)]="item._statusDraft">
+                          <option *ngFor="let s of itemStatuses" [value]="s">{{ prettyStatus(s) }}</option>
+                        </select>
+                      </div>
+                      <div *ngIf="itemDirty(item)" class="ax-flex ax-items-center ax-gap-2 ax-mt-2">
+                        <input type="text" class="ax-input ax-input-sm" style="flex: 1;" [(ngModel)]="item._reason"
+                          placeholder="Reason for change" />
+                        <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
+                          (click)="saveItemStatus(item)" [disabled]="item._saving">
+                          {{ item._saving ? 'Saving…' : 'Save' }}
+                        </button>
+                        <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="resetItem(item)" [disabled]="item._saving">
+                          Cancel
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  <tr *ngIf="items.length === 0">
+                    <td colspan="5" class="ax-text-center ax-text-secondary ax-py-6">No items on this order.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Timeline -->
+          <section class="ax-card ax-p-0">
+            <div class="ax-p-4 ax-flex ax-items-center ax-justify-between" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+              <h3 class="ax-h6 ax-m-0">Timeline</h3>
+              <span *ngIf="ui.timeline_loading" class="ax-spinner ax-spinner-sm"></span>
+            </div>
+            <ul *ngIf="timeline.length > 0" style="list-style: none; margin: 0; padding: 0;">
+              <li *ngFor="let ev of timeline" class="ax-flex ax-gap-3 ax-p-4"
+                style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+                <span class="ax-text-secondary" style="flex-shrink: 0;"><app-icon [name]="eventIcon(ev.type)" aria-hidden="true"></app-icon></span>
+                <div style="flex: 1; min-width: 0;">
+                  <div class="ax-text-sm ax-text-primary">{{ ev.summary || prettyStatus(ev.type) }}</div>
+                  <div class="ax-text-2xs ax-text-tertiary ax-mt-1">
+                    {{ timeAgo(ev.occurred_at) }}
+                    <span *ngIf="ev.actor?.type"> · {{ ev.actor?.type }}</span>
+                  </div>
+                </div>
+              </li>
+            </ul>
+            <div *ngIf="!ui.timeline_loading && timeline.length === 0" class="ax-text-center ax-text-secondary ax-py-6">
+              No events recorded yet.
+            </div>
+          </section>
+        </div>
+
+        <!-- RIGHT: summary + danger actions (1 col) -->
+        <div class="ax-flex ax-flex-col ax-gap-4">
+
+          <!-- Customer + shipping -->
+          <section class="ax-card ax-p-5">
+            <h3 class="ax-h6 ax-m-0 ax-mb-3">Customer</h3>
+            <div class="ax-font-medium ax-text-primary">{{ customerName }}</div>
+            <div class="ax-text-sm ax-text-secondary ax-mt-1" *ngIf="order.customer?.email">{{ order.customer?.email }}</div>
+            <div class="ax-text-sm ax-text-secondary" *ngIf="order.customer?.phone">{{ order.customer?.phone }}</div>
+
+            <h3 class="ax-h6 ax-m-0 ax-mt-4 ax-mb-2">Shipping</h3>
+            <div class="ax-text-sm ax-text-primary">{{ shippingName }}</div>
+            <div class="ax-text-sm ax-text-secondary ax-mt-1" *ngIf="shipping.street">{{ shipping.street }}</div>
+            <div class="ax-text-sm ax-text-secondary">
+              <span *ngIf="shipping.city">{{ shipping.city }}</span>
+              <span *ngIf="shipping.state_province">, {{ shipping.state_province }}</span>
+              <span *ngIf="shipping.country_code"> · {{ shipping.country_code }}</span>
+            </div>
+            <div class="ax-text-sm ax-text-secondary ax-mt-1" *ngIf="shipping.phone">
+              <app-icon name="phone" style="font-size: 0.9rem;" aria-hidden="true"></app-icon> {{ shipping.phone }}
+            </div>
+          </section>
+
+          <!-- Totals -->
+          <section class="ax-card ax-p-5">
+            <h3 class="ax-h6 ax-m-0 ax-mb-3">Payment summary</h3>
+            <div class="ax-flex ax-justify-between ax-text-sm ax-mb-2">
+              <span class="ax-text-secondary">Subtotal</span><span class="ax-numeric">{{ money(order.subtotal) }}</span>
+            </div>
+            <div class="ax-flex ax-justify-between ax-text-sm ax-mb-2">
+              <span class="ax-text-secondary">Delivery</span><span class="ax-numeric">{{ money(order.delivery_fee) }}</span>
+            </div>
+            <div class="ax-flex ax-justify-between ax-text-sm ax-mb-2" *ngIf="order.discount && order.discount !== '0.00'">
+              <span class="ax-text-secondary">Discount</span><span class="ax-numeric">−{{ money(order.discount) }}</span>
+            </div>
+            <div class="ax-flex ax-justify-between ax-font-semibold ax-pt-2" style="border-top: 1px solid var(--ax-color-border-subtle);">
+              <span>Total</span><span class="ax-numeric">{{ money(order.total) }}</span>
+            </div>
+          </section>
+
+          <!-- Danger zone -->
+          <section class="ax-card ax-p-5">
+            <h3 class="ax-h6 ax-m-0 ax-mb-3">Actions</h3>
+
+            <!-- Refund -->
+            <button *ngIf="!showRefund" type="button" class="ax-btn ax-btn-secondary ax-w-full ax-mb-2" (click)="showRefund = true">
+              <app-icon name="currency_exchange" aria-hidden="true"></app-icon> Refund
+            </button>
+            <div *ngIf="showRefund" class="ax-mb-3">
+              <div class="ax-form-field ax-mb-2">
+                <label class="ax-label" for="refundAmount">Amount <span class="ax-text-tertiary">(blank = full remaining)</span></label>
+                <input id="refundAmount" type="text" inputmode="decimal" class="ax-input ax-input-sm" [(ngModel)]="refundAmount" placeholder="e.g. 29.99" />
+              </div>
+              <div class="ax-form-field ax-mb-2">
+                <label class="ax-label" for="refundReason">Reason <span class="ax-text-danger">*</span></label>
+                <input id="refundReason" type="text" class="ax-input ax-input-sm" [(ngModel)]="refundReason" placeholder="Reason for refund" />
+              </div>
+              <div class="ax-flex ax-gap-2">
+                <button type="button" class="ax-btn ax-btn-primary ax-btn-sm" (click)="confirmRefund()" [disabled]="ui.refunding">
+                  {{ ui.refunding ? 'Processing…' : 'Process refund' }}
+                </button>
+                <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="showRefund = false" [disabled]="ui.refunding">Cancel</button>
               </div>
             </div>
-            <div>
-              <div *ngIf="single_order.delivery_phone" class="ax-text-sm ax-text-secondary ax-flex ax-items-center ax-gap-2">
-                <app-icon name="phone" style="font-size: 1rem;" aria-hidden="true"></app-icon>
-                {{ single_order.delivery_phone }}
+
+            <!-- Cancel -->
+            <button *ngIf="!showCancel" type="button" class="ax-btn ax-btn-danger-soft ax-w-full" (click)="showCancel = true">
+              <app-icon name="cancel" aria-hidden="true"></app-icon> Cancel order
+            </button>
+            <div *ngIf="showCancel">
+              <div class="ax-form-field ax-mb-2">
+                <label class="ax-label" for="cancelReason">Cancellation reason <span class="ax-text-danger">*</span></label>
+                <input id="cancelReason" type="text" class="ax-input ax-input-sm" [(ngModel)]="cancelReason" placeholder="Why is this order being cancelled?" />
               </div>
-              <div *ngIf="single_order.delivery_email" class="ax-text-sm ax-text-secondary ax-flex ax-items-center ax-gap-2 ax-mt-2">
-                <app-icon name="email" style="font-size: 1rem;" aria-hidden="true"></app-icon>
-                {{ single_order.delivery_email }}
+              <div class="ax-flex ax-gap-2">
+                <button type="button" class="ax-btn ax-btn-danger ax-btn-sm" (click)="confirmCancel()" [disabled]="ui.cancelling">
+                  {{ ui.cancelling ? 'Cancelling…' : 'Confirm cancellation' }}
+                </button>
+                <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="showCancel = false" [disabled]="ui.cancelling">Keep order</button>
               </div>
             </div>
-          </div>
+          </section>
         </div>
-      </article>
-
-      <!-- Items -->
-      <section class="ax-card ax-p-0 ax-mt-4">
-        <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
-          <h3 class="ax-h6 ax-m-0">Order items</h3>
-        </div>
-        <div class="ax-table-wrapper">
-          <table class="ax-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Store</th>
-                <th style="text-align: center;">Qty</th>
-                <th style="text-align: right;">Price</th>
-                <th style="text-align: right;">Total</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (a_item of items; track $index) {
-                <tr>
-                  <td><span class="ax-font-medium ax-text-primary">{{ a_item.product_name }}</span></td>
-                  <td><span class="ax-text-sm ax-text-secondary">{{ a_item.store }}</span></td>
-                  <td style="text-align: center;"><span class="ax-numeric">{{ a_item.quantity }}</span></td>
-                  <td style="text-align: right;"><span class="ax-numeric">{{ a_item.price }}</span></td>
-                  <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ a_item.total_price }}</span></td>
-                  <td><span [ngClass]="itemStatusClass(a_item.status)">{{ a_item.status }}</span></td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
+      </div>
     </ng-container>
   </div>
 </main>
