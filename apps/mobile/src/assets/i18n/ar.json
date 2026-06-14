@@ -558,5 +558,17 @@
   "gift_card_check_balance": "تحقق من الرصيد",
   "gift_card_add_wallet": "إضافة إلى محفظتي",
   "gift_card_added": "تمت إضافة بطاقة الهدية إلى محفظتك!",
-  "gift_card_spend_history": "سجل الإنفاق"
+  "gift_card_spend_history": "سجل الإنفاق",
+  "text_messages": "الرسائل",
+  "text_no_conversations": "لا توجد محادثات بعد",
+  "text_vendor": "البائع",
+  "text_customer": "العميل",
+  "text_customer_messages": "رسائل العملاء",
+  "text_chat": "الدردشة",
+  "text_type_message": "اكتب رسالة",
+  "text_message_too_long": "الرسالة طويلة جدًا",
+  "text_chat_blocked": "تم حظر الرسالة: يرجى عدم مشاركة بيانات الاتصال أو الدفع هنا",
+  "text_message_send_failed": "تعذّر إرسال رسالتك. يرجى المحاولة مرة أخرى.",
+  "text_not_delivered": "لم تُسلَّم",
+  "text_chat_closed": "تم إغلاق هذه المحادثة"
 }

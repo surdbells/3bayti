@@ -566,5 +566,17 @@
   "gift_card_check_balance": "Check balance",
   "gift_card_add_wallet": "Add to my wallet",
   "gift_card_added": "Gift card added to your wallet!",
-  "gift_card_spend_history": "Spend history"
+  "gift_card_spend_history": "Spend history",
+  "text_messages": "Messages",
+  "text_no_conversations": "No conversations yet",
+  "text_vendor": "Vendor",
+  "text_customer": "Customer",
+  "text_customer_messages": "Customer Messages",
+  "text_chat": "Chat",
+  "text_type_message": "Type a message",
+  "text_message_too_long": "Message is too long",
+  "text_chat_blocked": "Message blocked: please don't share contact or payment details here",
+  "text_message_send_failed": "Couldn't send your message. Please try again.",
+  "text_not_delivered": "Not delivered",
+  "text_chat_closed": "This conversation is closed"
 }
