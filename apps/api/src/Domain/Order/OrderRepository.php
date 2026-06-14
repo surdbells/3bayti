@@ -6,6 +6,7 @@ namespace Bayti\Api\Domain\Order;
 
 use Bayti\Api\Domain\User\User;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
 
 /**
  * Repository for Order.
@@ -308,11 +309,56 @@ class OrderRepository extends EntityRepository
      *                               value. Null = no status filter.
      * @return array{0: list<Order>, 1: int} Tuple of [orders, total_count].
      */
+    /**
+     * Apply the vendor-order list filters (status, free-text search, and
+     * created-at date range) to a query builder that already joins items
+     * as `i`. Search matches order reference, customer email/name, and
+     * product name snapshot. Shared by the count + id-page queries so they
+     * stay in lock-step.
+     */
+    private function applyVendorOrderFilters(
+        QueryBuilder $qb,
+        ?string $status,
+        ?string $search,
+        ?string $dateFrom,
+        ?string $dateTo,
+    ): void {
+        if ($status !== null && $status !== '') {
+            $qb->andWhere('o.status = :status')->setParameter('status', $status);
+        }
+
+        if ($search !== null && trim($search) !== '') {
+            $term = '%' . strtolower(trim($search)) . '%';
+            $qb->leftJoin('o.user', 'u')
+                ->andWhere(
+                    '(LOWER(o.orderReference) LIKE :q '
+                    . 'OR LOWER(i.productNameSnapshot) LIKE :q '
+                    . 'OR LOWER(u.email) LIKE :q '
+                    . 'OR LOWER(u.firstName) LIKE :q '
+                    . 'OR LOWER(u.lastName) LIKE :q)'
+                )
+                ->setParameter('q', $term);
+        }
+
+        if ($dateFrom !== null && $dateFrom !== '') {
+            $qb->andWhere('o.createdAt >= :dateFrom')
+                ->setParameter('dateFrom', new \DateTimeImmutable($dateFrom . ' 00:00:00'));
+        }
+
+        if ($dateTo !== null && $dateTo !== '') {
+            $qb->andWhere('o.createdAt <= :dateTo')
+                ->setParameter('dateTo', new \DateTimeImmutable($dateTo . ' 23:59:59'));
+        }
+    }
+
     public function paginatedForVendorIds(
         array $vendorIds,
         int $limit,
         int $offset,
         ?string $statusFilter = null,
+        ?string $search = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
     ): array {
         if ($vendorIds === []) {
             return [[], 0];
@@ -327,10 +373,7 @@ class OrderRepository extends EntityRepository
             ->innerJoin('o.items', 'i')
             ->where('i.vendor IN (:vendors)')
             ->setParameter('vendors', $vendorIds);
-        if ($statusFilter !== null) {
-            $totalQb->andWhere('o.status = :status')
-                ->setParameter('status', $statusFilter);
-        }
+        $this->applyVendorOrderFilters($totalQb, $statusFilter, $search, $dateFrom, $dateTo);
         $total = (int) $totalQb->getQuery()->getSingleScalarResult();
 
         if ($total === 0) {
@@ -346,10 +389,7 @@ class OrderRepository extends EntityRepository
             ->orderBy('o.createdAt', 'DESC')
             ->setMaxResults($limit)
             ->setFirstResult($offset);
-        if ($statusFilter !== null) {
-            $idQb->andWhere('o.status = :status')
-                ->setParameter('status', $statusFilter);
-        }
+        $this->applyVendorOrderFilters($idQb, $statusFilter, $search, $dateFrom, $dateTo);
         $idRows = $idQb->getQuery()->getScalarResult();
         $ids = array_map(static fn (array $r): int => (int) $r['id'], $idRows);
         if ($ids === []) {

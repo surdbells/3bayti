@@ -80,10 +80,13 @@ final class ListVendorOrdersController
         $limit = $this->clampLimit($query['limit'] ?? null);
         $offset = $this->clampOffset($query['offset'] ?? null);
         $status = $this->parseStatus($query['status'] ?? null);
+        $search = $this->parseSearch($query['search'] ?? null);
+        $dateFrom = $this->parseDate($query['date_from'] ?? null);
+        $dateTo = $this->parseDate($query['date_to'] ?? null);
 
         /** @var OrderRepository $orders */
         $orders = $this->em->getRepository(Order::class);
-        [$list, $total] = $orders->paginatedForVendorIds($vendorIds, $limit, $offset, $status);
+        [$list, $total] = $orders->paginatedForVendorIds($vendorIds, $limit, $offset, $status, $search, $dateFrom, $dateTo);
 
         $vendorIdSet = array_flip($vendorIds);
         $items = array_map(
@@ -168,5 +171,27 @@ final class ListVendorOrdersController
         // shouldn't see orders that haven't been paid yet (the cart
         // is still in flux).
         return in_array($raw, $valid, true) ? $raw : null;
+    }
+
+    private function parseSearch(mixed $raw): ?string
+    {
+        if (!is_string($raw)) {
+            return null;
+        }
+        $trimmed = trim($raw);
+        return $trimmed === '' ? null : mb_substr($trimmed, 0, 100);
+    }
+
+    /**
+     * Accept an ISO date (YYYY-MM-DD) for the created-at range filter;
+     * anything malformed is ignored rather than erroring the request.
+     */
+    private function parseDate(mixed $raw): ?string
+    {
+        if (!is_string($raw) || $raw === '') {
+            return null;
+        }
+        $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $raw);
+        return $d !== false ? $d->format('Y-m-d') : null;
     }
 }

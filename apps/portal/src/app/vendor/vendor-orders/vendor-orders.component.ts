@@ -160,6 +160,7 @@ export class VendorOrdersComponent implements OnInit {
             { label: 'Failed', value: 'failed' },
           ],
         },
+        { key: 'date', label: 'Order date', type: 'date-range' },
       ],
       columns: [
         { key: 'created', label: 'Date', sortable: true, sticky: 'left', width: '11rem' },
@@ -180,6 +181,9 @@ export class VendorOrdersComponent implements OnInit {
     };
     if (query.search) q.search = query.search;
     if (query.filters['status']) q.status = query.filters['status'];
+    const dateRange: any = query.filters['date'];
+    if (dateRange?.from) q.date_from = dateRange.from;
+    if (dateRange?.to) q.date_to = dateRange.to;
 
     return this.adapter.get_v3('GET /vendor/orders', { query: q }).pipe(
       map((res: any): AxServerFetchResult<OrderRow> => {

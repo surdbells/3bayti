@@ -79,7 +79,7 @@ final class ListVendorOrdersControllerTest extends HttpTestCase
 
         $orderRepo = $this->createMock(OrderRepository::class);
         $orderRepo->method('paginatedForVendorIds')
-            ->with([5], 10, 0, null)
+            ->with([5], 10, 0, null, null, null, null)
             ->willReturn([[$order], 1]);
 
         $this->bindEm($user, $orderRepo, $vendorRepo);
@@ -106,7 +106,7 @@ final class ListVendorOrdersControllerTest extends HttpTestCase
         $orderRepo = $this->createMock(OrderRepository::class);
         $orderRepo->expects(self::once())
             ->method('paginatedForVendorIds')
-            ->with([5], 10, 0, Order::STATUS_FULFILLING)
+            ->with([5], 10, 0, Order::STATUS_FULFILLING, null, null, null)
             ->willReturn([[], 0]);
 
         $this->bindEm($user, $orderRepo, $vendorRepo);
@@ -126,7 +126,7 @@ final class ListVendorOrdersControllerTest extends HttpTestCase
         $orderRepo = $this->createMock(OrderRepository::class);
         $orderRepo->expects(self::once())
             ->method('paginatedForVendorIds')
-            ->with([5], 10, 0, null) // null because the bogus status drops
+            ->with([5], 10, 0, null, null, null, null) // null because the bogus status drops
             ->willReturn([[], 0]);
 
         $this->bindEm($user, $orderRepo, $vendorRepo);
@@ -147,7 +147,7 @@ final class ListVendorOrdersControllerTest extends HttpTestCase
         // limit clamped to 100 (max); offset preserved
         $orderRepo->expects(self::once())
             ->method('paginatedForVendorIds')
-            ->with([5], 100, 50, null)
+            ->with([5], 100, 50, null, null, null, null)
             ->willReturn([[], 0]);
 
         $this->bindEm($user, $orderRepo, $vendorRepo);
@@ -157,6 +157,49 @@ final class ListVendorOrdersControllerTest extends HttpTestCase
         $body = $this->jsonBody($response);
         self::assertSame(100, $body['pagination']['limit']);
         self::assertSame(50, $body['pagination']['offset']);
+    }
+
+    #[Test]
+    public function searchAndDateRangeAreForwarded(): void
+    {
+        $user = $this->makeVendorUser(7);
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findIdsByOwnerUser')->willReturn([5]);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->expects(self::once())
+            ->method('paginatedForVendorIds')
+            ->with([5], 10, 0, null, 'abaya', '2026-06-01', '2026-06-30')
+            ->willReturn([[], 0]);
+
+        $this->bindEm($user, $orderRepo, $vendorRepo);
+        $response = $this->makeRequest(
+            $user,
+            '/v3/vendor/orders?search=abaya&date_from=2026-06-01&date_to=2026-06-30',
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function malformedDateIsDropped(): void
+    {
+        $user = $this->makeVendorUser(7);
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findIdsByOwnerUser')->willReturn([5]);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->expects(self::once())
+            ->method('paginatedForVendorIds')
+            ->with([5], 10, 0, null, null, null, null) // junk date + blank search → null
+            ->willReturn([[], 0]);
+
+        $this->bindEm($user, $orderRepo, $vendorRepo);
+        $response = $this->makeRequest($user, '/v3/vendor/orders?search=%20%20&date_from=June%201st');
+
+        self::assertSame(200, $response->getStatusCode());
     }
 
     #[Test]
