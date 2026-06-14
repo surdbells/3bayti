@@ -117,6 +117,8 @@ final class ListVendorNotificationsController
             'order.placed.vendor'     => "You have a new sale{$orderSuffix}.",
             'order.cancelled.vendor'  => "An order was cancelled{$orderSuffix}.",
             'return.submitted.vendor' => "A return was requested{$orderSuffix}.",
+            'compliance.approved.vendor' => 'Your compliance documents were approved.',
+            'compliance.rejected.vendor' => 'Your compliance submission was rejected — please re-upload.',
             default => 'You have a new notification' . $orderSuffix . '.',
         };
     }

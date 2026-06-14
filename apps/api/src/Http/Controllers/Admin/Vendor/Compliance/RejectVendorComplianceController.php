@@ -6,6 +6,7 @@ namespace Bayti\Api\Http\Controllers\Admin\Vendor\Compliance;
 
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
+use Bayti\Api\Domain\Compliance\ComplianceNotificationService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
@@ -29,6 +30,7 @@ final class RejectVendorComplianceController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly ComplianceNotificationService $notifier,
     ) {
     }
 
@@ -68,6 +70,8 @@ final class RejectVendorComplianceController
 
         $vendor->rejectCompliance((int) $user->getId(), $note);
         $this->em->flush();
+
+        $this->notifier->rejected($vendor, $note);
 
         return $this->ok(['data' => [
             'vendor_id'         => (int) $vendor->getId(),

@@ -57,6 +57,8 @@ final class AdminVendorComplianceTest extends HttpTestCase
             static fn (?string $p): ?string => $p === null ? null : 'data:image/png;base64,AAAA'
         );
 
+        $notifier = $this->createMock(\Bayti\Api\Domain\Compliance\ComplianceNotificationService::class);
+
         $em = $this->stubEm(function ($em) use ($userRepo, $vendorRepo): void {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
@@ -65,6 +67,7 @@ final class AdminVendorComplianceTest extends HttpTestCase
         });
         $this->bind(EntityManagerInterface::class, $em);
         $this->bind(ComplianceDocumentService::class, $docs);
+        $this->bind(\Bayti\Api\Domain\Compliance\ComplianceNotificationService::class, $notifier);
     }
 
     private function token(User $u): string
