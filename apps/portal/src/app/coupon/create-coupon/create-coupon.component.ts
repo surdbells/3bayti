@@ -95,15 +95,24 @@ export class CreateCouponComponent implements OnInit {
           this.categories = (r.data || []).map((c: any) => ({ id: c.id ?? c.category_id, name: c.name ?? c.category_name }));
         }
       },
+      error: () => {
+        this.toast.error('Could not load categories.');
+      },
     });
 
     if (this.user_session.is_vendor) {
-      const payload = { token: this.user_session.token, id: this.user_session.id, store: this.user_session.id };
-      this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(payload.id ?? 0) }, query: { limit: 100 } }).subscribe({
+      // Self-scoped: the vendor is resolved from the JWT, so no id is sent.
+      // The previous GET /vendors/by-legacy-id/:id/products call 404'd because
+      // the session id is the user id, not the vendor's legacy id.
+      this.adapter.get_v3('GET /vendor/products', { query: { limit: 100 } }).subscribe({
         next: (r: any) => {
           if (r) {
             this.products = (r.data || []).map((p: any) => ({ id: p.id, name: p.name }));
           }
+          this.ui.page_loading = false;
+        },
+        error: () => {
+          this.toast.error('Could not load your products. Please try again.');
           this.ui.page_loading = false;
         },
       });
@@ -115,6 +124,10 @@ export class CreateCouponComponent implements OnInit {
           if (r) {
             this.stores = (r.data || []).map((s: any) => ({ id: s.user_id ?? s.id, store_name: s.store_name }));
           }
+          this.ui.page_loading = false;
+        },
+        error: () => {
+          this.toast.error('Could not load stores. Please try again.');
           this.ui.page_loading = false;
         },
       });
