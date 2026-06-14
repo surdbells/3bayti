@@ -294,6 +294,10 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Chat\Customer\GetMessagesController::class,
         );
         $group->post(
+            '/conversations/{uuid}/messages',
+            \Bayti\Api\Http\Controllers\Chat\Customer\SendMessageController::class,
+        );
+        $group->post(
             '/conversations/{uuid}/read',
             \Bayti\Api\Http\Controllers\Chat\Customer\MarkReadController::class,
         );
@@ -835,6 +839,10 @@ return function (App $app): void {
         $group->get(
             '/conversations/{uuid}/messages',
             \Bayti\Api\Http\Controllers\Chat\Vendor\GetMessagesController::class,
+        );
+        $group->post(
+            '/conversations/{uuid}/messages',
+            \Bayti\Api\Http\Controllers\Chat\Vendor\SendMessageController::class,
         );
         $group->post(
             '/conversations/{uuid}/read',

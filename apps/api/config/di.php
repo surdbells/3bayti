@@ -735,6 +735,7 @@ return [
     \Bayti\Api\Domain\Chat\ModerationService::class => \DI\autowire(),
     \Bayti\Api\Domain\Chat\OrderDetailsMessageBuilder::class => \DI\autowire(),
     \Bayti\Api\Domain\Chat\OrderChatProvisioner::class => \DI\autowire(),
+    \Bayti\Api\Domain\Chat\ChatMessageSender::class => \DI\autowire(),
     \Bayti\Api\Http\Serializers\ChatSerializer::class => \DI\autowire(),
 
     // Gift card repositories (M3.5) — autowire suffices; all deps are

@@ -106,6 +106,9 @@ final class ErrorCodes
     /** User isn't allowed to perform the action (role check failed). */
     public const FORBIDDEN = 'FORBIDDEN';
 
+    /** A chat message was withheld because it appears to contain personal contact details. */
+    public const CHAT_MESSAGE_BLOCKED = 'CHAT_MESSAGE_BLOCKED';
+
     /**
      * Authenticated user is a vendor (is_vendor=true) but owns no
      * vendor stores in the 'approved' lifecycle state. Returned by

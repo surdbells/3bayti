@@ -87,6 +87,23 @@ final class HttpException extends \RuntimeException
     }
 
     /**
+     * 422 — a chat message was withheld by PII moderation. `flagTypes`
+     * (e.g. ['phone','email']) is surfaced under details.flag_types so the
+     * client can warn the sender precisely.
+     *
+     * @param list<string> $flagTypes
+     */
+    public static function chatBlocked(array $flagTypes, string $message): self
+    {
+        return new self(
+            status: 422,
+            errorCode: ErrorCodes::CHAT_MESSAGE_BLOCKED,
+            publicMessage: $message,
+            details: ['flag_types' => array_values($flagTypes)],
+        );
+    }
+
+    /**
      * 422 Unprocessable — body parsed OK but failed validation.
      *
      * @param array<string, list<string>> $fieldErrors Map of fieldName → list of messages
