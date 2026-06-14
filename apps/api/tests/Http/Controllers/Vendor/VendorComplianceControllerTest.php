@@ -80,7 +80,7 @@ final class VendorComplianceControllerTest extends HttpTestCase
     }
 
     #[Test]
-    public function getReturnsDocumentsAsDataUrlsAndStatus(): void
+    public function getReturnsDocumentUrlsAndStatus(): void
     {
         $user = $this->vendorUser(100);
         $vendor = $this->vendor(101);
@@ -93,7 +93,7 @@ final class VendorComplianceControllerTest extends HttpTestCase
 
         self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
         $data = $this->jsonBody($res)['data'];
-        self::assertStringStartsWith('data:image/png', $data['front']);
+        self::assertStringContainsString('/v3/compliance-documents/101/front?', $data['front']);
         self::assertNull($data['back']);
         self::assertSame('submitted', $data['compliance_status']);
         self::assertTrue($data['is_active']);

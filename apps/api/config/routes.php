@@ -59,6 +59,15 @@ return function (App $app): void {
     $app->get('/v3/health', [HealthController::class, 'liveness']);
     $app->get('/v3/health/ready', [HealthController::class, 'readiness']);
 
+    // Signed, short-lived serving of private KYC documents (authorised by the
+    // HMAC signature in the query, minted inside the authenticated compliance
+    // GET responses — see ComplianceDocumentSigner). No auth middleware: the
+    // signature is the credential.
+    $app->get(
+        '/v3/compliance-documents/{vendorId:[0-9]+}/{field}',
+        \Bayti\Api\Http\Controllers\Compliance\ServeComplianceDocumentController::class,
+    );
+
     // -------------------------------------------------------------------
     // M3.2.X.11-G — Marketing-email unsubscribe (public, no auth)
     //

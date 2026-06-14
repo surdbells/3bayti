@@ -88,7 +88,7 @@ final class AdminVendorComplianceTest extends HttpTestCase
         self::assertSame(200, $res->getStatusCode(), (string) $res->getBody());
         $data = $this->jsonBody($res)['data'];
         self::assertSame(101, $data['vendor_id']);
-        self::assertStringStartsWith('data:image/png', $data['front']);
+        self::assertStringContainsString('/v3/compliance-documents/101/front?', $data['front']);
         self::assertSame('submitted', $data['compliance_status']);
     }
 

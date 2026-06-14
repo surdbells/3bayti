@@ -85,6 +85,33 @@ class ComplianceDocumentService
         return 'data:' . $mime . ';base64,' . base64_encode($bytes);
     }
 
+    /**
+     * Read a stored document for streaming. Returns
+     * ['bytes' => string, 'mime' => string] or null when the path is
+     * null/empty or the file is missing. Tolerates a legacy data-URL value.
+     */
+    public function openForDownload(?string $path): ?array
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+        if (str_starts_with($path, 'data:')) {
+            if (!preg_match('#^data:([\w/+.-]+);base64,(.+)$#s', $path, $m)) {
+                return null;
+            }
+            $bytes = base64_decode($m[2], true);
+            if ($bytes === false || $bytes === '') {
+                return null;
+            }
+            return ['bytes' => $bytes, 'mime' => strtolower($m[1])];
+        }
+        $bytes = $this->storage->read($path);
+        if ($bytes === null) {
+            return null;
+        }
+        return ['bytes' => $bytes, 'mime' => $this->mimeForPath($path)];
+    }
+
     /** Delete a stored document file (idempotent; ignores data-URL legacy values). */
     public function delete(?string $path): void
     {

@@ -731,6 +731,10 @@ return [
     // (AwsS3V3Adapter); this binding needs no change.
     \Bayti\Api\Domain\Media\ImageStorageService::class => \DI\autowire(),
     \Bayti\Api\Domain\Compliance\ComplianceDocumentService::class => \DI\autowire(),
+    \Bayti\Api\Domain\Compliance\ComplianceDocumentSigner::class => static function (ContainerInterface $c): \Bayti\Api\Domain\Compliance\ComplianceDocumentSigner {
+        return new \Bayti\Api\Domain\Compliance\ComplianceDocumentSigner((string) ($_ENV['JWT_SECRET'] ?? ''));
+    },
+    \Bayti\Api\Http\Controllers\Compliance\ServeComplianceDocumentController::class => \DI\autowire(),
     \Bayti\Api\Domain\Compliance\ComplianceNotificationService::class => \DI\autowire()
         ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
     \Bayti\Api\Domain\Chat\ModerationService::class => \DI\autowire(),

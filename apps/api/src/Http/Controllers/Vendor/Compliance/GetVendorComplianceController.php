@@ -7,6 +7,7 @@ namespace Bayti\Api\Http\Controllers\Vendor\Compliance;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\Compliance\ComplianceDocumentService;
+use Bayti\Api\Domain\Compliance\ComplianceDocumentSigner;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
@@ -32,6 +33,7 @@ final class GetVendorComplianceController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly ComplianceDocumentService $docs,
+        private readonly ComplianceDocumentSigner $signer,
     ) {
     }
 
@@ -56,13 +58,24 @@ final class GetVendorComplianceController
         $vendor = $vendors[0];
 
         return $this->ok(['data' => [
-            'front'             => $this->docs->readAsDataUrl($vendor->getIdFront()),
-            'back'              => $this->docs->readAsDataUrl($vendor->getIdBack()),
-            'license_doc'       => $this->docs->readAsDataUrl($vendor->getLicenseDoc()),
+            'front'             => $this->docUrl($request, $vendor->getId(), 'front', $vendor->getIdFront()),
+            'back'              => $this->docUrl($request, $vendor->getId(), 'back', $vendor->getIdBack()),
+            'license_doc'       => $this->docUrl($request, $vendor->getId(), 'license_doc', $vendor->getLicenseDoc()),
             'compliance_status' => $vendor->getComplianceStatus(),
             'review_note'       => $vendor->getComplianceReviewNote(),
             'reviewed_at'       => $vendor->getComplianceReviewedAt()?->format(\DateTimeInterface::ATOM),
             'is_active'         => $vendor->isApproved(),
         ]]);
+    }
+
+    /** Absolute, short-lived signed URL for a stored document, or null. */
+    private function docUrl(ServerRequestInterface $request, int $vendorId, string $field, ?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+        $uri = $request->getUri();
+
+        return $uri->getScheme() . '://' . $uri->getAuthority() . $this->signer->signedPath($vendorId, $field);
     }
 }
