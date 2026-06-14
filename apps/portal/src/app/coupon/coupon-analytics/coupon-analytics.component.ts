@@ -1,6 +1,5 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
-import { CrudService } from '../../services/crud.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
@@ -76,7 +75,6 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private crudService: CrudService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
@@ -101,15 +99,6 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
-  }
-
-  private analyticsRequest(action: string, extra: any = {}): any {
-    return {
-      token: this.user_session.token,
-      id: this.user_session.id,
-      action,
-      ...extra,
-    };
   }
 
   fetchOverview(): void {
@@ -147,12 +136,12 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   fetchTopCoupons(): void {
-    this.crudService.post_request(
-      this.analyticsRequest('top_coupons', { sort_by: this.top_sort_by, limit: 5 }),
-      GlobalComponent.couponAnalytics,
-    ).subscribe({
+    this.adapter.get_v3('GET /vendor/coupons/:id/analytics', {
+      params: { id: String(this.coupon_id) },
+      query: { period: 'top_coupons', sort_by: this.top_sort_by, limit: 5 },
+    }).subscribe({
       next: (r: any) => {
-        if (r) this.top_coupons = r.data;
+        if (r?.data) this.top_coupons = r.data;
       },
     });
   }
@@ -177,14 +166,14 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
     if (this.coupon_id <= 0) return;
     this.ui.log_loading = true;
 
-    this.crudService.post_request(
-      this.analyticsRequest('usage_log', {
-        coupon_id: this.coupon_id,
+    this.adapter.get_v3('GET /vendor/coupons/:id/analytics', {
+      params: { id: String(this.coupon_id) },
+      query: {
+        period: 'usage_log',
         page: this.log_pagination.page,
         per_page: this.log_pagination.per_page,
-      }),
-      GlobalComponent.couponAnalytics,
-    ).subscribe({
+      },
+    }).subscribe({
       next: (r: any) => {
         if (r) {
           this.usage_log = r.data;
@@ -192,6 +181,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
         }
         this.ui.log_loading = false;
       },
+      error: () => { this.ui.log_loading = false; },
     });
   }
 
@@ -199,14 +189,14 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
     interval(15000).pipe(
       takeUntil(this.destroy$),
       switchMap(() =>
-        this.crudService.post_request(
-          this.analyticsRequest('live_count', { coupon_id: this.coupon_id }),
-          GlobalComponent.couponAnalytics,
-        ),
+        this.adapter.get_v3('GET /vendor/coupons/:id/analytics', {
+          params: { id: String(this.coupon_id) },
+          query: { period: 'live_count' },
+        }),
       ),
     ).subscribe({
       next: (r: any) => {
-        if (r) this.live_count = r.data.times_used;
+        if (r?.data) this.live_count = r.data.times_used;
       },
     });
   }

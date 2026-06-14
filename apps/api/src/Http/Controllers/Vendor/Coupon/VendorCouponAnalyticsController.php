@@ -67,6 +67,9 @@ final class VendorCouponAnalyticsController
         return match ($period) {
             'overview'         => $this->ok(['data' => $this->overview($conn, $vendorId, $couponId)]),
             'usage_over_time'  => $this->ok(['data' => $this->usageOverTime($conn, $couponId, $request)]),
+            'usage_log'        => $this->ok($this->usageLog($conn, $couponId, $request)),
+            'top_coupons'      => $this->ok(['data' => $this->topCoupons($conn, $vendorId, $request)]),
+            'live_count'       => $this->ok(['data' => ['times_used' => $this->liveCount($conn, $couponId)]]),
             default            => $this->ok(['data' => $this->couponStats($conn, $couponId)]),
         };
     }
@@ -138,6 +141,93 @@ final class VendorCouponAnalyticsController
             'uses'     => (int) $r['uses'],
             'discount' => round((float) $r['discount'], 2),
         ], $rows);
+    }
+
+    /** Paginated redemption log for this coupon (most recent first). */
+    private function usageLog(Connection $conn, int $couponId, ServerRequestInterface $request): array
+    {
+        $q = $request->getQueryParams();
+        $page = max(1, (int) ($q['page'] ?? 1));
+        $perPage = max(1, min(100, (int) ($q['per_page'] ?? 20)));
+        $offset = ($page - 1) * $perPage;
+
+        $total = (int) $conn->fetchOne(
+            'SELECT COUNT(*) FROM promo_redemptions WHERE promo_code_id = ?',
+            [$couponId]
+        );
+
+        $rows = $conn->fetchAllAssociative(
+            "SELECT r.id,
+                    to_char(r.redeemed_at, 'YYYY-MM-DD\"T\"HH24:MI:SSOF') AS redeemed_at,
+                    COALESCE(r.discount_amount, 0) AS discount_amount,
+                    r.order_id,
+                    o.order_reference
+             FROM promo_redemptions r
+             LEFT JOIN orders o ON o.id = r.order_id
+             WHERE r.promo_code_id = ?
+             ORDER BY r.redeemed_at DESC
+             LIMIT ? OFFSET ?",
+            [$couponId, $perPage, $offset]
+        );
+
+        return [
+            'data' => array_map(static fn (array $r): array => [
+                'id'              => (int) $r['id'],
+                'redeemed_at'     => $r['redeemed_at'],
+                'discount_amount' => round((float) $r['discount_amount'], 2),
+                'order_id'        => $r['order_id'] !== null ? (int) $r['order_id'] : null,
+                'order_reference' => $r['order_reference'] ?? null,
+            ], $rows),
+            'pagination' => [
+                'page'        => $page,
+                'per_page'    => $perPage,
+                'total'       => $total,
+                'total_pages' => (int) ceil($total / $perPage),
+            ],
+        ];
+    }
+
+    /**
+     * Top coupons across the vendor's store (by uses or discount). Scoped
+     * to the vendor, so the :id in the path is not used for this period.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function topCoupons(Connection $conn, int $vendorId, ServerRequestInterface $request): array
+    {
+        $q = $request->getQueryParams();
+        $limit = max(1, min(50, (int) ($q['limit'] ?? 5)));
+        $sortBy = ((string) ($q['sort_by'] ?? 'uses')) === 'discount' ? 'discount' : 'uses';
+
+        $rows = $conn->fetchAllAssociative(
+            "SELECT pc.id, pc.code, pc.name,
+                    COUNT(r.id) AS uses,
+                    COALESCE(SUM(r.discount_amount), 0) AS discount
+             FROM promo_codes pc
+             LEFT JOIN promo_redemptions r ON r.promo_code_id = pc.id
+             WHERE pc.vendor_id = ?
+             GROUP BY pc.id, pc.code, pc.name
+             ORDER BY {$sortBy} DESC
+             LIMIT ?",
+            [$vendorId, $limit]
+        );
+
+        return array_map(static fn (array $r): array => [
+            'id'       => (int) $r['id'],
+            'code'     => $r['code'],
+            'name'     => $r['name'],
+            'uses'     => (int) $r['uses'],
+            'discount' => round((float) $r['discount'], 2),
+        ], $rows);
+    }
+
+    /** Current redemption count for this coupon (live counter). */
+    private function liveCount(Connection $conn, int $couponId): int
+    {
+        return (int) $conn->fetchOne(
+            'SELECT COUNT(*) FROM promo_redemptions WHERE promo_code_id = ?',
+            [$couponId]
+        );
     }
 
     // ── resolution ───────────────────────────────────────────────────

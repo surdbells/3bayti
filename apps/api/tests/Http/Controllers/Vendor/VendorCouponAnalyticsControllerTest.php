@@ -178,4 +178,59 @@ final class VendorCouponAnalyticsControllerTest extends HttpTestCase
         $res = $this->get($user, '/v3/vendor/coupons/999/analytics');
         self::assertSame(404, $res->getStatusCode());
     }
+
+    #[Test]
+    public function usageLogReturnsPaginatedRows(): void
+    {
+        $user = $this->makeVendorUser(100);
+        $vendor = $this->makeVendor(101);
+        $this->bindDeps($user, $vendor, $this->makeCoupon(5, 101), [
+            'one' => '2',
+            'all' => [
+                ['id' => '11', 'redeemed_at' => '2026-06-02T10:00:00+00', 'discount_amount' => '12.50', 'order_id' => '900', 'order_reference' => 'ORD-900'],
+                ['id' => '10', 'redeemed_at' => '2026-06-01T09:00:00+00', 'discount_amount' => '8.00', 'order_id' => null, 'order_reference' => null],
+            ],
+        ]);
+
+        $res = $this->get($user, '/v3/vendor/coupons/5/analytics?period=usage_log&page=1&per_page=20');
+        self::assertSame(200, $res->getStatusCode());
+        $body = $this->jsonBody($res);
+        self::assertCount(2, $body['data']);
+        self::assertSame(12.5, $body['data'][0]['discount_amount']);
+        self::assertSame('ORD-900', $body['data'][0]['order_reference']);
+        self::assertSame(2, $body['pagination']['total']);
+        self::assertSame(1, $body['pagination']['total_pages']);
+    }
+
+    #[Test]
+    public function topCouponsReturnsRankedList(): void
+    {
+        $user = $this->makeVendorUser(100);
+        $vendor = $this->makeVendor(101);
+        $this->bindDeps($user, $vendor, $this->makeCoupon(5, 101), [
+            'all' => [
+                ['id' => '5', 'code' => 'SAVE10', 'name' => 'Save 10', 'uses' => '40', 'discount' => '400.00'],
+                ['id' => '6', 'code' => 'SAVE5', 'name' => 'Save 5', 'uses' => '12', 'discount' => '60.00'],
+            ],
+        ]);
+
+        $res = $this->get($user, '/v3/vendor/coupons/5/analytics?period=top_coupons&sort_by=uses&limit=5');
+        self::assertSame(200, $res->getStatusCode());
+        $data = $this->jsonBody($res)['data'];
+        self::assertCount(2, $data);
+        self::assertSame('SAVE10', $data[0]['code']);
+        self::assertSame(40, $data[0]['uses']);
+    }
+
+    #[Test]
+    public function liveCountReturnsTimesUsed(): void
+    {
+        $user = $this->makeVendorUser(100);
+        $vendor = $this->makeVendor(101);
+        $this->bindDeps($user, $vendor, $this->makeCoupon(5, 101), ['one' => '42']);
+
+        $res = $this->get($user, '/v3/vendor/coupons/5/analytics?period=live_count');
+        self::assertSame(200, $res->getStatusCode());
+        self::assertSame(42, $this->jsonBody($res)['data']['times_used']);
+    }
 }
