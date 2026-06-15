@@ -1,0 +1,26 @@
+<main class="not-found-page">
+  <ui-container size="narrow">
+    <ui-stack gap="lg" align="center">
+      <p class="not-found-page__code" aria-hidden="true">404</p>
+
+      <ui-stack gap="md" align="center">
+        <p class="eyebrow">Page not found</p>
+        <ui-heading level="h1" size="xl">We can't find that page</ui-heading>
+        <ui-text size="lg" tone="secondary">
+          The page you're looking for doesn't exist, may have moved, or is no
+          longer available. Let's get you back to the collections.
+        </ui-text>
+      </ui-stack>
+
+      <ui-stack
+        class="not-found-page__actions"
+        direction="horizontal"
+        gap="sm"
+        justify="center"
+        [wrap]="true">
+        <ui-button variant="primary" size="lg" routerLink="/">Back to home</ui-button>
+        <ui-button variant="secondary" size="lg" routerLink="/category">Browse categories</ui-button>
+      </ui-stack>
+    </ui-stack>
+  </ui-container>
+</main>

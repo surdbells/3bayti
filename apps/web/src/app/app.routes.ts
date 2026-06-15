@@ -245,4 +245,14 @@ export const routes: Routes = [
       import('./features/checkout/checkout-success-page').then(m => m.CheckoutSuccessPageComponent),
     title: 'Order placed · 3bayti',
   },
+  {
+    /* Catch-all 404 — MUST remain last. This is a client route (not a
+       top-level 404.html asset), so Cloudflare Pages' built-in SPA
+       fallback still serves index.html for unknown paths and Angular
+       renders this page. */
+    path: '**',
+    loadComponent: () =>
+      import('./features/not-found/not-found-page').then(m => m.NotFoundPageComponent),
+    title: 'Page not found · 3bayti',
+  },
 ];
