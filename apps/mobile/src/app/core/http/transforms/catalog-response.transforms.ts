@@ -430,6 +430,25 @@ export function transformVendorResponse(data: unknown): unknown {
   };
 }
 
+/**
+ * v3 GET /v3/vendors list -> legacy vendor-picker shape. The styles-create
+ * page (and any other vendor list consumer) binds `store.store_id` and
+ * `store.store_name`; v3 publicShape uses `id`/`name`. We map each item and
+ * keep the v3 fields too (pass-through) so slug/logo-aware callers still work.
+ */
+export function transformVendorListResponse(data: unknown): unknown {
+  if (!Array.isArray(data)) return data;
+  return data.map((v) => {
+    if (!isRecord(v)) return v;
+    return {
+      ...v,
+      store_id: v['id'],
+      store_name: asString(v['name']),
+      logo: asString(v['logo_url']),
+    };
+  });
+}
+
 /* ============================================================== *
  * M3.1.5.5 — List shape for vendor labels + styles
  * ============================================================== */
@@ -546,6 +565,7 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
 
   // Vendor-shape endpoints
   'GET /mobile/read-vendor': transformVendorResponse,
+  'GET /vendors': transformVendorListResponse,
 
   // M3.1.5.5 catalog additions:
   'GET /mobile/search': transformProductListResponse,            // products list

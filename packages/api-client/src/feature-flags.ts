@@ -139,7 +139,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'GET /vendors': {
     target: 'new',
-    oldPath: '/v2/vendors',
+    oldPath: '/customer/vendors_list',
     newPath: '/v3/vendors',
     shape: 'v3-envelope',
   },
