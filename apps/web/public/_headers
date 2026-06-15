@@ -35,11 +35,12 @@
   Cache-Control: public, max-age=86400
   Content-Type: text/plain; charset=utf-8
 
-# ----- HTML pages (short cache, frequent updates) -----
-# index.html and the prerendered subroute index.html files. We want fresh
-# content for visitors but want the CDN to serve hot pages efficiently.
-# 5 minutes fresh + stale-while-revalidate = effectively free for the
-# browser, never more than 5 minutes stale.
+# ----- HTML / SPA shell (short cache, frequent updates) -----
+# index.html is the SPA shell served at / and (via Pages' SPA fallback)
+# at every client route. Keep it fresh so new deploys are picked up, but
+# let the CDN serve it efficiently: 5 minutes fresh + stale-while-
+# revalidate. The hashed JS/CSS above are immutable, so even a slightly
+# stale shell still loads the correct assets.
 /
   Cache-Control: public, max-age=0, s-maxage=300, stale-while-revalidate=86400
 /*/

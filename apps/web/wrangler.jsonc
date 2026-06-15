@@ -1,125 +1,35 @@
 {
-  // Cloudflare Wrangler configuration for the 3bayti web Worker.
+  // Cloudflare Pages configuration for the 3bayti storefront (CSR SPA).
   //
-  // Migration context: this project previously deployed to Cloudflare
-  // Pages with all routes prerendered. With the catalogue at 5,000+
-  // products, prerendering everything is impractical (build time would
-  // exceed CF Pages' window), so we've migrated to Workers + Static
-  // Assets to get runtime SSR for the long tail while keeping the
-  // top-200 most recent products prerendered.
+  // The storefront is a pure client-side-rendered Angular SPA deployed as
+  // static assets to Cloudflare Pages. The only server-side piece is the
+  // auth-proxy Pages Function (functions/auth-proxy/[[path]].ts), which
+  // Pages auto-detects and deploys alongside the static assets.
   //
-  // Request flow:
-  //   1. CF edge checks assets.directory for a static match → serves
-  //      it directly if found. This is ~100% of traffic for prerendered
-  //      pages (home, /category, top-200 PDPs, hashed JS/CSS).
-  //   2. If no asset matches → invokes this Worker (src/worker.ts) →
-  //      AngularAppEngine.handle() runs SSR.
+  // SPA routing:
+  //   The build output has no top-level 404.html, so Cloudflare Pages
+  //   treats the deploy as a single-page application and serves
+  //   index.html for any unmatched path (its built-in SPA behavior).
+  //   Deep links like /product/<slug> resolve to the SPA shell and
+  //   Angular routes client-side. No "/* /index.html 200" _redirects
+  //   rule is needed — and such a rule triggers an "infinite loop"
+  //   build warning, so we deliberately omit it.
   //
-  // See https://developers.cloudflare.com/workers/static-assets/ for
-  // the routing model details.
+  //   _redirects rules never apply to Function routes, so the SPA
+  //   fallback never shadows /auth-proxy/*.
+  //
+  // Reference: https://developers.cloudflare.com/pages/configuration/serving-pages/
 
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "3bayti-web",
 
-  // The compiled Worker entry. Angular's build (with `outputMode:
-  // "server"` and `ssr.entry: "src/worker.ts"` configured per-target
-  // in angular.json) emits this to dist/3bayti-web/server/server.mjs.
-  "main": "./dist/3bayti-web/server/server.mjs",
+  // Angular's browser build output — what Pages serves.
+  "pages_build_output_dir": "./dist/3bayti-web/browser",
 
-  // Today's date. Pinning this date locks in the Workers runtime
-  // behavior; bumping it in future intentionally opts into newer
-  // semantics. Reference: https://developers.cloudflare.com/workers/configuration/compatibility-dates/
-  "compatibility_date": "2026-04-23",
-
-  // nodejs_compat enables Cloudflare's Node.js polyfills (Buffer,
-  // process, etc.). Required because Angular's SSR pipeline and some
-  // transitive deps reference Node globals even when our own code
-  // doesn't. Without this flag the Worker fails to start with
-  // "process is not defined" or similar.
-  "compatibility_flags": ["nodejs_compat"],
-
-  // Static assets binding. CF serves files in this directory directly
-  // (and faster than going through the Worker) when their paths match
-  // the request. Crucially, this binding takes precedence over the
-  // Worker by default — exactly what we want.
-  "assets": {
-    "directory": "./dist/3bayti-web/browser/",
-    "binding": "ASSETS",
-
-    // Drop trailing slashes from HTML URLs.
-    //
-    // The site's own canonical URLs (rel=canonical, sitemap.xml,
-    // OG urls, JSON-LD @id) all use NO trailing slash:
-    //   - https://staging.3bayti.ae/category/abayas-1
-    //   - https://staging.3bayti.ae/product/la26-2637
-    //
-    // Workers Static Assets defaults to "auto-trailing-slash", which
-    // serves directory index.html files (e.g. product/la26-2637/index.html)
-    // at the SLASHED path and 307-redirects the unslashed path to the
-    // slashed one. That would mean the canonical URLs the site emits
-    // would each cost a 307 redirect on first visit — a small SEO hit
-    // and a bad UX.
-    //
-    // "drop-trailing-slash" reverses this: Workers serves
-    // product/la26-2637/index.html when the request is for
-    // /product/la26-2637 (no trailing slash), and redirects the
-    // slashed form to the canonical unslashed form. Matches the
-    // sitemap, matches the internal link structure, no 307s on first
-    // visit.
-    //
-    // Reference: https://developers.cloudflare.com/workers/static-assets/routing/advanced/html-handling/
-    "html_handling": "drop-trailing-slash",
-
-    // Don't add not_found_handling. The default (no special handling)
-    // means: if a request doesn't match a static asset, it falls
-    // through to the Worker — which is what we want for runtime SSR.
-    // Setting "single-page-application" would short-circuit by serving
-    // index.html for any non-asset path, which would re-introduce the
-    // exact bug we're fixing (long-tail PDPs serving the SPA shell).
-    //
-    // Setting "404-page" would return a 404 page instead of falling
-    // through, also wrong for our use case.
-
-    // run_worker_first is left at the default (false). Static assets
-    // are served before the Worker is invoked. This is the cheapest
-    // and fastest mode — every prerendered page costs zero Worker
-    // invocations.
-  },
-
-  // Workers Logs — gives us request/response logs and uncaught
-  // exceptions in the CF dashboard. Free up to 200k events/day on the
-  // free plan; effectively free for a site of this scale.
-  "observability": {
-    "enabled": true
-  },
-
-  // Module aliases — stub out modules that are imported by transitive
-  // deps but never reached at runtime. Each alias points esbuild at
-  // src/empty-shim.mjs (a no-op `export default {}`) instead of trying
-  // to resolve the real package.
-  //
-  // Current entries:
-  //   xhr2 — Angular's @angular/common/http SSR backend has a dynamic
-  //          `import("xhr2")` as a fallback for non-browser, non-fetch
-  //          environments. We configure HttpClient with
-  //          provideHttpClient(withFetch()) so the fallback is never
-  //          exercised, but wrangler 4.88+ became stricter about
-  //          resolving the import path at bundle time. Aliasing to
-  //          the empty shim makes the build succeed without changing
-  //          runtime behavior.
-  "alias": {
-    "xhr2": "./src/empty-shim.mjs"
-  },
-
-  // Enable the *.workers.dev preview subdomain for staging/testing.
-  // Once a custom domain is wired up (Phase 4), production traffic
-  // hits the custom domain directly; workers_dev stays useful for
-  // debugging.
-  "workers_dev": true,
-
-  // Preview URLs for non-production branches. This is the Workers
-  // equivalent of Pages' per-branch preview deploys. Combined with
-  // "non-production branch builds" in the Workers Build settings,
-  // every PR gets its own preview URL.
-  "preview_urls": true
+  // Pinning the compatibility date locks the runtime behavior for the
+  // auth-proxy Function. The Function uses only standard Web APIs
+  // (fetch/Request/Response/Headers/URL), so nodejs_compat is NOT
+  // required. Reference:
+  // https://developers.cloudflare.com/workers/configuration/compatibility-dates/
+  "compatibility_date": "2026-04-23"
 }

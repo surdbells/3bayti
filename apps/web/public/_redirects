@@ -1,12 +1,16 @@
 # Cloudflare Pages — URL redirects
 # https://developers.cloudflare.com/pages/configuration/redirects/
 #
-# Format: /from /to [status]
-# Status defaults to 301 (permanent). Use 302 for temporary, 200 for
-# rewrites (proxy).
+# Format: /from /to [status]   (301 default; 302 temporary; 200 rewrite)
 #
-# Phase 1: empty. Real redirects appear in Phase 2+ as URLs evolve.
-# Examples we'll likely add:
-#   - /designers /designers/  301      (trailing slash normalization)
-#   - /old-product-slug /new-product-slug 301
-#   - /home / 301                       (defensive against legacy links)
+# SPA routing is handled automatically: because the build output has no
+# top-level 404.html, Cloudflare Pages treats this as a single-page app
+# and serves index.html for any unmatched path, so deep links such as
+# /product/<slug> resolve to the SPA shell and Angular routes client-side.
+# Do NOT add a "/* /index.html 200" catch-all — Pages flags it as an
+# infinite loop and ignores it. Also note: _redirects rules never apply
+# to Pages Function routes, so /auth-proxy/* is unaffected.
+#
+# Real content redirects go here as URLs evolve, e.g.:
+#   /home / 301
+#   /old-slug /new-slug 301

@@ -14,8 +14,8 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:report": "playwright show-report",
     "chromatic": "chromatic --playwright --config-file=chromatic.config.json",
-    "preview:worker": "wrangler dev",
-    "deploy": "wrangler deploy",
+    "preview": "wrangler pages dev dist/3bayti-web/browser",
+    "deploy": "wrangler pages deploy dist/3bayti-web/browser",
     "dev": "ng serve",
     "type-check": "tsc --noEmit -p tsconfig.app.json",
     "lint": "echo \"lint not configured yet (M0.4)\""
