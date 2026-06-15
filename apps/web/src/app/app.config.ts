@@ -4,6 +4,7 @@ import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
 import { provideI18n } from './core/i18n';
 import { provideAuth } from './core/auth/auth.providers';
+import { provideMonitoring } from './core/monitoring';
 
 /**
  * Root application config — provided once per app instance.
@@ -35,5 +36,6 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideI18n(),
     provideAuth(),
+    provideMonitoring(),
   ],
 };
