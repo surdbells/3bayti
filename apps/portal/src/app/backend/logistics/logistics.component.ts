@@ -117,7 +117,7 @@ export class LogisticsComponent implements OnInit {
 
   onRowAction(e: { action: { id: string }; row: LogisticRow }) {
     if (e.action.id === 'deliveries') {
-      window.open('/deliveries?vendor=' + e.row.store, '_blank', 'width=900,height=800');
+      this.router.navigate(['/deliveries'], { queryParams: { vendor: e.row.store } });
     }
   }
 

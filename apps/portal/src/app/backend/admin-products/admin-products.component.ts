@@ -173,13 +173,11 @@ export class AdminProductsComponent implements OnInit {
           queryParams: { id: row.id, slug: row.slug },
         });
         return;
-      case 'manage-store': {
-        const urlTree = this.router.createUrlTree(['/manage_store'], {
+      case 'manage-store':
+        this.router.navigate(['/manage_store'], {
           queryParams: { id: row.store, name: row.store_name },
         });
-        window.open(this.router.serializeUrl(urlTree), '_blank');
         return;
-      }
       case 'delete':
         return this.confirmDelete(row);
     }

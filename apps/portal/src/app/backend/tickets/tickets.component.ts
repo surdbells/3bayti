@@ -159,10 +159,9 @@ export class TicketsComponent implements OnInit {
   onRowAction(e: { action: { id: string }; row: Tickets }) {
     const { action, row } = e;
     if (action.id === 'view') {
-      const urlTree = this.router.createUrlTree(['/ticket_messages'], {
+      this.router.navigate(['/ticket_messages'], {
         queryParams: { id: row.ticket_id, name: row.subject },
       });
-      window.open(this.router.serializeUrl(urlTree), '_blank');
     } else if (action.id === 'priority') {
       this.cyclePriority(row);
     } else if (action.id === 'status') {
