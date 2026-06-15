@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Domain\Catalog;
 
 use Bayti\Api\Domain\Common\Timestamps;
+use Bayti\Api\Domain\User\User;
 use DateTimeImmutable;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -134,6 +135,16 @@ class Style
     #[ORM\InverseJoinColumn(name: 'product_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
     private Collection $products;
 
+    /**
+     * The customer who created this style, if any. NULL for the
+     * editorial/community styles seeded by admins. Set for user-
+     * submitted styles so they're attributable (and removable on
+     * abuse). SET NULL on user deletion so the style survives.
+     */
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'created_by_user_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?User $createdByUser = null;
+
     public function __construct(string $slug, string $name, int $styleType = self::TYPE_COMMUNITY)
     {
         $this->slug = $slug;
@@ -177,6 +188,16 @@ class Style
     public function setName(string $name): void
     {
         $this->name = $name;
+    }
+
+    public function getCreatedByUser(): ?User
+    {
+        return $this->createdByUser;
+    }
+
+    public function setCreatedByUser(?User $user): void
+    {
+        $this->createdByUser = $user;
     }
 
     public function getDescription(): ?string

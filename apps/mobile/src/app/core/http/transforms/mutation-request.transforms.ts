@@ -503,6 +503,21 @@ export function transformUpdateMeasurementRequest(body: unknown): MutationTransf
   return { body: out };
 }
 
+/**
+ * `create_style` — POST /customer/create_style → POST /v3/me/styles.
+ * Legacy body { id, token, name, category, products(csv) }; v3 wants
+ * { name, products }. `category` has no v3 equivalent and is dropped.
+ */
+export function transformCreateStyleRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  return {
+    body: {
+      name: String(b['name'] ?? ''),
+      products: String(b['products'] ?? ''),
+    },
+  };
+}
+
 export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> = {
   // Cart mutations
   'POST /cart/items': transformAddToCartRequest,
@@ -533,6 +548,9 @@ export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> 
 
   // Measurements (Group A)
   'PUT /me/measurements/default': transformUpdateMeasurementRequest,
+
+  // Styles (Group B / B4)
+  'POST /me/styles': transformCreateStyleRequest,
 };
 
 /**

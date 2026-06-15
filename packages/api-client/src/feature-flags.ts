@@ -667,6 +667,14 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/measurements/default',
     shape: 'v3-envelope',
   },
+  // Customer style submission (Group B / B4). name + products(csv) ->
+  // owned, active TYPE_COMMUNITY style; legacy `category` is dropped.
+  'POST /me/styles': {
+    target: 'new',
+    oldPath: '/customer/create_style',
+    newPath: '/v3/me/styles',
+    shape: 'v3-envelope',
+  },
 
   // ---- Admin catalog (M2.1.A - on v3, raw shapes) ----
   // Note: admin endpoints don't follow the v3-envelope shape; they

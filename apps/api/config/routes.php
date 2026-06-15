@@ -240,6 +240,9 @@ return function (App $app): void {
         // /customer/settings/read-reviews + /settings/delete-review).
         $group->get('/reviews', \Bayti\Api\Http\Controllers\Review\ListMyReviewsController::class);
         $group->delete('/reviews/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Review\DeleteMyReviewController::class);
+
+        // v3 customer style submission (replaces legacy /customer/create_style).
+        $group->post('/styles', \Bayti\Api\Http\Controllers\Style\CreateStyleController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
