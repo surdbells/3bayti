@@ -224,13 +224,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // Backend (M3.2.X.1-A 86454d3): 'best_seller' = units sold in the
   // last 30 days across paid/fulfilling/shipped/delivered orders.
   'GET /mobile/best-sellers': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/best_sellers',
     newPath: '/v3/products',
     shape: 'v3-envelope',
   },
   'GET /mobile/best-sellers-listing': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/best_sellers_listing',
     newPath: '/v3/products',
     shape: 'v3-envelope',
@@ -783,7 +783,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // and 404 there). The endpoint exists at api-v3.3bayti.ae/v3/payment
   // /webhook/noon for Noon's direct POSTs.
   'POST /payment/webhook/noon': {
-    target: 'old',
+    target: 'new',
     oldPath: '',
     newPath: '/v3/payment/webhook/noon',
     shape: 'v3-envelope',
@@ -791,22 +791,22 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
 
   // ---- Wishlist (legacy) ----
   'GET /wishlist': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/wishlist',
-    newPath: '/v3/wishlist',
-    shape: 'v2',
+    newPath: '/v3/me/wishlist',
+    shape: 'v3-envelope',
   },
   'POST /wishlist': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/addToWishlist',
-    newPath: '/v3/wishlist',
-    shape: 'v2',
+    newPath: '/v3/me/wishlist',
+    shape: 'v3-envelope',
   },
   'DELETE /wishlist/:productId': {
-    target: 'old',
+    target: 'new',
     oldPath: '/customer/removeFromWishlist/:productId',
-    newPath: '/v3/wishlist/:productId',
-    shape: 'v2',
+    newPath: '/v3/me/wishlist/:productId',
+    shape: 'v3-envelope',
   },
 
   // ---- Wishlist v3 (label-aware; M3.2.Y.6 + Z.3) ----
