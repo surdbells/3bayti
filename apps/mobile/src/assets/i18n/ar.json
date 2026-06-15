@@ -290,6 +290,7 @@
   "label_dial_code": "رمز الاتصال",
   "label_phone_number": "رقم الهاتف *",
   "placeholder_phone_number": "أدخل رقم هاتفك",
+  "hint_phone_not_editable": "لا يمكن تغيير رقم الهاتف من هنا حاليًا — يُرجى التواصل مع الدعم لتحديثه.",
   "title_select_country_code": "اختر رمز الدولة",
   "placeholder_search_country_or_code": "ابحث حسب الدولة أو الرمز +",
   "label_no_results": "لا توجد نتائج",

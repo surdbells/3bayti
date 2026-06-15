@@ -69,7 +69,7 @@
           <ion-row>
             <ion-col size="4" class="ion-no-padding">
               <label class="profile-field-label">{{ 'label_dial_code' | translate }}</label>
-              <ion-button expand="block" class="ion-margin-vertical" type="button" (click)="isCountryCodeOpen = true">
+              <ion-button expand="block" class="ion-margin-vertical" type="button" [disabled]="true" (click)="isCountryCodeOpen = true">
                 <span class="cc-flag">{{ selectedDial?.flag }}</span>
                 <span class="cc-code">{{ update.countryCode }}</span>
                 <ax-icon name="chevron-down" slot="end" [style.color]="'var(--ion-color-secondary)'"/>
@@ -83,6 +83,8 @@
                 [maxlength]="15"
                 [placeholder]="'placeholder_phone_number' | translate"
                 autocomplete="tel-national"
+                [disabled]="true"
+                [hint]="'hint_phone_not_editable' | translate"
                 [(ngModel)]="update.phone"
                 name="phone">
               </ax-text-field>

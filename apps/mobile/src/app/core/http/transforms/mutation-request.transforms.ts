@@ -518,6 +518,23 @@ export function transformCreateStyleRequest(body: unknown): MutationTransformOut
   };
 }
 
+/**
+ * `update-profile` — POST /customer/settings/update-profile
+ *                  → PATCH /v3/me/profile.
+ *
+ * v3 PATCH updates NAME ONLY; phone/email are deliberately separate
+ * re-verification flows (not yet shipped). We forward first_name +
+ * last_name only and drop phone/countryCode (the profile page makes the
+ * phone field read-only so there's no silent-loss surprise).
+ */
+export function transformUpdateProfileRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  const out: Record<string, unknown> = {};
+  if (typeof b['first_name'] === 'string') out['first_name'] = b['first_name'];
+  if (typeof b['last_name'] === 'string') out['last_name'] = b['last_name'];
+  return { body: out };
+}
+
 export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> = {
   // Cart mutations
   'POST /cart/items': transformAddToCartRequest,
@@ -551,6 +568,9 @@ export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> 
 
   // Styles (Group B / B4)
   'POST /me/styles': transformCreateStyleRequest,
+
+  // Profile (Group A) — name only; phone/email are separate v3 flows
+  'PATCH /me/profile': transformUpdateProfileRequest,
 };
 
 /**

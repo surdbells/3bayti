@@ -507,7 +507,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'PATCH /me/profile': {
     target: 'new',
-    oldPath: '/users/updateProfile',
+    oldPath: '/customer/settings/update-profile',
     newPath: '/v3/me/profile',
     shape: 'v3-envelope',
     // M3.2.Y.5-A — method corrected PUT → PATCH to match the v3

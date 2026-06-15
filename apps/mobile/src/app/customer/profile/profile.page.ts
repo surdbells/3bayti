@@ -198,14 +198,6 @@ export class ProfilePage implements OnInit, OnDestroy {
         this.error_notification(this.i18n.t('text_last_name_required'));
         return;
       }
-      if (this.update.phone.length == 0) {
-        this.error_notification(this.i18n.t('text_phone_required'));
-        return;
-      }
-      if (this.update.countryCode.length === 0) {
-        this.error_notification(this.i18n.t('text_country_code_required'));
-        return;
-      }
       this.ui_controls.is_updating = true;
       this.networkAdapter.post_request(this.update, GlobalComponent.updateProfile)
         .subscribe(({

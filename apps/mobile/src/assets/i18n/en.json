@@ -291,6 +291,7 @@
   "label_dial_code": "Dial code",
   "label_phone_number": "Phone number *",
   "placeholder_phone_number": "Enter your phone number",
+  "hint_phone_not_editable": "Phone number can't be changed here yet — contact support to update it.",
   "title_select_country_code": "Select country code",
   "placeholder_search_country_or_code": "Search by country or +code",
   "label_no_results": "No results",
