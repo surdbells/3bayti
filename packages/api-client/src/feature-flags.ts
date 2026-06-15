@@ -417,7 +417,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   // ---- Account / Me (M1.7 shipped - all on v3) ----
   'GET /me/profile': {
     target: 'new',
-    oldPath: '/users/profile',
+    oldPath: '/customer/settings/read-profile',
     newPath: '/v3/me/profile',
     shape: 'v3-envelope',
   },
