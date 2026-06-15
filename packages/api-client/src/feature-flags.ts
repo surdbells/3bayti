@@ -917,7 +917,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/measurement/get-measurements', newPath: '/v3/vendor/measurements', shape: 'v3-envelope',
   },
   'GET /vendor/measurements/:id': {
-    target: 'old', oldPath: '/vendors/measurement/getMeasurementById', newPath: '/v3/me/measurements/:id', shape: 'v3-envelope',
+    target: 'new', oldPath: '/vendors/measurement/getMeasurementById', newPath: '/v3/vendor/measurements/:id', shape: 'v3-envelope',
   },
   'POST /vendor/messages/:id/read': {
     target: 'new', oldPath: '/vendors/common/mark_message', newPath: '/v3/vendor/messages/:id/read', shape: 'v3-envelope',
@@ -1033,7 +1033,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/vendors/measurement/create-measurement', newPath: '/v3/vendor/measurements', shape: 'v3-envelope',
   },
   'POST /vendor/messages': {
-    target: 'old', oldPath: '/admin/message-vendor', newPath: '/v3/vendor/messages', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/message-vendor', newPath: '/v3/vendor/messages', shape: 'v3-envelope',
   },
   'POST /vendor/notifications/mark-read': {
     target: 'new', oldPath: '/vendors/common/mark_notifications', newPath: '/v3/vendor/notifications/mark-read', shape: 'v3-envelope',
@@ -1225,7 +1225,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/utility/category', newPath: '/v3/categories', shape: 'v3-envelope',
   },
   'GET /utility/collections': {
-    target: 'old', oldPath: '/utility/collections', newPath: '/v3/admin/collections', shape: 'v3-envelope',
+    target: 'new', oldPath: '/utility/collections', newPath: '/v3/admin/collections', shape: 'v3-envelope',
   },
   'GET /utility/stores': {
     target: 'new', oldPath: '/utility/stores', newPath: '/v3/vendors', shape: 'v3-envelope',
