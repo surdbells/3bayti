@@ -220,6 +220,11 @@ return function (App $app): void {
         // logout / opt-out. Both are idempotent and owner-scoped.
         $group->post('/device-tokens', \Bayti\Api\Http\Controllers\Notification\RegisterDeviceTokenController::class);
         $group->delete('/device-tokens', \Bayti\Api\Http\Controllers\Notification\DeleteDeviceTokenController::class);
+
+        // v3 customer Follow (replaces legacy /customer/follow + /unfollow).
+        // Idempotent + owner-scoped; the vendor id is in the path.
+        $group->post('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\FollowVendorController::class);
+        $group->delete('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\UnfollowVendorController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
