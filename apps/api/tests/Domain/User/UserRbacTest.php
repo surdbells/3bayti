@@ -1,0 +1,78 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Bayti\Api\Tests\Domain\User;
+
+use Bayti\Api\Domain\Authz\Permission;
+use Bayti\Api\Domain\Authz\Role;
+use Bayti\Api\Domain\User\User;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+
+final class UserRbacTest extends TestCase
+{
+    private function user(): User
+    {
+        return new User('staff@example.com', '+971500000000', password_hash('x', PASSWORD_BCRYPT), 'AE');
+    }
+
+    private function role(string $slug, array $permissionKeys): Role
+    {
+        $role = new Role($slug, ucfirst($slug));
+        foreach ($permissionKeys as $key) {
+            $role->addPermission(new Permission($key, explode('.', $key)[0], $key));
+        }
+        return $role;
+    }
+
+    #[Test]
+    public function customerWithNoRolesIsNotStaffAndHasNoPermissions(): void
+    {
+        $user = $this->user();
+
+        self::assertFalse($user->isStaff());
+        self::assertSame([], $user->effectivePermissionKeys());
+        self::assertFalse($user->hasPermission('orders.view'));
+    }
+
+    #[Test]
+    public function effectivePermissionsAreTheUnionOfAllRolesDeduplicated(): void
+    {
+        $user = $this->user();
+        $user->addRole($this->role('support', ['tickets.view', 'orders.view']));
+        $user->addRole($this->role('finance', ['orders.view', 'payouts.process']));
+
+        $keys = $user->effectivePermissionKeys();
+        sort($keys);
+
+        self::assertSame(['orders.view', 'payouts.process', 'tickets.view'], $keys);
+        self::assertTrue($user->isStaff());
+        self::assertTrue($user->hasPermission('payouts.process'));
+        self::assertFalse($user->hasPermission('orders.refund'));
+    }
+
+    #[Test]
+    public function superAdminHoldsEveryPermissionWithoutAnyRole(): void
+    {
+        $user = $this->user();
+        $user->setRoles(admin: true);
+
+        self::assertTrue($user->isStaff());
+        self::assertTrue($user->hasPermission('orders.refund'));
+        self::assertTrue($user->hasPermission('anything.at.all'));
+    }
+
+    #[Test]
+    public function removingARoleRevokesItsPermissions(): void
+    {
+        $user = $this->user();
+        $finance = $this->role('finance', ['payouts.process']);
+        $user->addRole($finance);
+        self::assertTrue($user->hasPermission('payouts.process'));
+
+        $user->removeRole($finance);
+        self::assertFalse($user->hasPermission('payouts.process'));
+        self::assertFalse($user->isStaff());
+    }
+}

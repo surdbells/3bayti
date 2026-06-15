@@ -423,7 +423,7 @@ class User
     // -------------------------------------------------------------------
 
     /** @return Collection<int, \Bayti\Api\Domain\Authz\Role> */
-    public function getRoles(): Collection { return $this->roles; }
+    public function getAssignedRoles(): Collection { return $this->roles; }
 
     public function addRole(\Bayti\Api\Domain\Authz\Role $role): void
     {
