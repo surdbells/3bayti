@@ -1,6 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { PLATFORM_ID } from '@angular/core';
 import { CurrencyService, SUPPORTED_CURRENCIES } from './currency.service';
 
 const STORAGE_KEY = 'bayti_currency';
@@ -12,13 +11,8 @@ describe('CurrencyService', () => {
     vi.restoreAllMocks();
   });
 
-  function setup(platformId: string = 'browser'): CurrencyService {
-    TestBed.configureTestingModule({
-      providers: [
-        CurrencyService,
-        { provide: PLATFORM_ID, useValue: platformId },
-      ],
-    });
+  function setup(): CurrencyService {
+    TestBed.configureTestingModule({ providers: [CurrencyService] });
     return TestBed.inject(CurrencyService);
   }
 
@@ -72,18 +66,5 @@ describe('CurrencyService', () => {
       svc.set(code);
       expect(svc.currency()).toBe(code);
     }
-  });
-
-  describe('SSR (server platform)', () => {
-    it('always returns AED on the server regardless of localStorage', () => {
-      localStorage.setItem(STORAGE_KEY, 'GBP');
-      const svc = setup('server');
-      expect(svc.currency()).toBe('AED');
-    });
-
-    it('set() does not throw on the server', () => {
-      const svc = setup('server');
-      expect(() => svc.set('USD')).not.toThrow();
-    });
   });
 });

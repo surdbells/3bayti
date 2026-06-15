@@ -3,10 +3,7 @@ import {
   Signal,
   signal,
   computed,
-  PLATFORM_ID,
-  inject,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
 
 /** ISO 4217 codes supported for display (mirroring the backend Currency enum, X.15). */
 export const SUPPORTED_CURRENCIES = ['AED', 'USD', 'EUR', 'SAR', 'GBP'] as const;
@@ -33,16 +30,16 @@ const DEFAULT: SupportedCurrency = 'AED';
  * payments; the other codes are DISPLAY ONLY. The checkout always
  * charges in AED regardless of the display preference.
  *
- * The choice is persisted in localStorage (same approach as locale
- * preference) so it survives page reloads and tab switches. On the
- * server the service always returns AED (no localStorage in SSR).
+ * The choice is persisted in localStorage so it survives page reloads
+ * and tab switches. localStorage access is wrapped in try/catch so a
+ * blocked-storage environment degrades to the default rather than
+ * throwing.
  */
 @Injectable({ providedIn: 'root' })
 export class CurrencyService {
-  private readonly platformId = inject(PLATFORM_ID);
   private readonly _currency = signal<SupportedCurrency>(this.readInitial());
 
-  /** Current display currency. AED on the server. */
+  /** Current display currency. */
   readonly currency: Signal<SupportedCurrency> = this._currency.asReadonly();
 
   /** True when the display currency differs from the settlement currency. */
@@ -56,13 +53,10 @@ export class CurrencyService {
   set(code: SupportedCurrency): void {
     if (!SUPPORTED_CURRENCIES.includes(code)) return;
     this._currency.set(code);
-    if (isPlatformBrowser(this.platformId)) {
-      try { localStorage.setItem(STORAGE_KEY, code); } catch { /* storage unavailable */ }
-    }
+    try { localStorage.setItem(STORAGE_KEY, code); } catch { /* storage unavailable */ }
   }
 
   private readInitial(): SupportedCurrency {
-    if (!isPlatformBrowser(this.platformId)) return DEFAULT;
     try {
       const saved = localStorage.getItem(STORAGE_KEY) as SupportedCurrency | null;
       return saved && (SUPPORTED_CURRENCIES as readonly string[]).includes(saved) ? saved : DEFAULT;

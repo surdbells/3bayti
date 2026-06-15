@@ -3,13 +3,9 @@ import {
   Signal,
   signal,
   inject,
-  PLATFORM_ID,
-  REQUEST,
-  RESPONSE_INIT,
   DOCUMENT,
   computed,
 } from '@angular/core';
-import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { TranslateService } from '@ngx-translate/core';
 import {
   DEFAULT_LOCALE,
@@ -27,27 +23,15 @@ import {
  *
  * Resolution precedence (highest to lowest)
  * ------------------------------------------
- *   1. SSR: cookie `bayti_locale` (carries last user choice across requests)
- *   2. SSR: `Accept-Language` header (browser preference on first visit)
- *   3. Client: cookie `bayti_locale` (set by SSR; hydration reads same)
- *   4. Client: `navigator.language` (fallback if no cookie present)
- *   5. DEFAULT_LOCALE
+ *   1. Cookie `bayti_locale` (carries the last explicit user choice)
+ *   2. `navigator.language` (browser preference on first visit)
+ *   3. DEFAULT_LOCALE
  *
  * Authenticated users
  * -------------------
- * Auth integration is added in Y.1-B (`AuthService` watches `currentUser`
- * and calls `setLocale(user.locale)` on login + PATCHes /v3/me/profile
- * on switch). For Y.1-A we only handle anonymous resolution.
- *
- * SSR / hydration consistency
- * ---------------------------
- * The server-rendered HTML's `<html lang>` and `dir` attributes must
- * match what the client computes on hydration, or Angular emits a
- * hydration mismatch warning. We achieve this by:
- *   - SSR sets the cookie if not already set (so the client sees it)
- *   - Client reads the cookie first; never falls back to navigator.language
- *     unless cookie is missing (which only happens on the very first
- *     visit if SSR didn't run — rare)
+ * AuthService watches `currentUser` and calls `setLocale(user.locale)`
+ * on login + PATCHes /v3/me/profile on switch (Y.1-B). This service only
+ * handles anonymous resolution.
  *
  * Why a service rather than an Angular provider factory
  * -----------------------------------------------------
@@ -57,14 +41,8 @@ import {
  */
 @Injectable({ providedIn: 'root' })
 export class LocaleService {
-  private readonly platformId = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
   private readonly translate = inject(TranslateService);
-
-  /* SSR-only injections — null on the browser. We use { optional: true }
-     because in some test setups these may be absent even server-side. */
-  private readonly request = inject(REQUEST, { optional: true });
-  private readonly responseInit = inject(RESPONSE_INIT, { optional: true });
 
   /* Current locale — signal so views can react. Components inject the
      service and bind to `current` directly, or to `dir` / `lang` for
@@ -78,14 +56,14 @@ export class LocaleService {
   /**
    * Initialise the service.
    *
-   * Called once per request from APP_INITIALIZER (registered in
-   * i18n.providers.ts). On the server it reads cookie/Accept-Language
-   * and writes a Set-Cookie on the response. On the client it reads
-   * the cookie (set by SSR) or falls back to navigator.language.
+   * Called once at startup from APP_INITIALIZER (registered in
+   * i18n.providers.ts). Reads the cookie (or falls back to
+   * navigator.language), applies <html lang>/<dir>, persists the cookie,
+   * and activates the locale's translations.
    *
-   * Returns a promise that resolves once translations are loaded
-   * for the resolved locale, so the app's first paint already has
-   * translated strings.
+   * Returns a promise that resolves once translations are loaded for the
+   * resolved locale, so the app's first paint already has translated
+   * strings.
    */
   async initialize(): Promise<void> {
     const resolved = this.resolve();
@@ -106,9 +84,7 @@ export class LocaleService {
    * Side effects:
    *   - Updates the signal
    *   - Applies <html lang> + <html dir>
-   *   - Persists the cookie on the BROWSER (we can't write Set-Cookie
-   *     after SSR is done; for SSR-time changes, callers should use
-   *     `initialize()` instead)
+   *   - Persists the cookie
    *   - Loads the new locale's translations
    */
   async setLocale(next: Locale): Promise<void> {
@@ -126,84 +102,26 @@ export class LocaleService {
      ---------------------------------------------------------------- */
 
   /**
-   * Run the resolution precedence chain.
+   * Run the resolution precedence chain: cookie, then navigator.language,
+   * then DEFAULT_LOCALE.
    *
-   * Pure function modulo `inject()` reads; covered by unit tests with
-   * mocked PLATFORM_ID / REQUEST / cookies.
+   * Pure function modulo `inject()` reads; covered by unit tests with a
+   * mocked DOCUMENT / cookies.
    */
   private resolve(): Locale {
-    /* Server-side: look at cookie header first, then Accept-Language */
-    if (isPlatformServer(this.platformId)) {
-      const cookieLocale = this.readCookieFromRequest();
-      if (cookieLocale !== null) {
-        return cookieLocale;
-      }
-      const acceptLanguage = this.readAcceptLanguageFromRequest();
-      if (acceptLanguage !== null) {
-        return acceptLanguage;
-      }
-      return DEFAULT_LOCALE;
+    const cookieLocale = this.readCookieFromDocument();
+    if (cookieLocale !== null) {
+      return cookieLocale;
     }
-
-    /* Browser-side: cookie first (set by SSR), then navigator.language */
-    if (isPlatformBrowser(this.platformId)) {
-      const cookieLocale = this.readCookieFromDocument();
-      if (cookieLocale !== null) {
-        return cookieLocale;
-      }
-      const navigatorLocale = this.readNavigatorLocale();
-      if (navigatorLocale !== null) {
-        return navigatorLocale;
-      }
-      return DEFAULT_LOCALE;
+    const navigatorLocale = this.readNavigatorLocale();
+    if (navigatorLocale !== null) {
+      return navigatorLocale;
     }
-
-    /* Some non-DOM platform (web worker, test, etc.) — fall back. */
     return DEFAULT_LOCALE;
   }
 
   /**
-   * Read the bayti_locale cookie from the incoming SSR request.
-   * Returns null if no cookie or value is unsupported.
-   */
-  private readCookieFromRequest(): Locale | null {
-    if (this.request === null) return null;
-    const header = this.request.headers.get('cookie');
-    if (header === null) return null;
-    return this.parseCookieHeader(header, LOCALE_COOKIE);
-  }
-
-  /**
-   * Read the first valid Accept-Language entry from the SSR request.
-   * Doesn't implement full quality-value parsing — that's overkill
-   * for two locales. We just check whether `ar` appears anywhere.
-   */
-  private readAcceptLanguageFromRequest(): Locale | null {
-    if (this.request === null) return null;
-    const header = this.request.headers.get('accept-language');
-    if (header === null) return null;
-
-    /* Example header: "ar-AE,ar;q=0.9,en;q=0.8"
-       Split on commas, take the first locale code from each entry,
-       normalise to short tag, return the first one we support. */
-    const entries = header.split(',');
-    for (const entry of entries) {
-      const code = entry.split(';')[0]?.trim() ?? '';
-      const short = normalizeLocale(code);
-      /* normalizeLocale always returns a supported locale (falling
-         back to DEFAULT_LOCALE on unsupported input). We only want
-         to count it as a hit if the input genuinely matched, so
-         re-check against the original. */
-      if (short !== DEFAULT_LOCALE || code.toLowerCase().startsWith(DEFAULT_LOCALE)) {
-        return short;
-      }
-    }
-    return null;
-  }
-
-  /**
    * Read the bayti_locale cookie from document.cookie.
-   * Browser-only.
    */
   private readCookieFromDocument(): Locale | null {
     /* document.cookie is "key=value; key=value" */
@@ -212,11 +130,9 @@ export class LocaleService {
   }
 
   /**
-   * Read navigator.language. Browser-only.
+   * Read navigator.language and map it to a supported locale, or null.
    */
   private readNavigatorLocale(): Locale | null {
-    /* defaultView is the window in SSR-aware Angular; on the client
-       it's globalThis.window. nav.language may be undefined in tests. */
     const nav = this.document.defaultView?.navigator;
     if (!nav || !nav.language) return null;
     const short = normalizeLocale(nav.language);
@@ -256,46 +172,26 @@ export class LocaleService {
   }
 
   /**
-   * Persist the locale to a cookie.
-   *
-   *   - On the server: writes Set-Cookie via RESPONSE_INIT.headers
-   *   - On the browser: writes document.cookie
+   * Persist the locale to the bayti_locale cookie (document.cookie).
    *
    * Idempotent: writing the same cookie twice is a no-op.
    */
   private persistCookie(locale: Locale): void {
-    if (isPlatformServer(this.platformId)) {
-      if (this.responseInit === null) return;
-      /* RESPONSE_INIT.headers may be undefined; initialise lazily.
-         Multiple Set-Cookie headers can coexist (e.g. session +
-         locale); use Headers API to append rather than overwrite. */
-      const headers =
-        this.responseInit.headers instanceof Headers
-          ? this.responseInit.headers
-          : new Headers(this.responseInit.headers ?? undefined);
-      const cookieValue = this.buildCookieString(locale);
-      headers.append('set-cookie', cookieValue);
-      this.responseInit.headers = headers;
-      return;
-    }
-
-    if (isPlatformBrowser(this.platformId)) {
-      /* document.cookie assignment sets one cookie per assignment. */
-      this.document.cookie = this.buildCookieString(locale);
-    }
+    /* document.cookie assignment sets one cookie per assignment. */
+    this.document.cookie = this.buildCookieString(locale);
   }
 
   /**
    * Build a `name=value; ...attributes` cookie string.
    *
    * Attributes:
-   *   - Path=/             — visible to every route (SSR + BFF + client)
+   *   - Path=/             — visible to every route (BFF + client)
    *   - Max-Age=31536000   — 1 year (long-lived; user choice persists)
    *   - SameSite=Lax       — locale isn't security-sensitive; Lax is fine
-   *   - Secure (prod only) — sent only over HTTPS in production
+   *   - Secure (https only) — sent only over HTTPS
    *
-   * We don't set HttpOnly because the browser needs to read this on
-   * hydration to avoid a mismatch with SSR.
+   * We don't set HttpOnly because the app reads this cookie client-side
+   * to resolve the locale.
    */
   private buildCookieString(locale: Locale): string {
     const parts = [
@@ -305,12 +201,8 @@ export class LocaleService {
       'SameSite=Lax',
     ];
 
-    /* In SSR contexts the request's `protocol` tells us whether to
-       set Secure. On the browser, location.protocol is the source of
-       truth. Defensive: when in doubt, set Secure (most modern
-       browsers tolerate Secure on http://localhost during dev). */
-    const isHttps = this.isSecureContext();
-    if (isHttps) {
+    /* Set Secure over HTTPS (location.protocol is the source of truth). */
+    if (this.isSecureContext()) {
       parts.push('Secure');
     }
 
@@ -318,24 +210,11 @@ export class LocaleService {
   }
 
   private isSecureContext(): boolean {
-    if (isPlatformServer(this.platformId) && this.request !== null) {
-      /* Edge runtimes pass `x-forwarded-proto` from the upstream proxy. */
-      const proto =
-        this.request.headers.get('x-forwarded-proto') ??
-        new URL(this.request.url).protocol.replace(':', '');
-      return proto === 'https';
-    }
-    if (isPlatformBrowser(this.platformId)) {
-      return this.document.defaultView?.location?.protocol === 'https:';
-    }
-    return false;
+    return this.document.defaultView?.location?.protocol === 'https:';
   }
 
   /**
    * Apply <html lang> and <html dir> to the document.
-   *
-   * Works on both SSR (where the document is the rendering buffer)
-   * and the browser (where it's the live DOM).
    */
   private applyToDocument(locale: Locale): void {
     const html = this.document.documentElement;
