@@ -30,7 +30,7 @@ use Doctrine\ORM\Mapping as ORM;
  * `star` is decimal(2,1) to allow half-stars (e.g. 4.5) if the UI supports
  * that later. CHECK constraint enforces 0.0–5.0.
  */
-#[ORM\Entity]
+#[ORM\Entity(repositoryClass: ProductReviewRepository::class)]
 #[ORM\Table(name: 'product_reviews')]
 class ProductReview
 {
@@ -130,6 +130,7 @@ class ProductReview
     public function setProductNameSnapshot(?string $name): void { $this->productNameSnapshot = $name; $this->touch(); }
     public function setTitle(?string $title): void { $this->title = $title; $this->touch(); }
     public function setComment(?string $comment): void { $this->comment = $comment; $this->touch(); }
+    public function setStar(string $star): void { $this->star = $star; $this->touch(); }
     public function setVendorReply(?string $reply): void { $this->vendorReply = $reply; $this->touch(); }
 
     public function setStatus(string $status): void

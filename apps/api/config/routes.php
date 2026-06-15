@@ -235,6 +235,11 @@ return function (App $app): void {
         $group->get('/tickets/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Ticket\GetMyTicketController::class);
         $group->get('/tickets/{id:[0-9]+}/messages', \Bayti\Api\Http\Controllers\Ticket\ListMyTicketMessagesController::class);
         $group->post('/tickets/{id:[0-9]+}/messages', \Bayti\Api\Http\Controllers\Ticket\CreateMyTicketMessageController::class);
+
+        // v3 customer reviews — own reviews (replaces legacy
+        // /customer/settings/read-reviews + /settings/delete-review).
+        $group->get('/reviews', \Bayti\Api\Http\Controllers\Review\ListMyReviewsController::class);
+        $group->delete('/reviews/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Review\DeleteMyReviewController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
@@ -434,6 +439,16 @@ return function (App $app): void {
     $app->get('/v3/products/{slug}/recommendations',
         \Bayti\Api\Http\Controllers\Catalog\GetProductRecommendationsController::class);
     $app->get('/v3/vendors/{slug}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsController::class);
+
+    // Product/vendor reviews (Group B / B1). Numeric id in the path
+    // (mobile passes ids); the distinct /reviews suffix + 3-segment
+    // shape means no collision with the {slug} catalog routes above.
+    // Public reads expose APPROVED reviews only.
+    $app->get('/v3/products/{productId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\ListProductReviewsController::class);
+    $app->get('/v3/vendors/{vendorId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\ListVendorPublicReviewsController::class);
+    // Authed customer review actions.
+    $app->post('/v3/products/{productId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\CreateReviewController::class)->add(AuthMiddleware::class);
+    $app->post('/v3/reviews/{id:[0-9]+}/helpful', \Bayti\Api\Http\Controllers\Review\MarkReviewHelpfulController::class)->add(AuthMiddleware::class);
 
     // M3.1.5a — by-legacy-id variants for mobile compatibility during
     // the strangler-fig flip. These resolve legacy WordPress/CodeIgniter
