@@ -195,7 +195,7 @@ goToReviews(id: number, name: string) {
       }))
   }
   user_follow_vendor() {
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.follow_vendor)
+    this.networkAdapter.post_request(this.follow_vendor, GlobalComponent.follow_vendor)
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -208,7 +208,7 @@ goToReviews(id: number, name: string) {
       }))
   }
   user_unfollow_vendor() {
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.unfollow_vendor)
+    this.networkAdapter.post_request(this.unfollow_vendor, GlobalComponent.unfollow_vendor)
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

@@ -430,6 +430,20 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/profile',
     shape: 'v3-envelope',
   },
+  // v3 customer Follow (Group B / B3). Vendor id moves from the legacy
+  // body (store_id) into the v3 path via the mutation request transforms.
+  'POST /following/:vendorId': {
+    target: 'new',
+    oldPath: '/customer/follow',
+    newPath: '/v3/me/following/:vendorId',
+    shape: 'v3-envelope',
+  },
+  'DELETE /following/:vendorId': {
+    target: 'new',
+    oldPath: '/customer/unfollow',
+    newPath: '/v3/me/following/:vendorId',
+    shape: 'v3-envelope',
+  },
   'PATCH /me/profile': {
     target: 'new',
     oldPath: '/users/updateProfile',

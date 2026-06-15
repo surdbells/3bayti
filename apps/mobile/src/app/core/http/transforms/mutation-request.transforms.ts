@@ -373,6 +373,36 @@ export function transformInitiatePaymentRequest(body: unknown): MutationTransfor
  * in feature-flags.ts. Use the LOGICAL path (with `:id` placeholders),
  * not a substituted URL.
  */
+/**
+ * `follow` — POST /customer/follow → POST /v3/me/following/{vendorId}.
+ *
+ * Legacy body: { id, token, store_id: <vendorId>, store_name }
+ * v3 path:     POST /v3/me/following/{store_id}
+ * v3 body:     {} (vendor from path, user from token — controller reads
+ *              nothing from the body)
+ */
+export function transformFollowVendorRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  const vendorId = pickInt(b, 'store_id');
+  return {
+    pathParams: { vendorId: String(vendorId ?? 0) },
+    body: {},
+  };
+}
+
+/**
+ * `unfollow` — POST /customer/unfollow → DELETE /v3/me/following/{vendorId}.
+ * Same id extraction; DELETE carries no body.
+ */
+export function transformUnfollowVendorRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  const vendorId = pickInt(b, 'store_id');
+  return {
+    pathParams: { vendorId: String(vendorId ?? 0) },
+    body: null,
+  };
+}
+
 export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> = {
   // Cart mutations
   'POST /cart/items': transformAddToCartRequest,
@@ -387,6 +417,10 @@ export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> 
 
   // Checkout
   'POST /checkout/initiate': transformInitiatePaymentRequest,
+
+  // Follow (vendor id moves from legacy body.store_id to the v3 path)
+  'POST /following/:vendorId': transformFollowVendorRequest,
+  'DELETE /following/:vendorId': transformUnfollowVendorRequest,
 };
 
 /**
