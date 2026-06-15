@@ -10,19 +10,17 @@ import { currencyInterceptor } from '../currency/currency.interceptor';
  *
  * Why APP_INITIALIZER for hydration
  * ---------------------------------
- * On both SSR and the client, the very first paint should reflect
- * the user's signed-in state — otherwise the page flashes "Sign in"
- * for half a second before discovering the cookie session and
- * swapping to the user's name. Returning the hydrate() promise from
- * the initializer delays bootstrap until /auth-proxy/me has resolved
- * (either to a user payload or to a 401). For SSR this also seeds
- * TransferState so the client doesn't repeat the call.
+ * The very first paint should reflect the user's signed-in state —
+ * otherwise the page flashes "Sign in" for half a second before
+ * discovering the cookie session and swapping to the user's name.
+ * Returning the hydrate() promise from the initializer delays bootstrap
+ * until /auth-proxy/me has resolved (either to a user payload or a 401).
  *
  * Cost
  * ----
- * One BFF round-trip on every page load. Modest (~50-100ms on a warm
- * lambda) and well within the budget for a marketplace where the
- * vast majority of pages benefit from knowing the user is logged in.
+ * One BFF round-trip on app load. Modest (~50-100ms) and well within
+ * the budget for a marketplace where the vast majority of pages benefit
+ * from knowing the user is logged in.
  *
  * Order of registration
  * ---------------------

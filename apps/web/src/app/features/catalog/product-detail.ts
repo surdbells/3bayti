@@ -2,14 +2,10 @@ import {
   Component,
   ChangeDetectionStrategy,
   inject,
-  PLATFORM_ID,
-  TransferState,
-  makeStateKey,
   computed,
   signal,
   effect,
 } from '@angular/core';
-import { isPlatformServer } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -17,7 +13,6 @@ import { catchError, from, map, of, switchMap, tap } from 'rxjs';
 
 import { SeoService } from '../../core/seo/seo.service';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
-import { createSetSsrStatus } from '../../core/ssr/response-status';
 import {
   productSchema,
   breadcrumbSchema,
@@ -91,47 +86,15 @@ export class ProductDetailComponent {
   private route = inject(ActivatedRoute);
   private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
-  private state = inject(TransferState);
-  private platformId = inject(PLATFORM_ID);
   private recsService = inject(RecommendationsService);
   private cart = inject(CartService);
   private cartDrawer = inject(CartDrawerService);
 
-  /**
-   * Sets the SSR HTTP response status. Called when the API returns 404
-   * for the product slug — without this the response would be HTTP 200
-   * with a "not found" page, which crawlers index as real content.
-   * No-op on the browser. (W2.2c)
-   */
-  private setSsrStatus = createSetSsrStatus();
-
-  /**
-   * True if the API returned 404 for this slug.
-   *
-   * NOTE on field order: this MUST be declared BEFORE `product`
-   * below. TypeScript class fields initialize top-to-bottom, and
-   * `product`'s `toSignal()` subscribes synchronously on creation;
-   * its inner `switchMap` may then call `fetchProduct$()` which
-   * touches `this.notFound.set(...)`. If `notFound` were declared
-   * after `product`, that .set call would throw at construction time
-   * with `Cannot read properties of undefined (reading 'set')` —
-   * surfaced specifically when the client hydrates with a populated
-   * TransferState (the cache-hit path is synchronous, so the .set
-   * fires before the rest of the class fields are initialized).
-   *
-   * SSR prerender doesn't hit this because the cache-miss path is
-   * async (HTTP latency) — by the time tap()/catchError() runs,
-   * `notFound` exists.
-   *
-   * (`loading` below references `notFound` too, but that's safe
-   * because `computed()` is lazy — its body doesn't run at
-   * declaration time, only on first read.)
-   */
+  /** True if the API returned 404 for this slug. */
   readonly notFound = signal(false);
 
   /**
-   * Product detail fetched from /v2/products/:slug.
-   * Embeds in TransferState for SSR-to-client hand-off.
+   * Product detail fetched for the current route slug.
    */
   readonly product = toSignal(
     this.route.paramMap.pipe(
@@ -149,9 +112,7 @@ export class ProductDetailComponent {
 
   /**
    * Recommendations from the X.12 engine (co-purchase + category +
-   * popular fallback), loaded for the current product slug. Client-side
-   * only: recommendations are a progressive enhancement, not SEO content,
-   * so we don't pay the SSR cost or embed them in TransferState.
+   * popular fallback), loaded for the current product slug.
    *
    * The "you may also like" strip prefers these engine results and only
    * falls back to the product's own `related_products` (from the single
@@ -163,7 +124,7 @@ export class ProductDetailComponent {
     this.route.paramMap.pipe(
       switchMap((params) => {
         const slug = params.get('slug') ?? '';
-        if (slug === '' || isPlatformServer(this.platformId)) {
+        if (slug === '') {
           return of([] as Product[]);
         }
         return from(this.recsService.forProduct(slug)).pipe(
@@ -466,31 +427,17 @@ export class ProductDetailComponent {
   }
 
   /**
-   * Fetch product detail with TransferState caching.
+   * Fetch product detail for the given slug.
    */
   private fetchProduct$(slug: string) {
-    const stateKey = makeStateKey<ProductDetail>(`product-detail-${slug}`);
-
-    const cached = this.state.get(stateKey, null);
-    if (cached !== null) {
-      this.notFound.set(false);
-      return of(cached);
-    }
-
     return this.routed.get<ProductDetail>('GET /products/:slug', { params: { slug } }).pipe(
       map((envelope) => envelope.data),
-      tap((product) => {
-        if (isPlatformServer(this.platformId)) {
-          this.state.set(stateKey, product);
-        }
+      tap(() => {
         this.notFound.set(false);
       }),
       catchError((err: HttpErrorResponse) => {
         if (err.status === 404) {
           this.notFound.set(true);
-          /* W2.2c: propagate 404 to the HTTP response so search engines
-           * see a real 404 instead of indexing this URL as a 200 page. */
-          this.setSsrStatus(404);
         } else {
           console.error(`[/product/${slug}] fetch failed:`, err.status);
         }

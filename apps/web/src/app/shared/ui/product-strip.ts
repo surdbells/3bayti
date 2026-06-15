@@ -6,12 +6,10 @@ import {
   ViewChild,
   ElementRef,
   inject,
-  PLATFORM_ID,
   AfterViewInit,
   OnDestroy,
   ChangeDetectorRef,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
 import type { Product } from '../../features/catalog/product.model';
 import { ProductCardComponent } from '../../features/catalog/product-card';
 import { SkeletonShimmerComponent } from './skeleton-shimmer';
@@ -43,10 +41,9 @@ import { SkeletonShimmerComponent } from './skeleton-shimmer';
  * the strip renders nothing (parent should hide the section
  * entirely if there's no content).
  *
- * SSR safety: arrows render only after view init on the browser
- * — server-rendered HTML omits them entirely (no hydration
- * mismatch). The strip itself prerenders cleanly because all
- * card data is in TransferState.
+ * Arrows render only after view init (showArrows starts false) so the
+ * initial paint omits them until scroll state is computed — avoids a
+ * flash of arrows before edge detection runs.
  */
 @Component({
   selector: 'ui-product-strip',
@@ -153,22 +150,19 @@ export class ProductStripComponent implements AfterViewInit, OnDestroy {
 
   @ViewChild('scroller') private scrollerRef?: ElementRef<HTMLElement>;
 
-  private platformId = inject(PLATFORM_ID);
   private cdr = inject(ChangeDetectorRef);
 
-  /** True when arrows should render — only on browser AND only on
-   * non-touch (the CSS handles the touch hiding, this signal only
-   * controls SSR behavior). */
+  /** True when arrows should render. The CSS handles hiding on touch
+   * devices; this signal gates them until post-view-init scroll state
+   * is computed. */
   readonly showArrows = signal(false);
 
   readonly atStart = signal(true);
   readonly atEnd = signal(false);
 
   ngAfterViewInit(): void {
-    if (!isPlatformBrowser(this.platformId)) return;
-    /* Reveal arrows post-hydration. Server renders without them —
-     * avoids the FOUC where arrows briefly flash before scroll-state
-     * is computed. */
+    /* Reveal arrows now that the view exists — avoids the FOUC where
+     * arrows briefly flash before scroll-state is computed. */
     this.showArrows.set(true);
     /* Initialise edge state from current scroll position. */
     queueMicrotask(() => this.onScroll());

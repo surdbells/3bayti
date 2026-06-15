@@ -21,14 +21,8 @@ import { ApiConfigService } from '../api/api-config.service';
  * ===============
  * `packages/api-client` exposes a runtime-agnostic `fetch()` based
  * client. That's fine for Node scripts and possibly mobile native
- * shells, but apps/web has SSR concerns that demand Angular's
- * HttpClient:
+ * shells, but apps/web wants Angular's HttpClient:
  *
- *   - SSR's TransferState injects HTTP responses into the prerendered
- *     HTML so the browser doesn't re-fetch after hydration. This only
- *     works for requests that go through Angular's HttpClient
- *     (`provideHttpClient(withFetch())` in app.config.ts wires it up).
- *     Bypass that and you get a double-fetch — visible flicker.
  *   - HttpClient gives us interceptors (auth, error logging, retry).
  *     Reusing them is preferable to porting them onto fetch.
  *   - Observable-based; matches the existing apps/web idiom and our

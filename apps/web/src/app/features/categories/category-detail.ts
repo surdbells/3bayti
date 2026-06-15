@@ -2,14 +2,10 @@ import {
   Component,
   ChangeDetectionStrategy,
   inject,
-  PLATFORM_ID,
-  TransferState,
-  makeStateKey,
   computed,
   signal,
   effect,
 } from '@angular/core';
-import { isPlatformServer } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -18,7 +14,6 @@ import { catchError, map, of, switchMap, tap } from 'rxjs';
 import { SeoService } from '../../core/seo/seo.service';
 import { breadcrumbSchema, itemListSchema } from '../../core/seo/schema.helpers';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
-import { createSetSsrStatus } from '../../core/ssr/response-status';
 import { environment } from '../../../environments/environment';
 import {
   ContainerComponent,
@@ -67,10 +62,7 @@ export class CategoryDetailComponent {
   private router = inject(Router);
   private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
-  private state = inject(TransferState);
-  private platformId = inject(PLATFORM_ID);
   private catalog = inject(CatalogService);
-  private setSsrStatus = createSetSsrStatus();
 
   // ── SSR metadata ──────────────────────────────────────────────────
   // (unchanged from original; keeps SEO intact)
@@ -139,8 +131,6 @@ export class CategoryDetailComponent {
   private _page = signal(0);
   readonly page = this._page.asReadonly();
 
-  readonly isBrowser = computed(() => !isPlatformServer(this.platformId));
-
   constructor() {
     // SEO effect (unchanged)
     effect(() => {
@@ -196,10 +186,10 @@ export class CategoryDetailComponent {
       });
     });
 
-    // Drive catalog + facets whenever filters change (browser only)
+    // Drive catalog + facets whenever filters change
     effect(() => {
       const filters = this.currentFilters();
-      if (isPlatformServer(this.platformId) || !filters.category) return;
+      if (!filters.category) return;
       this._page.set(0);
       this.catalog.reset();
       void this.catalog.loadProducts(filters, 0, false);
@@ -235,24 +225,14 @@ export class CategoryDetailComponent {
   // ── Private ──────────────────────────────────────────────────────
 
   private fetchCategoryDetail$(slug: string) {
-    const stateKey = makeStateKey<CategoryDetailEnvelope>(`category-detail-${slug}`);
-    const cached = this.state.get(stateKey, null);
-    if (cached !== null) {
-      this.notFound.set(false);
-      return of(cached);
-    }
     return this.routed.get<CategoryDetail>('GET /categories/:slug', { params: { slug } }).pipe(
       map((env) => env as unknown as CategoryDetailEnvelope),
-      tap((envelope) => {
-        if (isPlatformServer(this.platformId)) {
-          this.state.set(stateKey, envelope);
-        }
+      tap(() => {
         this.notFound.set(false);
       }),
       catchError((err: HttpErrorResponse) => {
         if (err.status === 404) {
           this.notFound.set(true);
-          this.setSsrStatus(404);
         } else {
           console.error(`[/category/${slug}] fetch failed:`, err.status);
         }

@@ -510,20 +510,6 @@ describe('AuthService', () => {
      Pre-emptive refresh scheduler
      ----------------------------------------------------------------- */
   describe('pre-emptive refresh scheduler', () => {
-    it('does NOT arm the scheduler on the server', async () => {
-      const { service, controller, emitIsStable } = setup({ platform: 'server' });
-
-      service.login({ email: 'a@b.com', password: 'x' });
-      controller.expectOne('/auth-proxy/login').flush(makeLoginResponse());
-      await Promise.resolve();
-
-      /* Even if we emit isStable, nothing should happen on the server. */
-      emitIsStable(true);
-      await Promise.resolve();
-
-      controller.expectNone('/auth-proxy/refresh');
-    });
-
     it('arms a refresh timer on the browser after isStable emits', async () => {
       vi.useFakeTimers();
       try {
@@ -730,21 +716,6 @@ describe('AuthService', () => {
       await Promise.resolve();
       expect(warnSpy).toHaveBeenCalledWith('[AuthService] locale push failed', expect.anything());
       warnSpy.mockRestore();
-    });
-
-    it('does NOT push on the server (SSR build)', async () => {
-      const { service, controller, locale } = setup({ platform: 'server' });
-      locale._setCurrent('en');
-
-      service.login({ email: 'a@b.com', password: 'x' });
-      controller.expectOne('/auth-proxy/login').flush(
-        makeLoginResponse({ user: makeUser({ locale: 'en' }) }),
-      );
-      await Promise.resolve();
-
-      /* On the server the effect doesn't register at all. */
-      await locale.setLocale('ar');
-      controller.expectNone('https://api-v3.3bayti.ae/v3/me/profile');
     });
   });
 

@@ -2,14 +2,10 @@ import {
   Component,
   ChangeDetectionStrategy,
   inject,
-  PLATFORM_ID,
-  TransferState,
-  makeStateKey,
   computed,
 } from '@angular/core';
-import { isPlatformServer } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, map, of, tap } from 'rxjs';
+import { catchError, map, of } from 'rxjs';
 
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { SeoService } from '../../core/seo/seo.service';
@@ -26,16 +22,8 @@ import { Category } from './category.model';
 /**
  * Categories index — `/category`.
  *
- * Lists all visible product categories as a clickable grid. Server-
- * rendered so search engines see the full list in the HTML (no
- * client-side fetching for crawlers).
- *
- * Why TransferState:
- *   The page renders during prerender via SSR. Without TransferState,
- *   the browser would re-fetch the same data after hydration —
- *   wasteful and visually disruptive. TransferState embeds the SSR
- *   response in a <script> tag in the HTML, and the browser picks up
- *   the cached data instead of making the round trip.
+ * Lists all visible product categories as a clickable grid, fetched
+ * client-side on load.
  *
  * Image handling:
  *   The backend returns Lucide icon names (e.g. "@tui.sparkles") in
@@ -62,17 +50,11 @@ import { Category } from './category.model';
 export class CategoriesComponent {
   private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
-  private state = inject(TransferState);
-  private platformId = inject(PLATFORM_ID);
-
-  /** Cache key — must be stable across server/client for hydration to find it. */
-  private readonly STATE_KEY = makeStateKey<Category[]>('categories-list');
 
   /**
    * Loaded categories. Starts as null (= loading); becomes Category[]
-   * once data arrives (SSR or client). Errors resolve to empty array
-   * so the page still renders — caller-side error handling can be
-   * added later.
+   * once data arrives. Errors resolve to empty array so the page still
+   * renders — caller-side error handling can be added later.
    */
   readonly categories = toSignal(this.fetchCategories$(), { initialValue: null });
 
@@ -110,33 +92,13 @@ export class CategoriesComponent {
   }
 
   /**
-   * Returns an Observable of Category[] that uses TransferState as a cache.
-   *
-   * On the server: fetch, store result in TransferState, return.
-   * On the browser (after hydration): pull from TransferState (no re-fetch).
-   * On the browser (no SSR cache, e.g. CSR-only build): fetch normally.
+   * Fetch the category list from the API via the routed client, which
+   * resolves 'GET /categories' to v3 (per ENDPOINT_ROUTING). Errors
+   * degrade to an empty array so the page still renders.
    */
   private fetchCategories$() {
-    /* Browser-side: check if SSR seeded the cache. */
-    const cached = this.state.get(this.STATE_KEY, null);
-    if (cached !== null) {
-      /* SSR-prerendered data is available — no need to fetch again. */
-      return of(cached);
-    }
-
-    /* Cache miss — fetch from the API via the routed client, which
-       resolves 'GET /categories' to v3 (per ENDPOINT_ROUTING). Errors
-       degrade to empty array so the page still renders (could swap to
-       a "no data" UI in Phase 2 polish). */
     return this.routed.get<Category[]>('GET /categories').pipe(
       map((envelope) => envelope.data),
-      tap((categories) => {
-        /* Seed TransferState during SSR so the browser side picks it
-           up after hydration without a re-fetch. */
-        if (isPlatformServer(this.platformId)) {
-          this.state.set(this.STATE_KEY, categories);
-        }
-      }),
       catchError(() => of([] as Category[])),
     );
   }

@@ -2,14 +2,9 @@ import {
   Component,
   ChangeDetectionStrategy,
   inject,
-  PLATFORM_ID,
-  TransferState,
-  makeStateKey,
-  computed,
 } from '@angular/core';
-import { isPlatformServer } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { catchError, from, map, of, tap } from 'rxjs';
+import { catchError, from, map, of } from 'rxjs';
 
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { SeoService } from '../../core/seo/seo.service';
@@ -33,15 +28,10 @@ import { HomeDataService } from './home-data.service';
  * strips (Featured / Best Sellers / New Arrivals) + Designer
  * Spotlight + global footer (provided by app shell).
  *
- * SSR strategy:
- *   Every section is server-rendered with TransferState-cached data.
- *   The browser never re-fetches on hydration — it picks up the
- *   pre-fetched data the server emitted in <script id="ng-state">.
- *
- *   When the API is up at build/prerender time (which it is for
- *   /), all 5 sections render with real content. If any single API
- *   call fails, that section silently omits itself rather than
- *   showing a broken state — see HomeDataService for error handling.
+ * Data:
+ *   All 5 sections fetch client-side on load. If any single API call
+ *   fails, that section silently omits itself rather than showing a
+ *   broken state — see HomeDataService for error handling.
  *
  * SEO:
  *   - <title> + <meta description> set via SeoService
@@ -68,23 +58,15 @@ import { HomeDataService } from './home-data.service';
 export class HomeComponent {
   private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
-  private state = inject(TransferState);
-  private platformId = inject(PLATFORM_ID);
   private homeData = inject(HomeDataService);
   private auth = inject(AuthService);
   private recsService = inject(RecommendationsService);
 
   /* ----- Categories (one extra fetch beyond the 4 home-page endpoints)
    *
-   * The home page wants the same categories list that /category renders.
-   * Reusing the routed.get<Category[]>('GET /categories') call (v3 via
-   * ENDPOINT_ROUTING) with its own TransferState key. The /category index
-   * page uses a different key — that's intentional, so each page's data
-   * is cached independently and a stale entry for one doesn't poison the
-   * other.
-   * ----------------------------------------------------------------- */
-
-  private readonly KEY_CATEGORIES = makeStateKey<Category[]>('home-categories');
+   * The home page wants the same categories list that /category renders,
+   * via the routed.get<Category[]>('GET /categories') call (v3 through
+   * ENDPOINT_ROUTING). ----------------------------------------------- */
 
   /** Categories — null while loading, Category[] once loaded. */
   readonly categories = toSignal(this.fetchCategories$(), { initialValue: null });
@@ -100,13 +82,13 @@ export class HomeComponent {
   readonly vendors      = toSignal(this.homeData.featuredVendors$(),   { initialValue: null });
 
   /* ----- Personalized "For you" strip (X.12 / W.1).
-     Only loaded for signed-in users, browser-side (the personalized
-     endpoint is auth-gated and not SEO content). Resolves to a
-     Product[] (possibly empty); the template hides the strip when the
-     user is anonymous or the engine returns nothing. Errors degrade to
-     [] inside the service. ----- */
+     Only loaded for signed-in users (the personalized endpoint is
+     auth-gated and not SEO content). Resolves to a Product[] (possibly
+     empty); the template hides the strip when the user is anonymous or
+     the engine returns nothing. Errors degrade to [] inside the
+     service. ----- */
   readonly forYou = toSignal(
-    isPlatformServer(this.platformId) || !this.auth.isAuthenticated()
+    !this.auth.isAuthenticated()
       ? of([] as Product[])
       : from(this.recsService.forMe()).pipe(
           map((recs) => recs.map((r) => r.product)),
@@ -175,20 +157,11 @@ export class HomeComponent {
     return categoryIconUrl(slug);
   }
 
-  /* ----- Internal: TransferState-cached categories fetch ---------------- */
+  /* ----- Internal: categories fetch ------------------------------------- */
 
   private fetchCategories$() {
-    const cached = this.state.get(this.KEY_CATEGORIES, null);
-    if (cached !== null) {
-      return of(cached);
-    }
     return this.routed.get<Category[]>('GET /categories').pipe(
       map(envelope => envelope.data),
-      tap(categories => {
-        if (isPlatformServer(this.platformId)) {
-          this.state.set(this.KEY_CATEGORIES, categories);
-        }
-      }),
       /* Filter out categories without bundled icons (currently just
          pyjamas — see category-icons.ts). The home-page row only shows
          visually-coherent tiles; /category index still lists everything. */

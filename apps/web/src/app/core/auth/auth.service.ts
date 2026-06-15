@@ -5,11 +5,8 @@ import {
   computed,
   effect,
   inject,
-  PLATFORM_ID,
   DestroyRef,
-  REQUEST,
 } from '@angular/core';
-import { isPlatformBrowser, isPlatformServer } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { AccessTokenStore, AccessTokenSnapshot } from './access-token-store';
@@ -63,36 +60,24 @@ import type {
  * refresh.interceptor.ts. (AuthService's `refresh()` itself does the
  * work; the interceptor's queueing layer sits on top.)
  *
- * SSR considerations
- * ------------------
- *   - The scheduler is browser-only. setTimeout in SSR would either
- *     keep the Node process alive past response or trigger an
- *     unhandled promise rejection if it fires after teardown.
- *     `hydrate()` is the SSR-safe path: it calls /auth-proxy/me and
- *     seeds the user signal so the rendered HTML reflects auth state.
- *   - On the browser, the scheduler is armed inside applyAuthState()
- *     — i.e. only after a real auth response sets a real token. We
- *     deliberately do NOT inject ApplicationRef and wait for isStable
- *     here: ApplicationRef participates in the APP_INITIALIZER graph,
- *     so injecting it from a root service used by an initializer
- *     creates an NG0200 circular dependency during prerender. Arming
- *     on token-set is the correct trigger anyway: with no token there
- *     is nothing to schedule.
+ * Refresh scheduler
+ * -----------------
+ * The scheduler is armed inside applyAuthState() — i.e. only after a
+ * real auth response sets a real token. We deliberately do NOT inject
+ * ApplicationRef and wait for isStable: ApplicationRef participates in
+ * the APP_INITIALIZER graph, so injecting it from a root service used
+ * by an initializer creates an NG0200 circular dependency. Arming on
+ * token-set is the correct trigger anyway — with no token there is
+ * nothing to schedule.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly platformId = inject(PLATFORM_ID);
   private readonly http = inject(HttpClient);
   private readonly tokenStore = inject(AccessTokenStore);
   private readonly locale = inject(LocaleService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly proxyBase = inject(AUTH_PROXY_BASE);
   private readonly refreshLeadTimeMs = inject(AUTH_REFRESH_LEAD_TIME_MS);
-  /* SSR-only. Null on the browser AND null at build-time prerender —
-     prerender has no inbound request, so a missing REQUEST is the
-     signal to skip hydration entirely (the upstream API isn't even
-     reachable from the build machine in most CI configs). */
-  private readonly request = inject(REQUEST, { optional: true });
 
   /* ---------- Reactive state ---------- */
 
@@ -191,30 +176,26 @@ export class AuthService {
        on the auth response), so pushing it back would be redundant
        chatter. We track the last-pushed value to skip the no-op case.
 
-       Browser-only. SSR construction never fires this effect.
-
        Failures are silent: a 5xx or auth race shouldn't surface a
        toast for what's essentially a preference sync. The next change
        will retry. */
-    if (isPlatformBrowser(this.platformId)) {
-      effect(() => {
-        const desired = this.locale.current();
-        const user = this._currentUser();
-        if (user === null) {
-          this.lastPushedLocale = null; /* Clear so next login re-syncs. */
-          return;
-        }
-        if (this.lastPushedLocale === desired) return;
-        if (user.locale === desired) {
-          /* Local state already matches server — no need to PATCH. */
-          this.lastPushedLocale = desired;
-          return;
-        }
-        /* Fire and forget. */
+    effect(() => {
+      const desired = this.locale.current();
+      const user = this._currentUser();
+      if (user === null) {
+        this.lastPushedLocale = null; /* Clear so next login re-syncs. */
+        return;
+      }
+      if (this.lastPushedLocale === desired) return;
+      if (user.locale === desired) {
+        /* Local state already matches server — no need to PATCH. */
         this.lastPushedLocale = desired;
-        void this.pushLocaleToServer(desired);
-      });
-    }
+        return;
+      }
+      /* Fire and forget. */
+      this.lastPushedLocale = desired;
+      void this.pushLocaleToServer(desired);
+    });
   }
 
   /* ---------- Public API ---------- */
@@ -227,20 +208,10 @@ export class AuthService {
    * BFF reads the HttpOnly refresh cookie and returns the current
    * access token + user, or a 401 if there's no valid session.
    *
-   * Safe to call on both SSR and the browser. On SSR it forwards the
-   * incoming request's Cookie header to the BFF route; on the browser
-   * cookies are automatically attached by fetch() (same-origin).
+   * Cookies are attached automatically by fetch() (same-origin), so
+   * the BFF reads the HttpOnly refresh cookie to resolve the session.
    */
   async hydrate(): Promise<void> {
-    /* Prerender bail: there's no inbound request, so there's nothing
-       to hydrate from. On the server with a real request we proceed.
-       On the browser the platformId check is unnecessary (REQUEST is
-       always null in the browser) so we explicitly allow that path. */
-    if (isPlatformServer(this.platformId) && this.request === null) {
-      this.applyLogoutState();
-      return;
-    }
-
     try {
       const response = await firstValueFrom(
         this.http.get<BffLoginResponse>(`${this.proxyBase}/me`, {
@@ -524,12 +495,11 @@ export class AuthService {
 
   /**
    * Schedule a pre-emptive refresh AUTH_REFRESH_LEAD_TIME_MS before
-   * the current token's expiry. SSR-safe: no-op on the server.
+   * the current token's expiry.
    *
    * Cancels any existing timer first to avoid overlapping schedules.
    */
   private scheduleRefresh(): void {
-    if (isPlatformServer(this.platformId)) return;
     this.cancelScheduledRefresh();
 
     const snap = this.tokenStore.current();

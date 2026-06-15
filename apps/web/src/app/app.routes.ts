@@ -11,8 +11,9 @@ import { guestActivateGuard, authActivateGuard } from './core/auth/auth.guards';
  *             /reset-password — all gated by guestActivateGuard so
  *             signed-in users get redirected away.
  *
- * All routes are SSR'd by default; route-level data is fetched server-
- * side via TransferState (see individual feature components).
+ * This is a client-side-rendered SPA (deployed as static assets on
+ * Cloudflare Pages); every route lazy-loads its component chunk and
+ * fetches its data client-side.
  */
 export const routes: Routes = [
   {
@@ -22,20 +23,16 @@ export const routes: Routes = [
     title: '3bayti — Premium Abayas, Kaftans & Modest Wear',
   },
   {
-    /* Categories index — `/category`. Server-rendered with TransferState
-       so the prerendered HTML embeds the live category list and the
-       browser hydrates without a re-fetch. Lazy-loaded so it's its own
-       chunk in the build output. */
+    /* Categories index — `/category`. Lazy-loaded; fetches the live
+       category list client-side on load. */
     path: 'category',
     loadComponent: () =>
       import('./features/categories/categories').then(m => m.CategoriesComponent),
     title: 'Shop by Category · 3bayti',
   },
   {
-    /* Category detail — `/category/:slug`. Each of the 8 categories
-       is prerendered at build time (see app.routes.server.ts for the
-       slug list provider). Renders category metadata + first 20
-       products with full SEO + ItemList JSON-LD. */
+    /* Category detail — `/category/:slug`. Renders category metadata +
+       a filterable product grid with ItemList JSON-LD. */
     path: 'category/:slug',
     loadComponent: () =>
       import('./features/categories/category-detail').then(m => m.CategoryDetailComponent),
@@ -45,16 +42,9 @@ export const routes: Routes = [
     title: 'Shop by Category · 3bayti',
   },
   {
-    /* Product detail — `/product/:slug`. The PDP. The 200 most-recent
-       products are prerendered at build time (see app.routes.server.ts
-       for the cap and slug fetcher). The remaining ~1,400 products
-       fall back to runtime SSR — slower first byte but still fully
-       indexable.
-
-       Why the cap: building all 1,657 PDPs would push build time past
-       Cloudflare Pages' practical limits. 200 prerendered + runtime
-       SSR for the long tail is the chosen balance per W2.2 sprint
-       planning. */
+    /* Product detail — `/product/:slug`. The PDP. Renders the product
+       with Product + Breadcrumb JSON-LD; data is fetched client-side
+       for the current slug. */
     path: 'product/:slug',
     loadComponent: () =>
       import('./features/catalog/product-detail').then(m => m.ProductDetailComponent),
@@ -73,9 +63,8 @@ export const routes: Routes = [
   },
   {
     /* Designer detail — `/designer/:slug`. Designer header + their
-       product grid. Prerendered at build time for known vendor slugs
-       (see app.routes.server.ts), runtime SSR for the long tail. The
-       104 designer slugs are restored to the sitemap in Y.4-D. */
+       product grid. The 104 designer slugs are listed in the sitemap
+       (Y.4-D). */
     path: 'designer/:slug',
     loadComponent: () =>
       import('./features/designers/designer-detail-page').then(m => m.DesignerDetailPageComponent),

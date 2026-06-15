@@ -48,82 +48,66 @@
           </ui-stack>
         </header>
 
-        <!-- Filter + grid layout (browser only — facets need a live call) -->
-        @if (isBrowser()) {
-          <div class="catalog-layout">
+        <!-- Filter + grid layout -->
+        <div class="catalog-layout">
 
-            <!-- Filter sidebar -->
-            <aside class="catalog-layout__sidebar">
-              <app-facet-filters
-                [filters]="currentFilters()"
-                [facets]="facets()"
-                (filterChange)="onFilterChange($event)"
-              />
-            </aside>
+          <!-- Filter sidebar -->
+          <aside class="catalog-layout__sidebar">
+            <app-facet-filters
+              [filters]="currentFilters()"
+              [facets]="facets()"
+              (filterChange)="onFilterChange($event)"
+            />
+          </aside>
 
-            <!-- Product grid -->
-            <section class="catalog-layout__grid" aria-label="Products in this category">
+          <!-- Product grid -->
+          <section class="catalog-layout__grid" aria-label="Products in this category">
 
-              <!-- Loading shimmer row -->
-              @if (isLoadingGrid()) {
-                <div class="grid-loading" aria-live="polite" aria-label="Loading products…">
-                  @for (_ of [1,2,3,4,5,6]; track _) {
-                    <div class="grid-loading__card"></div>
-                  }
-                </div>
-              }
+            <!-- Loading shimmer row -->
+            @if (isLoadingGrid()) {
+              <div class="grid-loading" aria-live="polite" aria-label="Loading products…">
+                @for (_ of [1,2,3,4,5,6]; track _) {
+                  <div class="grid-loading__card"></div>
+                }
+              </div>
+            }
 
-              <!-- Empty state -->
-              @if (!isLoadingGrid() && products().length === 0) {
-                <div class="grid-empty">
-                  <p class="grid-empty__title">No products match your filters</p>
-                  <p class="grid-empty__hint">Try adjusting or clearing your filters.</p>
-                </div>
-              }
+            <!-- Empty state -->
+            @if (!isLoadingGrid() && products().length === 0) {
+              <div class="grid-empty">
+                <p class="grid-empty__title">No products match your filters</p>
+                <p class="grid-empty__hint">Try adjusting or clearing your filters.</p>
+              </div>
+            }
 
-              <!-- Product cards -->
-              @if (!isLoadingGrid() && products().length > 0) {
-                <div class="product-grid">
-                  @for (p of products(); track p.id) {
-                    <ui-product-card [product]="p" />
-                  }
-                </div>
-
-                <!-- Load more / total indicator -->
-                <div class="grid-footer">
-                  <p class="grid-count">
-                    Showing {{ products().length }} of {{ catalogTotal() }}
-                  </p>
-                  @if (hasMore()) {
-                    <button
-                      class="load-more-btn"
-                      type="button"
-                      (click)="loadMore()"
-                      [disabled]="isLoadingGrid()"
-                      aria-label="Load more products">
-                      {{ isLoadingGrid() ? 'Loading…' : 'Load more' }}
-                    </button>
-                  }
-                </div>
-              }
-
-            </section>
-          </div>
-
-        } @else {
-          <!-- SSR: render the embedded products as plain grid for SEO -->
-          @if (products().length === 0) {
-            <ui-text tone="secondary">No products in this category yet. Check back soon.</ui-text>
-          } @else {
-            <section class="product-grid-section" aria-label="Products in this category">
+            <!-- Product cards -->
+            @if (!isLoadingGrid() && products().length > 0) {
               <div class="product-grid">
                 @for (p of products(); track p.id) {
                   <ui-product-card [product]="p" />
                 }
               </div>
-            </section>
-          }
-        }
+
+              <!-- Load more / total indicator -->
+              <div class="grid-footer">
+                <p class="grid-count">
+                  Showing {{ products().length }} of {{ catalogTotal() }}
+                </p>
+                @if (hasMore()) {
+                  <button
+                    class="load-more-btn"
+                    type="button"
+                    (click)="loadMore()"
+                    [disabled]="isLoadingGrid()"
+                    aria-label="Load more products">
+                    {{ isLoadingGrid() ? 'Loading…' : 'Load more' }}
+                  </button>
+                }
+              </div>
+            }
+
+          </section>
+        </div>
 
       }
     </ui-stack>
