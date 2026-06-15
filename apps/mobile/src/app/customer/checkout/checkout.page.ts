@@ -289,7 +289,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
       paymentAction: "SALE",
       tokenizeCc: "true",
       locale: "en",
-      returnUrl: "https://api.3bayti.ae/customer/complete"
+      returnUrl: "https://api-v3.3bayti.ae/v3/checkout/return/"
     },
     deliveryConfiguration: {
       link: {
@@ -416,8 +416,8 @@ export class CheckoutPage implements OnInit, OnDestroy {
     // We check both. Whichever matches first determines the
     // post-redirect handling: legacy passes query params to /process;
     // v3 passes only order_reference to /process which then polls.
-    const legacyReturnPrefix = 'https://api.3bayti.ae/customer/complete';
-    const v3ReturnPrefix = 'https://api.3bayti.ae/v3/checkout/return/';
+    const legacyReturnPrefix = 'https://api-v3.3bayti.ae/customer/complete';
+    const v3ReturnPrefix = 'https://api-v3.3bayti.ae/v3/checkout/return/';
     let listenerHandle: any = null;
     let processed = false; // ensure we only handle the redirect once
     this.networkAdapter.post_request(this.checkout, GlobalComponent.initiatePayment)

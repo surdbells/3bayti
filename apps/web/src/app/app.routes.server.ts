@@ -44,7 +44,7 @@ const V3_API_BASE_URL = 'https://api-v3.3bayti.ae/v3';
 const CATEGORY_API_BASE =
   process.env['CATEGORY_API_BASE_URL'] ||
   process.env['API_BASE_URL'] ||
-  LEGACY_API_BASE_URL;
+  V3_API_BASE_URL;
 
 const PRODUCT_API_BASE =
   process.env['PRODUCT_API_BASE_URL'] ||
