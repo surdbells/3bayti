@@ -9,10 +9,8 @@ import {ConnectionService} from "../../service/connection.service";
 import {ActivatedRoute, Router} from "@angular/router";
 import {BlockerService} from "../../blocker.service";
 import {NetworkService} from "../../service/network.service";
-import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
-import {GlobalComponent} from "../../global-component";
 import {TranslatePipe} from "../../translate.pipe";
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { CheckoutStatusPollService, type PollOutcome } from '../../core/services/checkout-status-poll.service';
@@ -35,7 +33,6 @@ export class ProcessPage implements OnInit {
     private blocker: BlockerService,
     private route: ActivatedRoute,
     private networkService: NetworkService,
-    private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private pollService: CheckoutStatusPollService,
     private i18n: I18nService,
@@ -124,76 +121,57 @@ export class ProcessPage implements OnInit {
 finalize() {
       this.ui_controls.confirming_transaction = true;
 
-      // v3 path: orderReference is set when checkout.page detected the
-      // v3 return URL (path-based). Poll the status endpoint instead
-      // of calling the legacy finalizePayment.
-      if (this.orderReference) {
-        this.pollService.pollUntilTerminal(this.orderReference).subscribe({
-          next: (outcome: PollOutcome) => {
-            this.ui_controls.confirming_transaction = false;
-            switch (outcome.kind) {
-              case 'paid':
-                this.router.navigate(['/success'], { replaceUrl: true });
-                break;
-              case 'failed':
-                this.router.navigate(['/failed'], { replaceUrl: true });
-                break;
-              case 'timeout':
-                // The order may still complete via a delayed webhook.
-                // Navigate to my-orders so the user can see the order
-                // and check back; their order is real even if not yet
-                // confirmed. Reset the blocker so they can interact.
-                this.toast.info(
-                  this.i18n.t('text_payment_processing_check_later'),
-                );
-                this.router.navigate(['/my-orders'], { replaceUrl: true });
-                break;
-              case 'error':
-              default:
-                this.router.navigate(['/failed'], { replaceUrl: true });
-                break;
-            }
-          },
-          error: (err) => {
-            // Should not happen (the service catches its own errors),
-            // but defensive: treat as failed.
-            console.error('[ProcessPage] poll subscribe error', err);
-            this.ui_controls.confirming_transaction = false;
-            this.router.navigate(['/failed'], { replaceUrl: true });
-          },
-        });
+      // Unified v3 confirmation. orderReference is set when checkout.page
+      // detected the v3 (path-based) return; for older-format returns we
+      // fall back to the merchant reference / order id. Either way we poll
+      // GET /v3/checkout/status/{ref} to a terminal state instead of the
+      // retired legacy finalizePayment endpoint.
+      const reference = (
+        this.orderReference ||
+        this.rqst_param.merchantReference ||
+        String(this.rqst_param.orderId || '')
+      ).trim();
+
+      if (!reference) {
+        // Nothing to confirm against — don't claim success or failure;
+        // send the user to their orders so they can see the real state.
+        this.ui_controls.confirming_transaction = false;
+        this.router.navigate(['/my-orders'], { replaceUrl: true });
         return;
       }
 
-      // Legacy path: finalizePayment endpoint with orderId/merchantReference
-      // from the customer/complete?... return URL.
-      this.networkAdapter.post_request(this.rqst_param, GlobalComponent.finalizePayment)
-        .subscribe(({
-          next: (response: any) => {
-            if (response.status === "SUCCESS") {
-              this.ui_controls.confirming_transaction = false;
-              this.router.navigate(['/success'], {replaceUrl: true});
-            }
-            if (response.status === "FAILED") {
-              this.ui_controls.confirming_transaction = false;
-              this.router.navigate(['/failed'], {replaceUrl: true});
-            }
-            if (response.status === "UNKNOWN") {
-              this.ui_controls.confirming_transaction = false;
-              this.router.navigate(['/failed'], {replaceUrl: true});
-            }
-            if (response.status === "ERROR") {
-              this.ui_controls.confirming_transaction = false;
-              this.router.navigate(['/failed'], {replaceUrl: true});
-            }
-          },
-          error: (e) => {
-            this.ui_controls.confirming_transaction = false;
-            this.router.navigate(['/failed'], {replaceUrl: true});
-          },
-          complete: () => {
-            console.info('complete');
+      this.pollService.pollUntilTerminal(reference).subscribe({
+        next: (outcome: PollOutcome) => {
+          this.ui_controls.confirming_transaction = false;
+          switch (outcome.kind) {
+            case 'paid':
+              this.router.navigate(['/success'], { replaceUrl: true });
+              break;
+            case 'failed':
+              this.router.navigate(['/failed'], { replaceUrl: true });
+              break;
+            case 'timeout':
+              // The order may still complete via a delayed webhook. Send
+              // the user to my-orders so they can see the order and check
+              // back; the order is real even if not yet confirmed.
+              this.toast.info(
+                this.i18n.t('text_payment_processing_check_later'),
+              );
+              this.router.navigate(['/my-orders'], { replaceUrl: true });
+              break;
+            case 'error':
+            default:
+              this.router.navigate(['/failed'], { replaceUrl: true });
+              break;
           }
-        }))
+        },
+        error: (err) => {
+          // Should not happen (the service catches its own errors), but
+          // defensive: treat as failed.
+          console.error('[ProcessPage] poll subscribe error', err);
+          this.ui_controls.confirming_transaction = false;
+          this.router.navigate(['/failed'], { replaceUrl: true });
+        },
+      });
   }
 }

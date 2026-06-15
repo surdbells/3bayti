@@ -669,8 +669,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
       {
         queryParams: {
           orderId, merchantReference, paymentType, deliveryFee,
-          // v3 only: presence of orderReference triggers polling mode
-          // in process.page (else falls back to legacy finalizePayment).
+          // process.page polls GET /v3/checkout/status to confirm, keyed
+          // by orderReference (or the merchant reference / order id for
+          // older-format returns).
           orderReference,
         }
       }
