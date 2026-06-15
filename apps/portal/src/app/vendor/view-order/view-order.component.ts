@@ -62,7 +62,7 @@ export class ViewOrderComponent implements OnInit {
   };
 
   session_data: any = '';
-  image_url: any = 'https://api.3bayti.ae/vendors/products/';
+  image_url: any = 'https://api-v3.3bayti.ae/vendors/products/';
 
   user_session = {
     id: 0,

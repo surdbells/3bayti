@@ -38,7 +38,6 @@ import { RenderMode, ServerRoute } from '@angular/ssr';
  *                           fallback for BOTH if the specific override
  *                           isn't set
  */
-const LEGACY_API_BASE_URL = 'https://api.3bayti.ae/v2';
 const V3_API_BASE_URL = 'https://api-v3.3bayti.ae/v3';
 
 const CATEGORY_API_BASE =

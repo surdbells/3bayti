@@ -74,7 +74,7 @@ export class AdminViewProductComponent implements OnInit {
   };
 
   session_data: any = '';
-  image_url: any = 'https://api.3bayti.ae/vendors/products/';
+  image_url: any = 'https://api-v3.3bayti.ae/vendors/products/';
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',

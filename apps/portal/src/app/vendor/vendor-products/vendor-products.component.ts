@@ -176,7 +176,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
   /** Category options for the list filter dropdown. */
   categories: { id: number; name: string }[] = [];
 
-  image_url = 'https://api.3bayti.ae/vendors/products/';
+  image_url = 'https://api-v3.3bayti.ae/vendors/products/';
   single_product: any = {
     id: 0, token: '', product: 0, store: 0, category: 0, category_name: '',
     name: '', description: '',
