@@ -1,0 +1,214 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { TestBed, ComponentFixture } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
+import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClientTesting } from '@angular/common/http/testing';
+import { PLATFORM_ID } from '@angular/core';
+import { of } from 'rxjs';
+
+import { ProductDetailComponent } from './product-detail';
+import { RoutedHttpClient } from '../../core/http/routed-http-client';
+import { SeoService } from '../../core/seo/seo.service';
+import { RecommendationsService } from './recommendations.service';
+import { CartService } from '../../core/cart/cart.service';
+import { CartDrawerService } from '../../core/cart/cart-drawer.service';
+import { provideI18n } from '../../core/i18n';
+import type { ProductDetail } from './product.model';
+
+/**
+ * Buy-box coverage for the PDP (Phase A). Exercises variant selection,
+ * quantity, the validity/gating computeds, and the add-to-cart handler
+ * (success, failure, in-flight, and no-op paths) against the real cart
+ * contract. The product is driven through the component's route → fetch
+ * pipeline exactly as it is at runtime.
+ */
+function makeProduct(overrides: Partial<ProductDetail> = {}): ProductDetail {
+  return {
+    id: 100,
+    slug: 'abaya-01',
+    name: 'Test Abaya',
+    price: { amount: 530, currency: 'AED' },
+    sale_price: null,
+    primary_image: null,
+    in_stock: true,
+    description: '',
+    images: [],
+    sizes: [
+      { label: 'S', in_stock: true },
+      { label: 'M', in_stock: true },
+      { label: 'L', in_stock: false },
+    ],
+    colors: [
+      { label: 'Black', in_stock: true },
+      { label: 'Red', in_stock: false },
+    ],
+    ...overrides,
+  } as ProductDetail;
+}
+
+let addItemMock: ReturnType<typeof vi.fn>;
+let openDrawerMock: ReturnType<typeof vi.fn>;
+
+function setup(product: ProductDetail = makeProduct()): ComponentFixture<ProductDetailComponent> {
+  addItemMock = vi.fn(() => Promise.resolve({}));
+  openDrawerMock = vi.fn();
+
+  TestBed.configureTestingModule({
+    providers: [
+      provideRouter([]),
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      provideI18n(),
+      { provide: ActivatedRoute, useValue: { paramMap: of(convertToParamMap({ slug: product.slug })) } },
+      { provide: RoutedHttpClient, useValue: { get: vi.fn(() => of({ data: product })) } },
+      { provide: SeoService, useValue: { set: vi.fn(), setStructuredData: vi.fn() } },
+      { provide: RecommendationsService, useValue: { forProduct: vi.fn(() => Promise.resolve([])) } },
+      { provide: CartService, useValue: { addItem: addItemMock } },
+      { provide: CartDrawerService, useValue: { open: openDrawerMock } },
+      { provide: PLATFORM_ID, useValue: 'browser' },
+    ],
+  });
+
+  const fixture = TestBed.createComponent(ProductDetailComponent);
+  fixture.detectChanges();
+  return fixture;
+}
+
+describe('ProductDetail buy box', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('loads the product through the route pipeline', () => {
+    const c = setup().componentInstance;
+    expect(c.product()?.id).toBe(100);
+  });
+
+  describe('variant selection', () => {
+    it('selects an in-stock size and toggles it off on reselect', () => {
+      const c = setup().componentInstance;
+      c.selectSize({ label: 'M', in_stock: true });
+      expect(c.selectedSize()).toBe('M');
+      c.selectSize({ label: 'M', in_stock: true });
+      expect(c.selectedSize()).toBeNull();
+    });
+
+    it('ignores an out-of-stock size', () => {
+      const c = setup().componentInstance;
+      c.selectSize({ label: 'L', in_stock: false });
+      expect(c.selectedSize()).toBeNull();
+    });
+
+    it('selects an in-stock colour and ignores an out-of-stock one', () => {
+      const c = setup().componentInstance;
+      c.selectColor({ label: 'Black', in_stock: true });
+      expect(c.selectedColor()).toBe('Black');
+      c.selectColor({ label: 'Red', in_stock: false });
+      expect(c.selectedColor()).toBe('Black');
+    });
+  });
+
+  describe('quantity stepper', () => {
+    it('clamps between 1 and 99', () => {
+      const c = setup().componentInstance;
+      expect(c.quantity()).toBe(1);
+      c.decrementQuantity();
+      expect(c.quantity()).toBe(1); // floor
+      c.incrementQuantity();
+      expect(c.quantity()).toBe(2);
+      for (let i = 0; i < 200; i++) c.incrementQuantity();
+      expect(c.quantity()).toBe(99); // ceiling
+    });
+  });
+
+  describe('selectionValid + canAddToCart', () => {
+    it('requires an in-stock selection on every present axis', () => {
+      const c = setup().componentInstance;
+      expect(c.selectionValid()).toBe(false);
+      c.selectSize({ label: 'M', in_stock: true });
+      expect(c.selectionValid()).toBe(false); // colour still unselected
+      c.selectColor({ label: 'Black', in_stock: true });
+      expect(c.selectionValid()).toBe(true);
+      expect(c.canAddToCart()).toBe(true);
+    });
+
+    it('rejects a stale selection not present in the current product', () => {
+      const c = setup().componentInstance;
+      c.selectedSize.set('XXL'); // not an option on this product
+      c.selectColor({ label: 'Black', in_stock: true });
+      expect(c.selectionValid()).toBe(false);
+    });
+
+    it('is valid with no variant axes (simple product)', () => {
+      const c = setup(makeProduct({ sizes: [], colors: [] })).componentInstance;
+      expect(c.selectionValid()).toBe(true);
+      expect(c.canAddToCart()).toBe(true);
+    });
+
+    it('cannot add when the product is out of stock', () => {
+      const c = setup(makeProduct({ in_stock: false, sizes: [], colors: [] })).componentInstance;
+      expect(c.canAddToCart()).toBe(false);
+    });
+  });
+
+  describe('addToCart', () => {
+    it('sends the exact cart payload and opens the drawer on success', async () => {
+      const c = setup().componentInstance;
+      c.selectSize({ label: 'M', in_stock: true });
+      c.selectColor({ label: 'Black', in_stock: true });
+      c.incrementQuantity(); // 2
+      await c.addToCart();
+      expect(addItemMock).toHaveBeenCalledWith({
+        product_id: 100,
+        quantity: 2,
+        size: 'M',
+        color: 'Black',
+      });
+      expect(openDrawerMock).toHaveBeenCalledOnce();
+      expect(c.adding()).toBe(false);
+      expect(c.addError()).toBeNull();
+    });
+
+    it('sends null variant axes for a simple product', async () => {
+      const c = setup(makeProduct({ sizes: [], colors: [] })).componentInstance;
+      await c.addToCart();
+      expect(addItemMock).toHaveBeenCalledWith({
+        product_id: 100,
+        quantity: 1,
+        size: null,
+        color: null,
+      });
+    });
+
+    it('surfaces an error and does not open the drawer on failure', async () => {
+      const c = setup().componentInstance;
+      addItemMock.mockRejectedValueOnce(new Error('network'));
+      c.selectSize({ label: 'M', in_stock: true });
+      c.selectColor({ label: 'Black', in_stock: true });
+      await c.addToCart();
+      expect(c.addError()).toBeTruthy();
+      expect(openDrawerMock).not.toHaveBeenCalled();
+      expect(c.adding()).toBe(false);
+    });
+
+    it('does nothing when the selection is invalid', async () => {
+      const c = setup().componentInstance;
+      await c.addToCart(); // nothing selected
+      expect(addItemMock).not.toHaveBeenCalled();
+    });
+
+    it('reflects an in-flight state while the request is pending', async () => {
+      const c = setup().componentInstance;
+      let resolveAdd!: (v: unknown) => void;
+      addItemMock.mockReturnValueOnce(new Promise((res) => (resolveAdd = res)));
+      c.selectSize({ label: 'M', in_stock: true });
+      c.selectColor({ label: 'Black', in_stock: true });
+      const pending = c.addToCart();
+      expect(c.adding()).toBe(true);
+      expect(c.canAddToCart()).toBe(false); // disabled while adding
+      resolveAdd({});
+      await pending;
+      expect(c.adding()).toBe(false);
+    });
+  });
+});
