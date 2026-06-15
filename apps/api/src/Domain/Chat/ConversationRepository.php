@@ -91,6 +91,22 @@ class ConversationRepository extends EntityRepository
     }
 
     /**
+     * The distinct vendors a customer has any conversation with, ordered
+     * by name. Backs the store-grouped legacy inbox (read-messages).
+     *
+     * @return list<\Bayti\Api\Domain\Catalog\Vendor>
+     */
+    public function findDistinctVendorsForCustomer(int $customerId): array
+    {
+        return $this->createQueryBuilder('c')
+            ->select('DISTINCT v')
+            ->join('c.vendor', 'v')
+            ->where('c.customer = :cid')->setParameter('cid', $customerId)
+            ->orderBy('v.name', 'ASC')
+            ->getQuery()->getResult();
+    }
+
+    /**
      * Total unread messages for a customer across all their conversations.
      * Cheap aggregate for badge polling (no row hydration).
      */

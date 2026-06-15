@@ -1047,6 +1047,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /chat/conversations': {
     target: 'new', oldPath: '/chat/get_conversation', newPath: '/v3/chat/conversations', shape: 'v3-envelope',
   },
+  // Store-grouped inbox (replaces legacy /customer/read-messages). The v3
+  // controller returns { data: [{store, store_name, store_address,
+  // total_products}] }, which the adapter unwraps straight into the
+  // page's response.data — no response transform needed.
+  'GET /chat/conversation-stores': {
+    target: 'new', oldPath: '/customer/read-messages', newPath: '/v3/chat/conversation-stores', shape: 'v3-envelope',
+  },
   'GET /chat/unread-count': {
     target: 'new', oldPath: '/chat/get_unread_count', newPath: '/v3/chat/unread-count', shape: 'v3-envelope',
   },

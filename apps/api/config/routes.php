@@ -324,6 +324,8 @@ return function (App $app): void {
     // carries the conversation meta so the screen opens in one call.
     $app->group('/v3/chat', function (RouteCollectorProxy $group): void {
         $group->get('/conversations', \Bayti\Api\Http\Controllers\Chat\Customer\ListConversationsController::class);
+        // Store-grouped inbox (replaces legacy /customer/read-messages).
+        $group->get('/conversation-stores', \Bayti\Api\Http\Controllers\Chat\Customer\ListConversationStoresController::class);
         $group->get('/unread-count', \Bayti\Api\Http\Controllers\Chat\Customer\GetUnreadCountController::class);
         $group->get(
             '/conversations/{uuid}/messages',
