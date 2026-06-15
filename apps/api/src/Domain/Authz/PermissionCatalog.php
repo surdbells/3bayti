@@ -83,6 +83,17 @@ final class PermissionCatalog
                     'products.manage_inventory' => 'Manage inventory',
                 ],
             ],
+            'catalog' => [
+                'label' => 'Catalog taxonomy',
+                'permissions' => [
+                    'catalog.brands_view' => 'View brands',
+                    'catalog.brands_manage' => 'Create / edit / delete brands',
+                    'catalog.categories_view' => 'View categories',
+                    'catalog.categories_manage' => 'Create / edit / delete categories',
+                    'catalog.collections_view' => 'View collections',
+                    'catalog.collections_manage' => 'Create / edit / delete collections',
+                ],
+            ],
             'coupons' => [
                 'label' => 'Coupons',
                 'permissions' => [
@@ -108,6 +119,8 @@ final class PermissionCatalog
                     'payouts.view' => 'View payouts',
                     'payouts.process' => 'Process payouts',
                     'payouts.export' => 'Export payouts',
+                    'payouts.view_transactions' => 'View transactions',
+                    'payouts.view_commissions' => 'View commissions',
                 ],
             ],
             'returns' => [
@@ -117,6 +130,13 @@ final class PermissionCatalog
                     'returns.approve' => 'Approve returns',
                     'returns.deny' => 'Deny returns',
                     'returns.refund' => 'Refund returns',
+                ],
+            ],
+            'disputes' => [
+                'label' => 'Disputes',
+                'permissions' => [
+                    'disputes.view' => 'View disputes',
+                    'disputes.resolve' => 'Resolve disputes',
                 ],
             ],
             'tickets' => [
@@ -226,6 +246,10 @@ final class PermissionCatalog
                     'vendors.view', 'vendors.view_detail', 'vendors.approve',
                     'returns.view', 'returns.approve', 'returns.deny',
                     'sales.view',
+                    'catalog.brands_view', 'catalog.brands_manage',
+                    'catalog.categories_view', 'catalog.categories_manage',
+                    'catalog.collections_view', 'catalog.collections_manage',
+                    'disputes.view', 'disputes.resolve',
                 ],
             ],
             'finance' => [
@@ -235,6 +259,7 @@ final class PermissionCatalog
                     'dashboard.view',
                     'sales.view', 'sales.export',
                     'payouts.view', 'payouts.process', 'payouts.export',
+                    'payouts.view_transactions', 'payouts.view_commissions',
                     'orders.view', 'orders.view_detail', 'orders.refund', 'orders.export',
                     'returns.view', 'returns.refund',
                     'gift_cards.view', 'gift_cards.adjust_balance',
@@ -251,6 +276,7 @@ final class PermissionCatalog
                     'returns.view', 'returns.approve', 'returns.deny',
                     'vendors.view',
                     'notifications.view',
+                    'disputes.view',
                 ],
             ],
         ];
