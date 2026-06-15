@@ -97,20 +97,27 @@ const URL_TO_ROUTE_KEY: Map<string, MethodMap> = (() => {
       continue;
     }
     const method = routeKey.slice(0, spaceIdx) as HttpMethod;
-    const oldPath = entry.oldPath;
+
+    // Every legacy path that should resolve to this routeKey: the primary
+    // oldPath plus any oldPathAliases (several legacy URLs → one v3 route).
+    const legacyPaths = [entry.oldPath, ...(entry.oldPathAliases ?? [])].filter(
+      (p): p is string => typeof p === 'string' && p.length > 0,
+    );
 
     // Skip v3-only endpoints — they have no legacy URL to translate from.
-    if (!oldPath) {
+    if (legacyPaths.length === 0) {
       continue;
     }
 
-    // Normalise: strip leading slash for storage. We'll match against
-    // similarly-stripped inputs in resolveRouteKey.
-    const normalisedPath = stripLeadingSlash(oldPath);
+    for (const legacyPath of legacyPaths) {
+      // Normalise: strip leading slash for storage. We'll match against
+      // similarly-stripped inputs in resolveRouteKey.
+      const normalisedPath = stripLeadingSlash(legacyPath);
 
-    const existing = map.get(normalisedPath) ?? {};
-    existing[method] = routeKey;
-    map.set(normalisedPath, existing);
+      const existing = map.get(normalisedPath) ?? {};
+      existing[method] = routeKey;
+      map.set(normalisedPath, existing);
+    }
   }
 
   return map;

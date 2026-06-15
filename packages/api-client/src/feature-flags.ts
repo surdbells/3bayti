@@ -47,6 +47,15 @@ export interface EndpointConfig {
   target: EndpointTarget;
   /** Path on the OLD backend, including version prefix (e.g. '/users/login'). */
   oldPath: string;
+  /**
+   * Additional legacy paths that should resolve to THIS same v3 endpoint.
+   * Used when several distinct legacy URLs map onto one v3 route (e.g. the
+   * old `/customer/IncreaseItem` + `/customer/decreaseItem` both becoming
+   * `PATCH /v3/cart/items/:id`). The mobile URL→routeKey resolver maps each
+   * alias to this entry's routeKey exactly as it does `oldPath`, so the same
+   * request/response transforms apply. Has no effect on the web/portal client.
+   */
+  oldPathAliases?: string[];
   /** Path on the NEW backend, including version prefix (e.g. '/v3/auth/login'). */
   newPath: string;
   /**
@@ -683,6 +692,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'PATCH /cart/items/:id': {
     target: 'new',
     oldPath: '/customer/IncreaseItem',
+    oldPathAliases: ['/customer/decreaseItem'],
     newPath: '/v3/cart/items/:id',
     shape: 'v2',
   },
@@ -737,6 +747,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /orders': {
     target: 'new',
     oldPath: '/customer/read_orders_listing',
+    oldPathAliases: ['/customer/read-customer-orders'],
     newPath: '/v3/orders',
     shape: 'v2',
   },
