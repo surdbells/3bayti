@@ -129,6 +129,11 @@ class UserRepository extends EntityRepository
             }
         }
 
+        if (!empty($filters['staff'])) {
+            // Staff = full admins OR anyone holding at least one RBAC role.
+            $qb->andWhere('u.isAdmin = true OR SIZE(u.roles) > 0');
+        }
+
         if (!empty($filters['search'])) {
             $needle = '%' . $filters['search'] . '%';
             $qb->andWhere(

@@ -33,14 +33,14 @@ final class ListUsersController
         /** @var UserRepository $repo */
         $repo   = $this->em->getRepository(User::class);
         $result = $repo->findPaginated([
-            'role'   => $q['role']   ?? null,
+            'staff'  => true,
             'search' => $q['search'] ?? null,
             'limit'  => $limit,
             'offset' => $offset,
         ]);
 
         return $this->ok([
-            'data' => array_map([$this->serializer, 'publicProfile'], $result['items']),
+            'data' => array_map([$this->serializer, 'staff'], $result['items']),
             'meta' => ['total' => $result['total'], 'limit' => $limit, 'offset' => $offset],
         ]);
     }

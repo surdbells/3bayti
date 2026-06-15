@@ -663,6 +663,22 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Currency\ListFxRatesController::class)->add($perm->for('settings.view'));
         $group->put('/fx-rates/{target:[A-Za-z]{3}}',
             \Bayti\Api\Http\Controllers\Admin\Currency\UpsertFxRateController::class)->add($perm->for('settings.edit'));
+
+        // ── RBAC: roles & staff permission management (Phase C4) ──────────
+        $group->get('/permission-catalog',
+            \Bayti\Api\Http\Controllers\Admin\Role\ListPermissionCatalogController::class)->add($perm->for('roles.view'));
+        $group->get('/roles',
+            \Bayti\Api\Http\Controllers\Admin\Role\ListRolesController::class)->add($perm->for('roles.view'));
+        $group->post('/roles',
+            \Bayti\Api\Http\Controllers\Admin\Role\CreateRoleController::class)->add($perm->for('roles.create'));
+        $group->get('/roles/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Role\GetRoleController::class)->add($perm->for('roles.view'));
+        $group->put('/roles/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Role\UpdateRoleController::class)->add($perm->for('roles.edit'));
+        $group->delete('/roles/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Role\DeleteRoleController::class)->add($perm->for('roles.delete'));
+        $group->post('/users/{id:[0-9]+}/roles',
+            \Bayti\Api\Http\Controllers\Admin\Role\AssignUserRolesController::class)->add($perm->for('users.manage_roles'));
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);
