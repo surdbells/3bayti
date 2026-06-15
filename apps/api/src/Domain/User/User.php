@@ -374,6 +374,19 @@ class User
     #[ORM\OneToMany(targetEntity: RefreshToken::class, mappedBy: 'user', cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $refreshTokens;
 
+    /**
+     * Admin/staff roles (RBAC). Empty for customers/vendors. A user's effective
+     * permissions are the union of their roles' permissions; `is_admin` is the
+     * unrestricted super-admin override.
+     *
+     * @var Collection<int, \Bayti\Api\Domain\Authz\Role>
+     */
+    #[ORM\ManyToMany(targetEntity: \Bayti\Api\Domain\Authz\Role::class, fetch: 'EAGER')]
+    #[ORM\JoinTable(name: 'user_role')]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    #[ORM\InverseJoinColumn(name: 'role_id', referencedColumnName: 'id', onDelete: 'CASCADE')]
+    private Collection $roles;
+
     // -------------------------------------------------------------------
     // Constructor
     // -------------------------------------------------------------------
@@ -388,6 +401,7 @@ class User
         $this->addresses = new ArrayCollection();
         $this->measurements = new ArrayCollection();
         $this->refreshTokens = new ArrayCollection();
+        $this->roles = new ArrayCollection();
 
         $this->initTimestamps();
     }
@@ -403,6 +417,51 @@ class User
     // -------------------------------------------------------------------
 
     public function getId(): ?int                  { return $this->id; }
+
+    // -------------------------------------------------------------------
+    // RBAC (roles & permissions)
+    // -------------------------------------------------------------------
+
+    /** @return Collection<int, \Bayti\Api\Domain\Authz\Role> */
+    public function getRoles(): Collection { return $this->roles; }
+
+    public function addRole(\Bayti\Api\Domain\Authz\Role $role): void
+    {
+        if (!$this->roles->contains($role)) {
+            $this->roles->add($role);
+        }
+    }
+
+    public function removeRole(\Bayti\Api\Domain\Authz\Role $role): void
+    {
+        $this->roles->removeElement($role);
+    }
+
+    public function clearRoles(): void { $this->roles->clear(); }
+
+    /** Union of permission keys granted by all of the user's roles. @return list<string> */
+    public function effectivePermissionKeys(): array
+    {
+        $keys = [];
+        foreach ($this->roles as $role) {
+            foreach ($role->getPermissionKeys() as $key) {
+                $keys[$key] = true;
+            }
+        }
+        return array_keys($keys);
+    }
+
+    /** Super-admins (is_admin) hold every permission; otherwise check the role union. */
+    public function hasPermission(string $key): bool
+    {
+        return $this->isAdmin || in_array($key, $this->effectivePermissionKeys(), true);
+    }
+
+    /** Whether the user may access the admin area at all (full admin or any assigned role). */
+    public function isStaff(): bool
+    {
+        return $this->isAdmin || !$this->roles->isEmpty();
+    }
     public function getLegacyUserId(): ?int        { return $this->legacyUserId; }
     public function getEmail(): string             { return $this->email; }
     public function getPhone(): ?string            { return $this->phone; }
