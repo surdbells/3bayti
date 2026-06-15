@@ -192,7 +192,8 @@
           <section class="ax-card ax-p-5">
             <h3 class="ax-h6 ax-m-0 ax-mb-3">Actions</h3>
 
-            <!-- Refund -->
+            <!-- Refund — requires orders.refund -->
+            <ng-container *axCan="'orders.refund'">
             <button *ngIf="!showRefund" type="button" class="ax-btn ax-btn-secondary ax-w-full ax-mb-2" (click)="showRefund = true">
               <app-icon name="currency_exchange" aria-hidden="true"></app-icon> Refund
             </button>
@@ -212,8 +213,10 @@
                 <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="showRefund = false" [disabled]="ui.refunding">Cancel</button>
               </div>
             </div>
+            </ng-container>
 
-            <!-- Cancel -->
+            <!-- Cancel — requires orders.cancel -->
+            <ng-container *axCan="'orders.cancel'">
             <button *ngIf="!showCancel" type="button" class="ax-btn ax-btn-danger-soft ax-w-full" (click)="showCancel = true">
               <app-icon name="cancel" aria-hidden="true"></app-icon> Cancel order
             </button>
@@ -229,6 +232,7 @@
                 <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="showCancel = false" [disabled]="ui.cancelling">Keep order</button>
               </div>
             </div>
+            </ng-container>
           </section>
         </div>
       </div>

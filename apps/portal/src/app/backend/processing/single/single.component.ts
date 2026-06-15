@@ -8,6 +8,7 @@ import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import { AxCanDirective } from '../../../shared/security/ax-can.directive';
 
 interface OrderItemRow {
   id: number;
@@ -45,7 +46,7 @@ const ITEM_STATUSES = [
 @Component({
   selector: 'app-single',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, AdminShellComponent],
+  imports: [CommonModule, FormsModule, IconComponent, AdminShellComponent, AxCanDirective],
   templateUrl: './single.component.html',
   styleUrl: './single.component.css',
 })

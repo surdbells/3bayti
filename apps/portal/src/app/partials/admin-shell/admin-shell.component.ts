@@ -1,6 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { AsideComponent } from '../aside/aside.component';
 import { AdminTopComponent } from '../admin-top/admin-top.component';
+import { PermissionService } from '../../services/permission.service';
 
 /**
  * Admin application shell.
@@ -31,6 +32,13 @@ import { AdminTopComponent } from '../admin-top/admin-top.component';
     </div>
   `,
 })
-export class AdminShellComponent {
+export class AdminShellComponent implements OnInit {
   nav_open = false;
+
+  constructor(private permissions: PermissionService) {}
+
+  ngOnInit(): void {
+    // Load the current user's effective permissions once for UI gating.
+    this.permissions.load();
+  }
 }
