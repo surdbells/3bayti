@@ -476,6 +476,33 @@ export function transformDeleteReviewRequest(body: unknown): MutationTransformOu
   return { pathParams: { id: String(reviewId ?? 0) }, body: null };
 }
 
+/**
+ * `update-measurement` — POST /customer/settings/measurement/update-measurement
+ *                      → PUT /v3/me/measurements/default.
+ *
+ * Legacy body has flat measurement fields ({ id, token, bust, armhole,
+ * shoulder, length, hip, arm, ... }); v3 wants { values: { ... }, notes? }.
+ * Collect positive numeric fields into `values` (v3 requires each in
+ * (0, 500]); id/token are stripped by the adapter's auth handling.
+ */
+export function transformUpdateMeasurementRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  const values: Record<string, number> = {};
+  for (const [key, raw] of Object.entries(b)) {
+    if (key === 'id' || key === 'token' || key === 'category' || key === 'category_id' || key === 'notes') {
+      continue;
+    }
+    if (raw === '' || raw === null || raw === undefined) continue;
+    const n = Number(raw);
+    if (Number.isFinite(n) && n > 0 && n <= 500) {
+      values[key] = n;
+    }
+  }
+  const out: Record<string, unknown> = { values };
+  if (typeof b['notes'] === 'string') out['notes'] = b['notes'];
+  return { body: out };
+}
+
 export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> = {
   // Cart mutations
   'POST /cart/items': transformAddToCartRequest,
@@ -503,6 +530,9 @@ export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> 
   'POST /vendors/:vendorId/reviews': transformAddVendorReviewRequest,
   'POST /reviews/:id/helpful': transformMarkHelpfulRequest,
   'DELETE /me/reviews/:id': transformDeleteReviewRequest,
+
+  // Measurements (Group A)
+  'PUT /me/measurements/default': transformUpdateMeasurementRequest,
 };
 
 /**

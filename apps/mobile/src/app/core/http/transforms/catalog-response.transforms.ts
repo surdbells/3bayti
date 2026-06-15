@@ -513,6 +513,33 @@ export function transformReviewDisplayResponse(data: unknown): unknown {
   });
 }
 
+/**
+ * v3 GET /v3/me/measurements ({ measurements: [{category_id, values:{...}}] })
+ * -> legacy read-measurement shape. The measurements + product pages read
+ * response.data[0].<field> from the DEFAULT set with the measurement
+ * fields flat at the top level, so: pick the default set (category_id
+ * null), flatten its `values` to the top level, and return it as a
+ * single-element array. v3 stores the same field keys (bust, armhole,
+ * shoulder, length, hip, arm, ...) the pages read.
+ */
+export function transformMeasurementsReadResponse(data: unknown): unknown {
+  if (!isRecord(data)) return data;
+  const list = Array.isArray(data['measurements']) ? data['measurements'] : [];
+  const def =
+    list.find((m) => isRecord(m) && (m['category_id'] === null || m['category_id'] === undefined)) ??
+    list[0];
+  if (!isRecord(def)) return [];
+  const values = isRecord(def['values']) ? def['values'] : {};
+  return [
+    {
+      id: def['id'],
+      category_id: def['category_id'] ?? null,
+      notes: def['notes'] ?? null,
+      ...values,
+    },
+  ];
+}
+
 /* ============================================================== *
  * M3.1.5.5 — List shape for vendor labels + styles
  * ============================================================== */
@@ -634,6 +661,7 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   'GET /me/tickets/:id/messages': transformTicketMessagesResponse,
   'GET /vendors/:vendorId/reviews': transformReviewDisplayResponse,
   'GET /me/reviews': transformReviewDisplayResponse,
+  'GET /me/measurements': transformMeasurementsReadResponse,
 
   // M3.1.5.5 catalog additions:
   'GET /mobile/search': transformProductListResponse,            // products list

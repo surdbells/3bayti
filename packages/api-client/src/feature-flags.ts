@@ -637,7 +637,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'GET /me/measurements': {
     target: 'new',
-    oldPath: '/users/measurements',
+    oldPath: '/customer/settings/measurement/read-measurement',
     newPath: '/v3/me/measurements',
     shape: 'v3-envelope',
   },
@@ -657,6 +657,14 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new',
     oldPath: '/users/deleteMeasurement/:id',
     newPath: '/v3/me/measurements/:id',
+    shape: 'v3-envelope',
+  },
+  // Customer default-measurement update (Group A). Mobile POSTs flat
+  // measurement fields; v3 PUTs { values: {...} } to the default set.
+  'PUT /me/measurements/default': {
+    target: 'new',
+    oldPath: '/customer/settings/measurement/update-measurement',
+    newPath: '/v3/me/measurements/default',
     shape: 'v3-envelope',
   },
 
