@@ -495,6 +495,22 @@ export function transformStylesListRequest(body: unknown): {
   return { queryParams: query };
 }
 
+/**
+ * `store-reviews` + `settings/store-reviews` — POST → GET
+ * /v3/vendors/{vendorId}/reviews (public, approved reviews for a store).
+ *
+ * vendor-reviews.page sends the id as `store_id`; store-reviews.page
+ * sends it as `store`. Accept either; vendor id goes in the path.
+ */
+export function transformVendorReviewsListRequest(body: unknown): { pathParams: Record<string, string> } {
+  const b = asRecord(body);
+  let vendorId = pickIntOrDefault(b, 'store_id', 0);
+  if (vendorId === 0) {
+    vendorId = pickIntOrDefault(b, 'store', 0);
+  }
+  return { pathParams: { vendorId: String(vendorId) } };
+}
+
 /* ============================================================== *
  * Registry — keyed by routeKey, matching ENDPOINT_ROUTING keys
  * ============================================================== */
@@ -518,6 +534,8 @@ export const CATALOG_REQUEST_TRANSFORMS: Record<string, BodyToRouteArgs> = {
   'GET /mobile/store-labels': transformStoreLabelsRequest,
   'GET /mobile/products-by-labels': transformProductsByLabelsRequest,
   'GET /mobile/styles-list': transformStylesListRequest,
+  // Reviews (Group B / B1): store reviews list (public).
+  'GET /vendors/:vendorId/reviews': transformVendorReviewsListRequest,
 };
 
 /* ============================================================== *

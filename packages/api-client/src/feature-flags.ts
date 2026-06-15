@@ -471,6 +471,40 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/tickets/:id/messages',
     shape: 'v3-envelope',
   },
+  // v3 customer reviews (Group B / B1). add-review is store-scoped
+  // (vendor id in body); store-reviews + settings/store-reviews both
+  // list a vendor's approved reviews (one v3 endpoint via alias).
+  'POST /vendors/:vendorId/reviews': {
+    target: 'new',
+    oldPath: '/customer/add-review',
+    newPath: '/v3/vendors/:vendorId/reviews',
+    shape: 'v3-envelope',
+  },
+  'POST /reviews/:id/helpful': {
+    target: 'new',
+    oldPath: '/customer/helpful',
+    newPath: '/v3/reviews/:id/helpful',
+    shape: 'v3-envelope',
+  },
+  'GET /vendors/:vendorId/reviews': {
+    target: 'new',
+    oldPath: '/customer/store-reviews',
+    oldPathAliases: ['/customer/settings/store-reviews'],
+    newPath: '/v3/vendors/:vendorId/reviews',
+    shape: 'v3-envelope',
+  },
+  'GET /me/reviews': {
+    target: 'new',
+    oldPath: '/customer/settings/read-reviews',
+    newPath: '/v3/me/reviews',
+    shape: 'v3-envelope',
+  },
+  'DELETE /me/reviews/:id': {
+    target: 'new',
+    oldPath: '/customer/settings/delete-review',
+    newPath: '/v3/me/reviews/:id',
+    shape: 'v3-envelope',
+  },
   'PATCH /me/profile': {
     target: 'new',
     oldPath: '/users/updateProfile',

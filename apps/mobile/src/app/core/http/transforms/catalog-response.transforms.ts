@@ -474,6 +474,45 @@ export function transformTicketMessagesResponse(data: unknown): unknown {
   });
 }
 
+/** Human "x ago" from an ISO timestamp, for review cards. */
+function relativeTime(iso: string): string {
+  if (!iso) return '';
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const diff = Date.now() - then;
+  if (diff < 60_000) return 'Just now';
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  if (diff < 7 * 86_400_000) return `${Math.floor(diff / 86_400_000)}d ago`;
+  return new Date(iso).toLocaleDateString();
+}
+
+/**
+ * v3 review lists -> legacy review-card shape. The review pages assign
+ * response.data directly and bind derived display fields. v3 publicShape
+ * gives id/star/title/comment/product_name/reviewer/created_at; we add
+ * the derived rating/author/authorInitial/relativeDate/aria. Used for
+ * both store reviews and the user's own reviews (extra fields are inert
+ * where a template doesn't read them).
+ */
+export function transformReviewDisplayResponse(data: unknown): unknown {
+  if (!Array.isArray(data)) return data;
+  return data.map((r) => {
+    if (!isRecord(r)) return r;
+    const reviewer = asString(r['reviewer']);
+    const starNum = Number(r['star'] ?? 0);
+    const star = Number.isFinite(starNum) ? starNum : 0;
+    return {
+      ...r,
+      rating: star,
+      author: reviewer,
+      authorInitial: reviewer ? reviewer.charAt(0).toUpperCase() : '',
+      relativeDate: relativeTime(asString(r['created_at'])),
+      aria: `${star} out of 5 stars`,
+    };
+  });
+}
+
 /* ============================================================== *
  * M3.1.5.5 — List shape for vendor labels + styles
  * ============================================================== */
@@ -593,6 +632,8 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   'GET /vendors': transformVendorListResponse,
   'GET /me/tickets': transformTicketListResponse,
   'GET /me/tickets/:id/messages': transformTicketMessagesResponse,
+  'GET /vendors/:vendorId/reviews': transformReviewDisplayResponse,
+  'GET /me/reviews': transformReviewDisplayResponse,
 
   // M3.1.5.5 catalog additions:
   'GET /mobile/search': transformProductListResponse,            // products list

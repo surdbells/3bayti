@@ -440,6 +440,42 @@ export function transformSendTicketMessageRequest(body: unknown): MutationTransf
   };
 }
 
+/**
+ * `add-review` — POST /customer/add-review → POST /v3/vendors/{vendorId}/reviews.
+ * Store review: legacy body { id, token, store_id, star, title, comment }.
+ * v3 path takes the vendor id; body carries star/title/comment.
+ */
+export function transformAddVendorReviewRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  const vendorId = pickInt(b, 'store_id');
+  const star = pickInt(b, 'star') ?? pickInt(b, 'rating') ?? 0;
+  const out: Record<string, unknown> = { star };
+  if (typeof b['title'] === 'string') out['title'] = b['title'];
+  if (typeof b['comment'] === 'string') out['comment'] = b['comment'];
+  return { pathParams: { vendorId: String(vendorId ?? 0) }, body: out };
+}
+
+/**
+ * `helpful` — POST /customer/helpful → POST /v3/reviews/{id}/helpful.
+ * Legacy body { id, token, reviewId } → review id in path, empty body.
+ */
+export function transformMarkHelpfulRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  const reviewId = pickInt(b, 'reviewId');
+  return { pathParams: { id: String(reviewId ?? 0) }, body: {} };
+}
+
+/**
+ * `delete-review` — POST /customer/settings/delete-review
+ *                 → DELETE /v3/me/reviews/{id}.
+ * Legacy body { id, token, review } → review id in path, no body.
+ */
+export function transformDeleteReviewRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  const reviewId = pickInt(b, 'review');
+  return { pathParams: { id: String(reviewId ?? 0) }, body: null };
+}
+
 export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> = {
   // Cart mutations
   'POST /cart/items': transformAddToCartRequest,
@@ -462,6 +498,11 @@ export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> 
   // Support tickets (Group B / B2)
   'POST /me/tickets': transformCreateTicketRequest,
   'POST /me/tickets/:id/messages': transformSendTicketMessageRequest,
+
+  // Reviews (Group B / B1)
+  'POST /vendors/:vendorId/reviews': transformAddVendorReviewRequest,
+  'POST /reviews/:id/helpful': transformMarkHelpfulRequest,
+  'DELETE /me/reviews/:id': transformDeleteReviewRequest,
 };
 
 /**
