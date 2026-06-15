@@ -48,6 +48,14 @@ export interface RoleOption {
   is_system: boolean;
 }
 
+export interface RoleDetail extends RoleOption {
+  permissions: string[];
+}
+
+export interface CatalogPermission { key: string; label: string; }
+export interface CatalogModule { module: string; label: string; permissions: CatalogPermission[]; }
+export interface CatalogPreset { slug: string; name: string; description: string | null; permissions: string[]; }
+
 @Component({
   selector: 'app-users',
   standalone: true,
@@ -72,12 +80,18 @@ export class UsersComponent implements OnInit {
   protected readonly createOpen = signal(false);
   protected readonly pwOpen = signal(false);
   protected readonly rolesOpen = signal(false);
+  protected readonly roleEditorOpen = signal(false);
+
+  // View toggle (Staff | Roles)
+  protected readonly view = signal<'staff' | 'roles'>('staff');
 
   ui = {
     registering: false,
     updating_password: false,
     saving_roles: false,
     roles_loading: false,
+    roles_list_loading: false,
+    saving_role: false,
   };
 
   register = {
@@ -96,6 +110,15 @@ export class UsersComponent implements OnInit {
   rolesTarget: StaffUser | null = null;
   allRoles: RoleOption[] = [];
   selectedRoleIds: number[] = [];
+
+  // Roles management (matrix editor) state
+  rolesList: RoleDetail[] = [];
+  catalogModules: CatalogModule[] = [];
+  catalogPresets: CatalogPreset[] = [];
+  private catalogLoaded = false;
+  editingRole: RoleDetail | null = null;
+  roleForm = { name: '', description: '' };
+  selectedPerms = new Set<string>();
 
   config!: AxDataTableConfig<StaffUser>;
   dataSource!: AxServerDataSource<StaffUser>;
@@ -313,6 +336,130 @@ export class UsersComponent implements OnInit {
         this.ui.updating_password = false;
       },
       error: () => { this.toast.error('Unable to complete your request at this time.'); this.ui.updating_password = false; },
+    });
+  }
+
+  // ── Roles management (matrix editor) ─────────────────────────────────
+  switchView(v: 'staff' | 'roles') {
+    this.view.set(v);
+    if (v === 'roles') {
+      this.loadRolesList();
+      this.loadCatalog();
+    }
+  }
+
+  private loadRolesList() {
+    this.ui.roles_list_loading = true;
+    this.adapter.get_v3('GET /admin/roles').subscribe({
+      next: (res: any) => {
+        this.rolesList = (res?.data ?? []).map((r: any) => ({
+          id: r.id, slug: r.slug, name: r.name, description: r.description ?? null,
+          is_system: !!r.is_system, permissions: Array.isArray(r.permissions) ? r.permissions : [],
+        }));
+        // Keep the assign-roles drawer options in sync with any new/edited roles.
+        this.allRoles = this.rolesList.map((r) => ({
+          id: r.id, slug: r.slug, name: r.name, description: r.description, is_system: r.is_system,
+        }));
+        this.ui.roles_list_loading = false;
+      },
+      error: () => { this.toast.error('Unable to load roles at this time.'); this.ui.roles_list_loading = false; },
+    });
+  }
+
+  private loadCatalog() {
+    if (this.catalogLoaded) return;
+    this.adapter.get_v3('GET /admin/permission-catalog').subscribe({
+      next: (res: any) => {
+        const d = res?.data ?? {};
+        this.catalogModules = (d.modules ?? []).map((m: any) => ({
+          module: m.module, label: m.label,
+          permissions: (m.permissions ?? []).map((p: any) => ({ key: p.key, label: p.label })),
+        }));
+        this.catalogPresets = (d.presets ?? []).map((p: any) => ({
+          slug: p.slug, name: p.name, description: p.description ?? null,
+          permissions: Array.isArray(p.permissions) ? p.permissions : [],
+        }));
+        this.catalogLoaded = true;
+      },
+      error: () => { this.toast.error('Unable to load the permission catalog.'); },
+    });
+  }
+
+  openRoleEditor(role?: RoleDetail) {
+    this.loadCatalog();
+    if (role) {
+      this.editingRole = role;
+      this.roleForm = { name: role.name, description: role.description ?? '' };
+      this.selectedPerms = new Set(role.permissions);
+    } else {
+      this.editingRole = null;
+      this.roleForm = { name: '', description: '' };
+      this.selectedPerms = new Set<string>();
+    }
+    this.roleEditorOpen.set(true);
+  }
+
+  closeRoleEditor() { this.roleEditorOpen.set(false); this.editingRole = null; }
+
+  isPermSelected(key: string): boolean { return this.selectedPerms.has(key); }
+
+  togglePerm(key: string) {
+    const next = new Set(this.selectedPerms);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    this.selectedPerms = next;
+  }
+
+  moduleSelectedCount(m: CatalogModule): number {
+    return m.permissions.filter((p) => this.selectedPerms.has(p.key)).length;
+  }
+
+  moduleAllSelected(m: CatalogModule): boolean {
+    return m.permissions.length > 0 && m.permissions.every((p) => this.selectedPerms.has(p.key));
+  }
+
+  toggleModule(m: CatalogModule) {
+    const all = this.moduleAllSelected(m);
+    const next = new Set(this.selectedPerms);
+    for (const p of m.permissions) { if (all) next.delete(p.key); else next.add(p.key); }
+    this.selectedPerms = next;
+  }
+
+  applyPreset(p: CatalogPreset) {
+    this.selectedPerms = new Set(p.permissions);
+    this.toast.success(`Applied the "${p.name}" preset.`);
+  }
+
+  saveRole() {
+    const name = this.roleForm.name.trim();
+    if (!name) { this.toast.error('A role name is required.'); return; }
+    this.ui.saving_role = true;
+    const payload = { name, description: this.roleForm.description.trim(), permissions: Array.from(this.selectedPerms) };
+    const done = () => { this.ui.saving_role = false; };
+    if (this.editingRole) {
+      this.adapter.put_v3('PUT /admin/roles/:id', payload, { params: { id: String(this.editingRole.id) } }).subscribe({
+        next: (r: any) => { if (r) { this.toast.success('Role updated.'); this.roleEditorOpen.set(false); this.loadRolesList(); } done(); },
+        error: () => { this.toast.error('Unable to save the role.'); done(); },
+      });
+    } else {
+      this.adapter.post_v3('POST /admin/roles', payload).subscribe({
+        next: (r: any) => { if (r) { this.toast.success('Role created.'); this.roleEditorOpen.set(false); this.loadRolesList(); } done(); },
+        error: () => { this.toast.error('Unable to create the role.'); done(); },
+      });
+    }
+  }
+
+  deleteRole(role: RoleDetail) {
+    if (role.is_system) return;
+    this.confirm.confirm({
+      title: 'Delete role',
+      message: `Delete the "${role.name}" role? Staff currently assigned will lose its permissions.`,
+      confirmLabel: 'Delete role', cancelLabel: 'Cancel', variant: 'danger',
+    }).then((ok) => {
+      if (!ok) return;
+      this.adapter.delete_v3('DELETE /admin/roles/:id', { params: { id: String(role.id) } }).subscribe({
+        next: () => { this.toast.success('Role deleted.'); this.loadRolesList(); },
+        error: () => { this.toast.error('Unable to delete the role.'); },
+      });
     });
   }
 
