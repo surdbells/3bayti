@@ -1,200 +1,173 @@
 <app-admin-shell>
   <div class="ax-container">
-      <header class="ax-page-header">
-        <div class="ax-page-header-content">
-          <button
-            type="button"
-            (click)="goBack()"
-            class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2"
-            style="align-self: flex-start;">
-            <app-icon name="arrow_back" aria-hidden="true"></app-icon>
-            Back to dashboard
-          </button>
-          <span class="ax-page-header-eyebrow">Access control</span>
-          <h1 class="ax-page-title">Platform users</h1>
-          <p class="ax-page-subtitle">
-            Manage platform staff and customer accounts.
-          </p>
-        </div>
-      </header>
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self: flex-start;">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon>
+          Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Access control</span>
+        <h1 class="ax-page-title">Staff &amp; access</h1>
+        <p class="ax-page-subtitle">Manage admin staff and the roles that grant them access.</p>
+      </div>
+      <div class="ax-page-header-actions">
+        <button *axCan="'users.create'" type="button" class="ax-btn ax-btn-primary" (click)="openCreate()">
+          <app-icon name="person_add" aria-hidden="true"></app-icon>
+          Add staff
+        </button>
+      </div>
+    </header>
 
-      <section class="ax-page-section">
-        <div class="ax-grid ax-grid-cols-1 ax-lg-grid-cols-4 ax-gap-3">
-          <!-- Register card -->
-          <div class="ax-card ax-p-4" style="align-self: start;">
-            <h3 class="ax-h6 ax-m-0 ax-mb-3">Add new user</h3>
+    <section class="ax-page-section">
+      <div class="ax-card ax-p-0">
+        <app-ax-data-table
+          [config]="config"
+          [dataSource]="dataSource"
+          (rowAction)="onRowAction($event)">
 
-            <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-2 ax-mb-3">
-              <div class="ax-form-field">
-                <label class="ax-label ax-text-2xs ax-label-required" for="first_name">{{ 'first_name' | translate }}</label>
-                <input id="first_name" autocomplete="off" [(ngModel)]="register.first_name" name="first_name" class="ax-input ax-input-sm" type="text" />
-              </div>
-              <div class="ax-form-field">
-                <label class="ax-label ax-text-2xs ax-label-required" for="last_name">{{ 'last_name' | translate }}</label>
-                <input id="last_name" autocomplete="off" [(ngModel)]="register.last_name" name="last_name" class="ax-input ax-input-sm" type="text" />
-              </div>
+          <ng-template axCell="name" let-row>
+            <span class="ax-font-medium ax-text-primary">{{ row.first_name }} {{ row.last_name }}</span>
+          </ng-template>
+
+          <ng-template axCell="roles" let-row>
+            <div class="ax-flex ax-gap-1 ax-flex-wrap">
+              <span *ngIf="row.is_admin" class="ax-badge ax-badge-brand">Super Admin</span>
+              <ng-container *ngIf="!row.is_admin">
+                <span *ngFor="let r of row.assigned_roles" class="ax-badge ax-badge-info">{{ r.name }}</span>
+                <span *ngIf="!row.assigned_roles?.length" class="ax-text-2xs ax-text-tertiary">—</span>
+              </ng-container>
             </div>
+          </ng-template>
 
-            <div class="ax-form-field ax-mb-3">
-              <label class="ax-label ax-text-2xs ax-label-required" for="email">{{ 'email' | translate }}</label>
-              <input id="email" autocomplete="off" [(ngModel)]="register.email" name="email" class="ax-input ax-input-sm" type="email" />
-            </div>
-
-            <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-2 ax-mb-3">
-              <div class="ax-form-field">
-                <label class="ax-label ax-text-2xs ax-label-required" for="password">{{ 'password' | translate }}</label>
-                <input id="password" autocomplete="off" [(ngModel)]="register.password" name="password" class="ax-input ax-input-sm" type="password" />
-              </div>
-              <div class="ax-form-field">
-                <label class="ax-label ax-text-2xs ax-label-required" for="confirm_password">{{ 'confirm_password' | translate }}</label>
-                <input id="confirm_password" autocomplete="off" [(ngModel)]="register.confirm_password" name="confirm_password" class="ax-input ax-input-sm" type="password" />
-              </div>
-            </div>
-
-            <div class="ax-mb-3">
-              <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Roles</div>
-              <label class="ax-check ax-mb-2">
-                <input type="checkbox" class="ax-check-box" [(ngModel)]="register.is_finance" name="is_finance" />
-                <span class="ax-check-label">Finance manager</span>
-              </label>
-              <label class="ax-check ax-mb-2">
-                <input type="checkbox" class="ax-check-box" [(ngModel)]="register._sub_admin" name="is_sub_admin" />
-                <span class="ax-check-label">Sub admin</span>
-              </label>
-              <label class="ax-check">
-                <input type="checkbox" class="ax-check-box" [(ngModel)]="register.is_support" name="is_support" />
-                <span class="ax-check-label">Customer support</span>
-              </label>
-            </div>
-
-            <button
-              type="button"
-              class="ax-btn ax-btn-primary"
-              style="width: 100%;"
-              (click)="user_register()"
-              [disabled]="ui_controls.is_registering">
-              <span *ngIf="ui_controls.is_registering" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-              <app-icon name="person_add" *ngIf="!ui_controls.is_registering" aria-hidden="true"></app-icon>
-              Add user
-            </button>
-          </div>
-
-          <!-- Users table (enterprise) -->
-          <div style="grid-column: span 3;">
-            <div class="ax-flex ax-gap-2 ax-mb-3 ax-items-center">
-              <label class="ax-text-sm ax-text-secondary">Role</label>
-              <select class="ax-input ax-input-sm" style="width:12rem"
-                [ngModel]="roleFilter" (ngModelChange)="onRoleFilter($event)" aria-label="Filter by role">
-                <option value="customer">Customers</option>
-                <option value="finance">Finance</option>
-                <option value="support">Support</option>
-                <option value="sub_admin">Sub-admins</option>
-                <option value="">All roles</option>
-              </select>
-            </div>
-
-            <div class="ax-card ax-p-0">
-              <app-ax-data-table
-                [config]="config"
-                [dataSource]="dataSource"
-                (rowAction)="onRowAction($event)">
-
-                <ng-template axCell="name" let-row>
-                  <span class="ax-font-medium ax-text-primary">{{ row.first_name }} {{ row.last_name }}</span>
-                </ng-template>
-
-                <ng-template axCell="roles" let-row>
-                  <div class="ax-flex ax-gap-1 ax-flex-wrap">
-                    <span *ngIf="row.is_finance" class="ax-badge ax-badge-info">Finance</span>
-                    <span *ngIf="row.is_sub_admin" class="ax-badge ax-badge-brand">Sub-admin</span>
-                    <span *ngIf="row.is_support" class="ax-badge ax-badge-neutral">Support</span>
-                    <span *ngIf="!row.is_finance && !row.is_sub_admin && !row.is_support" class="ax-text-2xs ax-text-tertiary">—</span>
-                  </div>
-                </ng-template>
-
-                <ng-template axCell="status" let-row>
-                  <span class="ax-badge" [class.ax-badge-success]="row.status" [class.ax-badge-danger]="!row.status">
-                    {{ row.status ? 'Active' : 'Inactive' }}
-                  </span>
-                </ng-template>
-              </app-ax-data-table>
-            </div>
-          </div>
-        </div>
-      </section>  </div>
+          <ng-template axCell="status" let-row>
+            <span class="ax-badge" [class.ax-badge-success]="row.status" [class.ax-badge-danger]="!row.status">
+              {{ row.status ? 'Active' : 'Inactive' }}
+            </span>
+          </ng-template>
+        </app-ax-data-table>
+      </div>
+    </section>
+  </div>
 </app-admin-shell>
 
-<!-- Edit user drawer -->
-<div
-  *ngIf="open()"
-  class="ax-drawer-overlay"
-  (click)="onCloseDrawer()"
-  style="position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 1000; animation: fadeIn 150ms ease;"></div>
-
-<aside
-  *ngIf="open()"
-  class="ax-drawer ax-drawer-right"
+<!-- ───────────────────────── Create staff drawer ───────────────────────── -->
+<div *ngIf="createOpen()" class="ax-drawer-overlay" (click)="closeCreate()"
+  style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; animation: fadeIn 150ms ease;"></div>
+<aside *ngIf="createOpen()" class="ax-drawer ax-drawer-right"
   style="position: fixed; top: 0; right: 0; bottom: 0; width: min(100%, 28rem); background: var(--ax-color-bg-surface); z-index: 1001; display: flex; flex-direction: column; box-shadow: var(--ax-shadow-lg);">
   <header class="ax-drawer-header">
     <div class="ax-drawer-header-content">
-      <h2 class="ax-drawer-title">Edit user</h2>
-      <p class="ax-drawer-subtitle">{{ single.first_name }} {{ single.last_name }}</p>
+      <h2 class="ax-drawer-title">Add staff member</h2>
+      <p class="ax-drawer-subtitle">Create the account, then assign roles to grant access.</p>
     </div>
-    <button type="button" class="ax-drawer-close" (click)="onCloseDrawer()" aria-label="Close">
+    <button type="button" class="ax-drawer-close" (click)="closeCreate()" aria-label="Close">
       <app-icon name="close" aria-hidden="true"></app-icon>
     </button>
   </header>
-
   <div class="ax-drawer-body">
-    <!-- User info form -->
-    <div class="ax-mb-4">
-      <h3 class="ax-h6 ax-m-0 ax-mb-3">Profile</h3>
-      <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-2 ax-mb-3">
-        <div class="ax-form-field">
-          <label class="ax-label ax-text-2xs">{{ 'first_name' | translate }}</label>
-          <input class="ax-input ax-input-sm" type="text" [(ngModel)]="single.first_name" name="first_name" />
-        </div>
-        <div class="ax-form-field">
-          <label class="ax-label ax-text-2xs">{{ 'last_name' | translate }}</label>
-          <input class="ax-input ax-input-sm" type="text" [(ngModel)]="single.last_name" name="last_name" />
-        </div>
+    <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-2 ax-mb-3">
+      <div class="ax-form-field">
+        <label class="ax-label ax-text-2xs ax-label-required" for="first_name">{{ 'first_name' | translate }}</label>
+        <input id="first_name" autocomplete="off" [(ngModel)]="register.first_name" name="first_name" class="ax-input ax-input-sm" type="text" />
       </div>
-
-      <div class="ax-form-field ax-mb-3">
-        <label class="ax-label ax-text-2xs">{{ 'email' | translate }}</label>
-        <input class="ax-input ax-input-sm" type="email" [(ngModel)]="single.email" name="email" />
+      <div class="ax-form-field">
+        <label class="ax-label ax-text-2xs ax-label-required" for="last_name">{{ 'last_name' | translate }}</label>
+        <input id="last_name" autocomplete="off" [(ngModel)]="register.last_name" name="last_name" class="ax-input ax-input-sm" type="text" />
       </div>
-
-      <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Roles</div>
-      <label class="ax-check ax-mb-2">
-        <input type="checkbox" class="ax-check-box" [(ngModel)]="single.is_finance" name="edit_is_finance" />
-        <span class="ax-check-label">Finance manager</span>
-      </label>
-      <label class="ax-check ax-mb-2">
-        <input type="checkbox" class="ax-check-box" [(ngModel)]="single.is_sub_admin" name="edit_is_sub_admin" />
-        <span class="ax-check-label">Sub admin</span>
-      </label>
-      <label class="ax-check ax-mb-3">
-        <input type="checkbox" class="ax-check-box" [(ngModel)]="single.is_support" name="edit_is_support" />
-        <span class="ax-check-label">Customer support</span>
-      </label>
     </div>
-
-    <!-- Password reset -->
-    <div class="ax-card ax-p-3">
-      <h3 class="ax-h6 ax-m-0 ax-mb-3">Reset password</h3>
-      <div class="ax-form-field ax-mb-3">
-        <label class="ax-label ax-text-2xs">{{ 'password' | translate }}</label>
-        <input class="ax-input ax-input-sm" type="text" [(ngModel)]="password_c.password" name="new_password" autocomplete="new-password" />
+    <div class="ax-form-field ax-mb-3">
+      <label class="ax-label ax-text-2xs ax-label-required" for="email">{{ 'email' | translate }}</label>
+      <input id="email" autocomplete="off" [(ngModel)]="register.email" name="email" class="ax-input ax-input-sm" type="email" />
+    </div>
+    <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-2 ax-mb-3">
+      <div class="ax-form-field">
+        <label class="ax-label ax-text-2xs ax-label-required" for="password">{{ 'password' | translate }}</label>
+        <input id="password" autocomplete="new-password" [(ngModel)]="register.password" name="password" class="ax-input ax-input-sm" type="password" />
       </div>
-      <button
-        type="button"
-        class="ax-btn ax-btn-primary"
-        style="width: 100%;"
-        (click)="update_password()"
-        [disabled]="ui_controls.is_updating_password">
-        <span *ngIf="ui_controls.is_updating_password" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-        <app-icon name="key" *ngIf="!ui_controls.is_updating_password" aria-hidden="true"></app-icon>
+      <div class="ax-form-field">
+        <label class="ax-label ax-text-2xs ax-label-required" for="confirm_password">{{ 'confirm_password' | translate }}</label>
+        <input id="confirm_password" autocomplete="new-password" [(ngModel)]="register.confirm_password" name="confirm_password" class="ax-input ax-input-sm" type="password" />
+      </div>
+    </div>
+    <div class="ax-callout ax-callout-info ax-text-2xs ax-mb-4">
+      <app-icon name="admin_panel_settings" aria-hidden="true"></app-icon>
+      New staff start with no access. Use <strong>Manage roles</strong> on the staff row to grant permissions.
+    </div>
+    <div class="ax-flex ax-gap-2">
+      <button type="button" class="ax-btn ax-btn-ghost" (click)="closeCreate()">Cancel</button>
+      <button type="button" class="ax-btn ax-btn-primary" style="flex:1;" (click)="user_register()" [disabled]="ui.registering">
+        <span *ngIf="ui.registering" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+        <app-icon name="person_add" *ngIf="!ui.registering" aria-hidden="true"></app-icon>
+        Create staff
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- ───────────────────────── Manage roles drawer ───────────────────────── -->
+<div *ngIf="rolesOpen()" class="ax-drawer-overlay" (click)="closeRoles()"
+  style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; animation: fadeIn 150ms ease;"></div>
+<aside *ngIf="rolesOpen()" class="ax-drawer ax-drawer-right"
+  style="position: fixed; top: 0; right: 0; bottom: 0; width: min(100%, 30rem); background: var(--ax-color-bg-surface); z-index: 1001; display: flex; flex-direction: column; box-shadow: var(--ax-shadow-lg);">
+  <header class="ax-drawer-header">
+    <div class="ax-drawer-header-content">
+      <h2 class="ax-drawer-title">Manage roles</h2>
+      <p class="ax-drawer-subtitle" *ngIf="rolesTarget">{{ rolesTarget.first_name }} {{ rolesTarget.last_name }}</p>
+    </div>
+    <button type="button" class="ax-drawer-close" (click)="closeRoles()" aria-label="Close">
+      <app-icon name="close" aria-hidden="true"></app-icon>
+    </button>
+  </header>
+  <div class="ax-drawer-body">
+    <div *ngIf="ui.roles_loading" class="ax-text-sm ax-text-tertiary ax-py-4 ax-text-center">
+      <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> Loading roles…
+    </div>
+    <div *ngIf="!ui.roles_loading && allRoles.length === 0" class="ax-text-sm ax-text-tertiary ax-py-4 ax-text-center">
+      No roles defined yet.
+    </div>
+    <label *ngFor="let role of allRoles" class="ax-check ax-card ax-p-3 ax-mb-2" style="cursor: pointer; display: flex; align-items: flex-start; gap: .625rem;">
+      <input type="checkbox" class="ax-check-box" [checked]="isRoleSelected(role.id)" (change)="toggleRole(role.id)" />
+      <span class="ax-check-label" style="flex:1;">
+        <span class="ax-font-medium ax-text-primary">{{ role.name }}</span>
+        <span *ngIf="role.is_system" class="ax-badge ax-badge-neutral" style="margin-left:.5rem;">System</span>
+        <span class="ax-text-2xs ax-text-tertiary" style="display:block; margin-top:.125rem;">{{ role.description || 'No description' }}</span>
+      </span>
+    </label>
+  </div>
+  <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--ax-color-border); display: flex; gap: .5rem;">
+    <button type="button" class="ax-btn ax-btn-ghost" (click)="closeRoles()">Cancel</button>
+    <button type="button" class="ax-btn ax-btn-primary" style="flex:1;" (click)="saveRoles()" [disabled]="ui.saving_roles">
+      <span *ngIf="ui.saving_roles" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+      <app-icon name="check_circle" *ngIf="!ui.saving_roles" aria-hidden="true"></app-icon>
+      Save roles
+    </button>
+  </div>
+</aside>
+
+<!-- ───────────────────────── Reset password drawer ─────────────────────── -->
+<div *ngIf="pwOpen()" class="ax-drawer-overlay" (click)="closePassword()"
+  style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; animation: fadeIn 150ms ease;"></div>
+<aside *ngIf="pwOpen()" class="ax-drawer ax-drawer-right"
+  style="position: fixed; top: 0; right: 0; bottom: 0; width: min(100%, 26rem); background: var(--ax-color-bg-surface); z-index: 1001; display: flex; flex-direction: column; box-shadow: var(--ax-shadow-lg);">
+  <header class="ax-drawer-header">
+    <div class="ax-drawer-header-content">
+      <h2 class="ax-drawer-title">Reset password</h2>
+      <p class="ax-drawer-subtitle">{{ pwTarget.first_name }} {{ pwTarget.last_name }}</p>
+    </div>
+    <button type="button" class="ax-drawer-close" (click)="closePassword()" aria-label="Close">
+      <app-icon name="close" aria-hidden="true"></app-icon>
+    </button>
+  </header>
+  <div class="ax-drawer-body">
+    <div class="ax-form-field ax-mb-3">
+      <label class="ax-label ax-text-2xs ax-label-required" for="new_password">New password</label>
+      <input id="new_password" class="ax-input ax-input-sm" type="text" [(ngModel)]="pwValue" name="new_password" autocomplete="new-password" />
+    </div>
+    <div class="ax-flex ax-gap-2">
+      <button type="button" class="ax-btn ax-btn-ghost" (click)="closePassword()">Cancel</button>
+      <button type="button" class="ax-btn ax-btn-primary" style="flex:1;" (click)="update_password()" [disabled]="ui.updating_password">
+        <span *ngIf="ui.updating_password" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+        <app-icon name="key" *ngIf="!ui.updating_password" aria-hidden="true"></app-icon>
         Update password
       </button>
     </div>

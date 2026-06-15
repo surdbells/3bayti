@@ -12,6 +12,8 @@ import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { TranslatePipe } from '../../translate.pipe';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { AxCanDirective } from '../../shared/security/ax-can.directive';
+import { PermissionService } from '../../services/permission.service';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -21,17 +23,29 @@ import {
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
 
-export interface User extends Record<string, unknown> {
+export interface RoleRef {
   id: number;
-  token: string;
+  slug: string;
+  name: string;
+}
+
+export interface StaffUser extends Record<string, unknown> {
+  id: number;
   first_name: string;
   last_name: string;
   email: string;
-  is_finance: boolean;
-  is_support: boolean;
-  is_sub_admin: boolean;
+  is_admin: boolean;
   last_login: string;
   status: boolean;
+  assigned_roles: RoleRef[];
+}
+
+export interface RoleOption {
+  id: number;
+  slug: string;
+  name: string;
+  description: string | null;
+  is_system: boolean;
 }
 
 @Component({
@@ -43,47 +57,48 @@ export interface User extends Record<string, unknown> {
     FormsModule,
     AxDataTableComponent,
     AxCellDirective,
-    TranslatePipe, IconComponent],
+    AxCanDirective,
+    TranslatePipe,
+    IconComponent,
+  ],
   templateUrl: './users.component.html',
   styleUrl: './users.component.css',
 })
 export class UsersComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
-  protected readonly open = signal(false);
+  protected readonly perms = inject(PermissionService);
 
-  ui_controls = {
-    is_loading: false,
-    is_registering: false,
-    is_updating_password: false,
-    nav_open: false,
-  };
+  // Drawer visibility
+  protected readonly createOpen = signal(false);
+  protected readonly pwOpen = signal(false);
+  protected readonly rolesOpen = signal(false);
 
-  user_session = {
-    id: 0, token: '', first_name: '', last_name: '',
-    email: '', phone: '',
-    is_2fa: false, is_active: false, is_admin: false,
-    is_vendor: false, is_customer: false,
+  ui = {
+    registering: false,
+    updating_password: false,
+    saving_roles: false,
+    roles_loading: false,
   };
 
   register = {
-    first_name: '', last_name: '', email: '',
-    password: '', confirm_password: '',
-    is_finance: false, is_support: false, _sub_admin: false,
+    first_name: '',
+    last_name: '',
+    email: '',
+    password: '',
+    confirm_password: '',
   };
 
-  single: User = {
-    id: 0, token: '',
-    first_name: '', last_name: '', email: '',
-    is_finance: false, is_support: false, is_sub_admin: false,
-    last_login: '', status: false,
-  };
+  // Password reset target
+  pwTarget = { id: 0, first_name: '', last_name: '' };
+  pwValue = '';
 
-  password_c = { id: 0, token: '', user: 0, password: '' };
+  // Role assignment state
+  rolesTarget: StaffUser | null = null;
+  allRoles: RoleOption[] = [];
+  selectedRoleIds: number[] = [];
 
-  roleFilter = 'customer';
-
-  config!: AxDataTableConfig<User>;
-  dataSource!: AxServerDataSource<User>;
+  config!: AxDataTableConfig<StaffUser>;
+  dataSource!: AxServerDataSource<StaffUser>;
 
   constructor(
     private router: Router,
@@ -92,123 +107,126 @@ export class UsersComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.user_session = GlobalComponent.decodeBase64(
-      sessionStorage.getItem('SESSION') ?? '',
-    );
+    this.perms.load();
     this.buildTable();
+    this.loadRoles();
   }
 
+  // ── Table ────────────────────────────────────────────────────────────
   private buildTable() {
-    this.dataSource = new AxServerDataSource<User>((q) => this.fetchUsers(q));
+    this.dataSource = new AxServerDataSource<StaffUser>((q) => this.fetchStaff(q));
     this.config = {
-      tableId: 'admin-users',
+      tableId: 'admin-staff',
       mode: 'server',
       rowId: 'id',
       pageSize: 20,
       pageSizeOptions: [20, 50, 100],
       globalSearch: true,
-      searchPlaceholder: 'Search users by name or email…',
+      searchPlaceholder: 'Search staff by name or email…',
       stickyHeader: true,
       hover: true,
-      emptyTitle: 'No users found',
-      emptyDescription: 'No platform users match your current filters.',
-      export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'platform-users' },
+      emptyTitle: 'No staff yet',
+      emptyDescription: 'Admins and role-holders will appear here. Add a staff member to get started.',
+      export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'admin-staff' },
       columns: [
         { key: 'name', label: 'Name', sortable: true, sticky: 'left', width: '14rem',
           value: (r) => `${r.first_name} ${r.last_name}` },
         { key: 'email', label: 'Email' },
+        { key: 'roles', label: 'Roles', align: 'left',
+          value: (r) => (r.is_admin ? 'Super Admin' : (r.assigned_roles ?? []).map((x) => x.name).join(', ') || '—') },
         { key: 'last_login', label: 'Last login', hideOnMobile: true,
           format: (v) => (v ? new Date(String(v)).toLocaleString() : '—') },
-        { key: 'roles', label: 'Roles', align: 'left',
-          value: (r) => [r.is_finance && 'Finance', r.is_sub_admin && 'Sub-admin', r.is_support && 'Support'].filter(Boolean).join(', ') || '—' },
         { key: 'status', label: 'Status', align: 'center',
           value: (r) => (r.status ? 'Active' : 'Inactive') },
       ],
       rowActions: [
-        { id: 'activate', label: 'Activate', icon: 'check_circle', hidden: (r) => r.status },
-        { id: 'deactivate', label: 'Deactivate', icon: 'block', variant: 'danger', hidden: (r) => !r.status },
-        { id: 'edit', label: 'Edit', icon: 'edit' },
+        { id: 'manage_roles', label: 'Manage roles', icon: 'admin_panel_settings',
+          hidden: (r) => r.is_admin || !this.perms.can('users.manage_roles') },
+        { id: 'activate', label: 'Activate', icon: 'check_circle',
+          hidden: (r) => r.status || !this.perms.can('users.deactivate') },
+        { id: 'deactivate', label: 'Deactivate', icon: 'block', variant: 'danger',
+          hidden: (r) => !r.status || !this.perms.can('users.deactivate') },
+        { id: 'password', label: 'Reset password', icon: 'key',
+          hidden: () => !this.perms.can('users.edit') },
       ],
     };
   }
 
-  private fetchUsers(query: AxQueryState) {
+  private fetchStaff(query: AxQueryState) {
     const q: any = {
       limit: query.pageSize,
       offset: query.pageIndex * query.pageSize,
-      role: this.roleFilter,
     };
     if (query.search) q.search = query.search;
     return this.adapter.get_v3('GET /admin/users', { query: q }).pipe(
-      map((response: any): AxServerFetchResult<User> => {
+      map((response: any): AxServerFetchResult<StaffUser> => {
         const raw: any[] = response?.data ?? [];
-        const rows = raw.map((u) => this.mapUser(u));
+        const rows = raw.map((u) => this.mapStaff(u));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
-        this.toast.error('Unable to load users at this time.');
-        return of({ rows: [], total: 0 } as AxServerFetchResult<User>);
+        this.toast.error('Unable to load staff at this time.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<StaffUser>);
       }),
     );
   }
 
-  /** Map publicProfile (roles[] array, last_login_at) into the flat row. */
-  private mapUser(u: any): User {
-    const roles: string[] = Array.isArray(u.roles) ? u.roles : [];
+  /** Map the staff() shape into a flat row. */
+  private mapStaff(u: any): StaffUser {
     return {
       ...u,
       id: u.id,
       first_name: u.first_name ?? '',
       last_name: u.last_name ?? '',
       email: u.email ?? '',
-      last_login: u.last_login_at ?? u.last_login ?? '',
-      is_finance: roles.includes('finance'),
-      is_support: roles.includes('support'),
-      is_sub_admin: roles.includes('sub_admin'),
-      is_admin: roles.includes('admin'),
-      status: u.is_store_active ?? u.is_active ?? true,
-    } as User;
+      is_admin: !!u.is_admin,
+      last_login: u.last_login_at ?? '',
+      status: u.is_active ?? true,
+      assigned_roles: Array.isArray(u.assigned_roles) ? u.assigned_roles : [],
+    } as StaffUser;
   }
 
-  onRoleFilter(role: string) {
-    this.roleFilter = role;
-    this.dataSource.retry();
-  }
-
-  onRowAction(e: { action: { id: string }; row: User }) {
+  onRowAction(e: { action: { id: string }; row: StaffUser }) {
     const { action, row } = e;
     switch (action.id) {
+      case 'manage_roles': return this.openRoles(row);
       case 'activate': return this.startActivate(row);
       case 'deactivate': return this.startDeactivate(row);
-      case 'edit': return this.start_edit(row);
+      case 'password': return this.openPassword(row);
     }
   }
 
   private refresh() { this.dataSource.retry(); }
 
-  private startActivate(row: User) {
+  // ── Activate / deactivate ────────────────────────────────────────────
+  private startActivate(row: StaffUser) {
     this.confirm.confirm({
-      title: 'Activate user', message: `${row.first_name}'s account will be activated.`,
+      title: 'Activate staff member', message: `${row.first_name}'s account will be activated.`,
       confirmLabel: 'Activate', cancelLabel: 'Cancel',
-    }).then((ok) => { if (ok) this.activate_customer(row.id); });
+    }).then((ok) => { if (ok) this.setActive(row.id, true); });
   }
 
-  private startDeactivate(row: User) {
+  private startDeactivate(row: StaffUser) {
     this.confirm.confirm({
-      title: 'Deactivate user', message: `${row.first_name} will be deactivated.`,
+      title: 'Deactivate staff member', message: `${row.first_name} will lose access until reactivated.`,
       confirmLabel: 'Deactivate', cancelLabel: 'Cancel', variant: 'danger',
-    }).then((ok) => { if (ok) this.deactivate_customer(row.id); });
+    }).then((ok) => { if (ok) this.setActive(row.id, false); });
   }
 
-  private activate_customer(uid: number) {
-    this.adapter.post_v3('POST /admin/users/:id/activate', {}, { params: { id: String(uid) } })
-      .subscribe({ next: (r: any) => { if (r) { this.toast.success('User activated.'); this.refresh(); } } });
+  private setActive(uid: number, active: boolean) {
+    const key = active ? 'POST /admin/users/:id/activate' : 'POST /admin/users/:id/deactivate';
+    this.adapter.post_v3(key, {}, { params: { id: String(uid) } }).subscribe({
+      next: (r: any) => { if (r) { this.toast.success(active ? 'Staff member activated.' : 'Staff member deactivated.'); this.refresh(); } },
+      error: () => this.toast.error('Unable to complete your request at this time.'),
+    });
   }
 
-  private deactivate_customer(uid: number) {
-    this.adapter.post_v3('POST /admin/users/:id/deactivate', {}, { params: { id: String(uid) } })
-      .subscribe({ next: (r: any) => { if (r) { this.toast.success('User deactivated.'); this.refresh(); } } });
+  // ── Create staff ─────────────────────────────────────────────────────
+  openCreate() {
+    this.register = { first_name: '', last_name: '', email: '', password: '', confirm_password: '' };
+    this.createOpen.set(true);
   }
+  closeCreate() { this.createOpen.set(false); }
 
   user_register() {
     const r = this.register;
@@ -219,58 +237,82 @@ export class UsersComponent implements OnInit {
     if (!r.password) { this.toast.error('Password is required'); return; }
     if (r.password !== r.confirm_password) { this.toast.error('Password does not match'); return; }
 
-    this.ui_controls.is_registering = true;
+    this.ui.registering = true;
     this.adapter.post_v3('POST /admin/users', this.register).subscribe({
       next: (response: any) => {
         if (response) {
-          this.toast.success('User created successfully.');
-          this.register = {
-            first_name: '', last_name: '', email: '',
-            password: '', confirm_password: '',
-            is_finance: false, is_support: false, _sub_admin: false,
-          };
+          this.toast.success('Staff member created. Assign roles to grant access.');
+          this.register = { first_name: '', last_name: '', email: '', password: '', confirm_password: '' };
+          this.createOpen.set(false);
           this.refresh();
         }
-        this.ui_controls.is_registering = false;
+        this.ui.registering = false;
       },
-      error: () => {
-        this.toast.error('Unable to complete your request at this time.');
-        this.ui_controls.is_registering = false;
-      },
+      error: () => { this.toast.error('Unable to complete your request at this time.'); this.ui.registering = false; },
     });
   }
 
-  onCloseDrawer(): void { this.open.set(false); }
-
-  start_edit(a_customer: User) {
-    this.single = { ...a_customer };
-    this.password_c.password = '';
-    this.open.set(true);
+  // ── Roles ────────────────────────────────────────────────────────────
+  private loadRoles() {
+    this.ui.roles_loading = true;
+    this.adapter.get_v3('GET /admin/roles').subscribe({
+      next: (res: any) => {
+        this.allRoles = (res?.data ?? []).map((r: any) => ({
+          id: r.id, slug: r.slug, name: r.name, description: r.description ?? null, is_system: !!r.is_system,
+        }));
+        this.ui.roles_loading = false;
+      },
+      error: () => { this.ui.roles_loading = false; },
+    });
   }
 
-  update_user() {
-    // Update-user endpoint not yet available; drawer retained for password reset.
+  openRoles(row: StaffUser) {
+    this.rolesTarget = row;
+    this.selectedRoleIds = (row.assigned_roles ?? []).map((r) => r.id);
+    if (this.allRoles.length === 0) this.loadRoles();
+    this.rolesOpen.set(true);
   }
+
+  closeRoles() { this.rolesOpen.set(false); this.rolesTarget = null; }
+
+  isRoleSelected(id: number): boolean { return this.selectedRoleIds.includes(id); }
+
+  toggleRole(id: number) {
+    this.selectedRoleIds = this.isRoleSelected(id)
+      ? this.selectedRoleIds.filter((x) => x !== id)
+      : [...this.selectedRoleIds, id];
+  }
+
+  saveRoles() {
+    if (!this.rolesTarget) return;
+    this.ui.saving_roles = true;
+    this.adapter.post_v3('POST /admin/users/:id/roles', { role_ids: this.selectedRoleIds }, { params: { id: String(this.rolesTarget.id) } }).subscribe({
+      next: (r: any) => {
+        if (r) { this.toast.success('Roles updated.'); this.closeRoles(); this.refresh(); }
+        this.ui.saving_roles = false;
+      },
+      error: () => { this.toast.error('Unable to update roles at this time.'); this.ui.saving_roles = false; },
+    });
+  }
+
+  // ── Password reset ───────────────────────────────────────────────────
+  openPassword(row: StaffUser) {
+    this.pwTarget = { id: row.id, first_name: row.first_name, last_name: row.last_name };
+    this.pwValue = '';
+    this.pwOpen.set(true);
+  }
+
+  closePassword() { this.pwOpen.set(false); }
 
   update_password() {
-    if (!this.password_c.password) { this.toast.error('New password is required.'); return; }
-    this.password_c.user = this.single.id;
-    this.ui_controls.is_updating_password = true;
-    const pwUId = this.password_c.user ?? this.password_c.id;
-    this.adapter.patch_v3('PATCH /admin/users/:id/password', this.password_c, { params: { id: String(pwUId) } }).subscribe({
+    if (!this.pwValue) { this.toast.error('New password is required.'); return; }
+    this.ui.updating_password = true;
+    this.adapter.patch_v3('PATCH /admin/users/:id/password', { password: this.pwValue }, { params: { id: String(this.pwTarget.id) } }).subscribe({
       next: (response: any) => {
-        if (response) {
-          this.toast.success('Password updated.');
-          this.password_c.password = '';
-          this.open.set(false);
-          this.refresh();
-        }
-        this.ui_controls.is_updating_password = false;
+        if (response) { this.toast.success('Password updated.'); this.pwValue = ''; this.pwOpen.set(false); }
+        this.ui.updating_password = false;
       },
-      error: () => {
-        this.toast.error('Unable to complete your request at this time.');
-        this.ui_controls.is_updating_password = false;
-      },
+      error: () => { this.toast.error('Unable to complete your request at this time.'); this.ui.updating_password = false; },
     });
   }
 

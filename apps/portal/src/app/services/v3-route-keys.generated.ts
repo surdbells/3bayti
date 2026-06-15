@@ -43,6 +43,13 @@ export type V3RouteKey =
   | 'GET /admin/transactions'
   | 'GET /admin/users'
   | 'GET /admin/users/:id'
+  | 'GET /admin/permission-catalog'
+  | 'GET /admin/roles'
+  | 'GET /admin/roles/:id'
+  | 'POST /admin/roles'
+  | 'PUT /admin/roles/:id'
+  | 'DELETE /admin/roles/:id'
+  | 'POST /admin/users/:id/roles'
   | 'GET /admin/vendor-metrics'
   | 'GET /admin/vendors'
   | 'GET /admin/vendors/:id'
@@ -261,6 +268,13 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/transactions',
   'GET /admin/users',
   'GET /admin/users/:id',
+  'GET /admin/permission-catalog',
+  'GET /admin/roles',
+  'GET /admin/roles/:id',
+  'POST /admin/roles',
+  'PUT /admin/roles/:id',
+  'DELETE /admin/roles/:id',
+  'POST /admin/users/:id/roles',
   'GET /admin/vendor-metrics',
   'GET /admin/vendors',
   'GET /admin/vendors/:id',
