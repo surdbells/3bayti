@@ -25,6 +25,7 @@ class TicketRepository extends EntityRepository
         ?string $status = null,
         ?string $priority = null,
         ?int $vendorId = null,
+        ?int $userId = null,
     ): array {
         $qb = $this->createQueryBuilder('t')
             ->orderBy('t.id', 'DESC')
@@ -39,6 +40,9 @@ class TicketRepository extends EntityRepository
         }
         if ($vendorId !== null) {
             $qb->andWhere('t.vendorId = :vid')->setParameter('vid', $vendorId);
+        }
+        if ($userId !== null) {
+            $qb->andWhere('t.userId = :uid')->setParameter('uid', $userId);
         }
 
         $countQb = clone $qb;

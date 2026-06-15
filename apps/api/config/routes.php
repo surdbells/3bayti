@@ -225,6 +225,16 @@ return function (App $app): void {
         // Idempotent + owner-scoped; the vendor id is in the path.
         $group->post('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\FollowVendorController::class);
         $group->delete('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\UnfollowVendorController::class);
+
+        // v3 customer support tickets (owner-scoped). Replaces legacy
+        // /customer/create_ticket, read_ticket, read-ticket-messages,
+        // send-ticket-message. /tickets is registered before the
+        // /tickets/{id} variants by virtue of exact-vs-pattern matching.
+        $group->get('/tickets', \Bayti\Api\Http\Controllers\Ticket\ListMyTicketsController::class);
+        $group->post('/tickets', \Bayti\Api\Http\Controllers\Ticket\CreateMyTicketController::class);
+        $group->get('/tickets/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Ticket\GetMyTicketController::class);
+        $group->get('/tickets/{id:[0-9]+}/messages', \Bayti\Api\Http\Controllers\Ticket\ListMyTicketMessagesController::class);
+        $group->post('/tickets/{id:[0-9]+}/messages', \Bayti\Api\Http\Controllers\Ticket\CreateMyTicketMessageController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
