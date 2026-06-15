@@ -403,6 +403,43 @@ export function transformUnfollowVendorRequest(body: unknown): MutationTransform
   };
 }
 
+/**
+ * `create_ticket` — POST /customer/create_ticket → POST /v3/me/tickets.
+ *
+ * Legacy body: { id, token, store: <vendorId>, subject, message }
+ * v3 body:     { subject, message, vendor_id }  (the controller reads
+ *              body ?? message for the text; user from token)
+ */
+export function transformCreateTicketRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  const out: Record<string, unknown> = {
+    subject: String(b['subject'] ?? ''),
+    message: String(b['message'] ?? ''),
+  };
+  const store = pickInt(b, 'store');
+  if (store !== undefined && store > 0) {
+    out['vendor_id'] = store;
+  }
+  return { body: out };
+}
+
+/**
+ * `send-ticket-message` — POST /customer/send-ticket-message
+ *                       → POST /v3/me/tickets/{id}/messages.
+ *
+ * Legacy body: { id, token, ticket: <ticketId>, userId, message }
+ * v3 path:     POST /v3/me/tickets/{ticket}/messages
+ * v3 body:     { message }
+ */
+export function transformSendTicketMessageRequest(body: unknown): MutationTransformOutput {
+  const b = asRecord(body);
+  const ticketId = pickInt(b, 'ticket');
+  return {
+    pathParams: { id: String(ticketId ?? 0) },
+    body: { message: String(b['message'] ?? '') },
+  };
+}
+
 export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> = {
   // Cart mutations
   'POST /cart/items': transformAddToCartRequest,
@@ -421,6 +458,10 @@ export const MUTATION_REQUEST_TRANSFORMS: Record<string, MutationBodyToRequest> 
   // Follow (vendor id moves from legacy body.store_id to the v3 path)
   'POST /following/:vendorId': transformFollowVendorRequest,
   'DELETE /following/:vendorId': transformUnfollowVendorRequest,
+
+  // Support tickets (Group B / B2)
+  'POST /me/tickets': transformCreateTicketRequest,
+  'POST /me/tickets/:id/messages': transformSendTicketMessageRequest,
 };
 
 /**

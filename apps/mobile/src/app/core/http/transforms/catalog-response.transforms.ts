@@ -449,6 +449,31 @@ export function transformVendorListResponse(data: unknown): unknown {
   });
 }
 
+/**
+ * v3 GET /v3/me/tickets list -> legacy ticket-list shape. The mobile
+ * ticket-list binds `t.created` (v3 emits `created_at`); `summary` is
+ * already provided server-side. Pass through everything else.
+ */
+export function transformTicketListResponse(data: unknown): unknown {
+  if (!Array.isArray(data)) return data;
+  return data.map((t) => {
+    if (!isRecord(t)) return t;
+    return { ...t, created: t['created_at'] };
+  });
+}
+
+/**
+ * v3 GET /v3/me/tickets/{id}/messages list -> legacy thread shape. The
+ * mobile ticket-messages page binds `message.message`; v3 emits `body`.
+ */
+export function transformTicketMessagesResponse(data: unknown): unknown {
+  if (!Array.isArray(data)) return data;
+  return data.map((m) => {
+    if (!isRecord(m)) return m;
+    return { ...m, message: asString(m['body']) };
+  });
+}
+
 /* ============================================================== *
  * M3.1.5.5 — List shape for vendor labels + styles
  * ============================================================== */
@@ -566,6 +591,8 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   // Vendor-shape endpoints
   'GET /mobile/read-vendor': transformVendorResponse,
   'GET /vendors': transformVendorListResponse,
+  'GET /me/tickets': transformTicketListResponse,
+  'GET /me/tickets/:id/messages': transformTicketMessagesResponse,
 
   // M3.1.5.5 catalog additions:
   'GET /mobile/search': transformProductListResponse,            // products list

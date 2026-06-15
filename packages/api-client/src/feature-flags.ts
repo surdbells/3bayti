@@ -444,6 +444,33 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/following/:vendorId',
     shape: 'v3-envelope',
   },
+  // v3 customer support tickets (Group B / B2). Owner-scoped /v3/me/tickets.
+  // create_ticket body {subject, message, store} -> {subject, message,
+  // vendor_id}; the message endpoints move the ticket id into the path.
+  'POST /me/tickets': {
+    target: 'new',
+    oldPath: '/customer/create_ticket',
+    newPath: '/v3/me/tickets',
+    shape: 'v3-envelope',
+  },
+  'GET /me/tickets': {
+    target: 'new',
+    oldPath: '/customer/read_ticket',
+    newPath: '/v3/me/tickets',
+    shape: 'v3-envelope',
+  },
+  'GET /me/tickets/:id/messages': {
+    target: 'new',
+    oldPath: '/customer/read-ticket-messages',
+    newPath: '/v3/me/tickets/:id/messages',
+    shape: 'v3-envelope',
+  },
+  'POST /me/tickets/:id/messages': {
+    target: 'new',
+    oldPath: '/customer/send-ticket-message',
+    newPath: '/v3/me/tickets/:id/messages',
+    shape: 'v3-envelope',
+  },
   'PATCH /me/profile': {
     target: 'new',
     oldPath: '/users/updateProfile',

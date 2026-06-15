@@ -47,12 +47,19 @@ final class TicketSerializer
         ];
     }
 
-    /** Lightweight row for list views (no body/messages). @return array<string,mixed> */
+    /** Lightweight row for list views (no full body/messages). @return array<string,mixed> */
     public function listItemShape(Ticket $t): array
     {
+        $body    = $t->getBody();
+        $summary = mb_substr($body, 0, 140);
+        if (mb_strlen($body) > 140) {
+            $summary .= '…';
+        }
+
         return [
             'id'            => $t->getId(),
             'subject'       => $t->getSubject(),
+            'summary'       => $summary,
             'status'        => $t->getStatus(),
             'priority'      => $t->getPriority(),
             'vendor_id'     => $t->getVendorId(),

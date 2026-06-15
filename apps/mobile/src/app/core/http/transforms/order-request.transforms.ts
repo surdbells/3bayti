@@ -100,10 +100,24 @@ export function transformReadOrdersListingRequest(body: unknown): {
   };
 }
 
+/**
+ * `read-ticket-messages` — POST /customer/read-ticket-messages
+ *                        → GET /v3/me/tickets/{id}/messages.
+ *
+ * Legacy body: { id, token, ticket: <ticketId> }
+ * v3 path:     GET /v3/me/tickets/{ticket}/messages (id+token via header)
+ */
+export function transformReadTicketMessagesRequest(body: unknown): { pathParams: Record<string, string> } {
+  const b = asRecord(body);
+  const ticketId = Number(b['ticket'] ?? 0);
+  return {
+    pathParams: { id: String(Number.isFinite(ticketId) && ticketId > 0 ? ticketId : 0) },
+  };
+}
+
 /* ============================================================== *
  * Registry
  * ============================================================== */
-
 /**
  * Map of v3-GET routeKey → POST-body-to-query transform for endpoints
  * that REQUIRE authentication.
@@ -119,6 +133,10 @@ export const AUTHED_GET_REQUEST_TRANSFORMS: Record<string, BodyToRouteArgs> = {
   // it via POST with the id in the body. Currently my-orders.page
   // navigates to a detail page that already uses GET; if it sends
   // POST in the future, register here.
+
+  // Customer ticket thread (Group B / B2): legacy POSTs the ticket id
+  // in the body; v3 GET takes it in the path.
+  'GET /me/tickets/:id/messages': transformReadTicketMessagesRequest,
 };
 
 /** Export individual transforms for direct testing. */
