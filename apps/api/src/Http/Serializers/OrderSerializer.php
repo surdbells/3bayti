@@ -115,7 +115,26 @@ final class OrderSerializer
     {
         $shape = $this->listShape($order, $returns);
         $shape['customer'] = $this->customerShape($order->getUser());
+        $shape['delivery'] = $this->deliverySummary($order->getShippingAddress());
         return $shape;
+    }
+
+    /**
+     * Lightweight delivery destination for list/logistics rows (the full
+     * address lives on the detail shape). @return array{name:string|null, city:string|null, area:string|null, phone:string|null}|null
+     */
+    private function deliverySummary(?OrderAddress $a): ?array
+    {
+        if ($a === null) {
+            return null;
+        }
+        $name = trim(($a->getFirstName() ?? '') . ' ' . ($a->getLastName() ?? ''));
+        return [
+            'name' => $name !== '' ? $name : null,
+            'city' => $a->getCity(),
+            'area' => $a->getStateProvince(),
+            'phone' => $a->getPhone(),
+        ];
     }
 
     /**

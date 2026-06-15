@@ -11,24 +11,30 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { IconComponent } from '../../shared/icon/icon.component';
 import {
   AxDataTableComponent,
+  AxCellDirective,
   AxServerDataSource,
   type AxDataTableConfig,
   type AxQueryState,
   type AxServerFetchResult,
+  type AxDateRange,
 } from '../../shared/data/enterprise';
+import { ORDER_STATUS_OPTIONS, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
 
-interface LogisticRow extends Record<string, unknown> {
-  store: number;
-  store_name: string;
-  store_address: string;
-  store_email: string;
-  store_phone: string;
+interface DeliveryRow extends Record<string, unknown> {
+  id: number;
+  order_ref: string;
+  customer: string;
+  destination: string;
+  phone: string;
+  items_count: number;
+  status: string;
+  created: string;
 }
 
 @Component({
   selector: 'app-logistics',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, IconComponent],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './logistics.component.html',
   styleUrl: './logistics.component.css',
 })
@@ -40,8 +46,8 @@ export class LogisticsComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  config!: AxDataTableConfig<LogisticRow>;
-  dataSource!: AxServerDataSource<LogisticRow>;
+  config!: AxDataTableConfig<DeliveryRow>;
+  dataSource!: AxServerDataSource<DeliveryRow>;
 
   constructor(
     private router: Router,
@@ -50,74 +56,94 @@ export class LogisticsComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.user_session = GlobalComponent.decodeBase64(
-      sessionStorage.getItem('SESSION') ?? '',
-    );
+    this.user_session = GlobalComponent.decodeBase64(sessionStorage.getItem('SESSION') ?? '');
     this.buildTable();
   }
 
   private buildTable() {
-    this.dataSource = new AxServerDataSource<LogisticRow>((q) => this.fetchLogistics(q));
+    this.dataSource = new AxServerDataSource<DeliveryRow>((q) => this.fetch(q));
     this.config = {
       tableId: 'admin-logistics',
       mode: 'server',
-      rowId: 'store',
+      rowId: 'id',
       pageSize: 20,
       pageSizeOptions: [20, 50, 100],
       globalSearch: true,
-      searchPlaceholder: 'Search stores with shipments…',
+      searchPlaceholder: 'Search deliveries…',
       stickyHeader: true,
       hover: true,
-      emptyTitle: 'No shipments',
-      emptyDescription: 'No stores currently have orders awaiting delivery.',
-      export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'logistics' },
-      columns: [
-        { key: 'store_name', label: 'Store', sortable: true, sticky: 'left', width: '16rem' },
-        { key: 'store_address', label: 'Location', hideOnMobile: true },
-        { key: 'store_email', label: 'Email', hideOnMobile: true },
-        { key: 'store_phone', label: 'Phone', hideOnMobile: true },
+      emptyTitle: 'No deliveries',
+      emptyDescription: 'No orders match the selected delivery filters.',
+      export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'deliveries' },
+      filters: [
+        { key: 'status', label: 'Status', type: 'select', options: ORDER_STATUS_OPTIONS },
+        { key: 'vendor', label: 'Store', type: 'select', optionsLoader: () => loadAdminVendorOptions(this.adapter) },
+        { key: 'date', label: 'Date', type: 'date-range' },
       ],
-      rowActions: [{ id: 'deliveries', label: 'View deliveries', icon: 'local_shipping' }],
+      columns: [
+        { key: 'order_ref', label: 'Order', sortable: true, sticky: 'left', width: '13rem' },
+        { key: 'customer', label: 'Customer' },
+        { key: 'destination', label: 'Destination' },
+        { key: 'items_count', label: 'Items', align: 'center', hideOnMobile: true },
+        { key: 'status', label: 'Status', align: 'center' },
+        { key: 'created', label: 'Date', hideOnMobile: true,
+          format: (v) => (v ? new Date(String(v)).toLocaleString() : '—') },
+      ],
+      rowActions: [{ id: 'manage', label: 'Manage delivery', icon: 'local_shipping' }],
     };
   }
 
-  private fetchLogistics(query: AxQueryState) {
+  private fetch(query: AxQueryState) {
     const q: any = {
       limit: query.pageSize,
       offset: query.pageIndex * query.pageSize,
     };
     if (query.search) q.search = query.search;
-    // Logistics needs per-store delivery contacts. /admin/orders carries
-    // none of that (store data is per-item vendor_id only); /admin/vendors
-    // has the store name + contact email/phone.
-    return this.adapter.get_v3('GET /admin/vendors', { query: q }).pipe(
-      map((response: any): AxServerFetchResult<LogisticRow> => {
-        const raw: any[] = response?.vendors ?? response?.data ?? [];
-        const rows = raw.map((v) => this.mapRow(v));
-        return { rows, total: response?.meta?.total ?? rows.length };
+    if (query.filters['status']) q.status = query.filters['status'];
+    if (query.filters['vendor']) q.vendor_id = query.filters['vendor'];
+    const range = query.filters['date'] as AxDateRange | undefined;
+    if (range?.from) q.since = range.from;
+    if (range?.to) q.until = range.to;
+
+    return this.adapter.get_v3('GET /admin/orders', { query: q }).pipe(
+      map((response: any): AxServerFetchResult<DeliveryRow> => {
+        const raw: any[] = response?.orders ?? response?.data ?? [];
+        const rows = raw.map((o) => this.mapRow(o));
+        return { rows, total: response?.pagination?.total ?? response?.meta?.total ?? rows.length };
       }),
       catchError(() => {
-        this.toast.error('Unable to load logistics at this time.');
-        return of({ rows: [], total: 0 } as AxServerFetchResult<LogisticRow>);
+        this.toast.error('Unable to load deliveries at this time.');
+        return of({ rows: [], total: 0 } as AxServerFetchResult<DeliveryRow>);
       }),
     );
   }
 
-  /** Map the admin vendor shape into a per-store logistics row. No street
-   *  address field exists on the vendor; contact email/phone are shown. */
-  private mapRow(v: any): LogisticRow {
+  private mapRow(o: any): DeliveryRow {
+    const c = o.customer ?? {};
+    const name = `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim();
+    const d = o.delivery ?? {};
+    const dest = [d.city, d.area].filter(Boolean).join(', ');
+    const items: any[] = o.items ?? [];
     return {
-      store: v.id,
-      store_name: v.name ?? '—',
-      store_address: v.address ?? '—',
-      store_email: v.contact_email ?? '—',
-      store_phone: v.contact_phone ?? '—',
-    } as LogisticRow;
+      ...o,
+      id: o.id,
+      order_ref: o.order_reference ?? o.id,
+      customer: name || c.email || '—',
+      destination: dest || '—',
+      phone: d.phone ?? '',
+      items_count: items.reduce((s, i) => s + (Number(i.quantity) || 0), 0) || items.length,
+      status: o.status ?? '',
+      created: o.date ?? o.created_at ?? '',
+    } as DeliveryRow;
   }
 
-  onRowAction(e: { action: { id: string }; row: LogisticRow }) {
-    if (e.action.id === 'deliveries') {
-      this.router.navigate(['/deliveries'], { queryParams: { vendor: e.row.store } });
+  prettyStatus(s: string): string {
+    return prettyOrderStatus(s);
+  }
+
+  onRowAction(e: { action: { id: string }; row: DeliveryRow }) {
+    if (e.action.id === 'manage') {
+      this.router.navigate(['/single'], { queryParams: { order: e.row.id } });
     }
   }
 

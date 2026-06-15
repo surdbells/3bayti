@@ -273,9 +273,10 @@ class OrderRepository extends EntityRepository
         }
 
         $orders = $this->createQueryBuilder('o')
-            ->select('o', 'i', 'u')
+            ->select('o', 'i', 'u', 'a')
             ->leftJoin('o.items', 'i')
             ->leftJoin('o.user', 'u')
+            ->leftJoin('o.addresses', 'a')
             ->where('o.id IN (:ids)')
             ->setParameter('ids', $ids)
             ->orderBy('o.createdAt', 'DESC')

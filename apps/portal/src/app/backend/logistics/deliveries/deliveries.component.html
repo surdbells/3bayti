@@ -1,116 +1,57 @@
-<main class="ax-main" style="padding: var(--ax-space-5);">
-  <div style="max-width: 64rem; margin: 0 auto;">
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to logistics
+        </button>
+        <span class="ax-page-header-eyebrow">Operations</span>
+        <h1 class="ax-page-title">Store deliveries</h1>
+        <p class="ax-page-subtitle">Orders for this store, with destination and fulfilment status.</p>
+      </div>
+    </header>
 
-    <!-- Loading -->
-    <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
-      <span class="ax-spinner ax-spinner-lg" aria-label="Loading vendor"></span>
+    <div *ngIf="ui.loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading deliveries"></span>
     </div>
 
-    <!-- Content -->
-    <ng-container *ngIf="!ui_controls.is_loading">
-      <!-- Vendor + store header -->
-      <article class="ax-card ax-p-0" style="overflow: hidden;">
-        <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-0">
-          <!-- Vendor column -->
-          <div class="ax-p-5 ax-text-center" style="background: var(--ax-color-bg-canvas); border-right: 1px solid var(--ax-color-border-subtle);">
-            <h3 class="ax-h5 ax-m-0">{{ vendor.name || '—' }}</h3>
-            <div class="ax-text-sm ax-text-secondary ax-mt-1">{{ vendor.phone }}</div>
-            <a
-              *ngIf="vendor.email"
-              [href]="'mailto:' + vendor.email"
-              class="ax-text-sm ax-text-secondary ax-mt-2 ax-flex ax-items-center ax-gap-1 ax-justify-center"
-              style="text-decoration: none;">
-              <app-icon name="mail" style="font-size: 1rem;" aria-hidden="true"></app-icon>
-              {{ vendor.email }}
-            </a>
-          </div>
+    <div *ngIf="!ui.loading && ui.empty" class="ax-card ax-p-6 ax-text-center">
+      <app-icon name="local_shipping" aria-hidden="true"></app-icon>
+      <p class="ax-text-secondary ax-mt-2 ax-mb-0">No deliveries found for this store.</p>
+    </div>
 
-          <!-- Store info column -->
-          <div class="ax-p-5" style="grid-column: span 2;">
-            <h4 class="ax-h6 ax-m-0 ax-mb-3 ax-flex ax-items-center ax-gap-2">
-              <app-icon name="storefront" style="font-size: 1.25rem;" aria-hidden="true"></app-icon>
-              Store information
-            </h4>
-            <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
-              <div>
-                <div class="ax-text-2xs ax-text-tertiary">Store name</div>
-                <div class="ax-font-medium ax-text-primary">{{ vendor.store_name }}</div>
-              </div>
-              <div>
-                <div class="ax-text-2xs ax-text-tertiary">Email</div>
-                <div class="ax-text-sm ax-text-secondary">{{ vendor.store_email }}</div>
-              </div>
-              <div>
-                <div class="ax-text-2xs ax-text-tertiary">Phone</div>
-                <div class="ax-text-sm ax-text-secondary">{{ vendor.store_phone }}</div>
-              </div>
-              <div>
-                <div class="ax-text-2xs ax-text-tertiary">Address</div>
-                <div class="ax-text-sm ax-text-secondary">{{ vendor.store_address }}</div>
-              </div>
-              <div>
-                <div class="ax-text-2xs ax-text-tertiary">Trade license</div>
-                <div class="ax-text-sm ax-text-secondary">{{ vendor.trade_license_number }}</div>
-              </div>
-              <div>
-                <div class="ax-text-2xs ax-text-tertiary">Licensing authority</div>
-                <div class="ax-text-sm ax-text-secondary" style="text-transform: capitalize;">{{ vendor.licensing_authority }}</div>
-              </div>
-            </div>
-
-            <div class="ax-text-2xs ax-text-tertiary ax-mt-4" *ngIf="vendor.last_login">
-              Last login: {{ vendor.last_login }}
-            </div>
-          </div>
-        </div>
-      </article>
-
-      <!-- Deliveries table -->
-      <section class="ax-card ax-p-0 ax-mt-4">
-        <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
-          <h3 class="ax-h6 ax-m-0">Order items for delivery</h3>
-        </div>
-        <div class="ax-table-wrapper">
-          <table class="ax-table ax-table-hover">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th style="text-align: center;">Qty</th>
-                <th>Recipient</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th style="text-align: right; width: 6rem;"></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (a_item of items; track $index) {
-                <tr>
-                  <td><span class="ax-font-medium ax-text-primary">{{ a_item.product_name }}</span></td>
-                  <td style="text-align: center;"><span class="ax-numeric">{{ a_item.quantity }}</span></td>
-                  <td>
-                    <div class="ax-text-sm ax-text-primary">{{ a_item.billing_name }}</div>
-                    <div class="ax-text-2xs ax-text-tertiary">{{ a_item.billing_email }}</div>
-                    <div class="ax-text-2xs ax-text-tertiary">{{ a_item.billing_phone }}</div>
-                  </td>
-                  <td>
-                    <div class="ax-text-sm ax-text-secondary" *ngIf="a_item.villa_number">Villa {{ a_item.villa_number }}</div>
-                    <div class="ax-text-2xs ax-text-tertiary">{{ a_item.billing_city }}</div>
-                    <div class="ax-text-2xs ax-text-tertiary">{{ a_item.billing_area }}</div>
-                    <div class="ax-text-2xs ax-text-tertiary">{{ a_item.billing_street }}</div>
-                  </td>
-                  <td><span [ngClass]="itemStatusClass(a_item.status)">{{ a_item.status }}</span></td>
-                  <td style="text-align: right;">
-                    <button type="button" class="ax-btn ax-btn-primary ax-btn-sm">
-                      <app-icon name="check" aria-hidden="true"></app-icon>
-                      Done
-                    </button>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      </section>
-    </ng-container>
+    <section *ngIf="!ui.loading && !ui.empty" class="ax-card ax-p-0">
+      <div class="ax-table-wrapper">
+        <table class="ax-table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Customer</th>
+              <th>Destination</th>
+              <th style="text-align:center;">Items</th>
+              <th style="text-align:center;">Status</th>
+              <th style="text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let o of orders">
+              <td><span class="ax-font-medium ax-text-primary">#{{ o.order_reference }}</span></td>
+              <td>{{ o.customer }}</td>
+              <td>
+                <span>{{ o.destination }}</span>
+                <div class="ax-text-2xs ax-text-tertiary" *ngIf="o.phone">{{ o.phone }}</div>
+              </td>
+              <td style="text-align:center;"><span class="ax-numeric">{{ o.items_count }}</span></td>
+              <td style="text-align:center;"><span [ngClass]="badgeClass(o.status)">{{ prettyStatus(o.status) }}</span></td>
+              <td style="text-align:right;">
+                <button type="button" class="ax-btn ax-btn-secondary ax-btn-sm" (click)="manage(o)">
+                  <app-icon name="local_shipping" aria-hidden="true"></app-icon> Manage
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </div>
-</main>
+</app-admin-shell>

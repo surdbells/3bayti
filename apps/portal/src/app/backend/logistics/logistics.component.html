@@ -6,13 +6,23 @@
           <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to dashboard
         </button>
         <span class="ax-page-header-eyebrow">Operations</span>
-        <h1 class="ax-page-title">Logistics</h1>
-        <p class="ax-page-subtitle">Stores with orders awaiting delivery.</p>
+        <h1 class="ax-page-title">Logistics &amp; deliveries</h1>
+        <p class="ax-page-subtitle">Orders moving through fulfilment and delivery — filter by status, store, or date, then manage each delivery.</p>
       </div>
     </header>
 
     <section class="ax-card ax-p-0">
-      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)"></app-ax-data-table>
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="status" let-row>
+          <span class="ax-badge"
+            [class.ax-badge-success]="row.status === 'delivered'"
+            [class.ax-badge-info]="row.status === 'paid' || row.status === 'fulfilling' || row.status === 'shipped'"
+            [class.ax-badge-warning]="row.status === 'pending_payment'"
+            [class.ax-badge-danger]="row.status === 'cancelled' || row.status === 'refunded' || row.status === 'failed'">
+            {{ prettyStatus(row.status) }}
+          </span>
+        </ng-template>
+      </app-ax-data-table>
     </section>
   </div>
 </app-admin-shell>
