@@ -25,14 +25,17 @@ import {
 } from '../../core/seo/schema.helpers';
 import { environment } from '../../../environments/environment';
 import {
+  ButtonComponent,
   ContainerComponent,
   HeadingComponent,
   TextComponent,
   StackComponent,
 } from '../../shared/ui';
 import { ProductStripComponent } from '../../shared/ui/product-strip';
-import type { Money, Product, ProductDetail } from './product.model';
+import type { Money, Product, ProductDetail, ProductSize, ProductColor } from './product.model';
 import { RecommendationsService } from './recommendations.service';
+import { CartService } from '../../core/cart/cart.service';
+import { CartDrawerService } from '../../core/cart/cart-drawer.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
@@ -73,6 +76,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
   selector: 'app-product-detail',
   standalone: true,
   imports: [CfImagePipe, 
+    ButtonComponent,
     ContainerComponent,
     HeadingComponent,
     TextComponent,
@@ -90,6 +94,8 @@ export class ProductDetailComponent {
   private state = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
   private recsService = inject(RecommendationsService);
+  private cart = inject(CartService);
+  private cartDrawer = inject(CartDrawerService);
 
   /**
    * Sets the SSR HTTP response status. Called when the API returns 404
@@ -193,6 +199,49 @@ export class ProductDetailComponent {
     return images[this.activeImageIndex()] ?? fallback;
   });
 
+  /* ----- Buy box: variant selection + quantity + add-to-cart -------- */
+
+  /** Selected size label (null until the shopper picks one). */
+  readonly selectedSize = signal<string | null>(null);
+  /** Selected colour label (null until the shopper picks one). */
+  readonly selectedColor = signal<string | null>(null);
+  /** Quantity to add (1–99). */
+  readonly quantity = signal(1);
+  /** True while an add-to-cart request is in flight. */
+  readonly adding = signal(false);
+  /** Surfaced when an add-to-cart attempt fails; cleared on the next try. */
+  readonly addError = signal<string | null>(null);
+
+  /** Whether this product offers a size / colour axis at all. */
+  readonly hasSizes = computed(() => (this.product()?.sizes?.length ?? 0) > 0);
+  readonly hasColors = computed(() => (this.product()?.colors?.length ?? 0) > 0);
+
+  /**
+   * True when every required variant axis has an in-stock selection.
+   * Validates against the CURRENT product's options (not just "non-null")
+   * so a stale selection carried across navigation can't pass.
+   */
+  readonly selectionValid = computed(() => {
+    const p = this.product();
+    if (!p) return false;
+    const sizes = p.sizes ?? [];
+    if (sizes.length > 0) {
+      const s = this.selectedSize();
+      if (!s || !sizes.some((x) => x.label === s && x.in_stock)) return false;
+    }
+    const colors = p.colors ?? [];
+    if (colors.length > 0) {
+      const c = this.selectedColor();
+      if (!c || !colors.some((x) => x.label === c && x.in_stock)) return false;
+    }
+    return true;
+  });
+
+  /** The add-to-cart button is enabled only when all conditions hold. */
+  readonly canAddToCart = computed(
+    () => !!this.product()?.in_stock && this.selectionValid() && !this.adding(),
+  );
+
   /**
    * Description as plain text. Source data contains HTML (<div>, <span>,
    * etc.) which we strip server-side-equivalent — no innerHTML, no XSS
@@ -281,6 +330,19 @@ export class ProductDetailComponent {
   });
 
   constructor() {
+    /* Reset the buy box whenever the product changes (navigation to a
+       different slug) so a previous product's size/colour/quantity or a
+       stale error never leaks into the next one. Reads product() to
+       track it; writes only unrelated signals, so there's no feedback
+       loop. */
+    effect(() => {
+      this.product();
+      this.selectedSize.set(null);
+      this.selectedColor.set(null);
+      this.quantity.set(1);
+      this.addError.set(null);
+    });
+
     /* Apply SEO via effect() so it runs within Angular's CD cycle.
        During SSR prerender, this ensures meta tags are present in the
        captured HTML. (Microtask-based scheduling does NOT work for
@@ -447,6 +509,57 @@ export class ProductDetailComponent {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       this.selectImage(index);
+    }
+  }
+
+  /** Select a size (ignored if that size is out of stock). */
+  selectSize(size: ProductSize): void {
+    if (!size.in_stock) return;
+    this.selectedSize.set(this.selectedSize() === size.label ? null : size.label);
+    this.addError.set(null);
+  }
+
+  /** Select a colour (ignored if that colour is out of stock). */
+  selectColor(color: ProductColor): void {
+    if (!color.in_stock) return;
+    this.selectedColor.set(this.selectedColor() === color.label ? null : color.label);
+    this.addError.set(null);
+  }
+
+  /** Quantity stepper (clamped to 1–99). */
+  incrementQuantity(): void {
+    this.quantity.update((q) => Math.min(q + 1, 99));
+  }
+
+  decrementQuantity(): void {
+    this.quantity.update((q) => Math.max(q - 1, 1));
+  }
+
+  /**
+   * Add the current selection to the cart. No-ops unless the product is
+   * in stock and every required variant axis has a valid selection (the
+   * button is disabled in that state too — this is the belt-and-braces
+   * guard). On success the cart drawer opens; on failure an inline,
+   * actionable message is shown.
+   */
+  async addToCart(): Promise<void> {
+    const p = this.product();
+    if (!p || !this.canAddToCart()) return;
+
+    this.adding.set(true);
+    this.addError.set(null);
+    try {
+      await this.cart.addItem({
+        product_id: p.id,
+        quantity: this.quantity(),
+        size: this.selectedSize(),
+        color: this.selectedColor(),
+      });
+      this.cartDrawer.open();
+    } catch {
+      this.addError.set("We couldn't add this to your cart. Please try again.");
+    } finally {
+      this.adding.set(false);
     }
   }
 

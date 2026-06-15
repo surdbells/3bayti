@@ -174,13 +174,18 @@
               <legend>Size</legend>
               <div class="pdp-chips">
                 @for (s of p.sizes; track s.label) {
-                  <span
+                  <button
+                    type="button"
                     class="pdp-chip"
                     [class.pdp-chip--out]="!s.in_stock"
+                    [class.pdp-chip--selected]="selectedSize() === s.label"
+                    [disabled]="!s.in_stock"
+                    [attr.aria-pressed]="selectedSize() === s.label"
                     [attr.aria-label]="s.label + (s.in_stock ? '' : ' (out of stock)')"
+                    (click)="selectSize(s)"
                   >
                     {{ s.label }}
-                  </span>
+                  </button>
                 }
               </div>
             </fieldset>
@@ -192,16 +197,64 @@
               <legend>Color</legend>
               <div class="pdp-chips">
                 @for (c of p.colors; track c.label) {
-                  <span
+                  <button
+                    type="button"
                     class="pdp-chip pdp-chip--color"
                     [class.pdp-chip--out]="!c.in_stock"
+                    [class.pdp-chip--selected]="selectedColor() === c.label"
+                    [disabled]="!c.in_stock"
+                    [attr.aria-pressed]="selectedColor() === c.label"
                     [attr.aria-label]="c.label + (c.in_stock ? '' : ' (out of stock)')"
+                    (click)="selectColor(c)"
                   >
+                    @if (c.hex_code) {
+                      <span class="pdp-chip__swatch" [style.background]="c.hex_code" aria-hidden="true"></span>
+                    }
                     {{ c.label }}
-                  </span>
+                  </button>
                 }
               </div>
             </fieldset>
+          }
+
+          <!-- Buy box: quantity + add to cart -->
+          <div class="pdp-buybox">
+            @if (p.in_stock) {
+              <div class="pdp-qty" role="group" aria-label="Quantity">
+                <button
+                  type="button"
+                  class="pdp-qty__btn"
+                  (click)="decrementQuantity()"
+                  [disabled]="quantity() <= 1"
+                  aria-label="Decrease quantity"
+                >−</button>
+                <span class="pdp-qty__value" aria-live="polite">{{ quantity() }}</span>
+                <button
+                  type="button"
+                  class="pdp-qty__btn"
+                  (click)="incrementQuantity()"
+                  [disabled]="quantity() >= 99"
+                  aria-label="Increase quantity"
+                >+</button>
+              </div>
+            }
+            <ui-button
+              variant="primary"
+              size="lg"
+              [disabled]="!canAddToCart()"
+              (clicked)="addToCart()"
+            >
+              {{ adding() ? 'Adding…' : (p.in_stock ? 'Add to cart' : 'Out of stock') }}
+            </ui-button>
+          </div>
+          @if (p.in_stock && hasSizes() && !selectedSize()) {
+            <p class="pdp-buybox__hint">Select a size to continue.</p>
+          }
+          @if (p.in_stock && hasColors() && !selectedColor()) {
+            <p class="pdp-buybox__hint">Select a colour to continue.</p>
+          }
+          @if (addError(); as err) {
+            <p class="pdp-buybox__error" role="alert">{{ err }}</p>
           }
 
           <!-- Description -->
