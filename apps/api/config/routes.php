@@ -448,6 +448,7 @@ return function (App $app): void {
     $app->get('/v3/vendors/{vendorId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\ListVendorPublicReviewsController::class);
     // Authed customer review actions.
     $app->post('/v3/products/{productId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\CreateReviewController::class)->add(AuthMiddleware::class);
+    $app->post('/v3/vendors/{vendorId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\CreateVendorReviewController::class)->add(AuthMiddleware::class);
     $app->post('/v3/reviews/{id:[0-9]+}/helpful', \Bayti\Api\Http\Controllers\Review\MarkReviewHelpfulController::class)->add(AuthMiddleware::class);
 
     // M3.1.5a — by-legacy-id variants for mobile compatibility during

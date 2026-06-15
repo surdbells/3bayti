@@ -111,6 +111,24 @@ class ProductReviewRepository extends EntityRepository
         return ['items' => $items, 'total' => $total];
     }
 
+    /**
+     * The store review this user has already left for this vendor
+     * (a review with NO product — i.e. about the store itself), or null.
+     * Store-review upsert key (one per user+vendor).
+     */
+    public function findStoreReviewForUserAndVendor(User $user, Vendor $vendor): ?ProductReview
+    {
+        return $this->createQueryBuilder('r')
+            ->where('r.user = :user')
+            ->andWhere('r.vendor = :vendor')
+            ->andWhere('r.product IS NULL')
+            ->setParameter('user', $user)
+            ->setParameter('vendor', $vendor)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
     public function save(ProductReview $review, bool $flush = true): void
     {
         $em = $this->getEntityManager();
