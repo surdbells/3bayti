@@ -48,12 +48,12 @@ use Psr\Http\Server\RequestHandlerInterface;
  *    who you are, you can't do this" — appropriate for a logged-in
  *    customer trying to hit /v3/admin/*.
  *
- * Role check
- * ----------
- * For M2, "admin" means `is_admin === true`. We don't accept
- * `is_sub_admin` here. Sub-admins exist for future fine-grained
- * permissions (e.g., a vendor-support sub-admin who can view but
- * not modify catalog data); their permission model is M4+ work.
+ * Access check
+ * ------------
+ * Admits any staff member: full admins (`is_admin`) OR users holding at
+ * least one RBAC role (see User::isStaff). Per-endpoint authorization is
+ * then enforced by PermissionMiddleware, which checks the route's specific
+ * permission (`is_admin` is a super-bypass that holds every permission).
  *
  * Audit / logging
  * ---------------
@@ -86,8 +86,8 @@ final class AdminAuthMiddleware implements MiddlewareInterface
             return $this->unauthorized();
         }
 
-        if (!$user->isAdmin()) {
-            $this->logger->warning('AdminAuthMiddleware: non-admin tried to access admin endpoint', [
+        if (!$user->isStaff()) {
+            $this->logger->warning('AdminAuthMiddleware: non-staff tried to access admin endpoint', [
                 'user_id' => $user->getId(),
                 'method' => $request->getMethod(),
                 'uri' => (string) $request->getUri(),
@@ -95,7 +95,8 @@ final class AdminAuthMiddleware implements MiddlewareInterface
             return $this->forbidden();
         }
 
-        // Admin confirmed — proceed.
+        // Staff confirmed (full admin or a role-holder) — proceed. Each route is
+        // additionally gated by PermissionMiddleware for its specific permission.
         return $handler->handle($request);
     }
 

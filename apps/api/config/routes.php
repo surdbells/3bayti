@@ -454,213 +454,215 @@ return function (App $app): void {
     // then AdminAuthMiddleware to run SECOND (check the user is admin).
     // So: add(AdminAuth) THEN add(Auth) — Auth is added last, runs first.
 
-    $app->group('/v3/admin', function (RouteCollectorProxy $group): void {
+    $perm = $app->getContainer()->get(\Bayti\Api\Http\Middleware\PermissionGuard::class);
+
+    $app->group('/v3/admin', function (RouteCollectorProxy $group) use ($perm): void {
         // Admin in-app notification feed (admin top-bar bell) — replaces the
         // legacy /vendors/common/notifications call for admins.
         $group->get(
             '/notifications',
             \Bayti\Api\Http\Controllers\Admin\Notification\ListAdminNotificationsController::class,
-        );
+        )->add($perm->for('notifications.view'));
         $group->post(
             '/notifications/mark-read',
             \Bayti\Api\Http\Controllers\Admin\Notification\MarkAdminNotificationsReadController::class,
-        );
+        )->add($perm->for('notifications.view'));
 
         // Chat moderation — feed of PII-flagged message attempts.
         $group->get(
             '/chat/flagged',
             \Bayti\Api\Http\Controllers\Admin\Chat\ListFlaggedMessagesController::class,
-        );
+        )->add($perm->for('tickets.view'));
         $group->get(
             '/chat/conversations/{uuid}',
             \Bayti\Api\Http\Controllers\Admin\Chat\GetConversationController::class,
-        );
+        )->add($perm->for('tickets.view'));
 
         // Brand admin
-        $group->get('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\ListBrandsAdminController::class);
-        $group->post('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\CreateBrandController::class);
-        $group->put('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\UpdateBrandController::class);
-        $group->delete('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\DeleteBrandController::class);
+        $group->get('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\ListBrandsAdminController::class)->add($perm->for('catalog.brands_view'));
+        $group->post('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\CreateBrandController::class)->add($perm->for('catalog.brands_manage'));
+        $group->put('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\UpdateBrandController::class)->add($perm->for('catalog.brands_manage'));
+        $group->delete('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\DeleteBrandController::class)->add($perm->for('catalog.brands_manage'));
 
         // Vendor admin
-        $group->get('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class);
-        $group->post('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\CreateVendorController::class);
-        $group->put('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class);
-        $group->delete('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class);
+        $group->get('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class)->add($perm->for('vendors.view'));
+        $group->post('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\CreateVendorController::class)->add($perm->for('vendors.create'));
+        $group->put('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class)->add($perm->for('vendors.edit'));
+        $group->delete('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class)->add($perm->for('vendors.suspend'));
 
         // M3.2.X.6-C — Vendor lifecycle state transitions
         $group->post('/vendors/{id:[0-9]+}/approve',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\ApproveVendorController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ApproveVendorController::class)->add($perm->for('vendors.approve'));
         // Admin KYC compliance review.
         $group->get('/vendors/{id:[0-9]+}/compliance',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\Compliance\GetAdminVendorComplianceController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\Compliance\GetAdminVendorComplianceController::class)->add($perm->for('vendors.view_compliance'));
         $group->post('/vendors/{id:[0-9]+}/compliance/approve',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\Compliance\ApproveVendorComplianceController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\Compliance\ApproveVendorComplianceController::class)->add($perm->for('vendors.review_compliance'));
         $group->post('/vendors/{id:[0-9]+}/compliance/reject',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\Compliance\RejectVendorComplianceController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\Compliance\RejectVendorComplianceController::class)->add($perm->for('vendors.review_compliance'));
         $group->post('/vendors/{id:[0-9]+}/suspend',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\SuspendVendorController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\SuspendVendorController::class)->add($perm->for('vendors.suspend'));
         $group->post('/vendors/{id:[0-9]+}/reactivate',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\ReactivateVendorController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ReactivateVendorController::class)->add($perm->for('vendors.approve'));
 
         // M3.2.X.14-D — Cross-vendor metrics list (admin dashboard).
         // Registered BEFORE /vendors/{id:[0-9]+}/metrics so the
         // literal 'vendor-metrics' path doesn't get parsed as a
         // vendor id.
         $group->get('/vendor-metrics',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorMetricsController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ListAdminVendorMetricsController::class)->add($perm->for('reports.view'));
 
         // Platform-wide analytics dashboard (admin home screen KPIs)
         $group->get('/analytics',
-            \Bayti\Api\Http\Controllers\Admin\GetAdminPlatformAnalyticsController::class);
+            \Bayti\Api\Http\Controllers\Admin\GetAdminPlatformAnalyticsController::class)->add($perm->for('reports.view'));
 
         // M3.2.X.14-B — Vendor performance metrics (admin single-vendor view)
         $group->get('/vendors/{id:[0-9]+}/metrics',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorMetricsController::class)->add($perm->for('reports.view'));
 
         // M3.2.X.13-E — Vendor analytics dashboard (admin single-vendor view)
         $group->get('/vendors/{id:[0-9]+}/analytics',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorAnalyticsController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorAnalyticsController::class)->add($perm->for('reports.view'));
 
         // M3.2.X.12-G — Admin recommendations debug
         $group->get('/recommendations/{product_id:[0-9]+}/explain',
-            \Bayti\Api\Http\Controllers\Admin\Catalog\GetAdminRecommendationsExplainController::class);
+            \Bayti\Api\Http\Controllers\Admin\Catalog\GetAdminRecommendationsExplainController::class)->add($perm->for('reports.view'));
 
         // Category admin
-        $group->get('/categories', \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class);
-        $group->post('/categories', \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class);
-        $group->put('/categories/{id}', \Bayti\Api\Http\Controllers\Admin\Category\UpdateCategoryController::class);
-        $group->delete('/categories/{id}', \Bayti\Api\Http\Controllers\Admin\Category\DeleteCategoryController::class);
+        $group->get('/categories', \Bayti\Api\Http\Controllers\Admin\Category\ListCategoriesAdminController::class)->add($perm->for('catalog.categories_view'));
+        $group->post('/categories', \Bayti\Api\Http\Controllers\Admin\Category\CreateCategoryController::class)->add($perm->for('catalog.categories_manage'));
+        $group->put('/categories/{id}', \Bayti\Api\Http\Controllers\Admin\Category\UpdateCategoryController::class)->add($perm->for('catalog.categories_manage'));
+        $group->delete('/categories/{id}', \Bayti\Api\Http\Controllers\Admin\Category\DeleteCategoryController::class)->add($perm->for('catalog.categories_manage'));
 
         // Admin orders surface (M3.1.7-D)
-        $group->get('/orders', \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class);
-        $group->get('/orders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class);
+        $group->get('/orders', \Bayti\Api\Http\Controllers\Admin\Order\ListAdminOrdersController::class)->add($perm->for('orders.view'));
+        $group->get('/orders/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController::class)->add($perm->for('orders.view_detail'));
         $group->patch('/orders/{id:[0-9]+}/status',
-            \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderStatusController::class)->add($perm->for('orders.override_status'));
         $group->patch('/orders/{orderId:[0-9]+}/items/{itemId:[0-9]+}/status',
-            \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\OverrideOrderItemStatusController::class)->add($perm->for('orders.update_item_status'));
 
         // M3.2.X.17-C — Order timeline (admin chronological event feed)
         $group->get('/orders/{id:[0-9]+}/timeline',
-            \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderTimelineController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderTimelineController::class)->add($perm->for('orders.view_detail'));
 
         // Refund (M3.1.7-E)
         $group->post('/orders/{id:[0-9]+}/refund',
-            \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class)->add($perm->for('orders.refund'));
 
         // Cancel (M3.1.7-F)
         $group->post('/orders/{id:[0-9]+}/cancel',
-            \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\CancelOrderController::class)->add($perm->for('orders.cancel'));
 
         // Disputes (M3.1.7-G)
-        $group->get('/disputes', \Bayti\Api\Http\Controllers\Admin\Dispute\ListDisputesController::class);
-        $group->get('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\GetDisputeController::class);
-        $group->patch('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\ResolveDisputeController::class);
+        $group->get('/disputes', \Bayti\Api\Http\Controllers\Admin\Dispute\ListDisputesController::class)->add($perm->for('disputes.view'));
+        $group->get('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\GetDisputeController::class)->add($perm->for('disputes.view'));
+        $group->patch('/disputes/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Dispute\ResolveDisputeController::class)->add($perm->for('disputes.resolve'));
 
         // Notification logs (M3.2.X.4-C) — admin observability surface
         // for the notification_logs table. Filters: order_id, template,
         // status, recipient, error_kind, since, until, limit, offset.
         $group->get('/notification-logs',
-            \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class);
+            \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class)->add($perm->for('notifications.view'));
 
         // M3.3.2-C — Admin user list, detail, activate, deactivate.
         $group->get('/users',
-            \Bayti\Api\Http\Controllers\Admin\User\ListUsersController::class);
+            \Bayti\Api\Http\Controllers\Admin\User\ListUsersController::class)->add($perm->for('users.view'));
         $group->get('/users/{id:[0-9]+}',
-            \Bayti\Api\Http\Controllers\Admin\User\GetUserController::class);
+            \Bayti\Api\Http\Controllers\Admin\User\GetUserController::class)->add($perm->for('users.view'));
         $group->post('/users/{id:[0-9]+}/activate',
-            \Bayti\Api\Http\Controllers\Admin\User\ActivateUserController::class);
+            \Bayti\Api\Http\Controllers\Admin\User\ActivateUserController::class)->add($perm->for('users.deactivate'));
         $group->post('/users/{id:[0-9]+}/deactivate',
-            \Bayti\Api\Http\Controllers\Admin\User\DeactivateUserController::class);
+            \Bayti\Api\Http\Controllers\Admin\User\DeactivateUserController::class)->add($perm->for('users.deactivate'));
         // M5.1 — Admin-initiated staff creation + password reset.
         $group->post('/users',
-            \Bayti\Api\Http\Controllers\Admin\User\CreateUserController::class);
+            \Bayti\Api\Http\Controllers\Admin\User\CreateUserController::class)->add($perm->for('users.create'));
         $group->patch('/users/{id:[0-9]+}/password',
-            \Bayti\Api\Http\Controllers\Admin\User\AdminResetPasswordController::class);
+            \Bayti\Api\Http\Controllers\Admin\User\AdminResetPasswordController::class)->add($perm->for('users.edit'));
 
         // M3.4-H — Product collection CRUD (admin).
         $group->get('/collections',
-            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'list']);
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'list'])->add($perm->for('catalog.collections_view'));
         $group->post('/collections',
-            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'create']);
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'create'])->add($perm->for('catalog.collections_manage'));
         $group->get('/collections/{id:[0-9]+}',
-            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'get']);
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'get'])->add($perm->for('catalog.collections_view'));
         $group->put('/collections/{id:[0-9]+}',
-            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'update']);
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'update'])->add($perm->for('catalog.collections_manage'));
         $group->delete('/collections/{id:[0-9]+}',
-            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'delete']);
+            [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'delete'])->add($perm->for('catalog.collections_manage'));
 
         // M3.4-G — Support ticket CRUD + messaging.
         $group->get('/tickets',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketsController::class);
+            \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketsController::class)->add($perm->for('tickets.view'));
         $group->get('/tickets/{id:[0-9]+}',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\GetTicketController::class);
+            \Bayti\Api\Http\Controllers\Admin\Ticket\GetTicketController::class)->add($perm->for('tickets.view'));
         $group->patch('/tickets/{id:[0-9]+}/status',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\UpdateTicketStatusController::class);
+            \Bayti\Api\Http\Controllers\Admin\Ticket\UpdateTicketStatusController::class)->add($perm->for('tickets.update_status'));
         $group->patch('/tickets/{id:[0-9]+}/priority',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\UpdateTicketPriorityController::class);
+            \Bayti\Api\Http\Controllers\Admin\Ticket\UpdateTicketPriorityController::class)->add($perm->for('tickets.update_status'));
         $group->get('/tickets/{id:[0-9]+}/messages',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketMessagesController::class);
+            \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketMessagesController::class)->add($perm->for('tickets.view'));
         $group->post('/tickets/{id:[0-9]+}/messages',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\CreateTicketMessageController::class);
+            \Bayti\Api\Http\Controllers\Admin\Ticket\CreateTicketMessageController::class)->add($perm->for('tickets.reply'));
 
         // M3.3.2-D — Admin finance (transactions + commissions read).
         $group->get('/transactions',
-            \Bayti\Api\Http\Controllers\Admin\Finance\ListTransactionsController::class);
+            \Bayti\Api\Http\Controllers\Admin\Finance\ListTransactionsController::class)->add($perm->for('payouts.view_transactions'));
         $group->get('/commissions',
-            \Bayti\Api\Http\Controllers\Admin\Finance\ListCommissionsController::class);
+            \Bayti\Api\Http\Controllers\Admin\Finance\ListCommissionsController::class)->add($perm->for('payouts.view_commissions'));
 
         // M3.4-C — Admin message a specific vendor (portal → vendor comms).
         $group->post('/vendors/{id:[0-9]+}/messages',
-            \Bayti\Api\Http\Controllers\Admin\Vendor\SendVendorMessageController::class);
+            \Bayti\Api\Http\Controllers\Admin\Vendor\SendVendorMessageController::class)->add($perm->for('vendors.edit'));
 
         // Admin push broadcast (real implementation of legacy send_notifications).
         $group->post('/notifications',
-            \Bayti\Api\Http\Controllers\Admin\Notification\SendBroadcastNotificationController::class);
+            \Bayti\Api\Http\Controllers\Admin\Notification\SendBroadcastNotificationController::class)->add($perm->for('notifications.send'));
 
         // M3.3.2-F — Admin product write (admin can create/update/delete any product).
         $group->post('/products',
-            \Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController::class);
+            \Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController::class)->add($perm->for('products.create'));
         $group->put('/products/{id:[0-9]+}',
-            \Bayti\Api\Http\Controllers\Admin\Product\UpdateAdminProductController::class);
+            \Bayti\Api\Http\Controllers\Admin\Product\UpdateAdminProductController::class)->add($perm->for('products.edit'));
         $group->delete('/products/{id:[0-9]+}',
-            \Bayti\Api\Http\Controllers\Admin\Product\DeleteAdminProductController::class);
+            \Bayti\Api\Http\Controllers\Admin\Product\DeleteAdminProductController::class)->add($perm->for('products.delete'));
 
         // M3.2.X.8-E — Promo code CRUD. Soft-delete preserves
         // promo_redemptions FK; hard-delete only when zero redemptions.
         $group->get('/promo-codes',
-            \Bayti\Api\Http\Controllers\Admin\PromoCode\ListPromoCodesController::class);
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\ListPromoCodesController::class)->add($perm->for('coupons.view'));
         $group->get('/promo-codes/{id:[0-9]+}',
-            \Bayti\Api\Http\Controllers\Admin\PromoCode\GetPromoCodeController::class);
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\GetPromoCodeController::class)->add($perm->for('coupons.view'));
         $group->post('/promo-codes',
-            \Bayti\Api\Http\Controllers\Admin\PromoCode\CreatePromoCodeController::class);
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\CreatePromoCodeController::class)->add($perm->for('coupons.create'));
         $group->put('/promo-codes/{id:[0-9]+}',
-            \Bayti\Api\Http\Controllers\Admin\PromoCode\UpdatePromoCodeController::class);
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\UpdatePromoCodeController::class)->add($perm->for('coupons.edit'));
         $group->delete('/promo-codes/{id:[0-9]+}',
-            \Bayti\Api\Http\Controllers\Admin\PromoCode\DeletePromoCodeController::class);
+            \Bayti\Api\Http\Controllers\Admin\PromoCode\DeletePromoCodeController::class)->add($perm->for('coupons.delete'));
 
         // M3.2.X.18-F — Returns admin surface
         $group->get('/returns',
-            \Bayti\Api\Http\Controllers\Admin\Order\ListAdminReturnsController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\ListAdminReturnsController::class)->add($perm->for('returns.view'));
         $group->get('/returns/{id:[0-9]+}',
-            \Bayti\Api\Http\Controllers\Admin\Order\GetAdminReturnController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\GetAdminReturnController::class)->add($perm->for('returns.view'));
         $group->post('/returns/{id:[0-9]+}/approve',
-            \Bayti\Api\Http\Controllers\Admin\Order\ApproveReturnController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\ApproveReturnController::class)->add($perm->for('returns.approve'));
         $group->post('/returns/{id:[0-9]+}/deny',
-            \Bayti\Api\Http\Controllers\Admin\Order\DenyReturnController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\DenyReturnController::class)->add($perm->for('returns.deny'));
         $group->post('/returns/{id:[0-9]+}/mark-picked-up',
-            \Bayti\Api\Http\Controllers\Admin\Order\MarkPickedUpController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\MarkPickedUpController::class)->add($perm->for('returns.approve'));
         $group->post('/returns/{id:[0-9]+}/record-refund',
-            \Bayti\Api\Http\Controllers\Admin\Order\RecordReturnRefundController::class);
+            \Bayti\Api\Http\Controllers\Admin\Order\RecordReturnRefundController::class)->add($perm->for('returns.refund'));
 
         // M3.2.X.15-F — FX rate management (display-only multi-currency).
         // GET lists all rates with staleness flags; PUT upserts the rate
         // for a single target currency. Audited via AuditEmitter with
         // subject_type='FxRate'; visible via the X.4-C audit-log surface.
         $group->get('/fx-rates',
-            \Bayti\Api\Http\Controllers\Admin\Currency\ListFxRatesController::class);
+            \Bayti\Api\Http\Controllers\Admin\Currency\ListFxRatesController::class)->add($perm->for('settings.view'));
         $group->put('/fx-rates/{target:[A-Za-z]{3}}',
-            \Bayti\Api\Http\Controllers\Admin\Currency\UpsertFxRateController::class);
+            \Bayti\Api\Http\Controllers\Admin\Currency\UpsertFxRateController::class)->add($perm->for('settings.edit'));
     })
         ->add(\Bayti\Api\Http\Middleware\AdminAuthMiddleware::class)
         ->add(AuthMiddleware::class);
