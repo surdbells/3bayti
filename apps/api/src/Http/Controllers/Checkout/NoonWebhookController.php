@@ -79,6 +79,7 @@ final class NoonWebhookController
         // nullable+default parameters are not auto-injected from bindings.
         private readonly LoggerInterface $logger,
         private readonly \Bayti\Api\Domain\Chat\OrderChatProvisioner $chatProvisioner,
+        private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
     ) {
     }
 
@@ -434,7 +435,13 @@ final class NoonWebhookController
             $previous = $order->getStatus();
             // markPaid() is idempotent — safe to call even if already
             // marked paid. Don't double-stamp.
-            $order->markPaid();
+            $justPaid = $order->markPaid();
+            // Flash-campaign stock is decremented exactly once, on the
+            // first paid transition (markPaid() returns false on idempotent
+            // re-deliveries). Mutations are persisted by the webhook's flush.
+            if ($justPaid) {
+                $this->flashStock->reduceForPaidOrder($order);
+            }
             // Only notify on the FIRST paid transition; idempotent
             // re-deliveries find the order already paid.
             return $previous === Order::STATUS_PAID

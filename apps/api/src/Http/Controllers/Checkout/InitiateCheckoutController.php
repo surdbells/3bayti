@@ -115,6 +115,7 @@ final class InitiateCheckoutController
         private readonly \Bayti\Api\Notification\Push\PushNotificationService $pushNotifications,
         private readonly PromoCodeResolverService $promoResolver,
         private readonly \Bayti\Api\Domain\Chat\OrderChatProvisioner $chatProvisioner,
+        private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -381,7 +382,12 @@ final class InitiateCheckoutController
             // Mark order paid immediately (no gateway involved).
             /** @var OrderRepository $orderRepo */
             $orderRepo = $this->em->getRepository(Order::class);
-            $order->markPaid();
+            if ($order->markPaid()) {
+                // First (and only) paid transition for this zero-value
+                // order — decrement flash-campaign stock before the save
+                // below persists everything in one flush.
+                $this->flashStock->reduceForPaidOrder($order);
+            }
             $orderRepo->save($order);
 
             $this->notifications->orderPlaced($order);

@@ -95,6 +95,7 @@ final class ReconcilePendingOrdersCommand extends Command
         private readonly EntityManagerInterface $em,
         private readonly PaymentGatewayInterface $gateway,
         private readonly LoggerInterface $logger,
+        private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
     ) {
         parent::__construct();
     }
@@ -294,7 +295,12 @@ final class ReconcilePendingOrdersCommand extends Command
                 return 'would_mark_paid';
             }
             try {
-                $order->markPaid();
+                if ($order->markPaid()) {
+                    // First paid transition for this order — decrement
+                    // flash-campaign stock. The command flushes once after
+                    // processing the batch, so this persists with it.
+                    $this->flashStock->reduceForPaidOrder($order);
+                }
             } catch (\Throwable $e) {
                 $this->logger->warning('reconcile_pending.mark_paid_failed', [
                     'order_id' => $order->getId(),

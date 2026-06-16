@@ -1047,6 +1047,14 @@ return [
         return new \Bayti\Api\Payment\Noon\HmacSha256SignatureVerifier($secret);
     },
 
+    // Flash-campaign stock reducer: the finder resolves to the CampaignItem
+    // repository (a Doctrine repo, obtained via the EM); the reducer itself
+    // is autowired from that interface.
+    \Bayti\Api\Domain\Catalog\FlashCampaignItemFinder::class =>
+        static fn (EntityManagerInterface $em) =>
+            $em->getRepository(\Bayti\Api\Domain\Catalog\CampaignItem::class),
+    \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer::class => \DI\autowire(),
+
     // Doctrine repositories are accessed via EntityManager::getRepository();
     // no DI registrations needed.
 ];

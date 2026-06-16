@@ -65,7 +65,18 @@ final class ReconcilePendingOrdersCommandTest extends TestCase
 
     private function tester(): CommandTester
     {
-        $command = new ReconcilePendingOrdersCommand($this->em, $this->gateway, $this->logger);
+        // A no-op reducer: the mock Order's markPaid() returns false in these
+        // tests, so the reducer is never actually invoked. Its own behaviour
+        // is covered by FlashCampaignStockReducerTest.
+        $flashStock = new \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer(
+            new class implements \Bayti\Api\Domain\Catalog\FlashCampaignItemFinder {
+                public function findActiveFlashItemsForProduct(int $productId, \DateTimeImmutable $now): array
+                {
+                    return [];
+                }
+            }
+        );
+        $command = new ReconcilePendingOrdersCommand($this->em, $this->gateway, $this->logger, $flashStock);
         $app = new Application();
         $app->add($command);
         return new CommandTester($app->find('orders:reconcile-pending'));

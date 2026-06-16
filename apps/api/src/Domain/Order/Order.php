@@ -311,13 +311,18 @@ class Order
      * a second call (e.g. duplicate webhook) is a no-op. Throws if
      * called on a terminal order (DELIVERED already paid, REFUNDED
      * paid then reversed, etc.).
+     *
+     * @return bool True if this call performed the transition (the order
+     *              was not already paid/beyond); false on an idempotent
+     *              no-op. Callers use this to run once-per-order side
+     *              effects (e.g. flash-campaign stock) exactly once.
      */
-    public function markPaid(?DateTimeImmutable $when = null): void
+    public function markPaid(?DateTimeImmutable $when = null): bool
     {
         if ($this->status === self::STATUS_PAID || $this->status === self::STATUS_FULFILLING
             || $this->status === self::STATUS_SHIPPED || $this->status === self::STATUS_DELIVERED) {
             // Idempotent: already paid (or beyond). Don't double-stamp.
-            return;
+            return false;
         }
         if ($this->isTerminal()) {
             throw new \DomainException(
@@ -327,6 +332,7 @@ class Order
         $this->status = self::STATUS_PAID;
         $this->paidAt = $when ?? new DateTimeImmutable();
         $this->touchUpdatedAt();
+        return true;
     }
 
     /**
