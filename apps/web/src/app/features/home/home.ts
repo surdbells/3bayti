@@ -13,6 +13,7 @@ import { environment } from '../../../environments/environment';
 import { SkeletonShimmerComponent } from '../../shared/ui/skeleton-shimmer';
 import { ProductStripComponent } from '../../shared/ui/product-strip';
 import { HeroCarouselComponent } from '../../shared/ui/hero-carousel';
+import { SectionHeaderComponent } from '../../shared/ui/section-header';
 import { DesignerCardComponent } from '../catalog/designer-card';
 import { RecommendationsService } from '../catalog/recommendations.service';
 import type { Product } from '../catalog/product.model';
@@ -50,6 +51,7 @@ import { HomeDataService } from './home-data.service';
     ProductStripComponent,
     HeroCarouselComponent,
     DesignerCardComponent,
+    SectionHeaderComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',

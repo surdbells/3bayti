@@ -83,57 +83,54 @@
        (currently just Pyjamas) are filtered out at the data layer
        — see HomeComponent.fetchCategories$().
        =========================================================== -->
-  <section class="home-section home-section--categories" aria-labelledby="categories-title">
-    <header class="home-section__header">
-      <p class="home-section__eyebrow">Browse</p>
-      <h2 id="categories-title" class="home-section__title">Shop by category</h2>
-    </header>
+  <!-- ===========================================================
+       CATEGORIES — bento
+       HP3: a varied-size bento grid (the marquee category gets the
+       large feature tile) replacing the flat scroll row. Categories
+       have no cover photography, so each tile uses its bundled
+       illustration as a large motif. Icon-less categories are filtered
+       at the data layer (HomeComponent.fetchCategories$).
+       =========================================================== -->
+  <section class="home-section home-section--categories">
+    <div class="home-section__bounds">
+      <ui-section-header eyebrow="Browse" title="Shop by category" />
 
-    @if (categories(); as cats) {
-      @if (cats.length > 0) {
-        <div class="categories-row" role="list">
-          @for (cat of cats; track cat.id) {
-            <a
-              [href]="categoryUrl(cat.slug)"
-              class="category-tile"
-              role="listitem"
-              [attr.aria-label]="cat.name + ' — ' + cat.product_count + ' products'"
-            >
-              <div class="category-tile__thumb" aria-hidden="true">
+      @if (categories(); as cats) {
+        @if (cats.length > 0) {
+          <div class="bento" role="list">
+            @for (cat of cats; track cat.id; let first = $first) {
+              <a
+                [href]="categoryUrl(cat.slug)"
+                class="bento__tile"
+                [class.bento__tile--feature]="first"
+                role="listitem"
+                [attr.aria-label]="cat.name + ' — ' + cat.product_count + ' products'"
+              >
                 @if (iconFor(cat.slug); as iconUrl) {
-                  <img
-                    [src]="iconUrl"
-                    [alt]="''"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                } @else {
-                  <!-- Icon-less fallback (shouldn't reach here because
-                       fetchCategories$ filters out icon-less categories,
-                       but defensive in case the filter is ever relaxed). -->
-                  <span>{{ initial(cat.name) }}</span>
+                  <span class="bento__icon" aria-hidden="true">
+                    <img [src]="iconUrl" alt="" loading="lazy" decoding="async" />
+                  </span>
                 }
-              </div>
-              <div class="category-tile__meta">
-                <h3 class="category-tile__name">{{ cat.name }}</h3>
-                <p class="category-tile__count">
-                  {{ cat.product_count }} {{ cat.product_count === 1 ? 'product' : 'products' }}
-                </p>
-              </div>
-            </a>
+                <span class="bento__meta">
+                  <span class="bento__name">{{ cat.name }}</span>
+                  <span class="bento__count">
+                    {{ cat.product_count }} {{ cat.product_count === 1 ? 'piece' : 'pieces' }}
+                  </span>
+                </span>
+              </a>
+            }
+          </div>
+        }
+      } @else {
+        <div class="bento" aria-hidden="true">
+          @for (i of [0, 1, 2, 3, 4, 5, 6]; track i; let first = $first) {
+            <div class="bento__tile bento__tile--skeleton" [class.bento__tile--feature]="first">
+              <ui-skeleton-shimmer [rounded]="false" height="100%" />
+            </div>
           }
         </div>
       }
-    } @else {
-      <!-- Skeleton state — 7 placeholder tiles matching the new shape. -->
-      <div class="categories-row">
-        @for (i of [0, 1, 2, 3, 4, 5, 6]; track i) {
-          <div class="category-tile category-tile--skeleton">
-            <ui-skeleton-shimmer aspectRatio="1 / 1" />
-          </div>
-        }
-      </div>
-    }
+    </div>
   </section>
 
   <!-- ===========================================================
