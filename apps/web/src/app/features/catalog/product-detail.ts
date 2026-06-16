@@ -29,6 +29,7 @@ import {
   HeadingComponent,
   TextComponent,
   StackComponent,
+  ShareButtonsComponent,
 } from '../../shared/ui';
 import { ProductCardComponent } from './product-card';
 import type { Money, Product, ProductDetail, ProductSize, ProductColor } from './product.model';
@@ -81,6 +82,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
     TextComponent,
     StackComponent,
     ProductCardComponent,
+    ShareButtonsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './product-detail.html',
@@ -150,6 +152,15 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     const engine = this.recommendations();
     const list = engine.length > 0 ? engine : (this.product()?.related_products ?? []);
     return list.slice(0, 10);
+  });
+
+  /**
+   * Absolute canonical URL for this product, used by the share buttons.
+   * Mirrors the SEO canonical (SITE_URL + /product/:slug).
+   */
+  readonly shareUrl = computed<string>(() => {
+    const slug = this.product()?.slug;
+    return slug ? `${environment.SITE_URL}/product/${slug}` : environment.SITE_URL;
   });
 
   /** Currently-displayed image (clicking thumbnails switches it). */

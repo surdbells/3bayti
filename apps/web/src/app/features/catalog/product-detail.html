@@ -274,6 +274,11 @@
             <p class="pdp-buybox__error" role="alert">{{ err }}</p>
           }
 
+          <!-- Social share — six channels (decision #5): WhatsApp, copy
+               link, native share, Facebook, X, Telegram. Shares the
+               canonical product URL. -->
+          <ui-share-buttons [url]="shareUrl()" [title]="p.name" />
+
           <!-- Trust / delivery / returns (PDP4a) — grounded in real
                capability: a UAE marketplace, a returns flow on orders, and
                secured payment. No fabricated timeframes or thresholds. -->
