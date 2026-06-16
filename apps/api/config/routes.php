@@ -438,6 +438,13 @@ return function (App $app): void {
     $app->get('/v3/campaigns/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetCampaignController::class);
     $app->get('/v3/vendors/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class);
 
+    // Guest cart price resolution (public — no auth). Resolves a device-
+    // local cart payload into a server-priced display cart so the
+    // storefront drawer / cart page show authoritative, current prices.
+    // The /v3/cart group is auth-only (no anonymous session per Q7=B);
+    // this single read-only endpoint is the guest-facing exception.
+    $app->post('/v3/cart/resolve', \Bayti\Api\Http\Controllers\Cart\ResolveCartController::class);
+
     // M2.2 — Products (Day 2 of 10-day rollout)
     $app->get('/v3/products', \Bayti\Api\Http\Controllers\Catalog\ListProductsController::class);
     // M3.2.X.10 — Faceted search. Registered BEFORE /v3/products/{slug}
