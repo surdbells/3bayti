@@ -494,17 +494,17 @@
            category / popular), loaded client-side via
            relatedProducts(); falls back to the product's own
            related_products from the single PDP fetch when the engine
-           returns nothing. Rendered through the shared ui-product-strip
-           (same horizontal-scroll treatment as the home strips) for
-           visual consistency. Silently omitted when there's nothing to
-           show. -->
+           returns nothing. Rendered as a wrapping 5×2 grid of the shared
+           ui-product-card (capped at 10; 2 per row on mobile). Silently
+           omitted when there's nothing to show. -->
       @if (relatedProducts().length > 0) {
-        <section class="pdp-related" aria-label="Related products">
-          <ui-product-strip
-            heading="You may also like"
-            [products]="relatedProducts()"
-            [loading]="false"
-          />
+        <section class="pdp-related" aria-label="You may also like">
+          <h2 class="pdp-related__heading">You may also like</h2>
+          <div class="pdp-related__grid">
+            @for (rp of relatedProducts(); track rp.id) {
+              <ui-product-card [product]="rp" />
+            }
+          </div>
         </section>
       }
 

@@ -732,15 +732,34 @@
   gap: 24px;
 }
 
-.pdp-related__grid {
-  display: grid;
-  gap: 32px 24px;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+.pdp-related__heading {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-brand-700);
 }
 
-@media (min-width: 768px) {
+/* "You may also like" — wrapping 5×2 grid (decision #5): 2 per row on
+   mobile, 3 on tablet, 5 across at the 1280 desktop breakpoint so 10
+   items read as two tidy rows. Uses the compact ui-product-card. */
+.pdp-related__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px 14px;
+}
+
+@media (min-width: 600px) {
   .pdp-related__grid {
-    gap: 48px 32px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .pdp-related__grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 28px 20px;
   }
 }
 

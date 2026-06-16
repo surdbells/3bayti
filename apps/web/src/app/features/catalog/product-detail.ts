@@ -30,7 +30,7 @@ import {
   TextComponent,
   StackComponent,
 } from '../../shared/ui';
-import { ProductStripComponent } from '../../shared/ui/product-strip';
+import { ProductCardComponent } from './product-card';
 import type { Money, Product, ProductDetail, ProductSize, ProductColor } from './product.model';
 import { RecommendationsService } from './recommendations.service';
 import { CartService } from '../../core/cart/cart.service';
@@ -80,7 +80,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
     HeadingComponent,
     TextComponent,
     StackComponent,
-    ProductStripComponent,
+    ProductCardComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './product-detail.html',
@@ -141,16 +141,15 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   );
 
   /**
-   * The products to show in the "you may also like" strip: engine
+   * The products to show in the "you may also like" grid: engine
    * recommendations when present, otherwise the PDP's related_products,
-   * otherwise empty (section hidden).
+   * otherwise empty (section hidden). Capped at 10 — the grid is a
+   * wrapping 5×2 layout (decision #5), 2 per row on mobile.
    */
   readonly relatedProducts = computed<Product[]>(() => {
     const engine = this.recommendations();
-    if (engine.length > 0) {
-      return engine;
-    }
-    return this.product()?.related_products ?? [];
+    const list = engine.length > 0 ? engine : (this.product()?.related_products ?? []);
+    return list.slice(0, 10);
   });
 
   /** Currently-displayed image (clicking thumbnails switches it). */
