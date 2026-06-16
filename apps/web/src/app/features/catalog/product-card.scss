@@ -1,40 +1,36 @@
 /* ProductCard — Gilded Boutique design language (roadmap §4.4)
  * ===========================================================
- * Cream surface that floats above canvas via Pronounced shadow.
- * Image inset inside the card with rounded corners and 14px padding.
- * Typography hierarchy: italic Cormorant vendor → Playfair product
- * → Inter price/rating. Brand-gold ornament dot punctuates divider.
- * Hover: card lifts 6px, image scales 1.04, shadow deepens.
+ * Phase C1: tightened to a COMPACT, equal-height card while keeping the
+ * gilded character (cream surface, floating inset image, gold ornament
+ * divider, soft lift on hover).
  *
- * Not extracted into design tokens because this is the FIRST place
- * we use these specific values (cream surface, pronounced shadow).
- * Once SiteFooter and DesignerCard reuse the same surface, we'll
- * lift these up into styles.scss as proper tokens. For now: keep
- * them local until reuse is proven.
+ * Equal height: the card is a flex column that fills its grid/flex cell
+ * (height:100%); the meta block flexes to fill and the price+rating row
+ * is pinned to the bottom (margin-top:auto), so every card in a row
+ * aligns regardless of vendor/name length. The image keeps a fixed 3/4
+ * aspect ratio and the name clamps to two lines with a stable min-height.
  *
- * Locked spec values:
- *   --product-card-surface:        #fdfaf3
- *   --product-card-radius:         20px
- *   --product-card-padding:        14px 14px 20px
- *   --product-card-image-radius:   14px
- *   --product-card-aspect:         3 / 4
+ * Compact spec values (was → now):
+ *   radius            20px   → 14px
+ *   padding           14/14/20 → 8/8/12
+ *   image radius      14px   → 11px
+ *   image margin-btm  18px   → 10px
+ *   aspect            3 / 4  (unchanged)
  */
 
 .product-card {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   background: #fdfaf3;
-  border-radius: 20px;
-  padding: 14px 14px 20px;
+  border-radius: 14px;
+  padding: 8px 8px 12px;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
   position: relative;
-  /* Soft & subtle shadow at rest — cards float above the canvas with
-   * a whisper of elevation. Tinted brown (rgba(90,58,44, ...)) rather
-   * than neutral grey so it harmonises with the cream surface. See
-   * --shadow-card-resting in src/styles.scss for the source values
-   * and the rationale (Phase 1 W3 round 3 — replaces "Pronounced"
-   * shadow language). */
+  /* Soft, tinted-brown resting shadow so cards float above the cream
+   * canvas (see --shadow-card-resting in styles.scss). */
   box-shadow: var(--shadow-card-resting);
   transition:
     box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
@@ -43,18 +39,12 @@
 
 .product-card:hover,
 .product-card:focus-visible {
-  /* Lift reduced from -6px to -3px to match the softer shadow language.
-   * A taller lift with a soft shadow looks like the card is detached
-   * from its shadow; a smaller lift keeps the relationship believable. */
   transform: translateY(-3px);
   box-shadow: var(--shadow-card-hover);
   outline: none;
 }
 
 .product-card:focus-visible {
-  /* Keyboard focus: same lift as hover, plus a brand-gold ring. The
-   * ring is added on top of the hover shadow rather than replacing it
-   * so focus state still feels consistent with hover. */
   box-shadow:
     var(--shadow-card-hover),
     0 0 0 2px var(--color-brand-500);
@@ -67,8 +57,8 @@
   aspect-ratio: 3 / 4;
   background: var(--color-bg-muted);
   overflow: hidden;
-  border-radius: 14px;
-  margin-bottom: 18px;
+  border-radius: 11px;
+  margin-bottom: 10px;
 }
 
 .product-card__image-wrap img {
@@ -90,8 +80,6 @@
 }
 
 .product-card.is-out-of-stock:hover {
-  /* Defeat the lift and image scale for unavailable products. The
-   * cursor still says they can't act on it. */
   transform: none;
   box-shadow: var(--shadow-card-resting);
 }
@@ -113,13 +101,12 @@
   background: var(--color-brand-100);
   color: var(--color-brand-700);
   font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
-  font-size: 56px;
+  font-size: 44px;
   font-weight: 500;
   letter-spacing: -0.02em;
 }
 
 .product-card__fallback span {
-  /* Centred glyph; nudge up slightly to counter Playfair's tall ascender. */
   margin-top: -4px;
 }
 
@@ -127,15 +114,15 @@
 
 .product-card__badge {
   position: absolute;
-  top: 12px;
-  left: 12px;
+  top: 8px;
+  inset-inline-start: 8px;
   background: rgba(253, 250, 243, 0.95);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  padding: 5px 11px;
+  padding: 3px 9px;
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 10px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--color-brand-600);
   font-weight: 500;
@@ -154,10 +141,10 @@
 
 .product-card__like {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 36px;
-  height: 36px;
+  top: 8px;
+  inset-inline-end: 8px;
+  width: 32px;
+  height: 32px;
   background: rgba(253, 250, 243, 0.92);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -182,8 +169,8 @@
 }
 
 .product-card__like svg {
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   stroke: var(--color-brand-700);
   fill: none;
   stroke-width: 1.5;
@@ -211,13 +198,13 @@
 .product-card__stock-overlay span {
   font-family: 'Playfair Display', Georgia, serif;
   font-style: italic;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--color-brand-700);
   background: rgba(253, 250, 243, 0.92);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  padding: 8px 18px;
+  padding: 5px 13px;
   border-radius: 999px;
   border: 0.5px solid var(--color-brand-200);
   letter-spacing: 0.02em;
@@ -226,17 +213,19 @@
 /* ----- Meta block (vendor / name / divider / price+rating) ----------- */
 
 .product-card__meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
   padding: 0 4px;
 }
 
 .product-card__vendor {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-style: italic;
-  font-size: 14px;
+  font-size: 13px;
   color: var(--color-brand-500);
-  margin: 0 0 6px;
+  margin: 0 0 3px;
   letter-spacing: 0.01em;
-  /* Truncate to one line. Long vendor names rare but happen. */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -245,12 +234,11 @@
 .product-card__name {
   font-family: 'Playfair Display', Georgia, serif;
   font-weight: 500;
-  font-size: 16px;
+  font-size: 13.5px;
   line-height: 1.3;
   color: var(--color-brand-700);
-  margin: 0 0 12px;
-  /* Two-line clamp with stable height — prevents jagged grids when
-   * some products have short names and others long. */
+  margin: 0;
+  /* Two-line clamp with a stable height so grids stay even. */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -258,12 +246,12 @@
   min-height: 2.6em;
 }
 
-/* Gold ornament divider — three pieces for the dot-flanked-by-lines look. */
+/* Gold ornament divider — three pieces (dot flanked by lines). */
 .product-card__divider {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin: 5px 0 6px;
 }
 
 .product-card__divider-line {
@@ -279,35 +267,35 @@
   background: var(--color-brand-300);
 }
 
-/* ----- Price + rating row ------------------------------------------- */
+/* ----- Price + rating row (pinned to the card bottom) --------------- */
 
 .product-card__price-row {
+  margin-top: auto;
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 }
 
 .product-card__price {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
+  gap: 5px;
   font-family: 'Inter', system-ui, sans-serif;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13.5px;
   color: var(--color-brand-700);
   letter-spacing: 0.02em;
 }
 
-/* Sale state: current price uses brand-600 (slightly darker gold) to
- * emphasise. Restraint over flashy red — premium aesthetic. */
+/* Sale state: current price uses brand-600 (slightly darker gold). */
 .product-card__price-current--sale {
   color: var(--color-brand-600);
 }
 
 .product-card__price-original {
   font-weight: 400;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--color-text-tertiary);
   text-decoration: line-through;
 }
@@ -315,9 +303,9 @@
 .product-card__rating {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--color-text-secondary);
   white-space: nowrap;
 }
