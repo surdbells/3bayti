@@ -244,6 +244,15 @@ export class ProductDetailComponent {
     }
   }
 
+  /* ----- Content disclosures (PDP4b) -------------------------------------
+   * Description / Reviews / Details are independent collapsible panels.
+   * Description + Reviews default open (primary content + social proof
+   * stay visible); the secondary Details panel defaults closed. All panels
+   * remain in the DOM so the content is still crawlable. */
+  readonly descriptionOpen = signal(true);
+  readonly reviewsOpen = signal(true);
+  readonly detailsOpen = signal(false);
+
   /* ----- Buy box: variant selection + quantity + add-to-cart -------- */
 
   /** Selected size label (null until the shopper picks one). */

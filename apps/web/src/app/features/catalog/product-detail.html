@@ -324,11 +324,33 @@
 
           <!-- Description -->
           @if (descriptionParagraphs().length > 0) {
-            <div class="pdp-description">
-              <ui-heading level="h2" size="sm">Description</ui-heading>
-              @for (para of descriptionParagraphs(); track $index) {
-                <p>{{ para }}</p>
-              }
+            <div class="pdp-disclosure">
+              <h2 class="pdp-disclosure__heading">
+                <button
+                  type="button"
+                  id="pdp-trigger-description"
+                  class="pdp-disclosure__trigger"
+                  [attr.aria-expanded]="descriptionOpen()"
+                  aria-controls="pdp-panel-description"
+                  (click)="descriptionOpen.set(!descriptionOpen())"
+                >
+                  <span>Description</span>
+                  <svg class="pdp-disclosure__chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+              </h2>
+              <div
+                id="pdp-panel-description"
+                role="region"
+                aria-labelledby="pdp-trigger-description"
+                class="pdp-disclosure__panel pdp-description"
+                [hidden]="!descriptionOpen()"
+              >
+                @for (para of descriptionParagraphs(); track $index) {
+                  <p>{{ para }}</p>
+                }
+              </div>
             </div>
           }
 
@@ -336,8 +358,29 @@
                Uses an `id="reviews"` anchor so the rating count link
                above can scroll to it. -->
           @if (p.recent_reviews && p.recent_reviews.length > 0) {
-            <div class="pdp-reviews" id="reviews">
-              <ui-heading level="h2" size="sm">Reviews</ui-heading>
+            <div class="pdp-disclosure" id="reviews">
+              <h2 class="pdp-disclosure__heading">
+                <button
+                  type="button"
+                  id="pdp-trigger-reviews"
+                  class="pdp-disclosure__trigger"
+                  [attr.aria-expanded]="reviewsOpen()"
+                  aria-controls="pdp-panel-reviews"
+                  (click)="reviewsOpen.set(!reviewsOpen())"
+                >
+                  <span>Reviews</span>
+                  <svg class="pdp-disclosure__chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+              </h2>
+              <div
+                id="pdp-panel-reviews"
+                role="region"
+                aria-labelledby="pdp-trigger-reviews"
+                class="pdp-disclosure__panel pdp-reviews"
+                [hidden]="!reviewsOpen()"
+              >
 
               <!-- Aggregate summary repeated here so the section is
                    self-contained (helps when the user navigates
@@ -398,27 +441,50 @@
                   </li>
                 }
               </ul>
+              </div>
             </div>
           }
 
           <!-- Materials, fabric, care — only render if backend supplied data -->
           @if (p.fabric || p.materials?.length || p.care_instructions) {
-            <div class="pdp-details">
-              <ui-heading level="h2" size="sm">Details</ui-heading>
-              <dl class="pdp-detail-list">
-                @if (p.fabric) {
-                  <dt>Fabric</dt>
-                  <dd>{{ p.fabric }}</dd>
-                }
-                @if (p.materials && p.materials.length > 0) {
-                  <dt>Materials</dt>
-                  <dd>{{ p.materials.join(', ') }}</dd>
-                }
-                @if (p.care_instructions) {
-                  <dt>Care</dt>
-                  <dd>{{ p.care_instructions }}</dd>
-                }
-              </dl>
+            <div class="pdp-disclosure">
+              <h2 class="pdp-disclosure__heading">
+                <button
+                  type="button"
+                  id="pdp-trigger-details"
+                  class="pdp-disclosure__trigger"
+                  [attr.aria-expanded]="detailsOpen()"
+                  aria-controls="pdp-panel-details"
+                  (click)="detailsOpen.set(!detailsOpen())"
+                >
+                  <span>Details</span>
+                  <svg class="pdp-disclosure__chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M6 9l6 6 6-6"/>
+                  </svg>
+                </button>
+              </h2>
+              <div
+                id="pdp-panel-details"
+                role="region"
+                aria-labelledby="pdp-trigger-details"
+                class="pdp-disclosure__panel pdp-details"
+                [hidden]="!detailsOpen()"
+              >
+                <dl class="pdp-detail-list">
+                  @if (p.fabric) {
+                    <dt>Fabric</dt>
+                    <dd>{{ p.fabric }}</dd>
+                  }
+                  @if (p.materials && p.materials.length > 0) {
+                    <dt>Materials</dt>
+                    <dd>{{ p.materials.join(', ') }}</dd>
+                  }
+                  @if (p.care_instructions) {
+                    <dt>Care</dt>
+                    <dd>{{ p.care_instructions }}</dd>
+                  }
+                </dl>
+              </div>
             </div>
           }
       </div>
