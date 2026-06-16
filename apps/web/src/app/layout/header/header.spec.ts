@@ -183,4 +183,116 @@ describe('HeaderComponent (auth-aware)', () => {
       expect(f2.nativeElement.querySelector('app-locale-switcher')).not.toBeNull();
     });
   });
+
+  describe('primary navigation + mobile drawer', () => {
+    const NAV = [
+      { id: 'nav-categories', re: /category/ },
+      { id: 'nav-stores', re: /stores/ },
+      { id: 'nav-bestSellers', re: /best-sellers/ },
+      { id: 'nav-newArrivals', re: /new-arrivals/ },
+    ];
+
+    it('renders all primary nav items in the desktop nav with correct routerLinks', () => {
+      const { fixture } = setup({ user: null });
+      const nav = fixture.nativeElement.querySelector('.primary-nav') as HTMLElement;
+      expect(nav).not.toBeNull();
+      for (const { id, re } of NAV) {
+        const a = nav.querySelector(`[data-testid="${id}"]`) as HTMLAnchorElement | null;
+        expect(a, id).not.toBeNull();
+        const href = a!.getAttribute('href') ?? a!.getAttribute('ng-reflect-router-link') ?? '';
+        expect(href, id).toMatch(re);
+        // The glyph renders (icon binding resolved, not a no-op).
+        expect(a!.querySelector('app-nav-icon svg'), `${id} icon`).not.toBeNull();
+      }
+    });
+
+    it('does NOT render a Gift Cards nav item yet (deferred to Phase E)', () => {
+      const { fixture } = setup({ user: null });
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="nav-gift"]')).toBeNull();
+      expect(root.querySelector('[data-testid="drawer-nav-gift"]')).toBeNull();
+    });
+
+    it('drawer is closed initially (toggle collapsed; drawer inert + aria-hidden; no backdrop)', () => {
+      const { fixture } = setup({ user: null });
+      const root: HTMLElement = fixture.nativeElement;
+      const toggle = root.querySelector('[data-testid="nav-toggle"]')!;
+      const drawer = root.querySelector('[data-testid="nav-drawer"]')!;
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(toggle.getAttribute('aria-controls')).toBe('mobile-nav');
+      expect(drawer.getAttribute('inert')).toBe('');
+      expect(drawer.getAttribute('aria-hidden')).toBe('true');
+      expect(drawer.classList.contains('is-open')).toBe(false);
+      expect(root.querySelector('[data-testid="nav-drawer-backdrop"]')).toBeNull();
+    });
+
+    it('opening via the toggle updates aria + class and shows the backdrop', () => {
+      const { fixture } = setup({ user: null });
+      const root: HTMLElement = fixture.nativeElement;
+      (root.querySelector('[data-testid="nav-toggle"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const toggle = root.querySelector('[data-testid="nav-toggle"]')!;
+      const drawer = root.querySelector('[data-testid="nav-drawer"]')!;
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      expect(drawer.classList.contains('is-open')).toBe(true);
+      expect(drawer.getAttribute('inert')).toBeNull();
+      expect(drawer.getAttribute('aria-hidden')).toBe('false');
+      expect(root.querySelector('[data-testid="nav-drawer-backdrop"]')).not.toBeNull();
+    });
+
+    it('closes via the close button', () => {
+      const { fixture } = setup({ user: null });
+      const root: HTMLElement = fixture.nativeElement;
+      (root.querySelector('[data-testid="nav-toggle"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (root.querySelector('[data-testid="drawer-close"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      expect(root.querySelector('[data-testid="nav-drawer"]')!.classList.contains('is-open')).toBe(false);
+      expect(root.querySelector('[data-testid="nav-drawer-backdrop"]')).toBeNull();
+    });
+
+    it('closes when the backdrop is clicked', () => {
+      const { fixture } = setup({ user: null });
+      const root: HTMLElement = fixture.nativeElement;
+      (root.querySelector('[data-testid="nav-toggle"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      (root.querySelector('[data-testid="nav-drawer-backdrop"]') as HTMLElement).click();
+      fixture.detectChanges();
+      expect(root.querySelector('[data-testid="nav-drawer"]')!.classList.contains('is-open')).toBe(false);
+    });
+
+    it('closes on Escape', () => {
+      const { fixture } = setup({ user: null });
+      const root: HTMLElement = fixture.nativeElement;
+      (root.querySelector('[data-testid="nav-toggle"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+      fixture.detectChanges();
+      expect(root.querySelector('[data-testid="nav-drawer"]')!.classList.contains('is-open')).toBe(false);
+    });
+
+    it('drawer mirrors the primary nav items', () => {
+      const { fixture } = setup({ user: null });
+      const drawer = fixture.nativeElement.querySelector('[data-testid="nav-drawer"]') as HTMLElement;
+      for (const id of ['drawer-nav-categories', 'drawer-nav-stores', 'drawer-nav-bestSellers', 'drawer-nav-newArrivals']) {
+        expect(drawer.querySelector(`[data-testid="${id}"]`), id).not.toBeNull();
+      }
+    });
+
+    it('drawer surfaces the Customer + Vendor CTAs when logged out', () => {
+      const { fixture } = setup({ user: null });
+      const drawer = fixture.nativeElement.querySelector('[data-testid="nav-drawer"]') as HTMLElement;
+      expect(drawer.querySelector('[data-testid="drawer-customer"]')).not.toBeNull();
+      const vendor = drawer.querySelector('[data-testid="drawer-vendor"]') as HTMLAnchorElement | null;
+      expect(vendor).not.toBeNull();
+      expect(vendor!.getAttribute('href')).toContain('app.3bayti.ae');
+    });
+
+    it('drawer HIDES the audience CTAs when logged in', () => {
+      const { fixture } = setup({ user: makeUser() });
+      const drawer = fixture.nativeElement.querySelector('[data-testid="nav-drawer"]') as HTMLElement;
+      expect(drawer.querySelector('[data-testid="drawer-customer"]')).toBeNull();
+      expect(drawer.querySelector('[data-testid="drawer-vendor"]')).toBeNull();
+    });
+  });
 });

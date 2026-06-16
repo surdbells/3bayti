@@ -44,8 +44,10 @@
 }
 
 .primary-nav {
-  display: flex;
-  gap: 24px;
+  /* Mobile-first: the inline nav is hidden below 900px; the hamburger
+     drawer takes over (see the bottom of this file). */
+  display: none;
+  gap: 20px;
   /* Pull nav toward the center; actions slot keeps end alignment. */
   flex: 1 1 auto;
   justify-content: center;
@@ -59,6 +61,9 @@
 }
 
 .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-size: 14px;
   font-weight: 500;
   color: var(--color-text-primary);
@@ -69,10 +74,26 @@
   transition: color 0.15s ease;
 }
 
+.nav-link app-nav-icon {
+  color: var(--color-text-secondary);
+  transition: color 0.15s ease;
+}
+
+.nav-link:hover app-nav-icon,
+.nav-link:focus-visible app-nav-icon,
+.nav-link.is-active app-nav-icon {
+  color: var(--color-brand-700);
+}
+
 .nav-link:hover,
 .nav-link:focus-visible {
   color: var(--color-brand-700);
   outline: none;
+}
+
+.nav-link.is-active {
+  color: var(--color-brand-700);
+  font-weight: 600;
 }
 
 .nav-link::after {
@@ -103,7 +124,8 @@
 }
 
 .nav-link:hover::after,
-.nav-link:focus-visible::after {
+.nav-link:focus-visible::after,
+.nav-link.is-active::after {
   transform: scaleX(1);
 }
 
@@ -137,10 +159,13 @@
     background: rgba(46, 36, 28, 0.05);
     outline: none;
   }
+}
 
-  /* Hide on narrow screens; the user menu / signin still reachable
-     via /login direct link. */
-  @media (max-width: 560px) {
+/* In the header actions row, the ghost (Vendor) CTA collapses on narrow
+   screens — it remains reachable inside the mobile drawer. Scoped to
+   .header-actions so the drawer copy is unaffected. */
+@media (max-width: 560px) {
+  .header-actions .auth-cta--ghost {
     display: none;
   }
 }
@@ -200,5 +225,194 @@
 
   .verify-badge {
     padding: 6px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Mobile navigation — hamburger toggle + off-canvas drawer
+   The inline .primary-nav is hidden below 900px; the toggle opens a
+   left-anchored (right in RTL) drawer that mirrors the nav items and,
+   when logged out, the Customer / Vendor CTAs.
+   --------------------------------------------------------------------------- */
+.nav-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 8px;
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.nav-toggle:hover,
+.nav-toggle:focus-visible {
+  background: var(--color-bg-subtle, #f4f1ec);
+  border-color: var(--color-brand-500, #b18f1f);
+  outline: none;
+}
+
+.nav-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 14, 8, 0.45);
+  z-index: 55;
+  animation: nav-drawer-fade 0.2s ease;
+}
+
+@keyframes nav-drawer-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.nav-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 0;
+  width: min(320px, 82vw);
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: var(--color-bg-surface);
+  box-shadow: 2px 0 28px rgba(20, 14, 8, 0.16);
+  z-index: 60;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+}
+
+.nav-drawer.is-open {
+  transform: translateX(0);
+}
+
+/* RTL: anchor + slide from the right. */
+[dir='rtl'] .nav-drawer {
+  box-shadow: -2px 0 28px rgba(20, 14, 8, 0.16);
+  transform: translateX(100%);
+}
+
+[dir='rtl'] .nav-drawer.is-open {
+  transform: translateX(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-drawer {
+    transition: none;
+  }
+  .nav-drawer-backdrop {
+    animation: none;
+  }
+}
+
+.nav-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.nav-drawer__brand {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--color-brand-700);
+}
+
+.nav-drawer__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.nav-drawer__close:hover,
+.nav-drawer__close:focus-visible {
+  background: var(--color-bg-subtle, #f4f1ec);
+  outline: none;
+}
+
+.nav-drawer__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.nav-drawer__link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  color: var(--color-text-primary);
+  text-decoration: none;
+  font-size: 15px;
+  font-weight: 500;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.nav-drawer__link app-nav-icon {
+  color: var(--color-text-secondary);
+}
+
+.nav-drawer__link:hover,
+.nav-drawer__link:focus-visible {
+  background: var(--color-bg-subtle, #f4f1ec);
+  color: var(--color-brand-700);
+  outline: none;
+}
+
+.nav-drawer__link:hover app-nav-icon,
+.nav-drawer__link:focus-visible app-nav-icon,
+.nav-drawer__link.is-active app-nav-icon {
+  color: var(--color-brand-700);
+}
+
+.nav-drawer__link.is-active {
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+  font-weight: 600;
+}
+
+.nav-drawer__cta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.nav-drawer__cta .auth-cta {
+  justify-content: center;
+  height: 44px;
+}
+
+/* Desktop (≥900px): inline nav returns, drawer affordances disappear. */
+@media (min-width: 900px) {
+  .nav-toggle {
+    display: none;
+  }
+  .primary-nav {
+    display: flex;
+  }
+  .nav-drawer,
+  .nav-drawer-backdrop {
+    display: none;
   }
 }

@@ -15,7 +15,12 @@
   "nav": {
     "home": "الرئيسية",
     "categories": "الفئات",
-    "primary": "القائمة الرئيسية"
+    "primary": "القائمة الرئيسية",
+    "stores": "المتاجر",
+    "bestSellers": "الأكثر مبيعاً",
+    "newArrivals": "وصل حديثاً",
+    "giftCards": "بطاقات الهدايا",
+    "menuToggle": "فتح قائمة التنقل"
   },
   "footer": {
     "rights": "جميع الحقوق محفوظة.",

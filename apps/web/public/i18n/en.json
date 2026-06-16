@@ -15,7 +15,12 @@
   "nav": {
     "home": "Home",
     "categories": "Categories",
-    "primary": "Primary"
+    "primary": "Primary",
+    "stores": "Stores",
+    "bestSellers": "Best Sellers",
+    "newArrivals": "New Arrivals",
+    "giftCards": "Gift Cards",
+    "menuToggle": "Open navigation menu"
   },
   "footer": {
     "rights": "All rights reserved.",

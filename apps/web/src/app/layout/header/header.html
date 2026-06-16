@@ -1,11 +1,38 @@
 <header class="site-header">
   <div class="container">
+    <button
+      type="button"
+      class="nav-toggle"
+      (click)="toggleDrawer()"
+      [attr.aria-expanded]="drawerOpen()"
+      aria-controls="mobile-nav"
+      [attr.aria-label]="'nav.menuToggle' | translate"
+      data-testid="nav-toggle"
+    >
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+           stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <path d="M4 7h16M4 12h16M4 17h16" />
+      </svg>
+    </button>
+
     <a routerLink="/" class="brand-link" [attr.aria-label]="'common.brand' | translate">
       <span class="brand-mark">{{ 'common.brand' | translate }}</span>
     </a>
+
     <nav [attr.aria-label]="'nav.primary' | translate" class="primary-nav">
-      <a routerLink="/category" class="nav-link">{{ 'nav.categories' | translate }}</a>
+      @for (item of navItems; track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="is-active"
+          class="nav-link"
+          [attr.data-testid]="'nav-' + item.icon"
+        >
+          <app-nav-icon [icon]="item.icon" />
+          <span>{{ item.labelKey | translate }}</span>
+        </a>
+      }
     </nav>
+
     <div class="header-actions">
       <app-locale-switcher />
       <app-currency-switcher />
@@ -42,4 +69,77 @@
       </ng-template>
     </div>
   </div>
+
+  <!-- Mobile navigation drawer (hamburger) -->
+  @if (drawerOpen()) {
+    <div
+      class="nav-drawer-backdrop"
+      (click)="closeDrawer()"
+      data-testid="nav-drawer-backdrop"
+      aria-hidden="true"
+    ></div>
+  }
+
+  <aside
+    id="mobile-nav"
+    class="nav-drawer"
+    [class.is-open]="drawerOpen()"
+    [attr.inert]="drawerOpen() ? null : ''"
+    [attr.aria-hidden]="!drawerOpen()"
+    data-testid="nav-drawer"
+  >
+    <div class="nav-drawer__head">
+      <span class="nav-drawer__brand">{{ 'common.brand' | translate }}</span>
+      <button
+        #drawerClose
+        type="button"
+        class="nav-drawer__close"
+        (click)="closeDrawer()"
+        [attr.aria-label]="'common.close' | translate"
+        data-testid="drawer-close"
+      >
+        <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor"
+             stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <path d="M6 6l12 12M18 6L6 18" />
+        </svg>
+      </button>
+    </div>
+
+    <nav class="nav-drawer__nav" [attr.aria-label]="'nav.primary' | translate">
+      @for (item of navItems; track item.path) {
+        <a
+          [routerLink]="item.path"
+          routerLinkActive="is-active"
+          (click)="closeDrawer()"
+          class="nav-drawer__link"
+          [attr.data-testid]="'drawer-nav-' + item.icon"
+        >
+          <app-nav-icon [icon]="item.icon" />
+          <span>{{ item.labelKey | translate }}</span>
+        </a>
+      }
+    </nav>
+
+    @if (showLoggedOutCta()) {
+      <div class="nav-drawer__cta">
+        <a
+          routerLink="/login"
+          (click)="closeDrawer()"
+          class="auth-cta auth-cta--primary"
+          data-testid="drawer-customer"
+        >
+          {{ 'header.customer' | translate }}
+        </a>
+        <a
+          [href]="vendorAppUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="auth-cta auth-cta--ghost"
+          data-testid="drawer-vendor"
+        >
+          {{ 'header.vendor' | translate }}
+        </a>
+      </div>
+    }
+  </aside>
 </header>
