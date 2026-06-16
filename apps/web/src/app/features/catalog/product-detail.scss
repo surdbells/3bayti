@@ -730,3 +730,65 @@
     gap: 48px 32px;
   }
 }
+
+/* ----- Savings badge (PDP1) ------------------------------------------ */
+.pdp-price__save {
+  align-self: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--color-sale-bg);
+  color: var(--color-sale);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* ----- Mobile sticky add-to-cart (PDP1) ------------------------------
+   Fixed to the viewport bottom on small screens; hidden at the PDP's
+   desktop breakpoint (900px), where the in-page buy box is always
+   visible. The page already reserves 96px bottom padding, which clears
+   the bar so content isn't obscured. */
+.pdp-sticky-cta {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) var(--page-padding-x);
+  background: var(--color-bg-surface);
+  border-block-start: 1px solid var(--color-border-default);
+  box-shadow: 0 -4px 18px rgba(90, 58, 44, 0.10);
+}
+
+.pdp-sticky-cta__price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.pdp-sticky-cta__now {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 600;
+  font-size: 1.15rem;
+  color: var(--color-brand-700);
+  white-space: nowrap;
+}
+
+.pdp-sticky-cta__save {
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-sale-bg);
+  color: var(--color-sale);
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+@media (min-width: 900px) {
+  .pdp-sticky-cta { display: none; }
+}

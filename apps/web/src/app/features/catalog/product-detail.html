@@ -152,6 +152,9 @@
             @if (isOnSale() && p.sale_price) {
               <span class="price-current">{{ formatMoney(p.sale_price) }}</span>
               <span class="price-original">{{ formatMoney(p.price) }}</span>
+              @if (savingsPercent(); as pct) {
+                <span class="pdp-price__save">Save {{ pct }}%</span>
+              }
             } @else {
               <span class="price-current">{{ formatMoney(p.price) }}</span>
             }
@@ -377,6 +380,33 @@
             [loading]="false"
           />
         </section>
+      }
+
+      <!-- Mobile sticky add-to-cart — fixed to the viewport bottom on small
+           screens so the price + primary action stay reachable while
+           scrolling; hidden on desktop, where the in-page buy box suffices.
+           Mirrors the main buy box's enabled/disabled logic. -->
+      @if (p.in_stock) {
+        <div class="pdp-sticky-cta" role="region" aria-label="Add to cart">
+          <span class="pdp-sticky-cta__price">
+            @if (isOnSale() && p.sale_price) {
+              <span class="pdp-sticky-cta__now">{{ formatMoney(p.sale_price) }}</span>
+              @if (savingsPercent(); as pct) {
+                <span class="pdp-sticky-cta__save">Save {{ pct }}%</span>
+              }
+            } @else {
+              <span class="pdp-sticky-cta__now">{{ formatMoney(p.price) }}</span>
+            }
+          </span>
+          <ui-button
+            variant="primary"
+            size="md"
+            [disabled]="!canAddToCart()"
+            (clicked)="addToCart()"
+          >
+            {{ adding() ? 'Adding…' : 'Add to cart' }}
+          </ui-button>
+        </div>
       }
     }
   </ui-container>

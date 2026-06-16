@@ -250,6 +250,20 @@ export class ProductDetailComponent {
   });
 
   /**
+   * Savings as a whole-number percent off, or null when not on sale.
+   * Percent is currency-independent (computed from the canonical AED
+   * amounts), so it stays correct regardless of display currency.
+   */
+  readonly savingsPercent = computed(() => {
+    const p = this.product();
+    if (!p?.sale_price?.amount || !this.isOnSale()) return null;
+    const orig = p.price.amount;
+    const now = p.sale_price.amount;
+    if (orig <= now) return null;
+    return Math.round(((orig - now) / orig) * 100);
+  });
+
+  /**
    * Aggregate rating to display, or null if there's nothing meaningful
    * to show. Used by both the visible star block and (W2.2b Phase 2)
    * the schema.org JSON-LD AggregateRating — both must reflect the
