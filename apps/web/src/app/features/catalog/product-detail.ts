@@ -7,6 +7,8 @@ import {
   effect,
   ViewChild,
   ElementRef,
+  AfterViewChecked,
+  OnDestroy,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -84,7 +86,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
   templateUrl: './product-detail.html',
   styleUrl: './product-detail.scss',
 })
-export class ProductDetailComponent {
+export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   private route = inject(ActivatedRoute);
   private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
@@ -252,6 +254,33 @@ export class ProductDetailComponent {
   readonly descriptionOpen = signal(true);
   readonly reviewsOpen = signal(true);
   readonly detailsOpen = signal(false);
+
+  /* ----- Mobile sticky CTA visibility (follow-up) ------------------------
+   * The fixed bottom add-to-cart bar (mobile only) hides once the shopper
+   * reaches the end of the content, so it never sits over the site footer.
+   * A sentinel at the end of the page is observed; the negative bottom root
+   * margin (~bar height) flips the bar off just before it would cover the
+   * sentinel. CSR-only — IntersectionObserver is feature-guarded. */
+  readonly stickyCtaHidden = signal(false);
+  @ViewChild('ctaSentinel') private ctaSentinel?: ElementRef<HTMLElement>;
+  private ctaObserver?: IntersectionObserver;
+
+  ngAfterViewChecked(): void {
+    if (this.ctaObserver || typeof IntersectionObserver === 'undefined') return;
+    const el = this.ctaSentinel?.nativeElement;
+    if (!el) return;
+    this.ctaObserver = new IntersectionObserver(
+      entries => {
+        for (const entry of entries) this.stickyCtaHidden.set(entry.isIntersecting);
+      },
+      { rootMargin: '0px 0px -72px 0px' },
+    );
+    this.ctaObserver.observe(el);
+  }
+
+  ngOnDestroy(): void {
+    this.ctaObserver?.disconnect();
+  }
 
   /* ----- Buy box: variant selection + quantity + add-to-cart -------- */
 

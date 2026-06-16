@@ -1090,3 +1090,20 @@
 @media (prefers-reduced-motion: reduce) {
   .pdp-disclosure__chevron { transition: none; }
 }
+
+/* ----- Sticky CTA hide-near-footer (follow-up) ----------------------- */
+.pdp-sticky-cta {
+  transition: transform var(--duration-base) var(--ease-out),
+              opacity var(--duration-base) var(--ease-out);
+}
+.pdp-sticky-cta.is-hidden {
+  transform: translateY(110%);
+  opacity: 0;
+  pointer-events: none;
+}
+.pdp-cta-sentinel {
+  height: 1px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pdp-sticky-cta { transition: none; }
+}

@@ -210,7 +210,7 @@ describe('CheckoutReturnPageComponent', () => {
   });
 
   describe('initial render', () => {
-    it('shows the confirming spinner before polling resolves', () => {
+    it('shows the confirming spinner before polling resolves', async () => {
       /* Build without flushing so the poll promise is still pending. */
       const status = new StubStatusService();
       let resolvePoll: (r: PollResult) => void = () => { /* set below */ };
@@ -234,11 +234,17 @@ describe('CheckoutReturnPageComponent', () => {
           },
         ],
       });
+      /* Mock navigation: resolving to a paid status below drives a
+       * navigateByUrl, which against the empty router would otherwise
+       * surface an NG04002 ("cannot match routes") during teardown. */
+      vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
       const fixture = TestBed.createComponent(CheckoutReturnPageComponent);
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('[data-testid="return-confirming"]')).not.toBeNull();
-      /* Clean up the dangling promise. */
+      /* Resolve + drain so the (mocked) post-resolution navigation settles
+       * inside the test rather than leaking into the afterEach teardown. */
       resolvePoll({ status: makeStatus(), timedOut: false });
+      await flush();
     });
   });
 });
