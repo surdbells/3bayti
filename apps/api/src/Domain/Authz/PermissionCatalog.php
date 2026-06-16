@@ -92,6 +92,8 @@ final class PermissionCatalog
                     'catalog.categories_manage' => 'Create / edit / delete categories',
                     'catalog.collections_view' => 'View collections',
                     'catalog.collections_manage' => 'Create / edit / delete collections',
+                    'catalog.campaigns_view' => 'View campaigns',
+                    'catalog.campaigns_manage' => 'Create / edit / delete campaigns',
                 ],
             ],
             'coupons' => [
@@ -249,6 +251,7 @@ final class PermissionCatalog
                     'catalog.brands_view', 'catalog.brands_manage',
                     'catalog.categories_view', 'catalog.categories_manage',
                     'catalog.collections_view', 'catalog.collections_manage',
+                    'catalog.campaigns_view', 'catalog.campaigns_manage',
                     'disputes.view', 'disputes.resolve',
                 ],
             ],

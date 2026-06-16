@@ -633,6 +633,18 @@ return function (App $app): void {
         $group->delete('/collections/{id:[0-9]+}',
             [\Bayti\Api\Http\Controllers\Admin\Collection\CollectionCrudController::class, 'delete'])->add($perm->for('catalog.collections_manage'));
 
+        // HP-BE3 — Campaigns CRUD (homepage Anniversary Deals + Flash Sale).
+        $group->get('/campaigns',
+            [\Bayti\Api\Http\Controllers\Admin\Catalog\CampaignCrudController::class, 'list'])->add($perm->for('catalog.campaigns_view'));
+        $group->post('/campaigns',
+            [\Bayti\Api\Http\Controllers\Admin\Catalog\CampaignCrudController::class, 'create'])->add($perm->for('catalog.campaigns_manage'));
+        $group->get('/campaigns/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Admin\Catalog\CampaignCrudController::class, 'get'])->add($perm->for('catalog.campaigns_view'));
+        $group->put('/campaigns/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Admin\Catalog\CampaignCrudController::class, 'update'])->add($perm->for('catalog.campaigns_manage'));
+        $group->delete('/campaigns/{id:[0-9]+}',
+            [\Bayti\Api\Http\Controllers\Admin\Catalog\CampaignCrudController::class, 'delete'])->add($perm->for('catalog.campaigns_manage'));
+
         // M3.4-G — Support ticket CRUD + messaging.
         $group->get('/tickets',
             \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketsController::class)->add($perm->for('tickets.view'));
