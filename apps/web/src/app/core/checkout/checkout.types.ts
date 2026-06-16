@@ -54,6 +54,13 @@ export interface InitiateCheckoutInput {
   promo_code?: string | null;
   billing_address_id?: number | null;
   shipping_address_id?: number | null;
+  /**
+   * Gift-card purchase flow (Phase E2). When set, the server creates a
+   * single-line synthetic order to charge the buyer for the gift-card
+   * denomination via Noon (cart is bypassed). Mutually exclusive with
+   * cart-based fields above.
+   */
+  gift_card_purchase_id?: number | null;
 }
 
 /**

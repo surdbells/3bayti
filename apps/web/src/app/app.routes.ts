@@ -106,6 +106,15 @@ export const routes: Routes = [
     title: 'New Arrivals · 3bayti',
   },
   {
+    /* Gift Cards — browse the themed designs + purchase (Phase E2).
+       Public page; purchasing requires auth (the API rejects an
+       unauthenticated purchase) and sends the buyer to Noon checkout. */
+    path: 'gift-cards',
+    loadComponent: () =>
+      import('./features/gift-cards/gift-card-landing-page').then(m => m.GiftCardLandingPageComponent),
+    title: 'Gift Cards · 3bayti',
+  },
+  {
     /* Dev-only component preview. noindex'd via SeoService inside the
        component. Lazy-loaded so it doesn't bloat the production bundle
        for normal users. */

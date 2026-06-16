@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import { NgIf, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { consumeGiftCardCheckoutRef } from '../gift-cards/gift-card-checkout-handoff';
 import { TranslatePipe } from '@ngx-translate/core';
 import { CheckoutStepperComponent } from './checkout-stepper';
 import { CheckoutService, CheckoutStatusService } from '../../core/checkout';
@@ -183,9 +184,15 @@ export class CheckoutReturnPageComponent implements OnInit {
       return;
     }
 
-    /* Paid → success. Clear checkout state and route to the order. */
+    /* Paid → success. Clear checkout state, then route: a gift-card
+       purchase goes to the buyer's cards; everything else to the order. */
     if (result.status !== null && result.status.paid) {
       this.checkout.clear();
+      const giftRef = consumeGiftCardCheckoutRef();
+      if (giftRef !== null && giftRef === ref.trim()) {
+        await this.router.navigateByUrl('/account/gift-cards');
+        return;
+      }
       await this.router.navigateByUrl(`/checkout/success/${result.status.order_id}`);
       return;
     }

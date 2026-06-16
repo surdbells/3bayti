@@ -570,5 +570,30 @@
       "subtitle": "The latest pieces just added — discover fresh abayas, kaftans and modest wear from our designers.",
       "empty": "No new arrivals to show just yet. Check back soon."
     }
+  },
+  "giftCards": {
+    "landing": {
+      "eyebrow": "The 3bayti gift card",
+      "title": "Gift Cards",
+      "subtitle": "Give the gift of choice — a beautifully designed card for every occasion, delivered instantly or scheduled for the perfect moment.",
+      "chooseTheme": "Choose a design",
+      "chooseAmount": "Choose an amount",
+      "customAmount": "Custom",
+      "amountHint": "Any amount between AED 100 and AED 10,000.",
+      "recipientName": "Recipient name (optional)",
+      "recipientNamePlaceholder": "Who is this for?",
+      "recipientMessage": "Message (optional)",
+      "recipientMessagePlaceholder": "Add a personal note…",
+      "deliveryWhen": "When to send",
+      "deliveryNow": "Send now",
+      "deliverySchedule": "Schedule",
+      "photoComingSoon": "Photo personalisation for the Luxury card is coming soon.",
+      "errorLoad": "We couldn't load the gift card designs. Please try again.",
+      "retry": "Try again",
+      "buy": "Buy gift card",
+      "submitting": "Starting your purchase…",
+      "errorSubmit": "Something went wrong starting your purchase. Please try again.",
+      "reassure": "You'll be taken to our secure checkout to pay."
+    }
   }
 }
