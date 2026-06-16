@@ -7,7 +7,6 @@ import { signal } from '@angular/core';
 import { HeaderComponent } from './header';
 import { AuthService } from '../../core/auth/auth.service';
 import { ToastService } from '../../shared/forms';
-import { FEATURE_AUTH_HEADER_CTA } from '../../core/auth/auth.tokens';
 import { provideI18n } from '../../core/i18n';
 import type { AuthUser } from '../../core/auth/auth.types';
 
@@ -79,7 +78,7 @@ function makeUser(overrides: Partial<AuthUser> = {}): AuthUser {
   };
 }
 
-function setup(opts: { featureCta?: boolean; user?: AuthUser | null } = {}): {
+function setup(opts: { user?: AuthUser | null } = {}): {
   fixture: ComponentFixture<HeaderComponent>;
   auth: StubAuthService;
 } {
@@ -97,7 +96,6 @@ function setup(opts: { featureCta?: boolean; user?: AuthUser | null } = {}): {
       provideI18n(),
       { provide: AuthService, useValue: auth },
       { provide: ToastService, useValue: new StubToastService() },
-      { provide: FEATURE_AUTH_HEADER_CTA, useValue: opts.featureCta ?? false },
     ],
   });
 
@@ -112,51 +110,43 @@ describe('HeaderComponent (auth-aware)', () => {
     vi.restoreAllMocks();
   });
 
-  describe('logged-out + feature flag off (default)', () => {
-    it('renders neither auth CTAs nor user menu', () => {
-      const { fixture } = setup({ featureCta: false, user: null });
+  describe('logged-out', () => {
+    it('renders Customer + Vendor CTAs but no user menu', () => {
+      const { fixture } = setup({ user: null });
       const root: HTMLElement = fixture.nativeElement;
-      expect(root.querySelector('[data-testid="header-signin"]')).toBeNull();
-      expect(root.querySelector('[data-testid="header-register"]')).toBeNull();
-      expect(root.querySelector('[data-testid="header-user-menu"]')).toBeNull();
-    });
-  });
-
-  describe('logged-out + feature flag on', () => {
-    it('renders Sign in + Register CTAs but no user menu', () => {
-      const { fixture } = setup({ featureCta: true, user: null });
-      const root: HTMLElement = fixture.nativeElement;
-      expect(root.querySelector('[data-testid="header-signin"]')).not.toBeNull();
-      expect(root.querySelector('[data-testid="header-register"]')).not.toBeNull();
+      expect(root.querySelector('[data-testid="header-customer"]')).not.toBeNull();
+      expect(root.querySelector('[data-testid="header-vendor"]')).not.toBeNull();
       expect(root.querySelector('[data-testid="header-user-menu"]')).toBeNull();
     });
 
-    it('Sign in CTA links to /login', () => {
-      const { fixture } = setup({ featureCta: true, user: null });
-      const link = fixture.nativeElement.querySelector('[data-testid="header-signin"]') as HTMLAnchorElement;
+    it('Customer CTA links to /login', () => {
+      const { fixture } = setup({ user: null });
+      const link = fixture.nativeElement.querySelector('[data-testid="header-customer"]') as HTMLAnchorElement;
       /* Angular's RouterLink renders the href once routing resolves; for
          the unit test, the [routerLink] attribute is sufficient evidence. */
       expect(link.getAttribute('href') ?? link.getAttribute('ng-reflect-router-link')).toMatch(/login/);
     });
 
-    it('Register CTA links to /register', () => {
-      const { fixture } = setup({ featureCta: true, user: null });
-      const link = fixture.nativeElement.querySelector('[data-testid="header-register"]') as HTMLAnchorElement;
-      expect(link.getAttribute('href') ?? link.getAttribute('ng-reflect-router-link')).toMatch(/register/);
+    it('Vendor CTA links out to the external seller app in a new tab', () => {
+      const { fixture } = setup({ user: null });
+      const link = fixture.nativeElement.querySelector('[data-testid="header-vendor"]') as HTMLAnchorElement;
+      expect(link.getAttribute('href')).toContain('app.3bayti.ae');
+      expect(link.getAttribute('target')).toBe('_blank');
+      expect(link.getAttribute('rel')).toContain('noopener');
     });
   });
 
   describe('logged-in', () => {
-    it('renders the user menu and HIDES the logged-out CTAs (even when feature flag is on)', () => {
-      const { fixture } = setup({ featureCta: true, user: makeUser() });
+    it('renders the user menu and HIDES the logged-out CTAs', () => {
+      const { fixture } = setup({ user: makeUser() });
       const root: HTMLElement = fixture.nativeElement;
       expect(root.querySelector('[data-testid="header-user-menu"]')).not.toBeNull();
-      expect(root.querySelector('[data-testid="header-signin"]')).toBeNull();
-      expect(root.querySelector('[data-testid="header-register"]')).toBeNull();
+      expect(root.querySelector('[data-testid="header-customer"]')).toBeNull();
+      expect(root.querySelector('[data-testid="header-vendor"]')).toBeNull();
     });
 
     it('renders the user menu trigger button', () => {
-      const { fixture } = setup({ featureCta: false, user: makeUser() });
+      const { fixture } = setup({ user: makeUser() });
       const trigger = fixture.nativeElement.querySelector('[data-testid="user-menu-trigger"]');
       expect(trigger).not.toBeNull();
     });
@@ -183,13 +173,13 @@ describe('HeaderComponent (auth-aware)', () => {
 
   describe('locale switcher', () => {
     it('is always rendered regardless of auth state', () => {
-      /* Logged-out, flag off */
-      const { fixture: f1 } = setup({ featureCta: false, user: null });
+      /* Logged-out */
+      const { fixture: f1 } = setup({ user: null });
       expect(f1.nativeElement.querySelector('app-locale-switcher')).not.toBeNull();
       TestBed.resetTestingModule();
 
       /* Logged-in */
-      const { fixture: f2 } = setup({ featureCta: false, user: makeUser() });
+      const { fixture: f2 } = setup({ user: makeUser() });
       expect(f2.nativeElement.querySelector('app-locale-switcher')).not.toBeNull();
     });
   });

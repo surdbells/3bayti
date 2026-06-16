@@ -38,19 +38,14 @@ export const AUTH_REFRESH_LEAD_TIME_MS = new InjectionToken<number>(
 );
 
 /**
- * Feature flag controlling whether the header surfaces auth CTAs
- * (Sign in / Register).
+ * The vendor / seller app URL — the "Vendor" header CTA target. It lives
+ * on a separate origin (the seller console), so this is a full absolute
+ * URL the header opens directly. Tokenised so tests + future env wiring
+ * can override it.
  *
- * Per Q-FeatureFlag = C (Y.1 plan): routes are always live (staging-only
- * apps/web), but the header CTAs stay hidden until Y.2 ships
- * cart/checkout so users don't sign up only to find a dead end.
- *
- * Default: false. Flip to true in Y.2-close.
+ * Default: the production seller app.
  */
-export const FEATURE_AUTH_HEADER_CTA = new InjectionToken<boolean>(
-  'FEATURE_AUTH_HEADER_CTA',
-  {
-    providedIn: 'root',
-    factory: () => false,
-  },
-);
+export const VENDOR_APP_URL = new InjectionToken<string>('VENDOR_APP_URL', {
+  providedIn: 'root',
+  factory: () => 'https://app.3bayti.ae',
+});

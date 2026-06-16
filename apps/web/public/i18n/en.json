@@ -40,7 +40,9 @@
       "signOut": "Sign out"
     },
     "verifyPhone": "Verify phone",
-    "verifyPhoneAria": "Verify your phone number"
+    "verifyPhoneAria": "Verify your phone number",
+    "customer": "Customer",
+    "vendor": "Vendor"
   },
   "cart": {
     "drawer": {

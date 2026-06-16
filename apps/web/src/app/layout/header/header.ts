@@ -7,30 +7,19 @@ import { UserMenuComponent } from './user-menu';
 import { CartIconComponent } from './cart-icon';
 import { CurrencySwitcherComponent } from './currency-switcher';
 import { AuthService } from '../../core/auth/auth.service';
-import { FEATURE_AUTH_HEADER_CTA } from '../../core/auth/auth.tokens';
+import { VENDOR_APP_URL } from '../../core/auth/auth.tokens';
 
 /**
  * Site-wide header. Persistent across all pages, sticky to the viewport top.
  *
- * Phase 1 (M3.2.0): brand mark + minimal nav placeholder.
- * Phase Y.1-A: + locale switcher (EN ⇄ AR).
- * Phase Y.1-I: + auth-aware CTAs.
- *
  * Auth-aware rendering
  * --------------------
- * Three visual states:
- *   1. Logged out, FEATURE_AUTH_HEADER_CTA=false (default) →
- *      no auth CTAs, just locale switcher. Y.2 will flip the flag
- *      once cart/checkout flows make sign-in genuinely useful.
- *
- *   2. Logged out, FEATURE_AUTH_HEADER_CTA=true →
- *      "Sign in" link + "Register" button.
- *
- *   3. Logged in →
- *      UserMenuComponent dropdown with name, account, orders, sign-out.
- *      The flag does NOT gate this state: a signed-in user always
- *      sees their session indicator. The flag is for the LOGGED-OUT
- *      affordance only.
+ * Two visual states:
+ *   1. Logged out → audience CTAs: a "Customer" button (→ /login, which
+ *      also routes to registration) and a "Vendor" button (→ the seller
+ *      app at VENDOR_APP_URL, an external origin).
+ *   2. Logged in → UserMenuComponent dropdown (name, account, orders,
+ *      sign-out), plus the phone-verification badge when unverified.
  *
  * Bound directly to AuthService.currentUser + isAuthenticated signals;
  * no manual subscription teardown needed.
@@ -45,17 +34,17 @@ import { FEATURE_AUTH_HEADER_CTA } from '../../core/auth/auth.tokens';
 })
 export class HeaderComponent {
   private readonly auth = inject(AuthService);
-  protected readonly featureCta = inject(FEATURE_AUTH_HEADER_CTA);
+
+  /** The seller app URL — the "Vendor" CTA target (external origin). */
+  protected readonly vendorAppUrl = inject(VENDOR_APP_URL);
 
   /** Current user (or null when logged out) — for the user menu. */
   protected readonly currentUser = this.auth.currentUser;
   /** Authenticated state — for choosing which CTAs to render. */
   protected readonly isAuthenticated = this.auth.isAuthenticated;
 
-  /** True when the logged-out CTAs should be visible. */
-  protected readonly showLoggedOutCta = computed(
-    () => !this.isAuthenticated() && this.featureCta,
-  );
+  /** True when the logged-out audience CTAs should be visible. */
+  protected readonly showLoggedOutCta = computed(() => !this.isAuthenticated());
 
   /**
    * True when a signed-in user still needs to verify their phone. Drives

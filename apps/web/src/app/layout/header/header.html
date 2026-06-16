@@ -26,11 +26,17 @@
       </ng-container>
       <ng-template #loggedOutCta>
         <ng-container *ngIf="showLoggedOutCta()">
-          <a routerLink="/login" class="auth-cta auth-cta--ghost" data-testid="header-signin">
-            {{ 'header.signIn' | translate }}
+          <a routerLink="/login" class="auth-cta auth-cta--primary" data-testid="header-customer">
+            {{ 'header.customer' | translate }}
           </a>
-          <a routerLink="/register" class="auth-cta auth-cta--primary" data-testid="header-register">
-            {{ 'header.register' | translate }}
+          <a
+            [href]="vendorAppUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="auth-cta auth-cta--ghost"
+            data-testid="header-vendor"
+          >
+            {{ 'header.vendor' | translate }}
           </a>
         </ng-container>
       </ng-template>

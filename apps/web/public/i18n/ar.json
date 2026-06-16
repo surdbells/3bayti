@@ -40,7 +40,9 @@
       "signOut": "تسجيل الخروج"
     },
     "verifyPhone": "تأكيد الهاتف",
-    "verifyPhoneAria": "تأكيد رقم هاتفك"
+    "verifyPhoneAria": "تأكيد رقم هاتفك",
+    "customer": "عميل",
+    "vendor": "بائع"
   },
   "cart": {
     "drawer": {
