@@ -52,13 +52,14 @@ use Psr\Http\Message\ServerRequestInterface;
  *     "meta": {"total": 4, "count": 4, "limit": 4, "offset": 0, "has_more": false}
  *   }
  *
- * Embedded products (Q-EmbeddedProducts = A)
- * ==========================================
- * Each vendor gets up to 4 of their newest active products
- * (createdAt DESC). Computed via ProductRepository::findActivePaginated
- * filtered by vendorId. This is N+1 by design at Spotlight scale
- * (limit=4 → 1 vendor query + 4 product queries = 5 round trips,
- * within acceptable bounds for a home-page request).
+ * Embedded products (Stores #4)
+ * =============================
+ * Each vendor gets up to 5 of their newest IN-STOCK products
+ * (createdAt DESC; in-stock = stock_quantity > 0 OR allow_oversell,
+ * matching the serializer's in_stock boolean). Computed via
+ * ProductRepository::findActivePaginated filtered by vendorId + inStock.
+ * This is N+1 by design at Spotlight scale (limit=4 vendors → 1 vendor
+ * query + ≤4 product queries, within bounds for a home-page request).
  *
  * Rating aggregate (Q-Rating = A)
  * ===============================
@@ -85,8 +86,8 @@ final class ListFeaturedVendorsController
     /** Max number of featured vendors allowed per request. Q-LimitClamp = A. */
     private const MAX_LIMIT = 12;
 
-    /** Number of embedded product thumbnails per vendor. Q-EmbeddedProducts = A. */
-    private const EMBEDDED_PRODUCTS_PER_VENDOR = 4;
+    /** Number of embedded product thumbnails per vendor (Stores #4: 5 in-stock). */
+    private const EMBEDDED_PRODUCTS_PER_VENDOR = 5;
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
@@ -150,6 +151,7 @@ final class ListFeaturedVendorsController
             $productsResult = $productRepo->findActivePaginated([
                 'vendorId' => $vendor->getId(),
                 'sort' => 'newest',
+                'inStock' => true,
                 'limit' => self::EMBEDDED_PRODUCTS_PER_VENDOR,
                 'offset' => 0,
             ]);

@@ -341,6 +341,48 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
         );
     }
 
+    #[Test]
+    public function embedsUpToFiveNewestInStockProductsPerVendor(): void
+    {
+        $vendor = $this->makeVendor('almas-fashion', 'Almas Fashion', 'A luxe label.');
+        $vendor->setFeatured(true);
+
+        $product = new Product($vendor, 'silk-abaya', 'Silk Abaya');
+        $product->setPrimaryImageUrl('https://cdn.example/silk.jpg');
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findFeaturedWithStats')->willReturn([
+            ['vendor' => $vendor, 'rating' => null, 'ratingCount' => 0],
+        ]);
+
+        $capturedFilters = null;
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->expects(self::once())
+            ->method('findActivePaginated')
+            ->willReturnCallback(function (array $filters) use (&$capturedFilters, $product): array {
+                $capturedFilters = $filters;
+                return ['items' => [$product], 'total' => 1];
+            });
+
+        $em = $this->stubEm(function ($em) use ($vendorRepo, $productRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [Vendor::class, $vendorRepo],
+                [Product::class, $productRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle($this->jsonRequest('GET', '/v3/featured-vendors'));
+        self::assertSame(200, $response->getStatusCode());
+
+        // Stores #4: the spotlight embed asks for the 5 newest IN-STOCK
+        // products per vendor, in the same request.
+        self::assertIsArray($capturedFilters);
+        self::assertSame(5, $capturedFilters['limit'], 'embed must request up to 5 products');
+        self::assertTrue($capturedFilters['inStock'] ?? false, 'embed must filter to in-stock products');
+        self::assertSame('newest', $capturedFilters['sort'], 'embed must be newest-first');
+    }
+
     private function makeVendor(string $slug, string $name, ?string $description): Vendor
     {
         $v = new Vendor($slug, $name, 'vendor@example.test');

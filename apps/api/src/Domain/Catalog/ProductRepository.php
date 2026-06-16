@@ -192,6 +192,14 @@ class ProductRepository extends EntityRepository
             $qb->andWhere('p.isSale = TRUE');
         }
 
+        // In-stock filter (Stores #4): mirrors the serializer's `in_stock`
+        // boolean (stock_quantity > 0 OR allow_oversell) so a filtered
+        // list matches exactly what the storefront renders as available.
+        // Opt-in — existing callers that omit it are unaffected.
+        if (!empty($filters['inStock'])) {
+            $qb->andWhere('(p.stockQuantity > 0 OR p.allowOversell = TRUE)');
+        }
+
         $searchQuery = $filters['searchQuery'] ?? null;
         $hasSearch = is_string($searchQuery) && trim($searchQuery) !== '';
         if ($hasSearch) {
