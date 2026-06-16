@@ -74,6 +74,22 @@ export const routes: Routes = [
   { path: 'designer', pathMatch: 'full', redirectTo: 'stores' },
   { path: 'designer/:slug', redirectTo: 'stores/:slug' },
   {
+    /* Best Sellers — curated product listing sorted by sales. */
+    path: 'best-sellers',
+    loadComponent: () =>
+      import('./features/listings/product-listing-page').then(m => m.ProductListingPageComponent),
+    data: {
+      sort: 'best_seller',
+      i18nKey: 'bestSellers',
+      canonicalPath: '/best-sellers',
+      seoTitle: 'Best Sellers · 3bayti',
+      seoDescription:
+        'Shop the most-loved abayas, kaftans and modest wear on 3bayti — ' +
+        'our best-selling pieces from independent UAE designers.',
+    },
+    title: 'Best Sellers · 3bayti',
+  },
+  {
     /* Dev-only component preview. noindex'd via SeoService inside the
        component. Lazy-loaded so it doesn't bloat the production bundle
        for normal users. */

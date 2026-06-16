@@ -1,0 +1,137 @@
+/* ---------------------------------------------------------------------------
+   Curated product listing (Best Sellers / New Arrivals)
+   A flat, filter-free product grid. Layout matches the category browser's
+   product grid for visual consistency across the storefront.
+   --------------------------------------------------------------------------- */
+.listing-page {
+  display: block;
+  background: var(--color-bg-page, #fff);
+}
+
+.listing-page__container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 24px 64px;
+}
+
+.listing-page__crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--color-text-secondary, #6b6258);
+  margin-bottom: 20px;
+}
+
+.listing-page__crumbs a {
+  color: var(--color-text-secondary, #6b6258);
+  text-decoration: none;
+}
+
+.listing-page__crumbs a:hover,
+.listing-page__crumbs a:focus-visible {
+  color: var(--color-brand-700, #7a5e12);
+  text-decoration: underline;
+}
+
+.listing-page__crumbs-sep {
+  color: var(--color-border-strong, #c9c0b4);
+}
+
+.listing-page__header {
+  margin-bottom: 28px;
+}
+
+.listing-page__title {
+  margin: 0 0 6px;
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.listing-page__subtitle {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary, #6b6258);
+}
+
+/* Product grid — auto-fill columns, matching category-detail. */
+.listing-page__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 32px 24px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+@media (min-width: 1024px) {
+  .listing-page__grid {
+    gap: 48px 32px;
+  }
+}
+
+/* Skeleton placeholders shown on first load. */
+.listing-skeleton {
+  aspect-ratio: 3 / 4;
+  border-radius: 12px;
+  background: linear-gradient(
+    100deg,
+    var(--color-bg-subtle, #f4f1ec) 30%,
+    rgba(255, 255, 255, 0.6) 50%,
+    var(--color-bg-subtle, #f4f1ec) 70%
+  );
+  background-size: 200% 100%;
+  animation: listing-shimmer 1.3s ease-in-out infinite;
+}
+
+@keyframes listing-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .listing-skeleton {
+    animation: none;
+  }
+}
+
+.listing-page__empty {
+  margin: 48px 0;
+  text-align: center;
+  font-size: 1rem;
+  color: var(--color-text-secondary, #6b6258);
+}
+
+.listing-page__more {
+  display: flex;
+  justify-content: center;
+  margin-top: 48px;
+}
+
+.listing-page__more-btn {
+  appearance: none;
+  border: 1px solid var(--color-border-strong, #c9c0b4);
+  background: var(--color-bg-surface, #fff);
+  color: var(--color-text-primary, #2e241c);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  padding: 12px 32px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.listing-page__more-btn:hover:not(:disabled),
+.listing-page__more-btn:focus-visible:not(:disabled) {
+  background: var(--color-bg-subtle, #f4f1ec);
+  border-color: var(--color-brand-500, #b18f1f);
+}
+
+.listing-page__more-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
