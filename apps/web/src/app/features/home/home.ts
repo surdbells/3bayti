@@ -16,6 +16,7 @@ import { ProductStripComponent } from '../../shared/ui/product-strip';
 import { HeroCarouselComponent } from '../../shared/ui/hero-carousel';
 import { SectionHeaderComponent } from '../../shared/ui/section-header';
 import { CampaignSectionComponent } from './campaign-section';
+import { TopSellersComponent } from './top-sellers';
 import type { ActiveCampaigns } from '../campaigns/campaign.model';
 import { DesignerCardComponent } from '../catalog/designer-card';
 import { RecommendationsService } from '../catalog/recommendations.service';
@@ -56,6 +57,7 @@ import { HomeDataService } from './home-data.service';
     DesignerCardComponent,
     SectionHeaderComponent,
     CampaignSectionComponent,
+    TopSellersComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',
@@ -148,14 +150,6 @@ export class HomeComponent {
       }),
     ]);
   }
-
-  /* ----- Constants used in template ------------------------------------
-   * The "This week's edit" heading uses a curly apostrophe (’) instead
-   * of a straight one (') because (a) the typography is Playfair Display
-   * which has a beautifully drawn typographic apostrophe, and (b) putting
-   * a literal apostrophe in an Angular template attribute binding clashes
-   * with the parser. Defining it as a TS string is the cleaner approach. */
-  readonly featuredHeading = 'This week\u2019s edit';
 
   /* ----- Helpers (used in template) ------------------------------------- */
 
