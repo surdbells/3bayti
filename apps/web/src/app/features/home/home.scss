@@ -42,98 +42,185 @@
    ===================================================================== */
 
 .hero {
-  padding: 48px var(--page-padding-x) 0;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-}
-
-@media (min-width: 768px) {
-  .hero {
-    padding-top: 64px;
-    gap: 40px;
-  }
+  padding-block: var(--space-xl) 0;
+  padding-inline: var(--page-padding-x);
+  max-width: var(--page-max-width);
+  margin-inline: auto;
+  width: 100%;
 }
 
 @media (min-width: 1024px) {
   .hero {
-    padding-top: 80px;
-    gap: 48px;
+    padding-block-start: var(--space-2xl);
   }
 }
 
-.hero__inner {
-  max-width: 720px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
+/* Two columns on desktop (editorial / carousel); single column stacked
+   on smaller screens with the editorial first. */
+.hero__grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl);
   align-items: center;
 }
 
+@media (min-width: 1024px) {
+  .hero__grid {
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: var(--space-2xl);
+  }
+}
+
+.hero__editorial {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+  animation: hero-rise var(--duration-slow) var(--ease-out) both;
+}
+
 .hero__eyebrow {
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--color-brand-500);
   margin: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--text-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--color-brand-600);
 }
 
 .hero__title {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-weight: 500;
-  font-size: 32px;
-  line-height: 1.15;
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  font-weight: 600;
+  font-size: var(--text-hero-title);
+  line-height: 1.04;
   letter-spacing: -0.02em;
   color: var(--color-brand-700);
-  margin: 0;
-}
-
-@media (min-width: 640px) {
-  .hero__title {
-    font-size: 40px;
-  }
-}
-
-@media (min-width: 1024px) {
-  .hero__title {
-    font-size: 52px;
-    line-height: 1.05;
-  }
+  text-wrap: balance;
 }
 
 .hero__lede {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-style: italic;
-  font-weight: 400;
-  font-size: 18px;
-  line-height: 1.5;
-  color: var(--color-text-secondary);
   margin: 0;
-  max-width: 560px;
+  max-width: 46ch;
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
 }
 
 @media (min-width: 1024px) {
   .hero__lede {
-    font-size: 20px;
+    font-size: 1.125rem;
   }
 }
 
-/* Carousel wrapper sits inside the hero band. Per W3 round-2 direction
-   the hero band can be full viewport width, so this wrapper does NOT
-   apply the page max-width — the carousel stage spans edge-to-edge.
-   The cards inside are positioned absolutely from center so they stay
-   visually balanced regardless of viewport width. */
+.hero__ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-xs);
+}
+
+.hero__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-block: 0.8rem;
+  padding-inline: 1.5rem;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition:
+    transform var(--duration-base) var(--ease-out),
+    box-shadow var(--duration-base) var(--ease-out),
+    background-color var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out);
+}
+
+.hero__cta:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 3px;
+}
+
+.hero__cta--primary {
+  background: var(--color-brand-700);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-card-resting);
+}
+
+.hero__cta--primary:hover {
+  background: #4a2f23;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card-hover);
+}
+
+.hero__cta--primary svg {
+  width: 18px;
+  height: 18px;
+}
+
+:host-context([dir='rtl']) .hero__cta--primary svg {
+  transform: scaleX(-1);
+}
+
+.hero__cta--ghost {
+  background: transparent;
+  color: var(--color-brand-700);
+  border: 1.5px solid var(--color-border-default);
+}
+
+.hero__cta--ghost:hover {
+  border-color: var(--color-brand-500);
+  background: var(--color-brand-50);
+}
+
+.hero__trust {
+  list-style: none;
+  margin: var(--space-md) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md) var(--space-lg);
+}
+
+.hero__trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: 0.85rem;
+  color: var(--color-text-tertiary);
+}
+
+.hero__trust-item svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color-brand-500);
+  flex-shrink: 0;
+}
+
+/* Carousel: bleeds to the band edges on mobile/tablet so the side-card
+   peeks reach the viewport edge; sits inside its grid column on desktop. */
 .hero__carousel-wrapper {
-  width: 100%;
-  /* Negative margin pulls the wrapper out past the parent .hero
-     padding to achieve full viewport bleed. The hero band's padding
-     stays in place for the text content above it. */
-  margin-left: calc(-1 * var(--page-padding-x));
-  margin-right: calc(-1 * var(--page-padding-x));
+  margin-inline: calc(-1 * var(--page-padding-x));
+  width: calc(100% + 2 * var(--page-padding-x));
+}
+
+@media (min-width: 1024px) {
+  .hero__carousel-wrapper {
+    margin-inline: 0;
+    width: 100%;
+  }
+}
+
+@keyframes hero-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__editorial { animation: none; }
+  .hero__cta:hover { transform: none; }
 }
 
 /* =====================================================================

@@ -12,16 +12,66 @@
        screen readers a meaningful name for the band wrapper if a
        future change re-introduces text content above the carousel.
        =========================================================== -->
-  <section class="hero" aria-label="Featured products">
-    <!-- Product carousel — sits inside the hero band so the carousel
-         + future text content read as one composition. Slides come
-         from /v2/products?sort=featured (the same data feeding the
-         "This week's edit" strip below). -->
-    <div class="hero__carousel-wrapper">
-      <ui-hero-carousel
-        [products]="featured() ?? []"
-        [loading]="featured() === null"
-      />
+  <!-- ===========================================================
+       HERO — editorial
+       HP2: the page's single <h1> + value proposition + primary CTAs
+       + grounded trust signals, paired with the featured-product
+       carousel as the supporting visual. Two columns on desktop
+       (editorial / carousel); stacked on mobile with the carousel
+       bleeding to the viewport edges for its side-card peek.
+       The carousel declares its own role="region" + aria-label.
+       =========================================================== -->
+  <section class="hero" aria-label="Modest fashion from the UAE's independent designers">
+    <div class="hero__grid">
+      <div class="hero__editorial">
+        <p class="hero__eyebrow">Curated · UAE designers</p>
+        <h1 class="hero__title">Modest fashion, beautifully curated.</h1>
+        <p class="hero__lede">
+          Abayas, kaftans and ready-to-wear from the UAE's independent
+          labels — gathered into one place worth browsing.
+        </p>
+
+        <div class="hero__ctas">
+          <a href="/new-arrivals" class="hero__cta hero__cta--primary">
+            Shop new arrivals
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+          <a href="/designer" class="hero__cta hero__cta--ghost">Meet the designers</a>
+        </div>
+
+        <ul class="hero__trust" aria-label="Why shop with 3bayti">
+          <li class="hero__trust-item">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3 9l1.6-5h14.8L21 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4.5 9v10.5h15V9M9.5 19.5V14h5v5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Independent UAE designers
+          </li>
+          <li class="hero__trust-item">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3l7 3v6c0 4-3 6.8-7 8-4-1.2-7-4-7-8V6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+              <path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Secure checkout
+          </li>
+          <li class="hero__trust-item">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3L3.5 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M3.5 3.5V8h4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Easy returns
+          </li>
+        </ul>
+      </div>
+
+      <div class="hero__carousel-wrapper">
+        <ui-hero-carousel
+          [products]="featured() ?? []"
+          [loading]="featured() === null"
+        />
+      </div>
     </div>
   </section>
 
