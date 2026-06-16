@@ -259,6 +259,12 @@
           @if (addError(); as err) {
             <p class="pdp-buybox__error" role="alert">{{ err }}</p>
           }
+        </section>
+      </div>
+
+      <!-- Product information — moved below the gallery + buy-box grid (PDP2)
+           so the buy box can stick alongside the gallery on desktop. -->
+      <div class="pdp-content">
 
           <!-- Description -->
           @if (descriptionParagraphs().length > 0) {
@@ -359,8 +365,6 @@
               </dl>
             </div>
           }
-        </section>
-
       </div>
 
       <!-- Related products — "You may also like".

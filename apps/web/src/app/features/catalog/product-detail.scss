@@ -61,6 +61,7 @@
   .pdp-grid {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
     gap: 64px;
+    align-items: start;
   }
 }
 
@@ -189,6 +190,18 @@
   flex-direction: column;
   gap: 20px;
   padding-top: 8px;
+}
+
+/* Desktop: the buy box sticks alongside the gallery while it scrolls.
+   Sticks just below the sticky site header (~68px). The grid uses
+   align-items:start so this column isn't stretched to the gallery's
+   height (which would defeat sticky). */
+@media (min-width: 900px) {
+  .pdp-info {
+    position: sticky;
+    top: 88px;
+    align-self: start;
+  }
 }
 
 .pdp-vendor {
@@ -791,4 +804,32 @@
 
 @media (min-width: 900px) {
   .pdp-sticky-cta { display: none; }
+}
+
+/* ----- Product information block (moved full-width below the grid, PDP2)
+   Holds description, reviews, and material/care details. Separated from
+   the buy area by a hairline rule. The buy box (sticky on desktop) lives
+   in the grid above; this region spans the page so the sticky column has
+   somewhere to scroll past. */
+.pdp-content {
+  margin-top: 48px;
+  padding-top: 40px;
+  border-top: 1px solid var(--color-border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+@media (min-width: 900px) {
+  .pdp-content {
+    margin-top: 64px;
+  }
+}
+
+/* The description/reviews read better as a constrained column than full
+   page width; details stay within it too. */
+.pdp-content .pdp-description,
+.pdp-content .pdp-reviews,
+.pdp-content .pdp-details {
+  max-width: 820px;
 }
