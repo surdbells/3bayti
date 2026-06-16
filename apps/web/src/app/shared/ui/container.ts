@@ -12,7 +12,7 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
  *
  * Sizes:
  *   narrow  640px  — single-column reading content (about, blog post)
- *   default 1024px — most page content
+ *   default 1280px — most page content
  *   wide    1280px — marketing pages, dashboards
  *   full    100%   — edge-to-edge sections (hero backgrounds, etc.)
  */
@@ -29,7 +29,7 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
       padding-inline: 24px;
     }
     :host([data-size='narrow']) { max-width: 640px; }
-    :host([data-size='default']) { max-width: 1024px; }
+    :host([data-size='default']) { max-width: 1280px; }
     :host([data-size='wide']) { max-width: 1280px; }
     :host([data-size='full']) { max-width: 100%; padding-inline: 0; }
   `],

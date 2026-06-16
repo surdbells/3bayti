@@ -171,7 +171,7 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
       width: 168px;
       scroll-snap-align: start;
     }
-    @media (min-width: 1024px) {
+    @media (min-width: 1280px) {
       .cq-card { width: 200px; }
     }
 

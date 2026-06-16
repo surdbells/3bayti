@@ -27,7 +27,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .home-page {
     gap: 112px;
   }
@@ -49,7 +49,7 @@
   width: 100%;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero {
     padding-block-start: var(--space-2xl);
   }
@@ -64,7 +64,7 @@
   align-items: center;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero__grid {
     grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
     gap: var(--space-2xl);
@@ -108,7 +108,7 @@
   color: var(--color-text-secondary);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero__lede {
     font-size: 1.125rem;
   }
@@ -206,7 +206,7 @@
   width: calc(100% + 2 * var(--page-padding-x));
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero__carousel-wrapper {
     margin-inline: 0;
     width: 100%;
@@ -247,7 +247,7 @@
   flex-wrap: wrap;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .home-section__header {
     margin-bottom: 40px;
   }
@@ -280,7 +280,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .home-section__title {
     font-size: 36px;
   }
@@ -339,7 +339,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .bento {
     grid-template-columns: repeat(4, 1fr);
     grid-auto-rows: 168px;
@@ -381,7 +381,7 @@
   grid-column: span 2;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .bento__tile--feature {
     grid-row: span 2;
   }
@@ -407,7 +407,7 @@
   transform: scale(1.08) rotate(-3deg);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .bento__tile--feature .bento__icon {
     width: 132px;
     height: 132px;
@@ -425,7 +425,7 @@
   padding-inline-end: 52px;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .bento__tile--feature .bento__meta {
     padding-inline-end: 96px;
   }
@@ -439,7 +439,7 @@
   color: var(--color-brand-700);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .bento__tile--feature .bento__name {
     font-size: 1.75rem;
   }

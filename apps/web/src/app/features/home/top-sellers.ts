@@ -80,7 +80,7 @@ import type { Product } from '../catalog/product.model';
       width: 180px;
       scroll-snap-align: start;
     }
-    @media (min-width: 1024px) {
+    @media (min-width: 1280px) {
       .ts-item { width: 216px; }
     }
 

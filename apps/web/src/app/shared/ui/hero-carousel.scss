@@ -33,7 +33,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel {
     height: 600px;
   }
@@ -54,7 +54,7 @@
   overflow: hidden;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__skeleton ui-skeleton-shimmer {
     width: 360px;
     height: 540px;
@@ -102,7 +102,7 @@
      bottom. Set per-slot below. */
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__slide {
     width: 360px;
   }
@@ -141,7 +141,7 @@
   transform: translate(calc(-50% + 220px), -50%) scale(0.72);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__slide.is-near[data-slot="-1"] {
     transform: translate(calc(-50% - 280px), -50%) scale(0.72);
   }
@@ -168,7 +168,7 @@
   transform: translate(calc(-50% + 380px), -50%) scale(0.5);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__slide.is-far[data-slot="-2"] {
     transform: translate(calc(-50% - 480px), -50%) scale(0.5);
   }
@@ -265,7 +265,7 @@
   align-items: center;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__overlay {
     left: 20px;
     right: 20px;
@@ -283,7 +283,7 @@
   letter-spacing: 0.02em;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__vendor {
     font-size: 15px;
   }
@@ -304,7 +304,7 @@
   overflow: hidden;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__product-name {
     font-size: 22px;
   }
@@ -341,7 +341,7 @@
   letter-spacing: 0.01em;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__price {
     font-size: 16px;
   }
@@ -361,7 +361,7 @@
   transition: gap 0.3s cubic-bezier(0.22, 1, 0.36, 1), color 0.2s ease;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__cta {
     font-size: 12px;
   }
@@ -439,7 +439,7 @@
   right: 16px;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .hero-carousel__arrow--left {
     left: 32px;
   }

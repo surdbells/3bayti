@@ -9,9 +9,9 @@
  * Responsive layout:
  *   - Mobile <768px: brand stacks above 2-column link grid; bottom row
  *     stacks vertically
- *   - Tablet 768-1024px: brand top, 4 link columns below in a row,
+ *   - Tablet 768-1280px: brand top, 4 link columns below in a row,
  *     bottom row horizontal
- *   - Desktop ≥1024px: brand left + 4 link columns right in a row,
+ *   - Desktop ≥1280px: brand left + 4 link columns right in a row,
  *     bottom row horizontal
  */
 
@@ -45,7 +45,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .site-footer__inner {
     grid-template-columns: minmax(240px, 1fr) 3fr;
     gap: 80px;

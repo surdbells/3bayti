@@ -16,8 +16,8 @@
  *
  * Responsive breakpoints (matched to roadmap §6 web layout):
  *   - Mobile <640px:        1.5 cards visible, peek invites swipe
- *   - Tablet 640-1024px:    3 cards
- *   - Desktop ≥1024px:      4 cards with right peek
+ *   - Tablet 640-1280px:    3 cards
+ *   - Desktop ≥1280px:      4 cards with right peek
  */
 
 .strip {
@@ -45,7 +45,7 @@
   padding: 0 var(--page-padding-x);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .strip__header {
     margin-bottom: 40px;
   }
@@ -82,7 +82,7 @@
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .strip__title {
     font-size: 36px;
   }
@@ -147,7 +147,7 @@
   display: none;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .strip__track {
     padding-bottom: 40px;
     gap: 28px;
@@ -171,14 +171,14 @@
 @media (min-width: 640px) {
   .strip__item {
     /* Tablet: ~3 cards visible. Same calculation as before — container
-     * width at 640-1024px is essentially viewport-width, gutters are
+     * width at 640-1280px is essentially viewport-width, gutters are
      * 24px, so the card width math is unchanged. */
     width: calc((100vw - 48px - 48px) / 3);
     max-width: 280px;
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .strip__item {
     /* Desktop: ~3 cards visible with right peek (W3 round-2 — was 4
      * per row, felt cramped). Now each card is meaningfully larger,
