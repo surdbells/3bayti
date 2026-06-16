@@ -700,35 +700,57 @@ describe('CartService', () => {
       expect(service.itemCount()).toBe(1);
     });
 
-    it('falls through to refresh when merge fails (network error)', async () => {
+    it('keeps guest items on a transient merge failure and self-heals on the next refresh (#9)', async () => {
       localStorage.setItem(
         GUEST_KEY,
-        JSON.stringify({ items: [{ product_id: 100, quantity: 1 }], currency: 'AED' }),
+        JSON.stringify({ items: [{ product_id: 100, quantity: 2, size: 'M' }], currency: 'AED' }),
       );
       const { service, controller, auth } = setup();
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
+      /* Sign in → first merge attempt FAILS (transient 500). */
       auth.setAuthenticated(true);
       TestBed.tick();
       await drainMicrotasks();
 
-      const merge = controller.expectOne(`${V3_BASE}/v3/cart/merge`);
-      merge.flush('boom', { status: 500, statusText: 'Server error' });
-
+      const merge1 = controller.expectOne(`${V3_BASE}/v3/cart/merge`);
+      expect(merge1.request.method).toBe('POST');
+      merge1.flush('boom', { status: 500, statusText: 'Server error' });
       await drainMicrotasks();
 
-      const refresh = controller.expectOne(`${V3_BASE}/v3/cart`);
-      refresh.flush(makeServerCart({ item_count: 0, items: [] }));
-
+      /* refresh still loads the server cart (empty) — but the guest
+         items are NOT cleared, so nothing is lost. */
+      controller
+        .expectOne(`${V3_BASE}/v3/cart`)
+        .flush(makeServerCart({ items: [], item_count: 0, subtotal: '0.00' }));
       await drainMicrotasks();
 
       expect(warnSpy).toHaveBeenCalledWith(
-        '[CartService] merge failed; falling back to refresh',
+        '[CartService] guest cart merge failed; will retry on next cart load',
         expect.anything(),
       );
+      expect(localStorage.getItem(GUEST_KEY)).not.toBeNull(); // preserved
+
+      /* Next cart load (e.g. opening the cart page) retries the merge;
+         this time it succeeds, so the items are restored and
+         localStorage is cleared. */
+      const promise = service.refresh();
+      const merge2 = controller.expectOne(`${V3_BASE}/v3/cart/merge`);
+      expect(merge2.request.body).toEqual({
+        items: [{ product_id: 100, quantity: 2, size: 'M' }],
+      });
+      merge2.flush(makeServerCart({ item_count: 2, subtotal: '258.00' }));
+      await drainMicrotasks();
+      controller
+        .expectOne(`${V3_BASE}/v3/cart`)
+        .flush(makeServerCart({ item_count: 2, subtotal: '258.00' }));
+      await promise;
+
+      expect(localStorage.getItem(GUEST_KEY)).toBeNull(); // merged + cleared
+      expect(service.itemCount()).toBe(2);
       warnSpy.mockRestore();
-      /* Guest cart NOT cleared since merge failed. */
-      expect(localStorage.getItem(GUEST_KEY)).not.toBeNull();
+      errorSpy.mockRestore();
     });
 
     it('drops to empty guest cart on logout (does not seed from server cart)', async () => {

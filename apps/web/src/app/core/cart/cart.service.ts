@@ -297,6 +297,17 @@ export class CartService {
       return this._cart();
     }
     return this.runWithLoading(async () => {
+      /* Self-healing guest merge: if a device-local cart survived
+         sign-in — first sign-in, or a prior merge that failed
+         transiently — merge it before loading the server cart.
+         Idempotent: on success localStorage is cleared so this no-ops
+         thereafter; on failure localStorage is retained and the next
+         refresh() retries, so guest items are never lost. Gated on a
+         non-empty guest cart so the common (already-merged) path reaches
+         the GET without an extra microtask hop. */
+      if (this.loadGuestCartRaw().items.length > 0) {
+        await this.mergeGuestCartIfPresent();
+      }
       const cart = await firstValueFrom(
         this.http.get<Cart>(`${V3_BASE}/v3/cart`),
       );
@@ -332,45 +343,50 @@ export class CartService {
    * Internal: handle the first authenticated render after sign-in.
    * Decides between merge-then-refresh and plain refresh.
    */
+  /**
+   * Run once when the user becomes authenticated (see the constructor
+   * effect). Delegates to refresh(), which merges any surviving guest
+   * cart and then loads the server cart. Kept as a thin, named entry
+   * point for the effect.
+   */
   private async handleSignIn(): Promise<void> {
-    const guest = this.loadGuestCartRaw();
-    if (guest.items.length > 0) {
-      try {
-        await this.mergeGuestCart(guest);
-      } catch (err) {
-        /* If merge fails (network, validation, etc.) fall through
-           to refresh — at worst the user sees their server cart and
-           we keep the localStorage payload around for the next
-           attempt. */
-        if (typeof console !== 'undefined') {
-          console.warn('[CartService] merge failed; falling back to refresh', err);
-        }
-      }
-    }
     try {
       await this.refresh();
     } catch (err) {
-      if (typeof console !== 'undefined') {
-        console.warn('[CartService] post-merge refresh failed', err);
-      }
+      this.warn('sign-in cart sync failed', err);
     }
   }
 
   /**
-   * POST /v3/cart/merge with the guest cart items. On success clears
-   * localStorage so a subsequent logout doesn't replay the merge.
+   * Merge the device-local guest cart into the authenticated user's
+   * server cart via POST /v3/cart/merge, if a guest cart exists.
+   *
+   * Non-destructive + self-healing:
+   *   - On success: localStorage is cleared so the merge runs exactly
+   *     once (a later logout can't replay a stale payload).
+   *   - On failure: the error is swallowed (NOT rethrown) and
+   *     localStorage is KEPT, so the items aren't lost and the next
+   *     refresh() retries the merge. We never let a failed merge leave
+   *     the user staring at an empty server cart with their items
+   *     orphaned in localStorage — that was the "cart disappeared on
+   *     login" bug.
+   *
+   * Called from refresh()'s authenticated branch, so it must not open
+   * its own loading scope — refresh() owns that.
    */
-  private async mergeGuestCart(guest: GuestCart): Promise<void> {
-    const payload: MergeAnonCartInput = {
-      items: guest.items,
-    };
-    await this.runWithLoading(async () => {
-      const cart = await firstValueFrom(
+  private async mergeGuestCartIfPresent(): Promise<void> {
+    const guest = this.loadGuestCartRaw();
+    if (guest.items.length === 0) return;
+    try {
+      const payload: MergeAnonCartInput = { items: guest.items };
+      const merged = await firstValueFrom(
         this.http.post<Cart>(`${V3_BASE}/v3/cart/merge`, payload),
       );
-      this._cart.set(cart);
+      this._cart.set(merged);
       this.clearGuestCart();
-    });
+    } catch (err) {
+      this.warn('guest cart merge failed; will retry on next cart load', err);
+    }
   }
 
   /* =================================================================
@@ -572,11 +588,8 @@ export class CartService {
       });
     } catch (err) {
       /* Keep the synthesized cart already in the signal. */
-      if (seq === this.resolveSeq && typeof console !== 'undefined') {
-        console.warn(
-          '[CartService] guest cart resolve failed; showing local cart',
-          err,
-        );
+      if (seq === this.resolveSeq) {
+        this.warn('guest cart resolve failed; showing local cart', err);
       }
     } finally {
       /* Only the latest resolve owns the loading flag. */
@@ -618,6 +631,13 @@ export class CartService {
       Math.round(parseFloat(a || '0') * 100) +
       Math.round(parseFloat(b || '0') * 100);
     return (cents / 100).toFixed(2);
+  }
+
+  /** Console warning, guarded for non-browser / test environments. */
+  private warn(message: string, err: unknown): void {
+    if (typeof console !== 'undefined') {
+      console.warn(`[CartService] ${message}`, err);
+    }
   }
 
   /**
