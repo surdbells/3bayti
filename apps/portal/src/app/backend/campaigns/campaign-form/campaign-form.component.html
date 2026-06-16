@@ -1,0 +1,151 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to campaigns
+        </button>
+        <span class="ax-page-header-eyebrow">Catalog</span>
+        <h1 class="ax-page-title">{{ isEdit ? 'Edit campaign' : 'Create campaign' }}</h1>
+        <p class="ax-page-subtitle">Feature time-boxed deals on the storefront homepage with a live countdown and (for flash sales) stock bars.</p>
+      </div>
+    </header>
+
+    <div *ngIf="ui.is_loading" class="ax-card ax-p-6 ax-flex ax-justify-center">
+      <span class="ax-spinner" aria-label="Loading campaign"></span>
+    </div>
+
+    <ng-container *ngIf="!ui.is_loading">
+      <!-- Campaign details -->
+      <section class="ax-page-section" style="max-width: 48rem;">
+        <div class="ax-card ax-p-5">
+          <h2 class="ax-section-title ax-mb-4">Details</h2>
+
+          <div class="ax-grid-2 ax-gap-4">
+            <div class="ax-form-field">
+              <label class="ax-label ax-label-required" for="c_type">Type</label>
+              <select id="c_type" name="type" class="ax-input" [(ngModel)]="form.type">
+                <option value="anniversary">Anniversary — celebratory deals</option>
+                <option value="flash">Flash Sale — urgency + stock bars</option>
+              </select>
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label" for="c_discount">Default discount (%)</label>
+              <input id="c_discount" name="discount" type="number" min="0" max="100" class="ax-input" [(ngModel)]="form.discount_percent" />
+              <span class="ax-hint">Applied to products that don't set their own.</span>
+            </div>
+          </div>
+
+          <div class="ax-form-field ax-mt-4">
+            <label class="ax-label ax-label-required" for="c_title">Title</label>
+            <input id="c_title" name="title" type="text" class="ax-input" [(ngModel)]="form.title" placeholder="e.g. 5th Anniversary Sale, Midnight Flash Sale" />
+          </div>
+
+          <div class="ax-form-field ax-mt-4">
+            <label class="ax-label" for="c_subtitle">Subtitle</label>
+            <input id="c_subtitle" name="subtitle" type="text" class="ax-input" [(ngModel)]="form.subtitle" placeholder="Short supporting line shown under the title" />
+          </div>
+
+          <div class="ax-grid-2 ax-gap-4 ax-mt-4">
+            <div class="ax-form-field">
+              <label class="ax-label ax-label-required" for="c_start">Starts</label>
+              <input id="c_start" name="starts" type="datetime-local" class="ax-input" [(ngModel)]="form.starts_at" />
+            </div>
+            <div class="ax-form-field">
+              <label class="ax-label ax-label-required" for="c_end">Ends</label>
+              <input id="c_end" name="ends" type="datetime-local" class="ax-input" [(ngModel)]="form.ends_at" />
+            </div>
+          </div>
+
+          <div class="ax-grid-2 ax-gap-4 ax-mt-4 ax-items-center">
+            <div class="ax-form-field">
+              <label class="ax-label" for="c_priority">Priority</label>
+              <input id="c_priority" name="priority" type="number" class="ax-input" [(ngModel)]="form.priority" placeholder="Lower = shown first" />
+            </div>
+            <label class="ax-checkbox ax-mt-4">
+              <input type="checkbox" name="active" [(ngModel)]="form.is_active" />
+              <span>Active (eligible to show when in window)</span>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <!-- Products -->
+      <section class="ax-page-section" style="max-width: 48rem;">
+        <div class="ax-card ax-p-5">
+          <h2 class="ax-section-title ax-mb-1">Products</h2>
+          <p class="ax-page-subtitle ax-mb-4">Add products to the campaign. Override the discount or set campaign-scoped stock per product.</p>
+
+          <!-- Product search -->
+          <div class="campaign-search ax-form-field">
+            <label class="ax-label" for="c_search">Add a product</label>
+            <div class="campaign-search__box">
+              <app-icon name="search" aria-hidden="true"></app-icon>
+              <input
+                id="c_search"
+                type="text"
+                class="ax-input"
+                autocomplete="off"
+                [ngModel]="productQuery"
+                (ngModelChange)="onSearchChange($event)"
+                placeholder="Search products by name…" />
+              <span *ngIf="ui.searching" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+            </div>
+
+            <ul *ngIf="searchResults.length" class="campaign-results">
+              <li *ngFor="let p of searchResults" class="campaign-results__item" (click)="addProduct(p)">
+                <img *ngIf="p.image" [src]="p.image" alt="" class="campaign-results__img" />
+                <span class="campaign-results__name">{{ p.name }}</span>
+                <span class="campaign-results__price" *ngIf="p.price != null">AED {{ p.price | number:'1.0-2' }}</span>
+                <app-icon name="add" aria-hidden="true"></app-icon>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Items -->
+          <div *ngIf="items.length === 0" class="campaign-empty">
+            <app-icon name="inventory_2" aria-hidden="true"></app-icon>
+            <p>No products yet. Search above to add some.</p>
+          </div>
+
+          <div *ngIf="items.length" class="campaign-items">
+            <div class="campaign-items__head">
+              <span>Product</span>
+              <span>Discount %</span>
+              <span>Stock total</span>
+              <span>Stock left</span>
+              <span></span>
+            </div>
+            <div class="campaign-items__row" *ngFor="let it of items; let i = index">
+              <div class="campaign-items__product">
+                <img *ngIf="it.image" [src]="it.image" alt="" class="campaign-items__img" />
+                <div>
+                  <div class="campaign-items__name">{{ it.name }}</div>
+                  <div class="campaign-items__price" *ngIf="it.price != null">AED {{ it.price | number:'1.0-2' }}</div>
+                </div>
+              </div>
+              <input type="number" min="0" max="100" class="ax-input ax-input-sm" [(ngModel)]="it.discount_percent" name="disc_{{i}}" placeholder="default" />
+              <input type="number" min="0" class="ax-input ax-input-sm" [(ngModel)]="it.stock_total" name="stot_{{i}}" placeholder="—" />
+              <input type="number" min="0" class="ax-input ax-input-sm" [(ngModel)]="it.stock_remaining" name="srem_{{i}}" placeholder="—" />
+              <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="removeItem(i)" aria-label="Remove product">
+                <app-icon name="delete" aria-hidden="true"></app-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Actions -->
+      <section class="ax-page-section" style="max-width: 48rem;">
+        <div class="ax-flex ax-gap-2 ax-justify-end">
+          <button type="button" class="ax-btn ax-btn-outline" (click)="goBack()">Cancel</button>
+          <button type="button" class="ax-btn ax-btn-primary" (click)="save()" [disabled]="ui.is_saving">
+            <span *ngIf="ui.is_saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+            <app-icon name="save" *ngIf="!ui.is_saving" aria-hidden="true"></app-icon>
+            {{ isEdit ? 'Save changes' : 'Create campaign' }}
+          </button>
+        </div>
+      </section>
+    </ng-container>
+  </div>
+</app-admin-shell>

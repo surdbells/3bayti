@@ -100,6 +100,77 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/products/:slug/recommendations',
     shape: 'v3-envelope',
   },
+  // HP-BE — storefront campaigns (homepage Anniversary Deals + Flash Sale).
+  // Net-new v3-only. /active = the live anniversary + flash; /:slug = one
+  // campaign's full product set (storefront "view all").
+  'GET /campaigns/active': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/campaigns/active',
+    shape: 'v3-envelope',
+  },
+  'GET /campaigns/:slug': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/campaigns/:slug',
+    shape: 'v3-envelope',
+  },
+  // HP-BE — admin campaigns CRUD (portal).
+  'GET /admin/campaigns': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/campaigns',
+    shape: 'v3-envelope',
+  },
+  'POST /admin/campaigns': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/campaigns',
+    shape: 'v3-envelope',
+  },
+  'GET /admin/campaigns/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/campaigns/:id',
+    shape: 'v3-envelope',
+  },
+  'PUT /admin/campaigns/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/campaigns/:id',
+    shape: 'v3-envelope',
+  },
+  'DELETE /admin/campaigns/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/campaigns/:id',
+    shape: 'v3-envelope',
+  },
+  // Admin RBAC — roles, permission catalog, user-role assignment. These
+  // endpoints exist in the portal + API but had gone missing from this map
+  // (the generated route keys had drifted); restored here so both stay in
+  // sync. All net-new v3-only, admin-guarded.
+  'GET /admin/permission-catalog': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/permission-catalog', shape: 'v3-envelope',
+  },
+  'GET /admin/roles': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/roles', shape: 'v3-envelope',
+  },
+  'POST /admin/roles': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/roles', shape: 'v3-envelope',
+  },
+  'GET /admin/roles/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/roles/:id', shape: 'v3-envelope',
+  },
+  'PUT /admin/roles/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/roles/:id', shape: 'v3-envelope',
+  },
+  'DELETE /admin/roles/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/roles/:id', shape: 'v3-envelope',
+  },
+  'POST /admin/users/:id/roles': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/users/:id/roles', shape: 'v3-envelope',
+  },
   // M3.2.W.1 — personalized "for you" recommendations (authenticated).
   'GET /me/recommendations': {
     target: 'new',

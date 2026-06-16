@@ -3,20 +3,24 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 214 route keys.
+ * 243 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
 export type V3RouteKey =
   | 'DELETE /admin/brands/:id'
+  | 'DELETE /admin/campaigns/:id'
   | 'DELETE /admin/categories/:id'
   | 'DELETE /admin/collections/:id'
   | 'DELETE /admin/products/:id'
+  | 'DELETE /admin/roles/:id'
   | 'DELETE /admin/vendors/:id'
   | 'DELETE /cart/items/:id'
+  | 'DELETE /following/:vendorId'
   | 'DELETE /me/addresses/:id'
   | 'DELETE /me/device-tokens'
   | 'DELETE /me/measurements/:id'
+  | 'DELETE /me/reviews/:id'
   | 'DELETE /me/wishlist/:productId'
   | 'DELETE /me/wishlist/labels/:id'
   | 'DELETE /vendor/coupons/:id'
@@ -26,6 +30,8 @@ export type V3RouteKey =
   | 'DELETE /wishlist/:productId'
   | 'GET /admin/analytics'
   | 'GET /admin/brands'
+  | 'GET /admin/campaigns'
+  | 'GET /admin/campaigns/:id'
   | 'GET /admin/categories'
   | 'GET /admin/collections'
   | 'GET /admin/collections/:id'
@@ -35,21 +41,17 @@ export type V3RouteKey =
   | 'GET /admin/orders'
   | 'GET /admin/orders/:id'
   | 'GET /admin/orders/:id/timeline'
+  | 'GET /admin/permission-catalog'
   | 'GET /admin/products'
   | 'GET /admin/returns'
+  | 'GET /admin/roles'
+  | 'GET /admin/roles/:id'
   | 'GET /admin/tickets'
   | 'GET /admin/tickets/:id'
   | 'GET /admin/tickets/:id/messages'
   | 'GET /admin/transactions'
   | 'GET /admin/users'
   | 'GET /admin/users/:id'
-  | 'GET /admin/permission-catalog'
-  | 'GET /admin/roles'
-  | 'GET /admin/roles/:id'
-  | 'POST /admin/roles'
-  | 'PUT /admin/roles/:id'
-  | 'DELETE /admin/roles/:id'
-  | 'POST /admin/users/:id/roles'
   | 'GET /admin/vendor-metrics'
   | 'GET /admin/vendors'
   | 'GET /admin/vendors/:id'
@@ -57,9 +59,12 @@ export type V3RouteKey =
   | 'GET /admin/vendors/:id/compliance'
   | 'GET /admin/vendors/:id/metrics'
   | 'GET /auth/me'
+  | 'GET /campaigns/:slug'
+  | 'GET /campaigns/active'
   | 'GET /cart'
   | 'GET /categories'
   | 'GET /categories/:slug'
+  | 'GET /chat/conversation-stores'
   | 'GET /chat/conversations'
   | 'GET /chat/conversations/:uuid/messages'
   | 'GET /chat/unread-count'
@@ -75,6 +80,9 @@ export type V3RouteKey =
   | 'GET /me/measurements'
   | 'GET /me/profile'
   | 'GET /me/recommendations'
+  | 'GET /me/reviews'
+  | 'GET /me/tickets'
+  | 'GET /me/tickets/:id/messages'
   | 'GET /me/wishlist'
   | 'GET /me/wishlist/labels'
   | 'GET /mobile/best-sellers'
@@ -137,6 +145,7 @@ export type V3RouteKey =
   | 'GET /vendors'
   | 'GET /vendors/:slug'
   | 'GET /vendors/:slug/products'
+  | 'GET /vendors/:vendorId/reviews'
   | 'GET /vendors/by-legacy-id/:id'
   | 'GET /vendors/by-legacy-id/:id/products'
   | 'GET /wishlist'
@@ -151,7 +160,6 @@ export type V3RouteKey =
   | 'PATCH /me/location'
   | 'PATCH /me/password'
   | 'PATCH /me/profile'
-  | 'POST /me/avatar'
   | 'PATCH /me/wishlist/:productId'
   | 'PATCH /me/wishlist/labels/:id'
   | 'PATCH /vendor/compliance'
@@ -162,6 +170,7 @@ export type V3RouteKey =
   | 'PATCH /vendor/store/status'
   | 'PATCH /vendor/store/tax'
   | 'POST /admin/brands'
+  | 'POST /admin/campaigns'
   | 'POST /admin/categories'
   | 'POST /admin/collections'
   | 'POST /admin/notifications'
@@ -169,10 +178,12 @@ export type V3RouteKey =
   | 'POST /admin/orders/:id/cancel'
   | 'POST /admin/orders/:id/refund'
   | 'POST /admin/products'
+  | 'POST /admin/roles'
   | 'POST /admin/tickets/:id/messages'
   | 'POST /admin/users'
   | 'POST /admin/users/:id/activate'
   | 'POST /admin/users/:id/deactivate'
+  | 'POST /admin/users/:id/roles'
   | 'POST /admin/vendors'
   | 'POST /admin/vendors/:id/approve'
   | 'POST /admin/vendors/:id/compliance/approve'
@@ -196,16 +207,22 @@ export type V3RouteKey =
   | 'POST /chat/conversations/:uuid/messages'
   | 'POST /chat/conversations/:uuid/read'
   | 'POST /checkout/initiate'
+  | 'POST /following/:vendorId'
   | 'POST /gift-cards/:id/activate'
   | 'POST /gift-cards/purchase'
   | 'POST /gift-cards/redeem'
   | 'POST /me/addresses'
+  | 'POST /me/avatar'
   | 'POST /me/device-tokens'
   | 'POST /me/measurements'
+  | 'POST /me/styles'
+  | 'POST /me/tickets'
+  | 'POST /me/tickets/:id/messages'
   | 'POST /me/wishlist'
   | 'POST /me/wishlist/labels'
   | 'POST /orders/:id/cancel'
   | 'POST /payment/webhook/noon'
+  | 'POST /reviews/:id/helpful'
   | 'POST /vendor/chat/conversations/:uuid/messages'
   | 'POST /vendor/chat/conversations/:uuid/read'
   | 'POST /vendor/coupons'
@@ -218,14 +235,18 @@ export type V3RouteKey =
   | 'POST /vendor/onboarding/submit'
   | 'POST /vendor/products'
   | 'POST /vendor/returns/:id/confirm-receipt'
+  | 'POST /vendors/:vendorId/reviews'
   | 'POST /wishlist'
   | 'PUT /admin/brands/:id'
+  | 'PUT /admin/campaigns/:id'
   | 'PUT /admin/categories/:id'
   | 'PUT /admin/collections/:id'
   | 'PUT /admin/products/:id'
+  | 'PUT /admin/roles/:id'
   | 'PUT /admin/vendors/:id'
   | 'PUT /me/addresses/:id'
   | 'PUT /me/measurements/:id'
+  | 'PUT /me/measurements/default'
   | 'PUT /vendor/coupons/:id'
   | 'PUT /vendor/labels/:id'
   | 'PUT /vendor/measurements/:id'
@@ -234,14 +255,18 @@ export type V3RouteKey =
 /** Runtime set of valid route keys (frozen). */
 export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /admin/brands/:id',
+  'DELETE /admin/campaigns/:id',
   'DELETE /admin/categories/:id',
   'DELETE /admin/collections/:id',
   'DELETE /admin/products/:id',
+  'DELETE /admin/roles/:id',
   'DELETE /admin/vendors/:id',
   'DELETE /cart/items/:id',
+  'DELETE /following/:vendorId',
   'DELETE /me/addresses/:id',
   'DELETE /me/device-tokens',
   'DELETE /me/measurements/:id',
+  'DELETE /me/reviews/:id',
   'DELETE /me/wishlist/:productId',
   'DELETE /me/wishlist/labels/:id',
   'DELETE /vendor/coupons/:id',
@@ -251,6 +276,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /wishlist/:productId',
   'GET /admin/analytics',
   'GET /admin/brands',
+  'GET /admin/campaigns',
+  'GET /admin/campaigns/:id',
   'GET /admin/categories',
   'GET /admin/collections',
   'GET /admin/collections/:id',
@@ -260,21 +287,17 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/orders',
   'GET /admin/orders/:id',
   'GET /admin/orders/:id/timeline',
+  'GET /admin/permission-catalog',
   'GET /admin/products',
   'GET /admin/returns',
+  'GET /admin/roles',
+  'GET /admin/roles/:id',
   'GET /admin/tickets',
   'GET /admin/tickets/:id',
   'GET /admin/tickets/:id/messages',
   'GET /admin/transactions',
   'GET /admin/users',
   'GET /admin/users/:id',
-  'GET /admin/permission-catalog',
-  'GET /admin/roles',
-  'GET /admin/roles/:id',
-  'POST /admin/roles',
-  'PUT /admin/roles/:id',
-  'DELETE /admin/roles/:id',
-  'POST /admin/users/:id/roles',
   'GET /admin/vendor-metrics',
   'GET /admin/vendors',
   'GET /admin/vendors/:id',
@@ -282,9 +305,12 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/vendors/:id/compliance',
   'GET /admin/vendors/:id/metrics',
   'GET /auth/me',
+  'GET /campaigns/:slug',
+  'GET /campaigns/active',
   'GET /cart',
   'GET /categories',
   'GET /categories/:slug',
+  'GET /chat/conversation-stores',
   'GET /chat/conversations',
   'GET /chat/conversations/:uuid/messages',
   'GET /chat/unread-count',
@@ -300,6 +326,9 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /me/measurements',
   'GET /me/profile',
   'GET /me/recommendations',
+  'GET /me/reviews',
+  'GET /me/tickets',
+  'GET /me/tickets/:id/messages',
   'GET /me/wishlist',
   'GET /me/wishlist/labels',
   'GET /mobile/best-sellers',
@@ -362,6 +391,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendors',
   'GET /vendors/:slug',
   'GET /vendors/:slug/products',
+  'GET /vendors/:vendorId/reviews',
   'GET /vendors/by-legacy-id/:id',
   'GET /vendors/by-legacy-id/:id/products',
   'GET /wishlist',
@@ -376,7 +406,6 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PATCH /me/location',
   'PATCH /me/password',
   'PATCH /me/profile',
-  'POST /me/avatar',
   'PATCH /me/wishlist/:productId',
   'PATCH /me/wishlist/labels/:id',
   'PATCH /vendor/compliance',
@@ -387,6 +416,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PATCH /vendor/store/status',
   'PATCH /vendor/store/tax',
   'POST /admin/brands',
+  'POST /admin/campaigns',
   'POST /admin/categories',
   'POST /admin/collections',
   'POST /admin/notifications',
@@ -394,10 +424,12 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/orders/:id/cancel',
   'POST /admin/orders/:id/refund',
   'POST /admin/products',
+  'POST /admin/roles',
   'POST /admin/tickets/:id/messages',
   'POST /admin/users',
   'POST /admin/users/:id/activate',
   'POST /admin/users/:id/deactivate',
+  'POST /admin/users/:id/roles',
   'POST /admin/vendors',
   'POST /admin/vendors/:id/approve',
   'POST /admin/vendors/:id/compliance/approve',
@@ -421,16 +453,22 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /chat/conversations/:uuid/messages',
   'POST /chat/conversations/:uuid/read',
   'POST /checkout/initiate',
+  'POST /following/:vendorId',
   'POST /gift-cards/:id/activate',
   'POST /gift-cards/purchase',
   'POST /gift-cards/redeem',
   'POST /me/addresses',
+  'POST /me/avatar',
   'POST /me/device-tokens',
   'POST /me/measurements',
+  'POST /me/styles',
+  'POST /me/tickets',
+  'POST /me/tickets/:id/messages',
   'POST /me/wishlist',
   'POST /me/wishlist/labels',
   'POST /orders/:id/cancel',
   'POST /payment/webhook/noon',
+  'POST /reviews/:id/helpful',
   'POST /vendor/chat/conversations/:uuid/messages',
   'POST /vendor/chat/conversations/:uuid/read',
   'POST /vendor/coupons',
@@ -443,14 +481,18 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /vendor/onboarding/submit',
   'POST /vendor/products',
   'POST /vendor/returns/:id/confirm-receipt',
+  'POST /vendors/:vendorId/reviews',
   'POST /wishlist',
   'PUT /admin/brands/:id',
+  'PUT /admin/campaigns/:id',
   'PUT /admin/categories/:id',
   'PUT /admin/collections/:id',
   'PUT /admin/products/:id',
+  'PUT /admin/roles/:id',
   'PUT /admin/vendors/:id',
   'PUT /me/addresses/:id',
   'PUT /me/measurements/:id',
+  'PUT /me/measurements/default',
   'PUT /vendor/coupons/:id',
   'PUT /vendor/labels/:id',
   'PUT /vendor/measurements/:id',

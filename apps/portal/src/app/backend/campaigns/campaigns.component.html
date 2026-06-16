@@ -1,0 +1,38 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Catalog</span>
+        <h1 class="ax-page-title">Campaigns</h1>
+        <p class="ax-page-subtitle">Time-boxed Anniversary Deals and Flash Sales featured on the storefront homepage.</p>
+      </div>
+      <div class="ax-flex ax-gap-2 ax-items-center">
+        <a routerLink="/create_campaign" class="ax-btn ax-btn-primary ax-btn-sm">
+          <app-icon name="add" aria-hidden="true"></app-icon> New campaign
+        </a>
+      </div>
+    </header>
+
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="type" let-row>
+          <span class="ax-badge" [class.ax-badge-warning]="row.type === 'flash'" [class.ax-badge-info]="row.type !== 'flash'">
+            {{ typeLabel(row.type) }}
+          </span>
+        </ng-template>
+        <ng-template axCell="is_live" let-row>
+          <span
+            class="ax-badge"
+            [class.ax-badge-success]="row.is_live"
+            [class.ax-badge-neutral]="!row.is_live && row.is_active"
+            [class.ax-badge-danger]="!row.is_active">
+            {{ statusLabel(row) }}
+          </span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
+</app-admin-shell>

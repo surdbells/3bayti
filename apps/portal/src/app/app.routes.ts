@@ -182,6 +182,24 @@ export const routes: Routes = [
     title: 'Edit collection'
   },
   {
+    path: 'campaigns',
+    loadComponent: () => import('./backend/campaigns/campaigns.component').then(m => m.CampaignsComponent),
+    canActivate: [adminGuard],
+    title: 'Campaigns'
+  },
+  {
+    path: 'create_campaign',
+    loadComponent: () => import('./backend/campaigns/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
+    canActivate: [adminGuard],
+    title: 'Create campaign'
+  },
+  {
+    path: 'edit_campaign',
+    loadComponent: () => import('./backend/campaigns/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
+    canActivate: [adminGuard],
+    title: 'Edit campaign'
+  },
+  {
     path: 'stores',
     loadComponent: () => import('./backend/stores/stores.component').then(m => m.StoresComponent),
     canActivate: [adminGuard],
