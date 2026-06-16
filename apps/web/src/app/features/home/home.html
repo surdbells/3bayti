@@ -205,6 +205,7 @@
        /v3/featured-vendors?limit=4 — vendor cards with embedded
        product thumbnails. Uses StoreCard primitive.
        =========================================================== -->
+  @if (vendors() === null || vendors()!.length > 0) {
   <section class="home-section home-section--stores" aria-labelledby="stores-title">
     <header class="home-section__header">
       <p class="home-section__eyebrow">Meet the makers</p>
@@ -239,5 +240,6 @@
       </div>
     }
   </section>
+  }
 
 </main>
