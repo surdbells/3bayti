@@ -45,6 +45,28 @@ abstract class HttpTestCase extends TestCase
     protected function setUp(): void
     {
         $this->app = Bootstrap::createApp();
+
+        // The checkout + Noon-webhook controllers depend on
+        // FlashCampaignStockReducer, whose FlashCampaignItemFinder is bound in
+        // production to a Doctrine repository via
+        // EntityManager::getRepository(CampaignItem). These HTTP tests run
+        // against a STUBBED EntityManager (no DB), so resolving that finder
+        // would call getRepository() on the mock and blow up with a TypeError.
+        // Bind a no-op fake finder (no live flash items) by default so the
+        // controller graph resolves; tests exercising flash-stock behaviour
+        // can override it via bind(). The reducer's own logic is covered by
+        // FlashCampaignStockReducerTest.
+        $this->bind(
+            \Bayti\Api\Domain\Catalog\FlashCampaignItemFinder::class,
+            new class implements \Bayti\Api\Domain\Catalog\FlashCampaignItemFinder {
+                public function findActiveFlashItemsForProduct(
+                    int $productId,
+                    \DateTimeImmutable $now,
+                ): array {
+                    return [];
+                }
+            },
+        );
     }
 
     /**

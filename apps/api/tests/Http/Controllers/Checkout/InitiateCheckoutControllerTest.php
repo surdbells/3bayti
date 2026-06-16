@@ -150,6 +150,37 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function rejectsWhenPhoneNotVerified(): void
+    {
+        // Phone verification is required before placing any order. The
+        // guard fires before cart lookup, so only the user repo is needed.
+        $user = $this->makeUser(id: 7, phoneVerified: false);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $em = $this->stubEm(function ($em) use ($userRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', [], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(403, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
+        $body = $this->jsonBody($response);
+        self::assertSame('AUTH_PHONE_NOT_VERIFIED', $body['error']['code']);
+    }
+
+    #[Test]
     public function rejectsWhenNoDefaultBillingAddress(): void
     {
         $user = $this->makeUser(id: 7);

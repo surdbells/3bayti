@@ -71,6 +71,17 @@ final class HttpException extends \RuntimeException
     }
 
     /**
+     * 403 Forbidden — the account's phone number isn't verified yet.
+     * Distinct from forbidden() (a role/permission check) so clients can
+     * detect this case precisely and route the user to phone verification.
+     */
+    public static function phoneNotVerified(
+        string $message = 'Please verify your phone number before placing an order.',
+    ): self {
+        return new self(403, ErrorCodes::AUTH_PHONE_NOT_VERIFIED, $message);
+    }
+
+    /**
      * 404 Not Found.
      */
     public static function notFound(string $message = 'Resource not found.'): self

@@ -135,6 +135,14 @@ final class InitiateCheckoutController
             );
         }
 
+        // Phone verification is required before any paid order — cart
+        // checkout OR gift-card purchase. The web/mobile clients mirror
+        // this gate (routing unverified users to verification), but we
+        // enforce it here so the rule is authoritative server-side.
+        if (!$user->isPhoneVerified()) {
+            throw HttpException::phoneNotVerified();
+        }
+
         $input = $this->validator->parse($request, InitiateCheckoutInput::class);
 
         // ------------------------------------------------------------------
