@@ -431,6 +431,11 @@ return function (App $app): void {
     // Vendors — public list + per-slug detail
     $app->get('/v3/vendors', \Bayti\Api\Http\Controllers\Catalog\ListVendorsController::class);
     $app->get('/v3/featured-vendors', \Bayti\Api\Http\Controllers\Catalog\ListFeaturedVendorsController::class);
+    // HP-BE2 — Storefront campaigns (homepage Anniversary Deals + Flash Sale).
+    // /active MUST be registered before /{slug} so the literal path is not
+    // captured by the slug placeholder.
+    $app->get('/v3/campaigns/active', \Bayti\Api\Http\Controllers\Catalog\GetActiveCampaignsController::class);
+    $app->get('/v3/campaigns/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetCampaignController::class);
     $app->get('/v3/vendors/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetVendorController::class);
 
     // M2.2 — Products (Day 2 of 10-day rollout)

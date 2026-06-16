@@ -92,6 +92,27 @@ class CampaignRepository extends EntityRepository
     }
 
     /**
+     * Load one campaign by slug with items + products eager-loaded
+     * (public "view all this campaign" page).
+     */
+    public function findBySlugWithItems(string $slug): ?Campaign
+    {
+        /** @var Campaign|null $campaign */
+        $campaign = $this->createQueryBuilder('c')
+            ->addSelect('i', 'p')
+            ->leftJoin('c.items', 'i')
+            ->leftJoin('i.product', 'p')
+            ->where('c.slug = :slug')
+            ->setParameter('slug', $slug)
+            ->orderBy('i.sortOrder', 'ASC')
+            ->addOrderBy('i.id', 'ASC')
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        return $campaign;
+    }
+
+    /**
      * @return array{items: list<Campaign>, total: int}
      */
     public function findPaginated(int $limit = 20, int $offset = 0, ?string $type = null, ?bool $activeOnly = null): array
