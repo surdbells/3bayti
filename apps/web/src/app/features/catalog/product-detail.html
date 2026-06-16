@@ -44,15 +44,29 @@
         <section class="pdp-gallery" aria-label="Product images">
           <div class="pdp-main-image">
             @if (activeImage(); as img) {
-              <img
-                [src]="img.url | cfImage:'detail'"
-                [alt]="activeImageAlt()"
-                [width]="img.width || 900"
-                [height]="img.height || 1200"
-                loading="eager"
-                fetchpriority="high"
-                decoding="async"
-              />
+              <button
+                type="button"
+                class="pdp-main-image__trigger"
+                (click)="openLightbox()"
+                aria-label="View larger image"
+              >
+                <img
+                  [src]="img.url | cfImage:'detail'"
+                  [alt]="activeImageAlt()"
+                  [width]="img.width || 900"
+                  [height]="img.height || 1200"
+                  loading="eager"
+                  fetchpriority="high"
+                  decoding="async"
+                />
+                <span class="pdp-main-image__zoom" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="7"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                    <path d="M11 8.5v5M8.5 11h5"/>
+                  </svg>
+                </span>
+              </button>
             } @else {
               <div class="pdp-fallback" aria-hidden="true">
                 <span>{{ initial() }}</span>
@@ -410,6 +424,68 @@
           >
             {{ adding() ? 'Adding…' : 'Add to cart' }}
           </ui-button>
+        </div>
+      }
+
+      <!-- Gallery lightbox (PDP3) — fullscreen zoomed viewer. Mounted only
+           while open; focus is trapped within the dialog (see component),
+           Esc closes, Left/Right cycle, and clicking the backdrop closes. -->
+      @if (lightboxOpen()) {
+        <div class="pdp-lightbox" (click)="onLightboxBackdrop($event)">
+          <div
+            #lightbox
+            class="pdp-lightbox__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Product image viewer"
+            (keydown)="onLightboxKeydown($event)"
+          >
+            <button
+              #lightboxClose
+              type="button"
+              class="pdp-lightbox__close"
+              (click)="closeLightbox()"
+              aria-label="Close image viewer"
+            >
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+                <path d="M6 6l12 12M18 6L6 18"/>
+              </svg>
+            </button>
+
+            @if (activeImage(); as img) {
+              <img
+                class="pdp-lightbox__img"
+                [src]="img.url | cfImage:'gallery'"
+                [alt]="activeImageAlt()"
+              />
+            }
+
+            @if (imageCount() > 1) {
+              <button
+                type="button"
+                class="pdp-lightbox__nav pdp-lightbox__nav--prev"
+                (click)="lightboxPrev()"
+                aria-label="Previous image"
+              >
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M15 5l-7 7 7 7"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="pdp-lightbox__nav pdp-lightbox__nav--next"
+                (click)="lightboxNext()"
+                aria-label="Next image"
+              >
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+              <span class="pdp-lightbox__counter" aria-hidden="true">
+                {{ activeImageIndex() + 1 }} / {{ imageCount() }}
+              </span>
+            }
+          </div>
         </div>
       }
     }

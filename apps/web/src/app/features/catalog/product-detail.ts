@@ -5,6 +5,8 @@ import {
   computed,
   signal,
   effect,
+  ViewChild,
+  ElementRef,
 } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -159,6 +161,88 @@ export class ProductDetailComponent {
     const fallback = p.primary_image;
     return images[this.activeImageIndex()] ?? fallback;
   });
+
+  /* ----- Gallery lightbox (PDP3) -----------------------------------------
+   * Click-to-zoom fullscreen viewer. Focus moves to the close button on
+   * open and is restored to the trigger on close; Tab is trapped within
+   * the dialog; Esc closes; Left/Right cycle images. CSR-only. */
+  readonly lightboxOpen = signal(false);
+  private lightboxTrigger: HTMLElement | null = null;
+
+  @ViewChild('lightbox') private lightboxEl?: ElementRef<HTMLElement>;
+  @ViewChild('lightboxClose') private lightboxCloseBtn?: ElementRef<HTMLButtonElement>;
+
+  /** Number of gallery images (used to bound prev/next + show controls). */
+  readonly imageCount = computed(() => this.product()?.images?.length ?? 0);
+
+  openLightbox(): void {
+    if (!this.activeImage()) return;
+    this.lightboxTrigger = (typeof document !== 'undefined'
+      ? (document.activeElement as HTMLElement | null)
+      : null);
+    this.lightboxOpen.set(true);
+    // Focus the close button once the overlay has rendered.
+    setTimeout(() => this.lightboxCloseBtn?.nativeElement.focus(), 0);
+  }
+
+  closeLightbox(): void {
+    if (!this.lightboxOpen()) return;
+    this.lightboxOpen.set(false);
+    this.lightboxTrigger?.focus();
+    this.lightboxTrigger = null;
+  }
+
+  lightboxNext(): void {
+    const n = this.imageCount();
+    if (n > 1) this.activeImageIndex.set((this.activeImageIndex() + 1) % n);
+  }
+
+  lightboxPrev(): void {
+    const n = this.imageCount();
+    if (n > 1) this.activeImageIndex.set((this.activeImageIndex() - 1 + n) % n);
+  }
+
+  /** Close only when the backdrop itself (not the dialog) is clicked. */
+  onLightboxBackdrop(event: MouseEvent): void {
+    if (event.target === event.currentTarget) this.closeLightbox();
+  }
+
+  /** Esc closes; arrows cycle; Tab is trapped within the dialog. */
+  onLightboxKeydown(event: KeyboardEvent): void {
+    switch (event.key) {
+      case 'Escape':
+        event.preventDefault();
+        this.closeLightbox();
+        return;
+      case 'ArrowRight':
+        event.preventDefault();
+        this.lightboxNext();
+        return;
+      case 'ArrowLeft':
+        event.preventDefault();
+        this.lightboxPrev();
+        return;
+      case 'Tab': {
+        const root = this.lightboxEl?.nativeElement;
+        if (!root) return;
+        const focusables = Array.from(
+          root.querySelectorAll<HTMLElement>('button:not([disabled])'),
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement;
+        if (event.shiftKey && active === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && active === last) {
+          event.preventDefault();
+          first.focus();
+        }
+        return;
+      }
+    }
+  }
 
   /* ----- Buy box: variant selection + quantity + add-to-cart -------- */
 
