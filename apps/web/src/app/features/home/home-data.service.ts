@@ -4,6 +4,7 @@ import { catchError, map, Observable, of } from 'rxjs';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import type { Product } from '../catalog/product.model';
 import type { FeaturedVendor } from '../catalog/designer-card';
+import type { ActiveCampaigns } from '../campaigns/campaign.model';
 
 /**
  * HomeDataService — encapsulates the four data fetches the home page
@@ -90,6 +91,21 @@ export class HomeDataService {
         .get<FeaturedVendor[]>('GET /featured-vendors', { query: { limit: this.SPOTLIGHT_LIMIT } })
         .pipe(map(env => env.data)),
     );
+  }
+
+  /**
+   * Active campaigns — the live Anniversary Deals + Flash Sale for the
+   * homepage. Unlike the strips, the payload is an object (not a list),
+   * so it falls back to null (not []) on error/none — each section hides
+   * itself when its campaign is null.
+   */
+  activeCampaigns$(): Observable<ActiveCampaigns | null> {
+    return this.routed
+      .get<ActiveCampaigns>('GET /campaigns/active')
+      .pipe(
+        map(env => env.data),
+        catchError(() => of(null)),
+      );
   }
 
   /* ----- Internal -----------------------------------------------------------

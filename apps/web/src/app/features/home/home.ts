@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  computed,
   inject,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -14,6 +15,8 @@ import { SkeletonShimmerComponent } from '../../shared/ui/skeleton-shimmer';
 import { ProductStripComponent } from '../../shared/ui/product-strip';
 import { HeroCarouselComponent } from '../../shared/ui/hero-carousel';
 import { SectionHeaderComponent } from '../../shared/ui/section-header';
+import { CampaignSectionComponent } from './campaign-section';
+import type { ActiveCampaigns } from '../campaigns/campaign.model';
 import { DesignerCardComponent } from '../catalog/designer-card';
 import { RecommendationsService } from '../catalog/recommendations.service';
 import type { Product } from '../catalog/product.model';
@@ -52,6 +55,7 @@ import { HomeDataService } from './home-data.service';
     HeroCarouselComponent,
     DesignerCardComponent,
     SectionHeaderComponent,
+    CampaignSectionComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',
@@ -82,6 +86,17 @@ export class HomeComponent {
   readonly bestSellers  = toSignal(this.homeData.bestSellers$(),       { initialValue: null });
   readonly newArrivals  = toSignal(this.homeData.newArrivals$(),       { initialValue: null });
   readonly vendors      = toSignal(this.homeData.featuredVendors$(),   { initialValue: null });
+
+  /* ----- Campaigns: the live Anniversary Deals + Flash Sale. The payload
+   * is an object (server_now + the two campaigns), so the signal holds
+   * ActiveCampaigns | null. Each section renders only when its campaign is
+   * present; countdowns run against server_now. ------------------------- */
+  readonly campaigns = toSignal(this.homeData.activeCampaigns$(), {
+    initialValue: null as ActiveCampaigns | null,
+  });
+  readonly anniversary = computed(() => this.campaigns()?.anniversary ?? null);
+  readonly flash       = computed(() => this.campaigns()?.flash ?? null);
+  readonly serverNow   = computed(() => this.campaigns()?.server_now ?? new Date().toISOString());
 
   /* ----- Personalized "For you" strip (X.12 / W.1).
      Only loaded for signed-in users (the personalized endpoint is
