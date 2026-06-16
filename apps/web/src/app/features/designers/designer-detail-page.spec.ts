@@ -237,12 +237,12 @@ describe('DesignerDetailPageComponent', () => {
       expect(service.getBySlugCalls).toEqual([]);
     });
 
-    it('not-found state links back to /designer', async () => {
+    it('not-found state links back to /stores', async () => {
       const { fixture } = setup({ getThrows: true });
       await flush();
       fixture.detectChanges();
       const cta = fixture.nativeElement.querySelector('[data-testid="designer-not-found"] a') as HTMLAnchorElement;
-      expect(cta.getAttribute('href')).toBe('/designer');
+      expect(cta.getAttribute('href')).toBe('/stores');
     });
   });
 });

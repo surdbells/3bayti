@@ -61,10 +61,9 @@ const OUT_DIR  = process.env.OUTPUT_DIR || join(__dirname, '..', 'dist', '3bayti
 const STATIC_PAGES = [
   { loc: '/',          changefreq: 'weekly',  priority: '1.0' },
   { loc: '/category',  changefreq: 'weekly',  priority: '0.9' },
-  // /designer directory index — added M3.2.Y.4-D alongside the
-  // per-designer URLs below. Per-designer (/designer/:slug) entries
-  // come from the vendors loop in the dynamic section.
-  { loc: '/designer',  changefreq: 'weekly',  priority: '0.8' },
+  // /stores directory index (formerly /designer). Per-store
+  // (/stores/:slug) entries come from the vendors loop below.
+  { loc: '/stores',    changefreq: 'weekly',  priority: '0.8' },
 ];
 
 async function fetchSitemapDataFrom(baseUrl) {
@@ -185,7 +184,7 @@ async function main() {
     for (const vendor of apiData.vendors || []) {
       if (!vendor.slug) continue;
       entries.push({
-        loc: `${SITE_URL}/designer/${vendor.slug}`,
+        loc: `${SITE_URL}/stores/${vendor.slug}`,
         lastmod: vendor.last_modified,
         changefreq: 'weekly',
         priority: '0.6',
@@ -195,7 +194,7 @@ async function main() {
       `[sitemap] ${entries.length} URLs total `
       + `(${apiData.categories?.length || 0} categories, `
       + `${apiData.products?.length || 0} products, `
-      + `${apiData.vendors?.length || 0} designers)`
+      + `${apiData.vendors?.length || 0} stores)`
     );
   } else {
     console.log(`[sitemap] static-only mode: ${entries.length} URLs`);

@@ -53,23 +53,26 @@ export const routes: Routes = [
     title: 'Product · 3bayti',
   },
   {
-    /* Designer directory — `/designer`. Public storefront page:
-       Designer Spotlight (featured) + paginated A-Z grid of all
-       active designers. Backed by /v3/vendors + /v3/featured-vendors. */
-    path: 'designer',
+    /* Stores directory — `/stores`. Public storefront page:
+       featured stores + paginated A-Z grid of all active stores.
+       Backed by /v3/vendors + /v3/featured-vendors. (Formerly /designer.) */
+    path: 'stores',
     loadComponent: () =>
       import('./features/designers/designer-directory-page').then(m => m.DesignerDirectoryPageComponent),
-    title: 'Designers · 3bayti',
+    title: 'Stores · 3bayti',
   },
   {
-    /* Designer detail — `/designer/:slug`. Designer header + their
-       product grid. The 104 designer slugs are listed in the sitemap
-       (Y.4-D). */
-    path: 'designer/:slug',
+    /* Store detail — `/stores/:slug`. Store header + their product grid.
+       (Formerly /designer/:slug.) */
+    path: 'stores/:slug',
     loadComponent: () =>
       import('./features/designers/designer-detail-page').then(m => m.DesignerDetailPageComponent),
-    title: 'Designer · 3bayti',
+    title: 'Store · 3bayti',
   },
+  /* Legacy /designer URLs (pre-rename — indexed + bookmarked) → /stores.
+     Param-preserving so deep links to a specific store survive. */
+  { path: 'designer', pathMatch: 'full', redirectTo: 'stores' },
+  { path: 'designer/:slug', redirectTo: 'stores/:slug' },
   {
     /* Dev-only component preview. noindex'd via SeoService inside the
        component. Lazy-loaded so it doesn't bloat the production bundle

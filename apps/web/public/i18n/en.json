@@ -390,23 +390,23 @@
     }
   },
   "designers": {
-    "verified": "Verified designer",
+    "verified": "Verified store",
     "directory": {
-      "title": "Our Designers",
+      "title": "Our Stores",
       "subtitle": "Discover the ateliers and labels behind every piece in our collection.",
-      "spotlightHeading": "Designer Spotlight",
-      "allHeading": "All designers",
+      "spotlightHeading": "Featured Stores",
+      "allHeading": "All stores",
       "loadMore": "Load more",
-      "empty": "No designers to show just yet. Check back soon."
+      "empty": "No stores to show just yet. Check back soon."
     },
     "detail": {
       "productsHeading": "Collection",
       "loadMore": "Load more",
-      "emptyProducts": "This designer hasn't listed any pieces yet.",
-      "notFoundTitle": "Designer not found",
-      "notFoundBody": "We couldn't find that designer. They may have moved or are no longer with us.",
-      "backToDirectory": "Browse all designers",
-      "loadError": "We couldn't load this designer. Please try again."
+      "emptyProducts": "This store hasn't listed any pieces yet.",
+      "notFoundTitle": "Store not found",
+      "notFoundBody": "We couldn't find that store. They may have moved or are no longer with us.",
+      "backToDirectory": "Browse all stores",
+      "loadError": "We couldn't load this store. Please try again."
     }
   },
   "account": {

@@ -151,7 +151,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
             <p class="designer-detail__not-found-body">
               {{ 'designers.detail.notFoundBody' | translate }}
             </p>
-            <a routerLink="/designer" class="designer-detail__not-found-cta">
+            <a routerLink="/stores" class="designer-detail__not-found-cta">
               {{ 'designers.detail.backToDirectory' | translate }}
             </a>
           </div>

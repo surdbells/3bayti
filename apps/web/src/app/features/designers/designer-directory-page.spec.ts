@@ -125,12 +125,12 @@ describe('DesignerDirectoryPageComponent', () => {
       expect(fixture.nativeElement.querySelectorAll('[data-testid="designer-grid-item"]')).toHaveLength(2);
     });
 
-    it('tile links to /designer/:slug', async () => {
+    it('tile links to /stores/:slug', async () => {
       const { fixture } = setup({ directory: [makeDesigner({ slug: 'acme-couture' })] });
       await flush();
       fixture.detectChanges();
       const tile = fixture.nativeElement.querySelector('.designer-tile') as HTMLAnchorElement;
-      expect(tile.getAttribute('href')).toBe('/designer/acme-couture');
+      expect(tile.getAttribute('href')).toBe('/stores/acme-couture');
     });
 
     it('shows the verified badge only for verified designers', async () => {

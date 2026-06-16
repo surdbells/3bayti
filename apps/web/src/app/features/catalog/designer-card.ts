@@ -132,14 +132,14 @@ export class DesignerCardComponent {
   /** The vendor to display. Null/undefined renders nothing. */
   @Input({ required: true }) vendor!: FeaturedVendor | null;
 
-  /** Build the canonical /designer/:slug URL. */
+  /** Build the canonical /stores/:slug URL. */
   vendorUrl(): string {
-    return `/designer/${this.vendor?.slug ?? ''}`;
+    return `/stores/${this.vendor?.slug ?? ''}`;
   }
 
-  /** /designer/:slug/reviews — the rating chip links here. */
+  /** /stores/:slug/reviews — the rating chip links here. */
   vendorReviewsUrl(): string {
-    return `/designer/${this.vendor?.slug ?? ''}/reviews`;
+    return `/stores/${this.vendor?.slug ?? ''}/reviews`;
   }
 
   /** Build /product/:slug URL for a thumbnail. */

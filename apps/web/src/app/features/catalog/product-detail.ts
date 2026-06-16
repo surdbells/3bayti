@@ -751,6 +751,6 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /** URL for the vendor breadcrumb link. */
   vendorUrl(): string | null {
     const slug = this.product()?.vendor?.slug;
-    return slug ? `/designer/${slug}` : null;
+    return slug ? `/stores/${slug}` : null;
   }
 }

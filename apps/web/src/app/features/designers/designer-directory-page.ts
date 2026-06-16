@@ -85,7 +85,7 @@ import type { FeaturedVendor } from '../catalog/designer-card';
                 data-testid="designer-grid-item"
               >
                 <a
-                  [routerLink]="['/designer', d.slug]"
+                  [routerLink]="['/stores', d.slug]"
                   class="designer-tile"
                   [attr.data-slug]="d.slug"
                 >
