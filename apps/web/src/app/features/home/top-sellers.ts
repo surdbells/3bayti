@@ -52,6 +52,12 @@ import type { Product } from '../catalog/product.model';
   styles: [`
     :host { display: block; }
 
+    /* .home-section's gutter lives in home.scss, which is encapsulated to
+       HomeComponent — it doesn't reach this separate component's DOM, so
+       the inline gutter is declared here too. */
+    .home-section {
+      padding-inline: var(--page-padding-x);
+    }
     .home-section__bounds {
       max-width: var(--page-max-width);
       margin-inline: auto;
