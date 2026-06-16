@@ -16,9 +16,8 @@ import 'zone.js/testing';
 import '@angular/compiler';
 import 'reflect-metadata';
 
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
-import { execSync } from 'child_process';
+import { readFileSync, readdirSync } from 'fs';
+import { resolve, join } from 'path';
 import { beforeEach } from 'vitest';
 import { getTestBed } from '@angular/core/testing';
 import {
@@ -29,17 +28,44 @@ import { ɵresolveComponentResources } from '@angular/core';
 
 // ── Template HTML file resolver ──────────────────────────────────────────────
 // Angular JIT passes templateUrl as a relative path (e.g. './header.html').
-// We find the actual file under src/ by its basename.
+// We locate the actual file under src/ by its basename. This walks the tree
+// with Node's fs (cross-platform) rather than shelling out to `find`, which
+// does not exist / behaves differently on Windows.
+let _htmlIndex: Map<string, string> | null = null;
+function buildHtmlIndex(): Map<string, string> {
+  const index = new Map<string, string>();
+  const walk = (dir: string): void => {
+    let entries: import('fs').Dirent[];
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.name === 'node_modules') continue;
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(full);
+      } else if (entry.name.endsWith('.html') && !index.has(entry.name)) {
+        // First match wins (matches the previous `find … | head -1`).
+        index.set(entry.name, full);
+      }
+    }
+  };
+  walk(resolve(process.cwd(), 'src'));
+  return index;
+}
+
 const _htmlCache = new Map<string, string>();
 function resolveHtmlFile(url: string): string {
-  const basename = url.replace(/^\.\//, '').split('?')[0];
+  // Strip a leading './' and any query, then take just the file name in case a
+  // path prefix (POSIX or Windows separators) sneaks in.
+  const stripped = url.replace(/^\.\//, '').split('?')[0];
+  const basename = stripped.split(/[\\/]/).pop() ?? stripped;
   if (_htmlCache.has(basename)) return _htmlCache.get(basename)!;
   try {
-    const srcDir = resolve(process.cwd(), 'src');
-    const found = execSync(
-      'find ' + srcDir + ' -name "' + basename + '" -not -path "*/node_modules/*" 2>/dev/null | head -1',
-      { encoding: 'utf-8', timeout: 3000 },
-    ).trim();
+    if (!_htmlIndex) _htmlIndex = buildHtmlIndex();
+    const found = _htmlIndex.get(basename);
     const content = found ? readFileSync(found, 'utf-8') : '';
     _htmlCache.set(basename, content);
     return content;
