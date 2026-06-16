@@ -1,13 +1,15 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, HttpErrorResponse } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { CheckoutReviewPageComponent } from './checkout-review-page';
 import { CartService } from '../../core/cart';
 import { CheckoutService } from '../../core/checkout';
 import { AddressService } from '../../core/addresses';
+import { AuthService } from '../../core/auth/auth.service';
+import type { AuthUser } from '../../core/auth/auth.types';
 import { ToastService } from '../../shared/forms';
 import { provideI18n } from '../../core/i18n';
 import type { Cart, CartItem, CartQuoteResponse } from '../../core/cart';
@@ -99,6 +101,8 @@ class StubCheckoutService {
     order_id: 100,
   };
   shouldThrowInitiate = false;
+  /** When set, initiate() throws this instead (for testing error codes). */
+  initiateError: unknown = null;
   promoCalls: Array<string | null> = [];
 
   setShipping(id: number | null): void {
@@ -112,6 +116,7 @@ class StubCheckoutService {
   setPromoCode(code: string | null): void { this.promoCalls.push(code); }
   async initiate(input: unknown): Promise<InitiateCheckoutResponse> {
     this.initiateCalls.push(input);
+    if (this.initiateError !== null) throw this.initiateError;
     if (this.shouldThrowInitiate) throw new Error('initiate failed');
     return this.initiateResponse;
   }
@@ -147,12 +152,31 @@ class StubToastService {
   hasToasts = signal(false).asReadonly();
 }
 
+function makeAuthUser(o: Partial<AuthUser> = {}): AuthUser {
+  return {
+    id: 1, email: 'jane@example.com', phone: '+971501234567',
+    country_code: 'AE', first_name: 'Jane', last_name: 'Doe',
+    gender: null, dob: null, locale: null, timezone: null,
+    is_phone_verified: true, is_email_verified: false,
+    roles: ['customer'], is_store_approved: false, is_store_active: false,
+    last_login_at: null, ...o,
+  };
+}
+
+class StubAuthService {
+  private _user = signal<AuthUser | null>(makeAuthUser());
+  currentUser = this._user.asReadonly();
+  setUser(u: AuthUser | null): void { this._user.set(u); }
+}
+
 interface SetupOptions {
   cart?: Cart;
   addresses?: Address[];
   shippingId?: number | null;
   priorPromo?: string | null;
   quoteResponse?: CartQuoteResponse;
+  /** Phone-verification state of the signed-in user. Default: verified. */
+  phoneVerified?: boolean;
 }
 
 function setup(opts: SetupOptions = {}): {
@@ -176,6 +200,11 @@ function setup(opts: SetupOptions = {}): {
   if (opts.addresses !== undefined) address.setAddrs(opts.addresses);
   else address.setAddrs([makeAddress({ id: 1 })]);
 
+  const auth = new StubAuthService();
+  if (opts.phoneVerified === false) {
+    auth.setUser(makeAuthUser({ is_phone_verified: false }));
+  }
+
   TestBed.configureTestingModule({
     imports: [CheckoutReviewPageComponent],
     providers: [
@@ -186,6 +215,7 @@ function setup(opts: SetupOptions = {}): {
       { provide: CartService, useValue: cart },
       { provide: CheckoutService, useValue: checkout },
       { provide: AddressService, useValue: address },
+      { provide: AuthService, useValue: auth },
       { provide: ToastService, useValue: new StubToastService() },
     ],
   });
@@ -376,6 +406,7 @@ describe('CheckoutReviewPageComponent', () => {
           { provide: CartService, useValue: cart },
           { provide: CheckoutService, useValue: checkout },
           { provide: AddressService, useValue: address },
+          { provide: AuthService, useValue: new StubAuthService() },
           { provide: ToastService, useValue: new StubToastService() },
         ],
       });
@@ -406,6 +437,7 @@ describe('CheckoutReviewPageComponent', () => {
           { provide: CartService, useValue: cart },
           { provide: CheckoutService, useValue: checkout },
           { provide: AddressService, useValue: address },
+          { provide: AuthService, useValue: new StubAuthService() },
           { provide: ToastService, useValue: new StubToastService() },
         ],
       });
@@ -474,6 +506,54 @@ describe('CheckoutReviewPageComponent', () => {
       btn.click();
       await flush();
       expect(toast.errors).toContain('checkout.errors.initiateFailed');
+    });
+
+    it('blocks placement and routes to verification when phone is unverified (#8)', async () => {
+      const { fixture, checkout, toast, navigateSpy } = setup({
+        phoneVerified: false,
+        quoteResponse: makeQuote({ code: null, valid: false, discount: '0.00', total: '225.00' }),
+      });
+      await flush();
+      fixture.detectChanges();
+
+      /* The inline note is shown... */
+      expect(fixture.nativeElement.querySelector('[data-testid="checkout-verify-note"]')).not.toBeNull();
+
+      const btn = fixture.nativeElement.querySelector('[data-testid="review-place-order"]') as HTMLButtonElement;
+      btn.click();
+      await flush();
+
+      /* ...and placing the order routes to verification instead of initiating. */
+      expect(checkout.initiateCalls).toHaveLength(0);
+      expect(toast.errors).toContain('checkout.errors.phoneNotVerified');
+      expect(navigateSpy).toHaveBeenCalledWith(['/verify-phone'], {
+        queryParams: { returnUrl: '/checkout/review' },
+      });
+    });
+
+    it('routes to verification when the SERVER rejects with AUTH_PHONE_NOT_VERIFIED (backstop)', async () => {
+      const { fixture, checkout, toast, navigateSpy } = setup({
+        quoteResponse: makeQuote({ code: null, valid: false, discount: '0.00', total: '225.00' }),
+      });
+      /* Client thinks the phone is verified, but the server disagrees. */
+      checkout.initiateError = new HttpErrorResponse({
+        status: 403,
+        error: { error: { code: 'AUTH_PHONE_NOT_VERIFIED', message: 'Verify your phone.' } },
+      });
+      await flush();
+      fixture.detectChanges();
+
+      const btn = fixture.nativeElement.querySelector('[data-testid="review-place-order"]') as HTMLButtonElement;
+      btn.click();
+      await flush();
+
+      expect(checkout.initiateCalls).toHaveLength(1); // it tried
+      expect(toast.errors).toContain('checkout.errors.phoneNotVerified');
+      expect(navigateSpy).toHaveBeenCalledWith(['/verify-phone'], {
+        queryParams: { returnUrl: '/checkout/review' },
+      });
+      /* Did NOT show the generic failure toast. */
+      expect(toast.errors).not.toContain('checkout.errors.initiateFailed');
     });
   });
 

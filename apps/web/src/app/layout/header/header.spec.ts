@@ -162,6 +162,25 @@ describe('HeaderComponent (auth-aware)', () => {
     });
   });
 
+  describe('phone-verification badge', () => {
+    it('shows the verify badge when signed in but phone NOT verified', () => {
+      const { fixture } = setup({ user: makeUser({ is_phone_verified: false }) });
+      const badge = fixture.nativeElement.querySelector('[data-testid="header-verify-phone"]') as HTMLAnchorElement | null;
+      expect(badge).not.toBeNull();
+      expect(badge!.getAttribute('href')).toContain('/verify-phone');
+    });
+
+    it('HIDES the verify badge when the phone IS verified', () => {
+      const { fixture } = setup({ user: makeUser({ is_phone_verified: true }) });
+      expect(fixture.nativeElement.querySelector('[data-testid="header-verify-phone"]')).toBeNull();
+    });
+
+    it('HIDES the verify badge when logged out', () => {
+      const { fixture } = setup({ user: null });
+      expect(fixture.nativeElement.querySelector('[data-testid="header-verify-phone"]')).toBeNull();
+    });
+  });
+
   describe('locale switcher', () => {
     it('is always rendered regardless of auth state', () => {
       /* Logged-out, flag off */

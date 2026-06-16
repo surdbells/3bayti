@@ -155,3 +155,50 @@
     outline: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Phone-verification reminder badge
+   Shown to signed-in users who haven't verified their phone yet. Amber
+   treatment draws attention without alarming; links to the verification
+   flow. Collapses to just the dot on narrow viewports.
+   --------------------------------------------------------------------------- */
+.verify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  color: var(--color-warning-text, #92400e);
+  background: var(--color-warning-bg, #fef3c7);
+  border: 1px solid var(--color-warning-border, #fde68a);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.verify-badge:hover,
+.verify-badge:focus-visible {
+  background: var(--color-warning-bg-hover, #fde68a);
+  border-color: var(--color-warning-border-hover, #fcd34d);
+}
+
+.verify-badge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-warning-dot, #f59e0b);
+  flex: 0 0 auto;
+}
+
+@media (max-width: 600px) {
+  .verify-badge__label {
+    display: none;
+  }
+
+  .verify-badge {
+    padding: 6px;
+  }
+}

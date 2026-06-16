@@ -2,6 +2,8 @@ import {
   Component,
   ChangeDetectionStrategy,
   inject,
+  computed,
+  signal,
 } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { RouterLink } from '@angular/router';
@@ -28,6 +30,37 @@ import { AuthService } from '../../core/auth/auth.service';
   template: `
     <main class="account-hub" data-testid="account-hub-page">
       <div class="account-hub__container">
+        <div
+          *ngIf="showVerifyBanner()"
+          class="verify-reminder"
+          role="status"
+          data-testid="account-verify-banner"
+        >
+          <div class="verify-reminder__body">
+            <span class="verify-reminder__title">{{ 'account.hub.verify.title' | translate }}</span>
+            <span class="verify-reminder__desc">{{ 'account.hub.verify.desc' | translate }}</span>
+          </div>
+          <div class="verify-reminder__actions">
+            <a
+              routerLink="/verify-phone"
+              [queryParams]="{ returnUrl: '/account' }"
+              class="verify-reminder__cta"
+              data-testid="account-verify-cta"
+            >
+              {{ 'account.hub.verify.cta' | translate }}
+            </a>
+            <button
+              type="button"
+              class="verify-reminder__dismiss"
+              (click)="dismissVerifyBanner()"
+              [attr.aria-label]="'common.dismiss' | translate"
+              data-testid="account-verify-dismiss"
+            >
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+        </div>
+
         <header class="account-hub__header">
           <h1 class="account-hub__title">
             <ng-container *ngIf="firstName() !== null; else genericGreeting">
@@ -76,9 +109,27 @@ import { AuthService } from '../../core/auth/auth.service';
 export class AccountHubPageComponent {
   private readonly auth = inject(AuthService);
 
+  /** Banner dismissed for this view (resets on navigation/reload). */
+  private readonly bannerDismissed = signal(false);
+
   /** First name from the cached user, or null for a generic greeting. */
   protected firstName(): string | null {
     const name = this.auth.currentUser()?.first_name ?? null;
     return name !== null && name.trim() !== '' ? name : null;
+  }
+
+  /**
+   * Show the phone-verification reminder when the signed-in user hasn't
+   * verified their phone and hasn't dismissed the banner this session.
+   * Verification is required before placing an order.
+   */
+  protected readonly showVerifyBanner = computed(
+    () =>
+      this.auth.currentUser()?.is_phone_verified === false &&
+      !this.bannerDismissed(),
+  );
+
+  protected dismissVerifyBanner(): void {
+    this.bannerDismissed.set(true);
   }
 }

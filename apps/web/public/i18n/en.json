@@ -9,7 +9,8 @@
     "errors": {
       "network": "Network error. Please check your connection and try again."
     },
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "dismiss": "Dismiss"
   },
   "nav": {
     "home": "Home",
@@ -37,7 +38,9 @@
       "account": "My account",
       "orders": "Orders",
       "signOut": "Sign out"
-    }
+    },
+    "verifyPhone": "Verify phone",
+    "verifyPhoneAria": "Verify your phone number"
   },
   "cart": {
     "drawer": {
@@ -277,7 +280,9 @@
       "discount": "Discount",
       "total": "Total",
       "backToAddress": "Back to shipping",
-      "placeOrder": "Place order"
+      "placeOrder": "Place order",
+      "verifyNote": "Verify your phone number to place this order.",
+      "verifyLink": "Verify now"
     },
     "payment": {
       "title": "Redirecting to secure checkout",
@@ -304,7 +309,8 @@
       "initiateFailed": "We couldn't start checkout. Please try again.",
       "noShippingAddress": "Please select a shipping address.",
       "emptyCart": "Your bag is empty.",
-      "networkError": "Network error. Please try again."
+      "networkError": "Network error. Please try again.",
+      "phoneNotVerified": "Please verify your phone number before placing your order."
     }
   },
   "orders": {
@@ -429,6 +435,11 @@
       "password": {
         "title": "Password",
         "desc": "Change your account password."
+      },
+      "verify": {
+        "title": "Verify your phone number",
+        "desc": "Confirm your phone number to place orders and keep your account secure.",
+        "cta": "Verify now"
       }
     },
     "profile": {

@@ -682,3 +682,38 @@
     color: var(--color-text-secondary);
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Phone-verification notice (checkout review)
+   Inline note shown when a signed-in shopper hasn't verified their phone;
+   order placement is blocked until they do.
+   --------------------------------------------------------------------------- */
+.checkout-verify-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 16px 0 0;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  color: var(--color-warning-text, #92400e);
+  background: var(--color-warning-bg, #fef3c7);
+  border: 1px solid var(--color-warning-border, #fde68a);
+}
+
+.checkout-verify-note__link {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-warning-cta-hover, #b45309);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.checkout-verify-note__link:hover,
+.checkout-verify-note__link:focus-visible {
+  color: var(--color-warning-text, #92400e);
+}

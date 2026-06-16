@@ -7,6 +7,7 @@ import {
   OnInit,
 } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
@@ -14,11 +15,16 @@ import { CheckoutStepperComponent } from './checkout-stepper';
 import { CartService } from '../../core/cart';
 import type { CartItem, CartQuoteResponse } from '../../core/cart';
 import { CheckoutService } from '../../core/checkout';
+import { AuthService } from '../../core/auth/auth.service';
+import { AUTH_ERROR_CODES } from '../../core/auth/auth.types';
 import { AddressService } from '../../core/addresses';
 import type { Address } from '../../core/addresses';
 import { ToastService } from '../../shared/forms';
 import { CurrencyService } from '../../core/currency/currency.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+
+/** Where verify-phone returns the user after they verify mid-checkout. */
+const CHECKOUT_REVIEW_PATH = '/checkout/review';
 
 /**
  * /checkout/review — step 2 of 3.
@@ -266,6 +272,23 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
           </p>
         }
 
+        <p
+          *ngIf="needsPhoneVerification()"
+          class="checkout-verify-note"
+          role="note"
+          data-testid="checkout-verify-note"
+        >
+          {{ 'checkout.review.verifyNote' | translate }}
+          <button
+            type="button"
+            class="checkout-verify-note__link"
+            (click)="goToPhoneVerification()"
+            data-testid="checkout-verify-link"
+          >
+            {{ 'checkout.review.verifyLink' | translate }}
+          </button>
+        </p>
+
         <div class="checkout-page__actions">
           <button
             type="button"
@@ -294,11 +317,21 @@ export class CheckoutReviewPageComponent implements OnInit {
   private readonly cart = inject(CartService);
   private readonly checkout = inject(CheckoutService);
   private readonly addressService = inject(AddressService);
+  private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly toast = inject(ToastService);
   private readonly currencyService = inject(CurrencyService);
   /** True when the visitor has a non-AED display currency set. */
   protected readonly isDisplayConverted = this.currencyService.isConverted;
+
+  /**
+   * True when the signed-in shopper hasn't verified their phone. Phone
+   * verification is required before placing an order; we surface an inline
+   * note and block placement (the server enforces this too).
+   */
+  protected readonly needsPhoneVerification = computed(
+    () => this.auth.currentUser()?.is_phone_verified === false,
+  );
 
   protected readonly items = computed<CartItem[]>(() => this.cart.cart().items);
   protected readonly currency = this.cart.currency;
@@ -422,6 +455,16 @@ export class CheckoutReviewPageComponent implements OnInit {
 
   protected async onPlaceOrder(): Promise<void> {
     if (!this.canPlaceOrder()) return;
+
+    /* Phone verification is required before placing an order. Block here
+       and route to verification (returning to checkout after); the server
+       enforces the same rule, handled in the catch below as a backstop. */
+    if (this.needsPhoneVerification()) {
+      this.toast.error('checkout.errors.phoneNotVerified');
+      await this.goToPhoneVerification();
+      return;
+    }
+
     const breakdown = this.breakdown();
     if (breakdown === null) {
       this.toast.error('checkout.errors.initiateFailed');
@@ -450,8 +493,38 @@ export class CheckoutReviewPageComponent implements OnInit {
           order_reference: response.order_reference,
         },
       });
-    } catch {
+    } catch (err) {
+      /* Backstop: the server rejects unverified phones at order
+         placement. If our client state was stale, route to verification
+         rather than showing a generic failure. */
+      if (this.extractApiErrorCode(err) === AUTH_ERROR_CODES.PHONE_NOT_VERIFIED) {
+        this.toast.error('checkout.errors.phoneNotVerified');
+        await this.goToPhoneVerification();
+        return;
+      }
       this.toast.error('checkout.errors.initiateFailed');
     }
+  }
+
+  /** Route to phone verification, returning to checkout review after. */
+  protected async goToPhoneVerification(): Promise<void> {
+    await this.router.navigate(['/verify-phone'], {
+      queryParams: { returnUrl: CHECKOUT_REVIEW_PATH },
+    });
+  }
+
+  /**
+   * Pull the API error code out of a failed request. Handles the API's
+   * native nested envelope ({ error: { code } }) and the flat BFF-proxy
+   * shape ({ error_code }), returning null for non-HTTP / opaque errors.
+   */
+  private extractApiErrorCode(err: unknown): string | null {
+    if (!(err instanceof HttpErrorResponse)) return null;
+    const body = err.error as
+      | { error?: { code?: string }; error_code?: string }
+      | string
+      | null;
+    if (body === null || typeof body !== 'object') return null;
+    return body.error?.code ?? body.error_code ?? null;
   }
 }

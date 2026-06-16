@@ -272,12 +272,15 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
       });
 
       /* On success: AuthService is now in the authenticated state.
-         Clear the pending verification from sessionStorage and
-         navigate to the home page. (Future: route to a 'welcome'
-         page or honour a returnUrl.) */
+         Clear the pending verification from sessionStorage and return
+         to the page the user came from (e.g. checkout, when they were
+         gated there) if it's a safe in-app path; otherwise home. */
       this.removeFromSession(VERIFICATION_ID_STORAGE_KEY);
       this.removeFromSession(PHONE_STORAGE_KEY);
-      await this.router.navigateByUrl('/');
+      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+      await this.router.navigateByUrl(
+        this.isSafeInAppPath(returnUrl) ? returnUrl : '/',
+      );
     } catch (err) {
       const result = mapApiErrors(err, this.form, VERIFY_ERROR_MAP);
       if (result.isNetworkError) {
@@ -372,6 +375,18 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     } catch {
       /* Silently ignore. */
     }
+  }
+
+  /**
+   * True only for safe in-app paths ("/...", not "//..." which would be
+   * a protocol-relative external URL). Guards the post-verify returnUrl
+   * against open-redirects.
+   */
+  private isSafeInAppPath(value: string | null): value is string {
+    if (value === null || value.length === 0) return false;
+    if (value[0] !== '/') return false;
+    if (value.length > 1 && value[1] === '/') return false;
+    return true;
   }
 }
 

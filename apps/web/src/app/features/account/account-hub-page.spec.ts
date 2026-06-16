@@ -100,4 +100,30 @@ describe('AccountHubPageComponent', () => {
     const { fixture } = setup(null);
     expect(fixture.nativeElement.querySelector('[data-testid="account-hub-page"]')).not.toBeNull();
   });
+
+  describe('phone-verification reminder', () => {
+    it('shows the reminder banner when the phone is NOT verified', () => {
+      const { fixture } = setup(makeUser({ is_phone_verified: false }));
+      const banner = fixture.nativeElement.querySelector('[data-testid="account-verify-banner"]');
+      expect(banner).not.toBeNull();
+      const cta = fixture.nativeElement.querySelector('[data-testid="account-verify-cta"]') as HTMLAnchorElement;
+      expect(cta.getAttribute('href')).toContain('/verify-phone');
+    });
+
+    it('HIDES the banner when the phone IS verified', () => {
+      const { fixture } = setup(makeUser({ is_phone_verified: true }));
+      expect(fixture.nativeElement.querySelector('[data-testid="account-verify-banner"]')).toBeNull();
+    });
+
+    it('dismisses the banner when the dismiss button is clicked', () => {
+      const { fixture } = setup(makeUser({ is_phone_verified: false }));
+      expect(fixture.nativeElement.querySelector('[data-testid="account-verify-banner"]')).not.toBeNull();
+
+      const dismiss = fixture.nativeElement.querySelector('[data-testid="account-verify-dismiss"]') as HTMLButtonElement;
+      dismiss.click();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('[data-testid="account-verify-banner"]')).toBeNull();
+    });
+  });
 });

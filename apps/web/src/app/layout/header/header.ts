@@ -56,4 +56,15 @@ export class HeaderComponent {
   protected readonly showLoggedOutCta = computed(
     () => !this.isAuthenticated() && this.featureCta,
   );
+
+  /**
+   * True when a signed-in user still needs to verify their phone. Drives
+   * the header reminder badge — phone verification is required before
+   * placing an order (mirrored by the /account reminder + checkout gate).
+   */
+  protected readonly needsPhoneVerification = computed(
+    () =>
+      this.isAuthenticated() &&
+      this.currentUser()?.is_phone_verified === false,
+  );
 }

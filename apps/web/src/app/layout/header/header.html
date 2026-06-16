@@ -10,6 +10,17 @@
       <app-locale-switcher />
       <app-currency-switcher />
       <app-cart-icon data-testid="header-cart-icon" />
+      <a
+        *ngIf="needsPhoneVerification()"
+        routerLink="/verify-phone"
+        class="verify-badge"
+        data-testid="header-verify-phone"
+        [attr.aria-label]="'header.verifyPhoneAria' | translate"
+        [title]="'header.verifyPhoneAria' | translate"
+      >
+        <span class="verify-badge__dot" aria-hidden="true"></span>
+        <span class="verify-badge__label">{{ 'header.verifyPhone' | translate }}</span>
+      </a>
       <ng-container *ngIf="isAuthenticated() && currentUser() as user; else loggedOutCta">
         <app-user-menu [user]="user" data-testid="header-user-menu"></app-user-menu>
       </ng-container>

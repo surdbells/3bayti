@@ -69,3 +69,102 @@
   color: var(--color-text-muted, #6b6056);
   line-height: 1.4;
 }
+
+/* ---------------------------------------------------------------------------
+   Phone-verification reminder banner
+   Shown to signed-in users who haven't verified their phone. Amber accent,
+   dismissible. Stacks on narrow viewports.
+   --------------------------------------------------------------------------- */
+.verify-reminder {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px 20px;
+  border-radius: 14px;
+  background: var(--color-warning-bg, #fef3c7);
+  border: 1px solid var(--color-warning-border, #fde68a);
+}
+
+.verify-reminder__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.verify-reminder__title {
+  font-weight: 700;
+  font-size: 0.975rem;
+  color: var(--color-warning-text, #92400e);
+}
+
+.verify-reminder__desc {
+  font-size: 0.875rem;
+  color: var(--color-warning-text, #92400e);
+  opacity: 0.85;
+}
+
+.verify-reminder__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.verify-reminder__cta {
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  color: #fff;
+  background: var(--color-warning-dot, #d97706);
+  transition: background-color 0.15s ease;
+}
+
+.verify-reminder__cta:hover,
+.verify-reminder__cta:focus-visible {
+  background: var(--color-warning-cta-hover, #b45309);
+}
+
+.verify-reminder__dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-warning-text, #92400e);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.verify-reminder__dismiss:hover,
+.verify-reminder__dismiss:focus-visible {
+  background: rgba(146, 64, 14, 0.12);
+}
+
+@media (max-width: 600px) {
+  .verify-reminder {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .verify-reminder__actions {
+    justify-content: space-between;
+  }
+
+  .verify-reminder__cta {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}

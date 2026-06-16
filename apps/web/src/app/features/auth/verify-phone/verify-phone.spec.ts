@@ -265,6 +265,40 @@ describe('VerifyPhoneComponent', () => {
       expect(sessionStorage.getItem('bayti_pending_verification_id')).toBeNull();
       expect(sessionStorage.getItem('bayti_pending_verification_phone')).toBeNull();
     });
+
+    it('honours a safe returnUrl query param on success', async () => {
+      const { component, navigateByUrlSpy, fixture } = setup({
+        queryParams: {
+          verification_id: 'mc-abc',
+          phone: '+971501234567',
+          returnUrl: '/checkout/review',
+        },
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any).form.controls.code.setValue('123456');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (component as any).onSubmit();
+      fixture.detectChanges();
+
+      expect(navigateByUrlSpy).toHaveBeenCalledWith('/checkout/review');
+    });
+
+    it('ignores an unsafe (protocol-relative) returnUrl and goes home', async () => {
+      const { component, navigateByUrlSpy, fixture } = setup({
+        queryParams: {
+          verification_id: 'mc-abc',
+          phone: '+971501234567',
+          returnUrl: '//evil.example/',
+        },
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any).form.controls.code.setValue('123456');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (component as any).onSubmit();
+      fixture.detectChanges();
+
+      expect(navigateByUrlSpy).toHaveBeenCalledWith('/');
+    });
   });
 
   /* -----------------------------------------------------------------

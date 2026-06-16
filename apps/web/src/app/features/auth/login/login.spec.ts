@@ -253,10 +253,10 @@ describe('LoginComponent', () => {
   });
 
   /* -----------------------------------------------------------------
-     Phone-unverified user (auto-routed to /verify-phone)
+     Phone-unverified user — verification is no longer a login gate (#8)
      ----------------------------------------------------------------- */
   describe('phone-unverified user', () => {
-    it('routes to /verify-phone instead of returnUrl', async () => {
+    it('signs in and honours the returnUrl (does NOT force /verify-phone)', async () => {
       const { component, auth, routerNavigateSpy, routerNavigateByUrlSpy, fixture } = setup({
         queryParams: { returnUrl: '/account/orders' },
       });
@@ -269,11 +269,14 @@ describe('LoginComponent', () => {
       await (component as any).onSubmit();
       fixture.detectChanges();
 
-      expect(routerNavigateSpy).toHaveBeenCalledWith(['/verify-phone'], {
-        queryParams: { from: 'login' },
-      });
-      /* Did NOT navigate to returnUrl. */
-      expect(routerNavigateByUrlSpy).not.toHaveBeenCalled();
+      /* Phone verification is no longer a login gate: the user lands on
+         their returnUrl. The header badge + /account banner + checkout
+         gate nudge them to verify; order placement is blocked server-side. */
+      expect(routerNavigateByUrlSpy).toHaveBeenCalledWith('/account/orders');
+      expect(routerNavigateSpy).not.toHaveBeenCalledWith(
+        ['/verify-phone'],
+        expect.anything(),
+      );
     });
   });
 

@@ -201,22 +201,15 @@ export class LoginComponent implements OnInit {
 
     this.submitting.set(true);
     try {
-      const user = await this.auth.login({
+      await this.auth.login({
         email: this.form.controls.email.value,
         password: this.form.controls.password.value,
       });
 
-      /* Phone-unverified users get routed to OTP confirmation. They
-         ARE logged in at this point (the API returns tokens), but
-         the UI keeps them in a verification flow before letting
-         them shop. */
-      if (!user.is_phone_verified) {
-        await this.router.navigate(['/verify-phone'], {
-          queryParams: { from: 'login' },
-        });
-        return;
-      }
-
+      /* Phone verification is no longer a login gate — an unverified
+         user can sign in and shop, and is only blocked at order
+         placement (with a header badge + /account reminder nudging
+         them to verify). So we always honour the returnUrl. */
       const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
       const safeReturn = this.isSafeInAppPath(returnUrl) ? returnUrl : '/';
       await this.router.navigateByUrl(safeReturn);
