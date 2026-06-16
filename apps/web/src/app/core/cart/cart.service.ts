@@ -84,6 +84,27 @@ const EMPTY_CART: Cart = {
   items: [],
 };
 
+/**
+ * Response shape of POST /v3/cart/resolve — the public endpoint that
+ * prices a guest's device-local cart server-side. `cart` is the standard
+ * Cart shape (same as GET /v3/cart) with current names/images/prices;
+ * `removed` lists product_ids that no longer resolve (deleted/inactive)
+ * so the client can prune them from localStorage.
+ */
+interface GuestCartResolveResponse {
+  cart: Cart;
+  removed: number[];
+}
+
+/** Cached server-resolved display fields for a guest line, keyed by
+ *  variantKey(). Lets the synchronous synthesize show real names/prices
+ *  for already-seen lines instantly (no flash) before the next resolve. */
+interface ResolvedLineInfo {
+  name: string;
+  image: string;
+  unitPrice: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class CartService {
   private readonly _cart = signal<Cart>(EMPTY_CART);
@@ -117,6 +138,18 @@ export class CartService {
      the current authenticated session. Reset on auth false. */
   private mergedThisSession = false;
 
+  /* Monotonic token for guest-cart resolves. Each refreshGuestCart()
+     call takes the next value; only the latest may publish, so an older
+     in-flight resolve can't clobber a newer cart state (e.g. two quick
+     "add to bag" taps). */
+  private resolveSeq = 0;
+
+  /* Last server-resolved display fields per guest line (browser-session
+     memory, keyed by variantKey). Used by synthesizeCartFromGuest so a
+     re-render after a quantity change shows the known name/price/image
+     immediately instead of flashing a blank line. */
+  private readonly resolvedLineCache = new Map<string, ResolvedLineInfo>();
+
   constructor() {
     if (isPlatformBrowser(this.platformId)) {
       /* On browser construction, seed from localStorage if we're
@@ -124,6 +157,10 @@ export class CartService {
          authenticated-on-load case. */
       if (!this.auth.isAuthenticated()) {
         this._cart.set(this.loadGuestCart());
+        /* Price the local cart against the server so names/images/prices
+           are authoritative on first paint. Fire-and-forget; the
+           synthesized cart above already gives an instant item count. */
+        void this.refreshGuestCart();
       }
 
       /* React to auth transitions. */
@@ -137,6 +174,7 @@ export class CartService {
           /* On logout: drop to empty guest cart. Do NOT seed
              localStorage from the server cart. */
           this._cart.set(this.loadGuestCart());
+          void this.refreshGuestCart();
         }
       });
     }
@@ -177,6 +215,9 @@ export class CartService {
     this.saveGuestCart(guest);
     const synthesized = this.synthesizeCartFromGuest(guest);
     this._cart.set(synthesized);
+    /* Re-price against the server (handles a price change since the
+       item was added, and fills in name/image for a brand-new line). */
+    void this.refreshGuestCart();
     return synthesized;
   }
 
@@ -210,6 +251,7 @@ export class CartService {
     this.saveGuestCart(guest);
     const synthesized = this.synthesizeCartFromGuest(guest);
     this._cart.set(synthesized);
+    void this.refreshGuestCart();
     return synthesized;
   }
 
@@ -237,6 +279,7 @@ export class CartService {
     this.saveGuestCart(guest);
     const synthesized = this.synthesizeCartFromGuest(guest);
     this._cart.set(synthesized);
+    void this.refreshGuestCart();
     return synthesized;
   }
 
@@ -246,9 +289,12 @@ export class CartService {
    */
   async refresh(): Promise<Cart> {
     if (!this.auth.isAuthenticated()) {
-      const guest = this.loadGuestCart();
-      this._cart.set(guest);
-      return guest;
+      /* Instant synthesized cart (cached prices for known lines), then
+         await the server resolve so the returned cart carries
+         authoritative prices — the cart page calls refresh() on init. */
+      this._cart.set(this.loadGuestCart());
+      await this.refreshGuestCart();
+      return this._cart();
     }
     return this.runWithLoading(async () => {
       const cart = await firstValueFrom(
@@ -374,37 +420,204 @@ export class CartService {
   }
 
   /**
-   * Build a Cart shape from the guest store. The id, name, image,
-   * and prices are synthesized client-side; this is informational
-   * only — the merge call sends just the AddCartItemInput shape and
-   * the API re-resolves products at merge time.
+   * Build a Cart shape from the guest store for INSTANT render. Names,
+   * images, and prices come from the in-memory resolvedLineCache (last
+   * server resolve) when available, so a re-render after a quantity
+   * change shows real data immediately; a brand-new line renders with
+   * blank name + 0.00 until refreshGuestCart() resolves it a moment
+   * later. The synthetic id (index + 1) is the stable handle the UI
+   * passes back to updateQty / removeItem.
+   *
+   * This is a display convenience only — refreshGuestCart() is the
+   * source of authoritative pricing, and the merge call on sign-in
+   * sends just the AddCartItemInput shape for the API to re-resolve.
    */
   private synthesizeCartFromGuest(guest: GuestCart): Cart {
-    const items: CartItem[] = guest.items.map((input, idx) => ({
-      id: idx + 1, /* synthetic; used as a stable handle for updateQty / remove */
-      product_id: input.product_id,
-      product_name: '', /* unknown until PDP context provides it; future enhancement: cache in localStorage too */
-      product_image: '',
-      quantity: input.quantity,
-      unit_price: '0.00',
-      line_subtotal: '0.00',
-      size: input.size ?? null,
-      color: input.color ?? null,
-      is_custom: input.is_custom ?? false,
-      measurement: input.measurement ?? null,
-      extra_measurement: input.extra_measurement ?? null,
-      note: input.note ?? null,
-    }));
+    const items: CartItem[] = guest.items.map((input, idx) => {
+      const cached = this.resolvedLineCache.get(this.variantKey(input));
+      const unit_price = cached?.unitPrice ?? '0.00';
+      return {
+        id: idx + 1,
+        product_id: input.product_id,
+        product_name: cached?.name ?? '',
+        product_image: cached?.image ?? '',
+        quantity: input.quantity,
+        unit_price,
+        line_subtotal: this.multiplyMoney(unit_price, input.quantity),
+        size: input.size ?? null,
+        color: input.color ?? null,
+        is_custom: input.is_custom ?? false,
+        measurement: input.measurement ?? null,
+        extra_measurement: input.extra_measurement ?? null,
+        note: input.note ?? null,
+      };
+    });
     const item_count = items.reduce((acc, it) => acc + it.quantity, 0);
+    const subtotal = items.reduce(
+      (acc, it) => this.addMoney(acc, it.line_subtotal),
+      '0.00',
+    );
     return {
       id: 0,
       status: 'active',
-      currency: guest.currency,
+      currency: guest.currency ?? 'AED',
       cart_code: 'PND',
-      subtotal: '0.00',
+      subtotal,
       item_count,
       items,
     };
+  }
+
+  /**
+   * Price the guest's device-local cart against the server via the
+   * public POST /v3/cart/resolve endpoint and publish the authoritative
+   * cart (current names, images, prices, and subtotal). Browser-only.
+   *
+   * Resilience:
+   *   - A monotonic resolveSeq token ensures only the latest call may
+   *     publish, so a slow earlier resolve can't overwrite a newer
+   *     cart (e.g. two quick adds).
+   *   - On failure (offline / 5xx) we keep the synthesized cart already
+   *     in the signal — the drawer still opens with the local data.
+   *
+   * Reconciliation:
+   *   - Lines are matched back to localStorage by variantKey so the
+   *     synthetic (index + 1) ids stay consistent for updateQty /
+   *     removeItem.
+   *   - Products the server reports under `removed` (deleted/inactive)
+   *     are pruned from localStorage and from the resolved cache.
+   */
+  private async refreshGuestCart(): Promise<void> {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    const guest = this.loadGuestCartRaw();
+    if (guest.items.length === 0) {
+      /* Nothing to price — the caller already set an empty synthesized
+         cart; clear any stale cache so a future add starts fresh. */
+      this.resolvedLineCache.clear();
+      return;
+    }
+
+    const seq = ++this.resolveSeq;
+    this._isLoading.set(true);
+    try {
+      const resp = await firstValueFrom(
+        this.http.post<GuestCartResolveResponse>(
+          `${V3_BASE}/v3/cart/resolve`,
+          { items: guest.items },
+        ),
+      );
+
+      /* A newer resolve started after us — discard this (now stale)
+         result without touching the signal or localStorage. */
+      if (seq !== this.resolveSeq) return;
+
+      const removed = new Set<number>(resp.removed ?? []);
+
+      /* Index resolved lines by variantKey and refresh the cache. */
+      const resolvedByKey = new Map<string, CartItem>();
+      for (const line of resp.cart.items) {
+        const key = this.variantKey(line);
+        resolvedByKey.set(key, line);
+        this.resolvedLineCache.set(key, {
+          name: line.product_name,
+          image: line.product_image,
+          unitPrice: line.unit_price,
+        });
+      }
+
+      /* Rebuild from localStorage order so ids stay stable; drop any
+         line the server couldn't resolve (removed or missing). */
+      const keptInputs: AddCartItemInput[] = [];
+      const items: CartItem[] = [];
+      for (const input of guest.items) {
+        const key = this.variantKey(input);
+        const resolved = resolvedByKey.get(key);
+        if (removed.has(input.product_id) || resolved === undefined) {
+          this.resolvedLineCache.delete(key);
+          continue;
+        }
+        items.push({
+          id: keptInputs.length + 1,
+          product_id: input.product_id,
+          product_name: resolved.product_name,
+          product_image: resolved.product_image,
+          quantity: input.quantity,
+          unit_price: resolved.unit_price,
+          line_subtotal: resolved.line_subtotal,
+          size: input.size ?? null,
+          color: input.color ?? null,
+          is_custom: input.is_custom ?? false,
+          measurement: input.measurement ?? null,
+          extra_measurement: input.extra_measurement ?? null,
+          note: input.note ?? null,
+        });
+        keptInputs.push(input);
+      }
+
+      /* Persist the pruned cart if the server dropped anything. */
+      if (keptInputs.length !== guest.items.length) {
+        this.saveGuestCart({ ...guest, items: keptInputs });
+      }
+
+      const item_count = items.reduce((acc, it) => acc + it.quantity, 0);
+      this._cart.set({
+        id: 0,
+        status: 'active',
+        currency: resp.cart.currency ?? guest.currency ?? 'AED',
+        cart_code: 'PND',
+        subtotal: resp.cart.subtotal,
+        item_count,
+        items,
+      });
+    } catch (err) {
+      /* Keep the synthesized cart already in the signal. */
+      if (seq === this.resolveSeq && typeof console !== 'undefined') {
+        console.warn(
+          '[CartService] guest cart resolve failed; showing local cart',
+          err,
+        );
+      }
+    } finally {
+      /* Only the latest resolve owns the loading flag. */
+      if (seq === this.resolveSeq) {
+        this._isLoading.set(false);
+      }
+    }
+  }
+
+  /**
+   * Stable dedupe/match key for a cart line across the guest store, the
+   * resolve response, and the cache. Mirrors findMatchingItemIdx's axes
+   * (product + size + color + is_custom).
+   */
+  private variantKey(it: {
+    product_id: number;
+    size?: string | null;
+    color?: string | null;
+    is_custom?: boolean;
+  }): string {
+    return [
+      it.product_id,
+      it.size ?? '',
+      it.color ?? '',
+      it.is_custom ? 1 : 0,
+    ].join('|');
+  }
+
+  /* Decimal-string money helpers for the synthesized fallback (server
+     responses already arrive pre-computed). Cents-integer math avoids
+     binary-float drift for typical catalogue prices. */
+  private multiplyMoney(price: string, qty: number): string {
+    const cents = Math.round(parseFloat(price || '0') * 100) * qty;
+    return (cents / 100).toFixed(2);
+  }
+
+  private addMoney(a: string, b: string): string {
+    const cents =
+      Math.round(parseFloat(a || '0') * 100) +
+      Math.round(parseFloat(b || '0') * 100);
+    return (cents / 100).toFixed(2);
   }
 
   /**
