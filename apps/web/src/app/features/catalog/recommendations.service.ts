@@ -25,7 +25,7 @@ export interface Recommendation {
  *   GET /v3/me/recommendations?limit=N              (authenticated)
  *
  * Both are catalog reads, so they go through RoutedHttpClient (like
- * DesignerService / home-data.service.ts), NOT the Bearer-bound direct
+ * StoreService / home-data.service.ts), NOT the Bearer-bound direct
  * client. The personalized endpoint is auth-gated server-side; on the
  * web it is only called for signed-in users, and any 401 degrades to an
  * empty list rather than surfacing an error (recommendations are a

@@ -58,7 +58,7 @@ export const routes: Routes = [
        Backed by /v3/vendors + /v3/featured-vendors. (Formerly /designer.) */
     path: 'stores',
     loadComponent: () =>
-      import('./features/designers/designer-directory-page').then(m => m.DesignerDirectoryPageComponent),
+      import('./features/stores/store-directory-page').then(m => m.StoreDirectoryPageComponent),
     title: 'Stores · 3bayti',
   },
   {
@@ -66,7 +66,7 @@ export const routes: Routes = [
        (Formerly /designer/:slug.) */
     path: 'stores/:slug',
     loadComponent: () =>
-      import('./features/designers/designer-detail-page').then(m => m.DesignerDetailPageComponent),
+      import('./features/stores/store-detail-page').then(m => m.StoreDetailPageComponent),
     title: 'Store · 3bayti',
   },
   /* Legacy /designer URLs (pre-rename — indexed + bookmarked) → /stores.

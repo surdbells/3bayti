@@ -2,10 +2,10 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { DesignerService } from './designer.service';
+import { StoreService } from './store.service';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import { ApiConfigService } from '../../core/api/api-config.service';
-import type { Designer } from './designer.model';
+import type { Store } from './store.model';
 import type { Product } from './product.model';
 
 const V3 = 'https://api-v3.3bayti.ae';
@@ -14,7 +14,7 @@ function envelope<T>(data: T, meta?: { total: number; limit: number; offset: num
   return meta ? { data, meta } : { data };
 }
 
-function makeDesigner(o: Partial<Designer> = {}): Designer {
+function makeStore(o: Partial<Store> = {}): Store {
   return {
     id: 1, slug: 'acme-couture', name: 'Acme Couture',
     description: 'Fine kaftans', logo_url: 'https://img/logo.png',
@@ -30,23 +30,23 @@ function makeProduct(o: Partial<Product> = {}): Product {
   } as Product;
 }
 
-function setup(): { service: DesignerService; controller: HttpTestingController } {
+function setup(): { service: StoreService; controller: HttpTestingController } {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
       provideHttpClientTesting(),
       RoutedHttpClient,
       ApiConfigService,
-      DesignerService,
+      StoreService,
     ],
   });
   return {
-    service: TestBed.inject(DesignerService),
+    service: TestBed.inject(StoreService),
     controller: TestBed.inject(HttpTestingController),
   };
 }
 
-describe('DesignerService', () => {
+describe('StoreService', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.restoreAllMocks();
@@ -60,7 +60,7 @@ describe('DesignerService', () => {
       expect(req.request.method).toBe('GET');
       expect(req.request.params.get('limit')).toBe('24');
       expect(req.request.params.get('offset')).toBe('0');
-      req.flush(envelope([makeDesigner({ id: 1 }), makeDesigner({ id: 2, slug: 'b' })],
+      req.flush(envelope([makeStore({ id: 1 }), makeStore({ id: 2, slug: 'b' })],
         { total: 2, limit: 24, offset: 0, has_more: false }));
       await promise;
       expect(service.directory()).toHaveLength(2);
@@ -71,7 +71,7 @@ describe('DesignerService', () => {
       const { service, controller } = setup();
       const p1 = service.loadMore({ offset: 0, limit: 2 });
       controller.expectOne(r => r.url === `${V3}/v3/vendors`).flush(
-        envelope([makeDesigner({ id: 1 }), makeDesigner({ id: 2, slug: 'b' })],
+        envelope([makeStore({ id: 1 }), makeStore({ id: 2, slug: 'b' })],
           { total: 4, limit: 2, offset: 0, has_more: true }));
       await p1;
       expect(service.directory()).toHaveLength(2);
@@ -80,7 +80,7 @@ describe('DesignerService', () => {
       const p2 = service.loadMore();
       const req2 = controller.expectOne(r => r.url === `${V3}/v3/vendors`);
       expect(req2.request.params.get('offset')).toBe('2');
-      req2.flush(envelope([makeDesigner({ id: 3, slug: 'c' })],
+      req2.flush(envelope([makeStore({ id: 3, slug: 'c' })],
         { total: 4, limit: 2, offset: 2, has_more: false }));
       await p2;
       expect(service.directory()).toHaveLength(3);
@@ -90,7 +90,7 @@ describe('DesignerService', () => {
     it('defaults has_more to false when meta is absent', async () => {
       const { service, controller } = setup();
       const promise = service.loadMore();
-      controller.expectOne(r => r.url === `${V3}/v3/vendors`).flush(envelope([makeDesigner()]));
+      controller.expectOne(r => r.url === `${V3}/v3/vendors`).flush(envelope([makeStore()]));
       await promise;
       expect(service.hasMore()).toBe(false);
     });
@@ -99,7 +99,7 @@ describe('DesignerService', () => {
       const { service, controller } = setup();
       const promise = service.loadMore();
       controller.expectOne(r => r.url === `${V3}/v3/vendors`)
-        .flush(envelope({ unexpected: true } as unknown as Designer[]));
+        .flush(envelope({ unexpected: true } as unknown as Store[]));
       await promise;
       expect(service.directory()).toEqual([]);
     });
@@ -117,7 +117,7 @@ describe('DesignerService', () => {
       const { service, controller } = setup();
       const promise = service.loadMore();
       controller.expectOne(r => r.url === `${V3}/v3/vendors`).flush(
-        envelope([makeDesigner()], { total: 1, limit: 24, offset: 0, has_more: true }));
+        envelope([makeStore()], { total: 1, limit: 24, offset: 0, has_more: true }));
       await promise;
       expect(service.directory()).toHaveLength(1);
       service.reset();
@@ -153,7 +153,7 @@ describe('DesignerService', () => {
       const promise = service.getBySlug('acme-couture');
       const req = controller.expectOne(`${V3}/v3/vendors/acme-couture`);
       expect(req.request.method).toBe('GET');
-      req.flush(envelope(makeDesigner({ slug: 'acme-couture', name: 'Acme Couture' })));
+      req.flush(envelope(makeStore({ slug: 'acme-couture', name: 'Acme Couture' })));
       const result = await promise;
       expect(result.slug).toBe('acme-couture');
       expect(result.name).toBe('Acme Couture');

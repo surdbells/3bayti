@@ -1,23 +1,23 @@
-/* Designer directory page styles (Y.4-B). */
+/* Store directory page styles (Y.4-B). */
 
-.designer-directory {
+.store-directory {
   min-height: calc(100vh - 200px);
   padding: 32px 0 64px;
   background: var(--color-bg-default, #faf7f1);
 }
 
-.designer-directory__container {
+.store-directory__container {
   max-width: 1120px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-.designer-directory__header {
+.store-directory__header {
   margin-bottom: 32px;
   text-align: center;
 }
 
-.designer-directory__title {
+.store-directory__title {
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 36px;
   font-weight: 600;
@@ -26,7 +26,7 @@
   letter-spacing: -0.01em;
 }
 
-.designer-directory__subtitle {
+.store-directory__subtitle {
   font-size: 15px;
   color: var(--color-text-muted, #6b6056);
   margin: 0;
@@ -36,7 +36,7 @@
   line-height: 1.5;
 }
 
-.designer-directory__section-title {
+.store-directory__section-title {
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 22px;
   font-weight: 600;
@@ -46,23 +46,23 @@
 
 /* --- Spotlight (featured) ------------------------------------------ */
 
-.designer-directory__spotlight {
+.store-directory__spotlight {
   margin-bottom: 48px;
 }
 
-.designer-directory__spotlight-grid {
+.store-directory__spotlight-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
 
-/* --- All designers grid -------------------------------------------- */
+/* --- All stores grid -------------------------------------------- */
 
-.designer-directory__all {
+.store-directory__all {
   margin-bottom: 32px;
 }
 
-.designer-grid {
+.store-grid {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -71,11 +71,11 @@
   gap: 18px;
 }
 
-.designer-grid__item {
+.store-grid__item {
   margin: 0;
 }
 
-.designer-tile {
+.store-tile {
   display: block;
   text-decoration: none;
   color: inherit;
@@ -94,7 +94,7 @@
   }
 }
 
-.designer-tile__media {
+.store-tile__media {
   aspect-ratio: 3 / 2;
   background: var(--color-bg-muted, #f4f0ea);
   overflow: hidden;
@@ -107,17 +107,17 @@
   }
 }
 
-.designer-tile__media-blank {
+.store-tile__media-blank {
   width: 100%;
   height: 100%;
   background: linear-gradient(135deg, #efe8d8 25%, #e6dfcd 75%);
 }
 
-.designer-tile__body {
+.store-tile__body {
   padding: 14px 16px;
 }
 
-.designer-tile__name {
+.store-tile__name {
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 17px;
   font-weight: 600;
@@ -128,7 +128,7 @@
   gap: 6px;
 }
 
-.designer-tile__verified {
+.store-tile__verified {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -144,13 +144,13 @@
 
 /* --- Load more / empty / loading ----------------------------------- */
 
-.designer-directory__load-more {
+.store-directory__load-more {
   display: flex;
   justify-content: center;
   margin-top: 28px;
 }
 
-.designer-directory__load-more-btn {
+.store-directory__load-more-btn {
   appearance: none;
   background: #fff;
   border: 1px solid var(--color-border-default, #d8cfc1);
@@ -177,8 +177,8 @@
   }
 }
 
-.designer-directory__loading,
-.designer-directory__empty {
+.store-directory__loading,
+.store-directory__empty {
   text-align: center;
   padding: 48px 20px;
   color: var(--color-text-muted, #6b6056);

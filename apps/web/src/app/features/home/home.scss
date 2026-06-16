@@ -246,13 +246,13 @@
 }
 
 /* =====================================================================
-   GENERIC HOME-SECTION HEADER (shared by Categories + Designer Spotlight)
+   GENERIC HOME-SECTION HEADER (shared by Categories + Store Spotlight)
    ProductStrip has its own header pattern — these two surfaces use a
    slightly different shape because they're not horizontally scrolling.
 
    All sections use the global --page-padding-x / --page-max-width tokens
    so left/right alignment is identical across hero, categories, strips,
-   designers, and footer. Single source of truth for page gutter.
+   stores, and footer. Single source of truth for page gutter.
    ===================================================================== */
 
 .home-section {
@@ -488,25 +488,25 @@
 
 /* =====================================================================
    DESIGNER SPOTLIGHT GRID
-   4 designer cards in a row on desktop, 2x2 on tablet, stacked on mobile.
-   The cards themselves are styled in designer-card.scss.
+   4 store cards in a row on desktop, 2x2 on tablet, stacked on mobile.
+   The cards themselves are styled in store-card.scss.
    ===================================================================== */
 
-.designers-grid {
+.stores-grid {
   max-width: var(--page-max-width);
   margin: 0 auto;
   display: grid;
   gap: 24px;
   grid-template-columns: 1fr;
   /* Equal heights enforced by grid's default align-items: stretch.
-     The DesignerCard's internal flex column with margin-top:auto on the
+     The StoreCard's internal flex column with margin-top:auto on the
      products row keeps internal content aligned even when descriptions
      vary in length. */
   align-items: stretch;
 }
 
 @media (min-width: 768px) {
-  .designers-grid {
+  .stores-grid {
     /* 2-up at all desktop+ widths per Phase 1 W3 direction. The
        previous 4-up layout made cards too small (≈300px wide) on
        1280px+ screens; 2-up gives each card ~620px to work with —
@@ -516,11 +516,11 @@
   }
 }
 
-/* Designer skeleton — matches DesignerCard's outer dimensions so the
+/* Store skeleton — matches StoreCard's outer dimensions so the
  * layout doesn't shift when real content swaps in. Updated for W3
  * redesign (was 420px min-height with 2x2 mosaic; now 360px with
  * horizontal product row). */
-.designer-skeleton {
+.store-skeleton {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -532,10 +532,10 @@
   box-shadow: var(--shadow-card-resting);
 }
 
-.designer-skeleton ui-skeleton-shimmer {
+.store-skeleton ui-skeleton-shimmer {
   display: block;
 }
 
-.designer-skeleton ui-skeleton-shimmer:last-child {
+.store-skeleton ui-skeleton-shimmer:last-child {
   margin-top: auto;
 }

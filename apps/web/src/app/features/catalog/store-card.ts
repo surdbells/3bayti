@@ -8,7 +8,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  *
  * Lives here because /v2/featured-vendors (Phase 1 backend deliverable)
  * is its only consumer right now. Will move to a shared model file in
- * Phase 6 when /designer/:slug also consumes vendor data.
+ * Phase 6 when /store/:slug also consumes vendor data.
  */
 export interface FeaturedVendorProduct {
   /** Stable identifier for *trackBy. */
@@ -22,7 +22,7 @@ export interface FeaturedVendorProduct {
 }
 
 export interface FeaturedVendor {
-  /** Slug for the /designer/:slug link target. */
+  /** Slug for the /store/:slug link target. */
   slug: string;
   /** Display name. */
   name: string;
@@ -45,16 +45,16 @@ export interface FeaturedVendor {
 }
 
 /**
- * DesignerCard — vendor card with embedded product thumbnails.
+ * StoreCard — vendor card with embedded product thumbnails.
  *
- * Used by the home-page Designer Spotlight section (Phase 1) and
- * eventually any "designers we think you'd love" surface (Phase 6+).
+ * Used by the home-page Store Spotlight section (Phase 1) and
+ * eventually any "stores we think you'd love" surface (Phase 6+).
  *
  * Layout (left-to-right reading order):
  *   - Top: vendor name (Playfair) + rating chip (if rating_count > 0)
  *   - Description (Cormorant italic, dimmed) — optional
  *   - 2×2 grid of product thumbnails, each clicks through to PDP
- *   - Bottom: "View collection →" link to /designer/:slug
+ *   - Bottom: "View collection →" link to /store/:slug
  *
  * Visual cohesion with ProductCard:
  *   - Same cream surface (#fdfaf3)
@@ -63,7 +63,7 @@ export interface FeaturedVendor {
  *   - Same hover lift (-6px) and shadow deepening
  *
  * Important difference from ProductCard:
- *   - DesignerCard is NOT a single anchor. The outer container is a
+ *   - StoreCard is NOT a single anchor. The outer container is a
  *     plain div because the card has multiple click targets (4 product
  *     thumbnails + "View collection" link, all going to different
  *     destinations). Each is a separate <a>.
@@ -73,37 +73,37 @@ export interface FeaturedVendor {
  *     navigation destinations.
  */
 @Component({
-  selector: 'ui-designer-card',
+  selector: 'ui-store-card',
   standalone: true,
   imports: [CfImagePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (vendor) {
-      <article class="designer-card">
-        <header class="designer-card__header">
-          <a [href]="vendorUrl()" class="designer-card__name-link">
-            <h3 class="designer-card__name">{{ vendor.name }}</h3>
+      <article class="store-card">
+        <header class="store-card__header">
+          <a [href]="vendorUrl()" class="store-card__name-link">
+            <h3 class="store-card__name">{{ vendor.name }}</h3>
           </a>
           @if (vendor.rating !== null && vendor.rating_count > 0) {
-            <a [href]="vendorReviewsUrl()" class="designer-card__rating">
+            <a [href]="vendorReviewsUrl()" class="store-card__rating">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
               </svg>
               <span>{{ vendor.rating.toFixed(1) }}</span>
-              <span class="designer-card__rating-count">({{ vendor.rating_count }})</span>
+              <span class="store-card__rating-count">({{ vendor.rating_count }})</span>
             </a>
           }
         </header>
 
         @if (vendor.description) {
-          <p class="designer-card__description" [innerHTML]="vendor.description"></p>
+          <p class="store-card__description" [innerHTML]="vendor.description"></p>
         }
 
-        <div class="designer-card__products" role="list" aria-label="Featured products">
+        <div class="store-card__products" role="list" aria-label="Featured products">
           @for (product of vendor.products.slice(0, 4); track product.id) {
             <a
               [href]="productUrl(product.slug)"
-              class="designer-card__product"
+              class="store-card__product"
               role="listitem"
               [attr.aria-label]="product.name"
             >
@@ -117,7 +117,7 @@ export interface FeaturedVendor {
           }
         </div>
 
-        <a [href]="vendorUrl()" class="designer-card__view-collection">
+        <a [href]="vendorUrl()" class="store-card__view-collection">
           View collection
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -126,9 +126,9 @@ export interface FeaturedVendor {
       </article>
     }
   `,
-  styleUrl: './designer-card.scss',
+  styleUrl: './store-card.scss',
 })
-export class DesignerCardComponent {
+export class StoreCardComponent {
   /** The vendor to display. Null/undefined renders nothing. */
   @Input({ required: true }) vendor!: FeaturedVendor | null;
 

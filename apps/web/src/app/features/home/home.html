@@ -201,14 +201,14 @@
   }
 
   <!-- ===========================================================
-       DESIGNER SPOTLIGHT
-       /v2/featured-vendors?limit=4 — vendor cards with embedded
-       product thumbnails. Uses DesignerCard primitive.
+       STORE SPOTLIGHT
+       /v3/featured-vendors?limit=4 — vendor cards with embedded
+       product thumbnails. Uses StoreCard primitive.
        =========================================================== -->
-  <section class="home-section home-section--designers" aria-labelledby="designers-title">
+  <section class="home-section home-section--stores" aria-labelledby="stores-title">
     <header class="home-section__header">
       <p class="home-section__eyebrow">Meet the makers</p>
-      <h2 id="designers-title" class="home-section__title">Stores we love</h2>
+      <h2 id="stores-title" class="home-section__title">Stores we love</h2>
       <a href="/stores" class="home-section__view-all">
         View all
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -219,17 +219,17 @@
 
     @if (vendors(); as vs) {
       @if (vs.length > 0) {
-        <div class="designers-grid">
+        <div class="stores-grid">
           @for (vendor of vs; track vendor.slug) {
-            <ui-designer-card [vendor]="vendor" />
+            <ui-store-card [vendor]="vendor" />
           }
         </div>
       }
     } @else {
       <!-- Skeleton state — 4 placeholders matching the real card's layout. -->
-      <div class="designers-grid">
+      <div class="stores-grid">
         @for (i of [0, 1, 2, 3]; track i) {
-          <div class="designer-skeleton">
+          <div class="store-skeleton">
             <ui-skeleton-shimmer height="20px" width="60%" [rounded]="false" />
             <ui-skeleton-shimmer height="14px" width="100%" [rounded]="false" />
             <ui-skeleton-shimmer height="14px" width="80%" [rounded]="false" />

@@ -4,13 +4,13 @@ import { provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
-import { DesignerDirectoryPageComponent } from './designer-directory-page';
-import { DesignerService } from '../catalog/designer.service';
+import { StoreDirectoryPageComponent } from './store-directory-page';
+import { StoreService } from '../catalog/store.service';
 import { provideI18n } from '../../core/i18n';
-import type { Designer } from '../catalog/designer.model';
-import type { FeaturedVendor } from '../catalog/designer-card';
+import type { Store } from '../catalog/store.model';
+import type { FeaturedVendor } from '../catalog/store-card';
 
-function makeDesigner(o: Partial<Designer> = {}): Designer {
+function makeStore(o: Partial<Store> = {}): Store {
   return {
     id: 1, slug: 'acme', name: 'Acme Couture', description: null,
     logo_url: null, cover_image_url: 'https://img/cover.png',
@@ -25,8 +25,8 @@ function makeFeatured(o: Partial<FeaturedVendor> = {}): FeaturedVendor {
   };
 }
 
-class StubDesignerService {
-  private _dir = signal<Designer[]>([]);
+class StubStoreService {
+  private _dir = signal<Store[]>([]);
   private _loading = signal(false);
   private _hasMore = signal(false);
   directory = this._dir.asReadonly();
@@ -37,12 +37,12 @@ class StubDesignerService {
   loadMoreCalls = 0;
   getFeaturedCalls = 0;
   featuredResult: FeaturedVendor[] = [];
-  directoryResult: Designer[] = [];
+  directoryResult: Store[] = [];
   loadMoreThrows = false;
   featuredThrows = false;
 
   reset(): void { this.resetCalls++; this._dir.set([]); }
-  async loadMore(): Promise<Designer[]> {
+  async loadMore(): Promise<Store[]> {
     this.loadMoreCalls++;
     if (this.loadMoreThrows) throw new Error('list failed');
     this._dir.set(this.directoryResult);
@@ -59,15 +59,15 @@ class StubDesignerService {
 
 function setup(opts: {
   featured?: FeaturedVendor[];
-  directory?: Designer[];
+  directory?: Store[];
   hasMore?: boolean;
   loadMoreThrows?: boolean;
   featuredThrows?: boolean;
 } = {}): {
-  fixture: ComponentFixture<DesignerDirectoryPageComponent>;
-  service: StubDesignerService;
+  fixture: ComponentFixture<StoreDirectoryPageComponent>;
+  service: StubStoreService;
 } {
-  const service = new StubDesignerService();
+  const service = new StubStoreService();
   service.featuredResult = opts.featured ?? [];
   service.directoryResult = opts.directory ?? [];
   if (opts.loadMoreThrows === true) service.loadMoreThrows = true;
@@ -75,16 +75,16 @@ function setup(opts: {
   if (opts.hasMore === true) service.setHasMore(true);
 
   TestBed.configureTestingModule({
-    imports: [DesignerDirectoryPageComponent],
+    imports: [StoreDirectoryPageComponent],
     providers: [
       provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
       provideI18n(),
-      { provide: DesignerService, useValue: service },
+      { provide: StoreService, useValue: service },
     ],
   });
-  const fixture = TestBed.createComponent(DesignerDirectoryPageComponent);
+  const fixture = TestBed.createComponent(StoreDirectoryPageComponent);
   fixture.detectChanges();
   return { fixture, service };
 }
@@ -93,7 +93,7 @@ async function flush(): Promise<void> {
   for (let i = 0; i < 8; i++) await Promise.resolve();
 }
 
-describe('DesignerDirectoryPageComponent', () => {
+describe('StoreDirectoryPageComponent', () => {
   afterEach(() => {
     try {
       const controller = TestBed.inject(HttpTestingController);
@@ -107,7 +107,7 @@ describe('DesignerDirectoryPageComponent', () => {
 
   describe('init', () => {
     it('resets and loads the directory + fetches featured on init', async () => {
-      const { service } = setup({ directory: [makeDesigner()] });
+      const { service } = setup({ directory: [makeStore()] });
       await flush();
       expect(service.resetCalls).toBe(1);
       expect(service.loadMoreCalls).toBe(1);
@@ -116,91 +116,91 @@ describe('DesignerDirectoryPageComponent', () => {
   });
 
   describe('directory grid', () => {
-    it('renders one tile per designer', async () => {
+    it('renders one tile per store', async () => {
       const { fixture } = setup({
-        directory: [makeDesigner({ id: 1, slug: 'a' }), makeDesigner({ id: 2, slug: 'b' })],
+        directory: [makeStore({ id: 1, slug: 'a' }), makeStore({ id: 2, slug: 'b' })],
       });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelectorAll('[data-testid="designer-grid-item"]')).toHaveLength(2);
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="store-grid-item"]')).toHaveLength(2);
     });
 
     it('tile links to /stores/:slug', async () => {
-      const { fixture } = setup({ directory: [makeDesigner({ slug: 'acme-couture' })] });
+      const { fixture } = setup({ directory: [makeStore({ slug: 'acme-couture' })] });
       await flush();
       fixture.detectChanges();
-      const tile = fixture.nativeElement.querySelector('.designer-tile') as HTMLAnchorElement;
+      const tile = fixture.nativeElement.querySelector('.store-tile') as HTMLAnchorElement;
       expect(tile.getAttribute('href')).toBe('/stores/acme-couture');
     });
 
-    it('shows the verified badge only for verified designers', async () => {
+    it('shows the verified badge only for verified stores', async () => {
       const { fixture } = setup({
-        directory: [makeDesigner({ id: 1, slug: 'v', is_verified: true }),
-                    makeDesigner({ id: 2, slug: 'n', is_verified: false })],
+        directory: [makeStore({ id: 1, slug: 'v', is_verified: true }),
+                    makeStore({ id: 2, slug: 'n', is_verified: false })],
       });
       await flush();
       fixture.detectChanges();
-      const badges = fixture.nativeElement.querySelectorAll('.designer-tile__verified');
+      const badges = fixture.nativeElement.querySelectorAll('.store-tile__verified');
       expect(badges).toHaveLength(1);
     });
 
-    it('shows the empty state when no designers', async () => {
+    it('shows the empty state when no stores', async () => {
       const { fixture } = setup({ directory: [] });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-empty"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-empty"]')).not.toBeNull();
     });
 
     it('shows the loading state while the first load is in flight', async () => {
       const { fixture, service } = setup({ directory: [] });
       service.setLoading(true);
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-loading"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-loading"]')).not.toBeNull();
     });
   });
 
   describe('spotlight', () => {
-    it('renders the spotlight when featured designers exist', async () => {
+    it('renders the spotlight when featured stores exist', async () => {
       const { fixture } = setup({
         featured: [makeFeatured({ slug: 'a' })],
-        directory: [makeDesigner()],
+        directory: [makeStore()],
       });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-spotlight"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-spotlight"]')).not.toBeNull();
     });
 
-    it('hides the spotlight when no featured designers', async () => {
-      const { fixture } = setup({ featured: [], directory: [makeDesigner()] });
+    it('hides the spotlight when no featured stores', async () => {
+      const { fixture } = setup({ featured: [], directory: [makeStore()] });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-spotlight"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-spotlight"]')).toBeNull();
     });
 
     it('hides the spotlight (and does not crash) when featured fetch fails', async () => {
-      const { fixture } = setup({ featuredThrows: true, directory: [makeDesigner()] });
+      const { fixture } = setup({ featuredThrows: true, directory: [makeStore()] });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-spotlight"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-spotlight"]')).toBeNull();
       /* Directory still renders. */
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-grid"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-grid"]')).not.toBeNull();
     });
   });
 
   describe('load more', () => {
     it('hides the button when hasMore is false', async () => {
-      const { fixture } = setup({ directory: [makeDesigner()], hasMore: false });
+      const { fixture } = setup({ directory: [makeStore()], hasMore: false });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-load-more"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-load-more"]')).toBeNull();
     });
 
     it('shows the button when hasMore is true and calls loadMore on click', async () => {
-      const { fixture, service } = setup({ directory: [makeDesigner()], hasMore: true });
+      const { fixture, service } = setup({ directory: [makeStore()], hasMore: true });
       await flush();
       fixture.detectChanges();
       const before = service.loadMoreCalls;
-      const btn = fixture.nativeElement.querySelector('[data-testid="designer-load-more"]') as HTMLButtonElement;
+      const btn = fixture.nativeElement.querySelector('[data-testid="store-load-more"]') as HTMLButtonElement;
       expect(btn).not.toBeNull();
       btn.click();
       await flush();

@@ -3,12 +3,12 @@ import { catchError, map, Observable, of } from 'rxjs';
 
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
 import type { Product } from '../catalog/product.model';
-import type { FeaturedVendor } from '../catalog/designer-card';
+import type { FeaturedVendor } from '../catalog/store-card';
 import type { ActiveCampaigns } from '../campaigns/campaign.model';
 
 /**
  * HomeDataService — encapsulates the four data fetches the home page
- * needs (three product strips + the designer spotlight).
+ * needs (three product strips + the store spotlight).
  *
  * Why a service instead of fetching inline in HomeComponent:
  *   - Each strip + spotlight is independent — keeps HomeComponent slim
@@ -35,7 +35,7 @@ export class HomeDataService {
   /** Number of products per strip — matches the locked Phase 1 W2 spec. */
   private readonly STRIP_LIMIT = 12;
 
-  /** Number of vendors in the Designer Spotlight. */
+  /** Number of vendors in the Store Spotlight. */
   private readonly SPOTLIGHT_LIMIT = 4;
 
   /**
@@ -77,7 +77,7 @@ export class HomeDataService {
 
   /**
    * Featured vendors — on /v3/featured-vendors per M3.2.X.2. Each vendor
-   * comes with up to 4 embedded product thumbnails for the Designer
+   * comes with up to 4 embedded product thumbnails for the Store
    * Spotlight section. Backend computes rating aggregate + alphabetical-
    * by-name ordering.
    *

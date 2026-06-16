@@ -1,20 +1,20 @@
-/* DesignerCard — vendor card with embedded product thumbnails
+/* StoreCard — vendor card with embedded product thumbnails
  * ============================================================
  * Same surface language as ProductCard (cream, 20px radius,
  * Pronounced shadow, hover lift). Sized for 2-up display on the
- * Designer Spotlight section: wider, more spacious, more "panel"
+ * Store Spotlight section: wider, more spacious, more "panel"
  * than "card in a row."
  *
  * Phase 1 W3 redesign:
  *   - Was 4-up at ≥1280px with a 2x2 product mosaic
  *   - Now 2-up at ≥768px with a horizontal 4-product preview row
  *   - Bigger card → bigger description region → more vendor breathing room
- *   - Equal heights enforced by parent grid (.designers-grid uses align-
+ *   - Equal heights enforced by parent grid (.stores-grid uses align-
  *     items: stretch by default, plus min-height + flex column on
  *     this card pushes the products row to the bottom)
  */
 
-.designer-card {
+.store-card {
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -34,7 +34,7 @@
   min-height: 360px;
 }
 
-.designer-card:hover {
+.store-card:hover {
   /* Lift kept at -3px (was -4px) to align with the softer shadow
    * language. Smaller lift sits naturally with the gentler shadow. */
   transform: translateY(-3px);
@@ -43,27 +43,27 @@
 
 /* ----- Header (vendor name + rating) -------------------------------- */
 
-.designer-card__header {
+.store-card__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
 
-.designer-card__name-link {
+.store-card__name-link {
   text-decoration: none;
   color: inherit;
   flex: 1;
   min-width: 0;
 }
 
-.designer-card__name-link:focus-visible {
+.store-card__name-link:focus-visible {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-.designer-card__name {
+.store-card__name {
   font-family: 'Playfair Display', Georgia, serif;
   font-weight: 500;
   /* Bigger at the new 2-up size — vendor name should command the card. */
@@ -80,16 +80,16 @@
 }
 
 @media (min-width: 1280px) {
-  .designer-card__name {
+  .store-card__name {
     font-size: 30px;
   }
 }
 
-.designer-card__name-link:hover .designer-card__name {
+.store-card__name-link:hover .store-card__name {
   color: var(--color-brand-500);
 }
 
-.designer-card__rating {
+.store-card__rating {
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
@@ -107,29 +107,29 @@
   white-space: nowrap;
 }
 
-.designer-card__rating:hover {
+.store-card__rating:hover {
   background: var(--color-brand-100);
 }
 
-.designer-card__rating:focus-visible {
+.store-card__rating:focus-visible {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
 }
 
-.designer-card__rating svg {
+.store-card__rating svg {
   width: 12px;
   height: 12px;
   fill: var(--color-brand-500);
 }
 
-.designer-card__rating-count {
+.store-card__rating-count {
   color: var(--color-text-tertiary);
   font-weight: 400;
 }
 
 /* ----- Description -------------------------------------------------- */
 
-.designer-card__description {
+.store-card__description {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-style: italic;
   /* Bigger description font for the showcase format — Cormorant looks
@@ -147,14 +147,14 @@
 }
 
 @media (min-width: 1280px) {
-  .designer-card__description {
+  .store-card__description {
     font-size: 18px;
   }
 }
 
 /* ----- Products row (horizontal 4-up, replaces the old 2x2 mosaic) -- */
 
-.designer-card__products {
+.store-card__products {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
@@ -164,12 +164,12 @@
 }
 
 @media (min-width: 1280px) {
-  .designer-card__products {
+  .store-card__products {
     gap: 10px;
   }
 }
 
-.designer-card__product {
+.store-card__product {
   position: relative;
   display: block;
   overflow: hidden;
@@ -183,16 +183,16 @@
   transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.designer-card__product:hover {
+.store-card__product:hover {
   transform: scale(1.02);
 }
 
-.designer-card__product:focus-visible {
+.store-card__product:focus-visible {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
 }
 
-.designer-card__product img {
+.store-card__product img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -200,13 +200,13 @@
   transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.designer-card__product:hover img {
+.store-card__product:hover img {
   transform: scale(1.04);
 }
 
 /* ----- View collection link ---------------------------------------- */
 
-.designer-card__view-collection {
+.store-card__view-collection {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -223,14 +223,14 @@
   transition: color 0.2s ease, gap 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.designer-card__view-collection:hover,
-.designer-card__view-collection:focus-visible {
+.store-card__view-collection:hover,
+.store-card__view-collection:focus-visible {
   color: var(--color-brand-500);
   gap: 10px;
   outline: none;
 }
 
-.designer-card__view-collection svg {
+.store-card__view-collection svg {
   width: 14px;
   height: 14px;
 }

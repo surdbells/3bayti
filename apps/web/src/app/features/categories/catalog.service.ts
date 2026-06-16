@@ -70,7 +70,7 @@ interface ProductsMeta {
  *   GET /v3/products          (filtered, paginated grid)
  *   GET /v3/products/facets   (disjunctive facet counts)
  *
- * Public catalog reads → RoutedHttpClient (like DesignerService).
+ * Public catalog reads → RoutedHttpClient (like StoreService).
  *
  * State surface
  * -------------

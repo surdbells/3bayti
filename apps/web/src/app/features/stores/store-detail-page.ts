@@ -9,13 +9,13 @@ import { NgIf, NgFor } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { ProductCardComponent } from '../catalog/product-card';
-import { DesignerService, DESIGNER_PAGE_SIZE } from '../catalog/designer.service';
-import type { Designer } from '../catalog/designer.model';
+import { StoreService, DESIGNER_PAGE_SIZE } from '../catalog/store.service';
+import type { Store } from '../catalog/store.model';
 import type { Product } from '../catalog/product.model';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
 /**
- * /designer/:slug — a single designer's page.
+ * /store/:slug — a single store's page.
  *
  * Public storefront page. Layout:
  *   - Cover image banner (falls back to a gradient)
@@ -26,13 +26,13 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  * ----
  *   - getBySlug(slug) for the header. A 404 (unknown / inactive slug)
  *     renders the inline not-found state (Q4.4) with a link back to
- *     /designer — NOT a hard router error.
+ *     /store — NOT a hard router error.
  *   - listProducts(slug, {limit, offset}) for the collection, with a
  *     local accumulator + hasMore for load-more (the service keeps
- *     product lists stateless so two designer tabs don't collide).
+ *     product lists stateless so two store tabs don't collide).
  *
  * Description is rendered via [innerHTML]; the backend sanitises
- * vendor-authored HTML at write time (documented on the Designer
+ * vendor-authored HTML at write time (documented on the Store
  * model + VendorSerializer).
  *
  * SSR: prerendered for known vendor slugs at build time (see
@@ -41,64 +41,64 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
  * meaningful (crawlers hit real prerendered HTML, not a 404).
  */
 @Component({
-  selector: 'app-designer-detail',
+  selector: 'app-store-detail',
   standalone: true,
   imports: [CfImagePipe, NgIf, NgFor, RouterLink, TranslatePipe, ProductCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main class="designer-detail" data-testid="designer-detail-page">
+    <main class="store-detail" data-testid="store-detail-page">
       <ng-container *ngIf="!notFound(); else notFoundState">
-        <ng-container *ngIf="designer() !== null">
+        <ng-container *ngIf="store() !== null">
           <!-- Cover banner -->
-          <div class="designer-detail__cover" aria-hidden="true">
+          <div class="store-detail__cover" aria-hidden="true">
             <img
-              *ngIf="(designer()!.cover_image_url ?? '') !== ''; else coverBlank"
-              [src]="designer()!.cover_image_url | cfImage:'cover'"
+              *ngIf="(store()!.cover_image_url ?? '') !== ''; else coverBlank"
+              [src]="store()!.cover_image_url | cfImage:'cover'"
               alt=""
             />
             <ng-template #coverBlank>
-              <div class="designer-detail__cover-blank"></div>
+              <div class="store-detail__cover-blank"></div>
             </ng-template>
           </div>
 
-          <div class="designer-detail__container">
-            <header class="designer-detail__header">
+          <div class="store-detail__container">
+            <header class="store-detail__header">
               <div
-                *ngIf="(designer()!.logo_url ?? '') !== ''"
-                class="designer-detail__logo"
+                *ngIf="(store()!.logo_url ?? '') !== ''"
+                class="store-detail__logo"
                 aria-hidden="true"
               >
-                <img [src]="designer()!.logo_url" alt="" />
+                <img [src]="store()!.logo_url" alt="" />
               </div>
-              <div class="designer-detail__heading">
-                <h1 class="designer-detail__name">
-                  {{ designer()!.name }}
+              <div class="store-detail__heading">
+                <h1 class="store-detail__name">
+                  {{ store()!.name }}
                   <span
-                    *ngIf="designer()!.is_verified"
-                    class="designer-detail__verified"
-                    [attr.title]="'designers.verified' | translate"
+                    *ngIf="store()!.is_verified"
+                    class="store-detail__verified"
+                    [attr.title]="'stores.verified' | translate"
                     aria-hidden="true"
                   >✓</span>
                 </h1>
                 <p
-                  *ngIf="(designer()!.description ?? '') !== ''"
-                  class="designer-detail__description"
-                  [innerHTML]="designer()!.description"
-                  data-testid="designer-description"
+                  *ngIf="(store()!.description ?? '') !== ''"
+                  class="store-detail__description"
+                  [innerHTML]="store()!.description"
+                  data-testid="store-description"
                 ></p>
               </div>
             </header>
 
             <section
-              class="designer-detail__collection"
+              class="store-detail__collection"
               aria-labelledby="collection-heading"
             >
-              <h2 id="collection-heading" class="designer-detail__section-title">
-                {{ 'designers.detail.productsHeading' | translate }}
+              <h2 id="collection-heading" class="store-detail__section-title">
+                {{ 'stores.detail.productsHeading' | translate }}
               </h2>
 
               <ng-container *ngIf="products().length > 0; else emptyOrLoadingProducts">
-                <div class="designer-detail__grid" data-testid="designer-product-grid">
+                <div class="store-detail__grid" data-testid="store-product-grid">
                   <ui-product-card
                     *ngFor="let p of products(); trackBy: trackById"
                     [product]="p"
@@ -107,16 +107,16 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
                 <div
                   *ngIf="productsHasMore()"
-                  class="designer-detail__load-more"
+                  class="store-detail__load-more"
                 >
                   <button
                     type="button"
-                    class="designer-detail__load-more-btn"
+                    class="store-detail__load-more-btn"
                     [disabled]="isLoadingProducts()"
                     (click)="onLoadMoreProducts()"
-                    data-testid="designer-products-load-more"
+                    data-testid="store-products-load-more"
                   >
-                    {{ (isLoadingProducts() ? 'common.loading' : 'designers.detail.loadMore') | translate }}
+                    {{ (isLoadingProducts() ? 'common.loading' : 'stores.detail.loadMore') | translate }}
                   </button>
                 </div>
               </ng-container>
@@ -124,17 +124,17 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
               <ng-template #emptyOrLoadingProducts>
                 <div
                   *ngIf="isLoadingProducts()"
-                  class="designer-detail__loading"
-                  data-testid="designer-products-loading"
+                  class="store-detail__loading"
+                  data-testid="store-products-loading"
                 >
                   {{ 'common.loading' | translate }}
                 </div>
                 <div
                   *ngIf="!isLoadingProducts()"
-                  class="designer-detail__empty"
-                  data-testid="designer-products-empty"
+                  class="store-detail__empty"
+                  data-testid="store-products-empty"
                 >
-                  {{ 'designers.detail.emptyProducts' | translate }}
+                  {{ 'stores.detail.emptyProducts' | translate }}
                 </div>
               </ng-template>
             </section>
@@ -143,30 +143,30 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
       </ng-container>
 
       <ng-template #notFoundState>
-        <div class="designer-detail__container">
-          <div class="designer-detail__not-found" data-testid="designer-not-found">
-            <h1 class="designer-detail__not-found-title">
-              {{ 'designers.detail.notFoundTitle' | translate }}
+        <div class="store-detail__container">
+          <div class="store-detail__not-found" data-testid="store-not-found">
+            <h1 class="store-detail__not-found-title">
+              {{ 'stores.detail.notFoundTitle' | translate }}
             </h1>
-            <p class="designer-detail__not-found-body">
-              {{ 'designers.detail.notFoundBody' | translate }}
+            <p class="store-detail__not-found-body">
+              {{ 'stores.detail.notFoundBody' | translate }}
             </p>
-            <a routerLink="/stores" class="designer-detail__not-found-cta">
-              {{ 'designers.detail.backToDirectory' | translate }}
+            <a routerLink="/stores" class="store-detail__not-found-cta">
+              {{ 'stores.detail.backToDirectory' | translate }}
             </a>
           </div>
         </div>
       </ng-template>
     </main>
   `,
-  styleUrl: './designer-detail.scss',
+  styleUrl: './store-detail.scss',
 })
-export class DesignerDetailPageComponent implements OnInit {
+export class StoreDetailPageComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
-  private readonly designerService = inject(DesignerService);
+  private readonly storeService = inject(StoreService);
 
-  private readonly _designer = signal<Designer | null>(null);
-  protected readonly designer = this._designer.asReadonly();
+  private readonly _store = signal<Store | null>(null);
+  protected readonly store = this._store.asReadonly();
 
   private readonly _notFound = signal<boolean>(false);
   protected readonly notFound = this._notFound.asReadonly();
@@ -191,14 +191,14 @@ export class DesignerDetailPageComponent implements OnInit {
     this.slug = slugParam.trim();
 
     try {
-      this._designer.set(await this.designerService.getBySlug(this.slug));
+      this._store.set(await this.storeService.getBySlug(this.slug));
     } catch {
       /* 404 / inactive → inline not-found (Q4.4), not a hard error. */
       this._notFound.set(true);
       return;
     }
 
-    /* Designer loaded — fetch the first page of their collection. */
+    /* Store loaded — fetch the first page of their collection. */
     await this.onLoadMoreProducts();
   }
 
@@ -206,7 +206,7 @@ export class DesignerDetailPageComponent implements OnInit {
     if (this._isLoadingProducts()) return;
     this._isLoadingProducts.set(true);
     try {
-      const page = await this.designerService.listProducts(this.slug, {
+      const page = await this.storeService.listProducts(this.slug, {
         limit: DESIGNER_PAGE_SIZE,
         offset: this._products().length,
       });

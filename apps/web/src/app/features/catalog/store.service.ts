@@ -1,49 +1,49 @@
 import { Injectable, signal, computed, Signal, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
-import type { Designer, DesignerListParams } from './designer.model';
+import type { Store, StoreListParams } from './store.model';
 import type { Product } from './product.model';
-import type { FeaturedVendor } from './designer-card';
+import type { FeaturedVendor } from './store-card';
 
-/** Default page size for the directory + per-designer product grids.
+/** Default page size for the directory + per-store product grids.
  *  Matches the API's ListVendorProducts default (24). */
 export const DESIGNER_PAGE_SIZE = 24;
 
 /** Result of a paginated product fetch — items plus whether more exist. */
-export interface DesignerProductsPage {
+export interface StoreProductsPage {
   items: Product[];
   hasMore: boolean;
 }
 
 /**
- * DesignerService — storefront reads for the designer directory and
- * per-designer pages (Y.4). All endpoints are public catalog reads, so
+ * StoreService — storefront reads for the store directory and
+ * per-store pages (Y.4). All endpoints are public catalog reads, so
  * this goes through RoutedHttpClient (like home-data.service.ts), NOT
  * the Bearer-bound direct client used by cart/orders/checkout.
  *
  * State surface
  * -------------
  * The directory list accumulates across load-more pages and lives in
- * the service (mirrors OrderService) so the /designer page can scroll
+ * the service (mirrors OrderService) so the /store page can scroll
  * without re-fetching page 0 on every interaction:
- *   - directory()      Signal<Designer[]>
+ *   - directory()      Signal<Store[]>
  *   - hasMore()        computed boolean (from the last page's meta)
  *   - isLoadingList()
  *
- * Single-designer detail and per-designer products are NOT held in
- * service signals — the detail page owns those (two designer pages
+ * Single-store detail and per-store products are NOT held in
+ * service signals — the detail page owns those (two store pages
  * could be open in different tabs; per-page ownership avoids
  * cross-contamination), exactly as the order-detail page does.
  */
 @Injectable({ providedIn: 'root' })
-export class DesignerService {
+export class StoreService {
   private readonly http = inject(RoutedHttpClient);
 
-  private readonly _directory = signal<Designer[]>([]);
+  private readonly _directory = signal<Store[]>([]);
   private readonly _isLoadingList = signal<boolean>(false);
   private readonly _lastPageHasMore = signal<boolean>(false);
 
-  readonly directory: Signal<Designer[]> = this._directory.asReadonly();
+  readonly directory: Signal<Store[]> = this._directory.asReadonly();
   readonly isLoadingList: Signal<boolean> = this._isLoadingList.asReadonly();
   readonly hasMore = computed(() => this._lastPageHasMore());
   readonly loadedCount = computed(() => this._directory().length);
@@ -55,7 +55,7 @@ export class DesignerService {
   }
 
   /**
-   * Load the next page of the designer directory. Appends to the
+   * Load the next page of the store directory. Appends to the
    * accumulator (offset > 0) or replaces it (offset === 0).
    *
    * NOTE: the current v3 ListVendors endpoint returns ALL active
@@ -64,14 +64,14 @@ export class DesignerService {
    * machinery is kept so that when the endpoint gains real pagination
    * the UI needs no change.
    */
-  async loadMore(params: DesignerListParams = {}): Promise<Designer[]> {
+  async loadMore(params: StoreListParams = {}): Promise<Store[]> {
     const limit = params.limit ?? DESIGNER_PAGE_SIZE;
     const offset = params.offset ?? this.loadedCount();
 
     this._isLoadingList.set(true);
     try {
       const env = await firstValueFrom(
-        this.http.get<Designer[]>('GET /vendors', {
+        this.http.get<Store[]>('GET /vendors', {
           query: { limit, offset },
         }),
       );
@@ -88,7 +88,7 @@ export class DesignerService {
     }
   }
 
-  /** Featured designers (Designer Spotlight). Stateless return. */
+  /** Featured stores (Store Spotlight). Stateless return. */
   async getFeatured(limit = 8): Promise<FeaturedVendor[]> {
     const env = await firstValueFrom(
       this.http.get<FeaturedVendor[]>('GET /featured-vendors', {
@@ -98,22 +98,22 @@ export class DesignerService {
     return Array.isArray(env.data) ? env.data : [];
   }
 
-  /** Single designer by slug. Throws on 404 (unknown / inactive). */
-  async getBySlug(slug: string): Promise<Designer> {
+  /** Single store by slug. Throws on 404 (unknown / inactive). */
+  async getBySlug(slug: string): Promise<Store> {
     const env = await firstValueFrom(
-      this.http.get<Designer>('GET /vendors/:slug', {
+      this.http.get<Store>('GET /vendors/:slug', {
         params: { slug },
       }),
     );
     return env.data;
   }
 
-  /** A page of a designer's products. Stateless — the detail page
+  /** A page of a store's products. Stateless — the detail page
    *  owns the accumulator. */
   async listProducts(
     slug: string,
-    params: DesignerListParams = {},
-  ): Promise<DesignerProductsPage> {
+    params: StoreListParams = {},
+  ): Promise<StoreProductsPage> {
     const limit = params.limit ?? DESIGNER_PAGE_SIZE;
     const offset = params.offset ?? 0;
     const env = await firstValueFrom(

@@ -4,14 +4,14 @@ import { ActivatedRoute, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
-import { DesignerDetailPageComponent } from './designer-detail-page';
-import { DesignerService } from '../catalog/designer.service';
-import type { DesignerProductsPage } from '../catalog/designer.service';
+import { StoreDetailPageComponent } from './store-detail-page';
+import { StoreService } from '../catalog/store.service';
+import type { StoreProductsPage } from '../catalog/store.service';
 import { provideI18n } from '../../core/i18n';
-import type { Designer } from '../catalog/designer.model';
+import type { Store } from '../catalog/store.model';
 import type { Product } from '../catalog/product.model';
 
-function makeDesigner(o: Partial<Designer> = {}): Designer {
+function makeStore(o: Partial<Store> = {}): Store {
   return {
     id: 1, slug: 'acme', name: 'Acme Couture', description: null,
     logo_url: 'https://img/logo.png', cover_image_url: 'https://img/cover.png',
@@ -27,25 +27,25 @@ function makeProduct(o: Partial<Product> = {}): Product {
   } as Product;
 }
 
-class StubDesignerService {
+class StubStoreService {
   isLoadingList = signal(false).asReadonly();
-  directory = signal<Designer[]>([]).asReadonly();
+  directory = signal<Store[]>([]).asReadonly();
   hasMore = signal(false).asReadonly();
 
   getBySlugCalls: string[] = [];
   listProductsCalls: Array<{ slug: string; offset: number }> = [];
-  designerResult: Designer = makeDesigner();
-  productPages: DesignerProductsPage[] = [{ items: [], hasMore: false }];
+  storeResult: Store = makeStore();
+  productPages: StoreProductsPage[] = [{ items: [], hasMore: false }];
   private pageIdx = 0;
   getThrows = false;
   listThrows = false;
 
-  async getBySlug(slug: string): Promise<Designer> {
+  async getBySlug(slug: string): Promise<Store> {
     this.getBySlugCalls.push(slug);
     if (this.getThrows) throw new Error('not found');
-    return this.designerResult;
+    return this.storeResult;
   }
-  async listProducts(slug: string, params: { limit?: number; offset?: number } = {}): Promise<DesignerProductsPage> {
+  async listProducts(slug: string, params: { limit?: number; offset?: number } = {}): Promise<StoreProductsPage> {
     this.listProductsCalls.push({ slug, offset: params.offset ?? 0 });
     if (this.listThrows) throw new Error('products failed');
     const page = this.productPages[Math.min(this.pageIdx, this.productPages.length - 1)];
@@ -56,16 +56,16 @@ class StubDesignerService {
 
 function setup(opts: {
   slug?: string | null;
-  designer?: Designer;
-  productPages?: DesignerProductsPage[];
+  store?: Store;
+  productPages?: StoreProductsPage[];
   getThrows?: boolean;
   listThrows?: boolean;
 } = {}): {
-  fixture: ComponentFixture<DesignerDetailPageComponent>;
-  service: StubDesignerService;
+  fixture: ComponentFixture<StoreDetailPageComponent>;
+  service: StubStoreService;
 } {
-  const service = new StubDesignerService();
-  if (opts.designer !== undefined) service.designerResult = opts.designer;
+  const service = new StubStoreService();
+  if (opts.store !== undefined) service.storeResult = opts.store;
   if (opts.productPages !== undefined) service.productPages = opts.productPages;
   if (opts.getThrows === true) service.getThrows = true;
   if (opts.listThrows === true) service.listThrows = true;
@@ -81,17 +81,17 @@ function setup(opts: {
   };
 
   TestBed.configureTestingModule({
-    imports: [DesignerDetailPageComponent],
+    imports: [StoreDetailPageComponent],
     providers: [
       provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
       provideI18n(),
-      { provide: DesignerService, useValue: service },
+      { provide: StoreService, useValue: service },
       { provide: ActivatedRoute, useValue: activatedRouteStub },
     ],
   });
-  const fixture = TestBed.createComponent(DesignerDetailPageComponent);
+  const fixture = TestBed.createComponent(StoreDetailPageComponent);
   fixture.detectChanges();
   return { fixture, service };
 }
@@ -100,7 +100,7 @@ async function flush(): Promise<void> {
   for (let i = 0; i < 8; i++) await Promise.resolve();
 }
 
-describe('DesignerDetailPageComponent', () => {
+describe('StoreDetailPageComponent', () => {
   afterEach(() => {
     try {
       const controller = TestBed.inject(HttpTestingController);
@@ -112,42 +112,42 @@ describe('DesignerDetailPageComponent', () => {
     vi.restoreAllMocks();
   });
 
-  describe('loading the designer', () => {
-    it('fetches the designer by slug from the route', async () => {
+  describe('loading the store', () => {
+    it('fetches the store by slug from the route', async () => {
       const { service } = setup({ slug: 'acme-couture' });
       await flush();
       expect(service.getBySlugCalls).toEqual(['acme-couture']);
     });
 
-    it('renders the designer name + verified badge', async () => {
+    it('renders the store name + verified badge', async () => {
       const { fixture } = setup({
-        designer: makeDesigner({ name: 'Maison Noor', is_verified: true }),
+        store: makeStore({ name: 'Maison Noor', is_verified: true }),
       });
       await flush();
       fixture.detectChanges();
       expect(fixture.nativeElement.textContent).toContain('Maison Noor');
-      expect(fixture.nativeElement.querySelector('.designer-detail__verified')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.store-detail__verified')).not.toBeNull();
     });
 
     it('omits the verified badge when not verified', async () => {
-      const { fixture } = setup({ designer: makeDesigner({ is_verified: false }) });
+      const { fixture } = setup({ store: makeStore({ is_verified: false }) });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('.designer-detail__verified')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.store-detail__verified')).toBeNull();
     });
 
     it('renders the description via innerHTML', async () => {
       const { fixture } = setup({
-        designer: makeDesigner({ description: 'Fine <em>kaftans</em> since 1998' }),
+        store: makeStore({ description: 'Fine <em>kaftans</em> since 1998' }),
       });
       await flush();
       fixture.detectChanges();
-      const desc = fixture.nativeElement.querySelector('[data-testid="designer-description"]');
+      const desc = fixture.nativeElement.querySelector('[data-testid="store-description"]');
       expect(desc?.querySelector('em')).not.toBeNull();
       expect(desc?.textContent).toContain('kaftans');
     });
 
-    it('fetches the first product page after the designer loads', async () => {
+    it('fetches the first product page after the store loads', async () => {
       const { service } = setup({
         productPages: [{ items: [makeProduct()], hasMore: false }],
       });
@@ -163,16 +163,16 @@ describe('DesignerDetailPageComponent', () => {
       });
       await flush();
       fixture.detectChanges();
-      const grid = fixture.nativeElement.querySelector('[data-testid="designer-product-grid"]');
+      const grid = fixture.nativeElement.querySelector('[data-testid="store-product-grid"]');
       expect(grid).not.toBeNull();
       expect(grid.querySelectorAll('ui-product-card')).toHaveLength(2);
     });
 
-    it('shows the empty-products state when the designer has no products', async () => {
+    it('shows the empty-products state when the store has no products', async () => {
       const { fixture } = setup({ productPages: [{ items: [], hasMore: false }] });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-products-empty"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-products-empty"]')).not.toBeNull();
     });
   });
 
@@ -183,7 +183,7 @@ describe('DesignerDetailPageComponent', () => {
       });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-products-load-more"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-products-load-more"]')).toBeNull();
     });
 
     it('shows the button when hasMore and appends the next page on click', async () => {
@@ -195,7 +195,7 @@ describe('DesignerDetailPageComponent', () => {
       });
       await flush();
       fixture.detectChanges();
-      const btn = fixture.nativeElement.querySelector('[data-testid="designer-products-load-more"]') as HTMLButtonElement;
+      const btn = fixture.nativeElement.querySelector('[data-testid="store-products-load-more"]') as HTMLButtonElement;
       expect(btn).not.toBeNull();
       btn.click();
       await flush();
@@ -207,7 +207,7 @@ describe('DesignerDetailPageComponent', () => {
       ]);
       expect(fixture.nativeElement.querySelectorAll('ui-product-card')).toHaveLength(2);
       /* Button gone now that hasMore is false. */
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-products-load-more"]')).toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-products-load-more"]')).toBeNull();
     });
   });
 
@@ -216,8 +216,8 @@ describe('DesignerDetailPageComponent', () => {
       const { fixture, service } = setup({ getThrows: true });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-not-found"]')).not.toBeNull();
-      /* Never attempted to load products for a missing designer. */
+      expect(fixture.nativeElement.querySelector('[data-testid="store-not-found"]')).not.toBeNull();
+      /* Never attempted to load products for a missing store. */
       expect(service.listProductsCalls).toEqual([]);
     });
 
@@ -225,7 +225,7 @@ describe('DesignerDetailPageComponent', () => {
       const { fixture, service } = setup({ slug: null });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-not-found"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-not-found"]')).not.toBeNull();
       expect(service.getBySlugCalls).toEqual([]);
     });
 
@@ -233,7 +233,7 @@ describe('DesignerDetailPageComponent', () => {
       const { fixture, service } = setup({ slug: '   ' });
       await flush();
       fixture.detectChanges();
-      expect(fixture.nativeElement.querySelector('[data-testid="designer-not-found"]')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('[data-testid="store-not-found"]')).not.toBeNull();
       expect(service.getBySlugCalls).toEqual([]);
     });
 
@@ -241,7 +241,7 @@ describe('DesignerDetailPageComponent', () => {
       const { fixture } = setup({ getThrows: true });
       await flush();
       fixture.detectChanges();
-      const cta = fixture.nativeElement.querySelector('[data-testid="designer-not-found"] a') as HTMLAnchorElement;
+      const cta = fixture.nativeElement.querySelector('[data-testid="store-not-found"] a') as HTMLAnchorElement;
       expect(cta.getAttribute('href')).toBe('/stores');
     });
   });

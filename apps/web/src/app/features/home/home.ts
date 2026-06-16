@@ -18,7 +18,7 @@ import { SectionHeaderComponent } from '../../shared/ui/section-header';
 import { CampaignSectionComponent } from './campaign-section';
 import { TopSellersComponent } from './top-sellers';
 import type { ActiveCampaigns } from '../campaigns/campaign.model';
-import { DesignerCardComponent } from '../catalog/designer-card';
+import { StoreCardComponent } from '../catalog/store-card';
 import { RecommendationsService } from '../catalog/recommendations.service';
 import type { Product } from '../catalog/product.model';
 import { AuthService } from '../../core/auth/auth.service';
@@ -30,7 +30,7 @@ import { HomeDataService } from './home-data.service';
  * Home page — the canonical "/" route.
  *
  * Phase 1 W2 assembly: hero refresh + categories grid + 3 product
- * strips (Featured / Best Sellers / New Arrivals) + Designer
+ * strips (Featured / Best Sellers / New Arrivals) + Store
  * Spotlight + global footer (provided by app shell).
  *
  * Data:
@@ -45,7 +45,7 @@ import { HomeDataService } from './home-data.service';
  *   - JSON-LD Organization schema for brand identity
  *   - All product cards link to canonical /product/:slug URLs
  *   - All category tiles link to canonical /category/:slug URLs
- *   - All designer cards link to /designer/:slug
+ *   - All store cards link to /stores/:slug
  */
 @Component({
   selector: 'app-home',
@@ -54,7 +54,7 @@ import { HomeDataService } from './home-data.service';
     SkeletonShimmerComponent,
     ProductStripComponent,
     HeroCarouselComponent,
-    DesignerCardComponent,
+    StoreCardComponent,
     SectionHeaderComponent,
     CampaignSectionComponent,
     TopSellersComponent,
