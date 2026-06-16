@@ -273,6 +273,48 @@
           @if (addError(); as err) {
             <p class="pdp-buybox__error" role="alert">{{ err }}</p>
           }
+
+          <!-- Trust / delivery / returns (PDP4a) — grounded in real
+               capability: a UAE marketplace, a returns flow on orders, and
+               secured payment. No fabricated timeframes or thresholds. -->
+          <ul class="pdp-trust" aria-label="Delivery, returns and payment">
+            <li class="pdp-trust__item">
+              <span class="pdp-trust__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/>
+                  <circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/>
+                </svg>
+              </span>
+              <span class="pdp-trust__text">
+                <span class="pdp-trust__title">Delivery across the UAE</span>
+                <span class="pdp-trust__sub">Shipped to your address</span>
+              </span>
+            </li>
+            <li class="pdp-trust__item">
+              <span class="pdp-trust__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 9a9 9 0 0 1 15-3l3 3"/><path d="M21 5v4h-4"/>
+                  <path d="M21 15a9 9 0 0 1-15 3l-3-3"/><path d="M3 19v-4h4"/>
+                </svg>
+              </span>
+              <span class="pdp-trust__text">
+                <span class="pdp-trust__title">Easy returns</span>
+                <span class="pdp-trust__sub">Request a return on eligible orders</span>
+              </span>
+            </li>
+            <li class="pdp-trust__item">
+              <span class="pdp-trust__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/>
+                  <path d="M9 12l2 2 4-4"/>
+                </svg>
+              </span>
+              <span class="pdp-trust__text">
+                <span class="pdp-trust__title">Secure checkout</span>
+                <span class="pdp-trust__sub">Your payment is protected</span>
+              </span>
+            </li>
+          </ul>
         </section>
       </div>
 

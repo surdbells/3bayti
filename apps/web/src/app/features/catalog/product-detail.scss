@@ -980,3 +980,53 @@
   .pdp-lightbox { animation: none; }
   .pdp-main-image__zoom { transition: none; transform: none; }
 }
+
+/* ----- Trust / delivery / returns (PDP4a) ---------------------------- */
+.pdp-trust {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-muted);
+}
+
+.pdp-trust__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pdp-trust__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  color: var(--color-brand-700);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.pdp-trust__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.pdp-trust__title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-trust__sub {
+  font-size: 0.8rem;
+  color: var(--color-text-tertiary);
+}
