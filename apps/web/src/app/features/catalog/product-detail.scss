@@ -78,8 +78,11 @@
   aspect-ratio: 3 / 4;
   background: var(--color-bg-muted);
   border: 1px solid var(--color-border-subtle);
-  border-radius: 12px;
+  border-radius: 14px;
   overflow: hidden;
+  /* Float like the gilded product cards so the hero image reads as part
+     of the same family (same soft, tinted-brown resting shadow). */
+  box-shadow: var(--shadow-card-resting);
 }
 
 .pdp-main-image img {
@@ -95,11 +98,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(
-    135deg,
-    var(--color-brand-100) 0%,
-    var(--color-brand-200) 100%
-  );
+  background: var(--color-brand-100);
   color: var(--color-brand-700);
   font-family: 'Playfair Display', Georgia, serif;
   font-size: 96px;
@@ -110,7 +109,7 @@
 .pdp-pills {
   position: absolute;
   top: 16px;
-  left: 16px;
+  inset-inline-start: 16px;
   display: flex;
   flex-direction: column;
   gap: 8px;
