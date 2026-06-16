@@ -86,6 +86,50 @@
   --shadow-floating:
     0 1px 2px rgba(90, 58, 44, 0.04),
     0 6px 14px -4px rgba(90, 58, 44, 0.08);
+
+  /* ── Spacing scale (HP uplift) ──────────────────────────────────────
+     A single rhythm for inline gaps and stacks. --space-section is the
+     fluid vertical gap BETWEEN homepage sections (the prior layout used
+     ad-hoc margins, causing uneven section rhythm). */
+  --space-2xs: 4px;
+  --space-xs:  8px;
+  --space-sm:  12px;
+  --space-md:  16px;
+  --space-lg:  24px;
+  --space-xl:  40px;
+  --space-2xl: 64px;
+  --space-section: clamp(3.5rem, 2.6rem + 3.8vw, 6rem);
+
+  /* ── Radius scale ── */
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-xl:   28px;
+  --radius-pill: 999px;
+
+  /* ── Motion ── easings + durations for hovers, reveals, countdowns.
+     Respect prefers-reduced-motion at the component level. */
+  --ease-out:      cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-emphasis: cubic-bezier(0.16, 1, 0.30, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+  --duration-slow: 420ms;
+
+  /* ── Fluid type for marketing surfaces ── pairs with Playfair display
+     + Inter body already defined below. */
+  --text-eyebrow:       0.75rem;
+  --text-section-title: clamp(1.5rem, 1.15rem + 1.6vw, 2.25rem);
+  --text-hero-title:    clamp(2.25rem, 1.35rem + 4.2vw, 4rem);
+
+  /* ── Commerce accents ── deliberately warm, harmonised with the gold +
+     espresso palette rather than harsh primaries. Sale = brick; Flash =
+     ember (urgency); Success = eucalyptus (in-stock / savings-positive). */
+  --color-sale:       #b3402f;
+  --color-sale-bg:    #fbeae6;
+  --color-flash:      #c4561c;
+  --color-flash-bg:   #fcebdf;
+  --color-success:    #2f7d52;
+  --color-success-bg: #e6f2ea;
 }
 
 @media (min-width: 1024px) {

@@ -12,6 +12,7 @@ export { ContainerComponent } from './container';
 export { HeadingComponent } from './heading';
 export { TextComponent } from './text';
 export { StackComponent } from './stack';
+export { SectionHeaderComponent } from './section-header';
 export { SkeletonShimmerComponent } from './skeleton-shimmer';
 export { ConfirmModalComponent } from './confirm-modal';
 /* ProductStripComponent is exported separately because it depends on
