@@ -64,6 +64,14 @@ const BEST_SELLERS_DATA = {
   seoDescription: 'Shop the most-loved pieces.',
 };
 
+const NEW_ARRIVALS_DATA = {
+  sort: 'newest',
+  i18nKey: 'newArrivals',
+  canonicalPath: '/new-arrivals',
+  seoTitle: 'New Arrivals · 3bayti',
+  seoDescription: 'The latest pieces just added.',
+};
+
 function setup(routeData: Record<string, unknown> = BEST_SELLERS_DATA): {
   fixture: ComponentFixture<ProductListingPageComponent>;
   catalog: StubCatalogService;
@@ -167,5 +175,32 @@ describe('ProductListingPageComponent', () => {
     catalog.hasMore.set(false);
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('[data-testid="listing-load-more"]')).toBeNull();
+  });
+
+  describe('New Arrivals (same component, different route data)', () => {
+    it('loads with sort=newest and sets the New Arrivals SEO title', () => {
+      const { catalog, seo } = setup(NEW_ARRIVALS_DATA);
+      expect(catalog.loadCalls[0]).toEqual({
+        filters: { sort: 'newest' },
+        page: 0,
+        append: false,
+      });
+      expect((seo.setCalls[0] as { title: string }).title).toBe('New Arrivals · 3bayti');
+    });
+
+    it('appends the next page with sort=newest on "load more"', () => {
+      const { fixture, catalog } = setup(NEW_ARRIVALS_DATA);
+      catalog.isLoadingList.set(false);
+      catalog.products.set([makeProduct()]);
+      catalog.hasMore.set(true);
+      fixture.detectChanges();
+
+      (fixture.nativeElement.querySelector('[data-testid="listing-load-more"]') as HTMLButtonElement).click();
+      expect(catalog.loadCalls[1]).toEqual({
+        filters: { sort: 'newest' },
+        page: 1,
+        append: true,
+      });
+    });
   });
 });

@@ -560,6 +560,11 @@
       "title": "Best Sellers",
       "subtitle": "The pieces our community keeps coming back to — shop the most-loved abayas, kaftans and modest wear.",
       "empty": "No best sellers to show just yet. Check back soon."
+    },
+    "newArrivals": {
+      "title": "New Arrivals",
+      "subtitle": "The latest pieces just added — discover fresh abayas, kaftans and modest wear from our designers.",
+      "empty": "No new arrivals to show just yet. Check back soon."
     }
   }
 }

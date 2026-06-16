@@ -90,6 +90,22 @@ export const routes: Routes = [
     title: 'Best Sellers · 3bayti',
   },
   {
+    /* New Arrivals — curated product listing sorted by recency. */
+    path: 'new-arrivals',
+    loadComponent: () =>
+      import('./features/listings/product-listing-page').then(m => m.ProductListingPageComponent),
+    data: {
+      sort: 'newest',
+      i18nKey: 'newArrivals',
+      canonicalPath: '/new-arrivals',
+      seoTitle: 'New Arrivals · 3bayti',
+      seoDescription:
+        'The latest abayas, kaftans and modest wear just added to 3bayti — ' +
+        'fresh pieces from independent UAE designers.',
+    },
+    title: 'New Arrivals · 3bayti',
+  },
+  {
     /* Dev-only component preview. noindex'd via SeoService inside the
        component. Lazy-loaded so it doesn't bloat the production bundle
        for normal users. */
