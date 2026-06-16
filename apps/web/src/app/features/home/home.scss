@@ -41,23 +41,45 @@
    when paired with the carousel's own product CTAs.
    ===================================================================== */
 
+/* HP-C2: full-bleed gradient band. The hero now spans the viewport with
+   a layered warm-cream → gold gradient, a soft gold glow in the leading
+   top corner, and a faint dot-grid texture. The content (.hero__grid)
+   holds the page gutter + max-width so it stays aligned with the rest of
+   the page; the band itself bleeds edge to edge. Text is dark brand-700
+   on a light field, so it clears AA without a scrim. */
 .hero {
-  padding-block: var(--space-xl) 0;
-  padding-inline: var(--page-padding-x);
-  max-width: var(--page-max-width);
-  margin-inline: auto;
+  position: relative;
   width: 100%;
+  padding-block: clamp(2.5rem, 5vw, 4.5rem);
+  border-block-end: 1px solid var(--color-brand-100);
+  background:
+    radial-gradient(rgba(90, 58, 44, 0.04) 1px, transparent 1.6px) 0 0 / 22px 22px,
+    radial-gradient(120% 95% at 88% -12%, rgba(201, 162, 39, 0.14), transparent 60%),
+    linear-gradient(160deg, #f8efdd 0%, #fdfaf3 50%, #f6ecd6 100%);
 }
 
 @media (min-width: 1280px) {
   .hero {
-    padding-block-start: var(--space-2xl);
+    padding-block: clamp(3.5rem, 5vw, 5.5rem);
   }
 }
 
+/* RTL: mirror the gold glow to the leading (right) corner + flip the
+   gradient sweep so the warmth still reads from the leading edge. */
+:host-context([dir='rtl']) .hero {
+  background:
+    radial-gradient(rgba(90, 58, 44, 0.04) 1px, transparent 1.6px) 0 0 / 22px 22px,
+    radial-gradient(120% 95% at 12% -12%, rgba(201, 162, 39, 0.14), transparent 60%),
+    linear-gradient(200deg, #f8efdd 0%, #fdfaf3 50%, #f6ecd6 100%);
+}
+
 /* Two columns on desktop (editorial / carousel); single column stacked
-   on smaller screens with the editorial first. */
+   on smaller screens with the editorial first. Carries the page gutter
+   + max-width (moved off .hero so the band can bleed full width). */
 .hero__grid {
+  max-width: var(--page-max-width);
+  margin-inline: auto;
+  padding-inline: var(--page-padding-x);
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--space-xl);
