@@ -186,7 +186,6 @@ describe('HeaderComponent (auth-aware)', () => {
 
   describe('primary navigation + mobile drawer', () => {
     const NAV = [
-      { id: 'nav-categories', re: /category/ },
       { id: 'nav-stores', re: /stores/ },
       { id: 'nav-bestSellers', re: /best-sellers/ },
       { id: 'nav-newArrivals', re: /new-arrivals/ },
@@ -274,7 +273,7 @@ describe('HeaderComponent (auth-aware)', () => {
     it('drawer mirrors the primary nav items', () => {
       const { fixture } = setup({ user: null });
       const drawer = fixture.nativeElement.querySelector('[data-testid="nav-drawer"]') as HTMLElement;
-      for (const id of ['drawer-nav-categories', 'drawer-nav-stores', 'drawer-nav-bestSellers', 'drawer-nav-newArrivals']) {
+      for (const id of ['drawer-nav-stores', 'drawer-nav-bestSellers', 'drawer-nav-newArrivals']) {
         expect(drawer.querySelector(`[data-testid="${id}"]`), id).not.toBeNull();
       }
     });

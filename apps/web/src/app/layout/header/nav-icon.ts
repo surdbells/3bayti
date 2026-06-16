@@ -7,7 +7,7 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
  * line icons (24×24, 1.7 stroke, currentColor) rendered by key. Shared
  * by both the desktop nav and the mobile drawer so the two stay in sync.
  *
- * Keys: 'categories' | 'stores' | 'bestSellers' | 'newArrivals' | 'gift'.
+ * Keys: 'stores' | 'bestSellers' | 'newArrivals' | 'gift'.
  * ('gift' is authored ahead of the Phase E gift-card nav entry.)
  */
 @Component({
@@ -16,15 +16,6 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @switch (icon) {
-      @case ('categories') {
-        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <rect x="3" y="3" width="7" height="7" rx="1.5" />
-          <rect x="14" y="3" width="7" height="7" rx="1.5" />
-          <rect x="3" y="14" width="7" height="7" rx="1.5" />
-          <rect x="14" y="14" width="7" height="7" rx="1.5" />
-        </svg>
-      }
       @case ('stores') {
         <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
              stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
