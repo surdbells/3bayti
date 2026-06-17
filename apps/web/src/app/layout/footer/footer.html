@@ -3,64 +3,60 @@
 
     <!-- Brand block -->
     <div class="site-footer__brand">
-      <a href="/" class="site-footer__brand-name" aria-label="3bayti home">3bayti</a>
-      <p class="site-footer__tagline">
-        Premium modest fashion, curated from independent designers across the UAE.
-      </p>
+      <a href="/" class="site-footer__brand-name" [attr.aria-label]="'footer.brandAria' | translate">3bayti</a>
+      <p class="site-footer__tagline">{{ 'footer.tagline' | translate }}</p>
     </div>
 
     <!-- Link columns -->
-    <nav class="site-footer__nav" aria-label="Footer navigation">
+    <nav class="site-footer__nav" [attr.aria-label]="'footer.navAria' | translate">
       <div class="site-footer__column">
-        <h3 class="site-footer__heading">Shop</h3>
+        <h3 class="site-footer__heading">{{ 'footer.shop' | translate }}</h3>
         <ul>
-          <li><a href="/category">Categories</a></li>
-          <li><a href="/stores">Stores</a></li>
-          <li><a href="/best-sellers">Best sellers</a></li>
-          <li><a href="/new-arrivals">New arrivals</a></li>
-          <li><a href="/search">Search</a></li>
+          <li><a href="/category">{{ 'footer.categories' | translate }}</a></li>
+          <li><a href="/stores">{{ 'footer.stores' | translate }}</a></li>
+          <li><a href="/best-sellers">{{ 'footer.bestSellers' | translate }}</a></li>
+          <li><a href="/new-arrivals">{{ 'footer.newArrivals' | translate }}</a></li>
+          <li><a href="/search">{{ 'footer.search' | translate }}</a></li>
         </ul>
       </div>
 
       <div class="site-footer__column">
-        <h3 class="site-footer__heading">Customer</h3>
+        <h3 class="site-footer__heading">{{ 'footer.customer' | translate }}</h3>
         <ul>
-          <li><a href="/account">My account</a></li>
-          <li><a href="/account/orders">My orders</a></li>
-          <li><a href="/help">Help &amp; FAQ</a></li>
-          <li><a href="/contact">Contact us</a></li>
-          <li><a href="/returns">Returns &amp; exchanges</a></li>
+          <li><a href="/account">{{ 'footer.account' | translate }}</a></li>
+          <li><a href="/account/orders">{{ 'footer.orders' | translate }}</a></li>
+          <li><a href="/help">{{ 'footer.help' | translate }}</a></li>
+          <li><a href="/contact">{{ 'footer.contact' | translate }}</a></li>
+          <li><a href="/returns">{{ 'footer.returns' | translate }}</a></li>
         </ul>
       </div>
 
       <div class="site-footer__column">
-        <h3 class="site-footer__heading">About</h3>
+        <h3 class="site-footer__heading">{{ 'footer.about' | translate }}</h3>
         <ul>
-          <li><a href="/about">Our story</a></li>
-          <li><a href="/sell">Sell on 3bayti</a></li>
-          <li><a href="/sustainability">Sustainability</a></li>
-          <li><a href="/press">Press</a></li>
+          <li><a href="/about">{{ 'footer.story' | translate }}</a></li>
+          <li><a href="/sell">{{ 'footer.sell' | translate }}</a></li>
+          <li><a href="/sustainability">{{ 'footer.sustainability' | translate }}</a></li>
+          <li><a href="/press">{{ 'footer.press' | translate }}</a></li>
         </ul>
       </div>
 
       <div class="site-footer__column">
-        <h3 class="site-footer__heading">Legal</h3>
+        <h3 class="site-footer__heading">{{ 'footer.legal' | translate }}</h3>
         <ul>
-          <li><a href="/terms">Terms of service</a></li>
-          <li><a href="/privacy">Privacy policy</a></li>
-          <li><a href="/cookies">Cookie policy</a></li>
-          <li><a href="/shipping">Shipping policy</a></li>
+          <li><a href="/terms">{{ 'footer.terms' | translate }}</a></li>
+          <li><a href="/privacy">{{ 'footer.privacy' | translate }}</a></li>
+          <li><a href="/cookies">{{ 'footer.cookies' | translate }}</a></li>
+          <li><a href="/shipping">{{ 'footer.shipping' | translate }}</a></li>
         </ul>
       </div>
     </nav>
 
     <!-- Bottom row -->
     <div class="site-footer__bottom">
-      <p class="site-footer__copyright">
-        &copy; {{ currentYear }} 3bayti. All rights reserved.
-      </p>
+      <p class="site-footer__copyright">{{ 'footer.copyright' | translate:{ year: currentYear } }}</p>
 
-      <ul class="site-footer__social" aria-label="Social media">
+      <ul class="site-footer__social" [attr.aria-label]="'footer.socialAria' | translate">
         <li>
           <a href="https://www.instagram.com/" target="_blank" rel="noopener" aria-label="Instagram">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -87,7 +83,7 @@
         </li>
       </ul>
 
-      <ul class="site-footer__payments" aria-label="Accepted payment methods">
+      <ul class="site-footer__payments" [attr.aria-label]="'footer.paymentsAria' | translate">
         <li class="site-footer__payment">Visa</li>
         <li class="site-footer__payment">Mastercard</li>
         <li class="site-footer__payment">Apple Pay</li>

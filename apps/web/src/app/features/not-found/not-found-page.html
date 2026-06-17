@@ -4,12 +4,9 @@
       <p class="not-found-page__code" aria-hidden="true">404</p>
 
       <ui-stack gap="md" align="center">
-        <p class="eyebrow">Page not found</p>
-        <ui-heading level="h1" size="xl">We can't find that page</ui-heading>
-        <ui-text size="lg" tone="secondary">
-          The page you're looking for doesn't exist, may have moved, or is no
-          longer available. Let's get you back to the collections.
-        </ui-text>
+        <p class="eyebrow">{{ 'notFound.eyebrow' | translate }}</p>
+        <ui-heading level="h1" size="xl">{{ 'notFound.title' | translate }}</ui-heading>
+        <ui-text size="lg" tone="secondary">{{ 'notFound.body' | translate }}</ui-text>
       </ui-stack>
 
       <ui-stack
@@ -18,8 +15,8 @@
         gap="sm"
         justify="center"
         [wrap]="true">
-        <ui-button variant="primary" size="lg" routerLink="/">Back to home</ui-button>
-        <ui-button variant="secondary" size="lg" routerLink="/category">Browse categories</ui-button>
+        <ui-button variant="primary" size="lg" routerLink="/">{{ 'notFound.home' | translate }}</ui-button>
+        <ui-button variant="secondary" size="lg" routerLink="/category">{{ 'notFound.categories' | translate }}</ui-button>
       </ui-stack>
     </ui-stack>
   </ui-container>

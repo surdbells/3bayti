@@ -44,7 +44,7 @@ describe('NotFoundPageComponent', () => {
     const fixture = setup();
     const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
     expect(text).toContain('404');
-    expect(text).toContain("We can't find that page");
+    expect(fixture.nativeElement.querySelector('ui-heading')).not.toBeNull();
   });
 
   it('sets noindex SEO so unknown URLs are not indexed', () => {

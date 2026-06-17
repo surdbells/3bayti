@@ -7,6 +7,7 @@ import {
   ButtonComponent,
 } from '../../shared/ui';
 import { SeoService } from '../../core/seo/seo.service';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * 404 Not Found page — the catch-all `**` route (declared last in
@@ -30,6 +31,7 @@ import { SeoService } from '../../core/seo/seo.service';
     TextComponent,
     StackComponent,
     ButtonComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './not-found-page.html',

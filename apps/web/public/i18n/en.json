@@ -22,8 +22,34 @@
     "menuToggle": "Open navigation menu"
   },
   "footer": {
-    "rights": "All rights reserved.",
-    "tagline": "Bayti — your home, curated."
+    "brandAria": "3bayti home",
+    "tagline": "Premium modest fashion, curated from independent designers across the UAE.",
+    "navAria": "Footer navigation",
+    "shop": "Shop",
+    "categories": "Categories",
+    "stores": "Stores",
+    "bestSellers": "Best sellers",
+    "newArrivals": "New arrivals",
+    "search": "Search",
+    "customer": "Customer",
+    "account": "My account",
+    "orders": "My orders",
+    "help": "Help & FAQ",
+    "contact": "Contact us",
+    "returns": "Returns & exchanges",
+    "about": "About",
+    "story": "Our story",
+    "sell": "Sell on 3bayti",
+    "sustainability": "Sustainability",
+    "press": "Press",
+    "legal": "Legal",
+    "terms": "Terms of service",
+    "privacy": "Privacy policy",
+    "cookies": "Cookie policy",
+    "shipping": "Shipping policy",
+    "copyright": "© {{year}} 3bayti. All rights reserved.",
+    "socialAria": "Social media",
+    "paymentsAria": "Accepted payment methods"
   },
   "locale": {
     "switchToArabic": "Switch to Arabic",
@@ -933,5 +959,12 @@
     },
     "priceBandAria": "{{label}} ({{count}} products)",
     "clearAll": "Clear all filters"
+  },
+  "notFound": {
+    "eyebrow": "Page not found",
+    "title": "We can't find that page",
+    "body": "The page you're looking for doesn't exist, may have moved, or is no longer available. Let's get you back to the collections.",
+    "home": "Back to home",
+    "categories": "Browse categories"
   }
 }
