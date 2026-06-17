@@ -119,16 +119,22 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
     }
 
     #[Test]
-    public function emptyFeaturedSetReturnsValidEmptyEnvelope(): void
+    public function emptyFeaturedAndEmptyFallbackReturnsValidEmptyEnvelope(): void
     {
         $vendorRepo = $this->createMock(VendorRepository::class);
         $vendorRepo->expects(self::once())
             ->method('findFeaturedWithStats')
             ->willReturn([]);
+        // Stores H0.1: an empty featured set triggers the verified-vendor
+        // fallback. With the fallback ALSO empty (no verified vendors at
+        // all), the envelope stays empty.
+        $vendorRepo->expects(self::once())
+            ->method('findTopVerifiedWithStats')
+            ->willReturn([]);
 
         $productRepo = $this->createMock(ProductRepository::class);
-        // Must NOT be called when there are no featured vendors —
-        // early return after the empty check prevents wasted queries.
+        // Must NOT be called when neither featured nor fallback yields
+        // vendors — the early return prevents wasted product queries.
         $productRepo->expects(self::never())->method('findActivePaginated');
 
         $em = $this->stubEm(function ($em) use ($vendorRepo, $productRepo) {
@@ -150,6 +156,122 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
         self::assertSame([], $body['data']);
         self::assertSame(0, $body['meta']['total']);
         self::assertFalse($body['meta']['has_more']);
+    }
+
+    #[Test]
+    public function emptyFeaturedFallsBackToTopVerifiedVendors(): void
+    {
+        // No vendor is admin-flagged featured...
+        $verified1 = $this->makeVendor('noor-atelier', 'Noor Atelier', 'A verified label.');
+        $verified2 = $this->makeVendor('rana-couture', 'Rana Couture', null);
+        $this->setVendorId($verified1, 801);
+        $this->setVendorId($verified2, 802);
+
+        $p1 = new Product($verified1, 'linen-kaftan', 'Linen Kaftan');
+        $p1->setPrimaryImageUrl('https://cdn.example/linen.jpg');
+        $p2 = new Product($verified2, 'pearl-gown', 'Pearl Gown');
+        $p2->setPrimaryImageUrl('https://cdn.example/pearl.jpg');
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        // Empty featured → triggers the fallback.
+        $vendorRepo->expects(self::once())
+            ->method('findFeaturedWithStats')
+            ->willReturn([]);
+        // ...so we fall back to top verified vendors (with stats).
+        $vendorRepo->expects(self::once())
+            ->method('findTopVerifiedWithStats')
+            ->willReturn([
+                ['vendor' => $verified1, 'rating' => 4.2, 'ratingCount' => 30],
+                ['vendor' => $verified2, 'rating' => null, 'ratingCount' => 0],
+            ]);
+
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findActivePaginated')
+            ->willReturnCallback(function (array $filters) use ($verified1, $verified2, $p1, $p2): array {
+                if ($filters['vendorId'] === $verified1->getId()) {
+                    return ['items' => [$p1], 'total' => 1];
+                }
+                if ($filters['vendorId'] === $verified2->getId()) {
+                    return ['items' => [$p2], 'total' => 1];
+                }
+                return ['items' => [], 'total' => 0];
+            });
+
+        $em = $this->stubEm(function ($em) use ($vendorRepo, $productRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [Vendor::class, $vendorRepo],
+                [Product::class, $productRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('GET', '/v3/featured-vendors'),
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+
+        // Both verified vendors surface with their embedded products,
+        // exactly as featured vendors would — same wire contract.
+        self::assertCount(2, $body['data']);
+        self::assertSame('noor-atelier', $body['data'][0]['slug']);
+        self::assertSame(4.2, $body['data'][0]['rating']);
+        self::assertSame('linen-kaftan', $body['data'][0]['products'][0]['slug']);
+        self::assertSame('rana-couture', $body['data'][1]['slug']);
+        self::assertNull($body['data'][1]['rating']);
+        self::assertSame('pearl-gown', $body['data'][1]['products'][0]['slug']);
+        self::assertSame(2, $body['meta']['total']);
+    }
+
+    #[Test]
+    public function fallbackSkipsVerifiedVendorsWithoutInStockProducts(): void
+    {
+        // In the fallback path, a verified vendor with no in-stock
+        // products must NOT produce an empty Spotlight card — it's
+        // skipped so the surface always looks populated. (Contrast with
+        // vendorWithNoProductsStillAppears: a *curated* featured vendor
+        // is kept even when empty, because an admin chose to feature it.)
+        $hasStock = $this->makeVendor('with-stock', 'With Stock', null);
+        $noStock = $this->makeVendor('no-stock', 'No Stock', null);
+        $this->setVendorId($hasStock, 902);
+        $this->setVendorId($noStock, 901);
+        $p = new Product($hasStock, 'item', 'Item');
+
+        $vendorRepo = $this->createMock(VendorRepository::class);
+        $vendorRepo->method('findFeaturedWithStats')->willReturn([]);
+        $vendorRepo->method('findTopVerifiedWithStats')->willReturn([
+            ['vendor' => $noStock, 'rating' => null, 'ratingCount' => 0],
+            ['vendor' => $hasStock, 'rating' => null, 'ratingCount' => 0],
+        ]);
+
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('findActivePaginated')
+            ->willReturnCallback(function (array $filters) use ($hasStock, $p): array {
+                if ($filters['vendorId'] === $hasStock->getId()) {
+                    return ['items' => [$p], 'total' => 1];
+                }
+                return ['items' => [], 'total' => 0]; // noStock → skipped
+            });
+
+        $em = $this->stubEm(function ($em) use ($vendorRepo, $productRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [Vendor::class, $vendorRepo],
+                [Product::class, $productRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('GET', '/v3/featured-vendors'),
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+
+        // Only the vendor that actually has in-stock products appears.
+        self::assertCount(1, $body['data']);
+        self::assertSame('with-stock', $body['data'][0]['slug']);
     }
 
     #[Test]
@@ -388,5 +510,18 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
         $v = new Vendor($slug, $name, 'vendor@example.test');
         $v->setDescription($description);
         return $v;
+    }
+
+    /**
+     * Assign a synthetic id to an unpersisted Vendor so the per-vendor
+     * embedded-product callback can distinguish vendors by getId().
+     * Without this, unpersisted entities all report id=null and a mock
+     * keyed on vendorId can't tell them apart.
+     */
+    private function setVendorId(Vendor $vendor, int $id): void
+    {
+        $ref = new \ReflectionProperty(Vendor::class, 'id');
+        $ref->setAccessible(true);
+        $ref->setValue($vendor, $id);
     }
 }

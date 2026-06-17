@@ -68,13 +68,21 @@ use Psr\Http\Message\ServerRequestInterface;
  * via VendorRepository::findFeaturedWithStats. Vendors with zero
  * approved reviews get null rating + 0 rating_count.
  *
+ * Fallback (Stores H0.1)
+ * ======================
+ * When no vendor is admin-flagged featured, this falls back to the
+ * top VERIFIED vendors (VendorRepository::findTopVerifiedWithStats)
+ * that have in-stock products, so the storefront's "Stores we love"
+ * Spotlight is never empty just because curation hasn't been set up.
+ * Curated featured vendors always take precedence; the fallback only
+ * fires on a completely empty featured set.
+ *
  * Failure modes
  * =============
- * Empty featured set → returns valid empty envelope, not 404.
- * Apps/web's home-data.service.ts treats a 404 as 'failed strip
- * → hide' (same as an empty array), but returning 200+empty array
- * is the more honest contract and lets apps/web differentiate
- * 'no featured vendors right now' from 'endpoint broken'.
+ * Empty featured set → fall back to verified vendors. Empty featured
+ * AND no verified vendors with stock → valid empty envelope, not 404.
+ * Returning 200+empty array (rather than 404) lets apps/web
+ * differentiate 'nothing to show right now' from 'endpoint broken'.
  */
 final class ListFeaturedVendorsController
 {
@@ -88,6 +96,15 @@ final class ListFeaturedVendorsController
 
     /** Number of embedded product thumbnails per vendor (Stores #4: 5 in-stock). */
     private const EMBEDDED_PRODUCTS_PER_VENDOR = 5;
+
+    /**
+     * Fallback over-fetch multiplier (Stores H0.1). When no vendor is
+     * admin-flagged featured and we fall back to top verified vendors,
+     * we request this many × the caller's limit because the product
+     * loop skips any fallback vendor with no in-stock products. A
+     * featured vendor is trusted to have stock; an uncurated one isn't.
+     */
+    private const FALLBACK_OVERFETCH = 3;
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
@@ -122,13 +139,28 @@ final class ListFeaturedVendorsController
         /** @var VendorRepository $vendorRepo */
         $vendorRepo = $this->em->getRepository(Vendor::class);
 
-        // Single query: featured vendors + rating aggregates.
+        // Primary source: admin-curated featured vendors.
         // Q-Sort = A: alphabetical name ASC, applied in the repo method.
         $vendorRows = $vendorRepo->findFeaturedWithStats($limit, 0);
 
-        // No featured vendors right now → return valid empty envelope.
-        // Don't 404 — empty curation is a legitimate state distinct
-        // from endpoint failure.
+        // Fallback (Stores H0.1): when no vendor has been admin-flagged
+        // featured, fall back to top verified vendors so the storefront's
+        // "Stores we love" Spotlight is never empty just because curation
+        // hasn't been configured yet. We over-fetch (FALLBACK_OVERFETCH ×
+        // limit) because the loop below skips any fallback vendor with no
+        // in-stock products and stops once we have `limit` populated cards.
+        $isFallback = false;
+        if ($vendorRows === []) {
+            $vendorRows = $vendorRepo->findTopVerifiedWithStats(
+                $limit * self::FALLBACK_OVERFETCH,
+                0,
+            );
+            $isFallback = true;
+        }
+
+        // Still nothing (no verified vendors either) → valid empty
+        // envelope. Don't 404 — an unpopulated storefront is a legitimate
+        // state distinct from endpoint failure.
         if ($vendorRows === []) {
             return $this->ok(PaginatedEnvelope::build(
                 items: [],
@@ -142,7 +174,10 @@ final class ListFeaturedVendorsController
         $productRepo = $this->em->getRepository(Product::class);
 
         // Per-vendor product fetch (N+1 by design at Spotlight scale).
-        // For each featured vendor, fetch newest 4 active products.
+        // Each vendor gets up to EMBEDDED_PRODUCTS_PER_VENDOR newest
+        // in-stock products. In the fallback path, vendors with zero
+        // in-stock products are skipped so Spotlight cards are never
+        // empty; we stop once we have `limit` populated cards.
         $items = [];
         foreach ($vendorRows as $row) {
             /** @var Vendor $vendor */
@@ -156,12 +191,20 @@ final class ListFeaturedVendorsController
                 'offset' => 0,
             ]);
 
+            if ($isFallback && $productsResult['items'] === []) {
+                continue;
+            }
+
             $items[] = $this->serializer->featuredShape(
                 vendor: $vendor,
                 embeddedProducts: $productsResult['items'],
                 rating: $row['rating'],
                 ratingCount: $row['ratingCount'],
             );
+
+            if (count($items) >= $limit) {
+                break;
+            }
         }
 
         return $this->ok(PaginatedEnvelope::build(

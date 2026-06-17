@@ -101,7 +101,7 @@ export interface FeaturedVendor {
         }
 
         <div class="store-card__products" role="list" [attr.aria-label]="'ui.storeCard.featuredProducts' | translate">
-          @for (product of vendor.products.slice(0, 4); track product.id) {
+          @for (product of vendor.products.slice(0, 5); track product.id) {
             <a
               [href]="productUrl(product.slug)"
               class="store-card__product"

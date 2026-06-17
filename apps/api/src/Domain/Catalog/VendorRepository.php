@@ -410,4 +410,57 @@ class VendorRepository extends EntityRepository
 
         return $out;
     }
+
+    /**
+     * Top verified vendors + rating aggregates — the Store Spotlight
+     * FALLBACK source (Stores H0.1).
+     *
+     * Structurally identical to {@see findFeaturedWithStats} but selects
+     * active + VERIFIED vendors rather than admin-flagged featured ones.
+     * Used by ListFeaturedVendorsController when no vendor has been
+     * curated as featured, so the storefront's "Stores we love" surface
+     * is never empty just because curation hasn't been configured yet.
+     *
+     * Sort: name ASC (Q-Sort = A, matching the featured query). The
+     * controller over-fetches against this and skips any vendor with no
+     * in-stock products, so callers should request more than they need.
+     *
+     * @return list<array{vendor: Vendor, rating: float|null, ratingCount: int}>
+     */
+    public function findTopVerifiedWithStats(int $limit = 4, int $offset = 0): array
+    {
+        $rows = $this->createQueryBuilder('v')
+            ->select('v', 'AVG(pr.star) AS rating', 'COUNT(pr.id) AS ratingCount')
+            ->leftJoin(
+                \Bayti\Api\Domain\Catalog\ProductReview::class,
+                'pr',
+                'WITH',
+                "pr.vendor = v AND pr.status = 'approved'"
+            )
+            ->where('v.isActive = true')
+            ->andWhere('v.isVerified = true')
+            ->groupBy('v.id')
+            ->orderBy('v.name', 'ASC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+
+        // Same normalization as findFeaturedWithStats: Doctrine returns a
+        // mixed-array shape when SELECT mixes entities + scalars.
+        $out = [];
+        foreach ($rows as $row) {
+            $vendor = $row[0];
+            $rating = $row['rating'] !== null ? (float) $row['rating'] : null;
+            $ratingCount = (int) $row['ratingCount'];
+
+            $out[] = [
+                'vendor' => $vendor,
+                'rating' => $rating,
+                'ratingCount' => $ratingCount,
+            ];
+        }
+
+        return $out;
+    }
 }

@@ -152,11 +152,11 @@
   }
 }
 
-/* ----- Products row (horizontal 4-up, replaces the old 2x2 mosaic) -- */
+/* ----- Products row (horizontal 5-up, replaces the old 2x2 mosaic) -- */
 
 .store-card__products {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 8px;
   /* margin-top:auto pushes the products row to the bottom of the card,
      enforcing equal-height behavior across the 2-up grid. */
