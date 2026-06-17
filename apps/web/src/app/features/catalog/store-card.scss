@@ -14,6 +14,11 @@
  *     this card pushes the products row to the bottom)
  */
 
+:host {
+  display: block;
+  height: 100%;
+}
+
 .store-card {
   display: flex;
   flex-direction: column;

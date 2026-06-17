@@ -9,6 +9,11 @@ import type { FeaturedVendor } from './store-card';
  *  Matches the API's ListVendorProducts default (24). */
 export const DESIGNER_PAGE_SIZE = 24;
 
+/** Page size for the STORES directory grid (load-more). Smaller than the
+ *  per-store product grid so the A-Z store list paginates in digestible
+ *  batches of 10 rather than dumping every store at once. */
+export const STORE_DIRECTORY_PAGE_SIZE = 10;
+
 /** Result of a paginated product fetch — items plus whether more exist. */
 export interface StoreProductsPage {
   items: Product[];

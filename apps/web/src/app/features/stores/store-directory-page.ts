@@ -8,7 +8,7 @@ import {
 import { NgIf, NgFor } from '@angular/common';
 import { TranslatePipe } from '@ngx-translate/core';
 import { StoreCardComponent } from '../catalog/store-card';
-import { StoreService } from '../catalog/store.service';
+import { StoreService, STORE_DIRECTORY_PAGE_SIZE } from '../catalog/store.service';
 import type { Store } from '../catalog/store.model';
 import type { FeaturedVendor } from '../catalog/store-card';
 
@@ -155,7 +155,7 @@ export class StoreDirectoryPageComponent implements OnInit {
 
   protected async onLoadMore(): Promise<void> {
     try {
-      await this.storeService.loadMore();
+      await this.storeService.loadMore({ limit: STORE_DIRECTORY_PAGE_SIZE });
     } catch {
       /* Leave whatever's loaded; the empty/grid state handles the rest. */
     }
