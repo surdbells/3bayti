@@ -4,7 +4,7 @@
 **Repo:** https://github.com/surdbells/3bayti.git · **Working dir:** `/home/claude/work/3bayti`
 **Branch:** `main` · **App:** `apps/web` (Angular, deployed to Cloudflare Pages)
 **Last commit at doc creation:** `de8a78d` (H1.4 closure)
-**HEAD (latest session):** `adf461d` — H2 + H3 complete; H4 found already-built; H5.B done (Sell CTAs → in-app /sell). Full web suite green. All pushed to `main`.
+**HEAD (latest session):** `f7aac99` — H1–H3 complete; H4 + H5.A pre-existing; H5.B done; **post-deploy QA: #9 + #1 fixed (`af7e53e`)**, the rest tracked in §6. Full web suite **749** green. All pushed to `main`.
 
 This is the authoritative plan + handover for the customer-storefront visual/UX
 uplift driven by the June QA punch-list. A fresh conversation can resume from
@@ -21,9 +21,15 @@ here with full continuity.
 - **Before every push:** `git pull --no-edit origin main`.
 - Commit messages via `git commit -F /tmp/file` heredoc (**never backticks in `-m`**);
   include WHAT / WHY / WHAT'S NOT INCLUDED + gate results + pattern attribution.
-- **Full `vitest` suite** at each phase close (baseline **735 tests / 69 files**).
+- **Full `vitest` suite** at each phase close (current baseline **749 tests / 72 files**).
 - No stubs/placeholders; production-ready on commit. Surface mid-flight discoveries
   and reconcile before proceeding (never silently assume).
+- **apps/api** (only if a QA item touches the backend — e.g. filter params, a vendor
+  field): `cd apps/api && vendor/bin/phpunit` (baseline ~1662 tests / 5687 assertions),
+  `php -l <file>`, `vendor/bin/phpstan analyse <files> --level=6 --no-progress`. Controller
+  tests extend `HttpTestCase` (`bind` / `stubEm` with `getRepository` map / `jsonRequest`
+  with the query in the URI / `handle` / `jsonBody`). Any new entity touching
+  `AuditEmitter` needs a `match()` snapshot case (no compile-time enforcement).
 
 ## 2. Environment / architecture facts
 
@@ -43,6 +49,13 @@ here with full continuity.
     trigger/check before it is live.
   - The **Cloudflare Pages** build for H0.2 + H1 must be confirmed landed; then re-run
     the Playwright checks against `staging.3bayti.ae`.
+  - **Deploy state (end of last session):** the operator ran `git fetch` on the droplet
+    (`/www/wwwroot/3bayti`), but `fetch` only updates the ref — it does NOT touch the
+    working tree or restart anything. To make H2.A + H0.1 actually live (this unblocks
+    QA **#1**'s batching and **#7**'s homepage stores), it still needs completing:
+    `git merge origin/main` (or `git pull`) → api deploy (`composer install` + migrations
+    + service restart, or `/usr/local/bin/3bayti-deploy.sh`). apps/web is a separate
+    Cloudflare Pages build. **Confirm both are done before debugging #1/#7 as frontend bugs.**
 - **Playwright** (post-deploy verification + local screenshots): chromium at
   `/opt/pw-browsers` (`PLAYWRIGHT_BROWSERS_PATH`); import playwright by absolute path
   `node_modules/.pnpm/playwright@1.50.0/node_modules/playwright/index.mjs`. To screenshot
@@ -70,7 +83,9 @@ here with full continuity.
 | H5.A | in-app /sell recruitment pitch | ✅ pre-existing | — |
 | H5.B | re-point Sell CTAs (header+drawer) → /sell | ✅ | `adf461d` |
 | H5.C | root-promotion prep (routing/_redirects/canonical/SEO + legacy handoff) | ⬜ ops-ish | — |
-| H6 | gift-cards polish + responsive/a11y sweep | ⬜ next | — |
+| H6.1 | post-deploy QA: header icon (#9) + stores render + page-size (#1) | ✅ | `af7e53e` |
+| QA backlog | #2–#8, #10(b–h) operator-reported — **see §6** | ⬜ **next** | — |
+| H6 | gift-cards polish + responsive/a11y sweep | ⬜ after QA | — |
 
 ### Key learnings carried forward
 - **H0.2 root cause (fixed):** `applyAuthState()` called `syncLocale()` which threw on
@@ -207,6 +222,13 @@ legacy seller app.*
 ---
 
 ## 5. Next action
+**START HERE (fresh session):** the operator's current priority is the
+**post-deploy QA backlog in §6** (#2–#8, #10 b–h) — real, reported issues, with an
+ordered list at the bottom of §6. Read §6 first and work it top-down; pre-flight each
+component before changing it. The generic H6 sweep + H5.C (below) come *after* the QA
+backlog. **Step 0: confirm the api + Pages deploy actually completed** (see the §2
+deploy-state note) — it unblocks QA #1 and #7 without any further code.
+
 **As-built reality (important):** the storefront is far more complete than this
 plan (written ahead of the code) assumed. The PDP, cart (page + drawer + promo +
 totals + empty + a11y), all five auth flows, and the /sell pitch were already
@@ -227,9 +249,11 @@ Genuinely remaining work:
   search render real data only against deployed `/v3/vendors` + `/v3/products`.
 
 **Latest session log:** delivered **H2** (`df1c86a` `75709fe` `fa7cb05` `df94fca`
-`bdc074f`), **H3** (`251224d` `b49bbf9` — #4 empty reviews), confirmed **H4** was
-already built, and **H5.B** (`adf461d` — Sell CTAs → /sell) on top of H1. All
-pushed to `main`.
+`bdc074f`), **H3** (`251224d` `b49bbf9` — #4 empty reviews), confirmed **H4** +
+**H5.A** pre-existing, **H5.B** (`adf461d` — Sell CTAs → /sell), then after the first
+staging deploy fixed **post-deploy QA #9 + #1** (`af7e53e`) and captured #2–#8 + the
+full **#10 PDP list** in §6 (`f7aac99`). All on top of H1; all pushed to `main`.
+**HEAD `f7aac99`.**
 
 ---
 
