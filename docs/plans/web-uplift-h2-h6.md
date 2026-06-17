@@ -230,3 +230,57 @@ Genuinely remaining work:
 `bdc074f`), **H3** (`251224d` `b49bbf9` — #4 empty reviews), confirmed **H4** was
 already built, and **H5.B** (`adf461d` — Sell CTAs → /sell) on top of H1. All
 pushed to `main`.
+
+---
+
+## 6. Post-deploy QA backlog (found after the first staging deploy)
+
+Operator-reported issues. **#9 + #1 fixed in `af7e53e`.** The rest are the
+real remaining frontend work — tackle each as a small commit (build + targeted
+spec + snapshot), pre-flighting the component first.
+
+1. **✅ `/stores`** (`af7e53e`) — render bug (only 1 card showed, partial) was
+   the `ui-store-card` host defaulting to `display:inline` inside the `<li>`
+   grid wrapper; fixed with `:host{display:block;height:100%}`. Directory now
+   requests **10** per page (STORE_DIRECTORY_PAGE_SIZE). *The "all ~100 at once"
+   only resolves once H2.A's api is deployed* (un-deployed `/v3/vendors`
+   ignores limit/offset).
+2. **⬜ `/new-arrivals` filters** — no filters; add a filter bar ABOVE the
+   listing cards. Component: `features/listings/product-listing-page` (shared by
+   best-sellers + new-arrivals). Check what filter inputs the listing endpoint
+   supports (sort, price, category, in-stock).
+3. **⬜ `/best-sellers` filters** — same component as #2; same fix.
+4. **⬜ `/category/:slug` filters position** — filters exist but are not at the
+   top; move them above the grid to match #2/#3. Component:
+   `features/categories/category-detail`.
+5. **⬜ Listing filters — premium feel + easy to use** — unify the filter UI
+   (#2-4) into one polished, reusable filter-bar component (chips/dropdowns,
+   clear-all, active-count, sticky on scroll, RTL, mobile = drawer/sheet). This
+   is the substantive piece; build the shared component once and use it on
+   listings + category.
+6. **⬜ Search results tabbed** — the H2.C overlay (`features/search/
+   search-overlay.ts`) lists Stores then Products stacked. Make it **tabbed:
+   Products | Stores, each with an icon + a result count, Products default.**
+   `SearchService` already returns both groups with counts available
+   (`products.length` / `stores.length`).
+7. **⬜ Homepage stores section not showing** — the "stores + 5 latest products"
+   section is absent on the home page. Investigate `features/home` (the featured
+   stores section + its `getFeatured()`/`/v3/featured-vendors` fetch). LIKELY the
+   api-deploy caveat: `/v3/featured-vendors`' verified-fallback (H0.1) needs the
+   api deployed; confirm the section also renders (not just data). May share the
+   same `:host` card issue as #1 if it uses ui-store-card in a wrapper.
+8. **⬜ Product card size — "Picked for You" + "New Arrivals" home sections** —
+   cards are too big; match the "Top Sellers" card size. Components in
+   `features/home` (`top-sellers.ts` is the reference size). Likely different
+   grid column sizing / card variant between the sections — align them.
+9. **✅ Header icon removed** (`af7e53e`) — mark dropped, wordmark kept.
+10. **⬜ PDP optimizations (earlier-raised) not implemented** — NEEDS THE
+    ORIGINAL LIST: the specific PDP optimizations referenced were raised in an
+    earlier conversation and aren't in this doc. Ask the operator for the list
+    (or recover it from prior transcripts) before acting — do not guess. H3.A
+    delivered only the #4 empty-reviews state.
+
+**Suggested order for a fresh session:** #7 (likely deploy + quick render) →
+#6 (tabbed search, self-contained) → #8 (card sizing) → #5+#2+#3+#4 (the shared
+filter-bar component, the biggest item) → #10 (after the operator supplies the
+list). Plus the standing api-deploy + Pages/Playwright verification from §2.
