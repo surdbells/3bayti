@@ -274,11 +274,34 @@ spec + snapshot), pre-flighting the component first.
    `features/home` (`top-sellers.ts` is the reference size). Likely different
    grid column sizing / card variant between the sections — align them.
 9. **✅ Header icon removed** (`af7e53e`) — mark dropped, wordmark kept.
-10. **⬜ PDP optimizations (earlier-raised) not implemented** — NEEDS THE
-    ORIGINAL LIST: the specific PDP optimizations referenced were raised in an
-    earlier conversation and aren't in this doc. Ask the operator for the list
-    (or recover it from prior transcripts) before acting — do not guess. H3.A
-    delivered only the #4 empty-reviews state.
+10. **◐ PDP optimizations** (operator's original list — (a) done, (b)-(h) pending):
+    a. **✅ Reviews + empty state** — done (H3.A `251224d`): the reviews section
+       always renders, with an inviting empty state when there are none.
+    b. **⬜ Thumbnails on the LEFT** — move the gallery thumbnail strip from the
+       bottom to a vertical strip on the left (mirror to the right in RTL).
+       Gallery lives in `product-detail.html/.scss` (`activeImageIndex`).
+    c. **⬜ Zoom too small** — the image zoom/lightbox shows a tiny image; it
+       should open a large, properly-sized zoom view. Inspect the lightbox
+       (`lightboxOpen`) + its image sizing/object-fit.
+    d. **⬜ Store information block** — add a vendor/store section (name + link to
+       `/stores/:slug`, ideally logo + rating). `ProductDetail.vendor` is a
+       `VendorRef {slug, name}`; richer fields may need an API addition.
+    e. **⬜ Premium TABS instead of accordion** — description / reviews / details
+       are collapsible disclosures (accordion); convert to a premium tabbed UI
+       (single visible panel, tab strip with active state, a11y
+       tablist/tab/tabpanel + roving focus, RTL). Consider a small shared tabs
+       component.
+    f. **⬜ "You may also like" = 5 per row, 10 total** — the recommendations
+       strip should show 5 across, 10 items. Bump `recsService.forProduct` count
+       to 10 and set the grid to 5 columns (collapsing responsively on mobile).
+    g. **⬜ Format the variant hints** — "Select a size to continue" / "Select a
+       colour to continue" render as raw text; style them as proper inline
+       notices (icon + styled chip/banner), not bare strings.
+    h. **⬜ Social sharing buttons incl. WhatsApp** — add a share row (WhatsApp,
+       copy-link, X, Facebook) to the PDP using the product URL + name.
+
+    *Suggested PDP order:* g (hints, small) → h (share row, small) → f (recs
+    5x2) → d (store block) → c (zoom) → b (left thumbnails) → e (tabs, largest).
 
 **Suggested order for a fresh session:** #7 (likely deploy + quick render) →
 #6 (tabbed search, self-contained) → #8 (card sizing) → #5+#2+#3+#4 (the shared
