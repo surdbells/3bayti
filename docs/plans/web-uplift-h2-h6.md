@@ -4,7 +4,7 @@
 **Repo:** https://github.com/surdbells/3bayti.git · **Working dir:** `/home/claude/work/3bayti`
 **Branch:** `main` · **App:** `apps/web` (Angular, deployed to Cloudflare Pages)
 **Last commit at doc creation:** `de8a78d` (H1.4 closure)
-**HEAD (latest session):** `251224d` — **H2 + H3 COMPLETE**; full web suite **749** green. All pushed to `main`.
+**HEAD (latest session):** `adf461d` — H2 + H3 complete; H4 found already-built; H5.B done (Sell CTAs → in-app /sell). Full web suite green. All pushed to `main`.
 
 This is the authoritative plan + handover for the customer-storefront visual/UX
 uplift driven by the June QA punch-list. A fresh conversation can resume from
@@ -66,9 +66,11 @@ here with full continuity.
 | H2.C-2 | search overlay UI + header trigger + i18n | ✅ | `df94fca` |
 | H2.D | H2 closure (full web suite 747 green) | ✅ | this doc |
 | H3 | PDP — #4 empty-reviews state (PDP already built) | ✅ | `251224d` |
-| H4 | auth & cart | ⬜ next | — |
-| H5 | vendor-welcome merge + root promotion prep | ⬜ | — |
-| H6 | gift-cards + responsive sweep | ⬜ | — |
+| H4 | auth & cart — already built (cart page+drawer+promo+totals+empty+a11y; all 5 auth flows), green in suite | ✅ pre-existing | — |
+| H5.A | in-app /sell recruitment pitch | ✅ pre-existing | — |
+| H5.B | re-point Sell CTAs (header+drawer) → /sell | ✅ | `adf461d` |
+| H5.C | root-promotion prep (routing/_redirects/canonical/SEO + legacy handoff) | ⬜ ops-ish | — |
+| H6 | gift-cards polish + responsive/a11y sweep | ⬜ next | — |
 
 ### Key learnings carried forward
 - **H0.2 root cause (fixed):** `applyAuthState()` called `syncLocale()` which threw on
@@ -189,18 +191,26 @@ legacy seller app.*
 ---
 
 ## 5. Next action
-**H2 + H3 complete.** Resume at **H4 — auth & cart**, per the H4 breakdown in §4.
-Pre-flight the cart + auth components FIRST (like H3, parts of this may already be
-built — check before planning a from-scratch overhaul). Then detailed plan +
-decision box, per-sub-phase commits with `git pull --no-edit origin main` before
-each push and a status snapshot after each commit.
+**As-built reality (important):** the storefront is far more complete than this
+plan (written ahead of the code) assumed. The PDP, cart (page + drawer + promo +
+totals + empty + a11y), all five auth flows, and the /sell pitch were already
+built. So H3/H4/H5 reduced to targeted gaps (#4 empty reviews; re-pointing the
+Sell CTAs). **Do not assume any remaining phase is from-scratch — pre-flight
+first** (it has paid off every time).
 
-**Web test baseline is now 749 tests / 72 files** (H2 added SearchService/overlay/
-header; H3.A added the PDP reviews spec).
+Genuinely remaining work:
+- **H6 — gift-cards polish + a responsive/a11y sweep** across home, stores, PDP,
+  cart, checkout, account, auth, sell, gift-cards (mobile/tablet/desktop + RTL).
+  Pre-flight the gift-cards feature first (likely partly built too). Most
+  concrete frontend work left → recommended next.
+- **H5.C — root-promotion prep** (promote apps/web to `3bayti.ae`: routing /
+  `_redirects` / canonical / SEO + legacy seller-app handoff). Partly ops; the
+  DNS flip itself is an infra step.
+- **Standing live-verification (not code):** trigger the api auto-deploy for
+  H2.A; Pages build + Playwright pass against staging for H1/H2; the directory +
+  search render real data only against deployed `/v3/vendors` + `/v3/products`.
 
-**Latest session log:** completed **all of H2** (`df1c86a`, `75709fe`, `fa7cb05`,
-`df94fca`, `bdc074f`) **and H3** (`251224d`, the #4 empty-reviews state) on top of
-H1. All pushed to `main`. Standing caveats (§2) unchanged: trigger the api
-auto-deploy for H2.A; a Pages build + Playwright pass against staging is pending
-for H1/H2; the directory + search render real data only against deployed
-`/v3/vendors` + `/v3/products`.
+**Latest session log:** delivered **H2** (`df1c86a` `75709fe` `fa7cb05` `df94fca`
+`bdc074f`), **H3** (`251224d` `b49bbf9` — #4 empty reviews), confirmed **H4** was
+already built, and **H5.B** (`adf461d` — Sell CTAs → /sell) on top of H1. All
+pushed to `main`.
