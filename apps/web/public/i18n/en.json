@@ -757,5 +757,70 @@
       "point3": "Go live in minutes",
       "cta": "Start selling"
     }
+  },
+  "product": {
+    "loading": "Loading…",
+    "notFound": {
+      "eyebrow": "Product not found",
+      "title": "This piece is no longer available",
+      "body": "The product you're looking for may have been removed or sold out. Browse our other collections below.",
+      "back": "← Back to categories"
+    },
+    "breadcrumb": { "aria": "Breadcrumb", "home": "Home", "categories": "Categories" },
+    "gallery": {
+      "aria": "Product images",
+      "viewLarger": "View larger image",
+      "thumbsAria": "Additional product images",
+      "thumbAria": "Show image {{n}} of {{total}}",
+      "imageAlt": "{{name}} image {{n}}",
+      "fallbackAlt": "Product image",
+      "viewerAria": "Product image viewer",
+      "close": "Close image viewer",
+      "prev": "Previous image",
+      "next": "Next image"
+    },
+    "badges": { "new": "New", "bestseller": "Bestseller", "sale": "Sale" },
+    "infoAria": "Product details",
+    "skuLabel": "SKU:",
+    "rating": {
+      "aria": "Average rating {{value}} out of 5, {{count}}",
+      "outOf5": "{{value}} out of 5",
+      "starsAria": "{{rating}} out of 5 stars"
+    },
+    "reviews": {
+      "countOne": "1 review",
+      "countMany": "{{count}} reviews",
+      "heading": "Reviews",
+      "verified": "Verified buyer"
+    },
+    "savePercent": "Save {{pct}}%",
+    "inStock": "In stock",
+    "outOfStock": "Out of stock",
+    "size": "Size",
+    "color": "Color",
+    "optionOutAria": "{{label}} (out of stock)",
+    "quantityAria": "Quantity",
+    "decreaseQty": "Decrease quantity",
+    "increaseQty": "Increase quantity",
+    "adding": "Adding…",
+    "addToCart": "Add to cart",
+    "hintSize": "Select a size to continue.",
+    "hintColor": "Select a colour to continue.",
+    "addError": "We couldn't add this to your cart. Please try again.",
+    "trust": {
+      "aria": "Delivery, returns and payment",
+      "deliveryTitle": "Delivery across the UAE",
+      "deliverySub": "Shipped to your address",
+      "returnsTitle": "Easy returns",
+      "returnsSub": "Request a return on eligible orders",
+      "secureTitle": "Secure checkout",
+      "secureSub": "Your payment is protected"
+    },
+    "description": "Description",
+    "details": "Details",
+    "detailFabric": "Fabric",
+    "detailMaterials": "Materials",
+    "detailCare": "Care",
+    "relatedHeading": "You may also like"
   }
 }

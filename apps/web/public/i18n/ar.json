@@ -757,5 +757,70 @@
       "point3": "انطلقي خلال دقائق",
       "cta": "ابدئي البيع"
     }
+  },
+  "product": {
+    "loading": "جارٍ التحميل…",
+    "notFound": {
+      "eyebrow": "المنتج غير موجود",
+      "title": "هذه القطعة لم تعد متوفّرة",
+      "body": "ربما تمّت إزالة المنتج الذي تبحثين عنه أو نفد من المخزون. تصفّحي مجموعاتنا الأخرى أدناه.",
+      "back": "← العودة إلى الفئات"
+    },
+    "breadcrumb": { "aria": "مسار التنقّل", "home": "الرئيسية", "categories": "الفئات" },
+    "gallery": {
+      "aria": "صور المنتج",
+      "viewLarger": "عرض صورة أكبر",
+      "thumbsAria": "صور إضافية للمنتج",
+      "thumbAria": "عرض الصورة {{n}} من {{total}}",
+      "imageAlt": "{{name}} صورة {{n}}",
+      "fallbackAlt": "صورة المنتج",
+      "viewerAria": "عارض صور المنتج",
+      "close": "إغلاق العارض",
+      "prev": "الصورة السابقة",
+      "next": "الصورة التالية"
+    },
+    "badges": { "new": "جديد", "bestseller": "الأكثر مبيعًا", "sale": "تخفيض" },
+    "infoAria": "تفاصيل المنتج",
+    "skuLabel": "رمز المنتج:",
+    "rating": {
+      "aria": "متوسط التقييم {{value}} من 5، {{count}}",
+      "outOf5": "{{value}} من 5",
+      "starsAria": "{{rating}} من 5 نجوم"
+    },
+    "reviews": {
+      "countOne": "تقييم واحد",
+      "countMany": "{{count}} تقييم",
+      "heading": "التقييمات",
+      "verified": "مشترية موثّقة"
+    },
+    "savePercent": "وفّري {{pct}}%",
+    "inStock": "متوفّر",
+    "outOfStock": "غير متوفّر",
+    "size": "المقاس",
+    "color": "اللون",
+    "optionOutAria": "{{label}} (غير متوفّر)",
+    "quantityAria": "الكمية",
+    "decreaseQty": "إنقاص الكمية",
+    "increaseQty": "زيادة الكمية",
+    "adding": "جارٍ الإضافة…",
+    "addToCart": "أضيفي إلى السلّة",
+    "hintSize": "اختاري مقاسًا للمتابعة.",
+    "hintColor": "اختاري لونًا للمتابعة.",
+    "addError": "تعذّرت إضافة هذا المنتج إلى سلّتك. يُرجى المحاولة مرة أخرى.",
+    "trust": {
+      "aria": "التوصيل والإرجاع والدفع",
+      "deliveryTitle": "توصيل في جميع أنحاء الإمارات",
+      "deliverySub": "يُشحن إلى عنوانك",
+      "returnsTitle": "إرجاع سهل",
+      "returnsSub": "اطلبي الإرجاع للطلبات المؤهّلة",
+      "secureTitle": "دفع آمن",
+      "secureSub": "مدفوعاتك محميّة"
+    },
+    "description": "الوصف",
+    "details": "التفاصيل",
+    "detailFabric": "القماش",
+    "detailMaterials": "المواد",
+    "detailCare": "العناية",
+    "relatedHeading": "قد يعجبك أيضًا"
   }
 }

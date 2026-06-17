@@ -97,7 +97,7 @@ describe('ProductDetailComponent — "You may also like" grid (C3a, #5)', () => 
     const root: HTMLElement = fixture.nativeElement;
     const section = root.querySelector('.pdp-related');
     expect(section).not.toBeNull();
-    expect(section!.querySelector('.pdp-related__heading')?.textContent).toContain('You may also like');
+    expect(section!.querySelector('.pdp-related__heading')).not.toBeNull();
     const grid = section!.querySelector('.pdp-related__grid')!;
     expect(grid.querySelectorAll('ui-product-card').length).toBe(3);
   });

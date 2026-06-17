@@ -2,18 +2,15 @@
   <ui-container size="default">
 
     @if (loading()) {
-      <ui-text tone="secondary">Loading…</ui-text>
+      <ui-text tone="secondary">{{ 'product.loading' | translate }}</ui-text>
     } @else if (notFound()) {
       <header class="pdp-not-found">
         <ui-stack gap="md">
-          <p class="eyebrow">Product not found</p>
-          <ui-heading level="h1" size="xl">This piece is no longer available</ui-heading>
-          <ui-text size="lg" tone="secondary">
-            The product you're looking for may have been removed or sold out.
-            Browse our other collections below.
-          </ui-text>
+          <p class="eyebrow">{{ 'product.notFound.eyebrow' | translate }}</p>
+          <ui-heading level="h1" size="xl">{{ 'product.notFound.title' | translate }}</ui-heading>
+          <ui-text size="lg" tone="secondary">{{ 'product.notFound.body' | translate }}</ui-text>
           <p>
-            <a href="/category" class="back-link">← Back to categories</a>
+            <a href="/category" class="back-link">{{ 'product.notFound.back' | translate }}</a>
           </p>
         </ui-stack>
       </header>
@@ -24,10 +21,10 @@
            lockstep (Google's rich-results guidelines reject
            structured data that doesn't match visible content). The
            shared `categoryLabel()` helper enforces that. -->
-      <nav class="pdp-breadcrumb" aria-label="Breadcrumb">
-        <a href="/" class="crumb-link">Home</a>
+      <nav class="pdp-breadcrumb" [attr.aria-label]="'product.breadcrumb.aria' | translate">
+        <a href="/" class="crumb-link">{{ 'product.breadcrumb.home' | translate }}</a>
         <span class="crumb-sep" aria-hidden="true">›</span>
-        <a href="/category" class="crumb-link">Categories</a>
+        <a href="/category" class="crumb-link">{{ 'product.breadcrumb.categories' | translate }}</a>
         @if (categoryUrl(); as catUrl) {
           <span class="crumb-sep" aria-hidden="true">›</span>
           <a [href]="catUrl" class="crumb-link">{{ categoryLabel() }}</a>
@@ -41,14 +38,14 @@
         <!-- ======================================================== -->
         <!-- LEFT COLUMN: Image gallery                                -->
         <!-- ======================================================== -->
-        <section class="pdp-gallery" aria-label="Product images">
+        <section class="pdp-gallery" [attr.aria-label]="'product.gallery.aria' | translate">
           <div class="pdp-main-image">
             @if (activeImage(); as img) {
               <button
                 type="button"
                 class="pdp-main-image__trigger"
                 (click)="openLightbox()"
-                aria-label="View larger image"
+                [attr.aria-label]="'product.gallery.viewLarger' | translate"
               >
                 <img
                   [src]="img.url | cfImage:'detail'"
@@ -76,30 +73,30 @@
             <!-- Status pills (top-left of main image) -->
             @if (p.is_new || p.is_bestseller || isOnSale()) {
               <div class="pdp-pills">
-                @if (p.is_new) { <span class="pill pill-new">New</span> }
-                @if (p.is_bestseller) { <span class="pill pill-bestseller">Bestseller</span> }
-                @if (isOnSale()) { <span class="pill pill-sale">Sale</span> }
+                @if (p.is_new) { <span class="pill pill-new">{{ 'product.badges.new' | translate }}</span> }
+                @if (p.is_bestseller) { <span class="pill pill-bestseller">{{ 'product.badges.bestseller' | translate }}</span> }
+                @if (isOnSale()) { <span class="pill pill-sale">{{ 'product.badges.sale' | translate }}</span> }
               </div>
             }
           </div>
 
           <!-- Thumbnails. Only render if there's more than one image. -->
           @if (p.images && p.images.length > 1) {
-            <div class="pdp-thumbnails" role="list" aria-label="Additional product images">
+            <div class="pdp-thumbnails" role="list" [attr.aria-label]="'product.gallery.thumbsAria' | translate">
               @for (img of p.images; track img.url; let i = $index) {
                 <button
                   type="button"
                   role="listitem"
                   class="pdp-thumb"
                   [class.is-active]="i === activeImageIndex()"
-                  [attr.aria-label]="'Show image ' + (i + 1) + ' of ' + p.images.length"
+                  [attr.aria-label]="'product.gallery.thumbAria' | translate:{ n: i + 1, total: p.images.length }"
                   [attr.aria-pressed]="i === activeImageIndex()"
                   (click)="selectImage(i)"
                   (keydown)="onThumbnailKeydown($event, i)"
                 >
                   <img
                     [src]="img.url | cfImage:'detail'"
-                    [alt]="img.alt || (p.name + ' image ' + (i + 1))"
+                    [alt]="img.alt || ('product.gallery.imageAlt' | translate:{ name: p.name, n: i + 1 })"
                     loading="lazy"
                     decoding="async"
                   />
@@ -112,7 +109,7 @@
         <!-- ======================================================== -->
         <!-- RIGHT COLUMN: Product info                                -->
         <!-- ======================================================== -->
-        <section class="pdp-info" aria-label="Product details">
+        <section class="pdp-info" [attr.aria-label]="'product.infoAria' | translate">
 
           @if (p.vendor && p.vendor.name) {
             <p class="pdp-vendor">
@@ -127,7 +124,7 @@
           <ui-heading level="h1" size="xl">{{ p.name }}</ui-heading>
 
           @if (p.sku) {
-            <p class="pdp-sku">SKU: {{ p.sku }}</p>
+            <p class="pdp-sku">{{ 'product.skuLabel' | translate }} {{ p.sku }}</p>
           }
 
           <!-- Aggregate rating. Only renders when there's a real
@@ -136,7 +133,7 @@
                Phase 2) — Google requires the visible rating to match
                the structured-data rating. -->
           @if (aggregateRating(); as agg) {
-            <div class="pdp-rating" [attr.aria-label]="'Average rating ' + agg.value + ' out of 5, ' + reviewCountLabel(agg.count)">
+            <div class="pdp-rating" [attr.aria-label]="'product.rating.aria' | translate:{ value: agg.value, count: reviewCountLabel(agg.count) }">
               <span class="pdp-rating__stars" aria-hidden="true">
                 @for (pos of starPositions; track pos) {
                   <span class="star" [style.--fill]="starFillFor(pos)">
@@ -167,7 +164,7 @@
               <span class="price-current">{{ formatMoney(p.sale_price) }}</span>
               <span class="price-original">{{ formatMoney(p.price) }}</span>
               @if (savingsPercent(); as pct) {
-                <span class="pdp-price__save">Save {{ pct }}%</span>
+                <span class="pdp-price__save">{{ 'product.savePercent' | translate:{ pct: pct } }}</span>
               }
             } @else {
               <span class="price-current">{{ formatMoney(p.price) }}</span>
@@ -178,17 +175,17 @@
           <p class="pdp-stock" [class.pdp-stock--out]="!p.in_stock">
             @if (p.in_stock) {
               <span class="stock-dot stock-dot--in" aria-hidden="true"></span>
-              In stock
+              {{ 'product.inStock' | translate }}
             } @else {
               <span class="stock-dot stock-dot--out" aria-hidden="true"></span>
-              Out of stock
+              {{ 'product.outOfStock' | translate }}
             }
           </p>
 
           <!-- Sizes -->
           @if (p.sizes && p.sizes.length > 0) {
             <fieldset class="pdp-options">
-              <legend>Size</legend>
+              <legend>{{ 'product.size' | translate }}</legend>
               <div class="pdp-chips">
                 @for (s of p.sizes; track s.label) {
                   <button
@@ -198,7 +195,7 @@
                     [class.pdp-chip--selected]="selectedSize() === s.label"
                     [disabled]="!s.in_stock"
                     [attr.aria-pressed]="selectedSize() === s.label"
-                    [attr.aria-label]="s.label + (s.in_stock ? '' : ' (out of stock)')"
+                    [attr.aria-label]="s.in_stock ? s.label : ('product.optionOutAria' | translate:{ label: s.label })"
                     (click)="selectSize(s)"
                   >
                     {{ s.label }}
@@ -211,7 +208,7 @@
           <!-- Colors -->
           @if (p.colors && p.colors.length > 0) {
             <fieldset class="pdp-options">
-              <legend>Color</legend>
+              <legend>{{ 'product.color' | translate }}</legend>
               <div class="pdp-chips">
                 @for (c of p.colors; track c.label) {
                   <button
@@ -221,7 +218,7 @@
                     [class.pdp-chip--selected]="selectedColor() === c.label"
                     [disabled]="!c.in_stock"
                     [attr.aria-pressed]="selectedColor() === c.label"
-                    [attr.aria-label]="c.label + (c.in_stock ? '' : ' (out of stock)')"
+                    [attr.aria-label]="c.in_stock ? c.label : ('product.optionOutAria' | translate:{ label: c.label })"
                     (click)="selectColor(c)"
                   >
                     @if (c.hex_code) {
@@ -237,13 +234,13 @@
           <!-- Buy box: quantity + add to cart -->
           <div class="pdp-buybox">
             @if (p.in_stock) {
-              <div class="pdp-qty" role="group" aria-label="Quantity">
+              <div class="pdp-qty" role="group" [attr.aria-label]="'product.quantityAria' | translate">
                 <button
                   type="button"
                   class="pdp-qty__btn"
                   (click)="decrementQuantity()"
                   [disabled]="quantity() <= 1"
-                  aria-label="Decrease quantity"
+                  [attr.aria-label]="'product.decreaseQty' | translate"
                 >−</button>
                 <span class="pdp-qty__value" aria-live="polite">{{ quantity() }}</span>
                 <button
@@ -251,7 +248,7 @@
                   class="pdp-qty__btn"
                   (click)="incrementQuantity()"
                   [disabled]="quantity() >= 99"
-                  aria-label="Increase quantity"
+                  [attr.aria-label]="'product.increaseQty' | translate"
                 >+</button>
               </div>
             }
@@ -261,17 +258,17 @@
               [disabled]="!canAddToCart()"
               (clicked)="addToCart()"
             >
-              {{ adding() ? 'Adding…' : (p.in_stock ? 'Add to cart' : 'Out of stock') }}
+              {{ adding() ? ('product.adding' | translate) : (p.in_stock ? ('product.addToCart' | translate) : ('product.outOfStock' | translate)) }}
             </ui-button>
           </div>
           @if (p.in_stock && hasSizes() && !selectedSize()) {
-            <p class="pdp-buybox__hint">Select a size to continue.</p>
+            <p class="pdp-buybox__hint">{{ 'product.hintSize' | translate }}</p>
           }
           @if (p.in_stock && hasColors() && !selectedColor()) {
-            <p class="pdp-buybox__hint">Select a colour to continue.</p>
+            <p class="pdp-buybox__hint">{{ 'product.hintColor' | translate }}</p>
           }
           @if (addError(); as err) {
-            <p class="pdp-buybox__error" role="alert">{{ err }}</p>
+            <p class="pdp-buybox__error" role="alert">{{ err | translate }}</p>
           }
 
           <!-- Social share — six channels (decision #5): WhatsApp, copy
@@ -282,7 +279,7 @@
           <!-- Trust / delivery / returns (PDP4a) — grounded in real
                capability: a UAE marketplace, a returns flow on orders, and
                secured payment. No fabricated timeframes or thresholds. -->
-          <ul class="pdp-trust" aria-label="Delivery, returns and payment">
+          <ul class="pdp-trust" [attr.aria-label]="'product.trust.aria' | translate">
             <li class="pdp-trust__item">
               <span class="pdp-trust__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
@@ -291,8 +288,8 @@
                 </svg>
               </span>
               <span class="pdp-trust__text">
-                <span class="pdp-trust__title">Delivery across the UAE</span>
-                <span class="pdp-trust__sub">Shipped to your address</span>
+                <span class="pdp-trust__title">{{ 'product.trust.deliveryTitle' | translate }}</span>
+                <span class="pdp-trust__sub">{{ 'product.trust.deliverySub' | translate }}</span>
               </span>
             </li>
             <li class="pdp-trust__item">
@@ -303,8 +300,8 @@
                 </svg>
               </span>
               <span class="pdp-trust__text">
-                <span class="pdp-trust__title">Easy returns</span>
-                <span class="pdp-trust__sub">Request a return on eligible orders</span>
+                <span class="pdp-trust__title">{{ 'product.trust.returnsTitle' | translate }}</span>
+                <span class="pdp-trust__sub">{{ 'product.trust.returnsSub' | translate }}</span>
               </span>
             </li>
             <li class="pdp-trust__item">
@@ -315,8 +312,8 @@
                 </svg>
               </span>
               <span class="pdp-trust__text">
-                <span class="pdp-trust__title">Secure checkout</span>
-                <span class="pdp-trust__sub">Your payment is protected</span>
+                <span class="pdp-trust__title">{{ 'product.trust.secureTitle' | translate }}</span>
+                <span class="pdp-trust__sub">{{ 'product.trust.secureSub' | translate }}</span>
               </span>
             </li>
           </ul>
@@ -339,7 +336,7 @@
                   aria-controls="pdp-panel-description"
                   (click)="descriptionOpen.set(!descriptionOpen())"
                 >
-                  <span>Description</span>
+                  <span>{{ 'product.description' | translate }}</span>
                   <svg class="pdp-disclosure__chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 9l6 6 6-6"/>
                   </svg>
@@ -373,7 +370,7 @@
                   aria-controls="pdp-panel-reviews"
                   (click)="reviewsOpen.set(!reviewsOpen())"
                 >
-                  <span>Reviews</span>
+                  <span>{{ 'product.reviews.heading' | translate }}</span>
                   <svg class="pdp-disclosure__chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 9l6 6 6-6"/>
                   </svg>
@@ -392,7 +389,7 @@
                    directly via the #reviews anchor). -->
               @if (aggregateRating(); as agg) {
                 <p class="pdp-reviews__summary">
-                  <span class="pdp-reviews__avg">{{ agg.value }} out of 5</span>
+                  <span class="pdp-reviews__avg">{{ 'product.rating.outOf5' | translate:{ value: agg.value } }}</span>
                   <span aria-hidden="true">·</span>
                   <span>{{ reviewCountLabel(agg.count) }}</span>
                 </p>
@@ -404,7 +401,7 @@
                     <header class="pdp-review__head">
                       <span
                         class="pdp-review__stars"
-                        [attr.aria-label]="review.rating + ' out of 5 stars'"
+                        [attr.aria-label]="'product.rating.starsAria' | translate:{ rating: review.rating }"
                       >
                         @for (pos of starPositions; track pos) {
                           <span
@@ -422,11 +419,11 @@
                       </span>
 
                       @if (review.verified) {
-                        <span class="pdp-review__verified" title="Verified buyer">
+                        <span class="pdp-review__verified" [title]="'product.reviews.verified' | translate">
                           <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true">
                             <path d="M16.7 5.7L8.5 13.9 4.3 9.7l1.4-1.4 2.8 2.8 6.8-6.8z" fill="currentColor" />
                           </svg>
-                          Verified buyer
+                          {{ 'product.reviews.verified' | translate }}
                         </span>
                       }
                     </header>
@@ -462,7 +459,7 @@
                   aria-controls="pdp-panel-details"
                   (click)="detailsOpen.set(!detailsOpen())"
                 >
-                  <span>Details</span>
+                  <span>{{ 'product.details' | translate }}</span>
                   <svg class="pdp-disclosure__chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M6 9l6 6 6-6"/>
                   </svg>
@@ -477,15 +474,15 @@
               >
                 <dl class="pdp-detail-list">
                   @if (p.fabric) {
-                    <dt>Fabric</dt>
+                    <dt>{{ 'product.detailFabric' | translate }}</dt>
                     <dd>{{ p.fabric }}</dd>
                   }
                   @if (p.materials && p.materials.length > 0) {
-                    <dt>Materials</dt>
+                    <dt>{{ 'product.detailMaterials' | translate }}</dt>
                     <dd>{{ p.materials.join(', ') }}</dd>
                   }
                   @if (p.care_instructions) {
-                    <dt>Care</dt>
+                    <dt>{{ 'product.detailCare' | translate }}</dt>
                     <dd>{{ p.care_instructions }}</dd>
                   }
                 </dl>
@@ -503,8 +500,8 @@
            ui-product-card (capped at 10; 2 per row on mobile). Silently
            omitted when there's nothing to show. -->
       @if (relatedProducts().length > 0) {
-        <section class="pdp-related" aria-label="You may also like">
-          <h2 class="pdp-related__heading">You may also like</h2>
+        <section class="pdp-related" [attr.aria-label]="'product.relatedHeading' | translate">
+          <h2 class="pdp-related__heading">{{ 'product.relatedHeading' | translate }}</h2>
           <div class="pdp-related__grid">
             @for (rp of relatedProducts(); track rp.id) {
               <ui-product-card [product]="rp" />
@@ -522,12 +519,12 @@
            scrolling; hidden on desktop, where the in-page buy box suffices.
            Mirrors the main buy box's enabled/disabled logic. -->
       @if (p.in_stock) {
-        <div class="pdp-sticky-cta" [class.is-hidden]="stickyCtaHidden()" role="region" aria-label="Add to cart">
+        <div class="pdp-sticky-cta" [class.is-hidden]="stickyCtaHidden()" role="region" [attr.aria-label]="'product.addToCart' | translate">
           <span class="pdp-sticky-cta__price">
             @if (isOnSale() && p.sale_price) {
               <span class="pdp-sticky-cta__now">{{ formatMoney(p.sale_price) }}</span>
               @if (savingsPercent(); as pct) {
-                <span class="pdp-sticky-cta__save">Save {{ pct }}%</span>
+                <span class="pdp-sticky-cta__save">{{ 'product.savePercent' | translate:{ pct: pct } }}</span>
               }
             } @else {
               <span class="pdp-sticky-cta__now">{{ formatMoney(p.price) }}</span>
@@ -539,7 +536,7 @@
             [disabled]="!canAddToCart()"
             (clicked)="addToCart()"
           >
-            {{ adding() ? 'Adding…' : 'Add to cart' }}
+            {{ adding() ? ('product.adding' | translate) : ('product.addToCart' | translate) }}
           </ui-button>
         </div>
       }
@@ -554,7 +551,7 @@
             class="pdp-lightbox__dialog"
             role="dialog"
             aria-modal="true"
-            aria-label="Product image viewer"
+            [attr.aria-label]="'product.gallery.viewerAria' | translate"
             (keydown)="onLightboxKeydown($event)"
           >
             <button
@@ -562,7 +559,7 @@
               type="button"
               class="pdp-lightbox__close"
               (click)="closeLightbox()"
-              aria-label="Close image viewer"
+              [attr.aria-label]="'product.gallery.close' | translate"
             >
               <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
                 <path d="M6 6l12 12M18 6L6 18"/>
@@ -582,7 +579,7 @@
                 type="button"
                 class="pdp-lightbox__nav pdp-lightbox__nav--prev"
                 (click)="lightboxPrev()"
-                aria-label="Previous image"
+                [attr.aria-label]="'product.gallery.prev' | translate"
               >
                 <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M15 5l-7 7 7 7"/>
@@ -592,7 +589,7 @@
                 type="button"
                 class="pdp-lightbox__nav pdp-lightbox__nav--next"
                 (click)="lightboxNext()"
-                aria-label="Next image"
+                [attr.aria-label]="'product.gallery.next' | translate"
               >
                 <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M9 5l7 7-7 7"/>

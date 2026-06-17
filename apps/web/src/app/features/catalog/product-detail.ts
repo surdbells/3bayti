@@ -37,6 +37,7 @@ import { RecommendationsService } from './recommendations.service';
 import { CartService } from '../../core/cart/cart.service';
 import { CartDrawerService } from '../../core/cart/cart-drawer.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 /**
  * Product detail page (PDP) — `/product/:slug`.
@@ -83,6 +84,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
     StackComponent,
     ProductCardComponent,
     ShareButtonsComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './product-detail.html',
@@ -95,6 +97,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   private recsService = inject(RecommendationsService);
   private cart = inject(CartService);
   private cartDrawer = inject(CartDrawerService);
+  private i18n = inject(TranslateService);
 
   /** True if the API returned 404 for this slug. */
   readonly notFound = signal(false);
@@ -650,7 +653,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       });
       this.cartDrawer.open();
     } catch {
-      this.addError.set("We couldn't add this to your cart. Please try again.");
+      this.addError.set('product.addError');
     } finally {
       this.adding.set(false);
     }
@@ -695,7 +698,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
    * Saves the template from inline conditionals.
    */
   reviewCountLabel(count: number): string {
-    return count === 1 ? '1 review' : `${count} reviews`;
+    return this.i18n.instant(count === 1 ? 'product.reviews.countOne' : 'product.reviews.countMany', { count });
   }
 
   /**
@@ -720,7 +723,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   activeImageAlt(): string {
     return this.activeImage()?.alt
       || this.product()?.name
-      || 'Product image';
+      || this.i18n.instant('product.gallery.fallbackAlt');
   }
 
   /** URL for the category breadcrumb link. */
