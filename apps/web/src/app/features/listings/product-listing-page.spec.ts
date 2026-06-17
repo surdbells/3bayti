@@ -7,6 +7,7 @@ import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ProductListingPageComponent } from './product-listing-page';
 import { CatalogService } from '../categories/catalog.service';
+import type { Facets } from '../categories/catalog.service';
 import { SeoService } from '../../core/seo/seo.service';
 import { provideI18n } from '../../core/i18n';
 import type { Product } from '../catalog/product.model';
@@ -28,9 +29,12 @@ class StubCatalogService {
   total = signal(0);
   hasMore = signal(false);
   isLoadingList = signal(false);
+  facets = signal<Facets | null>(null);
+  isLoadingFacets = signal(false);
 
   resetCalls = 0;
   loadCalls: Array<{ filters: Record<string, unknown>; page: number; append: boolean }> = [];
+  facetCalls: Array<Record<string, unknown>> = [];
 
   reset(): void {
     this.resetCalls += 1;
@@ -46,6 +50,11 @@ class StubCatalogService {
   ): Promise<{ items: Product[]; total: number; hasMore: boolean }> {
     this.loadCalls.push({ filters, page, append });
     return { items: [], total: 0, hasMore: false };
+  }
+
+  async loadFacets(filters: Record<string, unknown>): Promise<Facets | null> {
+    this.facetCalls.push(filters);
+    return null;
   }
 }
 
@@ -200,6 +209,56 @@ describe('ProductListingPageComponent', () => {
         filters: { sort: 'newest' },
         page: 1,
         append: true,
+      });
+    });
+  });
+
+  describe('Filters (web-uplift #2/#3)', () => {
+    function makeFacets(): Facets {
+      return {
+        size: { values: [{ value: 'M', count: 4 }, { value: 'L', count: 2 }], total_distinct: 2 },
+        color: { values: [{ value: 'black', count: 6 }], total_distinct: 1 },
+        price: { values: [{ value: '0-100', count: 3, min: 0, max: 100 }] },
+        vendor: { values: [], total_distinct: 0 },
+        category: { values: [], total_distinct: 0 },
+        total_products: 6,
+      };
+    }
+
+    it('renders the shared filter bar', () => {
+      const { fixture } = setup();
+      expect(fixture.nativeElement.querySelector('[data-testid="filter-bar"]')).not.toBeNull();
+    });
+
+    it('requests facets on init with the route sort', () => {
+      const { catalog } = setup();
+      expect(catalog.facetCalls).toHaveLength(1);
+      expect(catalog.facetCalls[0]).toEqual({ sort: 'best_seller' });
+    });
+
+    it('reloads products + facets with the chosen size when a size filter is applied', () => {
+      const { fixture, catalog } = setup();
+      catalog.facets.set(makeFacets());
+      fixture.detectChanges();
+
+      // Open the Size popover, then tick the first size checkbox.
+      (fixture.nativeElement.querySelector('[data-testid="chip-size"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+      const checkbox = fixture.nativeElement.querySelector(
+        '[data-testid="pop-size"] input[type="checkbox"]',
+      ) as HTMLInputElement;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      fixture.detectChanges();
+
+      const lastLoad = catalog.loadCalls[catalog.loadCalls.length - 1];
+      expect(lastLoad).toEqual({
+        filters: { sort: 'best_seller', sizes: ['M'] },
+        page: 0,
+        append: false,
+      });
+      expect(catalog.facetCalls[catalog.facetCalls.length - 1]).toEqual({
+        sort: 'best_seller',
+        sizes: ['M'],
       });
     });
   });

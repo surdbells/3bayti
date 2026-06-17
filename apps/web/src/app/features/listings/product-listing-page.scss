@@ -135,3 +135,9 @@
   opacity: 0.6;
   cursor: default;
 }
+
+/* Shared FilterBar sits between the header and the grid (web-uplift #2/#3). */
+.listing-page__filters {
+  display: block;
+  margin-block-end: var(--space-lg);
+}
