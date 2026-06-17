@@ -624,6 +624,23 @@
       "notFoundBody": "We couldn't find that gift card in your account.",
       "errorLoad": "We couldn't load this gift card. Please try again.",
       "retry": "Try again"
+    },
+    "redeem": {
+      "title": "Redeem a gift card",
+      "subtitle": "Have a gift card code? Check its balance or add it to your account.",
+      "codeLabel": "Gift card code",
+      "codePlaceholder": "GIFT-XXXX-XXXX-XXXX",
+      "check": "Check balance",
+      "checking": "Checking…",
+      "redeem": "Redeem to my account",
+      "redeeming": "Redeeming…",
+      "balanceLabel": "Balance",
+      "expiresLabel": "Expires",
+      "notFound": "We couldn't find a gift card with that code. Please check and try again.",
+      "checkError": "We couldn't check that code right now. Please try again.",
+      "notRedeemable": "This gift card can't be redeemed — it may be used up, expired, or not yet active.",
+      "redeemError": "We couldn't redeem that code right now. Please try again.",
+      "notSpendable": "This card isn't currently spendable, so it can't be added to your account."
     }
   }
 }

@@ -115,6 +115,14 @@ export const routes: Routes = [
     title: 'Gift Cards · 3bayti',
   },
   {
+    /* Redeem a gift card / check balance (Phase E4). Public; the redeem
+       action requires auth and routes a 401 to /login. */
+    path: 'gift-cards/redeem',
+    loadComponent: () =>
+      import('./features/gift-cards/gift-card-redeem-page').then(m => m.GiftCardRedeemPageComponent),
+    title: 'Redeem a Gift Card · 3bayti',
+  },
+  {
     /* Dev-only component preview. noindex'd via SeoService inside the
        component. Lazy-loaded so it doesn't bloat the production bundle
        for normal users. */
