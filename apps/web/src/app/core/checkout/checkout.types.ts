@@ -61,6 +61,12 @@ export interface InitiateCheckoutInput {
    * cart-based fields above.
    */
   gift_card_purchase_id?: number | null;
+  /**
+   * Apply an existing gift card to a NORMAL cart order (Phase E5). The
+   * server debits the card's balance against the order total and charges
+   * only the remainder via Noon.
+   */
+  gift_card_code?: string | null;
 }
 
 /**

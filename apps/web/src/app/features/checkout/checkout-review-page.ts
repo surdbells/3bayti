@@ -15,6 +15,8 @@ import { CheckoutStepperComponent } from './checkout-stepper';
 import { CartService } from '../../core/cart';
 import type { CartItem, CartQuoteResponse } from '../../core/cart';
 import { CheckoutService } from '../../core/checkout';
+import { GiftCardService } from '../gift-cards/gift-card.service';
+import type { GiftCardCartPreview } from '../gift-cards/gift-card.model';
 import { AuthService } from '../../core/auth/auth.service';
 import { AUTH_ERROR_CODES } from '../../core/auth/auth.types';
 import { AddressService } from '../../core/addresses';
@@ -224,6 +226,88 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
           </ng-template>
         </section>
 
+        <section class="checkout-page__section" aria-labelledby="giftcard-heading">
+          <h2 id="giftcard-heading" class="checkout-page__section-title">
+            {{ 'checkout.review.giftCardHeading' | translate }}
+          </h2>
+
+          @if (appliedGiftCode() === null) {
+            <form
+              [formGroup]="giftCardForm"
+              (ngSubmit)="onApplyGiftCard()"
+              class="review-promo"
+              data-testid="review-giftcard-form"
+            >
+              <input
+                type="text"
+                formControlName="code"
+                class="review-promo__input"
+                autocapitalize="characters"
+                autocomplete="off"
+                spellcheck="false"
+                [placeholder]="'checkout.review.giftCardPlaceholder' | translate"
+                data-testid="review-giftcard-input"
+              />
+              <button
+                type="submit"
+                class="review-promo__btn"
+                [disabled]="giftCardForm.invalid || giftApplying() || isInitiating()"
+                data-testid="review-giftcard-apply"
+              >
+                {{ (giftApplying() ? 'common.loading' : 'checkout.review.giftCardApply') | translate }}
+              </button>
+            </form>
+
+            @switch (giftError()) {
+              @case ('notfound') {
+                <p class="review-promo-applied__status review-promo-applied__status--invalid" role="alert" data-testid="review-giftcard-error">
+                  {{ 'checkout.review.giftCardNotFound' | translate }}
+                </p>
+              }
+              @case ('notApplicable') {
+                <p class="review-promo-applied__status review-promo-applied__status--invalid" role="alert" data-testid="review-giftcard-error">
+                  {{ 'checkout.review.giftCardNotApplicable' | translate }}
+                </p>
+              }
+              @case ('error') {
+                <p class="review-promo-applied__status review-promo-applied__status--invalid" role="alert" data-testid="review-giftcard-error">
+                  {{ 'checkout.review.giftCardError' | translate }}
+                </p>
+              }
+            }
+          } @else {
+            <div
+              class="review-giftcard-applied"
+              [attr.data-giftcard-code]="appliedGiftCode()"
+              data-testid="review-giftcard-applied"
+            >
+              <div class="review-giftcard-applied__head">
+                <span class="review-promo-applied__status">
+                  {{ 'checkout.review.giftCardApplied' | translate : { code: appliedGiftCode() } }}
+                </span>
+                <button
+                  type="button"
+                  class="review-promo-applied__remove"
+                  (click)="onRemoveGiftCard()"
+                  data-testid="review-giftcard-remove"
+                >
+                  {{ 'checkout.review.giftCardRemove' | translate }}
+                </button>
+              </div>
+              <dl class="review-giftcard-applied__amounts checkout-summary">
+                <div class="checkout-summary__line">
+                  <dt>{{ 'checkout.review.giftCardCredit' | translate }}</dt>
+                  <dd>−{{ giftPreview()!.currency }} {{ giftPreview()!.applicable }}</dd>
+                </div>
+                <div class="checkout-summary__line checkout-summary__line--total">
+                  <dt>{{ 'checkout.review.amountDue' | translate }}</dt>
+                  <dd data-testid="review-giftcard-due">{{ giftPreview()!.currency }} {{ giftPreview()!.remaining_due }}</dd>
+                </div>
+              </dl>
+            </div>
+          }
+        </section>
+
         <section class="checkout-page__section" aria-labelledby="totals-heading">
           <h2 id="totals-heading" class="checkout-page__section-title">
             {{ 'checkout.review.totalsHeading' | translate }}
@@ -316,6 +400,7 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
 export class CheckoutReviewPageComponent implements OnInit {
   private readonly cart = inject(CartService);
   private readonly checkout = inject(CheckoutService);
+  private readonly giftCards = inject(GiftCardService);
   private readonly addressService = inject(AddressService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -362,10 +447,27 @@ export class CheckoutReviewPageComponent implements OnInit {
 
   protected readonly promoForm: FormGroup<{ code: FormControl<string> }>;
 
+  /* -----------------------------------------------------------------
+     Gift card (Phase E5) — apply an existing card to this cart order.
+     Preview via POST /v3/cart/gift-card; the resolved code is sent to
+     initiate, where the server debits the card and charges only the
+     remainder. The totals dl is left untouched (server-authoritative);
+     the applied block shows the credit + amount due from the preview.
+     ----------------------------------------------------------------- */
+  protected readonly giftCardForm: FormGroup<{ code: FormControl<string> }>;
+  private readonly _giftPreview = signal<GiftCardCartPreview | null>(null);
+  protected readonly giftPreview = this._giftPreview.asReadonly();
+  protected readonly giftApplying = signal<boolean>(false);
+  protected readonly giftError = signal<'none' | 'notfound' | 'notApplicable' | 'error'>('none');
+  protected readonly appliedGiftCode = computed<string | null>(() => this._giftPreview()?.code ?? null);
+
   constructor() {
     const fb = inject(FormBuilder).nonNullable;
     this.promoForm = fb.group({
       code: fb.control('', [Validators.required, Validators.minLength(2)]),
+    });
+    this.giftCardForm = fb.group({
+      code: fb.control('', [Validators.required, Validators.minLength(4)]),
     });
   }
 
@@ -442,6 +544,38 @@ export class CheckoutReviewPageComponent implements OnInit {
   }
 
   /* -----------------------------------------------------------------
+     Gift card
+     ----------------------------------------------------------------- */
+
+  protected async onApplyGiftCard(): Promise<void> {
+    this.giftCardForm.markAllAsTouched();
+    if (this.giftCardForm.invalid || this.giftApplying() || this.isInitiating()) return;
+    const code = this.giftCardForm.controls.code.value.trim();
+    this.giftError.set('none');
+    this.giftApplying.set(true);
+    try {
+      const preview = await this.giftCards.previewCartApply(code);
+      this._giftPreview.set(preview);
+    } catch (err) {
+      if (err instanceof HttpErrorResponse && err.status === 404) {
+        this.giftError.set('notfound');
+      } else if (err instanceof HttpErrorResponse && (err.status === 400 || err.status === 422)) {
+        this.giftError.set('notApplicable');
+      } else {
+        this.giftError.set('error');
+      }
+    } finally {
+      this.giftApplying.set(false);
+    }
+  }
+
+  protected onRemoveGiftCard(): void {
+    this._giftPreview.set(null);
+    this.giftError.set('none');
+    this.giftCardForm.controls.code.setValue('');
+  }
+
+  /* -----------------------------------------------------------------
      Navigation
      ----------------------------------------------------------------- */
 
@@ -483,6 +617,7 @@ export class CheckoutReviewPageComponent implements OnInit {
         promo_code: validPromo,
         billing_address_id: billingId,
         shipping_address_id: shippingId,
+        gift_card_code: this.appliedGiftCode(),
       });
       /* Hand off to the payment-handoff page with the URL via router
          state — query params would expose the redirect URL in browser

@@ -15,6 +15,8 @@ import { provideI18n } from '../../core/i18n';
 import type { Cart, CartItem, CartQuoteResponse } from '../../core/cart';
 import type { Address } from '../../core/addresses';
 import type { InitiateCheckoutResponse } from '../../core/checkout';
+import { GiftCardService } from '../gift-cards/gift-card.service';
+import type { GiftCardCartPreview } from '../gift-cards/gift-card.model';
 
 function makeItem(o: Partial<CartItem> = {}): CartItem {
   return {
@@ -122,6 +124,20 @@ class StubCheckoutService {
   }
 }
 
+class StubGiftCardService {
+  previewCalls: string[] = [];
+  previewResult: GiftCardCartPreview = {
+    code: 'GIFT-ABCD-1234', balance: '500.00', applicable: '120.00',
+    cart_total: '120.00', remaining_due: '0.00', currency: 'AED',
+  };
+  previewError: unknown = null;
+  async previewCartApply(code: string): Promise<GiftCardCartPreview> {
+    this.previewCalls.push(code);
+    if (this.previewError !== null) throw this.previewError;
+    return this.previewResult;
+  }
+}
+
 class StubAddressService {
   private _addrs = signal<Address[]>([]);
   addresses = this._addrs.asReadonly();
@@ -187,6 +203,7 @@ function setup(opts: SetupOptions = {}): {
   toast: StubToastService;
   navigateSpy: ReturnType<typeof vi.fn>;
   navigateByUrlSpy: ReturnType<typeof vi.fn>;
+  gift: StubGiftCardService;
 } {
   const cart = new StubCartService();
   if (opts.cart !== undefined) cart.setCart(opts.cart);
@@ -204,6 +221,7 @@ function setup(opts: SetupOptions = {}): {
   if (opts.phoneVerified === false) {
     auth.setUser(makeAuthUser({ is_phone_verified: false }));
   }
+  const gift = new StubGiftCardService();
 
   TestBed.configureTestingModule({
     imports: [CheckoutReviewPageComponent],
@@ -216,6 +234,7 @@ function setup(opts: SetupOptions = {}): {
       { provide: CheckoutService, useValue: checkout },
       { provide: AddressService, useValue: address },
       { provide: AuthService, useValue: auth },
+      { provide: GiftCardService, useValue: gift },
       { provide: ToastService, useValue: new StubToastService() },
     ],
   });
@@ -227,7 +246,7 @@ function setup(opts: SetupOptions = {}): {
 
   const fixture = TestBed.createComponent(CheckoutReviewPageComponent);
   fixture.detectChanges();
-  return { fixture, cart, checkout, address, toast, navigateSpy, navigateByUrlSpy };
+  return { fixture, cart, checkout, address, toast, navigateSpy, navigateByUrlSpy, gift };
 }
 
 async function flush(): Promise<void> {
@@ -576,6 +595,61 @@ describe('CheckoutReviewPageComponent', () => {
       btn.click();
       await flush();
       expect(navigateByUrlSpy).toHaveBeenCalledWith('/checkout/address');
+    });
+  });
+
+  describe('gift card (E5)', () => {
+    function cmp(fixture: ComponentFixture<CheckoutReviewPageComponent>): Record<string, any> {
+      return fixture.componentInstance as unknown as Record<string, any>;
+    }
+
+    it('applies a gift card and shows the applied block', async () => {
+      const { fixture, gift } = setup({});
+      await flush();
+      fixture.detectChanges();
+      cmp(fixture)['giftCardForm'].controls.code.setValue('GIFT-ABCD-1234');
+      await cmp(fixture)['onApplyGiftCard']();
+      await flush();
+      fixture.detectChanges();
+      expect(gift.previewCalls).toContain('GIFT-ABCD-1234');
+      expect(fixture.nativeElement.querySelector('[data-testid="review-giftcard-applied"]')).not.toBeNull();
+      expect(cmp(fixture)['appliedGiftCode']()).toBe('GIFT-ABCD-1234');
+    });
+
+    it('sends gift_card_code to initiate on place order', async () => {
+      const { fixture, checkout } = setup({});
+      await flush();
+      fixture.detectChanges();
+      cmp(fixture)['giftCardForm'].controls.code.setValue('GIFT-ABCD-1234');
+      await cmp(fixture)['onApplyGiftCard']();
+      await flush();
+      await cmp(fixture)['onPlaceOrder']();
+      await flush();
+      const last = checkout.initiateCalls.at(-1) as Record<string, unknown>;
+      expect(last['gift_card_code']).toBe('GIFT-ABCD-1234');
+    });
+
+    it('flags an unknown gift-card code (404)', async () => {
+      const { fixture, gift } = setup({});
+      await flush();
+      gift.previewError = new HttpErrorResponse({ status: 404 });
+      cmp(fixture)['giftCardForm'].controls.code.setValue('GIFT-NOPE-0000');
+      await cmp(fixture)['onApplyGiftCard']();
+      await flush();
+      fixture.detectChanges();
+      expect(cmp(fixture)['giftError']()).toBe('notfound');
+    });
+
+    it('removing a gift card clears the applied state', async () => {
+      const { fixture } = setup({});
+      await flush();
+      fixture.detectChanges();
+      cmp(fixture)['giftCardForm'].controls.code.setValue('GIFT-ABCD-1234');
+      await cmp(fixture)['onApplyGiftCard']();
+      await flush();
+      cmp(fixture)['onRemoveGiftCard']();
+      fixture.detectChanges();
+      expect(cmp(fixture)['appliedGiftCode']()).toBeNull();
     });
   });
 });
