@@ -4,6 +4,7 @@
 **Repo:** https://github.com/surdbells/3bayti.git · **Working dir:** `/home/claude/work/3bayti`
 **Branch:** `main` · **App:** `apps/web` (Angular, deployed to Cloudflare Pages)
 **Last commit at doc creation:** `de8a78d` (H1.4 closure)
+**HEAD (latest session):** `fa7cb05` — H2.A + H2.B complete; H2.C part 1 (SearchService) complete. All pushed to `main`.
 
 This is the authoritative plan + handover for the customer-storefront visual/UX
 uplift driven by the June QA punch-list. A fresh conversation can resume from
@@ -59,7 +60,11 @@ here with full continuity.
 | H1.2 | hero background (#1) | ✅ | `a31c001` |
 | H1.3 | nav (#5) | ✅ | `100c02c` |
 | H1.4 | header CTAs (#11) | ✅ | `de8a78d` |
-| H2 | stores experience + global search | ⬜ next | — |
+| H2.A | api: /v3/vendors paginate + q + embed products | ✅ | `df1c86a` |
+| H2.B | directory: rich 3-per-row store cards | ✅ | `75709fe` |
+| H2.C-1 | SearchService (products + stores data layer) | ✅ | `fa7cb05` |
+| H2.C-2 | search overlay UI + header trigger + i18n | ⬜ next | — |
+| H2.D | H2 closure (full suite + doc) | ⬜ | — |
 | H3 | PDP overhaul (incl. #4 empty reviews) | ⬜ | — |
 | H4 | auth & cart | ⬜ | — |
 | H5 | vendor-welcome merge + root promotion prep | ⬜ | — |
@@ -94,11 +99,42 @@ Each phase: detailed plan + decision box at execution, then continuous run.
   top-N products; H0.1 bumped the card to 5.)
 - **H2.B** Stores listing page: responsive **3-per-row** grid + **load-more**; card =
   logo/name/description + 5-product preview + "Visit store".
-- **H2.C** Global header **search** (the affordance the nav defers to): overlay/typeahead
-  over **products + stores**, grouped results, keyboard + a11y + RTL.
-- **H2.D** Closure.
-- *Decisions:* search trigger (icon-overlay vs inline bar) · typeahead vs results page ·
-  pagination style. **Backend bit → api-deploy caveat.**
+- **H2.C — global header search** (the affordance the nav defers to). **Locked
+  decisions:** icon-triggered overlay (not an inline bar) · typeahead with grouped
+  results (no separate results page this pass) · per-group cap 6.
+  - **part 1 ✅ (`fa7cb05`)** `features/search/search.service.ts` —
+    `SearchService.search(query, limit=6): Promise<{products: Product[], stores: DirectoryStore[]}>`,
+    parallel `GET /products?q=` + `GET /vendors?q=`, blank query short-circuits, q trimmed.
+    Spec: 4 tests. No consumer yet.
+  - **part 2 ⬜ (NEXT) — build to the quality bar:**
+    1. `features/search/search-overlay.ts` (standalone, OnPush, e.g. `app-search-overlay`).
+       Open state + close event (or a service-driven open signal). Behaviour: autofocus input
+       on open; debounce ~250ms (signal + setTimeout, cleared each keystroke); call
+       `SearchService.search(q)`; **guard stale responses** (track latest query / a request id,
+       ignore older resolutions); render TWO groups — **Stores** (row: `logo_url` thumb + name +
+       rating chip when `rating_count > 0`, links via the same URL the StoreCard uses) and
+       **Products** (row: primary image + name + price + link to the product detail route);
+       states: idle prompt, loading, empty ("no results for X"); close on Esc + backdrop;
+       a11y: `role="dialog"` + `aria-modal`, input `role="combobox"` with
+       `aria-expanded`/`aria-controls`, results `role="listbox"` + `role="option"`, focus
+       returns to the trigger on close; RTL via existing dir handling (logical CSS props).
+       Arrow-key option nav is a nice-to-have; Esc + click is the floor.
+    2. **Header trigger** — search icon button in `layout/header/header.html` header-actions
+       (mirror the cart/locale icon buttons; add a glyph to `layout/header/nav-icon.ts` or reuse
+       one), open/close state in `header.ts`, styled in `header.scss` to match the other icon
+       buttons, hosting `<app-search-overlay>` (testid `header-search`). Keep icon-only <560px
+       (header already collapses actions there — see H1.4).
+    3. **i18n** — `search.*` keys in BOTH `assets/i18n/en.json` + `ar.json` (placeholder, stores,
+       products, noResults, viewAll* if used). AR matches the feminine register used elsewhere.
+    4. **Tests** — `search-overlay.spec.ts` (typing triggers a debounced search + renders both
+       groups; empty state; Esc closes; a11y roles present) + extend `header.spec.ts` (opening
+       shows the overlay — keep it keyed on testids).
+  - **READ FIRST for part 2:** `features/catalog/product.model.ts` (Product fields for product
+    rows) + the product-detail route (in `app.routes.ts`) for the link target.
+- **H2.D** Closure: full `vitest` (expect ~739+), update this status table, re-confirm the
+  api-deploy + Pages-deploy caveats for the H2 changes.
+- **Backend dependency:** H2.A is live only once the api auto-deploy caveat (§2) is resolved;
+  the search overlay returns results only against the deployed `/v3/products` + `/v3/vendors`.
 
 ### H3 — PDP overhaul
 *#4 empty-reviews copy + overall product-detail quality. Component:
@@ -146,6 +182,15 @@ legacy seller app.*
 ---
 
 ## 5. Next action
-Execute **H2** — pre-flight the stores listing page + store-card + the api
-featured/list-vendors serializer, present H2's detailed sub-phase plan with
-recommended decision defaults, then run H2.A → H2.D continuously.
+Resume at **H2.C part 2** — the search overlay UI + header trigger + i18n (full
+spec in §4 under H2). The data layer (`SearchService`) is done + tested. After
+H2.C part 2: **H2.D** closure (full `vitest` + update the §3 status table), then
+**H3 → H6**, each with its own detailed plan + decision box, per-sub-phase commits,
+`git pull --no-edit origin main` before each push, and a status snapshot after
+each commit.
+
+**Latest session log:** completed H2.A (`df1c86a`), H2.B (`75709fe`), and
+H2.C part 1 (`fa7cb05`) on top of H1, plus this plan doc. All pushed to `main`.
+Backend (H2.A) remains subject to the api auto-deploy caveat in §2; the H2.B
+directory + the H2.C search both render real data only once `/v3/vendors`
+(and `/v3/products`) are deployed.
