@@ -53,9 +53,14 @@
   padding-block: clamp(2.5rem, 5vw, 4.5rem);
   border-block-end: 1px solid var(--color-brand-100);
   background:
-    radial-gradient(rgba(90, 58, 44, 0.04) 1px, transparent 1.6px) 0 0 / 22px 22px,
-    radial-gradient(120% 95% at 88% -12%, rgba(201, 162, 39, 0.14), transparent 60%),
-    linear-gradient(160deg, #f8efdd 0%, #fdfaf3 50%, #f6ecd6 100%);
+    /* refined hairline dot-grid — finer + a touch more present than before */
+    radial-gradient(rgba(90, 58, 44, 0.05) 0.5px, transparent 1px) 0 0 / 18px 18px,
+    /* primary gold glow, trailing top corner — deepened */
+    radial-gradient(130% 110% at 90% -15%, rgba(201, 162, 39, 0.26), transparent 58%),
+    /* secondary espresso glow, leading bottom corner — adds depth */
+    radial-gradient(120% 120% at -10% 115%, rgba(90, 58, 44, 0.10), transparent 60%),
+    /* deeper warm-cream → gold base sweep */
+    linear-gradient(155deg, #f3e6c9 0%, #fbf4e6 45%, #f7ecd2 72%, #f0e0bf 100%);
 }
 
 @media (min-width: 1280px) {
@@ -68,9 +73,10 @@
    gradient sweep so the warmth still reads from the leading edge. */
 :host-context([dir='rtl']) .hero {
   background:
-    radial-gradient(rgba(90, 58, 44, 0.04) 1px, transparent 1.6px) 0 0 / 22px 22px,
-    radial-gradient(120% 95% at 12% -12%, rgba(201, 162, 39, 0.14), transparent 60%),
-    linear-gradient(200deg, #f8efdd 0%, #fdfaf3 50%, #f6ecd6 100%);
+    radial-gradient(rgba(90, 58, 44, 0.05) 0.5px, transparent 1px) 0 0 / 18px 18px,
+    radial-gradient(130% 110% at 10% -15%, rgba(201, 162, 39, 0.26), transparent 58%),
+    radial-gradient(120% 120% at 110% 115%, rgba(90, 58, 44, 0.10), transparent 60%),
+    linear-gradient(205deg, #f3e6c9 0%, #fbf4e6 45%, #f7ecd2 72%, #f0e0bf 100%);
 }
 
 /* Two columns on desktop (editorial / carousel); single column stacked
