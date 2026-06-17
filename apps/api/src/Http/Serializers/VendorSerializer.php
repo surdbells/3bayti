@@ -177,6 +177,45 @@ final class VendorSerializer
     }
 
     /**
+     * Store DIRECTORY card shape (Stores H2.B) — a superset of
+     * {@see publicShape} (so existing /v3/vendors consumers keep every
+     * field they read) PLUS the rating aggregate + embedded product
+     * thumbnails the rich store card renders. Product mapping matches
+     * {@see featuredShape} so the same apps/web StoreCard works for both
+     * the Spotlight and the directory grid.
+     *
+     * @param list<Product> $embeddedProducts up to 5 (controller-clamped)
+     * @return array<string, mixed>
+     */
+    public function directoryShape(
+        Vendor $v,
+        array $embeddedProducts,
+        ?float $rating,
+        int $ratingCount,
+    ): array {
+        return [
+            'id' => $v->getId(),
+            'slug' => $v->getSlug(),
+            'name' => $v->getName(),
+            'description' => $v->getDescription(),
+            'logo_url' => $v->getLogoUrl(),
+            'cover_image_url' => $v->getCoverImageUrl(),
+            'is_verified' => $v->isVerified(),
+            'rating' => $rating !== null ? round($rating, 1) : null,
+            'rating_count' => $ratingCount,
+            'products' => array_map(
+                static fn (Product $p): array => [
+                    'id' => $p->getId(),
+                    'slug' => $p->getSlug(),
+                    'image_url' => $p->getPrimaryImageUrl() ?? '',
+                    'name' => $p->getName(),
+                ],
+                $embeddedProducts,
+            ),
+        ];
+    }
+
+    /**
      * @param iterable<Vendor> $vendors
      * @return list<array<string, mixed>>
      */

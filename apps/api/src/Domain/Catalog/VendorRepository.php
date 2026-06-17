@@ -463,4 +463,62 @@ class VendorRepository extends EntityRepository
 
         return $out;
     }
+
+    /**
+     * All active vendors + rating aggregates, paginated + optionally
+     * name-filtered — the store DIRECTORY source (Stores H2.A).
+     *
+     * Structurally identical to {@see findTopVerifiedWithStats} but without
+     * the verified/featured constraint (the directory lists every active
+     * store), with real limit/offset pagination, an optional case-insensitive
+     * name search, and a companion COUNT so the controller can emit an honest
+     * has_more. Sort: name ASC (A-Z directory).
+     *
+     * @return array{items: list<array{vendor: Vendor, rating: float|null, ratingCount: int}>, total: int}
+     */
+    public function findActiveWithStatsPaginated(int $limit, int $offset, ?string $q = null): array
+    {
+        $qb = $this->createQueryBuilder('v')
+            ->select('v', 'AVG(pr.star) AS rating', 'COUNT(pr.id) AS ratingCount')
+            ->leftJoin(
+                \Bayti\Api\Domain\Catalog\ProductReview::class,
+                'pr',
+                'WITH',
+                "pr.vendor = v AND pr.status = 'approved'"
+            )
+            ->where('v.isActive = true')
+            ->groupBy('v.id')
+            ->orderBy('v.name', 'ASC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset);
+
+        $countQb = $this->createQueryBuilder('v')
+            ->select('COUNT(v.id)')
+            ->where('v.isActive = true');
+
+        $trimmed = $q !== null ? trim($q) : '';
+        if ($trimmed !== '') {
+            $like = '%' . strtolower($trimmed) . '%';
+            $qb->andWhere('LOWER(v.name) LIKE :q')->setParameter('q', $like);
+            $countQb->andWhere('LOWER(v.name) LIKE :q')->setParameter('q', $like);
+        }
+
+        $rows = $qb->getQuery()->getResult();
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        $out = [];
+        foreach ($rows as $row) {
+            $vendor = $row[0];
+            $rating = $row['rating'] !== null ? (float) $row['rating'] : null;
+            $ratingCount = (int) $row['ratingCount'];
+
+            $out[] = [
+                'vendor' => $vendor,
+                'rating' => $rating,
+                'ratingCount' => $ratingCount,
+            ];
+        }
+
+        return ['items' => $out, 'total' => $total];
+    }
 }
