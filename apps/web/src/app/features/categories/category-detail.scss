@@ -90,48 +90,27 @@
   border-radius: 8px;
 }
 
-/* ----- Two-column catalog layout (filter sidebar + grid) -------- */
+/* ----- Stacked catalog layout (filter bar on top + grid) -------- */
 
 .catalog-layout {
-  display: grid;
-  gap: 40px;
-  grid-template-columns: 1fr;        /* mobile: stacked */
-  align-items: start;
-
-  @media (min-width: 768px) {
-    grid-template-columns: 240px 1fr; /* tablet+: sidebar + grid */
-  }
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
 
   @media (min-width: 1280px) {
-    grid-template-columns: 280px 1fr;
-    gap: 48px;
+    gap: var(--space-xl);
   }
 }
 
-.catalog-layout__sidebar {
-  /* On mobile the sidebar appears BELOW the header above the grid;
-     order ensures the grid always starts near the top of the viewport. */
-  order: 2;
-
-  @media (min-width: 768px) {
-    order: 1;
-    position: sticky;
-    top: 24px;
-    max-height: calc(100vh - 48px);
-    overflow-y: auto;
-  }
+.catalog-layout__filters {
+  display: block;
 }
 
 .catalog-layout__grid {
-  order: 1;
   display: flex;
   flex-direction: column;
   gap: 32px;
   min-width: 0; /* prevent grid blowout */
-
-  @media (min-width: 768px) {
-    order: 2;
-  }
 }
 
 /* ----- Loading shimmer ------------------------------------------- */

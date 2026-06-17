@@ -46,17 +46,16 @@
           </ui-stack>
         </header>
 
-        <!-- Filter + grid layout -->
+        <!-- Filter bar + grid layout -->
         <div class="catalog-layout">
 
-          <!-- Filter sidebar -->
-          <aside class="catalog-layout__sidebar">
-            <app-facet-filters
-              [filters]="currentFilters()"
-              [facets]="facets()"
-              (filterChange)="onFilterChange($event)"
-            />
-          </aside>
+          <!-- Filter bar (top, full-width) -->
+          <app-filter-bar
+            class="catalog-layout__filters"
+            [filters]="currentFilters()"
+            [facets]="facets()"
+            (filterChange)="onFilterChange($event)"
+          />
 
           <!-- Product grid -->
           <section class="catalog-layout__grid" [attr.aria-label]="'categories.gridAria' | translate">

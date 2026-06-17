@@ -23,7 +23,7 @@ import {
 } from '../../shared/ui';
 import type { CategoryDetail, CategoryDetailMeta } from './category.model';
 import { CatalogService, type CatalogFilters, type CatalogSort } from './catalog.service';
-import { FacetFiltersComponent } from './facet-filters.component';
+import { FilterBarComponent } from '../catalog/filter-bar';
 import { ProductCardComponent } from '../catalog/product-card';
 import { TranslatePipe } from '@ngx-translate/core';
 
@@ -52,7 +52,7 @@ import { TranslatePipe } from '@ngx-translate/core';
     TextComponent,
     StackComponent,
     ProductCardComponent,
-    FacetFiltersComponent,
+    FilterBarComponent,
     TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
