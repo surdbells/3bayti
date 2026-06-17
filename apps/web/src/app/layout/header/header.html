@@ -54,9 +54,6 @@
       </ng-container>
       <ng-template #loggedOutCta>
         <ng-container *ngIf="showLoggedOutCta()">
-          <a routerLink="/login" class="auth-cta auth-cta--primary" data-testid="header-customer">
-            {{ 'header.customer' | translate }}
-          </a>
           <a
             [href]="vendorAppUrl"
             target="_blank"
@@ -64,7 +61,16 @@
             class="auth-cta auth-cta--ghost"
             data-testid="header-vendor"
           >
-            {{ 'header.vendor' | translate }}
+            {{ 'header.sell' | translate }}
+          </a>
+          <a routerLink="/login" class="auth-cta auth-cta--signin" data-testid="header-customer">
+            <svg class="auth-cta__icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+                 stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true">
+              <path d="M20 21a8 8 0 0 0-16 0" />
+              <circle cx="12" cy="8" r="4" />
+            </svg>
+            <span>{{ 'header.signIn' | translate }}</span>
           </a>
         </ng-container>
       </ng-template>
@@ -130,10 +136,16 @@
         <a
           routerLink="/login"
           (click)="closeDrawer()"
-          class="auth-cta auth-cta--primary"
+          class="auth-cta auth-cta--signin"
           data-testid="drawer-customer"
         >
-          {{ 'header.customer' | translate }}
+          <svg class="auth-cta__icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+               stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0" />
+            <circle cx="12" cy="8" r="4" />
+          </svg>
+          <span>{{ 'header.signIn' | translate }}</span>
         </a>
         <a
           [href]="vendorAppUrl"
@@ -142,7 +154,7 @@
           class="auth-cta auth-cta--ghost"
           data-testid="drawer-vendor"
         >
-          {{ 'header.vendor' | translate }}
+          {{ 'header.sell' | translate }}
         </a>
       </div>
     }

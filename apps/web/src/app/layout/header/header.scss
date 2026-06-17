@@ -171,17 +171,40 @@
   .header-actions .auth-cta--ghost {
     display: none;
   }
+
+  /* Sign-in collapses to an icon-only button so the action row never
+     overflows on narrow screens; the labelled form returns at >=560px. */
+  .header-actions .auth-cta--signin {
+    width: 40px;
+    padding: 0;
+    justify-content: center;
+    border-color: transparent;
+  }
+
+  .header-actions .auth-cta--signin span {
+    display: none;
+  }
 }
 
-.auth-cta--primary {
-  background: var(--color-brand-500, #b18f1f);
-  color: #fff;
+/* Sign-in affordance — a refined account link (person icon + label) that
+   replaces the former gold "Customer" button. Espresso text on a hairline
+   border with a subtle brand-tinted hover. Deliberately quieter than a
+   primary button so it reads as utility, not a sales CTA. */
+.auth-cta--signin {
+  gap: 7px;
+  color: var(--color-brand-700);
+  border: 1px solid var(--color-border-default);
 
   &:hover,
   &:focus-visible {
-    background: var(--color-brand-600, #957615);
+    background: var(--color-brand-50);
+    border-color: var(--color-brand-300);
     outline: none;
   }
+}
+
+.auth-cta--signin .auth-cta__icon {
+  flex: 0 0 auto;
 }
 
 /* ---------------------------------------------------------------------------
