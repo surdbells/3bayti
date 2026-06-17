@@ -157,7 +157,23 @@ is optional follow-up. Original sub-phase sketch kept below for reference.*
 - *Decisions:* reviews **write** vs read-only+empty-state · gallery zoom depth · variant↔model.
 
 ### H4 — Auth & cart
-*Remaining auth/cart UX after H0.2's fix. Pre-flight the cart + auth components first.*
+**Pre-flight finding (this session):** like the PDP, the cart + auth surface is
+already built, so H4 is NOT a from-scratch build:
+- `features/cart/cart-page.ts` — line items (image + variants), qty stepper,
+  remove, totals card (subtotal / shipping / total), **promo code via
+  CartQuoteResponse** (+ a guest "sign in to apply a promo code" nudge), and an
+  empty state. `layout/cart-drawer` + `core/cart/cart.service` exist; cart-page
+  has its own spec.
+- `features/auth/{login, register, forgot-password, reset-password, verify-phone}`
+  + `features/account` all scaffolded; routes wired (login / register /
+  verify-phone / account). Header phone-verification badge exists.
+
+So H4.A (cart UX) and H4.C (verify-phone/badge) are largely pre-existing, and
+H4.B is auth-flow **polish**, not a build. **H4 should be re-scoped to specific,
+audited gaps** — exercise each auth flow + the cart end-to-end (validation,
+error/empty states, i18n coverage, a11y, RTL, mobile) and list concrete issues,
+then fix them as sub-phases. Best done fresh, with room for a thorough pass.
+Original from-scratch sketch kept below for reference only:
 - **H4.A** Cart page UX (line items, qty/remove, totals, **promo field** via X.8 quote,
   empty state, recs).
 - **H4.B** Auth flows polish (login/register/OTP/reset — validation, errors, i18n, a11y).
