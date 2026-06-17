@@ -507,6 +507,70 @@ describe('AuthService', () => {
   });
 
   /* -----------------------------------------------------------------
+     hydrate() session resilience (H0.2 — "cart disappears on reload")
+
+     Regression guard for the bug where a successful /me hydrate was
+     undone by a throwing locale side-effect, logging the user out on
+     every full page load and leaving the cart (and all authed
+     features) empty.
+     ----------------------------------------------------------------- */
+  describe('hydrate() session resilience (H0.2)', () => {
+    it('keeps the session when the user.locale is undefined (no crash, no logout)', async () => {
+      const { service, controller } = setup();
+      /* Pre-fix: syncLocale guarded `!== null` only, so an undefined
+         locale reached `undefined.startsWith(...)` and threw; hydrate's
+         catch then ran applyLogoutState and isAuthenticated became false. */
+      const resp = makeLoginResponse({
+        user: makeUser({ locale: undefined as unknown as null }),
+      });
+
+      const p = service.hydrate();
+      controller.expectOne('/auth-proxy/me').flush(resp);
+      await p;
+
+      expect(service.isAuthenticated()).toBe(true);
+      expect(service.currentUser()).not.toBeNull();
+    });
+
+    it('unwraps a double-nested { user: { ... } } body from a mismatched /me build', async () => {
+      const { service, controller } = setup();
+      const flat = makeUser({ id: 2, email: 'nested@example.com' });
+      /* Simulate a stale BFF /me that double-wraps the user. applyAuthState
+         must normalise it so _currentUser is the real AuthUser. */
+      const resp = makeLoginResponse({ user: { user: flat } as unknown as AuthUser });
+
+      const p = service.hydrate();
+      controller.expectOne('/auth-proxy/me').flush(resp);
+      await p;
+
+      expect(service.isAuthenticated()).toBe(true);
+      expect(service.currentUser()?.id).toBe(2);
+      expect(service.currentUser()?.email).toBe('nested@example.com');
+    });
+
+    it('does NOT wipe the session if the locale side-effect throws', async () => {
+      const { service, controller, locale } = setup();
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+      /* Force the NON-CRITICAL locale side-effect to blow up. applyAuthState
+         must isolate it so the session survives. */
+      vi.spyOn(locale, 'setLocale').mockImplementation(() => {
+        throw new Error('locale boom');
+      });
+      locale._setCurrent('en');
+      const resp = makeLoginResponse({ user: makeUser({ locale: 'ar' }) });
+
+      const p = service.hydrate();
+      controller.expectOne('/auth-proxy/me').flush(resp);
+      await p;
+
+      expect(service.isAuthenticated()).toBe(true);
+      expect(service.currentUser()).not.toBeNull();
+      expect(warn).toHaveBeenCalled();
+      warn.mockRestore();
+    });
+  });
+
+  /* -----------------------------------------------------------------
      Pre-emptive refresh scheduler
      ----------------------------------------------------------------- */
   describe('pre-emptive refresh scheduler', () => {

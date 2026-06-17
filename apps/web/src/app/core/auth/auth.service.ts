@@ -384,14 +384,35 @@ export class AuthService {
    * refresh, sync locale.
    */
   private applyAuthState(response: BffLoginResponse | BffRefreshResponse): void {
+    /* Defensive unwrap. /login emits a FLAT user, but a stale or
+       mismatched /me BFF build could still emit a double-nested
+       { user: { ... } }. Normalise here so _currentUser AND syncLocale
+       always receive the real AuthUser regardless of which BFF build is
+       live. AuthUser has no `user` field of its own, so once the BFF
+       returns the flat shape this is a harmless no-op. */
+    const raw = response.user as AuthUser & { user?: AuthUser };
+    const user: AuthUser = raw && raw.user ? raw.user : raw;
+
     const snapshot: AccessTokenSnapshot = {
       token: response.access_token,
       expiresAt: response.access_token_expires_at,
     };
     this.tokenStore.set(snapshot);
-    this._currentUser.set(response.user);
+    this._currentUser.set(user);
     this.scheduleRefresh();
-    this.syncLocale(response.user);
+    /* Locale sync is a NON-CRITICAL side effect. It must never be able
+       to throw out of applyAuthState — otherwise a failure here
+       propagates into hydrate()'s catch and tears down an otherwise
+       valid session (the root cause of "cart disappears on reload":
+       syncLocale threw on a missing locale and hydrate logged the user
+       out on every full page load). */
+    try {
+      this.syncLocale(user);
+    } catch (err) {
+      if (typeof console !== 'undefined') {
+        console.warn('[AuthService] locale sync skipped (non-critical)', err);
+      }
+    }
   }
 
   /**
@@ -418,12 +439,16 @@ export class AuthService {
     /* Track the server-side value so the locale-watch effect can
        skip pushing the same value back. user.locale may be 'en-AE'
        etc. which the LocaleService canonicalises to 'en'/'ar' on
-       setLocale. We store the normalised form here. */
-    if (user.locale !== null) {
-      this.lastPushedLocale = user.locale.startsWith('ar') ? 'ar' : 'en';
-    }
+       setLocale. We store the normalised form here.
 
-    if (user.locale === null) return;
+       Guard with `== null` (covers BOTH null and undefined): a missing
+       locale must short-circuit BEFORE .startsWith() rather than throw.
+       A bare `!== null` check let an undefined locale through and crashed
+       hydrate on every full page load. */
+    if (user?.locale == null) return;
+
+    this.lastPushedLocale = user.locale.startsWith('ar') ? 'ar' : 'en';
+
     if (user.locale === this.locale.current()) return;
     /* setLocale is async (it triggers translation load) but we
        don't await — the locale change can settle in the background.

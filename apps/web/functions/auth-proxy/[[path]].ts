@@ -128,7 +128,13 @@ async function handleAuthProxy(req: Request): Promise<Response> {
         access_token: rd.access_token,
         access_token_expires_at: rd.access_token_expires_at,
         refresh_token_expires_at: rd.refresh_token_expires_at,
-        user: md,
+        /* /v3/auth/me returns the user nested as { user: {...} }; unwrap
+           one level so /me matches the FLAT user shape that /login emits.
+           Without this, AuthService.applyAuthState sets _currentUser to the
+           wrapper and syncLocale crashes on the missing locale, wiping the
+           session on every full page load. The `?? md` keeps us resilient
+           if the upstream shape ever flattens. */
+        user: (md as Record<string, unknown>)?.['user'] ?? md,
       }),
       { status: 200, headers: rh },
     );
