@@ -822,5 +822,63 @@
     "detailMaterials": "Materials",
     "detailCare": "Care",
     "relatedHeading": "You may also like"
+  },
+  "ui": {
+    "loading": "Loading",
+    "productCard": {
+      "sale": "Sale",
+      "new": "New",
+      "bestseller": "Best seller",
+      "saveWishlist": "Save to wishlist",
+      "outOfStock": "Out of stock",
+      "imageAlt": "Product image"
+    },
+    "storeCard": {
+      "featuredProducts": "Featured products",
+      "viewCollection": "View collection"
+    },
+    "carousel": {
+      "featuredProducts": "Featured products",
+      "slideAria": "Slide {{n}} of {{total}}",
+      "designer": "designer",
+      "productByAria": "{{name}} by {{vendor}}",
+      "showProductAria": "Show {{name}} by {{vendor}}",
+      "viewProduct": "View product",
+      "prev": "Previous slide",
+      "next": "Next slide",
+      "chooseSlide": "Choose slide",
+      "goToSlide": "Go to slide {{n}}"
+    },
+    "share": {
+      "label": "Share",
+      "whatsapp": "Share on WhatsApp",
+      "facebook": "Share on Facebook",
+      "x": "Share on X",
+      "telegram": "Share on Telegram",
+      "copyLink": "Copy link",
+      "linkCopied": "Link copied",
+      "nativeShare": "Share via your device",
+      "copied": "Copied!"
+    },
+    "countdown": {
+      "days": "days",
+      "hrs": "hrs",
+      "min": "min",
+      "sec": "sec",
+      "ended": "Ended",
+      "ariaEnded": "Offer ended",
+      "ariaEndsIn": "Ends in {{time}}",
+      "ariaDay": "{{n}} day",
+      "ariaDays": "{{n}} days",
+      "ariaHour": "{{n}} hour",
+      "ariaHours": "{{n}} hours",
+      "ariaMin": "{{n}} minute",
+      "ariaMins": "{{n}} minutes"
+    },
+    "strip": {
+      "viewAll": "View all",
+      "scrollLeft": "Scroll left",
+      "scrollRight": "Scroll right"
+    }
   }
 }

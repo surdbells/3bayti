@@ -6,7 +6,9 @@ import {
   OnDestroy,
   signal,
   computed,
+  inject,
 } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 /**
  * Countdown — a compact days/hours/minutes/seconds timer to a deadline.
@@ -24,31 +26,32 @@ import {
 @Component({
   selector: 'ui-countdown',
   standalone: true,
+  imports: [TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="cd" role="timer" [attr.aria-label]="ariaLabel()">
       @if (!expired()) {
         <span class="cd__unit">
           <span class="cd__num" aria-hidden="true">{{ parts().d }}</span>
-          <span class="cd__lbl" aria-hidden="true">days</span>
+          <span class="cd__lbl" aria-hidden="true">{{ 'ui.countdown.days' | translate }}</span>
         </span>
         <span class="cd__sep" aria-hidden="true">:</span>
         <span class="cd__unit">
           <span class="cd__num" aria-hidden="true">{{ pad(parts().h) }}</span>
-          <span class="cd__lbl" aria-hidden="true">hrs</span>
+          <span class="cd__lbl" aria-hidden="true">{{ 'ui.countdown.hrs' | translate }}</span>
         </span>
         <span class="cd__sep" aria-hidden="true">:</span>
         <span class="cd__unit">
           <span class="cd__num" aria-hidden="true">{{ pad(parts().m) }}</span>
-          <span class="cd__lbl" aria-hidden="true">min</span>
+          <span class="cd__lbl" aria-hidden="true">{{ 'ui.countdown.min' | translate }}</span>
         </span>
         <span class="cd__sep" aria-hidden="true">:</span>
         <span class="cd__unit">
           <span class="cd__num" aria-hidden="true">{{ pad(parts().s) }}</span>
-          <span class="cd__lbl" aria-hidden="true">sec</span>
+          <span class="cd__lbl" aria-hidden="true">{{ 'ui.countdown.sec' | translate }}</span>
         </span>
       } @else {
-        <span class="cd__ended">Ended</span>
+        <span class="cd__ended">{{ 'ui.countdown.ended' | translate }}</span>
       }
     </div>
   `,
@@ -92,6 +95,8 @@ import {
 })
 export class CountdownComponent implements OnInit, OnDestroy {
   /** ISO 8601 deadline. */
+  private i18n = inject(TranslateService);
+
   @Input({ required: true }) endsAt!: string;
   /** ISO 8601 server clock at response time (optional). */
   @Input() serverNow?: string;
@@ -119,13 +124,13 @@ export class CountdownComponent implements OnInit, OnDestroy {
   });
 
   readonly ariaLabel = computed(() => {
-    if (this.expired()) return 'Offer ended';
+    if (this.expired()) return this.i18n.instant('ui.countdown.ariaEnded');
     const p = this.parts();
     const bits: string[] = [];
-    if (p.d) bits.push(`${p.d} day${p.d === 1 ? '' : 's'}`);
-    bits.push(`${p.h} hour${p.h === 1 ? '' : 's'}`);
-    bits.push(`${p.m} minute${p.m === 1 ? '' : 's'}`);
-    return `Ends in ${bits.join(', ')}`;
+    if (p.d) bits.push(this.i18n.instant(p.d === 1 ? 'ui.countdown.ariaDay' : 'ui.countdown.ariaDays', { n: p.d }));
+    bits.push(this.i18n.instant(p.h === 1 ? 'ui.countdown.ariaHour' : 'ui.countdown.ariaHours', { n: p.h }));
+    bits.push(this.i18n.instant(p.m === 1 ? 'ui.countdown.ariaMin' : 'ui.countdown.ariaMins', { n: p.m }));
+    return this.i18n.instant('ui.countdown.ariaEndsIn', { time: bits.join(', ') });
   });
 
   ngOnInit(): void {

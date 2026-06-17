@@ -14,6 +14,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { SkeletonShimmerComponent } from './skeleton-shimmer';
 import type { Product } from '../../features/catalog/product.model';
 import { CfImagePipe } from './cf-image.pipe';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 /**
  * HeroCarouselComponent — coverflow product carousel for the home-page
@@ -65,10 +66,10 @@ import { CfImagePipe } from './cf-image.pipe';
 @Component({
   selector: 'ui-hero-carousel',
   standalone: true,
-  imports: [CfImagePipe, SkeletonShimmerComponent],
+  imports: [CfImagePipe, SkeletonShimmerComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="hero-carousel" role="region" aria-label="Featured products">
+    <div class="hero-carousel" role="region" [attr.aria-label]="'ui.carousel.featuredProducts' | translate">
 
       @if (loading) {
         <!-- Skeleton state — center card placeholder, suggests the
@@ -97,14 +98,14 @@ import { CfImagePipe } from './cf-image.pipe';
               [attr.aria-current]="slotOf(i) === 0 ? 'true' : null"
               role="group"
               [attr.aria-roledescription]="'slide'"
-              [attr.aria-label]="'Slide ' + (i + 1) + ' of ' + slides().length"
+              [attr.aria-label]="'ui.carousel.slideAria' | translate:{ n: i + 1, total: slides().length }"
             >
               @if (slotOf(i) === 0) {
                 <!-- Center card: full link to product. -->
                 <a
                   [href]="productUrl(product.slug)"
                   class="hero-carousel__slide-link"
-                  [attr.aria-label]="product.name + ' by ' + (product.vendor?.name ?? 'designer')"
+                  [attr.aria-label]="'ui.carousel.productByAria' | translate:{ name: product.name, vendor: vendorName(product) }"
                 >
                   @if (product.primary_image; as img) {
                     <img
@@ -135,7 +136,7 @@ import { CfImagePipe } from './cf-image.pipe';
                       {{ product.price.currency }} {{ product.price.amount }}
                     </p>
                     <span class="hero-carousel__cta">
-                      View product
+                      {{ 'ui.carousel.viewProduct' | translate }}
                       <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
                       </svg>
@@ -150,7 +151,7 @@ import { CfImagePipe } from './cf-image.pipe';
                   type="button"
                   class="hero-carousel__slide-button"
                   (click)="goTo(i)"
-                  [attr.aria-label]="'Show ' + product.name + ' by ' + (product.vendor?.name ?? 'designer')"
+                  [attr.aria-label]="'ui.carousel.showProductAria' | translate:{ name: product.name, vendor: vendorName(product) }"
                   tabindex="-1"
                 >
                   @if (product.primary_image; as img) {
@@ -178,7 +179,7 @@ import { CfImagePipe } from './cf-image.pipe';
             type="button"
             class="hero-carousel__arrow hero-carousel__arrow--left"
             (click)="goPrev()"
-            aria-label="Previous slide"
+            [attr.aria-label]="'ui.carousel.prev' | translate"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M15 18l-6-6 6-6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -189,7 +190,7 @@ import { CfImagePipe } from './cf-image.pipe';
             type="button"
             class="hero-carousel__arrow hero-carousel__arrow--right"
             (click)="goNext()"
-            aria-label="Next slide"
+            [attr.aria-label]="'ui.carousel.next' | translate"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -197,7 +198,7 @@ import { CfImagePipe } from './cf-image.pipe';
           </button>
 
           <!-- Dot indicators. -->
-          <div class="hero-carousel__dots" role="tablist" aria-label="Choose slide">
+          <div class="hero-carousel__dots" role="tablist" [attr.aria-label]="'ui.carousel.chooseSlide' | translate">
             @for (product of slides(); track product.id; let i = $index) {
               <button
                 type="button"
@@ -205,7 +206,7 @@ import { CfImagePipe } from './cf-image.pipe';
                 class="hero-carousel__dot"
                 [class.is-active]="activeIndex() === i"
                 [attr.aria-selected]="activeIndex() === i"
-                [attr.aria-label]="'Go to slide ' + (i + 1)"
+                [attr.aria-label]="'ui.carousel.goToSlide' | translate:{ n: i + 1 }"
                 (click)="goTo(i)"
               ></button>
             }
@@ -233,6 +234,12 @@ export class HeroCarouselComponent implements OnDestroy {
   /* ----- Internal state -------------------------------------------- */
 
   private platformId = inject(PLATFORM_ID);
+  private i18n = inject(TranslateService);
+
+  /** Vendor display name with a localized fallback. */
+  vendorName(product: Product): string {
+    return product.vendor?.name ?? this.i18n.instant('ui.carousel.designer');
+  }
   private _products = signal<Product[]>([]);
 
   /** Coverflow shows exactly 5 slots (-2, -1, 0, +1, +2). More than 5

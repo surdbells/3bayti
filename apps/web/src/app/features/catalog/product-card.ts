@@ -4,6 +4,7 @@ import { Money, Product } from './product.model';
 import { WishlistService } from '../wishlist/wishlist.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 /**
  * ProductCard — single card in any product display surface.
@@ -46,7 +47,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 @Component({
   selector: 'ui-product-card',
   standalone: true,
-  imports: [CfImagePipe],
+  imports: [CfImagePipe, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (product) {
@@ -70,11 +71,11 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
                  order: Sale > New > Bestseller). The previous design
                  stacked all three; the new spec keeps it cleaner. -->
             @if (isOnSale()) {
-              <span class="product-card__badge product-card__badge--sale">Sale</span>
+              <span class="product-card__badge product-card__badge--sale">{{ 'ui.productCard.sale' | translate }}</span>
             } @else if (product.is_new) {
-              <span class="product-card__badge">New</span>
+              <span class="product-card__badge">{{ 'ui.productCard.new' | translate }}</span>
             } @else if (product.is_bestseller) {
-              <span class="product-card__badge">Best seller</span>
+              <span class="product-card__badge">{{ 'ui.productCard.bestseller' | translate }}</span>
             }
 
             <!-- Top-right: like / wishlist button. Reflects saved
@@ -85,7 +86,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
               class="product-card__like"
               [class.is-saved]="isSaved()"
               [attr.aria-pressed]="isSaved()"
-              aria-label="Save to wishlist"
+              [attr.aria-label]="'ui.productCard.saveWishlist' | translate"
               (click)="onLikeClick($event)"
             >
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -95,7 +96,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 
             @if (!product.in_stock) {
               <div class="product-card__stock-overlay">
-                <span>Out of stock</span>
+                <span>{{ 'ui.productCard.outOfStock' | translate }}</span>
               </div>
             }
           </div>
@@ -172,6 +173,7 @@ export class ProductCardComponent {
   private readonly wishlist = inject(WishlistService);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly i18n = inject(TranslateService);
 
   /** Whether this product is currently on the user's wishlist. */
   isSaved(): boolean {
@@ -188,7 +190,7 @@ export class ProductCardComponent {
   imageAlt(): string {
     return this.product?.primary_image?.alt
       || this.product?.name
-      || 'Product image';
+      || this.i18n.instant('ui.productCard.imageAlt');
   }
 
   /** First character for the letter-fallback. */

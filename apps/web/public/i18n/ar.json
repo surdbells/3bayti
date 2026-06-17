@@ -822,5 +822,63 @@
     "detailMaterials": "المواد",
     "detailCare": "العناية",
     "relatedHeading": "قد يعجبك أيضًا"
+  },
+  "ui": {
+    "loading": "جارٍ التحميل",
+    "productCard": {
+      "sale": "تخفيض",
+      "new": "جديد",
+      "bestseller": "الأكثر مبيعًا",
+      "saveWishlist": "أضيفي إلى قائمة الرغبات",
+      "outOfStock": "غير متوفّر",
+      "imageAlt": "صورة المنتج"
+    },
+    "storeCard": {
+      "featuredProducts": "منتجات مميّزة",
+      "viewCollection": "عرض المجموعة"
+    },
+    "carousel": {
+      "featuredProducts": "منتجات مميّزة",
+      "slideAria": "الشريحة {{n}} من {{total}}",
+      "designer": "مصمّم",
+      "productByAria": "{{name}} من {{vendor}}",
+      "showProductAria": "عرض {{name}} من {{vendor}}",
+      "viewProduct": "عرض المنتج",
+      "prev": "الشريحة السابقة",
+      "next": "الشريحة التالية",
+      "chooseSlide": "اختاري شريحة",
+      "goToSlide": "الانتقال إلى الشريحة {{n}}"
+    },
+    "share": {
+      "label": "مشاركة",
+      "whatsapp": "المشاركة عبر واتساب",
+      "facebook": "المشاركة عبر فيسبوك",
+      "x": "المشاركة عبر إكس",
+      "telegram": "المشاركة عبر تيليجرام",
+      "copyLink": "نسخ الرابط",
+      "linkCopied": "تمّ نسخ الرابط",
+      "nativeShare": "المشاركة عبر جهازك",
+      "copied": "تمّ النسخ!"
+    },
+    "countdown": {
+      "days": "يوم",
+      "hrs": "ساعة",
+      "min": "دقيقة",
+      "sec": "ثانية",
+      "ended": "انتهى",
+      "ariaEnded": "انتهى العرض",
+      "ariaEndsIn": "ينتهي خلال {{time}}",
+      "ariaDay": "{{n}} يوم",
+      "ariaDays": "{{n}} يوم",
+      "ariaHour": "{{n}} ساعة",
+      "ariaHours": "{{n}} ساعة",
+      "ariaMin": "{{n}} دقيقة",
+      "ariaMins": "{{n}} دقيقة"
+    },
+    "strip": {
+      "viewAll": "عرض الكل",
+      "scrollLeft": "التمرير يسارًا",
+      "scrollRight": "التمرير يمينًا"
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * SkeletonShimmer — loading placeholder with a subtle shimmer sweep.
@@ -28,6 +29,7 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 @Component({
   selector: 'ui-skeleton-shimmer',
   standalone: true,
+  imports: [TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div
@@ -37,7 +39,7 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
       [style.height]="height"
       [style.aspect-ratio]="aspectRatio"
       role="status"
-      aria-label="Loading"
+      [attr.aria-label]="'ui.loading' | translate"
     >
       <div class="skeleton__sweep" aria-hidden="true"></div>
     </div>

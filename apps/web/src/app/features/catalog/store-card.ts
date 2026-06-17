@@ -1,5 +1,6 @@
 import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * Featured-vendor data shape. Mirrors the mobile app's `customer/featured`
@@ -75,7 +76,7 @@ export interface FeaturedVendor {
 @Component({
   selector: 'ui-store-card',
   standalone: true,
-  imports: [CfImagePipe],
+  imports: [CfImagePipe, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (vendor) {
@@ -99,7 +100,7 @@ export interface FeaturedVendor {
           <p class="store-card__description" [innerHTML]="vendor.description"></p>
         }
 
-        <div class="store-card__products" role="list" aria-label="Featured products">
+        <div class="store-card__products" role="list" [attr.aria-label]="'ui.storeCard.featuredProducts' | translate">
           @for (product of vendor.products.slice(0, 4); track product.id) {
             <a
               [href]="productUrl(product.slug)"
@@ -118,7 +119,7 @@ export interface FeaturedVendor {
         </div>
 
         <a [href]="vendorUrl()" class="store-card__view-collection">
-          View collection
+          {{ 'ui.storeCard.viewCollection' | translate }}
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>

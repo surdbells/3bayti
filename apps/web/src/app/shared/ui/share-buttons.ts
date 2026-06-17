@@ -8,6 +8,7 @@ import {
   OnDestroy,
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * ShareButtons — social share row for a single canonical URL.
@@ -32,17 +33,18 @@ import { isPlatformBrowser } from '@angular/common';
 @Component({
   selector: 'ui-share-buttons',
   standalone: true,
+  imports: [TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="share">
-      <span class="share__label">Share</span>
+      <span class="share__label">{{ 'ui.share.label' | translate }}</span>
 
       <a
         class="share__btn"
         [href]="whatsappUrl()"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Share on WhatsApp"
+        [attr.aria-label]="'ui.share.whatsapp' | translate"
       >
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path
@@ -56,7 +58,7 @@ import { isPlatformBrowser } from '@angular/common';
         [href]="facebookUrl()"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Share on Facebook"
+        [attr.aria-label]="'ui.share.facebook' | translate"
       >
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path
@@ -70,7 +72,7 @@ import { isPlatformBrowser } from '@angular/common';
         [href]="xUrl()"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Share on X"
+        [attr.aria-label]="'ui.share.x' | translate"
       >
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path
@@ -84,7 +86,7 @@ import { isPlatformBrowser } from '@angular/common';
         [href]="telegramUrl()"
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Share on Telegram"
+        [attr.aria-label]="'ui.share.telegram' | translate"
       >
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path
@@ -98,7 +100,7 @@ import { isPlatformBrowser } from '@angular/common';
         class="share__btn"
         [class.is-copied]="copied()"
         (click)="copyLink()"
-        [attr.aria-label]="copied() ? 'Link copied' : 'Copy link'"
+        [attr.aria-label]="copied() ? ('ui.share.linkCopied' | translate) : ('ui.share.copyLink' | translate)"
       >
         @if (copied()) {
           <svg
@@ -133,7 +135,7 @@ import { isPlatformBrowser } from '@angular/common';
           type="button"
           class="share__btn"
           (click)="nativeShare()"
-          aria-label="Share via your device"
+          [attr.aria-label]="'ui.share.nativeShare' | translate"
         >
           <svg
             viewBox="0 0 24 24"
@@ -154,7 +156,7 @@ import { isPlatformBrowser } from '@angular/common';
       }
 
       <span class="share__status" role="status" aria-live="polite">{{
-        copied() ? 'Copied!' : ''
+        copied() ? ('ui.share.copied' | translate) : ''
       }}</span>
     </div>
   `,

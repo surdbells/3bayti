@@ -13,6 +13,7 @@ import {
 import type { Product } from '../../features/catalog/product.model';
 import { ProductCardComponent } from '../../features/catalog/product-card';
 import { SkeletonShimmerComponent } from './skeleton-shimmer';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * ProductStrip — horizontal-scrolling row of product cards.
@@ -48,7 +49,7 @@ import { SkeletonShimmerComponent } from './skeleton-shimmer';
 @Component({
   selector: 'ui-product-strip',
   standalone: true,
-  imports: [ProductCardComponent, SkeletonShimmerComponent],
+  imports: [ProductCardComponent, SkeletonShimmerComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="strip" [attr.aria-label]="heading">
@@ -61,7 +62,7 @@ import { SkeletonShimmerComponent } from './skeleton-shimmer';
         </h2>
         @if (viewAllUrl) {
           <a [href]="viewAllUrl" class="strip__view-all">
-            View all
+            {{ 'ui.strip.viewAll' | translate }}
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
@@ -78,7 +79,7 @@ import { SkeletonShimmerComponent } from './skeleton-shimmer';
             class="strip__arrow strip__arrow--left"
             [class.is-disabled]="atStart()"
             [attr.aria-disabled]="atStart()"
-            aria-label="Scroll left"
+            [attr.aria-label]="'ui.strip.scrollLeft' | translate"
             (click)="scrollByCard(-1)"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -115,7 +116,7 @@ import { SkeletonShimmerComponent } from './skeleton-shimmer';
             class="strip__arrow strip__arrow--right"
             [class.is-disabled]="atEnd()"
             [attr.aria-disabled]="atEnd()"
-            aria-label="Scroll right"
+            [attr.aria-label]="'ui.strip.scrollRight' | translate"
             (click)="scrollByCard(1)"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
