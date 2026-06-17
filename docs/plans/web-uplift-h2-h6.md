@@ -4,7 +4,7 @@
 **Repo:** https://github.com/surdbells/3bayti.git · **Working dir:** `/home/claude/work/3bayti`
 **Branch:** `main` · **App:** `apps/web` (Angular, deployed to Cloudflare Pages)
 **Last commit at doc creation:** `de8a78d` (H1.4 closure)
-**HEAD (latest session):** `fa7cb05` — H2.A + H2.B complete; H2.C part 1 (SearchService) complete. All pushed to `main`.
+**HEAD (latest session):** `df94fca` — **H2 COMPLETE** (A · B · C-1 · C-2); full web suite **747** green. All pushed to `main`.
 
 This is the authoritative plan + handover for the customer-storefront visual/UX
 uplift driven by the June QA punch-list. A fresh conversation can resume from
@@ -63,9 +63,9 @@ here with full continuity.
 | H2.A | api: /v3/vendors paginate + q + embed products | ✅ | `df1c86a` |
 | H2.B | directory: rich 3-per-row store cards | ✅ | `75709fe` |
 | H2.C-1 | SearchService (products + stores data layer) | ✅ | `fa7cb05` |
-| H2.C-2 | search overlay UI + header trigger + i18n | ⬜ next | — |
-| H2.D | H2 closure (full suite + doc) | ⬜ | — |
-| H3 | PDP overhaul (incl. #4 empty reviews) | ⬜ | — |
+| H2.C-2 | search overlay UI + header trigger + i18n | ✅ | `df94fca` |
+| H2.D | H2 closure (full web suite 747 green) | ✅ | this doc |
+| H3 | PDP overhaul (incl. #4 empty reviews) | ⬜ next | — |
 | H4 | auth & cart | ⬜ | — |
 | H5 | vendor-welcome merge + root promotion prep | ⬜ | — |
 | H6 | gift-cards + responsive sweep | ⬜ | — |
@@ -182,15 +182,18 @@ legacy seller app.*
 ---
 
 ## 5. Next action
-Resume at **H2.C part 2** — the search overlay UI + header trigger + i18n (full
-spec in §4 under H2). The data layer (`SearchService`) is done + tested. After
-H2.C part 2: **H2.D** closure (full `vitest` + update the §3 status table), then
-**H3 → H6**, each with its own detailed plan + decision box, per-sub-phase commits,
-`git pull --no-edit origin main` before each push, and a status snapshot after
-each commit.
+**H2 is complete.** Resume at **H3 — PDP overhaul** (`features/catalog/product-detail*`),
+per the H3 breakdown in §4. As always: detailed plan + decision box first, then
+per-sub-phase commits with `git pull --no-edit origin main` before each push and a
+status snapshot after each commit.
 
-**Latest session log:** completed H2.A (`df1c86a`), H2.B (`75709fe`), and
-H2.C part 1 (`fa7cb05`) on top of H1, plus this plan doc. All pushed to `main`.
-Backend (H2.A) remains subject to the api auto-deploy caveat in §2; the H2.B
-directory + the H2.C search both render real data only once `/v3/vendors`
-(and `/v3/products`) are deployed.
+**Web test baseline is now 747 tests / 71 files** (was 735/69: +SearchService 4,
++SearchOverlay 7, +header 2, −1 directory verified-tile test folded into the card-link
+test).
+
+**Latest session log:** completed **all of H2** — H2.A (`df1c86a`), H2.B (`75709fe`),
+H2.C part 1 (`fa7cb05`), H2.C part 2 (`df94fca`) — on top of H1, plus this plan doc.
+All pushed to `main`. Standing caveats (§2) unchanged: the api auto-deploy must be
+triggered for H2.A to be live, and the H2.B directory + H2.C search render real data
+only against the deployed `/v3/vendors` + `/v3/products`; a Pages build + Playwright
+pass against staging is still pending for H1/H2.
