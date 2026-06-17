@@ -880,5 +880,58 @@
       "scrollLeft": "التمرير يسارًا",
       "scrollRight": "التمرير يمينًا"
     }
+  },
+  "categories": {
+    "breadcrumb": { "aria": "مسار التنقّل", "home": "الرئيسية", "categories": "الفئات" },
+    "loading": "جارٍ التحميل…",
+    "notFound": {
+      "eyebrow": "الفئة غير موجودة",
+      "title": "لا توجد فئة بهذا الاسم",
+      "body": "الفئة التي تبحثين عنها غير موجودة. تصفّحي جميع الفئات أدناه.",
+      "back": "← جميع الفئات"
+    },
+    "eyebrow": "الفئة",
+    "piece": "قطعة",
+    "pieces": "قطع",
+    "fromDesigners": "من مصمّمي الإمارات المستقلّين",
+    "gridAria": "منتجات في هذه الفئة",
+    "loadingProducts": "جارٍ تحميل المنتجات…",
+    "emptyTitle": "لا توجد منتجات تطابق عوامل التصفية",
+    "emptyHint": "حاولي تعديل عوامل التصفية أو مسحها.",
+    "showing": "عرض {{shown}} من {{total}}",
+    "loadMoreAria": "تحميل المزيد من المنتجات",
+    "loadMore": "تحميل المزيد",
+    "indexEyebrow": "تصفّحي",
+    "indexTitle": "تسوّقي حسب الفئة",
+    "indexLede": "عباءات وقفاطين وإكسسوارات ومجموعات أزياء محتشمة منتقاة من مصمّمي الإمارات المستقلّين.",
+    "loadingIndex": "جارٍ تحميل الفئات…",
+    "emptyIndex": "لا توجد فئات متاحة حاليًا. يُرجى العودة قريبًا.",
+    "tileAria": "{{name}} — {{count}} منتج",
+    "product": "منتج",
+    "products": "منتجات",
+    "filterAria": "تصفية المنتجات",
+    "sortBy": "ترتيب حسب",
+    "sortAria": "ترتيب المنتجات حسب",
+    "sort": {
+      "newest": "الأحدث",
+      "oldest": "الأقدم",
+      "priceAsc": "السعر: من الأقل إلى الأعلى",
+      "priceDesc": "السعر: من الأعلى إلى الأقل",
+      "relevance": "الصلة",
+      "bestSeller": "الأكثر مبيعًا"
+    },
+    "size": "المقاس",
+    "filterSizeAria": "تصفية حسب المقاس {{value}} ({{count}} منتج)",
+    "colour": "اللون",
+    "filterColorAria": "تصفية حسب اللون {{value}} ({{count}} منتج)",
+    "priceTitle": "السعر (درهم)",
+    "price": {
+      "any": "أي سعر",
+      "min": "{{min}}+ درهم",
+      "under": "أقل من {{max}} درهم",
+      "range": "{{min}} – {{max}} درهم"
+    },
+    "priceBandAria": "{{label}} ({{count}} منتج)",
+    "clearAll": "مسح كل عوامل التصفية"
   }
 }

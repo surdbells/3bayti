@@ -25,6 +25,7 @@ import type { CategoryDetail, CategoryDetailMeta } from './category.model';
 import { CatalogService, type CatalogFilters, type CatalogSort } from './catalog.service';
 import { FacetFiltersComponent } from './facet-filters.component';
 import { ProductCardComponent } from '../catalog/product-card';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * Category detail page — `/category/:slug`.
@@ -52,6 +53,7 @@ import { ProductCardComponent } from '../catalog/product-card';
     StackComponent,
     ProductCardComponent,
     FacetFiltersComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './category-detail.html',

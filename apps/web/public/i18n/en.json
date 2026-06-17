@@ -880,5 +880,58 @@
       "scrollLeft": "Scroll left",
       "scrollRight": "Scroll right"
     }
+  },
+  "categories": {
+    "breadcrumb": { "aria": "Breadcrumb", "home": "Home", "categories": "Categories" },
+    "loading": "Loading…",
+    "notFound": {
+      "eyebrow": "Category not found",
+      "title": "No such category",
+      "body": "The category you're looking for doesn't exist. Browse all categories below.",
+      "back": "← All categories"
+    },
+    "eyebrow": "Category",
+    "piece": "piece",
+    "pieces": "pieces",
+    "fromDesigners": "from independent UAE designers",
+    "gridAria": "Products in this category",
+    "loadingProducts": "Loading products…",
+    "emptyTitle": "No products match your filters",
+    "emptyHint": "Try adjusting or clearing your filters.",
+    "showing": "Showing {{shown}} of {{total}}",
+    "loadMoreAria": "Load more products",
+    "loadMore": "Load more",
+    "indexEyebrow": "Browse",
+    "indexTitle": "Shop by Category",
+    "indexLede": "Curated abayas, kaftans, accessories and modest-wear collections from independent UAE designers.",
+    "loadingIndex": "Loading categories…",
+    "emptyIndex": "No categories available right now. Please check back soon.",
+    "tileAria": "{{name}} — {{count}} products",
+    "product": "product",
+    "products": "products",
+    "filterAria": "Filter products",
+    "sortBy": "Sort by",
+    "sortAria": "Sort products by",
+    "sort": {
+      "newest": "Newest",
+      "oldest": "Oldest",
+      "priceAsc": "Price: low to high",
+      "priceDesc": "Price: high to low",
+      "relevance": "Relevance",
+      "bestSeller": "Best sellers"
+    },
+    "size": "Size",
+    "filterSizeAria": "Filter by size {{value}} ({{count}} products)",
+    "colour": "Colour",
+    "filterColorAria": "Filter by colour {{value}} ({{count}} products)",
+    "priceTitle": "Price (AED)",
+    "price": {
+      "any": "Any price",
+      "min": "AED {{min}}+",
+      "under": "Under AED {{max}}",
+      "range": "AED {{min}} – {{max}}"
+    },
+    "priceBandAria": "{{label}} ({{count}} products)",
+    "clearAll": "Clear all filters"
   }
 }

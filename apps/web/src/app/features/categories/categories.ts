@@ -18,6 +18,7 @@ import {
   StackComponent,
 } from '../../shared/ui';
 import { Category } from './category.model';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * Categories index — `/category`.
@@ -42,6 +43,7 @@ import { Category } from './category.model';
     HeadingComponent,
     TextComponent,
     StackComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './categories.html',

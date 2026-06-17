@@ -3,10 +3,10 @@
     <ui-stack gap="2xl">
 
       <!-- Breadcrumb -->
-      <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="/" class="breadcrumb-link">Home</a>
+      <nav class="breadcrumb" [attr.aria-label]="'categories.breadcrumb.aria' | translate">
+        <a href="/" class="breadcrumb-link">{{ 'categories.breadcrumb.home' | translate }}</a>
         <span class="breadcrumb-sep" aria-hidden="true">›</span>
-        <a [href]="categoriesIndexUrl()" class="breadcrumb-link">Categories</a>
+        <a [href]="categoriesIndexUrl()" class="breadcrumb-link">{{ 'categories.breadcrumb.categories' | translate }}</a>
         @if (category(); as cat) {
           <span class="breadcrumb-sep" aria-hidden="true">›</span>
           <span class="breadcrumb-current" aria-current="page">{{ cat.name }}</span>
@@ -14,16 +14,14 @@
       </nav>
 
       @if (loading()) {
-        <ui-text tone="secondary">Loading…</ui-text>
+        <ui-text tone="secondary">{{ 'categories.loading' | translate }}</ui-text>
       } @else if (notFound()) {
         <header class="category-header">
           <ui-stack gap="md">
-            <p class="eyebrow">Category not found</p>
-            <ui-heading level="h1" size="xl">No such category</ui-heading>
-            <ui-text size="lg" tone="secondary">
-              The category you're looking for doesn't exist. Browse all categories below.
-            </ui-text>
-            <p><a [href]="categoriesIndexUrl()" class="back-link">← All categories</a></p>
+            <p class="eyebrow">{{ 'categories.notFound.eyebrow' | translate }}</p>
+            <ui-heading level="h1" size="xl">{{ 'categories.notFound.title' | translate }}</ui-heading>
+            <ui-text size="lg" tone="secondary">{{ 'categories.notFound.body' | translate }}</ui-text>
+            <p><a [href]="categoriesIndexUrl()" class="back-link">{{ 'categories.notFound.back' | translate }}</a></p>
           </ui-stack>
         </header>
 
@@ -32,17 +30,17 @@
         <!-- Header -->
         <header class="category-header">
           <ui-stack gap="md">
-            <p class="eyebrow">Category</p>
+            <p class="eyebrow">{{ 'categories.eyebrow' | translate }}</p>
             <ui-heading level="h1" size="xl">{{ cat.name }}</ui-heading>
             @if (catalogTotal() > 0) {
               <ui-text size="lg" tone="secondary">
-                {{ catalogTotal() }} {{ catalogTotal() === 1 ? 'piece' : 'pieces' }}
-                from independent UAE designers
+                {{ catalogTotal() }} {{ (catalogTotal() === 1 ? 'categories.piece' : 'categories.pieces') | translate }}
+                {{ 'categories.fromDesigners' | translate }}
               </ui-text>
             } @else if (meta(); as m) {
               <ui-text size="lg" tone="secondary">
-                {{ m.total_products }} {{ m.total_products === 1 ? 'piece' : 'pieces' }}
-                from independent UAE designers
+                {{ m.total_products }} {{ (m.total_products === 1 ? 'categories.piece' : 'categories.pieces') | translate }}
+                {{ 'categories.fromDesigners' | translate }}
               </ui-text>
             }
           </ui-stack>
@@ -61,11 +59,11 @@
           </aside>
 
           <!-- Product grid -->
-          <section class="catalog-layout__grid" aria-label="Products in this category">
+          <section class="catalog-layout__grid" [attr.aria-label]="'categories.gridAria' | translate">
 
             <!-- Loading shimmer row -->
             @if (isLoadingGrid()) {
-              <div class="grid-loading" aria-live="polite" aria-label="Loading products…">
+              <div class="grid-loading" aria-live="polite" [attr.aria-label]="'categories.loadingProducts' | translate">
                 @for (_ of [1,2,3,4,5,6]; track _) {
                   <div class="grid-loading__card"></div>
                 }
@@ -75,8 +73,8 @@
             <!-- Empty state -->
             @if (!isLoadingGrid() && products().length === 0) {
               <div class="grid-empty">
-                <p class="grid-empty__title">No products match your filters</p>
-                <p class="grid-empty__hint">Try adjusting or clearing your filters.</p>
+                <p class="grid-empty__title">{{ 'categories.emptyTitle' | translate }}</p>
+                <p class="grid-empty__hint">{{ 'categories.emptyHint' | translate }}</p>
               </div>
             }
 
@@ -91,7 +89,7 @@
               <!-- Load more / total indicator -->
               <div class="grid-footer">
                 <p class="grid-count">
-                  Showing {{ products().length }} of {{ catalogTotal() }}
+                  {{ 'categories.showing' | translate:{ shown: products().length, total: catalogTotal() } }}
                 </p>
                 @if (hasMore()) {
                   <button
@@ -99,8 +97,8 @@
                     type="button"
                     (click)="loadMore()"
                     [disabled]="isLoadingGrid()"
-                    aria-label="Load more products">
-                    {{ isLoadingGrid() ? 'Loading…' : 'Load more' }}
+                    [attr.aria-label]="'categories.loadMoreAria' | translate">
+                    {{ isLoadingGrid() ? ('categories.loading' | translate) : ('categories.loadMore' | translate) }}
                   </button>
                 }
               </div>

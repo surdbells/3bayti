@@ -4,19 +4,21 @@ import {
   input,
   output,
   computed,
+  inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { FormsModule } from '@angular/forms';
 import type { Facets, CatalogFilters, CatalogSort } from '../categories/catalog.service';
 import { CATALOG_SORTS } from '../categories/catalog.service';
 
 const SORT_LABELS: Record<CatalogSort, string> = {
-  newest:     'Newest',
-  oldest:     'Oldest',
-  price_asc:  'Price: low to high',
-  price_desc: 'Price: high to low',
-  relevance:  'Relevance',
-  best_seller: 'Best sellers',
+  newest:     'categories.sort.newest',
+  oldest:     'categories.sort.oldest',
+  price_asc:  'categories.sort.priceAsc',
+  price_desc: 'categories.sort.priceDesc',
+  relevance:  'categories.sort.relevance',
+  best_seller: 'categories.sort.bestSeller',
 };
 
 /**
@@ -40,21 +42,21 @@ const SORT_LABELS: Record<CatalogSort, string> = {
 @Component({
   selector: 'app-facet-filters',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <aside class="facets" aria-label="Filter products">
+    <aside class="facets" [attr.aria-label]="'categories.filterAria' | translate">
 
       <!-- ── Sort ── -->
       <section class="facets__group" aria-labelledby="sort-label">
-        <h3 id="sort-label" class="facets__group-title">Sort by</h3>
+        <h3 id="sort-label" class="facets__group-title">{{ 'categories.sortBy' | translate }}</h3>
         <select
           class="facets__select"
           [value]="filters().sort ?? 'newest'"
           (change)="onSortChange($event)"
-          aria-label="Sort products by">
+          [attr.aria-label]="'categories.sortAria' | translate">
           @for (s of sorts; track s) {
-            <option [value]="s">{{ sortLabel(s) }}</option>
+            <option [value]="s">{{ sortLabel(s) | translate }}</option>
           }
         </select>
       </section>
@@ -62,7 +64,7 @@ const SORT_LABELS: Record<CatalogSort, string> = {
       <!-- ── Sizes ── -->
       @if (sizeValues().length > 0) {
         <section class="facets__group" aria-labelledby="size-label">
-          <h3 id="size-label" class="facets__group-title">Size</h3>
+          <h3 id="size-label" class="facets__group-title">{{ 'categories.size' | translate }}</h3>
           <ul class="facets__list" role="list">
             @for (v of sizeValues(); track v.value) {
               <li class="facets__item">
@@ -72,7 +74,7 @@ const SORT_LABELS: Record<CatalogSort, string> = {
                     class="facets__checkbox"
                     [checked]="isChecked('sizes', v.value)"
                     (change)="toggleMulti('sizes', v.value)"
-                    [attr.aria-label]="'Filter by size ' + v.value + ' (' + v.count + ' products)'"/>
+                    [attr.aria-label]="'categories.filterSizeAria' | translate:{ value: v.value, count: v.count }"/>
                   <span class="facets__value">{{ v.value }}</span>
                   <span class="facets__count" aria-hidden="true">({{ v.count }})</span>
                 </label>
@@ -85,7 +87,7 @@ const SORT_LABELS: Record<CatalogSort, string> = {
       <!-- ── Colours ── -->
       @if (colorValues().length > 0) {
         <section class="facets__group" aria-labelledby="color-label">
-          <h3 id="color-label" class="facets__group-title">Colour</h3>
+          <h3 id="color-label" class="facets__group-title">{{ 'categories.colour' | translate }}</h3>
           <ul class="facets__list" role="list">
             @for (v of colorValues(); track v.value) {
               <li class="facets__item">
@@ -95,7 +97,7 @@ const SORT_LABELS: Record<CatalogSort, string> = {
                     class="facets__checkbox"
                     [checked]="isChecked('colors', v.value)"
                     (change)="toggleMulti('colors', v.value)"
-                    [attr.aria-label]="'Filter by colour ' + v.value + ' (' + v.count + ' products)'"/>
+                    [attr.aria-label]="'categories.filterColorAria' | translate:{ value: v.value, count: v.count }"/>
                   <span class="facets__swatch"
                     [style.background]="swatchColor(v.value)"
                     aria-hidden="true"></span>
@@ -111,7 +113,7 @@ const SORT_LABELS: Record<CatalogSort, string> = {
       <!-- ── Price ── -->
       @if (priceValues().length > 0) {
         <section class="facets__group" aria-labelledby="price-label">
-          <h3 id="price-label" class="facets__group-title">Price (AED)</h3>
+          <h3 id="price-label" class="facets__group-title">{{ 'categories.priceTitle' | translate }}</h3>
           <ul class="facets__list" role="list">
             <li class="facets__item">
               <label class="facets__label">
@@ -121,8 +123,8 @@ const SORT_LABELS: Record<CatalogSort, string> = {
                   name="price-band"
                   [checked]="!filters().minPrice && !filters().maxPrice"
                   (change)="setPriceBand(null, null)"
-                  aria-label="Any price"/>
-                <span class="facets__value">Any price</span>
+                  [attr.aria-label]="'categories.price.any' | translate"/>
+                <span class="facets__value">{{ 'categories.price.any' | translate }}</span>
               </label>
             </li>
             @for (v of priceValues(); track v.value) {
@@ -134,7 +136,7 @@ const SORT_LABELS: Record<CatalogSort, string> = {
                     name="price-band"
                     [checked]="isPriceBandActive(v.min, v.max)"
                     (change)="setPriceBand(v.min ?? null, v.max ?? null)"
-                    [attr.aria-label]="priceBandLabel(v.min, v.max) + ' (' + v.count + ' products)'"/>
+                    [attr.aria-label]="'categories.priceBandAria' | translate:{ label: priceBandLabel(v.min, v.max), count: v.count }"/>
                   <span class="facets__value">{{ priceBandLabel(v.min, v.max) }}</span>
                   <span class="facets__count" aria-hidden="true">({{ v.count }})</span>
                 </label>
@@ -150,8 +152,8 @@ const SORT_LABELS: Record<CatalogSort, string> = {
           class="facets__clear"
           type="button"
           (click)="clearAll()"
-          aria-label="Clear all filters">
-          Clear all filters
+          [attr.aria-label]="'categories.clearAll' | translate">
+          {{ 'categories.clearAll' | translate }}
         </button>
       }
     </aside>
@@ -159,6 +161,8 @@ const SORT_LABELS: Record<CatalogSort, string> = {
   styleUrl: './facet-filters.component.scss',
 })
 export class FacetFiltersComponent {
+  private i18n = inject(TranslateService);
+
   readonly filters  = input.required<CatalogFilters>();
   readonly facets   = input<Facets | null>(null);
   readonly filterChange = output<CatalogFilters>();
@@ -192,10 +196,10 @@ export class FacetFiltersComponent {
   }
 
   priceBandLabel(min?: number, max?: number): string {
-    if (min == null && max == null) return 'Any price';
-    if (max == null) return `AED ${min}+`;
-    if (min == null || min === 0) return `Under AED ${max}`;
-    return `AED ${min} – ${max}`;
+    if (min == null && max == null) return this.i18n.instant('categories.price.any');
+    if (max == null) return this.i18n.instant('categories.price.min', { min });
+    if (min == null || min === 0) return this.i18n.instant('categories.price.under', { max });
+    return this.i18n.instant('categories.price.range', { min, max });
   }
 
   swatchColor(color: string): string {
