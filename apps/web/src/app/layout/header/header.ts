@@ -76,14 +76,16 @@ export class HeaderComponent {
   protected readonly vendorAppUrl = inject(VENDOR_APP_URL);
 
   /**
-   * Primary navigation entries — the curated listings. Categories was
-   * intentionally removed from the nav (browse-by-category lives on the
-   * home page). Gift Cards (Phase E) links to the gift-card storefront.
+   * Primary navigation entries (H1.3). Order: Categories, Stores, New In,
+   * Best Sellers, Gift Cards. Categories leads (browse-by-department is the
+   * top of the IA); New In precedes Best Sellers so the freshest catalogue
+   * reads first. Gift Cards links to the gift-card storefront.
    */
   protected readonly navItems: readonly NavItem[] = [
+    { path: '/category', labelKey: 'nav.categories', icon: 'categories' },
     { path: '/stores', labelKey: 'nav.stores', icon: 'stores' },
-    { path: '/best-sellers', labelKey: 'nav.bestSellers', icon: 'bestSellers' },
     { path: '/new-arrivals', labelKey: 'nav.newArrivals', icon: 'newArrivals' },
+    { path: '/best-sellers', labelKey: 'nav.bestSellers', icon: 'bestSellers' },
     { path: '/gift-cards', labelKey: 'nav.giftCards', icon: 'gift' },
   ];
 

@@ -18,7 +18,8 @@
     "primary": "Primary",
     "stores": "Stores",
     "bestSellers": "Best Sellers",
-    "newArrivals": "New Arrivals",
+    "newArrivals": "New In",
+    "categories": "Categories",
     "giftCards": "Gift Cards",
     "menuToggle": "Open navigation menu"
   },
