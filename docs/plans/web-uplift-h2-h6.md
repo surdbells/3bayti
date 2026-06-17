@@ -37,7 +37,12 @@ here with full continuity.
   structure `src/app/{core,features,shared,layout}`. Build: `pnpm exec ng build`
   (Angular app builder; outputs `dist/3bayti-web/browser`). Tests: vitest
   (`pnpm exec vitest run [path]`). Pre-existing Sass `@import` deprecation warnings
-  are expected (not errors).
+  are expected (not errors). **Design tokens** live in `src/styles.scss` `:root` —
+  brand-500 gold `#b18f1f`, brand-700 espresso `#5a3a2c`, brand-50 `#f9f4ea`,
+  brand-300 `#d6b988`, text-primary `#2e241c`, plus bg-canvas/-muted + border-default;
+  reuse them and match existing components (`store-card`, `search-overlay`) for the
+  "premium" look in #5/#10. The `anyComponentStyle` CSS budget is **17kB warn / 18kB
+  error** (raised from 16 in H3.A — the PDP stylesheet is large).
 - **Deploy:** apps/web → **Cloudflare Pages** at `staging.3bayti.ae` (static bundle +
   a Pages Function BFF at `apps/web/functions/auth-proxy/[[path]].ts`). End goal (H5):
   promote to **`3bayti.ae`** root, replacing the legacy "Sell More" seller app.
