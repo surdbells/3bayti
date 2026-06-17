@@ -1,0 +1,388 @@
+:host {
+  display: block;
+}
+
+/* ============================================================= *
+   Shared page chrome
+ * ============================================================= */
+.gca__container,
+.gcd__container {
+  max-width: var(--page-max-width, 1280px);
+  margin-inline: auto;
+  padding: var(--space-xl, 40px) var(--page-padding-x, 24px) var(--space-2xl, 64px);
+}
+
+/* ============================================================= *
+   List — /account/gift-cards
+ * ============================================================= */
+.gca__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md, 16px);
+  margin-block-end: var(--space-xl, 40px);
+}
+
+.gca__title {
+  margin: 0 0 0.35rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.1;
+  color: var(--text-primary, #2e241c);
+}
+
+.gca__subtitle {
+  margin: 0;
+  color: var(--text-secondary, #6b5d4f);
+}
+
+.gca__actions,
+.gca__empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.gca__action {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--border-default, rgba(46, 36, 28, 0.16));
+  border-radius: var(--radius-pill, 999px);
+  background: var(--bg-surface, #fff);
+  color: var(--text-primary, #2e241c);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.gca__action:hover {
+  border-color: var(--color-brand-300, #d6b988);
+}
+
+.gca__action--primary {
+  background: var(--text-primary, #2e241c);
+  border-color: var(--text-primary, #2e241c);
+  color: #fff;
+}
+
+.gca__action--primary:hover {
+  opacity: 0.92;
+}
+
+.gca__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--space-lg, 24px);
+}
+
+.gca__item {
+  min-width: 0;
+}
+
+.gca__tile {
+  display: block;
+  border-radius: var(--radius-lg, 20px);
+  text-decoration: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  outline: none;
+}
+
+.gca__tile:hover {
+  transform: translateY(-3px);
+}
+
+.gca__tile:focus-visible {
+  box-shadow: 0 0 0 3px var(--color-brand-300, #d6b988);
+  border-radius: var(--radius-lg, 20px);
+}
+
+.gca__skeleton {
+  aspect-ratio: 1.586 / 1;
+  border-radius: var(--radius-lg, 20px);
+  background: var(--bg-muted, #f4f0ea);
+  background-image: linear-gradient(
+    100deg,
+    var(--bg-muted, #f4f0ea) 30%,
+    rgba(255, 255, 255, 0.6) 50%,
+    var(--bg-muted, #f4f0ea) 70%
+  );
+  background-size: 200% 100%;
+  animation: gca-shimmer 1.4s ease-in-out infinite;
+}
+
+/* ============================================================= *
+   Detail — /account/gift-cards/:id
+ * ============================================================= */
+.gcd__back {
+  display: inline-block;
+  margin-block-end: var(--space-lg, 24px);
+  color: var(--color-brand-700, #8a6a34);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.gcd__back:hover {
+  text-decoration: underline;
+}
+
+.gcd__layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl, 40px);
+  align-items: start;
+}
+
+@media (min-width: 880px) {
+  .gcd__layout {
+    grid-template-columns: minmax(18rem, 25rem) 1fr;
+    gap: var(--space-2xl, 64px);
+  }
+}
+
+.gcd__card {
+  min-width: 0;
+  position: sticky;
+  top: var(--space-xl, 40px);
+}
+
+.gcd__panel {
+  min-width: 0;
+}
+
+/* Balance */
+.gcd__balance {
+  padding-block-end: var(--space-lg, 24px);
+  margin-block-end: var(--space-lg, 24px);
+  border-block-end: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.1));
+}
+
+.gcd__balance-label {
+  display: block;
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-tertiary, #8a7868);
+}
+
+.gcd__balance-value {
+  display: block;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2rem, 5vw, 2.75rem);
+  line-height: 1.1;
+  color: var(--text-primary, #2e241c);
+  font-variant-numeric: tabular-nums;
+}
+
+.gcd__balance-of {
+  display: block;
+  margin-block-start: 0.15rem;
+  font-size: 0.85rem;
+  color: var(--text-tertiary, #8a7868);
+  font-variant-numeric: tabular-nums;
+}
+
+.gcd__bar {
+  margin-block-start: 0.75rem;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--bg-muted, #f4f0ea);
+  overflow: hidden;
+}
+
+.gcd__bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--color-brand-500, #c79a4f), var(--color-brand-700, #8a6a34));
+  transition: width 0.4s ease;
+}
+
+/* Rows */
+.gcd__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-block: 0.55rem;
+  border-block-end: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.07));
+}
+
+.gcd__row-label {
+  font-size: 0.85rem;
+  color: var(--text-tertiary, #8a7868);
+}
+
+.gcd__row-value {
+  color: var(--text-primary, #2e241c);
+  text-align: end;
+}
+
+.gcd__code {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.gcd__code code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+  letter-spacing: 0.06em;
+  color: var(--text-primary, #2e241c);
+}
+
+.gcd__copy {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--color-brand-600, #b08642);
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--color-brand-700, #8a6a34);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.gcd__copy:hover {
+  background: var(--color-brand-50, #f9f4ea);
+}
+
+/* Activity */
+.gcd__activity-title {
+  margin: var(--space-lg, 24px) 0 0.75rem;
+  font-size: 1.05rem;
+  color: var(--text-primary, #2e241c);
+}
+
+.gcd__no-activity {
+  margin: 0;
+  color: var(--text-tertiary, #8a7868);
+  font-size: 0.9rem;
+}
+
+.gcd__txns {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.gcd__txn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-block: 0.65rem;
+  border-block-end: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.07));
+}
+
+.gcd__txn-type {
+  display: block;
+  color: var(--text-primary, #2e241c);
+  text-transform: capitalize;
+}
+
+.gcd__txn-date {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-tertiary, #8a7868);
+}
+
+.gcd__txn-amounts {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.gcd__txn-amount {
+  display: block;
+  color: var(--text-primary, #2e241c);
+  font-weight: 600;
+}
+
+.gcd__txn-balance {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-tertiary, #8a7868);
+}
+
+.gcd__skeleton-card {
+  aspect-ratio: 1.586 / 1;
+  border-radius: var(--radius-lg, 20px);
+  background: var(--bg-muted, #f4f0ea);
+  animation: gca-shimmer 1.4s ease-in-out infinite;
+  background-image: linear-gradient(
+    100deg,
+    var(--bg-muted, #f4f0ea) 30%,
+    rgba(255, 255, 255, 0.6) 50%,
+    var(--bg-muted, #f4f0ea) 70%
+  );
+  background-size: 200% 100%;
+}
+
+.gcd__skeleton-panel {
+  height: 18rem;
+  border-radius: var(--radius-md, 12px);
+  background: var(--bg-muted, #f4f0ea);
+  animation: gca-shimmer 1.4s ease-in-out infinite;
+}
+
+/* ============================================================= *
+   Shared states
+ * ============================================================= */
+.gca__state,
+.gcd__state {
+  text-align: center;
+  padding: var(--space-2xl, 64px) var(--page-padding-x, 24px);
+  color: var(--text-secondary, #6b5d4f);
+}
+
+.gca__empty-title,
+.gcd__empty-title {
+  margin: 0 0 0.5rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.5rem;
+  color: var(--text-primary, #2e241c);
+}
+
+.gca__empty-body,
+.gcd__empty-body {
+  margin: 0 auto 1.25rem;
+  max-width: 28rem;
+}
+
+.gca__empty-actions {
+  justify-content: center;
+}
+
+.gca__retry,
+.gcd__retry,
+.gcd__empty-cta {
+  display: inline-block;
+  margin-block-start: 0.5rem;
+  padding: 0.6rem 1.4rem;
+  border: 1px solid var(--color-brand-600, #b08642);
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--color-brand-700, #8a6a34);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+@keyframes gca-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gca__skeleton,
+  .gcd__skeleton-card,
+  .gcd__skeleton-panel {
+    animation: none;
+  }
+}

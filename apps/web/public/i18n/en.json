@@ -594,6 +594,36 @@
       "submitting": "Starting your purchase…",
       "errorSubmit": "Something went wrong starting your purchase. Please try again.",
       "reassure": "You'll be taken to our secure checkout to pay."
+    },
+    "mine": {
+      "title": "My Gift Cards",
+      "subtitle": "Your purchased and redeemed gift cards.",
+      "buy": "Buy a gift card",
+      "redeem": "Redeem a code",
+      "emptyTitle": "No gift cards yet",
+      "emptyBody": "Gift cards you buy or redeem will appear here.",
+      "errorLoad": "We couldn't load your gift cards. Please try again.",
+      "retry": "Try again"
+    },
+    "detail": {
+      "back": "Back to gift cards",
+      "balanceHeading": "Remaining balance",
+      "ofTotal": "of",
+      "codeLabel": "Gift card code",
+      "copy": "Copy",
+      "copied": "Copied!",
+      "recipientLabel": "For",
+      "messageLabel": "Message",
+      "scheduledLabel": "Scheduled delivery",
+      "expiresLabel": "Expires",
+      "createdLabel": "Purchased",
+      "transactionsHeading": "Activity",
+      "balanceAfter": "Balance:",
+      "noTransactions": "No activity on this card yet.",
+      "notFoundTitle": "Gift card not found",
+      "notFoundBody": "We couldn't find that gift card in your account.",
+      "errorLoad": "We couldn't load this gift card. Please try again.",
+      "retry": "Try again"
     }
   }
 }

@@ -224,6 +224,21 @@ export const routes: Routes = [
     title: 'My wishlist · 3bayti',
   },
   {
+    /* Gift cards the buyer owns (purchased + redeemed) — Phase E3. */
+    path: 'account/gift-cards',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/gift-cards/my-gift-cards-page').then(m => m.MyGiftCardsPageComponent),
+    title: 'My Gift Cards · 3bayti',
+  },
+  {
+    path: 'account/gift-cards/:id',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/gift-cards/gift-card-detail-page').then(m => m.GiftCardDetailPageComponent),
+    title: 'Gift Card · 3bayti',
+  },
+  {
     path: 'account/addresses',
     canActivate: [authActivateGuard],
     loadComponent: () =>
