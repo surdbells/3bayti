@@ -123,6 +123,14 @@ export const routes: Routes = [
     title: 'Redeem a Gift Card · 3bayti',
   },
   {
+    /* Sell on 3bayti — vendor recruitment pitch (Phase F). Public; seller
+       CTAs target the external seller app (VENDOR_APP_URL). */
+    path: 'sell',
+    loadComponent: () =>
+      import('./features/sell/sell-page').then(m => m.SellPageComponent),
+    title: 'Sell on 3bayti',
+  },
+  {
     /* Dev-only component preview. noindex'd via SeoService inside the
        component. Lazy-loaded so it doesn't bloat the production bundle
        for normal users. */

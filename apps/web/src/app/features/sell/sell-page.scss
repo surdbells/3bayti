@@ -1,0 +1,295 @@
+:host {
+  display: block;
+}
+
+/* Shared buttons --------------------------------------------------- */
+.sell-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem 1.5rem;
+  border-radius: var(--radius-pill, 999px);
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  border: 1px solid transparent;
+  transition: opacity 0.15s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.sell-btn--primary {
+  background: var(--text-primary, #2e241c);
+  color: #fff;
+}
+.sell-btn--primary:hover {
+  opacity: 0.92;
+}
+
+.sell-btn--ghost {
+  background: transparent;
+  border-color: var(--border-default, rgba(46, 36, 28, 0.22));
+  color: var(--text-primary, #2e241c);
+}
+.sell-btn--ghost:hover {
+  border-color: var(--color-brand-600, #b08642);
+}
+
+.sell-btn--lg {
+  padding: 0.95rem 2rem;
+  font-size: 1.05rem;
+}
+
+.sell-btn:focus-visible {
+  outline: 2px solid var(--color-brand-600, #b08642);
+  outline-offset: 2px;
+}
+
+/* Hero ------------------------------------------------------------- */
+.sell-hero {
+  background:
+    radial-gradient(120% 140% at 50% 0%, var(--color-brand-50, #f9f4ea) 0%, transparent 60%),
+    var(--bg-surface, #fff);
+  border-block-end: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.08));
+}
+
+.sell-hero__inner {
+  max-width: 52rem;
+  margin-inline: auto;
+  padding: clamp(3rem, 7vw, 5.5rem) var(--page-padding-x, 24px) clamp(2.5rem, 5vw, 4rem);
+  text-align: center;
+}
+
+.sell-hero__eyebrow {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-brand-600, #b08642);
+}
+
+.sell-hero__title {
+  margin: 0 0 1rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(2.25rem, 6vw, 3.75rem);
+  line-height: 1.04;
+  color: var(--text-primary, #2e241c);
+}
+
+.sell-hero__lead {
+  margin: 0 auto 2rem;
+  max-width: 38rem;
+  font-size: 1.15rem;
+  line-height: 1.6;
+  color: var(--text-secondary, #6b5d4f);
+}
+
+.sell-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+}
+
+.sell-hero__trust {
+  list-style: none;
+  margin: 1.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.5rem;
+  justify-content: center;
+  font-size: 0.85rem;
+  color: var(--text-tertiary, #8a7868);
+}
+.sell-hero__trust li {
+  position: relative;
+  padding-inline-start: 1.1rem;
+}
+.sell-hero__trust li::before {
+  content: '✓';
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--color-brand-600, #b08642);
+  font-weight: 700;
+}
+
+.sell-hero__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem 3rem;
+  justify-content: center;
+  margin: 2.5rem 0 0;
+}
+.sell-hero__stats > div {
+  text-align: center;
+}
+.sell-hero__stat-value {
+  display: block;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--text-primary, #2e241c);
+}
+.sell-hero__stat-label {
+  display: block;
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-tertiary, #8a7868);
+}
+
+/* Sections --------------------------------------------------------- */
+.sell-section {
+  max-width: var(--page-max-width, 1280px);
+  margin-inline: auto;
+  padding: clamp(3rem, 6vw, 5rem) var(--page-padding-x, 24px);
+}
+.sell-section--alt {
+  max-width: none;
+  background: var(--bg-muted, #f7f3ec);
+}
+.sell-section--alt .sell-section__header,
+.sell-section--alt .sell-steps {
+  max-width: var(--page-max-width, 1280px);
+  margin-inline: auto;
+}
+
+.sell-section__header {
+  text-align: center;
+  max-width: 40rem;
+  margin: 0 auto clamp(2rem, 4vw, 3rem);
+}
+.sell-section__eyebrow {
+  margin: 0 0 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-brand-600, #b08642);
+}
+.sell-section__title {
+  margin: 0 0 0.6rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  line-height: 1.1;
+  color: var(--text-primary, #2e241c);
+}
+.sell-section__subtitle {
+  margin: 0;
+  color: var(--text-secondary, #6b5d4f);
+  font-size: 1.05rem;
+}
+
+/* Feature grid ----------------------------------------------------- */
+.sell-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-lg, 24px);
+}
+.sell-feature {
+  padding: 1.5rem;
+  border: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.1));
+  border-radius: var(--radius-lg, 20px);
+  background: var(--bg-surface, #fff);
+}
+.sell-feature__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--color-brand-50, #f9f4ea);
+  color: var(--color-brand-700, #8a6a34);
+  margin-block-end: 1rem;
+}
+.sell-feature__icon svg {
+  width: 24px;
+  height: 24px;
+}
+.sell-feature__title {
+  margin: 0 0 0.4rem;
+  font-size: 1.1rem;
+  color: var(--text-primary, #2e241c);
+}
+.sell-feature__desc {
+  margin: 0;
+  color: var(--text-secondary, #6b5d4f);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+/* Steps ------------------------------------------------------------ */
+.sell-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-lg, 24px);
+  counter-reset: none;
+}
+@media (min-width: 760px) {
+  .sell-steps {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-xl, 40px);
+  }
+}
+.sell-step {
+  padding: 1.5rem;
+  background: var(--bg-surface, #fff);
+  border: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.1));
+  border-radius: var(--radius-lg, 20px);
+}
+.sell-step__num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--text-primary, #2e241c);
+  color: #fff;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.2rem;
+  margin-block-end: 0.9rem;
+}
+.sell-step__title {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+  color: var(--text-primary, #2e241c);
+}
+.sell-step__desc {
+  margin: 0;
+  color: var(--text-secondary, #6b5d4f);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+/* Final CTA -------------------------------------------------------- */
+.sell-cta {
+  background:
+    radial-gradient(120% 160% at 50% 100%, var(--color-brand-50, #f9f4ea) 0%, transparent 60%),
+    var(--bg-surface, #fff);
+  border-block-start: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.08));
+}
+.sell-cta__inner {
+  max-width: 40rem;
+  margin-inline: auto;
+  padding: clamp(3rem, 6vw, 4.5rem) var(--page-padding-x, 24px);
+  text-align: center;
+}
+.sell-cta__title {
+  margin: 0 0 0.6rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  color: var(--text-primary, #2e241c);
+}
+.sell-cta__text {
+  margin: 0 auto 1.75rem;
+  max-width: 32rem;
+  color: var(--text-secondary, #6b5d4f);
+  font-size: 1.05rem;
+}

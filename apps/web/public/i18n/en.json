@@ -656,5 +656,49 @@
       "redeemError": "We couldn't redeem that code right now. Please try again.",
       "notSpendable": "This card isn't currently spendable, so it can't be added to your account."
     }
+  },
+  "sell": {
+    "hero": {
+      "eyebrow": "Sell on 3bayti",
+      "title": "Sell locally. Ship globally.",
+      "lead": "Create a beautiful storefront, manage inventory, and get paid — all from one dashboard.",
+      "startSelling": "Start selling",
+      "signIn": "Sign in",
+      "trust": {
+        "noSetup": "No setup required",
+        "securePay": "Secure payments",
+        "goLive": "Go live in minutes"
+      },
+      "stats": {
+        "shoppersLabel": "Monthly shoppers",
+        "signupLabel": "Average signup time",
+        "uptimeLabel": "Uptime"
+      }
+    },
+    "why": {
+      "eyebrow": "Why vendors choose 3bayti",
+      "title": "Everything you need to grow",
+      "subtitle": "From onboarding to payout — it's all streamlined.",
+      "features": {
+        "storefront": { "title": "Beautiful storefront", "desc": "Create your own branded shop with custom themes, logos, and galleries." },
+        "payments": { "title": "Payments & payouts", "desc": "Secure checkout, multiple gateways, and daily payouts." },
+        "logistics": { "title": "Integrated logistics", "desc": "Real-time rates, labels, and tracking updates." },
+        "analytics": { "title": "Sales analytics", "desc": "SKU insights, conversion, and repeat buyers." },
+        "marketing": { "title": "Marketing tools", "desc": "Discount codes, bundles, abandoned-cart emails, and SEO." },
+        "trust": { "title": "Trust & support", "desc": "Dispute centre, customer reviews, and 24/7 assistance so you're never alone." }
+      }
+    },
+    "steps": {
+      "eyebrow": "Onboarding",
+      "title": "Start selling in 3 simple steps",
+      "one": { "title": "Create your vendor account", "desc": "Register, complete KYC, and set up your store profile and policies." },
+      "two": { "title": "Add products & set fulfilment", "desc": "Upload listings, choose shipping options, and define pricing & taxes." },
+      "three": { "title": "Go live & get orders", "desc": "Promote your store with built-in marketing and watch the sales roll in." }
+    },
+    "cta": {
+      "title": "Become a vendor",
+      "text": "Create your free vendor account and start selling today.",
+      "register": "Register now"
+    }
   }
 }
