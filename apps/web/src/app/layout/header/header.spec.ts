@@ -189,6 +189,7 @@ describe('HeaderComponent (auth-aware)', () => {
       { id: 'nav-stores', re: /stores/ },
       { id: 'nav-bestSellers', re: /best-sellers/ },
       { id: 'nav-newArrivals', re: /new-arrivals/ },
+      { id: 'nav-gift', re: /gift-cards/ },
     ];
 
     it('renders all primary nav items in the desktop nav with correct routerLinks', () => {
@@ -205,11 +206,14 @@ describe('HeaderComponent (auth-aware)', () => {
       }
     });
 
-    it('does NOT render a Gift Cards nav item yet (deferred to Phase E)', () => {
+    it('renders the Gift Cards nav item (Phase E) in the desktop nav and the drawer', () => {
       const { fixture } = setup({ user: null });
       const root: HTMLElement = fixture.nativeElement;
-      expect(root.querySelector('[data-testid="nav-gift"]')).toBeNull();
-      expect(root.querySelector('[data-testid="drawer-nav-gift"]')).toBeNull();
+      const desktop = root.querySelector('[data-testid="nav-gift"]') as HTMLAnchorElement | null;
+      expect(desktop).not.toBeNull();
+      const href = desktop!.getAttribute('href') ?? desktop!.getAttribute('ng-reflect-router-link') ?? '';
+      expect(href).toMatch(/gift-cards/);
+      expect(root.querySelector('[data-testid="drawer-nav-gift"]')).not.toBeNull();
     });
 
     it('drawer is closed initially (toggle collapsed; drawer inert + aria-hidden; no backdrop)', () => {
@@ -273,7 +277,7 @@ describe('HeaderComponent (auth-aware)', () => {
     it('drawer mirrors the primary nav items', () => {
       const { fixture } = setup({ user: null });
       const drawer = fixture.nativeElement.querySelector('[data-testid="nav-drawer"]') as HTMLElement;
-      for (const id of ['drawer-nav-stores', 'drawer-nav-bestSellers', 'drawer-nav-newArrivals']) {
+      for (const id of ['drawer-nav-stores', 'drawer-nav-bestSellers', 'drawer-nav-newArrivals', 'drawer-nav-gift']) {
         expect(drawer.querySelector(`[data-testid="${id}"]`), id).not.toBeNull();
       }
     });

@@ -448,6 +448,10 @@
         "title": "Wishlist",
         "desc": "Products you’ve saved"
       },
+      "giftCards": {
+        "title": "Gift Cards",
+        "desc": "Buy, view and redeem gift cards"
+      },
       "password": {
         "title": "Password",
         "desc": "Change your account password."

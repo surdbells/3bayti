@@ -96,6 +96,10 @@ import { AuthService } from '../../core/auth/auth.service';
             <span class="account-tile__title">{{ 'account.hub.wishlist.title' | translate }}</span>
             <span class="account-tile__desc">{{ 'account.hub.wishlist.desc' | translate }}</span>
           </a>
+          <a routerLink="/account/gift-cards" class="account-tile" data-testid="account-tile-gift-cards">
+            <span class="account-tile__title">{{ 'account.hub.giftCards.title' | translate }}</span>
+            <span class="account-tile__desc">{{ 'account.hub.giftCards.desc' | translate }}</span>
+          </a>
           <a routerLink="/account/password" class="account-tile" data-testid="account-tile-password">
             <span class="account-tile__title">{{ 'account.hub.password.title' | translate }}</span>
             <span class="account-tile__desc">{{ 'account.hub.password.desc' | translate }}</span>

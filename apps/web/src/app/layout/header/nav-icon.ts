@@ -8,7 +8,6 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
  * by both the desktop nav and the mobile drawer so the two stay in sync.
  *
  * Keys: 'stores' | 'bestSellers' | 'newArrivals' | 'gift'.
- * ('gift' is authored ahead of the Phase E gift-card nav entry.)
  */
 @Component({
   selector: 'app-nav-icon',

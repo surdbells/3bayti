@@ -44,9 +44,8 @@ interface NavItem {
  * Primary navigation
  * ------------------
  * A shared `navItems` list renders the desktop nav (inline, ≥900px) and
- * the mobile drawer (off-canvas, &lt;900px, opened via the hamburger). The
- * Gift Cards entry is intentionally omitted until the Phase E gift-card
- * surfaces ship on web.
+ * the mobile drawer (off-canvas, &lt;900px, opened via the hamburger). It
+ * includes Gift Cards (Phase E), linking to the gift-card storefront.
  *
  * Bound directly to AuthService.currentUser + isAuthenticated signals;
  * no manual subscription teardown needed.
@@ -79,12 +78,13 @@ export class HeaderComponent {
   /**
    * Primary navigation entries — the curated listings. Categories was
    * intentionally removed from the nav (browse-by-category lives on the
-   * home page); Gift Cards is deferred to Phase E.
+   * home page). Gift Cards (Phase E) links to the gift-card storefront.
    */
   protected readonly navItems: readonly NavItem[] = [
     { path: '/stores', labelKey: 'nav.stores', icon: 'stores' },
     { path: '/best-sellers', labelKey: 'nav.bestSellers', icon: 'bestSellers' },
     { path: '/new-arrivals', labelKey: 'nav.newArrivals', icon: 'newArrivals' },
+    { path: '/gift-cards', labelKey: 'nav.giftCards', icon: 'gift' },
   ];
 
   /** Mobile drawer open state. */
