@@ -6,7 +6,6 @@ import {
   OnInit,
 } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
-import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { StoreCardComponent } from '../catalog/store-card';
 import { StoreService } from '../catalog/store.service';
@@ -36,7 +35,7 @@ import type { FeaturedVendor } from '../catalog/store-card';
 @Component({
   selector: 'app-store-directory',
   standalone: true,
-  imports: [NgIf, NgFor, RouterLink, TranslatePipe, StoreCardComponent],
+  imports: [NgIf, NgFor, TranslatePipe, StoreCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="store-directory" data-testid="store-directory-page">
@@ -84,34 +83,7 @@ import type { FeaturedVendor } from '../catalog/store-card';
                 class="store-grid__item"
                 data-testid="store-grid-item"
               >
-                <a
-                  [routerLink]="['/stores', d.slug]"
-                  class="store-tile"
-                  [attr.data-slug]="d.slug"
-                >
-                  <div class="store-tile__media" aria-hidden="true">
-                    <img
-                      *ngIf="(d.cover_image_url ?? d.logo_url ?? '') !== ''; else tileBlank"
-                      [src]="d.cover_image_url ?? d.logo_url"
-                      alt=""
-                      loading="lazy"
-                    />
-                    <ng-template #tileBlank>
-                      <div class="store-tile__media-blank"></div>
-                    </ng-template>
-                  </div>
-                  <div class="store-tile__body">
-                    <h3 class="store-tile__name">
-                      {{ d.name }}
-                      <span
-                        *ngIf="d.is_verified"
-                        class="store-tile__verified"
-                        [attr.title]="'stores.verified' | translate"
-                        aria-hidden="true"
-                      >✓</span>
-                    </h3>
-                  </div>
-                </a>
+                <ui-store-card [vendor]="d"></ui-store-card>
               </li>
             </ul>
 

@@ -7,14 +7,14 @@ import { signal } from '@angular/core';
 import { StoreDirectoryPageComponent } from './store-directory-page';
 import { StoreService } from '../catalog/store.service';
 import { provideI18n } from '../../core/i18n';
-import type { Store } from '../catalog/store.model';
+import type { DirectoryStore } from '../catalog/store.model';
 import type { FeaturedVendor } from '../catalog/store-card';
 
-function makeStore(o: Partial<Store> = {}): Store {
+function makeStore(o: Partial<DirectoryStore> = {}): DirectoryStore {
   return {
     id: 1, slug: 'acme', name: 'Acme Couture', description: null,
     logo_url: null, cover_image_url: 'https://img/cover.png',
-    is_verified: false, ...o,
+    is_verified: false, rating: null, rating_count: 0, products: [], ...o,
   };
 }
 
@@ -26,7 +26,7 @@ function makeFeatured(o: Partial<FeaturedVendor> = {}): FeaturedVendor {
 }
 
 class StubStoreService {
-  private _dir = signal<Store[]>([]);
+  private _dir = signal<DirectoryStore[]>([]);
   private _loading = signal(false);
   private _hasMore = signal(false);
   directory = this._dir.asReadonly();
@@ -37,12 +37,12 @@ class StubStoreService {
   loadMoreCalls = 0;
   getFeaturedCalls = 0;
   featuredResult: FeaturedVendor[] = [];
-  directoryResult: Store[] = [];
+  directoryResult: DirectoryStore[] = [];
   loadMoreThrows = false;
   featuredThrows = false;
 
   reset(): void { this.resetCalls++; this._dir.set([]); }
-  async loadMore(): Promise<Store[]> {
+  async loadMore(): Promise<DirectoryStore[]> {
     this.loadMoreCalls++;
     if (this.loadMoreThrows) throw new Error('list failed');
     this._dir.set(this.directoryResult);
@@ -59,7 +59,7 @@ class StubStoreService {
 
 function setup(opts: {
   featured?: FeaturedVendor[];
-  directory?: Store[];
+  directory?: DirectoryStore[];
   hasMore?: boolean;
   loadMoreThrows?: boolean;
   featuredThrows?: boolean;
@@ -116,7 +116,7 @@ describe('StoreDirectoryPageComponent', () => {
   });
 
   describe('directory grid', () => {
-    it('renders one tile per store', async () => {
+    it('renders one card per store', async () => {
       const { fixture } = setup({
         directory: [makeStore({ id: 1, slug: 'a' }), makeStore({ id: 2, slug: 'b' })],
       });
@@ -125,23 +125,13 @@ describe('StoreDirectoryPageComponent', () => {
       expect(fixture.nativeElement.querySelectorAll('[data-testid="store-grid-item"]')).toHaveLength(2);
     });
 
-    it('tile links to /stores/:slug', async () => {
+    it('renders a store card linking to each store', async () => {
       const { fixture } = setup({ directory: [makeStore({ slug: 'acme-couture' })] });
       await flush();
       fixture.detectChanges();
-      const tile = fixture.nativeElement.querySelector('.store-tile') as HTMLAnchorElement;
-      expect(tile.getAttribute('href')).toBe('/stores/acme-couture');
-    });
-
-    it('shows the verified badge only for verified stores', async () => {
-      const { fixture } = setup({
-        directory: [makeStore({ id: 1, slug: 'v', is_verified: true }),
-                    makeStore({ id: 2, slug: 'n', is_verified: false })],
-      });
-      await flush();
-      fixture.detectChanges();
-      const badges = fixture.nativeElement.querySelectorAll('.store-tile__verified');
-      expect(badges).toHaveLength(1);
+      const link = fixture.nativeElement.querySelector('.store-card__name-link') as HTMLAnchorElement;
+      expect(link).not.toBeNull();
+      expect(link.getAttribute('href')).toContain('acme-couture');
     });
 
     it('shows the empty state when no stores', async () => {

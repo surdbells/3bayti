@@ -67,79 +67,14 @@
   padding: 0;
   margin: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 18px;
+  /* Match the Spotlight grid so directory + featured cards align —
+     ~3 per row at desktop widths, collapsing toward 1 on mobile. */
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
 }
 
 .store-grid__item {
   margin: 0;
-}
-
-.store-tile {
-  display: block;
-  text-decoration: none;
-  color: inherit;
-  background: #fdfaf3;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid var(--color-border-subtle, #e2dccc);
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
-
-  &:hover,
-  &:focus-visible {
-    border-color: var(--color-brand-500, #b18f1f);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(46, 36, 28, 0.08);
-    outline: none;
-  }
-}
-
-.store-tile__media {
-  aspect-ratio: 3 / 2;
-  background: var(--color-bg-muted, #f4f0ea);
-  overflow: hidden;
-
-  img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-}
-
-.store-tile__media-blank {
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, #efe8d8 25%, #e6dfcd 75%);
-}
-
-.store-tile__body {
-  padding: 14px 16px;
-}
-
-.store-tile__name {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 17px;
-  font-weight: 600;
-  color: var(--color-text-primary, #2e241c);
-  margin: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.store-tile__verified {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(46, 125, 50, 0.12);
-  color: #2e7d32;
-  font-size: 11px;
-  font-weight: 700;
-  flex-shrink: 0;
 }
 
 /* --- Load more / empty / loading ----------------------------------- */

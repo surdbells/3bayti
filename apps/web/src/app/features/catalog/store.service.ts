@@ -1,7 +1,7 @@
 import { Injectable, signal, computed, Signal, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
-import type { Store, StoreListParams } from './store.model';
+import type { Store, DirectoryStore, StoreListParams } from './store.model';
 import type { Product } from './product.model';
 import type { FeaturedVendor } from './store-card';
 
@@ -39,11 +39,11 @@ export interface StoreProductsPage {
 export class StoreService {
   private readonly http = inject(RoutedHttpClient);
 
-  private readonly _directory = signal<Store[]>([]);
+  private readonly _directory = signal<DirectoryStore[]>([]);
   private readonly _isLoadingList = signal<boolean>(false);
   private readonly _lastPageHasMore = signal<boolean>(false);
 
-  readonly directory: Signal<Store[]> = this._directory.asReadonly();
+  readonly directory: Signal<DirectoryStore[]> = this._directory.asReadonly();
   readonly isLoadingList: Signal<boolean> = this._isLoadingList.asReadonly();
   readonly hasMore = computed(() => this._lastPageHasMore());
   readonly loadedCount = computed(() => this._directory().length);
@@ -64,14 +64,14 @@ export class StoreService {
    * machinery is kept so that when the endpoint gains real pagination
    * the UI needs no change.
    */
-  async loadMore(params: StoreListParams = {}): Promise<Store[]> {
+  async loadMore(params: StoreListParams = {}): Promise<DirectoryStore[]> {
     const limit = params.limit ?? DESIGNER_PAGE_SIZE;
     const offset = params.offset ?? this.loadedCount();
 
     this._isLoadingList.set(true);
     try {
       const env = await firstValueFrom(
-        this.http.get<Store[]>('GET /vendors', {
+        this.http.get<DirectoryStore[]>('GET /vendors', {
           query: { limit, offset },
         }),
       );

@@ -17,6 +17,8 @@
  * from the barrel; this file owns only the plain publicShape.
  */
 
+import type { FeaturedVendor } from './store-card';
+
 /** Storefront-facing store (vendor) — mirrors VendorSerializer::publicShape. */
 export interface Store {
   id: number;
@@ -28,6 +30,19 @@ export interface Store {
    * page renders it via [innerHTML].
    */
   description: string | null;
+  logo_url: string | null;
+  cover_image_url: string | null;
+  is_verified: boolean;
+}
+
+/**
+ * Directory store card (Stores H2.B) — the shape GET /vendors now returns
+ * (VendorSerializer::directoryShape): a FeaturedVendor (embedded products +
+ * rating, rendered by StoreCard) PLUS the publicShape identity fields, so
+ * the directory grid renders with the same <ui-store-card> as the Spotlight.
+ */
+export interface DirectoryStore extends FeaturedVendor {
+  id: number;
   logo_url: string | null;
   cover_image_url: string | null;
   is_verified: boolean;
