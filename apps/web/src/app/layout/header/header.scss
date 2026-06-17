@@ -31,16 +31,19 @@
 }
 
 .brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
   text-decoration: none;
   color: var(--color-brand-700);
 }
 
-.brand-mark {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 24px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--color-brand-700);
+/* Below 600px the mark alone carries the brand; the wordmark hides to keep
+   the header row uncramped next to the action icons. */
+@media (max-width: 600px) {
+  .brand-link__wordmark {
+    display: none;
+  }
 }
 
 .primary-nav {
@@ -318,11 +321,9 @@
 }
 
 .nav-drawer__brand {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: var(--color-brand-700);
+  /* The brand-logo classes render the wordmark; this just sizes it for the
+     drawer head. */
+  height: 1.4rem;
 }
 
 .nav-drawer__close {

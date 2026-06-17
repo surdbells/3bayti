@@ -3,7 +3,9 @@
 
     <!-- Brand block -->
     <div class="site-footer__brand">
-      <a href="/" class="site-footer__brand-name" [attr.aria-label]="'footer.brandAria' | translate">3bayti</a>
+      <a href="/" class="site-footer__brand-name" [attr.aria-label]="'footer.brandAria' | translate">
+        <span class="brand-logo brand-logo--wordmark" aria-hidden="true"></span>
+      </a>
       <p class="site-footer__tagline">{{ 'footer.tagline' | translate }}</p>
     </div>
 

@@ -163,3 +163,14 @@
 /* RTL polish — Playfair Display falls back gracefully via system Arabic
    serifs, but ensure right-aligned padding for inputs in RTL. The
    logical-property approach in .auth-input above handles this for free. */
+
+/* H1.1 — brand wordmark above the auth card title. */
+.auth-card__brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+}
+
+.auth-card__brand .brand-logo--wordmark {
+  height: 2rem;
+}

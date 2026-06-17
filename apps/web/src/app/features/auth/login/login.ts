@@ -77,6 +77,9 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
   template: `
     <main class="auth-page" data-testid="login-page">
       <div class="auth-card">
+        <a routerLink="/" class="auth-card__brand" [attr.aria-label]="'common.brand' | translate">
+          <span class="brand-logo brand-logo--wordmark" aria-hidden="true"></span>
+        </a>
         <h1 class="auth-card__title">{{ 'auth.login.title' | translate }}</h1>
         <p class="auth-card__subtitle">{{ 'auth.login.subtitle' | translate }}</p>
 

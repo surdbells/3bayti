@@ -162,3 +162,40 @@ h1, h2, h3, .font-display {
   font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
   letter-spacing: -0.01em;
 }
+
+/* ===========================================================================
+   Brand logo (H1.1) — recolorable logomark + wordmark.
+
+   The source artwork is a single colour on a transparent/black field. We
+   render it as a CSS mask so the shape inherits a brand colour per surface
+   (espresso on light chrome; can be overridden to cream on dark). This keeps
+   the logo crisp at any size and direction-agnostic for RTL. The accessible
+   name is carried by an aria-label on the anchor; the spans are decorative.
+   =========================================================================== */
+.brand-logo {
+  display: inline-block;
+  flex: 0 0 auto;
+  background-color: var(--color-brand-700);
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+          mask-position: center;
+  -webkit-mask-size: contain;
+          mask-size: contain;
+}
+
+.brand-logo--mark {
+  width: 1.75rem;
+  height: 1.75rem;
+  -webkit-mask-image: url('/icons/logo-mark.png');
+          mask-image: url('/icons/logo-mark.png');
+}
+
+.brand-logo--wordmark {
+  height: 1.3rem;
+  /* Intrinsic ratio of the wordmark mask (4003×1802) so width tracks height
+     without letterboxing. */
+  aspect-ratio: 4003 / 1802;
+  -webkit-mask-image: url('/icons/logo-wordmark.png');
+          mask-image: url('/icons/logo-wordmark.png');
+}

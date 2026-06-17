@@ -16,7 +16,8 @@
     </button>
 
     <a routerLink="/" class="brand-link" [attr.aria-label]="'common.brand' | translate">
-      <span class="brand-mark">{{ 'common.brand' | translate }}</span>
+      <span class="brand-logo brand-logo--mark" aria-hidden="true"></span>
+      <span class="brand-logo brand-logo--wordmark brand-link__wordmark" aria-hidden="true"></span>
     </a>
 
     <nav [attr.aria-label]="'nav.primary' | translate" class="primary-nav">
@@ -89,7 +90,11 @@
     data-testid="nav-drawer"
   >
     <div class="nav-drawer__head">
-      <span class="nav-drawer__brand">{{ 'common.brand' | translate }}</span>
+      <span
+        class="nav-drawer__brand brand-logo brand-logo--wordmark"
+        role="img"
+        [attr.aria-label]="'common.brand' | translate"
+      ></span>
       <button
         #drawerClose
         type="button"
