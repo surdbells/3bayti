@@ -21,47 +21,44 @@
        bleeding to the viewport edges for its side-card peek.
        The carousel declares its own role="region" + aria-label.
        =========================================================== -->
-  <section class="hero" aria-label="Modest fashion from the UAE's independent designers">
+  <section class="hero" [attr.aria-label]="'home.hero.bandAria' | translate">
     <div class="hero__grid">
       <div class="hero__editorial">
-        <p class="hero__eyebrow">Curated · UAE designers</p>
-        <h1 class="hero__title">Modest fashion, beautifully curated.</h1>
-        <p class="hero__lede">
-          Abayas, kaftans and ready-to-wear from the UAE's independent
-          labels — gathered into one place worth browsing.
-        </p>
+        <p class="hero__eyebrow">{{ 'home.hero.eyebrow' | translate }}</p>
+        <h1 class="hero__title">{{ 'home.hero.title' | translate }}</h1>
+        <p class="hero__lede">{{ 'home.hero.lede' | translate }}</p>
 
         <div class="hero__ctas">
           <a href="/new-arrivals" class="hero__cta hero__cta--primary">
-            Shop new arrivals
+            {{ 'home.hero.shopNewArrivals' | translate }}
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </a>
-          <a href="/stores" class="hero__cta hero__cta--ghost">Browse stores</a>
+          <a href="/stores" class="hero__cta hero__cta--ghost">{{ 'home.hero.browseStores' | translate }}</a>
         </div>
 
-        <ul class="hero__trust" aria-label="Why shop with 3bayti">
+        <ul class="hero__trust" [attr.aria-label]="'home.hero.trustAria' | translate">
           <li class="hero__trust-item">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M3 9l1.6-5h14.8L21 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M4.5 9v10.5h15V9M9.5 19.5V14h5v5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Independent UAE designers
+            {{ 'home.hero.trustDesigners' | translate }}
           </li>
           <li class="hero__trust-item">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3l7 3v6c0 4-3 6.8-7 8-4-1.2-7-4-7-8V6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
               <path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Secure checkout
+            {{ 'home.hero.trustSecure' | translate }}
           </li>
           <li class="hero__trust-item">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3L3.5 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M3.5 3.5V8h4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
-            Easy returns
+            {{ 'home.hero.trustReturns' | translate }}
           </li>
         </ul>
       </div>
@@ -93,7 +90,7 @@
        =========================================================== -->
   <section class="home-section home-section--categories">
     <div class="home-section__bounds">
-      <ui-section-header eyebrow="Browse" title="Shop by category" />
+      <ui-section-header [eyebrow]="'home.categories.eyebrow' | translate" [title]="'home.categories.title' | translate" />
 
       @if (categories(); as cats) {
         @if (cats.length > 0) {
@@ -104,7 +101,7 @@
                 class="bento__tile"
                 [class.bento__tile--feature]="first"
                 role="listitem"
-                [attr.aria-label]="cat.name + ' — ' + cat.product_count + ' products'"
+                [attr.aria-label]="'home.categories.tileAria' | translate:{ name: cat.name, count: cat.product_count }"
               >
                 @if (iconFor(cat.slug); as iconUrl) {
                   <span class="bento__icon" aria-hidden="true">
@@ -114,7 +111,7 @@
                 <span class="bento__meta">
                   <span class="bento__name">{{ cat.name }}</span>
                   <span class="bento__count">
-                    {{ cat.product_count }} {{ cat.product_count === 1 ? 'piece' : 'pieces' }}
+                    {{ cat.product_count }} {{ (cat.product_count === 1 ? 'home.categories.piece' : 'home.categories.pieces') | translate }}
                   </span>
                 </span>
               </a>
@@ -143,7 +140,7 @@
       [campaign]="anniv"
       [serverNow]="serverNow()"
       variant="anniversary"
-      eyebrow="Anniversary Deals"
+      [eyebrow]="'home.campaigns.anniversary' | translate"
     />
   }
 
@@ -156,7 +153,7 @@
       [campaign]="fl"
       [serverNow]="serverNow()"
       variant="flash"
-      eyebrow="Flash Sale"
+      [eyebrow]="'home.campaigns.flash' | translate"
     />
   }
 
@@ -176,8 +173,8 @@
        /v3/products?sort=newest&limit=12
        =========================================================== -->
   <ui-product-strip
-    heading="New arrivals"
-    eyebrow="Fresh from our designers"
+    [heading]="'home.newArrivals.heading' | translate"
+    [eyebrow]="'home.newArrivals.eyebrow' | translate"
     viewAllUrl="/new-arrivals"
     [products]="newArrivals() ?? []"
     [loading]="newArrivals() === null"
@@ -193,8 +190,8 @@
        =========================================================== -->
   @if (forYou().length > 0) {
     <ui-product-strip
-      heading="For you"
-      eyebrow="Picked for you"
+      [heading]="'home.forYou.heading' | translate"
+      [eyebrow]="'home.forYou.eyebrow' | translate"
       [products]="forYou()"
       [loading]="false"
     />
@@ -208,10 +205,10 @@
   @if (vendors() === null || vendors()!.length > 0) {
   <section class="home-section home-section--stores" aria-labelledby="stores-title">
     <header class="home-section__header">
-      <p class="home-section__eyebrow">Meet the makers</p>
-      <h2 id="stores-title" class="home-section__title">Stores we love</h2>
+      <p class="home-section__eyebrow">{{ 'home.stores.eyebrow' | translate }}</p>
+      <h2 id="stores-title" class="home-section__title">{{ 'home.stores.title' | translate }}</h2>
       <a href="/stores" class="home-section__view-all">
-        View all
+        {{ 'home.stores.viewAll' | translate }}
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
@@ -245,27 +242,22 @@
   <!-- ===========================================================
        SELL ON 3bayti — vendor-recruitment band (Phase F2).
        Shopper-first: placed low on the page; funnels to /sell.
-       Copy is hardcoded English to match the rest of this template
-       (the home page is not yet i18n'd — a separate future effort).
        =========================================================== -->
   <section class="home-section home-section--sell" aria-labelledby="sell-band-title">
     <div class="sell-band">
       <div class="sell-band__text">
-        <p class="sell-band__eyebrow">Become a seller</p>
-        <h2 id="sell-band-title" class="sell-band__title">Sell on 3bayti</h2>
-        <p class="sell-band__lead">
-          Open a beautiful storefront, reach thousands of shoppers across the UAE,
-          and get paid — all from one dashboard.
-        </p>
+        <p class="sell-band__eyebrow">{{ 'home.sell.eyebrow' | translate }}</p>
+        <h2 id="sell-band-title" class="sell-band__title">{{ 'home.sell.title' | translate }}</h2>
+        <p class="sell-band__lead">{{ 'home.sell.lead' | translate }}</p>
         <ul class="sell-band__points" role="list">
-          <li>No setup required</li>
-          <li>Secure payments &amp; daily payouts</li>
-          <li>Go live in minutes</li>
+          <li>{{ 'home.sell.point1' | translate }}</li>
+          <li>{{ 'home.sell.point2' | translate }}</li>
+          <li>{{ 'home.sell.point3' | translate }}</li>
         </ul>
       </div>
       <div class="sell-band__action">
         <a href="/sell" class="sell-band__cta">
-          Start selling
+          {{ 'home.sell.cta' | translate }}
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>

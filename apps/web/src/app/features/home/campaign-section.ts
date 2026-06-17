@@ -1,6 +1,7 @@
 import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { CountdownComponent } from '../../shared/ui/countdown';
+import { TranslatePipe } from '@ngx-translate/core';
 import { formatMoney } from '../catalog/product.model';
 import type { Money } from '../catalog/product.model';
 import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign.model';
@@ -21,7 +22,7 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
 @Component({
   selector: 'home-campaign-section',
   standalone: true,
-  imports: [CfImagePipe, CountdownComponent],
+  imports: [CfImagePipe, CountdownComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="cq" [class.cq--flash]="variant === 'flash'" [attr.aria-label]="campaign.title">
@@ -35,7 +36,7 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
             }
           </div>
           <div class="cq__timer">
-            <span class="cq__timer-label">{{ variant === 'flash' ? 'Ends in' : 'Offer ends in' }}</span>
+            <span class="cq__timer-label">{{ (variant === 'flash' ? 'home.campaigns.endsIn' : 'home.campaigns.offerEndsIn') | translate }}</span>
             <ui-countdown [endsAt]="campaign.ends_at" [serverNow]="serverNow" />
           </div>
         </header>
@@ -73,11 +74,11 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
                 </p>
 
                 @if (showStock && item.stock_total) {
-                  <div class="cq-stock" [attr.aria-label]="stockLabel(item)">
+                  <div class="cq-stock" [attr.aria-label]="'home.campaigns.stockAria' | translate:{ remaining: item.stock_remaining ?? 0, total: item.stock_total }">
                     <span class="cq-stock__track">
                       <span class="cq-stock__fill" [style.width.%]="stockPct(item)"></span>
                     </span>
-                    <span class="cq-stock__txt">{{ item.stock_remaining }} left</span>
+                    <span class="cq-stock__txt">{{ 'home.campaigns.stockLeft' | translate:{ count: item.stock_remaining } }}</span>
                   </div>
                 }
               </div>
@@ -320,7 +321,4 @@ export class CampaignSectionComponent {
     return Math.max(0, Math.min(100, Math.round((remaining / item.stock_total) * 100)));
   }
 
-  stockLabel(item: CampaignItem): string {
-    return `${item.stock_remaining ?? 0} of ${item.stock_total} remaining`;
-  }
 }

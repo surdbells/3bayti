@@ -2,6 +2,7 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
 import { SectionHeaderComponent } from '../../shared/ui/section-header';
 import { SkeletonShimmerComponent } from '../../shared/ui/skeleton-shimmer';
 import { ProductCardComponent } from '../catalog/product-card';
+import { TranslatePipe } from '@ngx-translate/core';
 import type { Product } from '../catalog/product.model';
 
 /**
@@ -17,15 +18,15 @@ import type { Product } from '../catalog/product.model';
 @Component({
   selector: 'home-top-sellers',
   standalone: true,
-  imports: [SectionHeaderComponent, SkeletonShimmerComponent, ProductCardComponent],
+  imports: [SectionHeaderComponent, SkeletonShimmerComponent, ProductCardComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="home-section" aria-label="Top sellers">
+    <section class="home-section" [attr.aria-label]="'home.topSellers.aria' | translate">
       <div class="home-section__bounds">
         <ui-section-header
-          eyebrow="Loved by our community"
-          title="Top sellers"
-          ctaLabel="View all"
+          [eyebrow]="'home.topSellers.eyebrow' | translate"
+          [title]="'home.topSellers.title' | translate"
+          [ctaLabel]="'home.topSellers.viewAll' | translate"
           [ctaLink]="viewAllUrl"
         />
 

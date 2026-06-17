@@ -25,6 +25,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import type { Category } from '../categories/category.model';
 import { categoryIconUrl, categoryHasIcon } from '../categories/category-icons';
 import { HomeDataService } from './home-data.service';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * Home page — the canonical "/" route.
@@ -58,6 +59,7 @@ import { HomeDataService } from './home-data.service';
     SectionHeaderComponent,
     CampaignSectionComponent,
     TopSellersComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',

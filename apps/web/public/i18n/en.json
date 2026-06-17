@@ -700,5 +700,62 @@
       "text": "Create your free vendor account and start selling today.",
       "register": "Register now"
     }
+  },
+  "home": {
+    "hero": {
+      "bandAria": "Modest fashion from the UAE's independent designers",
+      "eyebrow": "Curated · UAE designers",
+      "title": "Modest fashion, beautifully curated.",
+      "lede": "Abayas, kaftans and ready-to-wear from the UAE's independent labels — gathered into one place worth browsing.",
+      "shopNewArrivals": "Shop new arrivals",
+      "browseStores": "Browse stores",
+      "trustAria": "Why shop with 3bayti",
+      "trustDesigners": "Independent UAE designers",
+      "trustSecure": "Secure checkout",
+      "trustReturns": "Easy returns"
+    },
+    "categories": {
+      "eyebrow": "Browse",
+      "title": "Shop by category",
+      "tileAria": "{{name}} — {{count}} products",
+      "piece": "piece",
+      "pieces": "pieces"
+    },
+    "campaigns": {
+      "anniversary": "Anniversary Deals",
+      "flash": "Flash Sale",
+      "endsIn": "Ends in",
+      "offerEndsIn": "Offer ends in",
+      "stockLeft": "{{count}} left",
+      "stockAria": "{{remaining}} of {{total}} remaining"
+    },
+    "topSellers": {
+      "eyebrow": "Loved by our community",
+      "title": "Top sellers",
+      "aria": "Top sellers",
+      "viewAll": "View all"
+    },
+    "newArrivals": {
+      "heading": "New arrivals",
+      "eyebrow": "Fresh from our designers"
+    },
+    "forYou": {
+      "heading": "For you",
+      "eyebrow": "Picked for you"
+    },
+    "stores": {
+      "eyebrow": "Meet the makers",
+      "title": "Stores we love",
+      "viewAll": "View all"
+    },
+    "sell": {
+      "eyebrow": "Become a seller",
+      "title": "Sell on 3bayti",
+      "lead": "Open a beautiful storefront, reach thousands of shoppers across the UAE, and get paid — all from one dashboard.",
+      "point1": "No setup required",
+      "point2": "Secure payments & daily payouts",
+      "point3": "Go live in minutes",
+      "cta": "Start selling"
+    }
   }
 }
