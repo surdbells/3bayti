@@ -70,9 +70,7 @@
       <ng-template #loggedOutCta>
         <ng-container *ngIf="showLoggedOutCta()">
           <a
-            [href]="vendorAppUrl"
-            target="_blank"
-            rel="noopener noreferrer"
+            routerLink="/sell"
             class="auth-cta auth-cta--ghost"
             data-testid="header-vendor"
           >
@@ -163,9 +161,8 @@
           <span>{{ 'header.signIn' | translate }}</span>
         </a>
         <a
-          [href]="vendorAppUrl"
-          target="_blank"
-          rel="noopener noreferrer"
+          routerLink="/sell"
+          (click)="closeDrawer()"
           class="auth-cta auth-cta--ghost"
           data-testid="drawer-vendor"
         >

@@ -127,12 +127,11 @@ describe('HeaderComponent (auth-aware)', () => {
       expect(link.getAttribute('href') ?? link.getAttribute('ng-reflect-router-link')).toMatch(/login/);
     });
 
-    it('Vendor CTA links out to the external seller app in a new tab', () => {
+    it('Sell CTA links to the in-app /sell pitch (same tab)', () => {
       const { fixture } = setup({ user: null });
       const link = fixture.nativeElement.querySelector('[data-testid="header-vendor"]') as HTMLAnchorElement;
-      expect(link.getAttribute('href')).toContain('app.3bayti.ae');
-      expect(link.getAttribute('target')).toBe('_blank');
-      expect(link.getAttribute('rel')).toContain('noopener');
+      expect(link.getAttribute('href')).toContain('/sell');
+      expect(link.getAttribute('target')).toBeNull();
     });
   });
 
@@ -307,7 +306,7 @@ describe('HeaderComponent (auth-aware)', () => {
       expect(drawer.querySelector('[data-testid="drawer-customer"]')).not.toBeNull();
       const vendor = drawer.querySelector('[data-testid="drawer-vendor"]') as HTMLAnchorElement | null;
       expect(vendor).not.toBeNull();
-      expect(vendor!.getAttribute('href')).toContain('app.3bayti.ae');
+      expect(vendor!.getAttribute('href')).toContain('/sell');
     });
 
     it('drawer HIDES the audience CTAs when logged in', () => {

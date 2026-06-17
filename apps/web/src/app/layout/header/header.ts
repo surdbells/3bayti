@@ -18,7 +18,6 @@ import { CurrencySwitcherComponent } from './currency-switcher';
 import { NavIconComponent } from './nav-icon';
 import { SearchOverlayComponent } from '../../features/search/search-overlay';
 import { AuthService } from '../../core/auth/auth.service';
-import { VENDOR_APP_URL } from '../../core/auth/auth.tokens';
 
 /** A single primary-navigation entry (shared by desktop nav + drawer). */
 interface NavItem {
@@ -36,9 +35,8 @@ interface NavItem {
  * Auth-aware rendering
  * --------------------
  * Two visual states:
- *   1. Logged out → audience CTAs: a "Customer" button (→ /login, which
- *      also routes to registration) and a "Vendor" button (→ the seller
- *      app at VENDOR_APP_URL, an external origin).
+ *   1. Logged out → audience CTAs: a "Sign in" button (→ /login) and a
+ *      "Sell on 3bayti" button (→ the in-app /sell recruitment pitch).
  *   2. Logged in → UserMenuComponent dropdown (name, account, orders,
  *      sign-out), plus the phone-verification badge when unverified.
  *
@@ -73,9 +71,6 @@ interface NavItem {
 export class HeaderComponent {
   private readonly auth = inject(AuthService);
   private readonly doc = inject(DOCUMENT);
-
-  /** The seller app URL — the "Vendor" CTA target (external origin). */
-  protected readonly vendorAppUrl = inject(VENDOR_APP_URL);
 
   /**
    * Primary navigation entries (H1.3). Order: Categories, Stores, New In,
