@@ -1125,3 +1125,33 @@
 @media (prefers-reduced-motion: reduce) {
   .pdp-sticky-cta { transition: none; }
 }
+
+/* Empty reviews state (#4) — shown when a product has no reviews yet, so
+   the Reviews section is present + inviting rather than missing. */
+.pdp-reviews__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: rgba(46, 36, 28, 0.7);
+}
+
+.pdp-reviews__empty-icon {
+  color: var(--color-brand-300, #d6b988);
+}
+
+.pdp-reviews__empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0;
+}
+
+.pdp-reviews__empty-hint {
+  font-size: 14px;
+  margin: 0;
+  max-width: 360px;
+  line-height: 1.5;
+}

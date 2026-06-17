@@ -356,10 +356,10 @@
             </div>
           }
 
-          <!-- Reviews. Only rendered if the API returned recent_reviews.
-               Uses an `id="reviews"` anchor so the rating count link
-               above can scroll to it. -->
-          @if (p.recent_reviews && p.recent_reviews.length > 0) {
+          <!-- Reviews. Always rendered (within a loaded product) so a
+               product with no reviews shows an inviting empty state (#4)
+               rather than a missing section. The id="reviews" anchor lets
+               the rating-count link above scroll here. -->
             <div class="pdp-disclosure" id="reviews">
               <h2 class="pdp-disclosure__heading">
                 <button
@@ -395,6 +395,7 @@
                 </p>
               }
 
+              @if (p.recent_reviews && p.recent_reviews.length > 0) {
               <ul class="pdp-reviews__list">
                 @for (review of p.recent_reviews; track review.id) {
                   <li class="pdp-review">
@@ -443,9 +444,17 @@
                   </li>
                 }
               </ul>
+              } @else {
+                <div class="pdp-reviews__empty" data-testid="pdp-reviews-empty">
+                  <svg class="pdp-reviews__empty-icon" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                  <p class="pdp-reviews__empty-title">{{ 'product.reviews.emptyTitle' | translate }}</p>
+                  <p class="pdp-reviews__empty-hint">{{ 'product.reviews.emptyHint' | translate }}</p>
+                </div>
+              }
               </div>
             </div>
-          }
 
           <!-- Materials, fabric, care — only render if backend supplied data -->
           @if (p.fabric || p.materials?.length || p.care_instructions) {

@@ -880,7 +880,9 @@
       "countOne": "1 review",
       "countMany": "{{count}} reviews",
       "heading": "Reviews",
-      "verified": "Verified buyer"
+      "verified": "Verified buyer",
+      "emptyTitle": "No reviews yet",
+      "emptyHint": "Verified buyer reviews will appear here once this product has been reviewed."
     },
     "savePercent": "Save {{pct}}%",
     "inStock": "In stock",
