@@ -1,4 +1,15 @@
 {
+  "search": {
+    "open": "Search",
+    "placeholder": "Search products and stores",
+    "dialogLabel": "Site search",
+    "resultsLabel": "Search results",
+    "stores": "Stores",
+    "products": "Products",
+    "loading": "Searching…",
+    "noResults": "No results for “{{query}}”",
+    "hint": "Start typing to search products and stores"
+  },
   "common": {
     "notifications": "Notifications",
     "brand": "3bayti",
@@ -723,20 +734,47 @@
       "title": "Everything you need to grow",
       "subtitle": "From onboarding to payout — it's all streamlined.",
       "features": {
-        "storefront": { "title": "Beautiful storefront", "desc": "Create your own branded shop with custom themes, logos, and galleries." },
-        "payments": { "title": "Payments & payouts", "desc": "Secure checkout, multiple gateways, and daily payouts." },
-        "logistics": { "title": "Integrated logistics", "desc": "Real-time rates, labels, and tracking updates." },
-        "analytics": { "title": "Sales analytics", "desc": "SKU insights, conversion, and repeat buyers." },
-        "marketing": { "title": "Marketing tools", "desc": "Discount codes, bundles, abandoned-cart emails, and SEO." },
-        "trust": { "title": "Trust & support", "desc": "Dispute centre, customer reviews, and 24/7 assistance so you're never alone." }
+        "storefront": {
+          "title": "Beautiful storefront",
+          "desc": "Create your own branded shop with custom themes, logos, and galleries."
+        },
+        "payments": {
+          "title": "Payments & payouts",
+          "desc": "Secure checkout, multiple gateways, and daily payouts."
+        },
+        "logistics": {
+          "title": "Integrated logistics",
+          "desc": "Real-time rates, labels, and tracking updates."
+        },
+        "analytics": {
+          "title": "Sales analytics",
+          "desc": "SKU insights, conversion, and repeat buyers."
+        },
+        "marketing": {
+          "title": "Marketing tools",
+          "desc": "Discount codes, bundles, abandoned-cart emails, and SEO."
+        },
+        "trust": {
+          "title": "Trust & support",
+          "desc": "Dispute centre, customer reviews, and 24/7 assistance so you're never alone."
+        }
       }
     },
     "steps": {
       "eyebrow": "Onboarding",
       "title": "Start selling in 3 simple steps",
-      "one": { "title": "Create your vendor account", "desc": "Register, complete KYC, and set up your store profile and policies." },
-      "two": { "title": "Add products & set fulfilment", "desc": "Upload listings, choose shipping options, and define pricing & taxes." },
-      "three": { "title": "Go live & get orders", "desc": "Promote your store with built-in marketing and watch the sales roll in." }
+      "one": {
+        "title": "Create your vendor account",
+        "desc": "Register, complete KYC, and set up your store profile and policies."
+      },
+      "two": {
+        "title": "Add products & set fulfilment",
+        "desc": "Upload listings, choose shipping options, and define pricing & taxes."
+      },
+      "three": {
+        "title": "Go live & get orders",
+        "desc": "Promote your store with built-in marketing and watch the sales roll in."
+      }
     },
     "cta": {
       "title": "Become a vendor",
@@ -809,7 +847,11 @@
       "body": "The product you're looking for may have been removed or sold out. Browse our other collections below.",
       "back": "← Back to categories"
     },
-    "breadcrumb": { "aria": "Breadcrumb", "home": "Home", "categories": "Categories" },
+    "breadcrumb": {
+      "aria": "Breadcrumb",
+      "home": "Home",
+      "categories": "Categories"
+    },
     "gallery": {
       "aria": "Product images",
       "viewLarger": "View larger image",
@@ -822,7 +864,11 @@
       "prev": "Previous image",
       "next": "Next image"
     },
-    "badges": { "new": "New", "bestseller": "Bestseller", "sale": "Sale" },
+    "badges": {
+      "new": "New",
+      "bestseller": "Bestseller",
+      "sale": "Sale"
+    },
     "infoAria": "Product details",
     "skuLabel": "SKU:",
     "rating": {
@@ -925,7 +971,11 @@
     }
   },
   "categories": {
-    "breadcrumb": { "aria": "Breadcrumb", "home": "Home", "categories": "Categories" },
+    "breadcrumb": {
+      "aria": "Breadcrumb",
+      "home": "Home",
+      "categories": "Categories"
+    },
     "loading": "Loading…",
     "notFound": {
       "eyebrow": "Category not found",

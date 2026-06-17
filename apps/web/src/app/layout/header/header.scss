@@ -63,6 +63,28 @@
   flex-shrink: 0;
 }
 
+.header-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  color: var(--color-text-primary, #2e241c);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-brand-50, #f9f4ea);
+    color: var(--color-brand-700, #5a3a2c);
+    outline: none;
+  }
+}
+
 .nav-link {
   display: inline-flex;
   align-items: center;

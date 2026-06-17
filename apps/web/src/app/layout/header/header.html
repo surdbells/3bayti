@@ -35,6 +35,21 @@
     </nav>
 
     <div class="header-actions">
+      <button
+        type="button"
+        class="header-search-trigger"
+        (click)="openSearch()"
+        [attr.aria-label]="'search.open' | translate"
+        [attr.aria-expanded]="searchOpen()"
+        aria-haspopup="dialog"
+        data-testid="header-search"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none"
+             stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="21" y1="21" x2="16.5" y2="16.5"></line>
+        </svg>
+      </button>
       <app-locale-switcher />
       <app-currency-switcher />
       <app-cart-icon data-testid="header-cart-icon" />
@@ -159,4 +174,7 @@
       </div>
     }
   </aside>
+
+  <!-- Global search overlay (header search trigger) -->
+  <app-search-overlay [open]="searchOpen()" (closed)="closeSearch()" />
 </header>

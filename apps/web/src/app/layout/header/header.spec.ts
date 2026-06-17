@@ -152,6 +152,24 @@ describe('HeaderComponent (auth-aware)', () => {
     });
   });
 
+  describe('global search', () => {
+    it('renders the search trigger', () => {
+      const { fixture } = setup({ user: null });
+      expect(fixture.nativeElement.querySelector('[data-testid="header-search"]')).not.toBeNull();
+    });
+
+    it('opens the search overlay on trigger click (closed by default)', () => {
+      const { fixture } = setup({ user: null });
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="search-overlay"]')).toBeNull();
+
+      (root.querySelector('[data-testid="header-search"]') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(root.querySelector('[data-testid="search-overlay"]')).not.toBeNull();
+    });
+  });
+
   describe('phone-verification badge', () => {
     it('shows the verify badge when signed in but phone NOT verified', () => {
       const { fixture } = setup({ user: makeUser({ is_phone_verified: false }) });

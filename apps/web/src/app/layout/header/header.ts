@@ -16,6 +16,7 @@ import { UserMenuComponent } from './user-menu';
 import { CartIconComponent } from './cart-icon';
 import { CurrencySwitcherComponent } from './currency-switcher';
 import { NavIconComponent } from './nav-icon';
+import { SearchOverlayComponent } from '../../features/search/search-overlay';
 import { AuthService } from '../../core/auth/auth.service';
 import { VENDOR_APP_URL } from '../../core/auth/auth.tokens';
 
@@ -63,6 +64,7 @@ interface NavItem {
     CartIconComponent,
     CurrencySwitcherComponent,
     NavIconComponent,
+    SearchOverlayComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './header.html',
@@ -91,6 +93,9 @@ export class HeaderComponent {
 
   /** Mobile drawer open state. */
   protected readonly drawerOpen = signal(false);
+
+  /** Global search overlay open state (driven by the header search trigger). */
+  protected readonly searchOpen = signal(false);
 
   /** Close button inside the drawer — focused when the drawer opens. */
   private readonly drawerCloseBtn = viewChild<ElementRef<HTMLButtonElement>>('drawerClose');
@@ -132,6 +137,16 @@ export class HeaderComponent {
     if (!this.drawerOpen()) return;
     this.drawerOpen.set(false);
     this.doc.body.style.overflow = '';
+  }
+
+  /** Open the global search overlay. */
+  protected openSearch(): void {
+    this.searchOpen.set(true);
+  }
+
+  /** Close the global search overlay. */
+  protected closeSearch(): void {
+    this.searchOpen.set(false);
   }
 
   /** Escape closes the drawer when open. */
