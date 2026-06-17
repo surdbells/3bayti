@@ -539,3 +539,110 @@
 .store-skeleton ui-skeleton-shimmer:last-child {
   margin-top: auto;
 }
+
+/* ===========================================================
+   Sell on 3bayti band (Phase F2) — vendor-recruitment CTA.
+   Base .home-section supplies the inline gutter; the band
+   centres itself (like __bounds) and renders a gilded card.
+   =========================================================== */
+.home-section--sell {
+  margin-block: clamp(2.5rem, 5vw, 4rem);
+}
+
+.sell-band {
+  max-width: var(--page-max-width, 1280px);
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem 2.5rem;
+  padding: clamp(1.75rem, 4vw, 3rem);
+  border-radius: var(--radius-xl, 28px);
+  border: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.1));
+  background:
+    radial-gradient(120% 160% at 0% 0%, var(--color-brand-50, #f9f4ea) 0%, transparent 55%),
+    var(--bg-muted, #f7f3ec);
+}
+
+.sell-band__text {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.sell-band__eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-brand-600, #b08642);
+}
+
+.sell-band__title {
+  margin: 0 0 0.6rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.6rem, 3.5vw, 2.25rem);
+  line-height: 1.1;
+  color: var(--text-primary, #2e241c);
+}
+
+.sell-band__lead {
+  margin: 0 0 1rem;
+  max-width: 36rem;
+  color: var(--text-secondary, #6b5d4f);
+  line-height: 1.55;
+}
+
+.sell-band__points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  color: var(--text-tertiary, #8a7868);
+}
+.sell-band__points li {
+  position: relative;
+  padding-inline-start: 1.1rem;
+}
+.sell-band__points li::before {
+  content: '✓';
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--color-brand-600, #b08642);
+  font-weight: 700;
+}
+
+.sell-band__action {
+  flex: 0 0 auto;
+}
+
+.sell-band__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.6rem;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--text-primary, #2e241c);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+.sell-band__cta:hover {
+  opacity: 0.92;
+}
+.sell-band__cta svg {
+  width: 18px;
+  height: 18px;
+}
+:host-context([dir='rtl']) .sell-band__cta svg {
+  transform: scaleX(-1);
+}
+.sell-band__cta:focus-visible {
+  outline: 2px solid var(--color-brand-600, #b08642);
+  outline-offset: 2px;
+}
