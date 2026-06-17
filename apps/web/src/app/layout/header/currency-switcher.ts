@@ -13,6 +13,7 @@ import {
   CURRENCY_LABELS,
   type SupportedCurrency,
 } from '../../core/currency/currency.service';
+import { TranslatePipe } from '@ngx-translate/core';
 
 /**
  * CurrencySwitcherComponent — a compact dropdown in the site header
@@ -32,7 +33,7 @@ import {
 @Component({
   selector: 'app-currency-switcher',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="currency-switcher">
@@ -43,7 +44,7 @@ import {
         (click)="toggle()"
         aria-haspopup="listbox"
         [attr.aria-expanded]="open()"
-        [attr.aria-label]="'Display currency: ' + currency()"
+        [attr.aria-label]="'header.currencyAria' | translate:{ currency: currency() }"
         data-testid="currency-switcher">
         {{ currency() }}
         <span class="currency-switcher__chevron" aria-hidden="true">▾</span>
@@ -53,7 +54,7 @@ import {
         <ul
           class="currency-switcher__dropdown"
           role="listbox"
-          [attr.aria-label]="'Choose display currency'">
+          [attr.aria-label]="'header.chooseCurrency' | translate">
           @for (code of currencies; track code) {
             <li
               class="currency-switcher__option"

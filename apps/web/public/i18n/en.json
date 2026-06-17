@@ -1,5 +1,6 @@
 {
   "common": {
+    "notifications": "Notifications",
     "brand": "3bayti",
     "skipToContent": "Skip to main content",
     "loading": "Loading…",
@@ -58,6 +59,8 @@
     "arabic": "العربية"
   },
   "header": {
+    "currencyAria": "Display currency: {{currency}}",
+    "chooseCurrency": "Choose display currency",
     "signIn": "Sign in",
     "register": "Register",
     "cart": {
@@ -283,6 +286,7 @@
     }
   },
   "checkout": {
+    "progressAria": "Checkout progress",
     "steps": {
       "shipping": "Shipping",
       "review": "Review",
@@ -296,6 +300,7 @@
       "continue": "Continue to review"
     },
     "review": {
+      "priceNote": "﹡ Displayed prices are indicative. Your payment will be charged in AED at the rate set by your card issuer or payment provider.",
       "title": "Review your order",
       "itemsHeading": "Items",
       "shippingHeading": "Delivery to",
@@ -451,6 +456,7 @@
   },
   "account": {
     "hub": {
+      "sectionsAria": "Account sections",
       "greeting": "My account",
       "greetingNamed": "Hello, {{name}}",
       "subtitle": "Manage your profile, orders, addresses, and more.",
@@ -599,6 +605,7 @@
     }
   },
   "listing": {
+    "breadcrumbAria": "Breadcrumb",
     "loadMore": "Load more",
     "bestSellers": {
       "title": "Best Sellers",
@@ -612,6 +619,13 @@
     }
   },
   "giftCards": {
+    "status": {
+      "pending": "Pending",
+      "partlyUsed": "Partly used",
+      "usedUp": "Used up",
+      "expired": "Expired",
+      "voided": "Voided"
+    },
     "landing": {
       "eyebrow": "The 3bayti gift card",
       "title": "Gift Cards",
@@ -696,6 +710,7 @@
         "goLive": "Go live in minutes"
       },
       "stats": {
+        "signupValue": "3 min",
         "shoppersLabel": "Monthly shoppers",
         "signupLabel": "Average signup time",
         "uptimeLabel": "Uptime"

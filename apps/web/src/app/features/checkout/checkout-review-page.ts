@@ -349,11 +349,7 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
         </section>
 
         @if (isDisplayConverted()) {
-          <p class="checkout-aed-notice" role="note">
-            ﹡ Displayed prices are indicative. Your payment will be
-            charged in <strong>AED</strong> at the rate set by your
-            card issuer or payment provider.
-          </p>
+          <p class="checkout-aed-notice" role="note">{{ 'checkout.review.priceNote' | translate }}</p>
         }
 
         <p

@@ -39,7 +39,7 @@ import { ToastService, Toast } from './toast.service';
       *ngIf="isBrowser && toasts().length > 0"
       class="toast-container"
       role="region"
-      aria-label="Notifications"
+      [attr.aria-label]="'common.notifications' | translate"
       aria-live="polite"
     >
       <div

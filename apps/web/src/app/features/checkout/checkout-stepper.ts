@@ -24,7 +24,7 @@ import { TranslatePipe } from '@ngx-translate/core';
   imports: [NgFor, NgClass, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ol class="checkout-stepper" aria-label="Checkout progress">
+    <ol class="checkout-stepper" [attr.aria-label]="'checkout.progressAria' | translate">
       <li
         *ngFor="let step of steps; let i = index"
         class="checkout-stepper__item"

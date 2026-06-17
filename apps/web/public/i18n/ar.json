@@ -1,5 +1,6 @@
 {
   "common": {
+    "notifications": "الإشعارات",
     "brand": "3bayti",
     "skipToContent": "تخطَّ إلى المحتوى الرئيسي",
     "loading": "جارٍ التحميل…",
@@ -58,6 +59,8 @@
     "arabic": "العربية"
   },
   "header": {
+    "currencyAria": "عرض العملة: {{currency}}",
+    "chooseCurrency": "اختاري عملة العرض",
     "signIn": "تسجيل الدخول",
     "register": "إنشاء حساب",
     "cart": {
@@ -283,6 +286,7 @@
     }
   },
   "checkout": {
+    "progressAria": "تقدّم الدفع",
     "steps": {
       "shipping": "الشحن",
       "review": "المراجعة",
@@ -296,6 +300,7 @@
       "continue": "المتابعة إلى المراجعة"
     },
     "review": {
+      "priceNote": "﹡ الأسعار المعروضة استرشادية. سيتم خصم دفعتك بالدرهم الإماراتي وفقاً للسعر الذي يحدده مُصدِر بطاقتك أو مزوّد الدفع.",
       "title": "مراجعة طلبك",
       "itemsHeading": "العناصر",
       "shippingHeading": "التوصيل إلى",
@@ -451,6 +456,7 @@
   },
   "account": {
     "hub": {
+      "sectionsAria": "أقسام الحساب",
       "greeting": "حسابي",
       "greetingNamed": "مرحباً، {{name}}",
       "subtitle": "أديري ملفك الشخصي وطلباتك وعناوينك والمزيد.",
@@ -599,6 +605,7 @@
     }
   },
   "listing": {
+    "breadcrumbAria": "مسار التنقّل",
     "loadMore": "تحميل المزيد",
     "bestSellers": {
       "title": "الأكثر مبيعاً",
@@ -612,6 +619,13 @@
     }
   },
   "giftCards": {
+    "status": {
+      "pending": "قيد الانتظار",
+      "partlyUsed": "مُستخدمة جزئياً",
+      "usedUp": "مُستنفدة",
+      "expired": "منتهية الصلاحية",
+      "voided": "ملغاة"
+    },
     "landing": {
       "eyebrow": "بطاقة هدايا 3bayti",
       "title": "بطاقات الهدايا",
@@ -696,6 +710,7 @@
         "goLive": "انطلقي خلال دقائق"
       },
       "stats": {
+        "signupValue": "3 دقائق",
         "shoppersLabel": "متسوّقون شهرياً",
         "signupLabel": "متوسط وقت التسجيل",
         "uptimeLabel": "نسبة التوفّر"

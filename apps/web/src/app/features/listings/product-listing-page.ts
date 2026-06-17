@@ -48,7 +48,7 @@ export interface ProductListingRouteData {
   template: `
     <main class="listing-page" data-testid="product-listing-page">
       <div class="listing-page__container">
-        <nav class="listing-page__crumbs" aria-label="Breadcrumb">
+        <nav class="listing-page__crumbs" [attr.aria-label]="'listing.breadcrumbAria' | translate">
           <a routerLink="/">{{ 'nav.home' | translate }}</a>
           <span class="listing-page__crumbs-sep" aria-hidden="true">/</span>
           <span aria-current="page">{{ titleKey() | translate }}</span>

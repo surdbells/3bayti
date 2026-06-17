@@ -1,4 +1,5 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, inject } from '@angular/core';
+import { TranslateService } from '@ngx-translate/core';
 import { NgIf } from '@angular/common';
 import {
   GiftCard,
@@ -137,6 +138,8 @@ import {
   styleUrl: './gift-card-visual.scss',
 })
 export class GiftCardVisualComponent {
+  private i18n = inject(TranslateService);
+
   @Input({ required: true }) theme!: GiftCardTheme;
   /** Optional palette override (e.g. a real card's `theme_meta`). */
   @Input() themeMeta?: GiftCardThemeMeta | null;
@@ -247,15 +250,15 @@ export class GiftCardVisualComponent {
   get statusBadge(): string | null {
     switch (this.status) {
       case 'pending_payment':
-        return 'Pending';
+        return this.i18n.instant('giftCards.status.pending');
       case 'partially_used':
-        return 'Partly used';
+        return this.i18n.instant('giftCards.status.partlyUsed');
       case 'exhausted':
-        return 'Used up';
+        return this.i18n.instant('giftCards.status.usedUp');
       case 'expired':
-        return 'Expired';
+        return this.i18n.instant('giftCards.status.expired');
       case 'voided':
-        return 'Voided';
+        return this.i18n.instant('giftCards.status.voided');
       default:
         return null; // 'active' or preview → no badge
     }

@@ -75,7 +75,7 @@ import { AuthService } from '../../core/auth/auth.service';
           </p>
         </header>
 
-        <nav class="account-hub__grid" aria-label="Account sections">
+        <nav class="account-hub__grid" [attr.aria-label]="'account.hub.sectionsAria' | translate">
           <a routerLink="/account/profile" class="account-tile" data-testid="account-tile-profile">
             <span class="account-tile__title">{{ 'account.hub.profile.title' | translate }}</span>
             <span class="account-tile__desc">{{ 'account.hub.profile.desc' | translate }}</span>

@@ -71,7 +71,7 @@ interface SellFeature {
               <dd class="sell-hero__stat-label">{{ 'sell.hero.stats.shoppersLabel' | translate }}</dd>
             </div>
             <div>
-              <dt class="sell-hero__stat-value">3 min</dt>
+              <dt class="sell-hero__stat-value">{{ 'sell.hero.stats.signupValue' | translate }}</dt>
               <dd class="sell-hero__stat-label">{{ 'sell.hero.stats.signupLabel' | translate }}</dd>
             </div>
             <div>
