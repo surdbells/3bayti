@@ -972,6 +972,17 @@
       "scrollRight": "التمرير يمينًا"
     }
   },
+  "filters": {
+    "title": "عوامل التصفية",
+    "all": "عوامل التصفية",
+    "sort": "الترتيب",
+    "size": "المقاس",
+    "colour": "اللون",
+    "price": "السعر",
+    "clear": "مسح الكل",
+    "apply": "عرض النتائج",
+    "activeAria": "{{count}} عوامل تصفية مفعّلة"
+  },
   "categories": {
     "breadcrumb": {
       "aria": "مسار التنقّل",

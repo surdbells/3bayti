@@ -972,6 +972,17 @@
       "scrollRight": "Scroll right"
     }
   },
+  "filters": {
+    "title": "Filters",
+    "all": "Filters",
+    "sort": "Sort",
+    "size": "Size",
+    "colour": "Colour",
+    "price": "Price",
+    "clear": "Clear all",
+    "apply": "Show results",
+    "activeAria": "{{count}} filters active"
+  },
   "categories": {
     "breadcrumb": {
       "aria": "Breadcrumb",

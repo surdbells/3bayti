@@ -1,0 +1,410 @@
+/* FilterBar — unified premium product-filter surface (web-uplift #5).
+   Desktop: a sticky horizontal bar of popover chips.
+   Mobile (<640px): a single trigger that opens a bottom sheet.
+   Both layouts share one component; CSS media queries toggle them.
+   Brand tokens from :root; logical properties for RTL. */
+
+:host {
+  display: block;
+}
+
+/* ════════════════════════ DESKTOP / TABLET BAR ════════════════════════ */
+
+.filter-bar {
+  display: none; /* mobile-first: hidden until ≥640px */
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  padding-block: var(--space-sm);
+  padding-inline: var(--space-md);
+  background: color-mix(in srgb, var(--color-bg-surface) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card-resting);
+}
+
+@media (min-width: 640px) {
+  .filter-bar { display: flex; }
+}
+
+.filter-bar__lead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-text-secondary);
+  padding-inline-end: var(--space-xs);
+  margin-inline-end: var(--space-2xs);
+  border-inline-end: 1px solid var(--color-border-subtle);
+}
+.filter-bar__lead-text {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+/* ── Chips ── */
+
+.filter-bar__chip-wrap {
+  position: relative;
+}
+
+.filter-bar__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: 38px;
+  padding-block: 6px;
+  padding-inline: 14px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  background: var(--color-bg-canvas);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--color-brand-400);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+  &[aria-expanded='true'] {
+    border-color: var(--color-brand-500);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-brand-500) 14%, transparent);
+  }
+}
+
+.filter-bar__chip--active {
+  border-color: var(--color-brand-500);
+  background: var(--color-brand-50);
+  color: var(--color-brand-700);
+}
+
+.filter-bar__chip-label { white-space: nowrap; }
+
+.filter-bar__chip-value {
+  color: var(--color-text-tertiary);
+  font-weight: 400;
+  max-width: 14ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.filter-bar__chip--active .filter-bar__chip-value { color: var(--color-brand-600); }
+
+.filter-bar__chip-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--color-text-inverse);
+  background: var(--color-brand-500);
+  border-radius: var(--radius-pill);
+}
+
+.filter-bar__caret {
+  color: var(--color-text-tertiary);
+  flex-shrink: 0;
+}
+
+/* ── Popover ── */
+
+.filter-bar__pop {
+  position: absolute;
+  inset-block-start: calc(100% + 8px);
+  inset-inline-start: 0;
+  z-index: 40;
+  min-width: 220px;
+  max-width: 300px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: var(--space-sm);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-floating);
+  animation: filter-pop-in 0.14s ease;
+}
+
+@keyframes filter-pop-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Transparent click-catcher to dismiss an open popover on outside click. */
+.filter-bar__catcher {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+/* ── Clear all ── */
+
+.filter-bar__clear {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+  margin-inline-start: auto;
+  padding-block: 6px;
+  padding-inline: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-brand-700);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background 0.15s ease;
+
+  &:hover { background: var(--color-brand-50); }
+  &:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+}
+.filter-bar__clear-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 5px;
+  font-size: 11px;
+  background: var(--color-brand-100);
+  border-radius: var(--radius-pill);
+}
+
+/* ════════════════════════ OPTION LISTS (shared) ════════════════════════ */
+
+.filter-bar__opts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-bar__opt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-block: 8px;
+  padding-inline: 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.12s ease;
+
+  &:hover { background: var(--color-bg-muted); }
+}
+
+.filter-bar__check,
+.filter-bar__radio {
+  width: 17px;
+  height: 17px;
+  flex-shrink: 0;
+  accent-color: var(--color-brand-500);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+}
+
+.filter-bar__opt-text {
+  font-size: 14px;
+  color: var(--color-text-primary);
+}
+
+.filter-bar__opt-count {
+  margin-inline-start: auto;
+  font-size: 12px;
+  color: var(--color-text-tertiary);
+}
+
+.filter-bar__swatch {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-default);
+}
+
+.filter-bar__sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ════════════════════════ MOBILE TRIGGER ════════════════════════ */
+
+.filter-bar__mobile {
+  display: block;
+}
+@media (min-width: 640px) {
+  .filter-bar__mobile { display: none; }
+}
+
+.filter-bar__mobile-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  justify-content: center;
+  min-height: 46px;
+  padding-inline: var(--space-md);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+
+  &:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+}
+
+/* ════════════════════════ MOBILE BOTTOM SHEET ════════════════════════ */
+
+.filter-bar__sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.filter-bar__sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(46, 36, 28, 0.45);
+  animation: filter-fade-in 0.2s ease;
+}
+
+.filter-bar__sheet-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  background: var(--color-bg-surface);
+  border-start-start-radius: var(--radius-xl);
+  border-start-end-radius: var(--radius-xl);
+  box-shadow: var(--shadow-floating);
+  animation: filter-sheet-up 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes filter-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes filter-sheet-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+.filter-bar__sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: var(--space-md);
+  padding-inline: var(--space-lg);
+  border-block-end: 1px solid var(--color-border-subtle);
+}
+.filter-bar__sheet-title {
+  margin: 0;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+.filter-bar__sheet-close {
+  display: inline-flex;
+  padding: 6px;
+  color: var(--color-text-secondary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  &:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+}
+
+.filter-bar__sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-block: var(--space-sm) var(--space-lg);
+  padding-inline: var(--space-lg);
+  -webkit-overflow-scrolling: touch;
+}
+
+.filter-bar__sheet-group {
+  padding-block: var(--space-md);
+  & + & { border-block-start: 1px solid var(--color-border-subtle); }
+}
+.filter-bar__sheet-group-title {
+  margin: 0 0 var(--space-xs);
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-tertiary);
+}
+
+.filter-bar__sheet-foot {
+  display: flex;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  padding-block-end: max(var(--space-md), env(safe-area-inset-bottom));
+  border-block-start: 1px solid var(--color-border-subtle);
+}
+.filter-bar__sheet-clear,
+.filter-bar__sheet-apply {
+  flex: 1;
+  min-height: 48px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+
+  &:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+}
+.filter-bar__sheet-clear {
+  color: var(--color-text-secondary);
+  background: var(--color-bg-canvas);
+  border: 1px solid var(--color-border-default);
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+.filter-bar__sheet-apply {
+  color: var(--color-text-inverse);
+  background: var(--color-brand-700);
+  border: 1px solid var(--color-brand-700);
+
+  &:hover { background: var(--color-brand-600); border-color: var(--color-brand-600); }
+}
+
+/* Respect reduced-motion preferences. */
+@media (prefers-reduced-motion: reduce) {
+  .filter-bar__pop,
+  .filter-bar__sheet-backdrop,
+  .filter-bar__sheet-panel { animation: none; }
+}
