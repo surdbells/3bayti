@@ -113,58 +113,124 @@ const SEARCH_DEBOUNCE_MS = 250;
                 {{ 'search.noResults' | translate: { query: query() } }}
               </p>
             } @else if (hasResults()) {
-              @if (stores().length > 0) {
-                <section class="search-overlay__group" data-testid="search-stores">
-                  <h2 class="search-overlay__group-title">{{ 'search.stores' | translate }}</h2>
-                  @for (store of stores(); track store.slug) {
-                    <a
-                      class="search-overlay__row"
-                      role="option"
-                      [routerLink]="['/stores', store.slug]"
-                      (click)="requestClose()"
-                      data-testid="search-store-row"
-                    >
-                      <span class="search-overlay__thumb">
-                        @if (store.logo_url) {
-                          <img [src]="store.logo_url" alt="" loading="lazy" />
-                        }
-                      </span>
-                      <span class="search-overlay__row-text">
-                        <span class="search-overlay__row-name">{{ store.name }}</span>
-                        @if (store.rating_count > 0) {
-                          <span class="search-overlay__row-meta">
-                            &#9733; {{ store.rating }} ({{ store.rating_count }})
-                          </span>
-                        }
-                      </span>
-                    </a>
-                  }
-                </section>
-              }
+              <div
+                class="search-overlay__tabs"
+                role="tablist"
+                [attr.aria-label]="'search.resultsLabel' | translate"
+                (keydown)="onTabKeydown($event)"
+              >
+                <button
+                  type="button"
+                  role="tab"
+                  id="search-tab-products"
+                  class="search-overlay__tab"
+                  [class.search-overlay__tab--active]="activeTab() === 'products'"
+                  [attr.aria-selected]="activeTab() === 'products'"
+                  [attr.tabindex]="activeTab() === 'products' ? 0 : -1"
+                  aria-controls="search-panel-products"
+                  (click)="selectTab('products')"
+                  data-testid="search-tab-products"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                       stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 7l9-4 9 4-9 4-9-4z"></path><path d="M3 7v10l9 4 9-4V7"></path>
+                  </svg>
+                  {{ 'search.products' | translate }}
+                  <span class="search-overlay__tab-count" aria-hidden="true">{{ products().length }}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id="search-tab-stores"
+                  class="search-overlay__tab"
+                  [class.search-overlay__tab--active]="activeTab() === 'stores'"
+                  [attr.aria-selected]="activeTab() === 'stores'"
+                  [attr.tabindex]="activeTab() === 'stores' ? 0 : -1"
+                  aria-controls="search-panel-stores"
+                  (click)="selectTab('stores')"
+                  data-testid="search-tab-stores"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none"
+                       stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M3 9l1.5-5h15L21 9"></path><path d="M4 9h16v10H4z"></path><path d="M9 19v-6h6v6"></path>
+                  </svg>
+                  {{ 'search.stores' | translate }}
+                  <span class="search-overlay__tab-count" aria-hidden="true">{{ stores().length }}</span>
+                </button>
+              </div>
 
-              @if (products().length > 0) {
-                <section class="search-overlay__group" data-testid="search-products">
-                  <h2 class="search-overlay__group-title">{{ 'search.products' | translate }}</h2>
-                  @for (product of products(); track product.slug) {
-                    <a
-                      class="search-overlay__row"
-                      role="option"
-                      [routerLink]="['/product', product.slug]"
-                      (click)="requestClose()"
-                      data-testid="search-product-row"
-                    >
-                      <span class="search-overlay__thumb">
-                        @if (product.primary_image?.url) {
-                          <img [src]="product.primary_image!.url" [attr.alt]="product.name" loading="lazy" />
-                        }
-                      </span>
-                      <span class="search-overlay__row-text">
-                        <span class="search-overlay__row-name">{{ product.name }}</span>
-                        <span class="search-overlay__row-meta">{{ priceLabel(product) }}</span>
-                      </span>
-                    </a>
+              @if (activeTab() === 'products') {
+                <div
+                  role="tabpanel"
+                  id="search-panel-products"
+                  aria-labelledby="search-tab-products"
+                  class="search-overlay__group"
+                  data-testid="search-products"
+                >
+                  @if (products().length > 0) {
+                    @for (product of products(); track product.slug) {
+                      <a
+                        class="search-overlay__row"
+                        role="option"
+                        [routerLink]="['/product', product.slug]"
+                        (click)="requestClose()"
+                        data-testid="search-product-row"
+                      >
+                        <span class="search-overlay__thumb">
+                          @if (product.primary_image?.url) {
+                            <img [src]="product.primary_image!.url" [attr.alt]="product.name" loading="lazy" />
+                          }
+                        </span>
+                        <span class="search-overlay__row-text">
+                          <span class="search-overlay__row-name">{{ product.name }}</span>
+                          <span class="search-overlay__row-meta">{{ priceLabel(product) }}</span>
+                        </span>
+                      </a>
+                    }
+                  } @else {
+                    <p class="search-overlay__status" data-testid="search-tab-empty">
+                      {{ 'search.noResults' | translate: { query: query() } }}
+                    </p>
                   }
-                </section>
+                </div>
+              } @else {
+                <div
+                  role="tabpanel"
+                  id="search-panel-stores"
+                  aria-labelledby="search-tab-stores"
+                  class="search-overlay__group"
+                  data-testid="search-stores"
+                >
+                  @if (stores().length > 0) {
+                    @for (store of stores(); track store.slug) {
+                      <a
+                        class="search-overlay__row"
+                        role="option"
+                        [routerLink]="['/stores', store.slug]"
+                        (click)="requestClose()"
+                        data-testid="search-store-row"
+                      >
+                        <span class="search-overlay__thumb">
+                          @if (store.logo_url) {
+                            <img [src]="store.logo_url" alt="" loading="lazy" />
+                          }
+                        </span>
+                        <span class="search-overlay__row-text">
+                          <span class="search-overlay__row-name">{{ store.name }}</span>
+                          @if (store.rating_count > 0) {
+                            <span class="search-overlay__row-meta">
+                              &#9733; {{ store.rating }} ({{ store.rating_count }})
+                            </span>
+                          }
+                        </span>
+                      </a>
+                    }
+                  } @else {
+                    <p class="search-overlay__status" data-testid="search-tab-empty">
+                      {{ 'search.noResults' | translate: { query: query() } }}
+                    </p>
+                  }
+                </div>
               }
             } @else {
               <p class="search-overlay__status search-overlay__status--hint" data-testid="search-hint">
@@ -207,6 +273,9 @@ export class SearchOverlayComponent implements OnDestroy {
   protected readonly products = signal<Product[]>([]);
   protected readonly stores = signal<DirectoryStore[]>([]);
 
+  /** Active results tab. Products lead by default (web-uplift #6). */
+  protected readonly activeTab = signal<'products' | 'stores'>('products');
+
   protected readonly hasResults = computed(
     () => this.products().length > 0 || this.stores().length > 0,
   );
@@ -226,6 +295,7 @@ export class SearchOverlayComponent implements OnDestroy {
       this.searched.set(false);
       this.products.set([]);
       this.stores.set([]);
+      this.activeTab.set('products');
       return;
     }
 
@@ -235,6 +305,18 @@ export class SearchOverlayComponent implements OnDestroy {
 
   protected priceLabel(product: Product): string {
     return formatMoney(product.sale_price ?? product.price);
+  }
+
+  protected selectTab(tab: 'products' | 'stores'): void {
+    this.activeTab.set(tab);
+  }
+
+  /** Left/Right arrows move between the two result tabs (WAI-ARIA tabs). */
+  protected onTabKeydown(event: KeyboardEvent): void {
+    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
+      event.preventDefault();
+      this.activeTab.set(this.activeTab() === 'products' ? 'stores' : 'products');
+    }
   }
 
   protected requestClose(): void {
@@ -258,6 +340,8 @@ export class SearchOverlayComponent implements OnDestroy {
       if (seq !== this.requestSeq) return; // a newer query superseded this one
       this.products.set(res.products);
       this.stores.set(res.stores);
+      // Products lead, but if there are only stores, surface them.
+      this.activeTab.set(res.products.length === 0 && res.stores.length > 0 ? 'stores' : 'products');
     } catch {
       if (seq !== this.requestSeq) return;
       this.products.set([]);
@@ -292,6 +376,7 @@ export class SearchOverlayComponent implements OnDestroy {
     this.searched.set(false);
     this.products.set([]);
     this.stores.set([]);
+    this.activeTab.set('products');
   }
 
   private clearDebounce(): void {

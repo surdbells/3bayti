@@ -97,7 +97,7 @@ describe('SearchOverlayComponent', () => {
     expect(fixture.nativeElement.querySelector('[role="listbox"]')).not.toBeNull();
   });
 
-  it('debounces typing then renders grouped store + product results', async () => {
+  it('debounces typing then renders tabbed results with Products active by default', async () => {
     service.result = {
       products: [makeProduct('silk-dress', 'Silk Dress')] as never,
       stores: [makeStore('almas', 'Almas Fashion')] as never,
@@ -106,14 +106,56 @@ describe('SearchOverlayComponent', () => {
     await typeQuery('silk');
 
     expect(service.calls).toContain('silk');
-    expect(fixture.nativeElement.querySelector('[data-testid="search-stores"]')).not.toBeNull();
+    // Both tabs render with counts.
+    const productsTab = fixture.nativeElement.querySelector('[data-testid="search-tab-products"]');
+    const storesTab = fixture.nativeElement.querySelector('[data-testid="search-tab-stores"]');
+    expect(productsTab).not.toBeNull();
+    expect(storesTab).not.toBeNull();
+    expect(productsTab.getAttribute('aria-selected')).toBe('true');
+    expect(storesTab.getAttribute('aria-selected')).toBe('false');
+
+    // Products panel is active; product row visible, store row not in DOM yet.
     expect(fixture.nativeElement.querySelector('[data-testid="search-products"]')).not.toBeNull();
-    expect(
-      fixture.nativeElement.querySelector('[data-testid="search-store-row"]').textContent,
-    ).toContain('Almas Fashion');
     expect(
       fixture.nativeElement.querySelector('[data-testid="search-product-row"]').textContent,
     ).toContain('Silk Dress');
+    expect(fixture.nativeElement.querySelector('[data-testid="search-store-row"]')).toBeNull();
+  });
+
+  it('switches to the Stores tab on click and reveals store rows', async () => {
+    service.result = {
+      products: [makeProduct('silk-dress', 'Silk Dress')] as never,
+      stores: [makeStore('almas', 'Almas Fashion')] as never,
+    };
+    openOverlay();
+    await typeQuery('silk');
+
+    (fixture.nativeElement.querySelector('[data-testid="search-tab-stores"]') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="search-tab-stores"]').getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="search-store-row"]').textContent,
+    ).toContain('Almas Fashion');
+    expect(fixture.nativeElement.querySelector('[data-testid="search-product-row"]')).toBeNull();
+  });
+
+  it('auto-selects the Stores tab when there are no product matches', async () => {
+    service.result = {
+      products: [] as never,
+      stores: [makeStore('almas', 'Almas Fashion')] as never,
+    };
+    openOverlay();
+    await typeQuery('almas');
+
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="search-tab-stores"]').getAttribute('aria-selected'),
+    ).toBe('true');
+    expect(
+      fixture.nativeElement.querySelector('[data-testid="search-store-row"]').textContent,
+    ).toContain('Almas Fashion');
   });
 
   it('shows the empty state when a search returns nothing', async () => {
