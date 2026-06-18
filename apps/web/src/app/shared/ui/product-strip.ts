@@ -52,7 +52,7 @@ import { TranslatePipe } from '@ngx-translate/core';
   imports: [ProductCardComponent, SkeletonShimmerComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <section class="strip" [attr.aria-label]="heading">
+    <section class="strip" [class.strip--compact]="compact" [attr.aria-label]="heading">
       <header class="strip__header">
         <h2 class="strip__heading">
           @if (eyebrow) {
@@ -148,6 +148,14 @@ export class ProductStripComponent implements AfterViewInit, OnDestroy {
 
   /** True while parent is loading the data. Renders skeletons. */
   @Input() loading = false;
+
+  /**
+   * Compact density — pins each card to the Top Sellers rail width
+   * (180px, 216px ≥1280px) so the home page's strips read consistently
+   * with the ranked rail (web-uplift #8). Default (false) keeps the
+   * larger editorial sizing used on the PDP related-products strip.
+   */
+  @Input() compact = false;
 
   @ViewChild('scroller') private scrollerRef?: ElementRef<HTMLElement>;
 

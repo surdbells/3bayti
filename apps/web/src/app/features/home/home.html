@@ -178,6 +178,7 @@
     viewAllUrl="/new-arrivals"
     [products]="newArrivals() ?? []"
     [loading]="newArrivals() === null"
+    [compact]="true"
   />
 
   <!-- ===========================================================
@@ -194,6 +195,7 @@
       [eyebrow]="'home.forYou.eyebrow' | translate"
       [products]="forYou()"
       [loading]="false"
+      [compact]="true"
     />
   }
 

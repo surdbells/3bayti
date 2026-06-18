@@ -194,6 +194,24 @@
   }
 }
 
+/* Compact density (web-uplift #8): pin cards to the Top Sellers rail
+ * width so the home page's strips and the ranked rail share one scale.
+ * Higher specificity (.strip--compact .strip__item) overrides every
+ * default .strip__item width rule above, at any breakpoint. */
+.strip--compact .strip__item {
+  width: 180px;
+  min-width: 180px;
+  max-width: 180px;
+}
+
+@media (min-width: 1280px) {
+  .strip--compact .strip__item {
+    width: 216px;
+    min-width: 216px;
+    max-width: 216px;
+  }
+}
+
 /* ----- Skeleton items ---------------------------------------------- */
 
 .strip__item--skeleton {
