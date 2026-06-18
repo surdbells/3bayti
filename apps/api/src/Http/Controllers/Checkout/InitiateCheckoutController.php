@@ -677,6 +677,7 @@ final class InitiateCheckoutController
                     ucfirst($kind) . ' address not found.',
                 );
             }
+            $this->assertAddressComplete($candidate, $kind);
             return $candidate;
         }
 
@@ -690,7 +691,57 @@ final class InitiateCheckoutController
                 'No ' . $kind . ' address on file. Please add one before checking out.',
             );
         }
+        $this->assertAddressComplete($default, $kind);
         return $default;
+    }
+
+    /**
+     * Guard a resolved Address against the fields that OrderAddress (the
+     * immutable per-order snapshot) requires before it will construct.
+     *
+     * A saved Address can legitimately carry empty/null optional columns
+     * — street_address in particular is nullable — but OrderAddress
+     * mandates a recipient name, phone, email, street and city. Without
+     * this guard an incomplete (e.g. street-less) address flows into
+     * snapshotAddress() → OrderAddress::__construct(), which throws a raw
+     * \InvalidArgumentException that the error middleware can only render
+     * as an opaque 500 ("An unexpected error occurred"). That left buyers
+     * with a created-but-unpayable gift card and no idea why.
+     *
+     * Validating here — before any order is created and before the
+     * gateway is called — converts that 500 into an actionable 422 that
+     * names the address (billing/shipping) and the missing field(s), for
+     * BOTH the cart and gift-card checkout flows (they share this method).
+     */
+    private function assertAddressComplete(Address $address, string $kind): void
+    {
+        $missing = [];
+        if (trim($address->getRecipientName()) === '') {
+            $missing[] = 'recipient name';
+        }
+        if (trim($address->getRecipientPhone()) === '') {
+            $missing[] = 'phone number';
+        }
+        if (trim((string) $address->getUser()->getEmail()) === '') {
+            $missing[] = 'email';
+        }
+        if (trim((string) ($address->getStreetAddress() ?? '')) === '') {
+            $missing[] = 'street address';
+        }
+        if (trim($address->getEmirate()) === '') {
+            $missing[] = 'emirate';
+        }
+
+        if ($missing !== []) {
+            throw HttpException::businessRuleViolation(
+                ErrorCodes::VALIDATION_FAILED,
+                sprintf(
+                    'Your %s address is incomplete (missing: %s). Please update it before checking out.',
+                    $kind,
+                    implode(', ', $missing),
+                ),
+            );
+        }
     }
 
     private function snapshotAddress(Address $source, string $type): OrderAddress

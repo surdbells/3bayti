@@ -9,6 +9,8 @@ use Bayti\Api\Domain\Cart\CartItem;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\Vendor;
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\Payment\PaymentTransaction;
@@ -378,6 +380,207 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
         self::assertSame(401, $response->getStatusCode());
     }
 
+    // ----------------- gift-card purchase flow -----------------
+
+    #[Test]
+    public function giftCardPurchaseHappyPath(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $card = $this->makeGiftCard($user, id: 900, denomination: '500.00');
+        $billing = $this->makeAddress($user, id: 50, isDefaultBilling: true);
+        $shipping = $this->makeAddress($user, id: 51, isDefaultShipping: true);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $gcRepo = $this->createMock(GiftCardRepository::class);
+        $gcRepo->method('find')->with(900)->willReturn($card);
+
+        $addressRepo = $this->createMock(AddressRepository::class);
+        $addressRepo->method('findDefaultBillingForUser')->with($user)->willReturn($billing);
+        $addressRepo->method('findDefaultShippingForUser')->with($user)->willReturn($shipping);
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txRepo->method('findByIdempotencyKey')->willReturn(null);
+        $txRepo->method('save');
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('initiateCheckout')
+            ->willReturnCallback(function (Order $order, string $returnUrl, string $channel): CheckoutInitiation {
+                // The synthetic gift-card order's total equals the denomination.
+                self::assertSame('500.00', $order->getTotal());
+                return new CheckoutInitiation(
+                    checkoutUrl: 'https://api-test.noonpayments.com/checkout/gc123',
+                    providerOrderRef: '222222222222',
+                    rawResponse: [
+                        'resultCode' => 0,
+                        'result' => [
+                            'order' => ['id' => '222222222222'],
+                            'checkoutData' => ['postUrl' => 'https://api-test.noonpayments.com/checkout/gc123'],
+                        ],
+                    ],
+                );
+            });
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $gcRepo, $addressRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [GiftCard::class, $gcRepo],
+                [Address::class, $addressRepo],
+                [PaymentTransaction::class, $txRepo],
+            ]);
+            $em->method('persist');
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', [
+                'gift_card_purchase_id' => 900,
+            ], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
+        $body = $this->jsonBody($response);
+        self::assertSame('https://api-test.noonpayments.com/checkout/gc123', $body['checkout_url']);
+        self::assertSame(900, $body['gift_card_id']);
+    }
+
+    /**
+     * Regression: a gift-card purchase whose resolved billing/shipping
+     * address has no street line previously threw an uncaught
+     * \InvalidArgumentException from OrderAddress::__construct, which the
+     * error middleware surfaced as a generic 500 INTERNAL_ERROR ("An
+     * unexpected error occurred"). The buyer saw the card created but
+     * checkout fail. It must instead be a clear, actionable 422 telling
+     * them to complete their address.
+     */
+    #[Test]
+    public function giftCardPurchaseWithStreetlessAddressReturns422NotInternalError(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $card = $this->makeGiftCard($user, id: 900, denomination: '500.00');
+        $billing = $this->makeAddress($user, id: 50, isDefaultBilling: true, streetAddress: null);
+        $shipping = $this->makeAddress($user, id: 51, isDefaultShipping: true, streetAddress: null);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $gcRepo = $this->createMock(GiftCardRepository::class);
+        $gcRepo->method('find')->with(900)->willReturn($card);
+
+        $addressRepo = $this->createMock(AddressRepository::class);
+        $addressRepo->method('findDefaultBillingForUser')->with($user)->willReturn($billing);
+        $addressRepo->method('findDefaultShippingForUser')->with($user)->willReturn($shipping);
+
+        // Mapped so the (unfixed) code reaches the order-creation/snapshot
+        // step where the real OrderAddress street throw lives, rather than
+        // dying earlier on an unmapped repo. After the fix, the address
+        // guard short-circuits before this lookup is ever used.
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txRepo->method('findByIdempotencyKey')->willReturn(null);
+
+        // The gateway must never be reached — we fail on the address guard.
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('initiateCheckout');
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $gcRepo, $addressRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [GiftCard::class, $gcRepo],
+                [Address::class, $addressRepo],
+                [PaymentTransaction::class, $txRepo],
+            ]);
+            $em->method('persist');
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', [
+                'gift_card_purchase_id' => 900,
+            ], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(422, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
+        $body = $this->jsonBody($response);
+        self::assertSame('VALIDATION_FAILED', $body['error']['code']);
+        self::assertStringContainsString('address', strtolower($body['error']['message']));
+    }
+
+    /**
+     * Symmetric regression for the normal cart checkout: the same
+     * snapshotAddress() path is shared, so a street-less address must
+     * also produce the actionable 422 here rather than a 500.
+     */
+    #[Test]
+    public function cartCheckoutWithStreetlessAddressReturns422NotInternalError(): void
+    {
+        $user = $this->makeUser(id: 7);
+        [$cart] = $this->makeCartWithOneItem($user);
+        $billing = $this->makeAddress($user, id: 50, isDefaultBilling: true, streetAddress: null);
+        $shipping = $this->makeAddress($user, id: 51, isDefaultShipping: true, streetAddress: null);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $cartRepo = $this->createMock(CartRepository::class);
+        $cartRepo->method('findActiveForUser')->with($user)->willReturn($cart);
+
+        $addressRepo = $this->createMock(AddressRepository::class);
+        $addressRepo->method('findDefaultBillingForUser')->with($user)->willReturn($billing);
+        $addressRepo->method('findDefaultShippingForUser')->with($user)->willReturn($shipping);
+
+        // Mapped so the (unfixed) code reaches the order-creation/snapshot
+        // step where the real OrderAddress street throw lives. The fix
+        // short-circuits before this lookup is used.
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txRepo->method('findByIdempotencyKey')->willReturn(null);
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('initiateCheckout');
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $cartRepo, $addressRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Cart::class, $cartRepo],
+                [Address::class, $addressRepo],
+                [PaymentTransaction::class, $txRepo],
+            ]);
+            $em->method('persist');
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', [], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(422, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
+        $body = $this->jsonBody($response);
+        self::assertSame('VALIDATION_FAILED', $body['error']['code']);
+        self::assertStringContainsString('address', strtolower($body['error']['message']));
+    }
+
     // ----------------- helpers -----------------
 
     /**
@@ -407,6 +610,7 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
         int $id,
         bool $isDefaultBilling = false,
         bool $isDefaultShipping = false,
+        ?string $streetAddress = '123 Main St',
     ): Address {
         $address = (new \ReflectionClass(Address::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($address, 'id', $id);
@@ -415,11 +619,29 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
         $this->setEntityProp($address, 'recipientPhone', '500000000');
         $this->setEntityProp($address, 'emirate', 'Dubai');
         $this->setEntityProp($address, 'area', 'Bur Dubai');
-        $this->setEntityProp($address, 'streetAddress', '123 Main St');
+        // streetAddress is a nullable column; pass null to model an address
+        // saved without a street line (the case that triggered the 500).
+        $this->setEntityProp($address, 'streetAddress', $streetAddress);
         $this->setEntityProp($address, 'country', 'AE');
         $this->setEntityProp($address, 'isDefaultBilling', $isDefaultBilling);
         $this->setEntityProp($address, 'isDefaultShipping', $isDefaultShipping);
         return $address;
+    }
+
+    /**
+     * Build a pending-payment gift card owned by $user, with a forced id.
+     * Uses the real constructor (which generates a code + sets status to
+     * pending_payment), then forces the id like the other entity factories.
+     */
+    private function makeGiftCard(
+        User $user,
+        int $id,
+        string $denomination = '500.00',
+        string $theme = 'birthday',
+    ): GiftCard {
+        $card = new GiftCard(buyerUser: $user, denomination: $denomination, theme: $theme);
+        $this->setEntityId($card, $id);
+        return $card;
     }
 
     private function setEntityId(object $entity, int $id): void
