@@ -621,33 +621,69 @@ describe('CartService', () => {
       expect(service.subtotal()).toBe('645.00');
     });
 
-    it('quoteWithPromo POSTs to /v3/cart/quote with promo_code', async () => {
+    it('quoteWithPromo POSTs to /v3/cart/quote and maps the { data } breakdown without touching the cart', async () => {
       const { service, controller } = setup({ authed: true });
       await drainMicrotasks();
+      /* A populated cart is loaded on construction. */
       controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse());
       await Promise.resolve();
+      expect(service.cart().items).toHaveLength(1);
 
       const promise = service.quoteWithPromo('SAVE10');
       const req = controller.expectOne(`${V3_BASE}/v3/cart/quote`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ promo_code: 'SAVE10' });
+      /* Real API shape: a { data } envelope with pricing only — NO cart. */
       req.flush({
-        cart: makeServerCart({ subtotal: '129.00' }),
-        promo_code: 'SAVE10',
-        promo_valid: true,
-        promo_message: null,
-        breakdown: {
+        data: {
+          currency: 'AED',
           subtotal: '129.00',
-          shipping: '0.00',
-          tax: '0.00',
-          promo_discount: '12.90',
-          total: '116.10',
+          delivery_fee: '15.00',
+          discount: '12.90',
+          total: '131.10',
+          applied_promo: {
+            code: 'SAVE10',
+            discount_type: 'percent',
+            discount_value: '10',
+            discount_amount: '12.90',
+          },
         },
       });
 
       const result = await promise;
       expect(result.promo_valid).toBe(true);
-      expect(result.breakdown.total).toBe('116.10');
+      expect(result.promo_code).toBe('SAVE10');
+      expect(result.breakdown.subtotal).toBe('129.00');
+      expect(result.breakdown.shipping).toBe('15.00'); // mapped from delivery_fee
+      expect(result.breakdown.promo_discount).toBe('12.90'); // mapped from discount
+      expect(result.breakdown.total).toBe('131.10');
+      /* The quote must NOT have wiped the cart signal. */
+      expect(service.cart().items).toHaveLength(1);
+    });
+
+    it('quoteWithPromo with no applied_promo reports promo_valid=false', async () => {
+      const { service, controller } = setup({ authed: true });
+      await drainMicrotasks();
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse());
+      await Promise.resolve();
+
+      const promise = service.quoteWithPromo(null);
+      const req = controller.expectOne(`${V3_BASE}/v3/cart/quote`);
+      req.flush({
+        data: {
+          currency: 'AED',
+          subtotal: '129.00',
+          delivery_fee: '15.00',
+          discount: '0.00',
+          total: '144.00',
+          applied_promo: null,
+        },
+      });
+
+      const result = await promise;
+      expect(result.promo_valid).toBe(false);
+      expect(result.promo_code).toBeNull();
+      expect(result.breakdown.total).toBe('144.00');
     });
 
     it('isLoading is true during a mutation and false after', async () => {

@@ -116,6 +116,28 @@ interface ResolvedLineInfo {
   unitPrice: string;
 }
 
+/**
+ * Actual response of POST /v3/cart/quote: a `{ data }` envelope whose
+ * body is the pricing breakdown — it does NOT carry the cart/items.
+ * (CartQuoteSerializer::shape.) The client maps this into the flatter
+ * CartQuoteResponse the pages consume.
+ */
+interface QuoteApiResponse {
+  data: {
+    currency: string;
+    subtotal: string;
+    delivery_fee: string;
+    discount: string;
+    total: string;
+    applied_promo: {
+      code: string;
+      discount_type: string;
+      discount_value: string;
+      discount_amount: string;
+    } | null;
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class CartService {
   private readonly _cart = signal<Cart>(EMPTY_CART);
@@ -347,25 +369,41 @@ export class CartService {
   }
 
   /**
-   * Apply a promo code via /v3/cart/quote. Returns the full quote
-   * (cart + breakdown + promo validity). The cart page surfaces
-   * promo_valid + promo_message to the user.
+   * Apply a promo code via POST /v3/cart/quote and return the pricing
+   * breakdown + promo validity for the totals UI.
+   *
+   * The quote endpoint returns ONLY pricing ({ data: { subtotal,
+   * delivery_fee, discount, total, applied_promo } }) — it does NOT
+   * return the cart, so this MUST NOT touch the cart signal. (A previous
+   * version set `_cart` from a non-existent `response.cart`, wiping the
+   * cart and blanking the review page.) Cart items come from the
+   * separately-loaded cart() signal.
    */
   async quoteWithPromo(promoCode: string | null): Promise<CartQuoteResponse> {
     if (!this.auth.isAuthenticated()) {
       throw new Error('CartService.quoteWithPromo: sign in required');
     }
     return this.runWithLoading(async () => {
-      const response = await firstValueFrom(
-        this.http.post<CartQuoteResponse>(`${V3_BASE}/v3/cart/quote`, {
+      const res = await firstValueFrom(
+        this.http.post<QuoteApiResponse>(`${V3_BASE}/v3/cart/quote`, {
           promo_code: promoCode,
         }),
       );
-      /* The quote endpoint also returns the cart; sync our signal so
-         any UI watching `cart` reflects line-level changes (e.g.
-         products removed because the promo applied a free gift). */
-      this._cart.set(response.cart);
-      return response;
+      const d = res.data;
+      return {
+        promo_code: d.applied_promo?.code ?? null,
+        /* A valid promo comes back as a non-null applied_promo; an invalid
+           one is a thrown PROMO_INVALID, not a 200 with promo_valid:false. */
+        promo_valid: d.applied_promo !== null,
+        promo_message: null,
+        breakdown: {
+          subtotal: d.subtotal,
+          shipping: d.delivery_fee,
+          tax: '0.00',
+          promo_discount: d.discount,
+          total: d.total,
+        },
+      };
     });
   }
 

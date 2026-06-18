@@ -414,7 +414,7 @@ export class CheckoutReviewPageComponent implements OnInit {
     () => this.auth.currentUser()?.is_phone_verified === false,
   );
 
-  protected readonly items = computed<CartItem[]>(() => this.cart.cart().items);
+  protected readonly items = computed<CartItem[]>(() => this.cart.cart().items ?? []);
   protected readonly currency = this.cart.currency;
   protected readonly subtotal = this.cart.subtotal;
   protected readonly isInitiating = this.checkout.isInitiating;
@@ -469,7 +469,7 @@ export class CheckoutReviewPageComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     /* Bounce guards. */
-    if (this.cart.cart().items.length === 0) {
+    if ((this.cart.cart().items ?? []).length === 0) {
       await this.router.navigateByUrl('/cart');
       return;
     }

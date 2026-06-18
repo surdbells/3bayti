@@ -109,7 +109,6 @@ export interface CartQuoteLineBreakdown {
 }
 
 export interface CartQuoteResponse {
-  cart: Cart;
   promo_code: string | null;
   promo_valid: boolean;
   promo_message: string | null;
