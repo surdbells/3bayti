@@ -166,6 +166,35 @@ describe('FilterBarComponent', () => {
     expect(q(el, '[data-testid="filter-sheet"]')).toBeNull();
   });
 
+  it('handles facet price bounds that arrive as decimal strings (real API shape)', () => {
+    // The API serialises price-band bounds as strings ("50.00"); the bar
+    // must coerce them so the band matches the active filter and emits
+    // NUMERIC min/max (otherwise catalog.service drops them).
+    const facets = makeFacets();
+    facets.price.values = [
+      { value: '50-100', count: 3, min: '50.00' as unknown as number, max: '100.00' as unknown as number },
+      { value: '100-250', count: 5, min: '100.00' as unknown as number, max: '250.00' as unknown as number },
+    ];
+    const { fixture, el, host } = setup({
+      facets,
+      filters: { category: 'abayas', sort: 'newest', minPrice: 50, maxPrice: 100 },
+    });
+
+    click(q(el, '[data-testid="chip-price"]'));
+    fixture.detectChanges();
+
+    const radios = el.querySelectorAll('[data-testid="pop-price"] input[type="radio"]');
+    // radios[0] = "Any", [1] = 50-100 (active), [2] = 100-250
+    expect((radios[1] as HTMLInputElement).checked).toBe(true);
+
+    // Selecting the 100-250 band emits numeric bounds.
+    (radios[2] as HTMLInputElement).dispatchEvent(new Event('change', { bubbles: true }));
+    const last = host.emitted.at(-1)!;
+    expect(last.minPrice).toBe(100);
+    expect(last.maxPrice).toBe(250);
+    expect(typeof last.minPrice).toBe('number');
+  });
+
   it('closes an open surface on Escape', () => {
     const { fixture, el } = setup();
     click(q(el, '[data-testid="chip-size"]'));

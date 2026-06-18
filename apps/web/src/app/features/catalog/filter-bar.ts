@@ -368,7 +368,17 @@ export class FilterBarComponent {
     return this.facets()?.color.values ?? [];
   }
   priceValues() {
-    return this.facets()?.price.values ?? [];
+    // Facet price-band bounds arrive from the API as decimal STRINGS
+    // ("50.00"), but FacetValue types them as number. Coerce to numbers so
+    // the band radios match the active filter (isPriceBandActive compares
+    // with ===) and setPriceBand emits numeric min/max — catalog.service's
+    // toQuery only forwards a bound when `typeof === 'number'`, so without
+    // this the price filter silently does nothing.
+    return (this.facets()?.price.values ?? []).map((v) => ({
+      ...v,
+      min: v.min == null ? undefined : Number(v.min),
+      max: v.max == null ? undefined : Number(v.max),
+    }));
   }
 
   hasPrice(): boolean {
