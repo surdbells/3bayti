@@ -262,10 +262,24 @@
             </ui-button>
           </div>
           @if (p.in_stock && hasSizes() && !selectedSize()) {
-            <p class="pdp-buybox__hint">{{ 'product.hintSize' | translate }}</p>
+            <p class="pdp-buybox__hint" data-testid="pdp-hint-size">
+              <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
+                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line>
+                <circle cx="12" cy="8" r="1" fill="currentColor"></circle>
+              </svg>
+              <span>{{ 'product.hintSize' | translate }}</span>
+            </p>
           }
           @if (p.in_stock && hasColors() && !selectedColor()) {
-            <p class="pdp-buybox__hint">{{ 'product.hintColor' | translate }}</p>
+            <p class="pdp-buybox__hint" data-testid="pdp-hint-color">
+              <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
+                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line>
+                <circle cx="12" cy="8" r="1" fill="currentColor"></circle>
+              </svg>
+              <span>{{ 'product.hintColor' | translate }}</span>
+            </p>
           }
           @if (addError(); as err) {
             <p class="pdp-buybox__error" role="alert">{{ err | translate }}</p>
