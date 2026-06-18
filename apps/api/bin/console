@@ -101,7 +101,11 @@ $logger = $container->get(LoggerInterface::class);
 try {
     /** @var PaymentGatewayInterface $gateway */
     $gateway = $container->get(PaymentGatewayInterface::class);
-    $cli->add(new ReconcilePendingOrdersCommand($em, $gateway, $logger));
+    // ReconcilePendingOrdersCommand also needs the flash-campaign stock
+    // reducer (4th ctor arg). Resolve it from the container so this
+    // registration can't drift out of sync with the command signature.
+    $flashStock = $container->get(\Bayti\Api\Domain\Catalog\FlashCampaignStockReducer::class);
+    $cli->add(new ReconcilePendingOrdersCommand($em, $gateway, $logger, $flashStock));
 } catch (\Throwable $e) {
     // Log the reason — visible if anyone runs `bin/console
     // orders:reconcile-pending` and gets a "command not found"
