@@ -51,7 +51,7 @@ final class NoonPaymentGatewayTest extends TestCase
      * Helper: build a minimally-valid Order with billing + shipping
      * addresses attached. Total is auto-computed from subtotal.
      */
-    private function buildOrder(string $reference = 'V3-ORDER-001', string $subtotal = '99.50'): Order
+    private function buildOrder(string $reference = 'V3-ORDER-001', string $subtotal = '99.50', ?string $lastName = 'Bello'): Order
     {
         $user = new User(
             email: 'sodiq@test.local',
@@ -72,7 +72,7 @@ final class NoonPaymentGatewayTest extends TestCase
             email: 'sodiq@test.local',
             street: '123 Main St',
             city: 'Dubai',
-            lastName: 'Bello',
+            lastName: $lastName,
         );
         $shipping = new OrderAddress(
             type: OrderAddress::TYPE_SHIPPING,
@@ -81,7 +81,7 @@ final class NoonPaymentGatewayTest extends TestCase
             email: 'sodiq@test.local',
             street: '123 Main St',
             city: 'Dubai',
-            lastName: 'Bello',
+            lastName: $lastName,
         );
         $order->addAddress($billing);
         $order->addAddress($shipping);
@@ -136,6 +136,7 @@ final class NoonPaymentGatewayTest extends TestCase
         self::assertSame('V3-ORDER-001', $body['order']['reference']);
         self::assertSame('MOBILE', $body['order']['channel']);
         self::assertSame('pay_category', $body['order']['category']);
+        self::assertSame('Sodiq Bello', $body['order']['name']);
         self::assertSame('SALE', $body['configuration']['paymentAction']);
         // noon rejects our address shape (5019); these blocks are omitted and
         // the address is collected on noon's hosted page instead.
@@ -194,6 +195,29 @@ final class NoonPaymentGatewayTest extends TestCase
         $sent = $this->history[0]['request'];
         $body = json_decode((string) $sent->getBody(), true, 64, JSON_THROW_ON_ERROR);
         self::assertSame('WEB', $body['order']['channel']);
+    }
+
+    public function testInitiateCheckoutTrimsOrderNameWhenLastNameMissing(): void
+    {
+        // No last name must not leave a trailing space in Order.Name (5034).
+        $this->mock->append(new Response(200, [], json_encode([
+            'resultCode' => 0,
+            'message' => 'Success',
+            'result' => [
+                'order' => ['id' => '123456789012', 'reference' => 'V3-ORDER-001'],
+                'checkoutData' => ['postUrl' => 'https://api-test.noonpayments.com/checkout/1'],
+            ],
+        ], JSON_THROW_ON_ERROR)));
+
+        $this->gateway->initiateCheckout(
+            $this->buildOrder(lastName: null),
+            'https://api.3bayti.ae/v3/checkout/return/V3-ORDER-001',
+            'WEB',
+        );
+
+        $sent = $this->history[0]['request'];
+        $body = json_decode((string) $sent->getBody(), true, 64, JSON_THROW_ON_ERROR);
+        self::assertSame('Sodiq', $body['order']['name']);
     }
 
     public function testInitiateCheckoutOnDuplicateReferenceRaisesDuplicateRefException(): void

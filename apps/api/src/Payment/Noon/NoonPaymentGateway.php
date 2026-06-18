@@ -138,6 +138,17 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
             );
         }
 
+        // noon's Order.Name (resultCode 5034) rejects empty or
+        // whitespace-padded values. firstName is guaranteed non-empty by
+        // OrderAddress; collapse internal whitespace and trim so a null
+        // lastName doesn't leave a trailing space. Fall back defensively so a
+        // pathological all-whitespace name can never reach noon.
+        $rawName = $billing->getFirstName() . ' ' . ($billing->getLastName() ?? '');
+        $payerName = trim((string) preg_replace('/\s+/', ' ', $rawName));
+        if ($payerName === '') {
+            $payerName = 'Customer';
+        }
+
         $body = [
             'apiOperation' => 'INITIATE',
             'order' => [
@@ -146,7 +157,7 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
                 'currency' => $order->getCurrency(),
                 'channel' => $channel,
                 'category' => $this->orderCategory,
-                'name' => $billing->getFirstName() . ' ' . ($billing->getLastName() ?? ''),
+                'name' => $payerName,
             ],
             'configuration' => [
                 'returnUrl' => $returnUrl,
