@@ -88,13 +88,17 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
   imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, TranslatePipe, CheckoutStepperComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <main class="checkout-page" data-testid="checkout-review-page">
-      <div class="checkout-page__container">
+    <main class="checkout-page checkout-page--review" data-testid="checkout-review-page">
+      <div class="checkout-page__container checkout-page__container--wide">
         <h1 class="checkout-page__title">
           {{ 'checkout.review.title' | translate }}
         </h1>
 
         <app-checkout-stepper [activeStep]="1"></app-checkout-stepper>
+
+        <div class="review-grid">
+          <!-- Left column: delivery + items -->
+          <div class="review-grid__main">
 
         <section
           *ngIf="shippingAddress() !== null"
@@ -170,6 +174,10 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
             </li>
           </ul>
         </section>
+
+          </div>
+          <!-- Right column: order summary (sticky on desktop) -->
+          <aside class="review-grid__aside">
 
         <section class="checkout-page__section" aria-labelledby="promo-heading">
           <h2 id="promo-heading" class="checkout-page__section-title">
@@ -369,24 +377,35 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
           </button>
         </p>
 
-        <div class="checkout-page__actions">
-          <button
-            type="button"
-            class="checkout-page__back"
-            (click)="onBack()"
-            data-testid="review-back"
-          >
-            ← {{ 'checkout.review.backToAddress' | translate }}
-          </button>
-          <button
-            type="button"
-            class="checkout-page__continue"
-            [disabled]="!canPlaceOrder()"
-            (click)="onPlaceOrder()"
-            data-testid="review-place-order"
-          >
-            {{ (isInitiating() ? 'common.loading' : 'checkout.review.placeOrder') | translate }}
-          </button>
+        <div class="review-actions">
+          <div class="review-actions__recap" aria-hidden="true">
+            <span class="review-actions__recap-label">{{ 'checkout.review.total' | translate }}</span>
+            <span class="review-actions__recap-value">
+              {{ currency() }} {{ breakdown()?.total ?? subtotal() }}
+            </span>
+          </div>
+          <div class="review-actions__buttons">
+            <button
+              type="button"
+              class="review-actions__back"
+              (click)="onBack()"
+              data-testid="review-back"
+            >
+              ← {{ 'checkout.review.backToAddress' | translate }}
+            </button>
+            <button
+              type="button"
+              class="review-actions__place-order"
+              [disabled]="!canPlaceOrder()"
+              (click)="onPlaceOrder()"
+              data-testid="review-place-order"
+            >
+              {{ (isInitiating() ? 'common.loading' : 'checkout.review.placeOrder') | translate }}
+            </button>
+          </div>
+        </div>
+
+          </aside>
         </div>
       </div>
     </main>
