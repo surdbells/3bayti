@@ -61,6 +61,18 @@ function makeServerCart(overrides: Partial<Cart> = {}): Cart {
   };
 }
 
+/**
+ * The authenticated cart endpoints (GET /v3/cart, POST /v3/cart/merge)
+ * wrap the cart as { cart }, same as /resolve and /quote. Flush this for
+ * those responses so the fixtures match the real API envelope — a bare
+ * makeServerCart() here is what let the "envelope set as Cart" bug ship
+ * green. (POST/PATCH /items bodies are discarded by the service, so
+ * wrapping them too is harmless.)
+ */
+function serverCartResponse(overrides: Partial<Cart> = {}): { cart: Cart } {
+  return { cart: makeServerCart(overrides) };
+}
+
 /** Build a resolved cart line (the transient cart from /v3/cart/resolve
  *  carries id 0 on every line; the service re-assigns synthetic ids). */
 function resolvedLine(o: {
@@ -524,20 +536,20 @@ describe('CartService', () => {
       /* The constructor-time effect fires a refresh; consume it. */
       await drainMicrotasks();
       const initialRefresh = controller.expectOne(`${V3_BASE}/v3/cart`);
-      initialRefresh.flush(makeServerCart({ items: [], item_count: 0, subtotal: '0.00' }));
+      initialRefresh.flush(serverCartResponse({ items: [], item_count: 0, subtotal: '0.00' }));
       await Promise.resolve();
 
       const promise = service.addItem({ product_id: 100, quantity: 1, size: 'M' });
       const req = controller.expectOne(`${V3_BASE}/v3/cart/items`);
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ product_id: 100, quantity: 1, size: 'M' });
-      req.flush(makeServerCart());
+      req.flush(serverCartResponse());
       await drainMicrotasks();
 
       /* addItem reloads the authoritative cart via GET after the POST. */
       const refresh = controller.expectOne(`${V3_BASE}/v3/cart`);
       expect(refresh.request.method).toBe('GET');
-      refresh.flush(makeServerCart());
+      refresh.flush(serverCartResponse());
 
       await promise;
       expect(service.cart().id).toBe(42);
@@ -547,20 +559,20 @@ describe('CartService', () => {
     it('updateQty PATCHes /v3/cart/items/:id with the new quantity', async () => {
       const { service, controller } = setup({ authed: true });
       await drainMicrotasks();
-      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart());
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse());
       await Promise.resolve();
 
       const promise = service.updateQty(1, 3);
       const req = controller.expectOne(`${V3_BASE}/v3/cart/items/1`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual({ quantity: 3 });
-      req.flush(makeServerCart());
+      req.flush(serverCartResponse());
       await drainMicrotasks();
 
       /* updateQty reloads the authoritative cart via GET after the PATCH. */
       const refresh = controller.expectOne(`${V3_BASE}/v3/cart`);
       expect(refresh.request.method).toBe('GET');
-      refresh.flush(makeServerCart({
+      refresh.flush(serverCartResponse({
         items: [{ ...makeServerCart().items[0], quantity: 3, line_subtotal: '387.00' }],
         item_count: 3,
         subtotal: '387.00',
@@ -574,7 +586,7 @@ describe('CartService', () => {
     it('removeItem DELETEs then refreshes via GET /v3/cart', async () => {
       const { service, controller } = setup({ authed: true });
       await drainMicrotasks();
-      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart());
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse());
       await Promise.resolve();
 
       const promise = service.removeItem(1);
@@ -588,7 +600,7 @@ describe('CartService', () => {
       await Promise.resolve();
 
       const refresh = controller.expectOne(`${V3_BASE}/v3/cart`);
-      refresh.flush(makeServerCart({ items: [], item_count: 0, subtotal: '0.00' }));
+      refresh.flush(serverCartResponse({ items: [], item_count: 0, subtotal: '0.00' }));
 
       await promise;
       expect(service.cart().items).toEqual([]);
@@ -598,12 +610,12 @@ describe('CartService', () => {
       const { service, controller } = setup({ authed: true });
       /* Constructor refresh. */
       await drainMicrotasks();
-      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart({ items: [], item_count: 0 }));
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse({ items: [], item_count: 0 }));
       await Promise.resolve();
 
       const promise = service.refresh();
       const req = controller.expectOne(`${V3_BASE}/v3/cart`);
-      req.flush(makeServerCart({ item_count: 5, subtotal: '645.00' }));
+      req.flush(serverCartResponse({ item_count: 5, subtotal: '645.00' }));
       await promise;
       expect(service.itemCount()).toBe(5);
       expect(service.subtotal()).toBe('645.00');
@@ -612,7 +624,7 @@ describe('CartService', () => {
     it('quoteWithPromo POSTs to /v3/cart/quote with promo_code', async () => {
       const { service, controller } = setup({ authed: true });
       await drainMicrotasks();
-      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart());
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse());
       await Promise.resolve();
 
       const promise = service.quoteWithPromo('SAVE10');
@@ -641,7 +653,7 @@ describe('CartService', () => {
     it('isLoading is true during a mutation and false after', async () => {
       const { service, controller } = setup({ authed: true });
       await drainMicrotasks();
-      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart({ items: [], item_count: 0 }));
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse({ items: [], item_count: 0 }));
       /* Drain the construction-refresh's finally microtask. */
       await Promise.resolve();
       await Promise.resolve();
@@ -649,11 +661,11 @@ describe('CartService', () => {
       expect(service.isLoading()).toBe(false);
       const promise = service.addItem({ product_id: 100, quantity: 1 });
       expect(service.isLoading()).toBe(true);
-      controller.expectOne(`${V3_BASE}/v3/cart/items`).flush(makeServerCart());
+      controller.expectOne(`${V3_BASE}/v3/cart/items`).flush(serverCartResponse());
       await drainMicrotasks();
       /* The post-mutation authoritative GET keeps isLoading true until it
          resolves; flush it to complete the mutation. */
-      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart());
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse());
       await promise;
       expect(service.isLoading()).toBe(false);
     });
@@ -685,14 +697,14 @@ describe('CartService', () => {
       expect(merge.request.body).toEqual({
         items: [{ product_id: 100, quantity: 2, size: 'M' }],
       });
-      merge.flush(makeServerCart({ items: [], item_count: 0 }));
+      merge.flush(serverCartResponse({ items: [], item_count: 0 }));
 
       /* The merge's finally awaits a microtask chain before refresh fires. */
       await drainMicrotasks();
 
       /* Then refresh is called. */
       const refresh = controller.expectOne(`${V3_BASE}/v3/cart`);
-      refresh.flush(makeServerCart({ item_count: 2, subtotal: '258.00' }));
+      refresh.flush(serverCartResponse({ item_count: 2, subtotal: '258.00' }));
 
       /* Drain microtasks for the async chain. */
       await drainMicrotasks();
@@ -710,7 +722,7 @@ describe('CartService', () => {
 
       controller.expectNone(`${V3_BASE}/v3/cart/merge`);
       const refresh = controller.expectOne(`${V3_BASE}/v3/cart`);
-      refresh.flush(makeServerCart({ item_count: 1, subtotal: '129.00' }));
+      refresh.flush(serverCartResponse({ item_count: 1, subtotal: '129.00' }));
 
       await Promise.resolve();
       expect(service.itemCount()).toBe(1);
@@ -739,7 +751,7 @@ describe('CartService', () => {
          items are NOT cleared, so nothing is lost. */
       controller
         .expectOne(`${V3_BASE}/v3/cart`)
-        .flush(makeServerCart({ items: [], item_count: 0, subtotal: '0.00' }));
+        .flush(serverCartResponse({ items: [], item_count: 0, subtotal: '0.00' }));
       await drainMicrotasks();
 
       expect(warnSpy).toHaveBeenCalledWith(
@@ -756,11 +768,11 @@ describe('CartService', () => {
       expect(merge2.request.body).toEqual({
         items: [{ product_id: 100, quantity: 2, size: 'M' }],
       });
-      merge2.flush(makeServerCart({ item_count: 2, subtotal: '258.00' }));
+      merge2.flush(serverCartResponse({ item_count: 2, subtotal: '258.00' }));
       await drainMicrotasks();
       controller
         .expectOne(`${V3_BASE}/v3/cart`)
-        .flush(makeServerCart({ item_count: 2, subtotal: '258.00' }));
+        .flush(serverCartResponse({ item_count: 2, subtotal: '258.00' }));
       await promise;
 
       expect(localStorage.getItem(GUEST_KEY)).toBeNull(); // merged + cleared
@@ -776,7 +788,7 @@ describe('CartService', () => {
       auth.setAuthenticated(true);
       TestBed.tick();
       await drainMicrotasks();
-      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart({ item_count: 3, subtotal: '387.00' }));
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse({ item_count: 3, subtotal: '387.00' }));
       await Promise.resolve();
       expect(service.itemCount()).toBe(3);
 
@@ -796,9 +808,9 @@ describe('CartService', () => {
       TestBed.tick();
       await drainMicrotasks();
 
-      controller.expectOne(`${V3_BASE}/v3/cart/merge`).flush(makeServerCart({ items: [], item_count: 0 }));
+      controller.expectOne(`${V3_BASE}/v3/cart/merge`).flush(serverCartResponse({ items: [], item_count: 0 }));
       await drainMicrotasks();
-      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart({ items: [], item_count: 0 }));
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse({ items: [], item_count: 0 }));
       await drainMicrotasks();
 
       /* First merge cleared localStorage. Sign out + back in:
@@ -812,7 +824,7 @@ describe('CartService', () => {
       await drainMicrotasks();
 
       controller.expectNone(`${V3_BASE}/v3/cart/merge`);
-      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart());
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(serverCartResponse());
     });
   });
 });

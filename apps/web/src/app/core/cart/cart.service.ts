@@ -96,6 +96,17 @@ interface GuestCartResolveResponse {
   removed: number[];
 }
 
+/**
+ * Envelope for the authenticated cart endpoints — GET /v3/cart and
+ * POST /v3/cart/merge both wrap the cart as `{ cart: ... }` (same as
+ * /resolve and /quote). The cart must be read off `.cart`; setting the
+ * envelope directly as the Cart leaves `items` undefined and the drawer
+ * empty despite a 200.
+ */
+interface ServerCartResponse {
+  cart: Cart;
+}
+
 /** Cached server-resolved display fields for a guest line, keyed by
  *  variantKey(). Lets the synchronous synthesize show real names/prices
  *  for already-seen lines instantly (no flash) before the next resolve. */
@@ -205,9 +216,7 @@ export class CartService {
            right after adding while signed in. Load the authoritative cart so
            the drawer + badge reflect the new line. Consistent with
            removeItem(), which already refreshes via GET. */
-        const cart = await firstValueFrom(
-          this.http.get<Cart>(`${V3_BASE}/v3/cart`),
-        );
+        const cart = await this.loadServerCart();
         this._cart.set(cart);
         return cart;
       });
@@ -248,9 +257,7 @@ export class CartService {
         );
         /* Authoritative reload after the mutation (see addItem) so the
            drawer + badge are never left stale by a partial PATCH response. */
-        const cart = await firstValueFrom(
-          this.http.get<Cart>(`${V3_BASE}/v3/cart`),
-        );
+        const cart = await this.loadServerCart();
         this._cart.set(cart);
         return cart;
       });
@@ -297,6 +304,18 @@ export class CartService {
   }
 
   /**
+   * GET /v3/cart and unwrap the `{ cart }` envelope into a Cart. The
+   * authenticated cart endpoints always wrap; reading the envelope as a
+   * Cart leaves `items` undefined (empty drawer despite a 200).
+   */
+  private async loadServerCart(): Promise<Cart> {
+    const res = await firstValueFrom(
+      this.http.get<ServerCartResponse>(`${V3_BASE}/v3/cart`),
+    );
+    return res.cart;
+  }
+
+  /**
    * Refresh the cart from the server. No-op for guests (their cart
    * is already in-signal).
    */
@@ -321,9 +340,7 @@ export class CartService {
       if (this.loadGuestCartRaw().items.length > 0) {
         await this.mergeGuestCartIfPresent();
       }
-      const cart = await firstValueFrom(
-        this.http.get<Cart>(`${V3_BASE}/v3/cart`),
-      );
+      const cart = await this.loadServerCart();
       this._cart.set(cart);
       return cart;
     });
@@ -393,9 +410,9 @@ export class CartService {
     try {
       const payload: MergeAnonCartInput = { items: guest.items };
       const merged = await firstValueFrom(
-        this.http.post<Cart>(`${V3_BASE}/v3/cart/merge`, payload),
+        this.http.post<ServerCartResponse>(`${V3_BASE}/v3/cart/merge`, payload),
       );
-      this._cart.set(merged);
+      this._cart.set(merged.cart);
       this.clearGuestCart();
     } catch (err) {
       this.warn('guest cart merge failed; will retry on next cart load', err);
