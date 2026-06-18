@@ -72,7 +72,7 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
                 self::assertSame('MOBILE', $channel);
                 self::assertStringStartsWith('http://localhost:8080/v3/checkout/return/V3-', $returnUrl);
                 self::assertStringNotContainsString('?', $returnUrl); // no query string per Noon
-                self::assertSame('299.00', $order->getTotal());
+                self::assertSame('319.00', $order->getTotal());
                 return new CheckoutInitiation(
                     checkoutUrl: 'https://api-test.noonpayments.com/checkout/abc123',
                     providerOrderRef: '123456789012',

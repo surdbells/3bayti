@@ -8,6 +8,7 @@ use Bayti\Api\Domain\Cart\Cart;
 use Bayti\Api\Domain\Cart\CartItem;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Promo\PromoCode;
 use Bayti\Api\Domain\Promo\PromoCodeRepository;
 use Bayti\Api\Domain\Promo\PromoRedemption;
@@ -79,6 +80,9 @@ final class QuoteCartControllerTest extends HttpTestCase
         $this->setEntityProp($product, 'name', $name);
         $this->setEntityProp($product, 'price', $price);
         $this->setEntityProp($product, 'isActive', true);
+        $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
+        $this->setEntityProp($vendor, 'id', 5);
+        $this->setEntityProp($product, 'vendor', $vendor);
         return $product;
     }
 
@@ -185,9 +189,9 @@ final class QuoteCartControllerTest extends HttpTestCase
 
         self::assertSame('AED', $body['data']['currency']);
         self::assertSame('100.00', $body['data']['subtotal']);
-        self::assertSame('0.00', $body['data']['delivery_fee']);
+        self::assertSame('20.00', $body['data']['delivery_fee']);
         self::assertSame('10.00', $body['data']['discount']);
-        self::assertSame('90.00', $body['data']['total']);
+        self::assertSame('110.00', $body['data']['total']);
 
         self::assertSame('WELCOME10', $body['data']['applied_promo']['code']);
         self::assertSame('percentage', $body['data']['applied_promo']['discount_type']);
@@ -214,7 +218,7 @@ final class QuoteCartControllerTest extends HttpTestCase
 
         self::assertSame('50.00', $body['data']['subtotal']);
         self::assertSame('0.00', $body['data']['discount']);
-        self::assertSame('50.00', $body['data']['total']);
+        self::assertSame('70.00', $body['data']['total']);
         self::assertNull($body['data']['applied_promo']);
     }
 
@@ -257,7 +261,7 @@ final class QuoteCartControllerTest extends HttpTestCase
         $body = $this->jsonBody($response);
 
         self::assertSame('40.00', $body['data']['discount']);
-        self::assertSame('0.00', $body['data']['total']);
+        self::assertSame('20.00', $body['data']['total']);
         self::assertSame('500.00', $body['data']['applied_promo']['discount_value']);
         self::assertSame('40.00', $body['data']['applied_promo']['discount_amount']);
     }

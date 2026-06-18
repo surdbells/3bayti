@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Serializers;
 
 use Bayti\Api\Domain\Cart\Cart;
+use Bayti\Api\Domain\Cart\DeliveryFeeCalculator;
 use Bayti\Api\Domain\Promo\PromoResolution;
 
 /**
@@ -43,7 +44,10 @@ use Bayti\Api\Domain\Promo\PromoResolution;
  */
 final class CartQuoteSerializer
 {
-    private const DEFAULT_DELIVERY_FEE = '0.00';
+    public function __construct(
+        private readonly DeliveryFeeCalculator $delivery = new DeliveryFeeCalculator(),
+    ) {
+    }
 
     /**
      * @return array{
@@ -63,7 +67,7 @@ final class CartQuoteSerializer
     public function shape(Cart $cart, ?PromoResolution $resolution): array
     {
         $subtotal = $cart->computeSubtotal();
-        $deliveryFee = self::DEFAULT_DELIVERY_FEE;
+        $deliveryFee = $this->delivery->forCart($cart);
         $discount = $resolution !== null ? $resolution->discountAmount : '0.00';
 
         $gross = bcadd($subtotal, $deliveryFee, 2);

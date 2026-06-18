@@ -116,6 +116,7 @@ final class InitiateCheckoutController
         private readonly PromoCodeResolverService $promoResolver,
         private readonly \Bayti\Api\Domain\Chat\OrderChatProvisioner $chatProvisioner,
         private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
+        private readonly \Bayti\Api\Domain\Cart\DeliveryFeeCalculator $delivery,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -181,7 +182,11 @@ final class InitiateCheckoutController
 
         // Compute subtotal from cart items. Don't trust the client.
         $subtotal = $cart->computeSubtotal();
-        $deliveryFee = $input->delivery_fee;
+        // Server-authoritative delivery fee: distinct vendors (stores) in the
+        // cart, 20 + 15×(stores−1). The client-supplied $input->delivery_fee
+        // is intentionally ignored (kept on the DTO for back-compat) so it
+        // can't be spoofed.
+        $deliveryFee = $this->delivery->forCart($cart);
 
         // ------------------------------------------------------------------
         // M3.2.X.8-D — Promo code resolution

@@ -88,7 +88,7 @@ final class InitiateCheckoutPromoTest extends HttpTestCase
                 // and the server-computed discount.
                 $orderHadPromoOnFlush = $order->getPromoRedemption();
                 self::assertSame('10.00', $order->getDiscount());
-                self::assertSame('90.00', $order->getTotal());
+                self::assertSame('110.00', $order->getTotal());
                 return new CheckoutInitiation(
                     checkoutUrl: 'https://test.noon/checkout/xyz',
                     providerOrderRef: '999',
