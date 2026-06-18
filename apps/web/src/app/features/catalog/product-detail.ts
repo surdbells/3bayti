@@ -341,6 +341,8 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   readonly selectedSize = signal<string | null>(null);
   /** Selected colour label (null until the shopper picks one). */
   readonly selectedColor = signal<string | null>(null);
+  /** Made-to-measure free-text measurement (empty until the shopper types). */
+  readonly measurement = signal('');
   /** Quantity to add (1–99). */
   readonly quantity = signal(1);
   /** True while an add-to-cart request is in flight. */
@@ -351,6 +353,10 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /** Whether this product offers a size / colour axis at all. */
   readonly hasSizes = computed(() => (this.product()?.sizes?.length ?? 0) > 0);
   readonly hasColors = computed(() => (this.product()?.colors?.length ?? 0) > 0);
+  /** Whether this product is made-to-measure and needs a measurement. */
+  readonly requiresMeasurement = computed(() => this.product()?.requires_measurement === true);
+  /** Optional on-PDP measurement guidance from the vendor. */
+  readonly measurementInstructions = computed(() => this.product()?.measurement_instructions ?? null);
 
   /**
    * True when every required variant axis has an in-stock selection.
@@ -370,6 +376,8 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       const c = this.selectedColor();
       if (!c || !colors.some((x) => x.label === c && x.in_stock)) return false;
     }
+    /* Made-to-measure products need a non-empty measurement. */
+    if (p.requires_measurement === true && this.measurement().trim() === '') return false;
     return true;
   });
 
@@ -496,6 +504,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       this.product();
       this.selectedSize.set(null);
       this.selectedColor.set(null);
+      this.measurement.set('');
       this.quantity.set(1);
       this.addError.set(null);
     });
@@ -697,6 +706,8 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
         quantity: this.quantity(),
         size: this.selectedSize(),
         color: this.selectedColor(),
+        is_custom: this.requiresMeasurement(),
+        measurement: this.requiresMeasurement() ? this.measurement().trim() : null,
       });
       this.cartDrawer.open();
     } catch {
@@ -704,6 +715,11 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     } finally {
       this.adding.set(false);
     }
+  }
+
+  /** Bind the made-to-measure textarea to the measurement signal. */
+  onMeasurementInput(event: Event): void {
+    this.measurement.set((event.target as HTMLTextAreaElement).value);
   }
 
   /** Format Money (AED 530.00 → "AED 530"). */

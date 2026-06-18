@@ -116,4 +116,8 @@ export interface ProductDetail extends Product {
   materials?: string[];
   related_products?: Product[];
   recent_reviews?: ProductReview[];
+  /** Made-to-measure: when true, the shopper must enter measurements. */
+  requires_measurement?: boolean;
+  /** Optional guidance shown alongside the measurement field. */
+  measurement_instructions?: string | null;
 }

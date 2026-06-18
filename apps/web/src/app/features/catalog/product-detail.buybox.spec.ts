@@ -163,6 +163,8 @@ describe('ProductDetail buy box', () => {
         quantity: 2,
         size: 'M',
         color: 'Black',
+        is_custom: false,
+        measurement: null,
       });
       expect(openDrawerMock).toHaveBeenCalledOnce();
       expect(c.adding()).toBe(false);
@@ -177,6 +179,8 @@ describe('ProductDetail buy box', () => {
         quantity: 1,
         size: null,
         color: null,
+        is_custom: false,
+        measurement: null,
       });
     });
 
@@ -209,6 +213,39 @@ describe('ProductDetail buy box', () => {
       resolveAdd({});
       await pending;
       expect(c.adding()).toBe(false);
+    });
+  });
+
+  describe('made-to-measure', () => {
+    it('blocks add-to-cart until a measurement is entered', () => {
+      const c = setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] })).componentInstance;
+      expect(c.requiresMeasurement()).toBe(true);
+      expect(c.selectionValid()).toBe(false);
+      expect(c.canAddToCart()).toBe(false);
+
+      c.measurement.set('Bust 92, Length 142');
+      expect(c.selectionValid()).toBe(true);
+      expect(c.canAddToCart()).toBe(true);
+    });
+
+    it('treats a whitespace-only measurement as empty', () => {
+      const c = setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] })).componentInstance;
+      c.measurement.set('   ');
+      expect(c.selectionValid()).toBe(false);
+    });
+
+    it('sends is_custom + the trimmed measurement on add-to-cart', async () => {
+      const c = setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] })).componentInstance;
+      c.measurement.set('  Bust 92, Length 142  ');
+      await c.addToCart();
+      expect(addItemMock).toHaveBeenCalledWith({
+        product_id: 100,
+        quantity: 1,
+        size: null,
+        color: null,
+        is_custom: true,
+        measurement: 'Bust 92, Length 142',
+      });
     });
   });
 });
