@@ -406,6 +406,43 @@ final class FacetAggregatorTest extends TestCase
     }
 
     #[Test]
+    public function sizesAndColorsUseJsonbExistsAnyFunctionNotOperator(): void
+    {
+        // Regression for the /v3/products/facets 500: the `?|` JSONB
+        // operator collides with DBAL/PDO parameter-placeholder parsing and
+        // throws at execute time whenever a size/color filter is active.
+        // The generated SQL must use the jsonb_exists_any() function and
+        // carry no bare `?|` operator. (Mocked Connection captures the SQL;
+        // a real-Postgres integration run is the end-to-end guard.)
+        $captured = $this->captureQueries([
+            [], [], [], [], [], ['0'],
+        ]);
+
+        $em = $this->emWithConnection($captured['connection']);
+        (new FacetAggregator($em, new \Psr\Log\NullLogger()))->compute([
+            'sizes' => ['XL'],      // the exact param from the reported 500
+            'colors' => ['Black'],
+        ]);
+
+        // Size facet drops the sizes filter (disjunctive) but keeps colors.
+        $sizeQuery = $captured['queries'][0];
+        self::assertStringContainsString('jsonb_exists_any(p.available_colors', $sizeQuery['sql']);
+        self::assertStringNotContainsString('?|', $sizeQuery['sql']);
+
+        // Color facet drops colors but keeps sizes.
+        $colorQuery = $captured['queries'][1];
+        self::assertStringContainsString('jsonb_exists_any(p.available_sizes', $colorQuery['sql']);
+        self::assertStringNotContainsString('?|', $colorQuery['sql']);
+
+        // Total-products query (last) applies BOTH filters — neither may
+        // reintroduce the operator.
+        $totalQuery = $captured['queries'][5];
+        self::assertStringContainsString('jsonb_exists_any(p.available_sizes', $totalQuery['sql']);
+        self::assertStringContainsString('jsonb_exists_any(p.available_colors', $totalQuery['sql']);
+        self::assertStringNotContainsString('?|', $totalQuery['sql']);
+    }
+
+    #[Test]
     public function totalProductsRespectsAllFilters(): void
     {
         $captured = $this->captureQueries([

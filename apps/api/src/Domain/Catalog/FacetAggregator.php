@@ -443,17 +443,24 @@ class FacetAggregator
             $params['searchQuery'] = trim($searchQuery);
         }
 
-        // M3.2.X.10 — refining filters: sizes, colors. JSONB containment.
+        // M3.2.X.10 — refining filters: sizes, colors. JSONB containment
+        // with OR semantics ("available_* contains ANY of the requested
+        // values"; @> would require ALL of them present).
+        //
+        // We use the jsonb_exists_any(jsonb, text[]) FUNCTION, NOT the
+        // equivalent `?|` operator. The `?` in `?|` (like `?` and `?&`) is
+        // parsed by DBAL/PDO as a positional parameter placeholder, so a
+        // query that mixes `?|` with bound parameters throws at execute
+        // time — that was the cause of the /v3/products/facets 500 whenever
+        // a size or color filter was applied. The function form is the
+        // documented equivalent and carries no `?`, so it binds cleanly.
         if (!empty($filters['sizes']) && is_array($filters['sizes'])) {
-            // p.available_sizes contains ANY of the requested sizes.
-            // Using @> with the array as a JSONB literal would require
-            // ALL of them present; we want OR semantics.
-            $where[] = "p.available_sizes ?| array[:sizes]";
+            $where[] = "jsonb_exists_any(p.available_sizes, array[:sizes]::text[])";
             $params['sizes'] = $filters['sizes'];
             $types['sizes'] = \Doctrine\DBAL\ArrayParameterType::STRING;
         }
         if (!empty($filters['colors']) && is_array($filters['colors'])) {
-            $where[] = "p.available_colors ?| array[:colors]";
+            $where[] = "jsonb_exists_any(p.available_colors, array[:colors]::text[])";
             $params['colors'] = $filters['colors'];
             $types['colors'] = \Doctrine\DBAL\ArrayParameterType::STRING;
         }
