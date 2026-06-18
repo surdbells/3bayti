@@ -201,9 +201,16 @@
     flex-direction: column;
     grid-template-columns: none;
     gap: 10px;
-    max-height: 540px;
+    max-height: 600px;
     overflow-y: auto;
-    scrollbar-width: thin;
+    /* Hide the scrollbar chrome: a visible thin scrollbar ate into the
+       fixed 84px rail and squeezed the thumbnails. Rail still scrolls. */
+    scrollbar-width: none;
+  }
+
+  .pdp-thumbnails::-webkit-scrollbar {
+    width: 0;
+    height: 0;
   }
 
   .pdp-thumb {
