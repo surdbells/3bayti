@@ -204,6 +204,9 @@
       "resendCta": "Didn't get a code?",
       "resendButton": "Resend code",
       "resendCooldown": "Resend available in {{seconds}}s",
+      "sendPrompt": "We'll text a 6-digit verification code to {{phone}}.",
+      "sendButton": "Send code",
+      "codeSent": "We've sent a verification code to your phone.",
       "errors": {
         "invalidCode": "That code is invalid or has expired. Please try again or request a new code.",
         "rateLimited": "Too many attempts. Please wait an hour and try again.",

@@ -27,6 +27,8 @@ import type { AuthUser, ConfirmInput } from '../../../core/auth/auth.types';
 class StubAuthService {
   confirmCalls: ConfirmInput[] = [];
   outcome: 'success' | 'invalid-code' | 'rate-limited' | 'network' = 'success';
+  resendCalls: string[] = [];
+  resendOutcome: 'success' | 'rate-limited' | 'network' = 'success';
   user: AuthUser = {
     id: 1,
     email: 'jane@example.com',
@@ -60,6 +62,24 @@ class StubAuthService {
       error: { error_code: codeMap[this.outcome], message: codeMap[this.outcome] },
     });
   }
+
+  private readonly _currentUser = signal<AuthUser | null>(null);
+  readonly currentUser = this._currentUser.asReadonly();
+  setCurrentUser(u: AuthUser | null): void {
+    this._currentUser.set(u);
+  }
+
+  async resendOtp(email: string): Promise<{ verification_id: string }> {
+    this.resendCalls.push(email);
+    if (this.resendOutcome === 'network') throw new TypeError('fetch failed');
+    if (this.resendOutcome === 'rate-limited') {
+      throw new HttpErrorResponse({
+        status: 429,
+        error: { error_code: 'OTP_RATE_LIMITED', message: 'OTP_RATE_LIMITED' },
+      });
+    }
+    return { verification_id: `mc-resent-${email}` };
+  }
 }
 
 class StubToastService {
@@ -74,7 +94,11 @@ class StubToastService {
     return msg;
   }
   show(input: { message: string }): string { return input.message; }
-  success(): string { return ''; }
+  successes: string[] = [];
+  success(msg: string): string {
+    this.successes.push(msg);
+    return msg;
+  }
   warning(): string { return ''; }
   dismiss(): void { /* no-op */ }
   clearAll(): void { /* no-op */ }
@@ -90,9 +114,32 @@ function makeRoute(queryParams: Record<string, string> = {}): ActivatedRoute {
   } as ActivatedRoute;
 }
 
+function makeUser(overrides: Partial<AuthUser> = {}): AuthUser {
+  return {
+    id: 1,
+    email: 'jane@example.com',
+    phone: '+971501234567',
+    country_code: 'AE',
+    first_name: 'Jane',
+    last_name: 'Doe',
+    gender: null,
+    dob: null,
+    locale: null,
+    timezone: null,
+    is_phone_verified: true,
+    is_email_verified: false,
+    roles: ['customer'],
+    is_store_approved: false,
+    is_store_active: false,
+    last_login_at: null,
+    ...overrides,
+  };
+}
+
 function setup(opts: {
   queryParams?: Record<string, string>;
   sessionStorage?: Record<string, string>;
+  currentUser?: AuthUser | null;
 } = {}): {
   fixture: ComponentFixture<VerifyPhoneComponent>;
   component: VerifyPhoneComponent;
@@ -128,6 +175,10 @@ function setup(opts: {
 
   const router = TestBed.inject(Router);
   const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true) as unknown as ReturnType<typeof vi.fn>;
+
+  if (opts.currentUser !== undefined) {
+    auth.setCurrentUser(opts.currentUser);
+  }
 
   const fixture = TestBed.createComponent(VerifyPhoneComponent);
   fixture.detectChanges();
@@ -400,6 +451,76 @@ describe('VerifyPhoneComponent', () => {
       } finally {
         vi.useRealTimers();
       }
+    });
+  });
+
+  /* -----------------------------------------------------------------
+     Self-serve send (signed-in, unverified, no verification_id) —
+     the post-registration nudge flow (account / checkout / header).
+     ----------------------------------------------------------------- */
+  describe('self-serve send', () => {
+    it('shows the send-code screen for a signed-in unverified user with no verification_id', () => {
+      const { fixture } = setup({ currentUser: makeUser({ is_phone_verified: false }) });
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="verify-send-code"]')).not.toBeNull();
+      expect(root.querySelector('[data-testid="verify-missing-vid"]')).toBeNull();
+      expect(root.querySelector('[data-testid="verify-form"]')).toBeNull();
+    });
+
+    it('onSendCode mints + adopts a verification_id and reveals the code form', async () => {
+      const { component, auth, toast, fixture } = setup({
+        currentUser: makeUser({ is_phone_verified: false }),
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (component as any).onSendCode();
+      fixture.detectChanges();
+
+      expect(auth.resendCalls).toEqual(['jane@example.com']);
+      expect(fixture.nativeElement.querySelector('[data-testid="verify-form"]')).not.toBeNull();
+      expect(toast.successes).toContain('auth.verifyPhone.codeSent');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      expect((component as any).resendCooldown()).toBe(30);
+    });
+
+    it('still shows the missing-verification banner for an anonymous visitor', () => {
+      const { fixture } = setup({ currentUser: null });
+      const root: HTMLElement = fixture.nativeElement;
+      expect(root.querySelector('[data-testid="verify-missing-vid"]')).not.toBeNull();
+      expect(root.querySelector('[data-testid="verify-send-code"]')).toBeNull();
+    });
+
+    it('redirects an already-verified user away when there is no verification_id', () => {
+      const { navigateByUrlSpy } = setup({
+        currentUser: makeUser({ is_phone_verified: true }),
+        queryParams: { returnUrl: '/account' },
+      });
+      expect(navigateByUrlSpy).toHaveBeenCalledWith('/account');
+    });
+
+    it('onResend re-sends via send-otp and adopts the new verification_id for a signed-in user', async () => {
+      const { component, auth, toast, fixture } = setup({
+        queryParams: { verification_id: 'mc-old', phone: '+971501234567' },
+        currentUser: makeUser({ is_phone_verified: false }),
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (component as any).onResend();
+      fixture.detectChanges();
+
+      expect(auth.resendCalls).toEqual(['jane@example.com']);
+      expect(sessionStorage.getItem('bayti_pending_verification_id')).toBe('mc-resent-jane@example.com');
+      expect(toast.successes).toContain('auth.verifyPhone.codeSent');
+    });
+
+    it('onResend falls back to resendUnavailable when no signed-in email is available', async () => {
+      const { component, toast, fixture } = setup({
+        queryParams: { verification_id: 'mc-old', phone: '+971501234567' },
+        currentUser: null,
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (component as any).onResend();
+      fixture.detectChanges();
+
+      expect(toast.infos).toContain('auth.verifyPhone.errors.resendUnavailable');
     });
   });
 });

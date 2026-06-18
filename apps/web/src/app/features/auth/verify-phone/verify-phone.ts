@@ -100,11 +100,10 @@ const RESEND_COOLDOWN_SECONDS = 30;
     <main class="auth-page" data-testid="verify-phone-page">
       <div class="auth-card">
         <h1 class="auth-card__title">{{ 'auth.verifyPhone.title' | translate }}</h1>
-        <p class="auth-card__subtitle">
-          {{ 'auth.verifyPhone.subtitle' | translate : { phone: maskedPhone() } }}
-        </p>
-
-        <ng-container *ngIf="hasVerificationId(); else missingVerification">
+        <ng-container *ngIf="hasVerificationId(); else noVerification">
+          <p class="auth-card__subtitle">
+            {{ 'auth.verifyPhone.subtitle' | translate : { phone: maskedPhone() } }}
+          </p>
           <form
             [formGroup]="form"
             (ngSubmit)="onSubmit()"
@@ -164,13 +163,30 @@ const RESEND_COOLDOWN_SECONDS = 30;
           </div>
         </ng-container>
 
-        <ng-template #missingVerification>
-          <p class="auth-error-banner" data-testid="verify-missing-vid" role="alert">
-            {{ 'auth.verifyPhone.errors.missingVerification' | translate }}
-          </p>
-          <a routerLink="/register" class="auth-link auth-link--strong">
-            {{ 'auth.verifyPhone.errors.startOver' | translate }}
-          </a>
+        <ng-template #noVerification>
+          <ng-container *ngIf="canSelfServe(); else missingVerification">
+            <p class="auth-card__subtitle">
+              {{ 'auth.verifyPhone.sendPrompt' | translate : { phone: maskedPhone() } }}
+            </p>
+            <button
+              type="button"
+              class="auth-submit"
+              [disabled]="sending()"
+              (click)="onSendCode()"
+              data-testid="verify-send-code"
+            >
+              {{ (sending() ? 'common.loading' : 'auth.verifyPhone.sendButton') | translate }}
+            </button>
+          </ng-container>
+
+          <ng-template #missingVerification>
+            <p class="auth-error-banner" data-testid="verify-missing-vid" role="alert">
+              {{ 'auth.verifyPhone.errors.missingVerification' | translate }}
+            </p>
+            <a routerLink="/register" class="auth-link auth-link--strong">
+              {{ 'auth.verifyPhone.errors.startOver' | translate }}
+            </a>
+          </ng-template>
         </ng-template>
       </div>
     </main>
@@ -182,6 +198,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
 
   protected readonly submitting = signal(false);
   protected readonly resending = signal(false);
+  protected readonly sending = signal(false);
   protected readonly resendCooldown = signal(0);
 
   private readonly verificationId = signal<string | null>(null);
@@ -207,6 +224,18 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
 
   protected hasVerificationId(): boolean {
     return this.verificationId() !== null;
+  }
+
+  /**
+   * A signed-in but unverified user can request an OTP to their phone on
+   * the spot — we have their email via currentUser. This is the path for
+   * the post-registration nudges (account banner, checkout gate, header
+   * badge) which route here WITHOUT a verification_id; previously that
+   * dead-ended at "Verification session missing".
+   */
+  protected canSelfServe(): boolean {
+    const user = this.auth.currentUser();
+    return user !== null && user.is_phone_verified === false;
   }
 
   private cooldownTimer: ReturnType<typeof setInterval> | null = null;
@@ -248,6 +277,26 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
         this.phone.set(stored);
       }
     }
+
+    /* Nudge flow (account / checkout / header badge) hands over no phone
+       query param — fall back to the signed-in user's phone so the
+       masked display still works. */
+    if (this.phone() === null) {
+      const userPhone = this.auth.currentUser()?.phone ?? null;
+      if (userPhone !== null && userPhone.length > 0) {
+        this.phone.set(userPhone);
+      }
+    }
+
+    /* If an already-verified user lands here (e.g. a stale nudge link),
+       there is nothing to verify — send them on to where they were
+       headed rather than showing a confusing screen. */
+    if (this.verificationId() === null) {
+      const user = this.auth.currentUser();
+      if (user !== null && user.is_phone_verified === true) {
+        void this.navigateAfter();
+      }
+    }
   }
 
   ngOnDestroy(): void {
@@ -277,10 +326,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
          gated there) if it's a safe in-app path; otherwise home. */
       this.removeFromSession(VERIFICATION_ID_STORAGE_KEY);
       this.removeFromSession(PHONE_STORAGE_KEY);
-      const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
-      await this.router.navigateByUrl(
-        this.isSafeInAppPath(returnUrl) ? returnUrl : '/',
-      );
+      await this.navigateAfter();
     } catch (err) {
       const result = mapApiErrors(err, this.form, VERIFY_ERROR_MAP);
       if (result.isNetworkError) {
@@ -299,30 +345,78 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Send-code button on the self-serve screen (signed-in, unverified, no
+   * verification_id yet). Mints + sends an OTP to the user's phone via
+   * /send-otp, then reveals the code-entry form.
+   */
+  protected async onSendCode(): Promise<void> {
+    const email = this.auth.currentUser()?.email ?? null;
+    if (email === null || this.sending()) return;
+    this.sending.set(true);
+    try {
+      if (await this.sendOtp(email)) {
+        this.toast.success('auth.verifyPhone.codeSent');
+        this.startCooldown();
+      }
+    } finally {
+      this.sending.set(false);
+    }
+  }
+
+  /**
+   * Resend from inside the code form. Uses the signed-in user's email.
+   * For the (unauthenticated) register-refresh edge case where we have no
+   * email client-side, point the user back to register rather than fail
+   * silently.
+   */
   protected async onResend(): Promise<void> {
     if (this.resending() || this.resendCooldown() > 0) return;
-    /* We need the email to call /send-otp; but the user came from
-       /register and we didn't carry the email through. The API
-       endpoint /v3/auth/send-otp accepts only email. Two ways to
-       handle this:
-         (a) Carry email through register → verify-phone as a query
-             param (slight privacy concern — email in URL).
-         (b) Have the user re-enter email on resend.
-       For Y.1 we adopt (a) but ONLY when from='register'; on
-       login-based verify (from=login) we route the user back to
-       login to re-authenticate (their tokens are issued but
-       resending OTP requires email which we don't have client-side).
+    const email = this.auth.currentUser()?.email ?? null;
+    if (email === null) {
+      /* Register flow lands here pre-authentication; we deliberately never
+         carried the email through (no email-in-URL). Direct them to
+         restart from register, where the email is in hand. */
+      this.toast.info('auth.verifyPhone.errors.resendUnavailable');
+      this.startCooldown();
+      return;
+    }
+    this.resending.set(true);
+    try {
+      if (await this.sendOtp(email)) {
+        this.toast.success('auth.verifyPhone.codeSent');
+      }
+    } finally {
+      this.resending.set(false);
+      /* Cooldown regardless, so the button can't be spammed while the
+         user reads the result. */
+      this.startCooldown();
+    }
+  }
 
-       For this iteration, we surface a toast pointing the user to
-       restart from the register page if the email isn't recoverable.
-       This is the cleanest path that doesn't introduce email-in-URL
-       privacy issues. */
-    this.toast.info('auth.verifyPhone.errors.resendUnavailable');
-    /* Even so, we kick off the cooldown so the button doesn't get
-       click-spammed while the user reads the message. */
-    this.startCooldown();
-    /* The full resend with email-from-register-state is a Y.4
-       refinement; see runbook. */
+  /**
+   * Request a fresh OTP for `email` via /send-otp and adopt the returned
+   * verification_id (persisted to sessionStorage so a refresh keeps it).
+   * Returns true on success. The API rate-limits send-otp (3/hour); the
+   * 30s resend cooldown keeps us comfortably under that.
+   */
+  private async sendOtp(email: string): Promise<boolean> {
+    try {
+      const res = await this.auth.resendOtp(email);
+      this.verificationId.set(res.verification_id);
+      this.persistToSession(VERIFICATION_ID_STORAGE_KEY, res.verification_id);
+      return true;
+    } catch (err) {
+      const result = mapApiErrors(err, this.form, VERIFY_ERROR_MAP);
+      if (result.isNetworkError) {
+        this.toast.error('auth.login.errors.network');
+      } else if (result.unmapped.includes(AUTH_ERROR_CODES.OTP_RATE_LIMITED)) {
+        this.toast.error('auth.verifyPhone.errors.rateLimited');
+      } else {
+        this.toast.error('auth.verifyPhone.errors.unexpected');
+      }
+      return false;
+    }
   }
 
   /* ----------------------------------------------------------------
@@ -375,6 +469,18 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     } catch {
       /* Silently ignore. */
     }
+  }
+
+  /**
+   * Navigate to the post-verification destination: a safe in-app
+   * returnUrl if one was supplied (e.g. checkout, when the user was gated
+   * there), otherwise home.
+   */
+  private async navigateAfter(): Promise<void> {
+    const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+    await this.router.navigateByUrl(
+      this.isSafeInAppPath(returnUrl) ? returnUrl : '/',
+    );
   }
 
   /**
