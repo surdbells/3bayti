@@ -182,6 +182,41 @@
   border-color: var(--color-brand-700);
 }
 
+/* Desktop: thumbnails become a vertical rail on the inline-start of the
+   main image (web-uplift #10b). `order: -1` moves the rail visually ahead
+   of the main image; because the flex row follows the inline axis, RTL
+   mirrors the rail to the inline-end automatically. The rail caps its
+   height and scrolls so a long image set never out-grows the hero. */
+@media (min-width: 768px) {
+  .pdp-gallery {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .pdp-thumbnails {
+    order: -1;
+    flex: 0 0 84px;
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    gap: 10px;
+    max-height: 540px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .pdp-thumb {
+    flex: 0 0 auto;
+    width: 84px;
+  }
+
+  .pdp-main-image {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
 /* ----- Info column --------------------------------------------------- */
 
 .pdp-info {
