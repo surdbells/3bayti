@@ -592,7 +592,7 @@
             @if (activeImage(); as img) {
               <img
                 class="pdp-lightbox__img"
-                [src]="img.url | cfImage:'gallery'"
+                [src]="img.url | cfImage:'zoom'"
                 [alt]="activeImageAlt()"
               />
             }

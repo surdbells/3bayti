@@ -100,6 +100,9 @@ export const CF_PRESETS = {
   detail:   { width: 900, quality: 85, fit: 'cover',  format: 'auto' } as CfImageOptions,
   /** Product detail gallery thumbnails strip — ~100px square. */
   gallery:  { width: 200, quality: 75, fit: 'cover',  format: 'auto' } as CfImageOptions,
+  /** Fullscreen lightbox zoom — large, uncropped (contain) so the whole
+   *  product is visible at high fidelity. */
+  zoom:     { width: 1600, quality: 88, fit: 'contain', format: 'auto' } as CfImageOptions,
   /** Vendor/designer cover banner — full-width hero, up to 1400px. */
   cover:    { width: 1400, quality: 80, fit: 'cover', format: 'auto' } as CfImageOptions,
   /** Vendor logo — small square, ~80px. */
