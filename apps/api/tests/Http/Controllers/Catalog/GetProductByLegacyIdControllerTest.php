@@ -38,6 +38,10 @@ final class GetProductByLegacyIdControllerTest extends HttpTestCase
         $product = new Product($vendor, 'silk-abaya', 'Silk Abaya');
         $product->setLegacyProductId(123);
         $product->setStatus(Product::STATUS_ACTIVE);
+        // Made-to-measure: the detail shape must surface the requirement +
+        // instructions so the PDP can collect the customer's measurement.
+        $product->setRequiresExtraMsmt(true);
+        $product->setExtraMsmt('Provide bust, waist and length in cm.');
 
         $productRepo = $this->createMock(ProductRepository::class);
         $productRepo->expects(self::once())
@@ -64,6 +68,8 @@ final class GetProductByLegacyIdControllerTest extends HttpTestCase
         self::assertArrayHasKey('data', $body);
         self::assertSame('Silk Abaya', $body['data']['name']);
         self::assertSame('silk-abaya', $body['data']['slug']);
+        self::assertTrue($body['data']['requires_measurement']);
+        self::assertSame('Provide bust, waist and length in cm.', $body['data']['measurement_instructions']);
     }
 
     #[Test]

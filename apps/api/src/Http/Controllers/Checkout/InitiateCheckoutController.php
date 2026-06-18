@@ -175,6 +175,23 @@ final class InitiateCheckoutController
             );
         }
 
+        // Made-to-measure backstop: every made-to-measure line must carry the
+        // customer's measurement. AddCartItemController blocks these at add
+        // time; this guards carts that predate that rule (or were tampered
+        // with) so a vendor never receives an un-fulfillable order line.
+        foreach ($cart->getItems() as $cartItem) {
+            $itemProduct = $cartItem->getProduct();
+            if ($itemProduct->requiresExtraMsmt() && trim((string) $cartItem->getMeasurement()) === '') {
+                throw HttpException::businessRuleViolation(
+                    ErrorCodes::VALIDATION_FAILED,
+                    sprintf(
+                        '"%s" is made to measure — add your measurements before checking out.',
+                        $itemProduct->getName(),
+                    ),
+                );
+            }
+        }
+
         /** @var AddressRepository $addresses */
         $addresses = $this->em->getRepository(Address::class);
         $billing = $this->resolveAddress($addresses, $user, $input->billing_address_id, 'billing');

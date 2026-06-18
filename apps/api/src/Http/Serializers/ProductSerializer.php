@@ -258,6 +258,12 @@ final class ProductSerializer
             'images' => $this->imagesArray($p),
             'sizes' => $sizes,
             'colors' => $colors,
+            // Made-to-measure: when requires_measurement is true the PDP shows
+            // measurement_instructions and collects the customer's measurement
+            // before add-to-cart (enforced server-side in AddCartItemController
+            // and at checkout).
+            'requires_measurement' => $p->requiresExtraMsmt(),
+            'measurement_instructions' => $p->getExtraMsmt(),
             'fabric' => null,
             'care_instructions' => null,
             'materials' => [],

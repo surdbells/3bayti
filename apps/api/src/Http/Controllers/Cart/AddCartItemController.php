@@ -79,6 +79,16 @@ final class AddCartItemController
             throw HttpException::notFound('Product not found.');
         }
 
+        // Made-to-measure products require the customer's measurement. The
+        // measurement field is server-authoritative on requirement: even if
+        // the client omits is_custom, an empty measurement is rejected here so
+        // a vendor never receives an un-fulfillable made-to-measure line.
+        if ($product->requiresExtraMsmt() && trim((string) $input->measurement) === '') {
+            throw HttpException::validation([
+                'measurement' => ['Measurement is required for this made-to-measure product.'],
+            ]);
+        }
+
         /** @var CartRepository $carts */
         $carts = $this->em->getRepository(Cart::class);
         $cart = $carts->findActiveForUser($user) ?? $this->createCartFor($user);
