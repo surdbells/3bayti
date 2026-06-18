@@ -5,7 +5,7 @@ from here in a fresh session.
 
 ## Where things stand
 
-Local `main` is **7 commits ahead of `b389bb2`** (none pushed yet — see "Handoff"):
+Local `main` is **10 commits ahead of `b389bb2`** (none pushed yet — see "Handoff"):
 
 | Commit | Stream | QA items |
 |--------|--------|----------|
@@ -16,8 +16,11 @@ Local `main` is **7 commits ahead of `b389bb2`** (none pushed yet — see "Hando
 | `dcac76a` | W3   | #8 compact ProductStrip density (home strips) |
 | `ddb0f81` | W5.1 | #10g variant hints → styled inline notices |
 | `f710011` | W5.2 | #10c lightbox loads full-size zoom (was 200px thumb) |
+| `0809237` | docs | (this handover doc) |
+| `00a5620` | W5.3 | #10b PDP thumbnails → left vertical rail (RTL-safe) |
+| `35acb5d` | W5.4 | #10e PDP description/reviews/details → premium tabs |
 
-**Gates at HEAD (`f710011`):** vitest **767 / 74** ✓ · `ng build` ✓ ·
+**Gates at HEAD (`35acb5d`):** vitest **767 / 74** ✓ · `ng build` ✓ ·
 `tsc --noEmit -p tsconfig.app.json` clean ✓ · 0 regressions.
 
 ### QA backlog status
@@ -28,8 +31,8 @@ Local `main` is **7 commits ahead of `b389bb2`** (none pushed yet — see "Hando
   not reflect them → the **api auto-deploy/redeploy is the broken link**.
   Operator must trigger the droplet api redeploy, then #1 pagination + #7 home
   Store Spotlight light up with no new web code.
-- #10: a ✅(prior) · g ✅ · c ✅ · **h ✅ already present** · **f ✅ already
-  present** · **d ⚠ API-blocked** · **b ⬜ TODO** · **e ⬜ TODO**
+- #10: a ✅ · g ✅ · c ✅ · b ✅ · e ✅ · **h ✅ already present** ·
+  **f ✅ already present** · **d ⚠ API-blocked (only item left)**
 
 ## Pre-flight catches (do NOT re-implement)
 - **#10h (share row incl. WhatsApp):** already done. `product-detail.html:291`
@@ -42,9 +45,24 @@ Local `main` is **7 commits ahead of `b389bb2`** (none pushed yet — see "Hando
 
 ## Remaining work
 
-### #10d — Store information block ⚠ API-blocked
-- A minimal vendor line already exists at `product-detail.html:114`
-  (`.pdp-vendor`: name + `vendorUrl()` link to `/stores/:slug`).
+### #10b — Thumbnails on the LEFT ✅ DONE (`00a5620`)
+CSS-only reflow: at ≥768px `.pdp-gallery` is a flex row with the thumbnail rail
+ordered first (`order: -1`, inline-start; RTL mirrors to inline-end), vertical,
+capped + scrollable. Mobile keeps the stacked grid. No markup/logic change.
+
+### #10e — Premium TABS instead of accordion ✅ DONE (`35acb5d`)
+Three disclosures → dynamic tab strip + single panel. Reviews always present;
+Description/Details tabs only when they have content; default = first available.
+WAI-ARIA tablist/tab/tabpanel, roving tabindex, arrow-key nav, RTL. `#reviews`
+deep-link preserved (id on the Reviews tab; fragment opens that tab). Reviews
+spec passed unmodified. **Follow-up recommendation:** the W2 search overlay uses
+the same tabs pattern inline — extract a shared `shared/ui/tab-group` component
+and adopt it in both (search + PDP) to remove the duplication. Deferred to avoid
+destabilising shipped W2; operator decision.
+
+### #10d — Store information block ⚠ API-blocked (ONLY ITEM LEFT)
+- A minimal vendor line already exists at `product-detail.html` (the
+  `.pdp-vendor` name + `vendorUrl()` link to `/stores/:slug`).
 - The richer block the item asks for (logo + rating) needs fields that
   `VendorRef { slug, name }` does not carry. **Decision needed (operator):**
   (a) extend the product-detail API payload with `vendor.logo_url` + `vendor.rating`
@@ -52,50 +70,6 @@ Local `main` is **7 commits ahead of `b389bb2`** (none pushed yet — see "Hando
   existing stores endpoint to enrich client-side (extra request). Until one is
   chosen, only the name+link is possible. Recommend (a) — single payload, no
   extra round-trip; mirrors how `DirectoryStore` already exposes logo/rating.
-
-### #10b — Thumbnails on the LEFT ⬜
-Currently the thumbnail strip renders **below** the main image.
-- HTML: gallery `<section class="pdp-gallery">` at `product-detail.html:41`;
-  main image trigger ~44–66; `<div class="pdp-thumbnails">` at `:85`
-  (after the main image). Logic — `selectImage(i)` + `activeImageIndex()` —
-  stays unchanged; this is layout only.
-- SCSS anchors: `.pdp-gallery` `:70`, `.pdp-main-image` `:76`,
-  `.pdp-thumbnails` `:147`, `.pdp-thumb` `:153`.
-- Plan: at desktop (≥768/960px) make `.pdp-gallery` a 2-col layout —
-  vertical thumb rail on the inline-start + main image. Stack (thumbs below or
-  above) on mobile. Use **logical properties** so RTL mirrors the rail to the
-  inline-end automatically. Keep the main image's aspect + lightbox trigger.
-- a11y: thumbnails already `role=list` + buttons with aria-labels; preserve.
-- No spec today on the gallery layout; a small render test (thumb rail present,
-  click switches `activeImageIndex`) would be a good add.
-
-### #10e — Premium TABS instead of accordion ⬜ (largest)
-Three disclosures today (accordion):
-- TS signals: `descriptionOpen = signal(true)` `:267`, `reviewsOpen = signal(true)`
-  `:268`, `detailsOpen = signal(false)` `:269` (block header "Content
-  disclosures (PDP4b)" at `:262`).
-- HTML `.pdp-disclosure` blocks: description `:343`, **reviews `:377` (has
-  `id="reviews"`)**, details `:475`. Triggers `.pdp-disclosure__trigger`
-  (aria-expanded + chevron); panels `.pdp-disclosure__panel`.
-- Plan: convert to a tab strip (Description · Reviews · Details) with one
-  visible `role=tabpanel`. WAI-ARIA tabs: `role=tablist/tab/tabpanel`,
-  `aria-selected`, roving `tabindex`, Left/Right arrow nav, RTL. The W2 search
-  overlay (`c8540ab`) implements this exact pattern inline — **consider
-  extracting a small shared `shared/ui/tab-group` component** and using it in
-  both places (search + PDP) to avoid a third copy. Decision to surface:
-  extract-shared vs inline-again.
-- **Preserve the `#reviews` deep-link:** something links to `…/product/x#reviews`.
-  When converting, activate the Reviews tab if the URL fragment is `reviews`
-  (read `ActivatedRoute.fragment`), and keep an element with `id="reviews"` as
-  the scroll target.
-- **Spec impact:** `product-detail.reviews.spec.ts` exists and likely asserts
-  the reviews panel/disclosure. Update it for the tab structure (Reviews tab →
-  panel visible). `product-detail.buybox.spec.ts` is buy-box only; unlikely to
-  touch disclosures but re-run. The `relatedProducts` spec is independent.
-
-*Suggested order for the remaining items:* **c ✅ → b → e**, then **d** once the
-API decision lands. (Original plan order was g→h→f→d→c→b→e; g/h/f/c are now
-resolved.)
 
 ## Environment + workflow notes (carry forward)
 - **Build:** `node_modules/.bin/ng build` (the direct binary). `pnpm exec ng build`
