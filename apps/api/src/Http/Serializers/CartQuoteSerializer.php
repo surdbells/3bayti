@@ -25,13 +25,12 @@ use Bayti\Api\Domain\Promo\PromoResolution;
  * for clarity + so consumer surfaces never accidentally render the
  * full cart contents on a "price preview" endpoint.
  *
- * Why delivery_fee is currently hardcoded '0.00'
- * -----------------------------------------------
- * The delivery-fee calculator is still deferred (per the comment in
- * InitiateCheckoutController:88). When that endpoint ships in a
- * future X-phase, the shape here doesn't change — the field just
- * starts returning the real number. Clients see the field today;
- * future-proofs the contract.
+ * delivery_fee is server-authoritative
+ * -------------------------------------
+ * Computed by the injected DeliveryFeeCalculator from the cart's
+ * distinct vendors (20 + 15×(stores−1)); the client never supplies it.
+ * Same calculator the checkout-initiate path uses, so the quote and the
+ * eventual placed order agree on the fee.
  *
  * Total computation mirrors Order::computeTotal
  * ----------------------------------------------
@@ -44,8 +43,15 @@ use Bayti\Api\Domain\Promo\PromoResolution;
  */
 final class CartQuoteSerializer
 {
+    // NOTE: $delivery is a REQUIRED dependency (no `= new DeliveryFeeCalculator()`
+    // default). A `new` object default cannot be compiled by PHP-DI in prod
+    // (enableCompilation) — it throws "An object was found but objects cannot
+    // be compiled". The class is only ever resolved via the container
+    // (QuoteCartController dep), and DeliveryFeeCalculator is a no-arg concrete
+    // class, so autowiring constructs and injects it cleanly. This mirrors
+    // InitiateCheckoutController, which already takes it as a required arg.
     public function __construct(
-        private readonly DeliveryFeeCalculator $delivery = new DeliveryFeeCalculator(),
+        private readonly DeliveryFeeCalculator $delivery,
     ) {
     }
 
