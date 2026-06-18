@@ -940,6 +940,8 @@ return [
         // deprecated alias. Adapter checks APP_KEY first; falls
         // back with a deprecation log line.
         $appKey = $_ENV['NOON_APP_KEY'] ?? '';
+        $orderCategory = $_ENV['NOON_ORDER_CATEGORY'] ?? '';
+        $mode = $_ENV['NOON_MODE'] ?? null;
 
         $logger = new \Psr\Log\NullLogger();
         try {
@@ -958,11 +960,11 @@ return [
             );
         }
 
-        if ($baseUrl === '' || $businessId === '' || $appId === '' || $appKey === '') {
+        if ($baseUrl === '' || $businessId === '' || $appId === '' || $appKey === '' || $orderCategory === '') {
             throw new \RuntimeException(
                 'NoonPaymentGateway requires env vars: NOON_API_BASE, '
-                . 'NOON_BUSINESS_IDENTIFIER, NOON_APP_IDENTIFIER, NOON_APP_KEY. '
-                . 'See apps/api/.env.example for the format.'
+                . 'NOON_BUSINESS_IDENTIFIER, NOON_APP_IDENTIFIER, NOON_APP_KEY, '
+                . 'NOON_ORDER_CATEGORY. See apps/api/.env.example for the format.'
             );
         }
 
@@ -978,6 +980,8 @@ return [
             businessIdentifier: $businessId,
             appIdentifier: $appId,
             appKey: $appKey,
+            orderCategory: $orderCategory,
+            mode: $mode,
             logger: $logger,
         );
     },

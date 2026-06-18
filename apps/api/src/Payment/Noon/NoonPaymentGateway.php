@@ -82,6 +82,8 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
         string $businessIdentifier,
         string $appIdentifier,
         string $appKey,
+        private readonly string $orderCategory,
+        ?string $mode = null,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
         if ($businessIdentifier === '' || $appIdentifier === '' || $appKey === '') {
@@ -90,8 +92,27 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
                 . 'Set NOON_BUSINESS_IDENTIFIER, NOON_APP_IDENTIFIER, NOON_APP_KEY.'
             );
         }
-        // Build "Key <base64(biz.app:key)>" per the ios SDK reference page.
-        $this->authHeaderValue = 'Key ' . base64_encode(
+        if ($orderCategory === '') {
+            throw new \InvalidArgumentException(
+                'NoonPaymentGateway requires a non-empty order category. '
+                . 'Set NOON_ORDER_CATEGORY to a category pre-configured on your noon account.'
+            );
+        }
+        // Resolve Test|Live. Explicit NOON_MODE wins; otherwise derive from
+        // the API host (api-test* => Test, anything else => Live).
+        $resolvedMode = ($mode !== null && trim($mode) !== '')
+            ? ucfirst(strtolower(trim($mode)))
+            : (str_contains($baseUrl, 'api-test') ? 'Test' : 'Live');
+        if ($resolvedMode !== 'Test' && $resolvedMode !== 'Live') {
+            throw new \InvalidArgumentException(
+                "NOON_MODE must be 'Test' or 'Live', got '{$mode}'."
+            );
+        }
+        // noon's server Order API authenticates with a MODE-qualified scheme:
+        //   Authorization: Key_<Mode> <base64(biz.app:key)>
+        // (The iOS SDK shows a bare "Key …"; the server API rejects that with
+        // resultCode 1500 "Invalid credentials".)
+        $this->authHeaderValue = 'Key_' . $resolvedMode . ' ' . base64_encode(
             "{$businessIdentifier}.{$appIdentifier}:{$appKey}"
         );
     }
@@ -124,6 +145,7 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
                 'amount' => $order->getTotal(),
                 'currency' => $order->getCurrency(),
                 'channel' => $channel,
+                'category' => $this->orderCategory,
                 'name' => $billing->getFirstName() . ' ' . ($billing->getLastName() ?? ''),
             ],
             'configuration' => [

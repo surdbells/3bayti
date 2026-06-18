@@ -43,6 +43,7 @@ final class NoonPaymentGatewayTest extends TestCase
             businessIdentifier: 'biz_abc',
             appIdentifier: 'app_xyz',
             appKey: 'secret_key_123',
+            orderCategory: 'pay_category',
         );
     }
 
@@ -123,10 +124,10 @@ final class NoonPaymentGatewayTest extends TestCase
         self::assertSame('POST', $sent->getMethod());
         self::assertSame('/payment/v1/order', $sent->getUri()->getPath());
 
-        // Auth header: Key <base64(biz.app:key)>
+        // Auth header: Key_<Mode> <base64(biz.app:key)>; api-test => Test.
         $authHeader = $sent->getHeaderLine('Authorization');
-        self::assertStringStartsWith('Key ', $authHeader);
-        $expected = 'Key ' . base64_encode('biz_abc.app_xyz:secret_key_123');
+        self::assertStringStartsWith('Key_Test ', $authHeader);
+        $expected = 'Key_Test ' . base64_encode('biz_abc.app_xyz:secret_key_123');
         self::assertSame($expected, $authHeader);
 
         // Body shape (sanity-check critical fields)
@@ -134,6 +135,7 @@ final class NoonPaymentGatewayTest extends TestCase
         self::assertSame('INITIATE', $body['apiOperation']);
         self::assertSame('V3-ORDER-001', $body['order']['reference']);
         self::assertSame('MOBILE', $body['order']['channel']);
+        self::assertSame('pay_category', $body['order']['category']);
         self::assertSame('SALE', $body['configuration']['paymentAction']);
         self::assertSame(
             'https://api.3bayti.ae/v3/checkout/return/V3-ORDER-001',
@@ -412,6 +414,54 @@ final class NoonPaymentGatewayTest extends TestCase
             businessIdentifier: '',
             appIdentifier: 'app_xyz',
             appKey: 'secret',
+            orderCategory: 'pay_category',
         );
+    }
+
+    public function testConstructorRejectsEmptyOrderCategory(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('order category');
+
+        new NoonPaymentGateway(
+            http: new Client(),
+            baseUrl: 'https://api-test.noonpayments.com',
+            businessIdentifier: 'biz_abc',
+            appIdentifier: 'app_xyz',
+            appKey: 'secret',
+            orderCategory: '',
+        );
+    }
+
+    public function testLiveBaseUrlDerivesKeyLiveScheme(): void
+    {
+        $gateway = new NoonPaymentGateway(
+            http: new Client(),
+            baseUrl: 'https://api.noonpayments.com',
+            businessIdentifier: 'biz_abc',
+            appIdentifier: 'app_xyz',
+            appKey: 'secret_key_123',
+            orderCategory: 'pay_category',
+        );
+        $ref = new \ReflectionProperty(NoonPaymentGateway::class, 'authHeaderValue');
+        $ref->setAccessible(true);
+        self::assertStringStartsWith('Key_Live ', $ref->getValue($gateway));
+    }
+
+    public function testExplicitModeOverridesBaseUrlDerivation(): void
+    {
+        // Live host but explicit Test mode → Key_Test wins.
+        $gateway = new NoonPaymentGateway(
+            http: new Client(),
+            baseUrl: 'https://api.noonpayments.com',
+            businessIdentifier: 'biz_abc',
+            appIdentifier: 'app_xyz',
+            appKey: 'secret_key_123',
+            orderCategory: 'pay_category',
+            mode: 'test',
+        );
+        $ref = new \ReflectionProperty(NoonPaymentGateway::class, 'authHeaderValue');
+        $ref->setAccessible(true);
+        self::assertStringStartsWith('Key_Test ', $ref->getValue($gateway));
     }
 }
