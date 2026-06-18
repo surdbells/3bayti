@@ -532,6 +532,12 @@ describe('CartService', () => {
       expect(req.request.method).toBe('POST');
       expect(req.request.body).toEqual({ product_id: 100, quantity: 1, size: 'M' });
       req.flush(makeServerCart());
+      await drainMicrotasks();
+
+      /* addItem reloads the authoritative cart via GET after the POST. */
+      const refresh = controller.expectOne(`${V3_BASE}/v3/cart`);
+      expect(refresh.request.method).toBe('GET');
+      refresh.flush(makeServerCart());
 
       await promise;
       expect(service.cart().id).toBe(42);
@@ -548,7 +554,13 @@ describe('CartService', () => {
       const req = controller.expectOne(`${V3_BASE}/v3/cart/items/1`);
       expect(req.request.method).toBe('PATCH');
       expect(req.request.body).toEqual({ quantity: 3 });
-      req.flush(makeServerCart({
+      req.flush(makeServerCart());
+      await drainMicrotasks();
+
+      /* updateQty reloads the authoritative cart via GET after the PATCH. */
+      const refresh = controller.expectOne(`${V3_BASE}/v3/cart`);
+      expect(refresh.request.method).toBe('GET');
+      refresh.flush(makeServerCart({
         items: [{ ...makeServerCart().items[0], quantity: 3, line_subtotal: '387.00' }],
         item_count: 3,
         subtotal: '387.00',
@@ -638,6 +650,10 @@ describe('CartService', () => {
       const promise = service.addItem({ product_id: 100, quantity: 1 });
       expect(service.isLoading()).toBe(true);
       controller.expectOne(`${V3_BASE}/v3/cart/items`).flush(makeServerCart());
+      await drainMicrotasks();
+      /* The post-mutation authoritative GET keeps isLoading true until it
+         resolves; flush it to complete the mutation. */
+      controller.expectOne(`${V3_BASE}/v3/cart`).flush(makeServerCart());
       await promise;
       expect(service.isLoading()).toBe(false);
     });

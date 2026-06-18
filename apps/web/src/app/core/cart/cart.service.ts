@@ -197,8 +197,16 @@ export class CartService {
   async addItem(input: AddCartItemInput): Promise<Cart> {
     if (this.auth.isAuthenticated()) {
       return this.runWithLoading(async () => {
-        const cart = await firstValueFrom(
+        await firstValueFrom(
           this.http.post<Cart>(`${V3_BASE}/v3/cart/items`, input),
+        );
+        /* The POST response is NOT a reliable full cart — it can come back
+           without the populated `items` array, which left the drawer empty
+           right after adding while signed in. Load the authoritative cart so
+           the drawer + badge reflect the new line. Consistent with
+           removeItem(), which already refreshes via GET. */
+        const cart = await firstValueFrom(
+          this.http.get<Cart>(`${V3_BASE}/v3/cart`),
         );
         this._cart.set(cart);
         return cart;
@@ -235,8 +243,13 @@ export class CartService {
     if (this.auth.isAuthenticated()) {
       return this.runWithLoading(async () => {
         const update: UpdateCartItemInput = { quantity };
-        const cart = await firstValueFrom(
+        await firstValueFrom(
           this.http.patch<Cart>(`${V3_BASE}/v3/cart/items/${itemId}`, update),
+        );
+        /* Authoritative reload after the mutation (see addItem) so the
+           drawer + badge are never left stale by a partial PATCH response. */
+        const cart = await firstValueFrom(
+          this.http.get<Cart>(`${V3_BASE}/v3/cart`),
         );
         this._cart.set(cart);
         return cart;
