@@ -92,6 +92,10 @@ export class HeaderComponent {
   /** Global search overlay open state (driven by the header search trigger). */
   protected readonly searchOpen = signal(false);
 
+  /** True once the page has scrolled past the top — drives the condensed,
+   *  elevated header + the slightly smaller logo. */
+  protected readonly scrolled = signal(false);
+
   /** Close button inside the drawer — focused when the drawer opens. */
   private readonly drawerCloseBtn = viewChild<ElementRef<HTMLButtonElement>>('drawerClose');
 
@@ -148,5 +152,12 @@ export class HeaderComponent {
   @HostListener('document:keydown.escape')
   protected onEscape(): void {
     this.closeDrawer();
+  }
+
+  /** Condense the header once the page scrolls a little. Reads the window
+   *  via DOCUMENT.defaultView so it stays inert during SSR. */
+  @HostListener('window:scroll')
+  protected onWindowScroll(): void {
+    this.scrolled.set((this.doc.defaultView?.scrollY ?? 0) > 12);
   }
 }
