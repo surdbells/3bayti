@@ -137,6 +137,11 @@ final class NoonPaymentGatewayTest extends TestCase
         self::assertSame('MOBILE', $body['order']['channel']);
         self::assertSame('pay_category', $body['order']['category']);
         self::assertSame('SALE', $body['configuration']['paymentAction']);
+        // noon rejects our address shape (5019); these blocks are omitted and
+        // the address is collected on noon's hosted page instead.
+        self::assertArrayNotHasKey('billing', $body);
+        self::assertArrayNotHasKey('shipping', $body);
+        self::assertArrayNotHasKey('customer', $body);
         self::assertSame(
             'https://api.3bayti.ae/v3/checkout/return/V3-ORDER-001',
             $body['configuration']['returnUrl']

@@ -152,13 +152,13 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
                 'returnUrl' => $returnUrl,
                 'paymentAction' => 'SALE',
             ],
-            'billing' => $this->mapAddress($billing),
-            'shipping' => $this->mapAddress($shipping),
-            'customer' => [
-                'email' => $billing->getEmail(),
-                'firstName' => $billing->getFirstName(),
-                'lastName' => $billing->getLastName(),
-            ],
+            // billing / shipping / customer are intentionally NOT sent.
+            // noon's hosted checkout collects the payer + address on its own
+            // page, and its strict billing schema rejects our address shape
+            // (resultCode 5019 "Member 'street' is not allowed"). The full
+            // address is retained in our OrderAddress snapshot; an INITIATE
+            // with order + configuration only is the verified-good request
+            // (the exact shape that returned resultCode 0 from noon).
         ];
 
         $response = $this->call($body, 'INITIATE');
@@ -563,17 +563,6 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
     /**
      * @return array<string, string|null>
      */
-    private function mapAddress(\Bayti\Api\Domain\Order\OrderAddress $address): array
-    {
-        return [
-            'street' => $address->getStreet(),
-            'city' => $address->getCity(),
-            'stateProvince' => $address->getStateProvince(),
-            'country' => $address->getCountryCode(),
-            'postalCode' => $address->getPostalCode(),
-        ];
-    }
-
     public static function getProviderName(): string
     {
         return self::PROVIDER_NAME;
