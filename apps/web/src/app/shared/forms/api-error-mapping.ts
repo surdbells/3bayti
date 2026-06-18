@@ -61,8 +61,16 @@ export interface MapApiErrorsResult {
 
 interface ApiErrorBody {
   error_code?: string;
+  code?: string;
   message?: string;
   errors?: Record<string, string[]>;
+  /* The API's native envelope nests the code under `error`; the BFF
+     proxy passes some responses through in that shape. Read both. */
+  error?: {
+    code?: string;
+    message?: string;
+    errors?: Record<string, string[]>;
+  };
 }
 
 export function mapApiErrors(
@@ -89,13 +97,14 @@ export function mapApiErrors(
     return { unmapped: [], isNetworkError: true };
   }
 
-  const code = body.error_code;
+  const code = body.error_code ?? body.error?.code ?? body.code;
+  const fieldErrors = body.errors ?? body.error?.errors;
   const unmapped: string[] = [];
 
   /* VALIDATION_FAILED brings field-level errors in `errors`. Walk them
      first so per-field copy wins over the generic mapping. */
-  if (code === 'VALIDATION_FAILED' && body.errors !== undefined) {
-    for (const [field, messages] of Object.entries(body.errors)) {
+  if (code === 'VALIDATION_FAILED' && fieldErrors !== undefined) {
+    for (const [field, messages] of Object.entries(fieldErrors)) {
       const control = form.get(field);
       if (control !== null && messages.length > 0) {
         /* The first message wins; UI shows one line at a time. */

@@ -498,5 +498,6 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
 
 const VERIFY_ERROR_MAP: Record<string, ApiErrorMapping> = {
   [AUTH_ERROR_CODES.OTP_INVALID_CODE]: { field: 'code', key: 'invalidCode' },
+  [AUTH_ERROR_CODES.OTP_VERIFICATION_FAILED]: { field: 'code', key: 'invalidCode' },
   [AUTH_ERROR_CODES.OTP_RATE_LIMITED]: { field: null, key: 'rateLimited' },
 };

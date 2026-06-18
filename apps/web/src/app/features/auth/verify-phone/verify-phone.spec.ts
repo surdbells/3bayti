@@ -26,7 +26,7 @@ import type { AuthUser, ConfirmInput } from '../../../core/auth/auth.types';
 
 class StubAuthService {
   confirmCalls: ConfirmInput[] = [];
-  outcome: 'success' | 'invalid-code' | 'rate-limited' | 'network' = 'success';
+  outcome: 'success' | 'invalid-code' | 'rate-limited' | 'network' | 'verification-failed' = 'success';
   resendCalls: string[] = [];
   resendOutcome: 'success' | 'rate-limited' | 'network' = 'success';
   user: AuthUser = {
@@ -52,6 +52,16 @@ class StubAuthService {
     this.confirmCalls.push(input);
     if (this.outcome === 'success') return this.user;
     if (this.outcome === 'network') throw new TypeError('fetch failed');
+
+    if (this.outcome === 'verification-failed') {
+      /* Nested proxy envelope — { error: { code } } — as returned by
+         /auth-proxy/confirm. Exercises both the nested-shape extraction
+         and the OTP_VERIFICATION_FAILED -> inline mapping. */
+      throw new HttpErrorResponse({
+        status: 401,
+        error: { error: { code: 'OTP_VERIFICATION_FAILED', message: 'Verification failed.' } },
+      });
+    }
 
     const codeMap = {
       'invalid-code': 'OTP_INVALID_CODE',
@@ -368,6 +378,22 @@ describe('VerifyPhoneComponent', () => {
      Error paths
      ----------------------------------------------------------------- */
   describe('error paths', () => {
+    it('attaches invalidCode error on OTP_VERIFICATION_FAILED (nested proxy envelope)', async () => {
+      const { component, auth, fixture } = setup({
+        queryParams: { verification_id: 'mc-abc', phone: '+971501234567' },
+      });
+      auth.outcome = 'verification-failed';
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any).form.controls.code.setValue('123456');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (component as any).onSubmit();
+      fixture.detectChanges();
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const errors = (component as any).form.controls.code.errors;
+      expect(errors).toEqual({ invalidCode: true });
+    });
+
     it('attaches invalidCode error on OTP_INVALID_CODE', async () => {
       const { component, auth, fixture } = setup({
         queryParams: { verification_id: 'mc-abc', phone: '+971501234567' },

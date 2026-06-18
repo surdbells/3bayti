@@ -57,6 +57,43 @@ describe('mapApiErrors', () => {
     expect(result.unmapped).toEqual(['UNKNOWN_THING_HAPPENED']);
   });
 
+  it('extracts the code from the nested { error: { code } } envelope (proxy shape)', () => {
+    const form = makeForm();
+    const err = new HttpErrorResponse({
+      status: 409,
+      error: { error: { code: 'CONFLICT_EMAIL_TAKEN', message: 'Already registered.' } },
+    });
+    const result = mapApiErrors(err, form, REGISTER_ERROR_MAP);
+
+    expect(form.controls['email'].errors).toEqual({ emailTaken: true });
+    expect(result.unmapped).toEqual([]);
+    expect(result.isNetworkError).toBe(false);
+  });
+
+  it('reports a nested-envelope code in `unmapped` when it is unmapped', () => {
+    const form = makeForm();
+    const err = new HttpErrorResponse({
+      status: 401,
+      error: { error: { code: 'OTP_VERIFICATION_FAILED', message: 'Verification failed.' } },
+    });
+    const result = mapApiErrors(err, form, REGISTER_ERROR_MAP);
+
+    expect(result.unmapped).toEqual(['OTP_VERIFICATION_FAILED']);
+    expect(result.isNetworkError).toBe(false);
+  });
+
+  it('walks nested VALIDATION_FAILED field errors ({ error: { code, errors } })', () => {
+    const form = makeForm();
+    const err = new HttpErrorResponse({
+      status: 422,
+      error: { error: { code: 'VALIDATION_FAILED', errors: { email: ['Invalid email.'] } } },
+    });
+    const result = mapApiErrors(err, form, REGISTER_ERROR_MAP);
+
+    expect(form.controls['email'].errors).toEqual({ apiValidation: { message: 'Invalid email.' } });
+    expect(result.unmapped).toEqual([]);
+  });
+
   it('walks the `errors` object on VALIDATION_FAILED and attaches per-field errors', () => {
     const form = makeForm();
     const err = new HttpErrorResponse({
