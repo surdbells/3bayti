@@ -248,7 +248,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
   constructor() {
     const fb = inject(FormBuilder).nonNullable;
     this.form = fb.group({
-      code: fb.control('', [Validators.required, Validators.pattern(/^\d{6}$/)]),
+      code: fb.control('', [Validators.required, Validators.pattern(/^\d{4,6}$/)]),
     });
   }
 

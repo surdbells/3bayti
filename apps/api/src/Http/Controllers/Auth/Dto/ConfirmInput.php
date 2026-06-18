@@ -11,7 +11,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Verifies a registration OTP. The client supplies:
  *   - verification_id: the opaque token from /register or /send-otp
- *   - code: the 6-digit code the user typed from their SMS
+ *   - code: the numeric code (4–6 digits) the user typed from their SMS
  *
  * Server flow on success:
  *   - OtpService::verify against MessageCentral
@@ -25,10 +25,9 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Code format
  * -----------
- * MessageCentral generates 6-digit numeric codes. We validate as
- * "exactly 6 digits". Refusing 4-digit, 8-digit, or alphanumeric
- * codes here is fine — if MessageCentral changes their format we
- * loosen the check then.
+ * MessageCentral sends 4-digit numeric codes in this account's
+ * configuration. We validate as 4–6 digits to tolerate a config that
+ * issues a longer code without another deploy; the ceiling stays 6.
  */
 final class ConfirmInput
 {
@@ -38,8 +37,8 @@ final class ConfirmInput
 
     #[Assert\NotBlank(message: 'Code is required.')]
     #[Assert\Regex(
-        pattern: '/^\d{6}$/',
-        message: 'Code must be 6 digits.',
+        pattern: '/^\d{4,6}$/',
+        message: 'Code must be 4 to 6 digits.',
     )]
     public readonly string $code;
 

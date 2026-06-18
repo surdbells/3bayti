@@ -11,7 +11,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  *
  * Completes the password reset. Three fields:
  *   - verification_id: the opaque token from /reset
- *   - code:            the 6-digit OTP code from the SMS
+ *   - code:            the numeric OTP code (4–6 digits) from the SMS
  *   - new_password:    what to set the user's password to
  *
  * Password constraints
@@ -42,8 +42,8 @@ final class ResetConfirmInput
 
     #[Assert\NotBlank(message: 'Code is required.')]
     #[Assert\Regex(
-        pattern: '/^\d{6}$/',
-        message: 'Code must be 6 digits.',
+        pattern: '/^\d{4,6}$/',
+        message: 'Code must be 4 to 6 digits.',
     )]
     public readonly string $code;
 

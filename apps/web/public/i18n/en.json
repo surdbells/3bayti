@@ -154,7 +154,7 @@
       "password_too_short": "Password must be at least {{requiredLength}} characters."
     },
     "validation": {
-      "code6Digits": "Code must be 6 digits."
+      "code6Digits": "Code must be 4–6 digits."
     },
     "login": {
       "title": "Sign in to your account",

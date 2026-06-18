@@ -92,6 +92,45 @@ final class ConfirmControllerTest extends HttpTestCase
         self::assertSame(42, $claims->userId);
     }
 
+    #[Test]
+    public function acceptsAFourDigitCode(): void
+    {
+        // MessageCentral issues 4-digit codes in this account; the DTO
+        // accepts 4–6 digits. A 4-digit code must pass format validation
+        // AND verify end-to-end.
+        $user = $this->makeUser(id: 43, phoneVerified: false);
+        $verificationId = $this->otpProvider->send($user->getPhone());
+        $this->otpProvider->setExpectedCode($verificationId, '1234');
+
+        $attempt = new OtpAttempt(
+            verificationId: $verificationId,
+            phone: $user->getPhone(),
+            purpose: OtpAttempt::PURPOSE_REGISTRATION,
+            expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+            user: $user,
+        );
+
+        $otpRepo = $this->createMock(OtpAttemptRepository::class);
+        $otpRepo->method('findByVerificationId')->willReturn($attempt);
+        $refreshRepo = $this->createMock(RefreshTokenRepository::class);
+        $refreshRepo->method('save');
+
+        $em = $this->stubEm(fn ($em) =>
+            $em->method('getRepository')->willReturnMap([
+                [OtpAttempt::class, $otpRepo],
+                [RefreshToken::class, $refreshRepo],
+            ]));
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle($this->jsonRequest('POST', '/v3/auth/confirm', [
+            'verification_id' => $verificationId,
+            'code' => '1234',
+        ]));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertTrue($user->isPhoneVerified());
+    }
+
     // -------------------------------------------------------------------
     // Failure modes — all collapse to single 401
     // -------------------------------------------------------------------

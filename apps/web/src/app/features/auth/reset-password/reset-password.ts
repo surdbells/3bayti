@@ -212,7 +212,7 @@ export class ResetPasswordComponent implements OnInit {
     const fb = inject(FormBuilder).nonNullable;
     this.form = fb.group(
       {
-        code: fb.control('', [Validators.required, Validators.pattern(/^\d{6}$/)]),
+        code: fb.control('', [Validators.required, Validators.pattern(/^\d{4,6}$/)]),
         new_password: fb.control('', [Validators.required, Validators.minLength(8)]),
         confirm_password: fb.control('', [Validators.required]),
       },

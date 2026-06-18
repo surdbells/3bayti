@@ -263,7 +263,7 @@ describe('VerifyPhoneComponent', () => {
       expect(auth.confirmCalls).toHaveLength(0);
     });
 
-    it('does not call confirmRegistration when code is fewer than 6 digits', async () => {
+    it('does not call confirmRegistration when code is fewer than 4 digits', async () => {
       const { component, auth, fixture } = setup({
         queryParams: { verification_id: 'mc-abc', phone: '+971501234567' },
       });
@@ -273,6 +273,18 @@ describe('VerifyPhoneComponent', () => {
       await (component as any).onSubmit();
       fixture.detectChanges();
       expect(auth.confirmCalls).toHaveLength(0);
+    });
+
+    it('accepts a 4-digit code (MessageCentral sends 4 digits)', async () => {
+      const { component, auth, fixture } = setup({
+        queryParams: { verification_id: 'mc-abc4', phone: '+971501234567' },
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (component as any).form.controls.code.setValue('1234');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (component as any).onSubmit();
+      fixture.detectChanges();
+      expect(auth.confirmCalls).toEqual([{ verification_id: 'mc-abc4', code: '1234' }]);
     });
 
     it('does not call confirmRegistration when code contains non-digits', async () => {
