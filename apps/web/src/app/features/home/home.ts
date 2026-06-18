@@ -170,6 +170,12 @@ export class HomeComponent {
     return categoryIconUrl(slug);
   }
 
+  /** Stable theme key for a category, derived from its slug (strips any
+   *  trailing "-<id>") — drives the per-category card gradient (#6). */
+  categoryKey(slug: string): string {
+    return (slug || '').toLowerCase().replace(/-\d+$/, '');
+  }
+
   /* ----- Internal: categories fetch ------------------------------------- */
 
   private fetchCategories$() {

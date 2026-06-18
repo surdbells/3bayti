@@ -15,21 +15,21 @@
 .home-page {
   display: flex;
   flex-direction: column;
-  /* Section gap — large but not absurd. Each section's own internal
-   * top/bottom padding adds to this for balanced rhythm. */
-  gap: 64px;
+  /* Section gap — tightened (was 64/88/112) so more of the page reads
+   * without scrolling. Each section's own padding adds to this. */
+  gap: 44px;
   padding-bottom: 0; /* Footer mounts directly below; no padding here. */
 }
 
 @media (min-width: 768px) {
   .home-page {
-    gap: 88px;
+    gap: 60px;
   }
 }
 
 @media (min-width: 1280px) {
   .home-page {
-    gap: 112px;
+    gap: 76px;
   }
 }
 
@@ -267,7 +267,7 @@
 
 .home-section__header {
   max-width: var(--page-max-width);
-  margin: 0 auto 32px;
+  margin: 0 auto 22px;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -277,7 +277,7 @@
 
 @media (min-width: 1280px) {
   .home-section__header {
-    margin-bottom: 40px;
+    margin-bottom: 28px;
   }
 }
 
@@ -384,7 +384,7 @@
   justify-content: flex-end;
   padding: var(--space-md);
   border-radius: var(--radius-lg);
-  background: linear-gradient(155deg, var(--color-brand-50), var(--color-bg-surface) 70%);
+  background: var(--tile-grad, linear-gradient(155deg, var(--color-brand-50), var(--color-bg-surface) 70%));
   border: 1px solid var(--color-border-subtle);
   box-shadow: var(--shadow-card-resting);
   text-decoration: none;
@@ -403,6 +403,18 @@
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
 }
+
+/* Per-category vibrant gradients (#6). A saturated hue in the top corner
+   fades to cream (brand-50) by ~58% so the bottom-anchored label keeps its
+   dark brand-700 contrast. Keyed on categoryKey(slug); unknown categories
+   fall back to the neutral base gradient above. */
+.bento__tile[data-cat='abayas']         { --tile-grad: linear-gradient(155deg, #a173b8 0%, var(--color-brand-50) 58%); }
+.bento__tile[data-cat='bags']           { --tile-grad: linear-gradient(155deg, #d98b6a 0%, var(--color-brand-50) 58%); }
+.bento__tile[data-cat='accessories']    { --tile-grad: linear-gradient(155deg, #d9b24a 0%, var(--color-brand-50) 58%); }
+.bento__tile[data-cat='dresses']        { --tile-grad: linear-gradient(155deg, #d9789b 0%, var(--color-brand-50) 58%); }
+.bento__tile[data-cat='kaftans']        { --tile-grad: linear-gradient(155deg, #5fae8a 0%, var(--color-brand-50) 58%); }
+.bento__tile[data-cat='mukhawars']      { --tile-grad: linear-gradient(155deg, #6f93cf 0%, var(--color-brand-50) 58%); }
+.bento__tile[data-cat='modest-clothes'] { --tile-grad: linear-gradient(155deg, #9bab6a 0%, var(--color-brand-50) 58%); }
 
 /* Marquee tile: full-width band on small layouts; 2x2 on desktop. */
 .bento__tile--feature {
