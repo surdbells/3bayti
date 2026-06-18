@@ -61,4 +61,14 @@ final class LoggingOnlyVerifier implements NoonWebhookSignatureVerifier
         // in NoonWebhookController is the real authority.
         return true;
     }
+
+    /**
+     * Passthrough verifier — accepts without any cryptographic check,
+     * so events it admits are NOT signature-verified. The controller
+     * records this as payment_webhook_events.signature_verified=false.
+     */
+    public function isCryptographic(): bool
+    {
+        return false;
+    }
 }

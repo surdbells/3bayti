@@ -46,4 +46,18 @@ interface NoonWebhookSignatureVerifier
      *              signature.
      */
     public function verify(string $rawBody, ?string $signatureHeader): bool;
+
+    /**
+     * Whether this verifier performs a real cryptographic check on
+     * the signature (true), or accepts everything without verifying
+     * (false — e.g. LoggingOnlyVerifier).
+     *
+     * The controller stamps payment_webhook_events.signature_verified
+     * with this value (only ever reached when verify() returned true),
+     * so the audit column truthfully distinguishes "cryptographically
+     * verified" from "passthrough-accepted". The M3.1.7 forensic
+     * capture + confirmation tooling relies on this to know which
+     * recorded events were actually checked.
+     */
+    public function isCryptographic(): bool;
 }

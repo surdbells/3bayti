@@ -361,6 +361,98 @@ final class NoonWebhookControllerTest extends HttpTestCase
     }
 
     // ==================================================================
+    // signature_verified audit flag — must reflect whether the bound
+    // verifier actually performed a cryptographic check, not merely
+    // that it accepted the event.
+    // ==================================================================
+
+    #[Test]
+    public function recordsSignatureVerifiedFalseUnderPassthroughVerifier(): void
+    {
+        // LoggingOnlyVerifier-style: verify() accepts but isCryptographic()
+        // is false → the persisted event must report signature_verified=false.
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $verifier->method('isCryptographic')->willReturn(false);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        $captured = null;
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save')->willReturnCallback(
+            function (PaymentWebhookEvent $e) use (&$captured): void { $captured = $e; }
+        );
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txRepo->method('findByProviderOrderRef')->willReturn(null);
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByOrderReference')->willReturn(null);
+
+        $em = $this->stubEm(function ($em) use ($eventRepo, $txRepo, $orderRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $txRepo],
+                [Order::class, $orderRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', [
+                'eventId' => 'evt-sig-false',
+                'result' => ['order' => ['id' => '123456789012', 'reference' => 'V3-SIG-F']],
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertInstanceOf(PaymentWebhookEvent::class, $captured);
+        self::assertFalse($captured->isSignatureVerified());
+    }
+
+    #[Test]
+    public function recordsSignatureVerifiedTrueUnderCryptographicVerifier(): void
+    {
+        // HmacSha256-style: verify() accepts AND isCryptographic() is true
+        // → the persisted event must report signature_verified=true.
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $verifier->method('isCryptographic')->willReturn(true);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        $captured = null;
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save')->willReturnCallback(
+            function (PaymentWebhookEvent $e) use (&$captured): void { $captured = $e; }
+        );
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txRepo->method('findByProviderOrderRef')->willReturn(null);
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByOrderReference')->willReturn(null);
+
+        $em = $this->stubEm(function ($em) use ($eventRepo, $txRepo, $orderRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $txRepo],
+                [Order::class, $orderRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', [
+                'eventId' => 'evt-sig-true',
+                'result' => ['order' => ['id' => '123456789012', 'reference' => 'V3-SIG-T']],
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertInstanceOf(PaymentWebhookEvent::class, $captured);
+        self::assertTrue($captured->isSignatureVerified());
+    }
+
+    // ==================================================================
     // M3.2.X.5-A — Observability hook for unknown dispute-shaped events
     // ==================================================================
 

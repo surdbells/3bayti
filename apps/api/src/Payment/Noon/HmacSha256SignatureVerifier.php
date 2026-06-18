@@ -68,4 +68,14 @@ final class HmacSha256SignatureVerifier implements NoonWebhookSignatureVerifier
         // length-mismatched inputs without leaking timing info.
         return hash_equals($expected, $normalised);
     }
+
+    /**
+     * Real cryptographic verifier — a passing verify() means the HMAC
+     * checked out, so the controller records the event as
+     * payment_webhook_events.signature_verified=true.
+     */
+    public function isCryptographic(): bool
+    {
+        return true;
+    }
 }

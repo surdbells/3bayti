@@ -131,4 +131,14 @@ try {
     ]);
 }
 
+// M3.1.7 — offline Noon webhook signature-algorithm confirmation.
+// Reads captured pairs from var/captures; no DB/network deps, so it
+// registers unconditionally (handy even on a fresh sandbox).
+$cli->add(new \Bayti\Api\Console\ConfirmNoonSignatureCommand(
+    captureDir: dirname(__DIR__) . '/var/captures',
+    defaultSecret: isset($_ENV['NOON_WEBHOOK_SECRET']) && $_ENV['NOON_WEBHOOK_SECRET'] !== ''
+        ? (string) $_ENV['NOON_WEBHOOK_SECRET']
+        : null,
+));
+
 $cli->run();

@@ -80,6 +80,10 @@ final class NoonWebhookController
         private readonly LoggerInterface $logger,
         private readonly \Bayti\Api\Domain\Chat\OrderChatProvisioner $chatProvisioner,
         private readonly \Bayti\Api\Domain\Catalog\FlashCampaignStockReducer $flashStock,
+        // M3.1.7 — gated raw (body+signature) capture for offline
+        // signature-algorithm confirmation. No-op unless NOON_WEBHOOK_CAPTURE
+        // is enabled; safe to inject unconditionally.
+        private readonly \Bayti\Api\Payment\Noon\NoonWebhookCaptureRecorder $captureRecorder,
     ) {
     }
 
@@ -100,6 +104,16 @@ final class NoonWebhookController
             $signatureHeader = $request->getHeaderLine('Signature');
         }
         $signatureHeader = $signatureHeader !== '' ? $signatureHeader : null;
+
+        // M3.1.7 — capture the raw (body, signature) pair for offline
+        // algorithm confirmation. Runs BEFORE the signature check so we
+        // record even would-be-rejected pairs during the capture window.
+        // No-op unless NOON_WEBHOOK_CAPTURE is enabled.
+        $this->captureRecorder->record(
+            $rawBody,
+            $signatureHeader,
+            $request->getHeaderLine('Content-Type'),
+        );
 
         // Signature check. M3.1.6 LoggingOnlyVerifier accepts everything;
         // M3.1.7 replaces with a strict verifier.
@@ -149,7 +163,14 @@ final class NoonWebhookController
             providerOrderRef: $providerOrderRef,
             eventType: $eventType,
             signatureHeader: $signatureHeader,
-            signatureVerified: true, // LoggingOnlyVerifier returned true
+            // Record whether the signature was ACTUALLY cryptographically
+            // verified, not merely accepted. We only reach this line when
+            // verify() returned true, so a cryptographic verifier
+            // (HmacSha256SignatureVerifier) means the HMAC checked out;
+            // the passthrough LoggingOnlyVerifier accepts everything
+            // without checking and reports false here. Keeps the
+            // signature_verified audit column honest for forensic capture.
+            signatureVerified: $this->signatureVerifier->isCryptographic(),
             order: $order,
         );
 

@@ -1051,6 +1051,36 @@ return [
         return new \Bayti\Api\Payment\Noon\HmacSha256SignatureVerifier($secret);
     },
 
+    // M3.1.7 rollout aid — gated raw (body+signature) webhook capture so
+    // `bin/console noon:confirm-signature` can confirm Noon's signing
+    // algorithm from real traffic. OFF by default; flip
+    // NOON_WEBHOOK_CAPTURE=true for a short window during rollout, then
+    // turn it back off. The recorder no-ops while disabled, so it is
+    // always safe to inject into NoonWebhookController.
+    \Bayti\Api\Payment\Noon\NoonWebhookCaptureRecorder::class => static function (
+        ContainerInterface $c
+    ): \Bayti\Api\Payment\Noon\NoonWebhookCaptureRecorder {
+        $flag = strtolower(trim((string) ($_ENV['NOON_WEBHOOK_CAPTURE'] ?? '')));
+        $enabled = $flag === 'true' || $flag === '1';
+
+        $logger = new \Psr\Log\NullLogger();
+        try {
+            /** @var \Psr\Log\LoggerInterface $logger */
+            $logger = $c->get(\Psr\Log\LoggerInterface::class);
+        } catch (\Throwable) {
+            // Continue with NullLogger
+        }
+
+        // apps/api/var/captures — gitignored (/var/), not web-served.
+        $captureDir = dirname(__DIR__) . '/var/captures';
+
+        return new \Bayti\Api\Payment\Noon\NoonWebhookCaptureRecorder(
+            enabled: $enabled,
+            captureDir: $captureDir,
+            logger: $logger,
+        );
+    },
+
     // Flash-campaign stock reducer: the finder resolves to the CampaignItem
     // repository (a Doctrine repo, obtained via the EM); the reducer itself
     // is autowired from that interface.
