@@ -142,7 +142,11 @@ final class InitiateCheckoutInput
         ?string $gift_card_code = null,
         ?int $gift_card_purchase_id = null,
     ) {
-        $this->channel = $channel ?? 'MOBILE';
+        /* Accept any casing from clients (the web app sends 'web'); the
+           Choice + Noon gateway require uppercase. Normalising here means
+           a lowercase channel is corrected rather than 422'd or — worse —
+           reaching the gateway and throwing a raw 500. */
+        $this->channel = strtoupper(trim($channel ?? 'MOBILE'));
         $this->delivery_fee = $delivery_fee ?? '0.00';
         $this->discount = $discount ?? '0.00';
         if ($promo_code === null) {

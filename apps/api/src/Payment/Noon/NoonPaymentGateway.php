@@ -101,6 +101,10 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
         string $returnUrl,
         string $channel,
     ): CheckoutInitiation {
+        /* Normalise casing so a lowercase channel from any caller is
+           corrected rather than throwing a raw InvalidArgumentException
+           (which would surface as a 500, not a clean validation error). */
+        $channel = strtoupper(trim($channel));
         $this->guardChannel($channel);
         $this->guardReturnUrl($returnUrl);
 

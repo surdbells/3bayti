@@ -165,6 +165,30 @@ final class NoonPaymentGatewayTest extends TestCase
         );
     }
 
+    public function testInitiateCheckoutNormalisesLowercaseChannelToUppercase(): void
+    {
+        // The web client sends channel 'web' (lowercase); it must be
+        // normalised to 'WEB' rather than throwing (which surfaced as a 500).
+        $this->mock->append(new Response(200, [], json_encode([
+            'resultCode' => 0,
+            'message' => 'Success',
+            'result' => [
+                'order' => ['id' => '123456789012', 'reference' => 'V3-ORDER-001'],
+                'checkoutData' => ['postUrl' => 'https://api-test.noonpayments.com/checkout/1'],
+            ],
+        ], JSON_THROW_ON_ERROR)));
+
+        $this->gateway->initiateCheckout(
+            $this->buildOrder(),
+            'https://api.3bayti.ae/v3/checkout/return/V3-ORDER-001',
+            'web',
+        );
+
+        $sent = $this->history[0]['request'];
+        $body = json_decode((string) $sent->getBody(), true, 64, JSON_THROW_ON_ERROR);
+        self::assertSame('WEB', $body['order']['channel']);
+    }
+
     public function testInitiateCheckoutOnDuplicateReferenceRaisesDuplicateRefException(): void
     {
         // Noon resultCode 19012 — caller looks up the existing order.
