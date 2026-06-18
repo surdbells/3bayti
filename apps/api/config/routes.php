@@ -289,6 +289,13 @@ return function (App $app): void {
         \Bayti\Api\Http\Controllers\GiftCard\RedeemGiftCardController::class
     )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
 
+    // Luxury-theme recipient photo upload (customer-scoped; separate from
+    // the vendor/admin /v3/upload). Returns { url } to pass as
+    // recipient_photo_url on /v3/gift-cards/purchase.
+    $app->post('/v3/gift-cards/photo',
+        \Bayti\Api\Http\Controllers\GiftCard\UploadGiftCardPhotoController::class
+    )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
+
     // Admin/internal — activate after payment confirmation:
     $app->post('/v3/gift-cards/{id:[0-9]+}/activate',
         \Bayti\Api\Http\Controllers\GiftCard\ActivateGiftCardController::class

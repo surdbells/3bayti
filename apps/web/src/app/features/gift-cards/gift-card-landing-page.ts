@@ -93,6 +93,7 @@ type LoadState = 'loading' | 'ready' | 'error';
                 [amount]="amountNumber()"
                 [recipientName]="recipientName()"
                 [recipientMessage]="recipientMessage()"
+                [photoUrl]="recipientPhotoUrl()"
               />
             </div>
 
@@ -237,7 +238,45 @@ type LoadState = 'loading' | 'ready' | 'error';
               </div>
 
               @if (selected()?.supports_photo) {
-                <p class="gc__note">{{ 'giftCards.landing.photoComingSoon' | translate }}</p>
+                <div class="gc__field gc__photo-field">
+                  <span class="gc__label">{{ 'giftCards.landing.photoLabel' | translate }}</span>
+                  <p class="gc__photo-hint">{{ 'giftCards.landing.photoHint' | translate }}</p>
+
+                  @if (recipientPhotoUrl()) {
+                    <div class="gc__photo-preview">
+                      <img class="gc__photo-thumb" [src]="recipientPhotoUrl()" alt="" />
+                      <button type="button" class="gc__photo-remove" (click)="removePhoto()">
+                        {{ 'giftCards.landing.photoRemove' | translate }}
+                      </button>
+                    </div>
+                  } @else {
+                    <label
+                      class="gc__photo-upload"
+                      [class.gc__photo-upload--busy]="photoUploading()"
+                    >
+                      <input
+                        type="file"
+                        class="gc__photo-input"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        [disabled]="photoUploading()"
+                        (change)="onPhotoSelected($event)"
+                      />
+                      <span class="gc__photo-upload-label">
+                        @if (photoUploading()) {
+                          {{ 'giftCards.landing.photoUploading' | translate }}
+                        } @else {
+                          {{ 'giftCards.landing.photoChoose' | translate }}
+                        }
+                      </span>
+                    </label>
+                  }
+
+                  @if (photoError(); as err) {
+                    <p class="gc__photo-error" role="alert">
+                      {{ ('giftCards.landing.photoError.' + err) | translate }}
+                    </p>
+                  }
+                </div>
               }
 
               @if (submitError()) {
@@ -286,6 +325,21 @@ export class GiftCardLandingPageComponent implements OnInit {
 
   protected readonly submitting = signal<boolean>(false);
   protected readonly submitError = signal<boolean>(false);
+
+  /* Luxury recipient photo state (only the luxury theme supports a photo). */
+  protected readonly recipientPhotoUrl = signal<string | null>(null);
+  protected readonly photoUploading = signal<boolean>(false);
+  /** null | 'type' | 'size' | 'upload' — drives the inline error message key. */
+  protected readonly photoError = signal<string | null>(null);
+
+  /** Client-side mirror of the API's accepted types + 10 MB ceiling. */
+  private static readonly ALLOWED_PHOTO_TYPES = [
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+  ];
+  private static readonly MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 
   protected readonly min = GIFT_CARD_MIN_DENOMINATION;
   protected readonly max = GIFT_CARD_MAX_DENOMINATION;
@@ -348,6 +402,51 @@ export class GiftCardLandingPageComponent implements OnInit {
 
   protected selectTheme(t: GiftCardTheme): void {
     this.theme.set(t);
+    // The API rejects a recipient photo on any non-luxury theme, so drop
+    // it (and any in-flight/error state) when leaving luxury.
+    if (t !== 'luxury') {
+      this.recipientPhotoUrl.set(null);
+      this.photoError.set(null);
+      this.photoUploading.set(false);
+    }
+  }
+
+  /**
+   * Validate (client-side, mirroring the API) then upload the chosen
+   * luxury recipient photo, storing the returned public URL for the
+   * preview + purchase payload.
+   */
+  protected async onPhotoSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] ?? null;
+    // Reset the native input so re-selecting the same file re-fires change.
+    input.value = '';
+    if (file === null) {
+      return;
+    }
+    this.photoError.set(null);
+    if (!GiftCardLandingPageComponent.ALLOWED_PHOTO_TYPES.includes(file.type)) {
+      this.photoError.set('type');
+      return;
+    }
+    if (file.size > GiftCardLandingPageComponent.MAX_PHOTO_BYTES) {
+      this.photoError.set('size');
+      return;
+    }
+    this.photoUploading.set(true);
+    try {
+      const url = await this.gift.uploadPhoto(file);
+      this.recipientPhotoUrl.set(url);
+    } catch {
+      this.photoError.set('upload');
+    } finally {
+      this.photoUploading.set(false);
+    }
+  }
+
+  protected removePhoto(): void {
+    this.recipientPhotoUrl.set(null);
+    this.photoError.set(null);
   }
 
   /** Preset values arrive as "500.00"; render + compare as integers. */
@@ -398,6 +497,7 @@ export class GiftCardLandingPageComponent implements OnInit {
         denomination: this.amountText(),
         recipient_name: this.recipientName().trim() || null,
         recipient_message: this.recipientMessage().trim() || null,
+        recipient_photo_url: this.theme() === 'luxury' ? this.recipientPhotoUrl() : null,
         scheduled_delivery_at: this.scheduledDeliveryIso(),
       };
       const card = await this.gift.purchase(input);

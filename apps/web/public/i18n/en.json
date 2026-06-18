@@ -654,7 +654,16 @@
       "deliveryWhen": "When to send",
       "deliveryNow": "Send now",
       "deliverySchedule": "Schedule",
-      "photoComingSoon": "Photo personalisation for the Luxury card is coming soon.",
+      "photoLabel": "Recipient photo",
+      "photoHint": "Add a personal photo to the Luxury card — JPG, PNG, WebP or GIF, up to 10 MB.",
+      "photoChoose": "Choose a photo",
+      "photoUploading": "Uploading…",
+      "photoRemove": "Remove photo",
+      "photoError": {
+        "type": "That file type isn't supported. Use a JPG, PNG, WebP or GIF.",
+        "size": "That image is too large. The maximum size is 10 MB.",
+        "upload": "We couldn't upload that photo. Please try again."
+      },
       "errorLoad": "We couldn't load the gift card designs. Please try again.",
       "retry": "Try again",
       "buy": "Buy gift card",

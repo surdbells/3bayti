@@ -58,6 +58,14 @@ class StubGiftCardService {
     if (this.purchaseError) throw this.purchaseError;
     return this.purchaseResult;
   }
+  uploadArg: File | null = null;
+  uploadResult = 'https://api-v3.3bayti.ae/uploads/gift-cards/7/01J.png';
+  uploadError: unknown = null;
+  async uploadPhoto(file: File): Promise<string> {
+    this.uploadArg = file;
+    if (this.uploadError) throw this.uploadError;
+    return this.uploadResult;
+  }
 }
 
 class StubCheckoutService {
@@ -200,5 +208,65 @@ describe('GiftCardLandingPageComponent', () => {
 
     expect(navSpy).toHaveBeenCalledWith('/login?returnUrl=/gift-cards');
     expect(redirectSpy).not.toHaveBeenCalled();
+  });
+
+  it('shows the photo upload control only for the luxury theme', async () => {
+    const { fixture } = setup({ themes: [themeOpt('birthday'), themeOpt('luxury')] });
+    await flush();
+    fixture.detectChanges();
+    // Default theme is birthday (supports_photo: false) → no photo field.
+    expect(fixture.nativeElement.querySelector('.gc__photo-field')).toBeNull();
+
+    cmp(fixture).selectTheme('luxury');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('.gc__photo-field')).not.toBeNull();
+  });
+
+  it('uploads a chosen luxury photo, previews it, and includes the url in the purchase', async () => {
+    const { fixture, gift } = setup();
+    await flush();
+    cmp(fixture).selectTheme('luxury');
+    cmp(fixture).denomination.set('500');
+    fixture.detectChanges();
+
+    const file = new File(['x'], 'recipient.png', { type: 'image/png' });
+    await cmp(fixture).onPhotoSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    fixture.detectChanges();
+
+    expect(gift.uploadArg).toBe(file);
+    expect(cmp(fixture).recipientPhotoUrl()).toBe(gift.uploadResult);
+    expect(fixture.nativeElement.querySelector('.gc__photo-thumb')).not.toBeNull();
+
+    await cmp(fixture).submit();
+    expect(gift.purchaseArg).toMatchObject({
+      theme: 'luxury',
+      recipient_photo_url: gift.uploadResult,
+    });
+  });
+
+  it('rejects an unsupported file type without uploading', async () => {
+    const { fixture, gift } = setup();
+    await flush();
+    cmp(fixture).selectTheme('luxury');
+
+    const file = new File(['x'], 'doc.pdf', { type: 'application/pdf' });
+    await cmp(fixture).onPhotoSelected({ target: { files: [file], value: '' } } as unknown as Event);
+
+    expect(gift.uploadArg).toBeNull();
+    expect(cmp(fixture).photoError()).toBe('type');
+    expect(cmp(fixture).recipientPhotoUrl()).toBeNull();
+  });
+
+  it('clears the photo when switching away from the luxury theme', async () => {
+    const { fixture } = setup();
+    await flush();
+    cmp(fixture).selectTheme('luxury');
+
+    const file = new File(['x'], 'recipient.png', { type: 'image/png' });
+    await cmp(fixture).onPhotoSelected({ target: { files: [file], value: '' } } as unknown as Event);
+    expect(cmp(fixture).recipientPhotoUrl()).not.toBeNull();
+
+    cmp(fixture).selectTheme('birthday');
+    expect(cmp(fixture).recipientPhotoUrl()).toBeNull();
   });
 });

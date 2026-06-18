@@ -271,6 +271,91 @@
   color: var(--text-tertiary, #8a7868);
 }
 
+/* Luxury recipient photo */
+.gc__photo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gc__photo-hint {
+  margin: -0.25rem 0 0.25rem;
+  font-size: 0.8rem;
+  color: var(--text-tertiary, #8a7868);
+}
+
+.gc__photo-upload {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 96px;
+  padding: 1rem;
+  border: 1px dashed var(--color-border-default, #d9cdbb);
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-bg-muted, #f9f4ea);
+  color: var(--text-secondary, #5a4a3a);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.gc__photo-upload:hover {
+  border-color: var(--color-brand-400, #b18f1f);
+}
+
+.gc__photo-upload--busy {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* Visually hide the native input; the label is the click target. */
+.gc__photo-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.gc__photo-preview {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.gc__photo-thumb {
+  width: 72px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius-md, 12px);
+  border: 1px solid var(--color-border-default, #d9cdbb);
+}
+
+.gc__photo-remove {
+  padding: 0.4rem 0.75rem;
+  border: 1px solid var(--color-border-default, #d9cdbb);
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: var(--text-secondary, #5a4a3a);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.gc__photo-remove:hover {
+  border-color: var(--color-brand-400, #b18f1f);
+  color: var(--color-brand-600, #5a3a2c);
+}
+
+.gc__photo-error {
+  margin: 0;
+  color: #b3261e;
+  font-size: 0.8rem;
+}
+
 /* Submit */
 .gc__submit-error {
   margin: 0 0 0.75rem;

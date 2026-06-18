@@ -95,6 +95,21 @@ export class GiftCardService {
     return res.data;
   }
 
+  /**
+   * Auth — upload a luxury-theme recipient photo. Returns the public URL
+   * to pass as `recipient_photo_url` on purchase(). The API field name is
+   * "image" (multipart/form-data); the auth Bearer is attached by the
+   * interceptor. Only meaningful for the luxury theme.
+   */
+  async uploadPhoto(file: File): Promise<string> {
+    const form = new FormData();
+    form.append('image', file);
+    const res = await firstValueFrom(
+      this.http.post<Envelope<{ url: string }>>(`${V3_BASE}/v3/gift-cards/photo`, form),
+    );
+    return res.data.url;
+  }
+
   /** Auth — claim a gift-card code into the signed-in account. */
   async redeem(code: string): Promise<GiftCard> {
     const res = await firstValueFrom(

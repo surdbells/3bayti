@@ -127,6 +127,27 @@ describe('GiftCardService', () => {
     expect((await promise).status).toBe('pending_payment');
   });
 
+  it('uploadPhoto() POSTs multipart to /v3/gift-cards/photo and returns the url', async () => {
+    const { service, controller } = setup();
+    const file = new File(['fakebytes'], 'recipient.png', { type: 'image/png' });
+    const promise = service.uploadPhoto(file);
+
+    const req = controller.expectOne(`${V3}/v3/gift-cards/photo`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body instanceof FormData).toBe(true);
+    expect((req.request.body as FormData).get('image')).toBe(file);
+    req.flush({
+      data: {
+        storage_path: 'gift-cards/7/01J.png',
+        url: 'https://api-v3.3bayti.ae/uploads/gift-cards/7/01J.png',
+        mime_type: 'image/png',
+        size_bytes: 9,
+      },
+    });
+
+    expect(await promise).toBe('https://api-v3.3bayti.ae/uploads/gift-cards/7/01J.png');
+  });
+
   it('redeem() POSTs the normalised code', async () => {
     const { service, controller } = setup();
     const promise = service.redeem('GIFT-abcd-1234');

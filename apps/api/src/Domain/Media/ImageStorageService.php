@@ -110,6 +110,33 @@ final class ImageStorageService
     }
 
     /**
+     * Store a gift-card recipient photo for the given buyer (luxury theme).
+     *
+     * Path: gift-cards/{userId}/{ULID}.{ext}. ULID filenames are
+     * time-sortable, collision-safe, and unguessable.
+     *
+     * Visibility is PUBLIC by design: the gift-card *recipient* — who is
+     * not the uploader — renders this photo on the card via a plain
+     * <img> tag (on the redeem / detail / my-cards views), so an
+     * auth-gated or private URL would not display for them. The
+     * unguessable ULID path is the privacy lever, mirroring how product
+     * images are served.
+     *
+     * @throws \InvalidArgumentException on invalid mime / size / upload error.
+     * @throws FilesystemException on backing-store failure.
+     */
+    public function storeGiftCardPhoto(
+        UploadedFileInterface $upload,
+        int $userId,
+    ): StoredImage {
+        [$mime, $ext] = $this->validate($upload);
+        $ulid = $this->ulid();
+        $path = "gift-cards/{$userId}/{$ulid}.{$ext}";
+        $this->write($upload, $path);
+        return new StoredImage($path, $mime, (int) $upload->getSize());
+    }
+
+    /**
      * Store a raw decoded image (from base64 blob — used by the
      * image migration script for legacy vendor logos).
      *
