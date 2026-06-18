@@ -534,7 +534,20 @@ export class CheckoutReviewPageComponent implements OnInit {
          server to ultimately reject again, OR the user removes it
          first. */
       this.checkout.setPromoCode(quote.promo_valid ? quote.promo_code : null);
-    } catch {
+    } catch (err) {
+      const code = this.extractApiErrorCode(err);
+      /* A rejected promo (not found / expired / inactive / min-subtotal
+         not met / limit reached / ...) comes back as a PROMO_* 422.
+         Surface the actual reason instead of a generic network error, then
+         re-quote WITHOUT the promo so the totals still render and the
+         order can proceed. The promoCode guard prevents recursion. */
+      if (promoCode !== null && code !== null && code.startsWith('PROMO_')) {
+        this.toast.error('checkout.review.promoInvalid', { code: promoCode });
+        this.checkout.setPromoCode(null);
+        this.promoForm.controls.code.setValue('');
+        await this.refreshQuote(null);
+        return;
+      }
       this.toast.error('checkout.errors.networkError');
     }
   }

@@ -71,6 +71,9 @@ class StubCartService {
   quoteCalls: Array<string | null> = [];
   quoteResponse: CartQuoteResponse | null = null;
   shouldThrowQuote = false;
+  /** When set, a non-null promo code is rejected with this PROMO_* code
+   *  in the nested proxy envelope, simulating the API's 422. */
+  promoRejectCode: string | null = null;
 
   setCart(c: Cart): void {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -82,6 +85,12 @@ class StubCartService {
   }
   async quoteWithPromo(code: string | null): Promise<CartQuoteResponse> {
     this.quoteCalls.push(code);
+    if (code !== null && this.promoRejectCode !== null) {
+      throw new HttpErrorResponse({
+        status: 422,
+        error: { error: { code: this.promoRejectCode, message: 'Promo not found.' } },
+      });
+    }
     if (this.shouldThrowQuote) throw new Error('quote failed');
     return this.quoteResponse ?? makeQuote({ code });
   }
@@ -356,6 +365,27 @@ describe('CheckoutReviewPageComponent', () => {
       expect(applied).not.toBeNull();
       expect(applied.getAttribute('data-promo-code')).toBe('SAVE10');
       expect(applied.getAttribute('data-promo-status')).toBe('valid');
+    });
+
+    it('on a PROMO_* rejection shows the promo message (not network error) and re-quotes without it', async () => {
+      const { fixture, cart, checkout, toast } = setup({ priorPromo: null });
+      await flush();
+      fixture.detectChanges();
+
+      cart.promoRejectCode = 'PROMO_NOT_FOUND';
+      const input = fixture.nativeElement.querySelector('[data-testid="review-promo-input"]') as HTMLInputElement;
+      input.value = '676799';
+      input.dispatchEvent(new Event('input'));
+      const form = fixture.nativeElement.querySelector('[data-testid="review-promo-form"]') as HTMLFormElement;
+      form.dispatchEvent(new Event('submit'));
+      await flush();
+
+      /* The actual promo reason, not the generic network toast. */
+      expect(toast.errors).toContain('checkout.review.promoInvalid');
+      expect(toast.errors).not.toContain('checkout.errors.networkError');
+      /* Cleared the bad promo and re-quoted without it so totals render. */
+      expect(checkout.promoCalls).toContain(null);
+      expect(cart.quoteCalls).toContain(null);
     });
 
     it('apply button calls quoteWithPromo with the trimmed code', async () => {
