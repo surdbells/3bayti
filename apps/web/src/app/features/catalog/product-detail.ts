@@ -259,14 +259,54 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     }
   }
 
-  /* ----- Content disclosures (PDP4b) -------------------------------------
-   * Description / Reviews / Details are independent collapsible panels.
-   * Description + Reviews default open (primary content + social proof
-   * stay visible); the secondary Details panel defaults closed. All panels
-   * remain in the DOM so the content is still crawlable. */
-  readonly descriptionOpen = signal(true);
-  readonly reviewsOpen = signal(true);
-  readonly detailsOpen = signal(false);
+  /* ----- Content tabs (PDP #10e) -----------------------------------------
+   * Description / Reviews / Details are presented as a premium tab strip
+   * (single visible panel) rather than stacked accordions. Reviews is
+   * always present; Description and Details only when they have content,
+   * so the tab strip is built dynamically. `activeContentTab` holds the
+   * user's explicit choice (null = none yet); `effectiveContentTab` falls
+   * back to the first available tab, so the default is Description when
+   * present, otherwise Reviews. */
+  readonly activeContentTab = signal<'description' | 'reviews' | 'details' | null>(null);
+
+  readonly hasDescriptionContent = computed<boolean>(() => this.descriptionParagraphs().length > 0);
+  readonly hasDetailsContent = computed<boolean>(() => {
+    const p = this.product();
+    return !!(p?.fabric || (p?.materials?.length ?? 0) > 0 || p?.care_instructions);
+  });
+
+  /** Tabs to render, in display order (Reviews always present). */
+  readonly contentTabs = computed<Array<'description' | 'reviews' | 'details'>>(() => {
+    const tabs: Array<'description' | 'reviews' | 'details'> = [];
+    if (this.hasDescriptionContent()) tabs.push('description');
+    tabs.push('reviews');
+    if (this.hasDetailsContent()) tabs.push('details');
+    return tabs;
+  });
+
+  /** The tab actually shown: the explicit selection if still valid, else the first. */
+  readonly effectiveContentTab = computed<'description' | 'reviews' | 'details'>(() => {
+    const sel = this.activeContentTab();
+    const tabs = this.contentTabs();
+    return sel && tabs.includes(sel) ? sel : tabs[0];
+  });
+
+  selectContentTab(tab: 'description' | 'reviews' | 'details'): void {
+    this.activeContentTab.set(tab);
+  }
+
+  /** Left/Right arrows move between content tabs (WAI-ARIA tabs). */
+  onContentTabKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return;
+    event.preventDefault();
+    const tabs = this.contentTabs();
+    const cur = tabs.indexOf(this.effectiveContentTab());
+    const next =
+      event.key === 'ArrowRight'
+        ? (cur + 1) % tabs.length
+        : (cur - 1 + tabs.length) % tabs.length;
+    this.activeContentTab.set(tabs[next]);
+  }
 
   /* ----- Mobile sticky CTA visibility (follow-up) ------------------------
    * The fixed bottom add-to-cart bar (mobile only) hides once the shopper
@@ -440,6 +480,13 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   });
 
   constructor() {
+    /* Deep link: /product/x#reviews opens directly on the Reviews tab.
+       Guarded — some test harnesses provide ActivatedRoute without a
+       snapshot. */
+    if (this.route.snapshot?.fragment === 'reviews') {
+      this.activeContentTab.set('reviews');
+    }
+
     /* Reset the buy box whenever the product changes (navigation to a
        different slug) so a previous product's size/colour/quantity or a
        stale error never leaks into the next one. Reads product() to

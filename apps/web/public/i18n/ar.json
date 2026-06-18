@@ -909,6 +909,7 @@
     },
     "description": "الوصف",
     "details": "التفاصيل",
+    "sectionsAria": "أقسام معلومات المنتج",
     "detailFabric": "القماش",
     "detailMaterials": "المواد",
     "detailCare": "العناية",

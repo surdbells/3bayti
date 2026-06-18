@@ -891,9 +891,10 @@
   }
 }
 
-/* The disclosures read better as a constrained column than full page
+/* The content tabs read better as a constrained column than full page
    width. */
-.pdp-content .pdp-disclosure {
+.pdp-tabs,
+.pdp-tabpanel {
   max-width: 820px;
 }
 
@@ -1095,66 +1096,55 @@
 }
 
 /* ----- Content disclosures / accordion (PDP4b) ----------------------- */
-.pdp-disclosure {
-  border-top: 1px solid var(--color-border-subtle);
-}
-.pdp-disclosure:last-child {
+/* ----- Content tabs (#10e) ------------------------------------------- */
+.pdp-tabs {
+  display: flex;
+  gap: 4px;
+  margin-block-end: 8px;
   border-bottom: 1px solid var(--color-border-subtle);
 }
 
-.pdp-disclosure__heading {
-  margin: 0;
-}
-
-.pdp-disclosure__trigger {
-  width: 100%;
-  display: flex;
+.pdp-tab {
+  appearance: none;
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 20px 2px;
+  padding: 14px 16px;
   background: none;
   border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
   cursor: pointer;
   font-family: 'Playfair Display', Georgia, serif;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 600;
-  color: var(--color-text-primary);
+  color: var(--color-text-tertiary);
   text-align: start;
-  transition: color var(--duration-fast) var(--ease-out);
+  transition: color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
 }
 
-.pdp-disclosure__trigger:hover {
-  color: var(--color-brand-700);
+.pdp-tab:hover {
+  color: var(--color-text-secondary);
 }
 
-.pdp-disclosure__trigger:focus-visible {
+.pdp-tab:focus-visible {
   outline: 2px solid var(--color-brand-500);
   outline-offset: 2px;
   border-radius: 4px;
 }
 
-.pdp-disclosure__chevron {
-  flex: 0 0 auto;
-  color: var(--color-text-tertiary);
-  transition: transform var(--duration-base) var(--ease-out);
+.pdp-tab--active {
+  color: var(--color-brand-700);
+  border-bottom-color: var(--color-brand-500);
 }
 
-.pdp-disclosure__trigger[aria-expanded='true'] .pdp-disclosure__chevron {
-  transform: rotate(180deg);
-}
-
-.pdp-disclosure__panel {
-  padding-bottom: 24px;
+.pdp-tabpanel {
+  padding-block: 8px 24px;
 }
 
 /* The reused content classes add their own top margin; neutralise it so
-   the panel hugs its trigger. */
-.pdp-disclosure__panel.pdp-description { margin-top: 0; }
-
-@media (prefers-reduced-motion: reduce) {
-  .pdp-disclosure__chevron { transition: none; }
-}
+   the panel hugs the tab strip. */
+.pdp-tabpanel.pdp-description { margin-top: 0; }
 
 /* ----- Sticky CTA hide-near-footer (follow-up) ----------------------- */
 .pdp-sticky-cta {

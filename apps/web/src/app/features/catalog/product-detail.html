@@ -338,65 +338,53 @@
            so the buy box can stick alongside the gallery on desktop. -->
       <div class="pdp-content">
 
-          <!-- Description -->
-          @if (descriptionParagraphs().length > 0) {
-            <div class="pdp-disclosure">
-              <h2 class="pdp-disclosure__heading">
-                <button
-                  type="button"
-                  id="pdp-trigger-description"
-                  class="pdp-disclosure__trigger"
-                  [attr.aria-expanded]="descriptionOpen()"
-                  aria-controls="pdp-panel-description"
-                  (click)="descriptionOpen.set(!descriptionOpen())"
-                >
-                  <span>{{ 'product.description' | translate }}</span>
-                  <svg class="pdp-disclosure__chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M6 9l6 6 6-6"/>
-                  </svg>
-                </button>
-              </h2>
-              <div
-                id="pdp-panel-description"
-                role="region"
-                aria-labelledby="pdp-trigger-description"
-                class="pdp-disclosure__panel pdp-description"
-                [hidden]="!descriptionOpen()"
-              >
+          <!-- Content tabs (#10e): Description · Reviews · Details -->
+          <div
+            class="pdp-tabs"
+            role="tablist"
+            [attr.aria-label]="'product.sectionsAria' | translate"
+            (keydown)="onContentTabKeydown($event)"
+          >
+            @if (hasDescriptionContent()) {
+              <button type="button" role="tab" id="pdp-tab-description" class="pdp-tab"
+                [class.pdp-tab--active]="effectiveContentTab() === 'description'"
+                [attr.aria-selected]="effectiveContentTab() === 'description'"
+                [attr.tabindex]="effectiveContentTab() === 'description' ? 0 : -1"
+                aria-controls="pdp-panel-description"
+                (click)="selectContentTab('description')">
+                {{ 'product.description' | translate }}
+              </button>
+            }
+            <button type="button" role="tab" id="reviews" class="pdp-tab"
+              [class.pdp-tab--active]="effectiveContentTab() === 'reviews'"
+              [attr.aria-selected]="effectiveContentTab() === 'reviews'"
+              [attr.tabindex]="effectiveContentTab() === 'reviews' ? 0 : -1"
+              aria-controls="pdp-panel-reviews"
+              (click)="selectContentTab('reviews')">
+              {{ 'product.reviews.heading' | translate }}
+            </button>
+            @if (hasDetailsContent()) {
+              <button type="button" role="tab" id="pdp-tab-details" class="pdp-tab"
+                [class.pdp-tab--active]="effectiveContentTab() === 'details'"
+                [attr.aria-selected]="effectiveContentTab() === 'details'"
+                [attr.tabindex]="effectiveContentTab() === 'details' ? 0 : -1"
+                aria-controls="pdp-panel-details"
+                (click)="selectContentTab('details')">
+                {{ 'product.details' | translate }}
+              </button>
+            }
+          </div>
+
+          @if (effectiveContentTab() === 'description' && hasDescriptionContent()) {
+            <div id="pdp-panel-description" role="tabpanel" aria-labelledby="pdp-tab-description" class="pdp-tabpanel pdp-description">
                 @for (para of descriptionParagraphs(); track $index) {
                   <p>{{ para }}</p>
                 }
-              </div>
             </div>
           }
 
-          <!-- Reviews. Always rendered (within a loaded product) so a
-               product with no reviews shows an inviting empty state (#4)
-               rather than a missing section. The id="reviews" anchor lets
-               the rating-count link above scroll here. -->
-            <div class="pdp-disclosure" id="reviews">
-              <h2 class="pdp-disclosure__heading">
-                <button
-                  type="button"
-                  id="pdp-trigger-reviews"
-                  class="pdp-disclosure__trigger"
-                  [attr.aria-expanded]="reviewsOpen()"
-                  aria-controls="pdp-panel-reviews"
-                  (click)="reviewsOpen.set(!reviewsOpen())"
-                >
-                  <span>{{ 'product.reviews.heading' | translate }}</span>
-                  <svg class="pdp-disclosure__chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M6 9l6 6 6-6"/>
-                  </svg>
-                </button>
-              </h2>
-              <div
-                id="pdp-panel-reviews"
-                role="region"
-                aria-labelledby="pdp-trigger-reviews"
-                class="pdp-disclosure__panel pdp-reviews"
-                [hidden]="!reviewsOpen()"
-              >
+          @if (effectiveContentTab() === 'reviews') {
+            <div id="pdp-panel-reviews" role="tabpanel" aria-labelledby="reviews" class="pdp-tabpanel pdp-reviews">
 
               <!-- Aggregate summary repeated here so the section is
                    self-contained (helps when the user navigates
@@ -467,34 +455,11 @@
                   <p class="pdp-reviews__empty-hint">{{ 'product.reviews.emptyHint' | translate }}</p>
                 </div>
               }
-              </div>
             </div>
+          }
 
-          <!-- Materials, fabric, care — only render if backend supplied data -->
-          @if (p.fabric || p.materials?.length || p.care_instructions) {
-            <div class="pdp-disclosure">
-              <h2 class="pdp-disclosure__heading">
-                <button
-                  type="button"
-                  id="pdp-trigger-details"
-                  class="pdp-disclosure__trigger"
-                  [attr.aria-expanded]="detailsOpen()"
-                  aria-controls="pdp-panel-details"
-                  (click)="detailsOpen.set(!detailsOpen())"
-                >
-                  <span>{{ 'product.details' | translate }}</span>
-                  <svg class="pdp-disclosure__chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M6 9l6 6 6-6"/>
-                  </svg>
-                </button>
-              </h2>
-              <div
-                id="pdp-panel-details"
-                role="region"
-                aria-labelledby="pdp-trigger-details"
-                class="pdp-disclosure__panel pdp-details"
-                [hidden]="!detailsOpen()"
-              >
+          @if (effectiveContentTab() === 'details' && hasDetailsContent()) {
+            <div id="pdp-panel-details" role="tabpanel" aria-labelledby="pdp-tab-details" class="pdp-tabpanel pdp-details">
                 <dl class="pdp-detail-list">
                   @if (p.fabric) {
                     <dt>{{ 'product.detailFabric' | translate }}</dt>
@@ -509,7 +474,6 @@
                     <dd>{{ p.care_instructions }}</dd>
                   }
                 </dl>
-              </div>
             </div>
           }
       </div>

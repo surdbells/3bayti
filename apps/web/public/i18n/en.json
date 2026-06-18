@@ -909,6 +909,7 @@
     },
     "description": "Description",
     "details": "Details",
+    "sectionsAria": "Product information sections",
     "detailFabric": "Fabric",
     "detailMaterials": "Materials",
     "detailCare": "Care",
