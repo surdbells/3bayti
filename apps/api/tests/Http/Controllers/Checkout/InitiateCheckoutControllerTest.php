@@ -119,6 +119,68 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function gatewayFailureRestoresCartToActive(): void
+    {
+        // A failed payment initiation (e.g. Noon rejects credentials) must
+        // not strand the customer's cart. The cart is marked converted in
+        // the order transaction; on gateway failure it must be reactivated
+        // so the user can retry.
+        $user = $this->makeUser(id: 7);
+        [$cart, $product] = $this->makeCartWithOneItem($user);
+        $billing = $this->makeAddress($user, id: 50, isDefaultBilling: true);
+        $shipping = $this->makeAddress($user, id: 51, isDefaultShipping: true);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $cartRepo = $this->createMock(CartRepository::class);
+        $cartRepo->method('findActiveForUser')->with($user)->willReturn($cart);
+
+        $addressRepo = $this->createMock(AddressRepository::class);
+        $addressRepo->method('findDefaultBillingForUser')->with($user)->willReturn($billing);
+        $addressRepo->method('findDefaultShippingForUser')->with($user)->willReturn($shipping);
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txRepo->method('findByIdempotencyKey')->willReturn(null);
+        $txRepo->method('save');
+
+        // Gateway rejects at INITIATE (mirrors the real Noon 401).
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('initiateCheckout')
+            ->willThrowException(
+                PaymentGatewayException::auth('Noon INITIATE: HTTP 401 authentication rejected')
+            );
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $cartRepo, $addressRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Cart::class, $cartRepo],
+                [Address::class, $addressRepo],
+                [PaymentTransaction::class, $txRepo],
+            ]);
+            $em->method('persist');
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', [], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        // Clean 502 (not a 500), and — the point of this test — the cart is
+        // active again so the customer can retry once the provider is fixed.
+        self::assertSame(502, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
+        self::assertTrue($cart->isActive(), 'Cart must be reactivated after a gateway failure');
+    }
+
+    #[Test]
     public function rejectsEmptyCart(): void
     {
         $user = $this->makeUser(id: 7);

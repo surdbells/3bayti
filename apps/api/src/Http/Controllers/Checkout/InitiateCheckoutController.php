@@ -447,7 +447,7 @@ final class InitiateCheckoutController
                 channel: $input->channel,
             );
         } catch (PaymentGatewayException $e) {
-            $this->markOrderFailed($order, $e);
+            $this->markOrderFailed($order, $e, $cart);
             $this->logger->error('checkout.initiate: gateway failure', [
                 'user_id' => $user->getId(),
                 'order_reference' => $orderReference,
@@ -790,20 +790,30 @@ final class InitiateCheckoutController
         return is_string($url) && $url !== '' ? $url : null;
     }
 
-    private function markOrderFailed(Order $order, PaymentGatewayException $e): void
+    private function markOrderFailed(Order $order, PaymentGatewayException $e, ?Cart $cart = null): void
     {
         // Mark the order failed. We keep the row (forensics, refund
         // attempts, customer-service lookups). A future cleanup job
         // archives old failed orders.
         try {
             $order->markFailed();
+            // The cart was marked converted inside the order-creation
+            // transaction (committed before the gateway call). Payment
+            // never started, so restore it to active — the customer keeps
+            // their cart and can retry. The bumped updated_at gives the
+            // retry a fresh idempotency key. (Gift-card purchases pass no
+            // cart; nothing to restore there.)
+            if ($cart !== null && !$cart->isActive()) {
+                $cart->reactivate();
+            }
             $this->em->flush();
         } catch (\Throwable $flushErr) {
             // Order entity might not have markFailed — degrade
             // gracefully. The pending_payment row still exists; the
             // ops team can mark it failed manually.
-            $this->logger->warning('checkout.initiate: could not mark order failed', [
+            $this->logger->warning('checkout.initiate: could not mark order failed / restore cart', [
                 'order_id' => $order->getId(),
+                'cart_id' => $cart?->getId(),
                 'error' => $flushErr->getMessage(),
             ]);
         }

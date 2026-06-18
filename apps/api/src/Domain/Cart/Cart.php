@@ -185,6 +185,28 @@ class Cart
         $this->touchUpdatedAt();
     }
 
+    /**
+     * Restore a converted cart to active. Used when an order created from
+     * this cart could not be handed off to the payment provider (e.g. the
+     * gateway rejected or timed out at INITIATE): payment never started, so
+     * the customer must keep their cart and be able to retry. A transient
+     * provider error must never empty someone's cart.
+     *
+     * Strict inverse of markConverted(): only a converted cart can be
+     * reactivated. touchUpdatedAt() bumps the timestamp so a retry derives a
+     * fresh idempotency key rather than echoing the failed attempt.
+     */
+    public function reactivate(): void
+    {
+        if ($this->status !== self::STATUS_CONVERTED) {
+            throw new \DomainException(
+                "Cannot reactivate cart in status '{$this->status}' — only converted carts can be reactivated."
+            );
+        }
+        $this->status = self::STATUS_ACTIVE;
+        $this->touchUpdatedAt();
+    }
+
     public function markArchived(): void
     {
         $this->status = self::STATUS_ARCHIVED;
