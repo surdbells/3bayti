@@ -110,7 +110,9 @@ export class GiftCardsAdminComponent implements OnInit {
     this.loading = true;
     this.adapter.get_v3('GET /gift-cards/themes').subscribe({
       next: (res: any) => {
-        this.themes = res?.themes ?? res?.data ?? [];
+        // Tolerate {data:{themes}}, {data:[...]}, or {themes} envelopes.
+        const giftData = res?.data ?? res;
+        this.themes = Array.isArray(giftData) ? giftData : (giftData?.themes ?? res?.themes ?? []);
         this.total = this.themes.length;
         this.loading = false;
       },

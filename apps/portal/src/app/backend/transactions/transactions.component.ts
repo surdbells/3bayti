@@ -142,6 +142,7 @@ export class TransactionsComponent implements OnInit {
       order_id: o.order_reference ?? o.id,
       transaction_id: o.order_reference ?? '',
       cart_code: o.cart_code ?? o.order_reference ?? '',
+      merchantReference: o.provider_order_ref ?? o.merchant_reference ?? o.merchantReference ?? '',
       amount: o.subtotal ?? o.total ?? '0',
       customer: name || customer.email || '—',
       status: o.status ?? '',

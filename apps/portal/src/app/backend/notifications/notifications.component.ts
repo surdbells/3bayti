@@ -99,7 +99,8 @@ export class NotificationsComponent implements OnInit {
     }).subscribe({
       next: (response: any) => {
         this.sending = false;
-        const data = response?.data;
+        // The send summary may be enveloped under data or returned flat.
+        const data = response?.data ?? response;
         if (data) {
           this.lastResult = data;
           if (data.recipients === 0) {
