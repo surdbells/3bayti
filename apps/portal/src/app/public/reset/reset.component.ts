@@ -140,6 +140,47 @@ export class ResetComponent implements OnInit{
       },
     });
   }
+  /** Step 2/3: re-send the reset code. Re-calls POST /auth/reset with the
+   *  same email and adopts the fresh verification_id, so a user whose code
+   *  never arrived or expired isn't stranded. */
+  resend_otp() {
+    if (this.ui_controls.loading) return;
+    this.ui_controls.loading = true;
+    this.adapter.post_v3('POST /auth/reset', { email: this.reset.email })
+      .subscribe({
+        next: (response: any) => {
+          this.ui_controls.loading = false;
+          const vid = response?.data?.verification_id ?? response?.verification_id;
+          if (vid) {
+            this.verificationId = vid;
+            this.confirm.input_otp = '';
+            this.success_notification('A new reset code has been sent.');
+          } else {
+            this.error_notification('Unable to resend the code. Please try again.');
+          }
+        },
+        error: (e) => {
+          console.error(e);
+          this.error_notification('Unable to resend the code. Please try again.');
+          this.ui_controls.loading = false;
+        },
+      });
+  }
+
+  /** Step 2 -> Step 1: let the user correct a mistyped email. */
+  back_to_email() {
+    this.ui_controls.confirmed = false;
+    this.ui_controls.validated = false;
+    this.confirm.input_otp = '';
+  }
+
+  /** Step 3 -> Step 2: a wrong/expired code surfaces at the final step, so
+   *  give the user a way back to re-enter or resend it instead of stranding
+   *  them on the password screen. */
+  back_to_otp() {
+    this.ui_controls.validated = false;
+  }
+
   toggleFieldTextType() {
     this.fieldTextType = !this.fieldTextType;
   }

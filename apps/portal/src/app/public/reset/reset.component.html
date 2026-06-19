@@ -120,6 +120,16 @@
               <span>{{ 'validate' | translate }}</span>
             </button>
           </form>
+
+          <p class="ax-auth-meta">
+            {{ 'otp_not_received' | translate }}
+            <button type="button" class="ax-btn-link" (click)="resend_otp()" [disabled]="ui_controls.loading">{{ 'resend_code' | translate }}</button>
+          </p>
+          <p class="ax-auth-meta">
+            <button type="button" class="ax-btn-link" (click)="back_to_email()">{{ 'change_email' | translate }}</button>
+            <span aria-hidden="true">·</span>
+            <a routerLink="/login">{{ 'sign_in' | translate }}</a>
+          </p>
         </div>
 
         <!-- Step 3: new password -->
@@ -169,6 +179,12 @@
               <span>{{ 'reset_password' | translate }}</span>
             </button>
           </form>
+
+          <p class="ax-auth-meta">
+            <button type="button" class="ax-btn-link" (click)="back_to_otp()">{{ 're_enter_code' | translate }}</button>
+            <span aria-hidden="true">·</span>
+            <a routerLink="/login">{{ 'sign_in' | translate }}</a>
+          </p>
         </div>
       </div>
     </div>
