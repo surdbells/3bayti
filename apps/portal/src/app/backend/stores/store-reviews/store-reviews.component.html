@@ -17,12 +17,32 @@
       </header>
 
       <section class="ax-page-section">
-        <div class="ax-card ax-p-8 ax-text-center">
-          <app-icon name="reviews" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
-          <h3 class="ax-h4 ax-m-0 ax-mt-3">No reviews yet</h3>
-          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-            Reviews will appear here after customers rate their purchases.
-          </p>
-        </div>
+        @if (ui_controls.is_loading) {
+          <div class="ax-flex ax-justify-center ax-py-8">
+            <span class="ax-spinner ax-spinner-lg" aria-label="Loading reviews"></span>
+          </div>
+        } @else if (reviews.length > 0) {
+          <div class="ax-flex ax-flex-col ax-gap-3">
+            @for (r of reviews; track r.id) {
+              <div class="ax-card ax-p-4">
+                <div class="ax-flex ax-items-center ax-justify-between ax-gap-2">
+                  <span class="ax-font-medium ax-text-primary">{{ r.author_name || r.author || r.customer_name || 'Customer' }}</span>
+                  <span class="ax-badge ax-badge-warning">{{ r.rating || r.star || r.stars || '—' }} ★</span>
+                </div>
+                @if (r.title) { <div class="ax-font-medium ax-mt-2">{{ r.title }}</div> }
+                <p class="ax-text-sm ax-text-secondary ax-mt-1">{{ r.body || r.comment || r.review || '' }}</p>
+                <div class="ax-text-2xs ax-text-tertiary ax-mt-2">{{ r.created_at || r.created || '' }}</div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="ax-card ax-p-8 ax-text-center">
+            <app-icon name="reviews" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
+            <h3 class="ax-h4 ax-m-0 ax-mt-3">No reviews yet</h3>
+            <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+              Reviews will appear here after customers rate their purchases.
+            </p>
+          </div>
+        }
       </section>  </div>
 </app-admin-shell>

@@ -17,12 +17,32 @@
       </header>
 
       <section class="ax-page-section">
-        <div class="ax-card ax-p-8 ax-text-center">
-          <app-icon name="support_agent" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
-          <h3 class="ax-h4 ax-m-0 ax-mt-3">No tickets yet</h3>
-          <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
-            Support tickets involving this store will appear here.
-          </p>
-        </div>
+        @if (ui_controls.is_loading) {
+          <div class="ax-flex ax-justify-center ax-py-8">
+            <span class="ax-spinner ax-spinner-lg" aria-label="Loading tickets"></span>
+          </div>
+        } @else if (tickets.length > 0) {
+          <div class="ax-flex ax-flex-col ax-gap-3">
+            @for (t of tickets; track t.id) {
+              <div class="ax-card ax-p-4">
+                <div class="ax-flex ax-items-center ax-justify-between ax-gap-2">
+                  <span class="ax-font-medium ax-text-primary">{{ t.subject || 'Ticket' }}</span>
+                  <span class="ax-badge ax-badge-neutral" style="text-transform: capitalize;">{{ t.status || '' }}</span>
+                </div>
+                <div class="ax-text-2xs ax-text-tertiary ax-mt-2" style="text-transform: capitalize;">
+                  Priority: {{ t.priority || '—' }}@if (t.message_count) { · {{ t.message_count }} message(s)} · {{ t.created_at || '' }}
+                </div>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="ax-card ax-p-8 ax-text-center">
+            <app-icon name="support_agent" style="font-size: 3rem; color: var(--ax-color-text-tertiary);" aria-hidden="true"></app-icon>
+            <h3 class="ax-h4 ax-m-0 ax-mt-3">No tickets yet</h3>
+            <p class="ax-text-secondary ax-mt-2" style="max-width: 32rem; margin-left: auto; margin-right: auto;">
+              Support tickets involving this store will appear here.
+            </p>
+          </div>
+        }
       </section>  </div>
 </app-admin-shell>

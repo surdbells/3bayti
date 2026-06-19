@@ -29,6 +29,7 @@ export class StoreReviewsComponent implements OnInit {
   };
 
   get_data = { id: 0, token: '' };
+  vendorId = 0;
   reviews: any[] = [];
 
   constructor(
@@ -42,6 +43,8 @@ export class StoreReviewsComponent implements OnInit {
     this.session_data = sessionStorage.getItem('SESSION');
     this.user_session = GlobalComponent.decodeBase64(this.session_data);
     this.store_name = this.route.snapshot.queryParamMap.get('name');
+    this.vendorId = Number(this.route.snapshot.queryParamMap.get('id'));
+    if (this.vendorId) this.get_post();
   }
 
   goBack() {
@@ -58,13 +61,17 @@ export class StoreReviewsComponent implements OnInit {
 
   get_post() {
     this.ui_controls.is_loading = true;
-    this.adapter.get_v3('GET /vendor/reviews', { query: { limit: 50, offset: 0 } }).subscribe({
+    this.adapter.get_v3('GET /vendors/:vendorId/reviews', {
+      params: { vendorId: String(this.vendorId) },
+      query: { limit: 50, offset: 0 },
+    }).subscribe({
       next: (response: any) => {
-        if (response?.data) {
-          this.reviews = Array.isArray(response.data) ? response.data : response.data?.items ?? [];
-          this.ui_controls.is_loading = false;
-        }
+        const d = response?.data ?? response;
+        this.reviews = Array.isArray(d) ? d : (d?.items ?? d?.reviews ?? []);
+        this.ui_controls.no_data = this.reviews.length === 0;
+        this.ui_controls.is_loading = false;
       },
+      error: () => { this.ui_controls.is_loading = false; },
     });
   }
 }

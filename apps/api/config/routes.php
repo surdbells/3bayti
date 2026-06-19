@@ -680,6 +680,8 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Finance\ListCommissionsController::class)->add($perm->for('payouts.view_commissions'));
 
         // M3.4-C — Admin message a specific vendor (portal → vendor comms).
+        $group->get('/vendors/{id:[0-9]+}/messages',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorMessagesController::class)->add($perm->for('vendors.view'));
         $group->post('/vendors/{id:[0-9]+}/messages',
             \Bayti\Api\Http\Controllers\Admin\Vendor\SendVendorMessageController::class)->add($perm->for('vendors.edit'));
 
