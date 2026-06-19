@@ -1,7 +1,6 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
@@ -30,30 +29,10 @@ interface ProductRow extends Record<string, unknown> {
   stock_status: string;
 }
 
-interface CategoryOption { id: number; name: string; }
-
-interface ProductForm {
-  id: number | null;
-  name: string;
-  description: string;
-  price: string;
-  stock_status: string;
-  stock_quantity: number | null;
-  category_id: number | null;
-  status: string;
-  primary_image_url: string;
-}
-
-const EMPTY_FORM: ProductForm = {
-  id: null, name: '', description: '', price: '',
-  stock_status: 'in_stock', stock_quantity: 0,
-  category_id: null, status: 'published', primary_image_url: '',
-};
-
 @Component({
   selector: 'app-store-products',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective, IconComponent],
+  imports: [AdminShellComponent, CommonModule, AxDataTableComponent, AxCellDirective, IconComponent],
   templateUrl: './store-products.component.html',
   styleUrl: './store-products.component.css',
 })
@@ -74,14 +53,6 @@ export class StoreProductsComponent implements OnInit {
   config!: AxDataTableConfig<ProductRow>;
   dataSource!: AxServerDataSource<ProductRow>;
 
-  categories: CategoryOption[] = [];
-
-  // Drawer state
-  readonly drawerOpen = signal(false);
-  readonly busy = signal(false);
-  readonly editing = signal(false);
-  form: ProductForm = { ...EMPTY_FORM };
-
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -96,7 +67,6 @@ export class StoreProductsComponent implements OnInit {
     this.storeId = Number(this.route.snapshot.queryParamMap.get('id'));
     this.store_name = this.route.snapshot.queryParamMap.get('name') ?? '';
     this.resolveVendor();
-    this.loadCategories();
     this.buildTable();
   }
 
@@ -105,16 +75,6 @@ export class StoreProductsComponent implements OnInit {
     this.adapter.get_v3('GET /vendors/by-legacy-id/:id', { params: { id: String(this.storeId) } }).subscribe({
       next: (res: any) => { this.vendorV3Id = res?.data?.id ?? this.vendorV3Id; },
       error: () => { /* falls back to meta.vendor_id from the list */ },
-    });
-  }
-
-  private loadCategories() {
-    this.adapter.get_v3('GET /utility/categories').subscribe({
-      next: (res: any) => {
-        const raw: any[] = res?.data ?? res?.categories ?? [];
-        this.categories = raw.map((c) => ({ id: c.id, name: c.name }));
-      },
-      error: () => { /* non-critical */ },
     });
   }
 
@@ -202,68 +162,11 @@ export class StoreProductsComponent implements OnInit {
     } as ProductRow;
   }
 
-  // ── Create / Edit drawer ───────────────────────────────────────────
+  /** Create a product for this store via the full routed create page. */
   openCreate() {
     // Route to the full create-product page, passing the store's vendor so it
     // can default to this store (the form still lets admin change it).
     this.router.navigate(['/admin_create_product'], { queryParams: { vendor_id: this.vendorV3Id } });
-  }
-
-  openEdit(row: ProductRow) {
-    this.editing.set(true);
-    this.drawerOpen.set(true);
-    // The list row carries enough to edit; the detail fetch route isn't
-    // registered for admin-by-id, so we populate from the row directly.
-    this.form = {
-      id: row.id,
-      name: row.name ?? '',
-      description: '',
-      price: String(row.price ?? ''),
-      stock_status: row.stock_status ?? 'in_stock',
-      stock_quantity: row.quantity ?? 0,
-      category_id: null,
-      status: 'published',
-      primary_image_url: (row['image'] as string) ?? (row['label'] as string) ?? '',
-    };
-  }
-
-  closeDrawer() { this.drawerOpen.set(false); }
-
-  save() {
-    if (!this.form.name.trim()) { this.toast.error('Product name is required.'); return; }
-    if (!this.form.price || Number(this.form.price) < 0) { this.toast.error('A valid price is required.'); return; }
-
-    const body: any = {
-      name: this.form.name.trim(),
-      description: this.form.description,
-      price: this.form.price,
-      stock_status: this.form.stock_status,
-      stock_quantity: this.form.stock_quantity,
-      category_id: this.form.category_id,
-      status: this.form.status,
-      primary_image_url: this.form.primary_image_url || undefined,
-    };
-
-    this.busy.set(true);
-    if (this.editing() && this.form.id) {
-      this.adapter.put_v3('PUT /admin/products/:id', body, { params: { id: String(this.form.id) } }).subscribe({
-        next: (r: any) => {
-          if (r) { this.toast.success('Product updated.'); this.drawerOpen.set(false); this.dataSource.retry(); }
-          this.busy.set(false);
-        },
-        error: () => { this.toast.error('Unable to update product.'); this.busy.set(false); },
-      });
-    } else {
-      if (!this.vendorV3Id) { this.toast.error('Store reference not ready — reload and try again.'); this.busy.set(false); return; }
-      body.vendor_id = this.vendorV3Id;
-      this.adapter.post_v3('POST /admin/products', body).subscribe({
-        next: (r: any) => {
-          if (r) { this.toast.success('Product created.'); this.drawerOpen.set(false); this.dataSource.retry(); }
-          this.busy.set(false);
-        },
-        error: () => { this.toast.error('Unable to create product.'); this.busy.set(false); },
-      });
-    }
   }
 
   private confirmDelete(row: ProductRow) {
