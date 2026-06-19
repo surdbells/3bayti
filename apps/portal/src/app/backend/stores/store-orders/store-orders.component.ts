@@ -248,7 +248,12 @@ export class StoreOrdersComponent implements OnInit {
   }
 
   onRowAction(e: { action: { id: string }; row: OrderRow }) {
-    if (e.action.id === 'manage') this.openOrder(e.row.id);
+    // Open the order in the routed detail page (/single) — same pattern as
+    // processing/logistics/deliveries and the corrected vendor portal —
+    // instead of an in-place drawer.
+    if (e.action.id === 'manage') {
+      this.router.navigate(['/single'], { queryParams: { order: e.row.id } });
+    }
   }
 
   // ── Drawer / detail ────────────────────────────────────────────────
