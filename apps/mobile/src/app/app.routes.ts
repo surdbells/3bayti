@@ -31,6 +31,12 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/settings/settings.page').then(m => m.SettingsPage)
   },
   {
+    // In-app account deletion (Apple 5.1.1(v)) — DELETE /v3/me with re-auth
+    path: 'delete-account',
+    loadComponent: () => import('./customer/delete-account/delete-account.page').then(m => m.DeleteAccountPage),
+    title: 'Delete Account'
+  },
+  {
     path: 'wishlist',
     loadComponent: () => import('./customer/wishlist/wishlist.page').then( m => m.WishlistPage)
   },

@@ -1043,6 +1043,14 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/device-tokens',
     shape: 'v3-envelope',
   },
+  'DELETE /me': {
+    // Self-serve account deletion (re-auth via { current_password }; 204 on
+    // success). v3-only — no legacy counterpart.
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me',
+    shape: 'v3-envelope',
+  },
   'DELETE /me/device-tokens': {
     target: 'new',
     oldPath: '',

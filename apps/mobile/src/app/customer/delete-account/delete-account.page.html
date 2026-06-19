@@ -1,0 +1,47 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'delete_account' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg">
+  <div class="ion-padding">
+    <div class="da-warn">
+      <div class="da-warn-icon"><ax-icon name="circle-alert" /></div>
+      <div>
+        <h2 class="da-warn-title">{{ 'delete_account_title' | translate }}</h2>
+        <p class="da-warn-text">{{ 'delete_account_warning' | translate }}</p>
+      </div>
+    </div>
+
+    <form (ngSubmit)="confirmDelete()" class="da-form">
+      <label class="da-field">
+        <span class="da-label">{{ 'delete_account_password_label' | translate }}</span>
+        <input
+          class="da-input"
+          type="password"
+          name="current_password"
+          [(ngModel)]="password"
+          [placeholder]="'delete_account_password_ph' | translate"
+          autocomplete="current-password" />
+      </label>
+
+      <button type="submit" class="da-delete" [disabled]="busy">
+        @if (busy) {
+          <ax-loader></ax-loader>
+        } @else {
+          {{ 'delete_account_button' | translate }}
+        }
+      </button>
+
+      <button type="button" class="da-cancel" (click)="goBack()" [disabled]="busy">
+        {{ 'cancel' | translate }}
+      </button>
+    </form>
+  </div>
+</ion-content>

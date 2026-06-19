@@ -312,29 +312,11 @@ export class SettingsPage implements OnInit, OnDestroy {
     await actionSheet.present();
   }
 
-  async confirmDelete(): Promise<void> {
-    const actionSheet = await this.actionSheetCtrl.create({
-      header: this.i18n.t('delete_account_action_header'),
-      buttons: [
-        {
-          text: this.i18n.t('delete_account'),
-          role: 'destructive',
-          handler: () => {
-            // No self-serve deletion endpoint yet — route the request to
-            // support rather than falsely confirming removal (the previous
-            // handler just showed a success toast and did nothing).
-            const subject = encodeURIComponent('Account deletion request');
-            const body = encodeURIComponent('Please delete my 3bayti account associated with this email.');
-            window.open(`mailto:support@3bayti.com?subject=${subject}&body=${body}`, '_system');
-          }
-        },
-        {
-          text: this.i18n.t('cancel'),
-          role: 'cancel'
-        }
-      ]
-    });
-    await actionSheet.present();
+  confirmDelete(): void {
+    // Open the in-app deletion flow (password re-auth -> DELETE /v3/me).
+    // Replaces the prior mailto-to-support stopgap now that the self-serve
+    // endpoint is wired (Apple 5.1.1(v) requires in-app deletion).
+    this.router.navigate(['/delete-account']);
   }
 
   // ========================================
