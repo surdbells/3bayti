@@ -195,12 +195,24 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
     this.router.navigate([path]);
   }
 
+  /** These vendor screens aren't built yet — surface an honest toast instead
+   *  of navigating to a non-existent route (which dead-ended on a blank page). */
+  async comingSoon(): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message: 'This feature is coming soon.',
+      duration: 2000,
+      position: 'bottom',
+      color: 'medium',
+    });
+    await toast.present();
+  }
+
   editStoreProfile(): void {
-    this.router.navigate(['/vendor-store-profile']);
+    void this.comingSoon();
   }
 
   openSettings(): void {
-    this.router.navigate(['/vendor-settings']);
+    void this.comingSoon();
   }
 
   async toggleStoreStatus(event: CustomEvent): Promise<void> {

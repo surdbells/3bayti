@@ -157,15 +157,22 @@ delete_reviews(review: number) {
     if(this.isOnline){
       this.delete.id = this.single_user.id;
       this.delete.token = this.single_user.token;
+      this.delete.review = review;
       this.ui_controls.is_deleting = true;
       this.networkAdapter.post_request(this.delete, GlobalComponent.deleteReview, )
         .subscribe(({
           next: (response: any) => {
+            this.ui_controls.is_deleting = false;
             if (response.response_code === 200 && response.status === "success") {
-              this.ui_controls.is_deleting = false;
               this.success_notification(response.message);
               this.get_reviews();
+            } else {
+              this.error_notification(response.message || this.i18n.t('text_offline_check_connection'));
             }
+          },
+          error: () => {
+            this.ui_controls.is_deleting = false;
+            this.error_notification(this.i18n.t('text_offline_check_connection'));
           }
         }))
     }else {
