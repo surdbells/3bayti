@@ -320,7 +320,12 @@ export class SettingsPage implements OnInit, OnDestroy {
           text: this.i18n.t('delete_account'),
           role: 'destructive',
           handler: () => {
-            this.showSuccess(this.i18n.t('text_account_scheduled_for_removal'));
+            // No self-serve deletion endpoint yet — route the request to
+            // support rather than falsely confirming removal (the previous
+            // handler just showed a success toast and did nothing).
+            const subject = encodeURIComponent('Account deletion request');
+            const body = encodeURIComponent('Please delete my 3bayti account associated with this email.');
+            window.open(`mailto:support@3bayti.com?subject=${subject}&body=${body}`, '_system');
           }
         },
         {
