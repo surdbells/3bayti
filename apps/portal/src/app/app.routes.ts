@@ -386,6 +386,13 @@ export const routes: Routes = [
     title: 'Platform Users'
   },
   {
+    // Deep-linkable role + permission-matrix editor (?id= to edit, omit to create).
+    path: 'admin_role',
+    loadComponent: () => import('./backend/users/role-editor/role-editor.component').then(m => m.RoleEditorComponent),
+    canActivate: [adminGuard],
+    title: 'Role editor'
+  },
+  {
     path: 'admin-gift-cards',
     loadComponent: () => import('./backend/gift-cards/gift-cards.component').then(m => m.GiftCardsAdminComponent),
     canActivate: [adminGuard],

@@ -80,7 +80,6 @@ export class UsersComponent implements OnInit {
   protected readonly createOpen = signal(false);
   protected readonly pwOpen = signal(false);
   protected readonly rolesOpen = signal(false);
-  protected readonly roleEditorOpen = signal(false);
 
   // View toggle (Staff | Roles)
   protected readonly view = signal<'staff' | 'roles'>('staff');
@@ -91,7 +90,6 @@ export class UsersComponent implements OnInit {
     saving_roles: false,
     roles_loading: false,
     roles_list_loading: false,
-    saving_role: false,
   };
 
   register = {
@@ -111,14 +109,8 @@ export class UsersComponent implements OnInit {
   allRoles: RoleOption[] = [];
   selectedRoleIds: number[] = [];
 
-  // Roles management (matrix editor) state
+  // Roles list (the matrix editor itself lives at /admin_role — RoleEditorComponent)
   rolesList: RoleDetail[] = [];
-  catalogModules: CatalogModule[] = [];
-  catalogPresets: CatalogPreset[] = [];
-  private catalogLoaded = false;
-  editingRole: RoleDetail | null = null;
-  roleForm = { name: '', description: '' };
-  selectedPerms = new Set<string>();
 
   config!: AxDataTableConfig<StaffUser>;
   dataSource!: AxServerDataSource<StaffUser>;
@@ -344,7 +336,6 @@ export class UsersComponent implements OnInit {
     this.view.set(v);
     if (v === 'roles') {
       this.loadRolesList();
-      this.loadCatalog();
     }
   }
 
@@ -366,86 +357,10 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  private loadCatalog() {
-    if (this.catalogLoaded) return;
-    this.adapter.get_v3('GET /admin/permission-catalog').subscribe({
-      next: (res: any) => {
-        const d = res?.data ?? {};
-        this.catalogModules = (d.modules ?? []).map((m: any) => ({
-          module: m.module, label: m.label,
-          permissions: (m.permissions ?? []).map((p: any) => ({ key: p.key, label: p.label })),
-        }));
-        this.catalogPresets = (d.presets ?? []).map((p: any) => ({
-          slug: p.slug, name: p.name, description: p.description ?? null,
-          permissions: Array.isArray(p.permissions) ? p.permissions : [],
-        }));
-        this.catalogLoaded = true;
-      },
-      error: () => { this.toast.error('Unable to load the permission catalog.'); },
-    });
-  }
-
+  /** Open the deep-linkable role editor (/admin_role). Pass a role to edit it,
+   *  or omit to create a new one. The matrix + save now live in RoleEditorComponent. */
   openRoleEditor(role?: RoleDetail) {
-    this.loadCatalog();
-    if (role) {
-      this.editingRole = role;
-      this.roleForm = { name: role.name, description: role.description ?? '' };
-      this.selectedPerms = new Set(role.permissions);
-    } else {
-      this.editingRole = null;
-      this.roleForm = { name: '', description: '' };
-      this.selectedPerms = new Set<string>();
-    }
-    this.roleEditorOpen.set(true);
-  }
-
-  closeRoleEditor() { this.roleEditorOpen.set(false); this.editingRole = null; }
-
-  isPermSelected(key: string): boolean { return this.selectedPerms.has(key); }
-
-  togglePerm(key: string) {
-    const next = new Set(this.selectedPerms);
-    if (next.has(key)) next.delete(key); else next.add(key);
-    this.selectedPerms = next;
-  }
-
-  moduleSelectedCount(m: CatalogModule): number {
-    return m.permissions.filter((p) => this.selectedPerms.has(p.key)).length;
-  }
-
-  moduleAllSelected(m: CatalogModule): boolean {
-    return m.permissions.length > 0 && m.permissions.every((p) => this.selectedPerms.has(p.key));
-  }
-
-  toggleModule(m: CatalogModule) {
-    const all = this.moduleAllSelected(m);
-    const next = new Set(this.selectedPerms);
-    for (const p of m.permissions) { if (all) next.delete(p.key); else next.add(p.key); }
-    this.selectedPerms = next;
-  }
-
-  applyPreset(p: CatalogPreset) {
-    this.selectedPerms = new Set(p.permissions);
-    this.toast.success(`Applied the "${p.name}" preset.`);
-  }
-
-  saveRole() {
-    const name = this.roleForm.name.trim();
-    if (!name) { this.toast.error('A role name is required.'); return; }
-    this.ui.saving_role = true;
-    const payload = { name, description: this.roleForm.description.trim(), permissions: Array.from(this.selectedPerms) };
-    const done = () => { this.ui.saving_role = false; };
-    if (this.editingRole) {
-      this.adapter.put_v3('PUT /admin/roles/:id', payload, { params: { id: String(this.editingRole.id) } }).subscribe({
-        next: (r: any) => { if (r) { this.toast.success('Role updated.'); this.roleEditorOpen.set(false); this.loadRolesList(); } done(); },
-        error: () => { this.toast.error('Unable to save the role.'); done(); },
-      });
-    } else {
-      this.adapter.post_v3('POST /admin/roles', payload).subscribe({
-        next: (r: any) => { if (r) { this.toast.success('Role created.'); this.roleEditorOpen.set(false); this.loadRolesList(); } done(); },
-        error: () => { this.toast.error('Unable to create the role.'); done(); },
-      });
-    }
+    this.router.navigate(['/admin_role'], role ? { queryParams: { id: role.id } } : {});
   }
 
   deleteRole(role: RoleDetail) {

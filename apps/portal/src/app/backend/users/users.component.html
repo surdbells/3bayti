@@ -228,58 +228,6 @@
   </div>
 </aside>
 
-<!-- ─────────────────────── Role editor drawer (matrix) ─────────────────── -->
-<div *ngIf="roleEditorOpen()" class="ax-drawer-overlay" (click)="closeRoleEditor()"
-  style="position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1000; animation: fadeIn 150ms ease;"></div>
-<aside *ngIf="roleEditorOpen()" class="ax-drawer ax-drawer-right"
-  style="position: fixed; top: 0; right: 0; bottom: 0; width: min(100%, 44rem); background: var(--ax-color-bg-surface); z-index: 1001; display: flex; flex-direction: column; box-shadow: var(--ax-shadow-lg);">
-  <header class="ax-drawer-header">
-    <div class="ax-drawer-header-content">
-      <h2 class="ax-drawer-title">{{ editingRole ? 'Edit role' : 'Create role' }}</h2>
-      <p class="ax-drawer-subtitle">{{ editingRole ? editingRole.name : 'Define a role and the permissions it grants' }}</p>
-    </div>
-    <button type="button" class="ax-drawer-close" (click)="closeRoleEditor()" aria-label="Close">
-      <app-icon name="close" aria-hidden="true"></app-icon>
-    </button>
-  </header>
-  <div class="ax-drawer-body">
-    <div class="ax-form-field ax-mb-3">
-      <label class="ax-label ax-text-2xs ax-label-required" for="role_name">Role name</label>
-      <input id="role_name" class="ax-input ax-input-sm" type="text" [(ngModel)]="roleForm.name" name="role_name" placeholder="e.g. Refund Desk" />
-    </div>
-    <div class="ax-form-field ax-mb-4">
-      <label class="ax-label ax-text-2xs" for="role_description">Description</label>
-      <input id="role_description" class="ax-input ax-input-sm" type="text" [(ngModel)]="roleForm.description" name="role_description" placeholder="What this role is for" />
-    </div>
+<!-- Role + permission-matrix editing now lives at /admin_role (RoleEditorComponent),
+     opened via the Create/Edit role buttons above. -->
 
-    <div *ngIf="catalogPresets.length" class="ax-mb-4">
-      <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Start from a preset</div>
-      <div class="ax-flex ax-gap-1 ax-flex-wrap">
-        <button *ngFor="let p of catalogPresets" type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="applyPreset(p)">{{ p.name }}</button>
-      </div>
-    </div>
-
-    <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Permissions</div>
-    <div *ngFor="let m of catalogModules" class="ax-card ax-p-3 ax-mb-2">
-      <label class="ax-check" style="display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem;">
-        <input type="checkbox" class="ax-check-box" [checked]="moduleAllSelected(m)" (change)="toggleModule(m)" />
-        <span class="ax-font-medium ax-text-primary">{{ m.label }}</span>
-        <span class="ax-text-2xs ax-text-tertiary" style="margin-left: auto;">{{ moduleSelectedCount(m) }}/{{ m.permissions.length }}</span>
-      </label>
-      <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-1" style="padding-left: 1.5rem;">
-        <label *ngFor="let p of m.permissions" class="ax-check" style="display: flex; align-items: center; gap: .5rem;">
-          <input type="checkbox" class="ax-check-box" [checked]="isPermSelected(p.key)" (change)="togglePerm(p.key)" />
-          <span class="ax-check-label ax-text-sm">{{ p.label }}</span>
-        </label>
-      </div>
-    </div>
-  </div>
-  <div style="padding: 1rem 1.25rem; border-top: 1px solid var(--ax-color-border); display: flex; gap: .5rem;">
-    <button type="button" class="ax-btn ax-btn-ghost" (click)="closeRoleEditor()">Cancel</button>
-    <button type="button" class="ax-btn ax-btn-primary" style="flex: 1;" (click)="saveRole()" [disabled]="ui.saving_role">
-      <span *ngIf="ui.saving_role" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
-      <app-icon name="check_circle" *ngIf="!ui.saving_role" aria-hidden="true"></app-icon>
-      {{ editingRole ? 'Save changes' : 'Create role' }}
-    </button>
-  </div>
-</aside>
