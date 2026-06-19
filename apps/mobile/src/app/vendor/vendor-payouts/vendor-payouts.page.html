@@ -1,0 +1,69 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'vendor_payouts_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg">
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  } @else {
+    <div class="ion-padding">
+      <div class="vpo-intro">
+        <div class="vpo-intro-icon"><ax-icon name="banknote" /></div>
+        <p>{{ 'payout_intro' | translate }}</p>
+      </div>
+
+      <form (ngSubmit)="save()" class="vpo-form">
+        <label class="vpo-field">
+          <span class="vpo-label">{{ 'bank_name' | translate }}</span>
+          <input
+            class="vpo-input"
+            type="text"
+            name="bank_name"
+            [(ngModel)]="form.store_bank_name"
+            [placeholder]="'bank_name_placeholder' | translate"
+            autocomplete="off" />
+        </label>
+
+        <label class="vpo-field">
+          <span class="vpo-label">{{ 'account_holder_name' | translate }}</span>
+          <input
+            class="vpo-input"
+            type="text"
+            name="account_name"
+            [(ngModel)]="form.store_account_name"
+            [placeholder]="'account_holder_placeholder' | translate"
+            autocomplete="off" />
+        </label>
+
+        <label class="vpo-field">
+          <span class="vpo-label">{{ 'account_number_iban' | translate }}</span>
+          <input
+            class="vpo-input"
+            type="text"
+            name="account_number"
+            [(ngModel)]="form.store_account_number"
+            [placeholder]="'account_number_placeholder' | translate"
+            autocomplete="off"
+            inputmode="text" />
+        </label>
+
+        <button type="submit" class="vpo-save" [disabled]="ui_controls.is_saving">
+          @if (ui_controls.is_saving) {
+            <ax-loader></ax-loader>
+          } @else {
+            {{ 'save_payout_details' | translate }}
+          }
+        </button>
+      </form>
+    </div>
+  }
+</ion-content>

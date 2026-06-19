@@ -1,0 +1,97 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'vendor_earnings_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Window selector -->
+  <div class="ve-windows">
+    @for (w of windows; track w) {
+      <button type="button" class="ve-window" [class.ve-window--active]="days === w" (click)="setWindow(w)">
+        {{ w }} {{ 'days' | translate }}
+      </button>
+    }
+  </div>
+
+  @if (ui_controls.is_loading) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  } @else if (ui_controls.error_message) {
+    <div class="empty-state">
+      <div class="empty-icon-wrap"><ax-icon name="circle-alert" /></div>
+      <h2>{{ 'earnings_unavailable' | translate }}</h2>
+      <p>{{ ui_controls.error_message }}</p>
+    </div>
+  } @else {
+    <div class="ion-padding">
+      <!-- Headline metrics -->
+      <div class="ve-grid">
+        <div class="ve-stat ve-stat--accent">
+          <ax-icon name="banknote" />
+          <span class="ve-value">{{ aed(totals.revenue_aed) }}</span>
+          <span class="ve-label">{{ 'revenue' | translate }}</span>
+        </div>
+        <div class="ve-stat">
+          <ax-icon name="shopping-bag" />
+          <span class="ve-value">{{ totals.orders }}</span>
+          <span class="ve-label">{{ 'orders' | translate }}</span>
+        </div>
+        <div class="ve-stat">
+          <ax-icon name="star" />
+          <span class="ve-value">{{ aed(totals.aov_aed) }}</span>
+          <span class="ve-label">{{ 'avg_order_value' | translate }}</span>
+        </div>
+        <div class="ve-stat">
+          <ax-icon name="package" />
+          <span class="ve-value">{{ totals.items }}</span>
+          <span class="ve-label">{{ 'items_sold' | translate }}</span>
+        </div>
+      </div>
+
+      <!-- Top products -->
+      <h2 class="ve-section-title">{{ 'top_products' | translate }}</h2>
+      @if (topProducts.length === 0) {
+        <p class="ve-muted">{{ 'no_sales_in_period' | translate }}</p>
+      } @else {
+        <div class="ve-list">
+          @for (p of topProducts; track p.product_id; let i = $index) {
+            <div class="ve-row">
+              <span class="ve-rank">{{ i + 1 }}</span>
+              <div class="ve-row-body">
+                <span class="ve-row-name">{{ p.name }}</span>
+                <span class="ve-row-sub">{{ p.units }} {{ 'units_sold' | translate }}</span>
+              </div>
+              <span class="ve-row-amt">{{ aed(p.revenue_aed) }}</span>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Customers + fulfilment -->
+      <h2 class="ve-section-title">{{ 'customers' | translate }}</h2>
+      <div class="ve-mix">
+        <div class="ve-mix-item"><span class="ve-mix-n">{{ customerMix.new }}</span><span class="ve-mix-l">{{ 'new_customers' | translate }}</span></div>
+        <div class="ve-mix-item"><span class="ve-mix-n">{{ customerMix.returning }}</span><span class="ve-mix-l">{{ 'returning' | translate }}</span></div>
+        <div class="ve-mix-item"><span class="ve-mix-n">{{ customerMix.total }}</span><span class="ve-mix-l">{{ 'total' | translate }}</span></div>
+      </div>
+
+      <h2 class="ve-section-title">{{ 'fulfilment' | translate }}</h2>
+      <div class="ve-mix">
+        <div class="ve-mix-item"><span class="ve-mix-n ve-ok">{{ statusMix.delivered }}</span><span class="ve-mix-l">{{ 'delivered' | translate }}</span></div>
+        <div class="ve-mix-item"><span class="ve-mix-n ve-warn">{{ statusMix.cancelled }}</span><span class="ve-mix-l">{{ 'cancelled' | translate }}</span></div>
+        <div class="ve-mix-item"><span class="ve-mix-n ve-warn">{{ statusMix.returned }}</span><span class="ve-mix-l">{{ 'returned' | translate }}</span></div>
+      </div>
+    </div>
+  }
+</ion-content>

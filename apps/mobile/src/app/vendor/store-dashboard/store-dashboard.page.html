@@ -92,7 +92,7 @@
         <span class="stat-label">{{ 'unread_messages' | translate }}</span>
       </button>
 
-      <button type="button" class="stat-card" (click)="comingSoon()">
+      <button type="button" class="stat-card" (click)="navigateTo('/vendor-products')">
         <div class="stat-icon stat-icon--products">
           <ax-icon name="package"></ax-icon>
         </div>
@@ -100,7 +100,7 @@
         <span class="stat-label">{{ 'products' | translate }}</span>
       </button>
 
-      <button type="button" class="stat-card" (click)="comingSoon()">
+      <button type="button" class="stat-card" (click)="navigateTo('/vendor-earnings')">
         <div class="stat-icon stat-icon--earnings">
           <ax-icon name="banknote"></ax-icon>
         </div>
@@ -138,6 +138,18 @@
         <div class="action-content">
           <h3>{{ 'customer_messages' | translate }}</h3>
           <p>{{ 'chat_with_customers' | translate }}</p>
+        </div>
+        <ax-icon name="chevron-right" class="action-arrow"></ax-icon>
+      </button>
+
+      <!-- Payouts / bank details -->
+      <button type="button" class="action-card" (click)="navigateTo('/vendor-payouts')">
+        <div class="action-icon">
+          <ax-icon name="banknote"></ax-icon>
+        </div>
+        <div class="action-content">
+          <h3>{{ 'payouts' | translate }}</h3>
+          <p>{{ 'payouts_subtitle' | translate }}</p>
         </div>
         <ax-icon name="chevron-right" class="action-arrow"></ax-icon>
       </button>

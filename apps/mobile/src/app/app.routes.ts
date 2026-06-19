@@ -171,6 +171,21 @@ export const routes: Routes = [
     path: 'vendor-orders/:id',
     loadComponent: () => import('./vendor/vendor-order-detail/vendor-order-detail.page').then(m => m.VendorOrderDetailPage),
     title: 'Order Detail'
+  }, {
+    // Vendor catalog — own products list + quick edits
+    path: 'vendor-products',
+    loadComponent: () => import('./vendor/vendor-products/vendor-products.page').then(m => m.VendorProductsPage),
+    title: 'My Products'
+  }, {
+    // Vendor self-serve earnings (GET /vendor/analytics)
+    path: 'vendor-earnings',
+    loadComponent: () => import('./vendor/vendor-earnings/vendor-earnings.page').then(m => m.VendorEarningsPage),
+    title: 'Earnings'
+  }, {
+    // Vendor payout / bank details (GET|PATCH /vendor/store/payment)
+    path: 'vendor-payouts',
+    loadComponent: () => import('./vendor/vendor-payouts/vendor-payouts.page').then(m => m.VendorPayoutsPage),
+    title: 'Payouts'
   },
   {
     path: 'gift-cards',

@@ -1,0 +1,71 @@
+<ion-header class="m7-header-shadow ion-no-border">
+  <ion-toolbar class="m7-toolbar ion-no-border">
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+        <ax-icon name="arrow-left" />
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="m7-title">{{ 'vendor_products_title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content fullscreen="true" class="page-bg">
+  <ion-searchbar
+    [placeholder]="'search_products' | translate"
+    [(ngModel)]="search"
+    debounce="400"
+    (ionInput)="onSearch()"
+    (ionClear)="onSearch()">
+  </ion-searchbar>
+
+  @if (ui_controls.is_loading && products.length === 0) {
+    <div class="loader-row">
+      <ax-loader></ax-loader>
+    </div>
+  }
+
+  @if (!ui_controls.is_loading && products.length === 0) {
+    <div class="empty-state">
+      <div class="empty-icon-wrap">
+        <ax-icon name="package" />
+      </div>
+      <h2>{{ 'no_products_yet' | translate }}</h2>
+      <p>{{ 'no_products_hint' | translate }}</p>
+    </div>
+  } @else {
+    <div class="vp-list ion-padding">
+      @for (p of products; track p.id) {
+        <ion-card class="vp-card">
+          <div class="vp-thumb">
+            @if (p.image) {
+              <img [src]="p.image" [alt]="p.name" (error)="onImgError($event)" />
+            } @else {
+              <div class="vp-thumb--ph"><ax-icon name="package" /></div>
+            }
+          </div>
+
+          <div class="vp-body">
+            <h3 class="vp-name">{{ p.name }}</h3>
+            <div class="vp-price">{{ p.price_formatted }}</div>
+            <div class="vp-badges">
+              <span class="vp-badge" [ngClass]="'vp-badge--' + stockClass(p.stock_status)">
+                {{ ('stock_' + p.stock_status) | translate }}
+              </span>
+              <span class="vp-badge" [ngClass]="p.status === 'published' ? 'vp-badge--pub' : 'vp-badge--draft'">
+                {{ (p.status === 'published' ? 'status_published' : 'status_draft') | translate }}
+              </span>
+            </div>
+          </div>
+
+          <button type="button" class="vp-manage" (click)="openActions(p)" [attr.aria-label]="'manage' | translate">
+            <ax-icon name="pencil" />
+          </button>
+        </ion-card>
+      }
+    </div>
+
+    <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)" [disabled]="!ui_controls.has_more">
+      <ion-infinite-scroll-content></ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+  }
+</ion-content>

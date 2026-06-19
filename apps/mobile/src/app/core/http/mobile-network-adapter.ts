@@ -357,6 +357,23 @@ export class MobileNetworkAdapter {
   }
 
   /**
+   * PUT a v3 endpoint directly by routeKey. Added for vendor product
+   * writes (PUT /vendor/products/:id), which the API exposes as PUT with
+   * partial-update semantics (only the fields present are applied).
+   */
+  put_v3(
+    routeKey: string,
+    body: unknown,
+    opts?: {
+      authToken?: string;
+      pathParams?: Record<string, string>;
+      queryParams?: Record<string, string | number | boolean>;
+    },
+  ): Observable<unknown> {
+    return this.callV3Direct('PUT', routeKey, body, opts);
+  }
+
+  /**
    * DELETE a v3 endpoint directly by routeKey. Added M3.2.Z.3-Mobile
    * for wishlist label/item deletion and similar mutating endpoints.
    */
