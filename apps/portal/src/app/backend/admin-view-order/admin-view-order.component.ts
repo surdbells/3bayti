@@ -114,8 +114,9 @@ export class AdminViewOrderComponent implements OnInit {
     const avOId = this.single.order ?? this.single.id;
     this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(avOId) } }).subscribe({
       next: (response: any) => {
-        if (response) {
-          this.data = response.data;
+        const order = response?.order ?? response?.data ?? null;
+        if (order) {
+          this.data = this.mapV3Order(order);
         }
         this.ui_controls.is_loading = false;
       },
@@ -123,6 +124,72 @@ export class AdminViewOrderComponent implements OnInit {
         this.ui_controls.is_loading = false;
       },
     });
+  }
+
+  /**
+   * Flatten the nested v3 admin order (items[]/customer/shipping_address)
+   * into the flat fields this invoice template binds. Mirrors the vendor
+   * view-order mapper; without it the response.data shape never matched the
+   * template and the invoice rendered blank.
+   */
+  private mapV3Order(o: any): any {
+    const items = o.items ?? [];
+    const first = items[0] ?? {};
+    const customer = o.customer ?? {};
+    const ship = o.shipping_address ?? {};
+    const customerName = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim();
+    const deliveryName = `${ship.first_name ?? ''} ${ship.last_name ?? ''}`.trim();
+    return {
+      ...o,
+      id: o.id,
+      order: o.id,
+      order_ref: o.order_reference,
+      merchantReference: o.provider_order_ref ?? '',
+      status: o.status,
+      payment_status: o.payment_status ?? '',
+      cart_code: o.cart_code ?? '',
+      // Bill to (account holder)
+      customer_name: customerName || customer.email || '',
+      customer_email: customer.email ?? '',
+      // Deliver to (shipping recipient)
+      delivery_name: deliveryName || customerName,
+      delivery_phone: ship.phone ?? customer.phone ?? '',
+      delivery_email: ship.email ?? '',
+      delivery_street_address: ship.street ?? '',
+      delivery_area: ship.state_province ?? '',
+      delivery_city: ship.city ?? '',
+      villa_number: '',
+      // First line item
+      name: first.product_name ?? o.order_reference ?? '',
+      image: first.product_image ?? '',
+      size: first.size ?? '',
+      color: first.color ?? '',
+      note: first.note ?? '',
+      quantity: items.reduce((s: number, i: any) => s + (i.quantity ?? 1), 0),
+      price: first.unit_price ?? o.subtotal ?? '',
+      total: o.total ?? o.subtotal ?? first.subtotal ?? '',
+      // Custom-size measurement snapshot (best-effort label mapping)
+      measurement: this.mapMeasurement(first.measurement),
+      extra_measurement: first.extra_measurement ?? '',
+    };
+  }
+
+  /** Parse the order item's measurement snapshot into the labelled fields. */
+  private mapMeasurement(raw: any): any {
+    let m: any = {};
+    if (raw && typeof raw === 'object') {
+      m = raw;
+    } else if (typeof raw === 'string' && raw.trim() !== '') {
+      try { m = JSON.parse(raw); } catch { m = {}; }
+    }
+    return {
+      bust: m.bust ?? m.bust_chest ?? '',
+      neck: m.neck ?? '',
+      waist: m.waist ?? '',
+      length: m.length ?? m.height ?? '',
+      hip: m.hip ?? m.hips ?? '',
+      arm: m.arm ?? m.sleeve_length ?? '',
+    };
   }
 
   printInvoice() {
