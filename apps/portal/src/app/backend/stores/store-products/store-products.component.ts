@@ -172,8 +172,13 @@ export class StoreProductsComponent implements OnInit {
   }
 
   onRowAction(e: { action: { id: string }; row: ProductRow }) {
-    if (e.action.id === 'edit') this.openEdit(e.row);
-    else if (e.action.id === 'delete') this.confirmDelete(e.row);
+    if (e.action.id === 'edit') {
+      // Open the full routed product editor (loads real product detail) —
+      // same pattern as AdminProducts — instead of the partial inline drawer.
+      this.router.navigate(['/admin_edit_product'], { queryParams: { id: e.row.id, slug: String(e.row['slug'] ?? '') } });
+    } else if (e.action.id === 'delete') {
+      this.confirmDelete(e.row);
+    }
   }
 
   /** Map the catalog product shape (price.amount, in_stock, category_slug)
@@ -199,9 +204,9 @@ export class StoreProductsComponent implements OnInit {
 
   // ── Create / Edit drawer ───────────────────────────────────────────
   openCreate() {
-    this.form = { ...EMPTY_FORM };
-    this.editing.set(false);
-    this.drawerOpen.set(true);
+    // Route to the full create-product page, passing the store's vendor so it
+    // can default to this store (the form still lets admin change it).
+    this.router.navigate(['/admin_create_product'], { queryParams: { vendor_id: this.vendorV3Id } });
   }
 
   openEdit(row: ProductRow) {
