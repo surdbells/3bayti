@@ -231,8 +231,8 @@
             </fieldset>
           }
 
-          <!-- Made-to-measure: measurement input (reuses .pdp-options layout) -->
-          @if (requiresMeasurement()) {
+          <!-- Vendor's extra measurement (reuses .pdp-options layout) -->
+          @if (requiresExtraMeasurement()) {
             <fieldset class="pdp-options pdp-measurement" data-testid="pdp-measurement">
               <legend>{{ 'product.measurementTitle' | translate }}</legend>
               @if (measurementInstructions(); as guide) {
@@ -241,8 +241,8 @@
               <textarea
                 class="pdp-measurement__input"
                 rows="3"
-                [value]="measurement()"
-                (input)="onMeasurementInput($event)"
+                [value]="extraMeasurement()"
+                (input)="onExtraMeasurementInput($event)"
                 [attr.placeholder]="'product.measurementPlaceholder' | translate"
                 [attr.aria-label]="'product.measurementTitle' | translate"
                 data-testid="pdp-measurement-input"
@@ -300,7 +300,7 @@
               <span>{{ 'product.hintColor' | translate }}</span>
             </p>
           }
-          @if (p.in_stock && requiresMeasurement() && measurement().trim() === '') {
+          @if (p.in_stock && requiresExtraMeasurement() && extraMeasurement().trim() === '') {
             <p class="pdp-buybox__hint" data-testid="pdp-hint-measurement">
               <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                 <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>

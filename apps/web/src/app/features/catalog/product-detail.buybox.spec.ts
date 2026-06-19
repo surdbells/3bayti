@@ -163,8 +163,7 @@ describe('ProductDetail buy box', () => {
         quantity: 2,
         size: 'M',
         color: 'Black',
-        is_custom: false,
-        measurement: null,
+        extra_measurement: null,
       });
       expect(openDrawerMock).toHaveBeenCalledOnce();
       expect(c.adding()).toBe(false);
@@ -179,8 +178,7 @@ describe('ProductDetail buy box', () => {
         quantity: 1,
         size: null,
         color: null,
-        is_custom: false,
-        measurement: null,
+        extra_measurement: null,
       });
     });
 
@@ -216,35 +214,34 @@ describe('ProductDetail buy box', () => {
     });
   });
 
-  describe('made-to-measure', () => {
-    it('blocks add-to-cart until a measurement is entered', () => {
+  describe('extra measurement', () => {
+    it('blocks add-to-cart until the extra measurement is entered', () => {
       const c = setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] })).componentInstance;
-      expect(c.requiresMeasurement()).toBe(true);
+      expect(c.requiresExtraMeasurement()).toBe(true);
       expect(c.selectionValid()).toBe(false);
       expect(c.canAddToCart()).toBe(false);
 
-      c.measurement.set('Bust 92, Length 142');
+      c.extraMeasurement.set('Length 56 inches');
       expect(c.selectionValid()).toBe(true);
       expect(c.canAddToCart()).toBe(true);
     });
 
-    it('treats a whitespace-only measurement as empty', () => {
+    it('treats a whitespace-only extra measurement as empty', () => {
       const c = setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] })).componentInstance;
-      c.measurement.set('   ');
+      c.extraMeasurement.set('   ');
       expect(c.selectionValid()).toBe(false);
     });
 
-    it('sends is_custom + the trimmed measurement on add-to-cart', async () => {
+    it('sends the trimmed extra_measurement on add-to-cart', async () => {
       const c = setup(makeProduct({ requires_measurement: true, sizes: [], colors: [] })).componentInstance;
-      c.measurement.set('  Bust 92, Length 142  ');
+      c.extraMeasurement.set('  Length 56 inches  ');
       await c.addToCart();
       expect(addItemMock).toHaveBeenCalledWith({
         product_id: 100,
         quantity: 1,
         size: null,
         color: null,
-        is_custom: true,
-        measurement: 'Bust 92, Length 142',
+        extra_measurement: 'Length 56 inches',
       });
     });
   });

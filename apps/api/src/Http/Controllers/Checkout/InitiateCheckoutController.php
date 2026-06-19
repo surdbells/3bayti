@@ -175,17 +175,17 @@ final class InitiateCheckoutController
             );
         }
 
-        // Made-to-measure backstop: every made-to-measure line must carry the
-        // customer's measurement. AddCartItemController blocks these at add
-        // time; this guards carts that predate that rule (or were tampered
-        // with) so a vendor never receives an un-fulfillable order line.
+        // Extra-measurement backstop: every line whose product requires the
+        // vendor's extra measurement must carry it. AddCartItemController blocks
+        // these at add time; this guards carts that predate that rule (or were
+        // tampered with) so a vendor never receives an un-fulfillable line.
         foreach ($cart->getItems() as $cartItem) {
             $itemProduct = $cartItem->getProduct();
-            if ($itemProduct->requiresExtraMsmt() && trim((string) $cartItem->getMeasurement()) === '') {
+            if ($itemProduct->requiresExtraMsmt() && trim((string) $cartItem->getExtraMeasurement()) === '') {
                 throw HttpException::businessRuleViolation(
                     ErrorCodes::VALIDATION_FAILED,
                     sprintf(
-                        '"%s" is made to measure — add your measurements before checking out.',
+                        '"%s" needs an extra measurement before you can check out.',
                         $itemProduct->getName(),
                     ),
                 );

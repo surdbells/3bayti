@@ -909,9 +909,9 @@
     "addToCart": "Add to cart",
     "hintSize": "Select a size to continue.",
     "hintColor": "Select a colour to continue.",
-    "measurementTitle": "Your measurements",
-    "measurementPlaceholder": "Enter your measurements (e.g. bust, waist, length in cm)",
-    "hintMeasurement": "Add your measurements to continue.",
+    "measurementTitle": "Extra measurements",
+    "measurementPlaceholder": "Any extra measurements the seller needs (e.g. length in inches)",
+    "hintMeasurement": "Add the extra measurements to continue.",
     "addError": "We couldn't add this to your cart. Please try again.",
     "trust": {
       "aria": "Delivery, returns and payment",

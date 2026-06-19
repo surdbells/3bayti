@@ -245,7 +245,7 @@ final class AddCartItemControllerTest extends HttpTestCase
     }
 
     #[Test]
-    public function rejectsMadeToMeasureWithoutMeasurementWith422(): void
+    public function rejectsRequiredExtraMeasurementMissingWith422(): void
     {
         $user = $this->makeUser(id: 7);
         $product = $this->makeProduct(id: 100, name: 'Bespoke Abaya', price: '799.00', requiresMsmt: true);
@@ -271,7 +271,7 @@ final class AddCartItemControllerTest extends HttpTestCase
             $this->jsonRequest('POST', '/v3/cart/items', [
                 'product_id' => 100,
                 'quantity' => 1,
-                /* no measurement supplied */
+                /* no extra_measurement supplied */
             ], [
                 'Authorization' => 'Bearer ' . $pair->accessToken,
             ])
@@ -280,11 +280,11 @@ final class AddCartItemControllerTest extends HttpTestCase
         self::assertSame(422, $response->getStatusCode());
         $body = $this->jsonBody($response);
         self::assertSame('VALIDATION_FAILED', $body['error']['code']);
-        self::assertArrayHasKey('measurement', $body['error']['details']['fields']);
+        self::assertArrayHasKey('extra_measurement', $body['error']['details']['fields']);
     }
 
     #[Test]
-    public function acceptsMadeToMeasureWithMeasurementWith201(): void
+    public function acceptsWithExtraMeasurementWith201(): void
     {
         $user = $this->makeUser(id: 7);
         $product = $this->makeProduct(id: 100, name: 'Bespoke Abaya', price: '799.00', requiresMsmt: true);
@@ -325,8 +325,7 @@ final class AddCartItemControllerTest extends HttpTestCase
             $this->jsonRequest('POST', '/v3/cart/items', [
                 'product_id' => 100,
                 'quantity' => 1,
-                'is_custom' => true,
-                'measurement' => 'Bust 92, Waist 74, Length 142',
+                'extra_measurement' => 'Length 56 inches',
             ], [
                 'Authorization' => 'Bearer ' . $pair->accessToken,
             ])
@@ -334,8 +333,7 @@ final class AddCartItemControllerTest extends HttpTestCase
 
         self::assertSame(201, $response->getStatusCode());
         $line = $this->jsonBody($response)['cart']['items'][0];
-        self::assertTrue($line['is_custom']);
-        self::assertSame('Bust 92, Waist 74, Length 142', $line['measurement']);
+        self::assertSame('Length 56 inches', $line['extra_measurement']);
     }
 
     #[Test]

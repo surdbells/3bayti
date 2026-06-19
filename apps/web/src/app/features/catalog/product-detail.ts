@@ -341,8 +341,9 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   readonly selectedSize = signal<string | null>(null);
   /** Selected colour label (null until the shopper picks one). */
   readonly selectedColor = signal<string | null>(null);
-  /** Made-to-measure free-text measurement (empty until the shopper types). */
-  readonly measurement = signal('');
+  /** Vendor's EXTRA measurement (free text) — additional measurements the
+   *  seller needs beyond the account profile. Empty until the shopper types. */
+  readonly extraMeasurement = signal('');
   /** Quantity to add (1–99). */
   readonly quantity = signal(1);
   /** True while an add-to-cart request is in flight. */
@@ -353,9 +354,9 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /** Whether this product offers a size / colour axis at all. */
   readonly hasSizes = computed(() => (this.product()?.sizes?.length ?? 0) > 0);
   readonly hasColors = computed(() => (this.product()?.colors?.length ?? 0) > 0);
-  /** Whether this product is made-to-measure and needs a measurement. */
-  readonly requiresMeasurement = computed(() => this.product()?.requires_measurement === true);
-  /** Optional on-PDP measurement guidance from the vendor. */
+  /** Whether the product asks for the vendor's EXTRA measurement field. */
+  readonly requiresExtraMeasurement = computed(() => this.product()?.requires_measurement === true);
+  /** Optional on-PDP guidance shown beside the extra-measurement field. */
   readonly measurementInstructions = computed(() => this.product()?.measurement_instructions ?? null);
 
   /**
@@ -376,8 +377,8 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       const c = this.selectedColor();
       if (!c || !colors.some((x) => x.label === c && x.in_stock)) return false;
     }
-    /* Made-to-measure products need a non-empty measurement. */
-    if (p.requires_measurement === true && this.measurement().trim() === '') return false;
+    /* Products that ask for an extra measurement need it filled in. */
+    if (p.requires_measurement === true && this.extraMeasurement().trim() === '') return false;
     return true;
   });
 
@@ -504,7 +505,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       this.product();
       this.selectedSize.set(null);
       this.selectedColor.set(null);
-      this.measurement.set('');
+      this.extraMeasurement.set('');
       this.quantity.set(1);
       this.addError.set(null);
     });
@@ -706,8 +707,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
         quantity: this.quantity(),
         size: this.selectedSize(),
         color: this.selectedColor(),
-        is_custom: this.requiresMeasurement(),
-        measurement: this.requiresMeasurement() ? this.measurement().trim() : null,
+        extra_measurement: this.requiresExtraMeasurement() ? this.extraMeasurement().trim() : null,
       });
       this.cartDrawer.open();
     } catch {
@@ -717,9 +717,9 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     }
   }
 
-  /** Bind the made-to-measure textarea to the measurement signal. */
-  onMeasurementInput(event: Event): void {
-    this.measurement.set((event.target as HTMLTextAreaElement).value);
+  /** Bind the extra-measurement textarea to its signal. */
+  onExtraMeasurementInput(event: Event): void {
+    this.extraMeasurement.set((event.target as HTMLTextAreaElement).value);
   }
 
   /** Format Money (AED 530.00 → "AED 530"). */
