@@ -100,11 +100,13 @@
                 [href]="categoryUrl(cat.slug)"
                 class="bento__tile"
                 [class.bento__tile--feature]="first"
-                [attr.data-cat]="categoryKey(cat.slug)"
+                [class.bento__tile--photo]="cat.image"
                 role="listitem"
                 [attr.aria-label]="'home.categories.tileAria' | translate:{ name: cat.name, count: cat.product_count }"
               >
-                @if (iconFor(cat.slug); as iconUrl) {
+                @if (cat.image) {
+                  <img class="bento__photo" [src]="cat.image.url" alt="" loading="lazy" decoding="async" />
+                } @else if (iconFor(cat.slug); as iconUrl) {
                   <span class="bento__icon" aria-hidden="true">
                     <img [src]="iconUrl" alt="" loading="lazy" decoding="async" />
                   </span>

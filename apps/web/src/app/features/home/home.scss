@@ -384,7 +384,7 @@
   justify-content: flex-end;
   padding: var(--space-md);
   border-radius: var(--radius-lg);
-  background: var(--tile-grad, linear-gradient(155deg, var(--color-brand-50), var(--color-bg-surface) 70%));
+  background: linear-gradient(155deg, var(--color-brand-50), var(--color-bg-surface) 70%);
   border: 1px solid var(--color-border-subtle);
   box-shadow: var(--shadow-card-resting);
   text-decoration: none;
@@ -404,17 +404,48 @@
   outline-offset: 2px;
 }
 
-/* Per-category vibrant gradients (#6). A saturated hue in the top corner
-   fades to cream (brand-50) by ~58% so the bottom-anchored label keeps its
-   dark brand-700 contrast. Keyed on categoryKey(slug); unknown categories
-   fall back to the neutral base gradient above. */
-.bento__tile[data-cat='abayas']         { --tile-grad: linear-gradient(155deg, #a173b8 0%, var(--color-brand-50) 58%); }
-.bento__tile[data-cat='bags']           { --tile-grad: linear-gradient(155deg, #d98b6a 0%, var(--color-brand-50) 58%); }
-.bento__tile[data-cat='accessories']    { --tile-grad: linear-gradient(155deg, #d9b24a 0%, var(--color-brand-50) 58%); }
-.bento__tile[data-cat='dresses']        { --tile-grad: linear-gradient(155deg, #d9789b 0%, var(--color-brand-50) 58%); }
-.bento__tile[data-cat='kaftans']        { --tile-grad: linear-gradient(155deg, #5fae8a 0%, var(--color-brand-50) 58%); }
-.bento__tile[data-cat='mukhawars']      { --tile-grad: linear-gradient(155deg, #6f93cf 0%, var(--color-brand-50) 58%); }
-.bento__tile[data-cat='modest-clothes'] { --tile-grad: linear-gradient(155deg, #9bab6a 0%, var(--color-brand-50) 58%); }
+/* Live cover image (admin-set category image) fills the tile; a bottom scrim
+   keeps the label readable over any photo. Tiles without an image keep the
+   neutral gradient + line-art icon above. */
+.bento__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+.bento__tile--photo {
+  border-color: transparent;
+  color: #fff;
+}
+
+.bento__tile--photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    to top,
+    rgba(20, 14, 10, 0.62) 0%,
+    rgba(20, 14, 10, 0.14) 48%,
+    rgba(20, 14, 10, 0) 100%
+  );
+}
+
+.bento__tile--photo .bento__meta {
+  position: relative;
+  z-index: 2;
+}
+
+.bento__tile--photo .bento__name {
+  color: #fff;
+}
+
+.bento__tile--photo .bento__count {
+  color: rgba(255, 255, 255, 0.85);
+}
 
 /* Marquee tile: full-width band on small layouts; 2x2 on desktop. */
 .bento__tile--feature {
