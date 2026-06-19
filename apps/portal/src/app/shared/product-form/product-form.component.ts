@@ -133,6 +133,9 @@ export class ProductFormComponent implements OnInit {
   @Input() productSlug = '';
   /** Where to navigate after a successful save (defaults per role). */
   @Input() returnTo: string | null = null;
+  /** Admin create only: pre-select this vendor/store in the selector
+   *  (e.g. "New product" opened from a specific store's product page). */
+  @Input() vendorId = 0;
   @Output() saved = new EventEmitter<void>();
 
   private readonly confirm = inject(AxConfirmService);
@@ -218,6 +221,8 @@ export class ProductFormComponent implements OnInit {
     this.fetchCollections();
     this.fetchVendorLabels();
     if (this.adminMode) this.fetchVendors();
+    // Pre-select the store when an admin creates from a specific store's page.
+    if (this.adminMode && this.mode === 'create' && this.vendorId) this.model.vendor_id = this.vendorId;
     if (this.mode === 'edit' && (this.productId || this.productSlug)) this.fetchProductById();
   }
 

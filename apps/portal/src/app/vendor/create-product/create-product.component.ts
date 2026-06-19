@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { GlobalComponent } from '../../global-component';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
@@ -20,15 +21,21 @@ import { ProductFormComponent } from '../../shared/product-form/product-form.com
     </app-vendor-shell>
     <ng-template #adminShell>
       <app-admin-shell>
-        <app-product-form mode="create" [adminMode]="true"></app-product-form>
+        <app-product-form mode="create" [adminMode]="true" [vendorId]="vendorId"></app-product-form>
       </app-admin-shell>
     </ng-template>
   `,
 })
 export class CreateProductComponent implements OnInit {
   isAdmin = false;
+  /** When opened from a store's product page (?vendor_id=), pre-select that store. */
+  vendorId = 0;
+
+  constructor(private route: ActivatedRoute) {}
+
   ngOnInit(): void {
     const s = GlobalComponent.decodeBase64(sessionStorage.getItem('SESSION') ?? '');
     this.isAdmin = !!s?.is_admin && !s?.is_vendor;
+    this.vendorId = Number(this.route.snapshot.queryParamMap.get('vendor_id')) || 0;
   }
 }
