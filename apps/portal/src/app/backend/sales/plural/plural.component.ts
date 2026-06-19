@@ -70,13 +70,17 @@ export class PluralComponent implements OnInit {
   }
 
   get_processingById() {
-    this.getProcessingById.vendor = this.single_vendor;
     this.ui_controls.is_loading = true;
-    const pluralOId = this.getProcessingById.id;
-    this.adapter.get_v3('GET /admin/orders/:id', { params: { id: String(pluralOId) } }).subscribe({
+    // The `vendor` query param is the v3 vendor id (the sales row's vendor_id).
+    // Fetch the full admin vendor profile, exactly like manage-store. The
+    // previous code fetched an ORDER by the admin's OWN user id and bound it
+    // as a vendor, so every store/bank/license field rendered blank.
+    const vendorId = this.single_vendor;
+    this.adapter.get_v3('GET /admin/vendors/:id', { params: { id: String(vendorId) } }).subscribe({
       next: (response: any) => {
-        if (response) {
-          this.vendor = response.data;
+        const v = response?.data ?? response ?? null;
+        if (v) {
+          this.vendor = v;
           this.get_vendorProducts();
         } else {
           this.ui_controls.is_loading = false;
@@ -89,13 +93,12 @@ export class PluralComponent implements OnInit {
   }
 
   get_vendorProducts() {
-    this.getProductsByVendor.vendor = this.vendor.id;
-    const pluralVId = this.getProductsByVendor.vendor ?? this.getProductsByVendor.id;
-    this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(pluralVId) } }).subscribe({
+    // The products endpoint is keyed by LEGACY vendor id; the admin vendor
+    // detail carries it as legacy_vendor_id.
+    const legacyId = (this.vendor as any).legacy_vendor_id ?? this.vendor.id;
+    this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', { params: { id: String(legacyId) } }).subscribe({
       next: (response: any) => {
-        if (response) {
-          this.items = response.data;
-        }
+        this.items = response?.data ?? [];
         this.ui_controls.is_loading = false;
       },
       error: () => {
