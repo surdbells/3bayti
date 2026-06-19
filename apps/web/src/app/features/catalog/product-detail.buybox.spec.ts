@@ -330,4 +330,38 @@ describe('ProductDetail buy box', () => {
       expect(c.customMeasurementComplete()).toBe(true);
     });
   });
+
+  describe('size-optional categories', () => {
+    it('does not require a size (even with CUSTOM available) for an exempt category', () => {
+      const c = setup(
+        makeProduct({
+          category_slug: 'kaftans-3',
+          sizes: [
+            { label: 'M', in_stock: true },
+            { label: 'CUSTOM', in_stock: true },
+          ],
+          colors: [],
+        }),
+        { authenticated: false },
+      ).componentInstance;
+      expect(c.isSizeOptional()).toBe(true);
+      // No size selected, not signed in — still addable.
+      expect(c.canAddToCart()).toBe(true);
+    });
+
+    it('allows CUSTOM in an exempt category without measurements or sign-in', () => {
+      const c = setup(
+        makeProduct({
+          category_slug: 'bags-2',
+          sizes: [{ label: 'CUSTOM', in_stock: true }],
+          colors: [],
+        }),
+        { authenticated: false },
+      ).componentInstance;
+      c.selectSize({ label: 'CUSTOM', in_stock: true });
+      expect(c.isCustomSize()).toBe(true);
+      expect(c.isSizeOptional()).toBe(true);
+      expect(c.canAddToCart()).toBe(true);
+    });
+  });
 });

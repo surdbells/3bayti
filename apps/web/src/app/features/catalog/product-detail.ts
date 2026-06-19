@@ -41,6 +41,10 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { MeasurementService, MEASUREMENT_FIELDS } from '../account/measurement.service';
 
+/** Categories where size selection is optional — a size (incl. CUSTOM) is
+ *  never required before add-to-cart, and CUSTOM doesn't force measurements. */
+const SIZE_OPTIONAL_CATEGORIES = ['bags', 'accessories', 'kaftans', 'mukhawars'];
+
 /**
  * Product detail page (PDP) — `/product/:slug`.
  *
@@ -368,6 +372,11 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
   /** Whether the chosen size is the made-to-order "CUSTOM" option. */
   readonly isCustomSize = computed(() => (this.selectedSize() ?? '').toUpperCase() === 'CUSTOM');
+  /** True when the product's category makes size selection optional. */
+  readonly isSizeOptional = computed(() => {
+    const key = (this.product()?.category_slug ?? '').toLowerCase().replace(/-\d+$/, '');
+    return SIZE_OPTIONAL_CATEGORIES.includes(key);
+  });
   /** Canonical body-measurement fields (mirrors the account profile). */
   readonly measurementFields = MEASUREMENT_FIELDS;
   /** Custom-size body measurements: field -> input string (cm). */
@@ -402,7 +411,10 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     const p = this.product();
     if (!p) return false;
     const sizes = p.sizes ?? [];
-    if (sizes.length > 0) {
+    /* Size is required unless the category makes it optional (bags,
+       accessories, kaftans, mukhawars). Out-of-stock sizes can't be picked
+       (the chips disable them), so an optional category just skips the check. */
+    if (sizes.length > 0 && !this.isSizeOptional()) {
       const s = this.selectedSize();
       if (!s || !sizes.some((x) => x.label === s && x.in_stock)) return false;
     }
@@ -413,8 +425,9 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     }
     /* Products that ask for an extra measurement need it filled in. */
     if (p.requires_measurement === true && this.extraMeasurement().trim() === '') return false;
-    /* CUSTOM size requires a signed-in shopper with a complete measurement. */
-    if (this.isCustomSize()) {
+    /* CUSTOM size requires a signed-in shopper with a complete measurement —
+       unless the category makes size optional, where it's never forced. */
+    if (this.isCustomSize() && !this.isSizeOptional()) {
       if (!this.isAuthenticated()) return false;
       if (!this.customMeasurementComplete()) return false;
     }

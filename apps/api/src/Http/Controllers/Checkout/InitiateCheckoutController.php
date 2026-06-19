@@ -190,8 +190,12 @@ final class InitiateCheckoutController
                     ),
                 );
             }
-            // CUSTOM size must carry the body-measurement snapshot.
-            if (strtoupper((string) $cartItem->getSize()) === 'CUSTOM' && trim((string) $cartItem->getMeasurement()) === '') {
+            // CUSTOM size must carry the body-measurement snapshot — unless the
+            // category makes size optional (bags/accessories/kaftans/mukhawars).
+            if (strtoupper((string) $cartItem->getSize()) === 'CUSTOM'
+                && !$this->isSizeOptionalCategory($itemProduct)
+                && trim((string) $cartItem->getMeasurement()) === ''
+            ) {
                 throw HttpException::businessRuleViolation(
                     ErrorCodes::VALIDATION_FAILED,
                     sprintf(
@@ -796,6 +800,18 @@ final class InitiateCheckoutController
         $epochMs = (int) (microtime(true) * 1000);
         $rand = bin2hex(random_bytes(2)); // 4 hex chars
         return sprintf('V3-%013d-%s', $epochMs, $rand);
+    }
+
+    /**
+     * Categories where size selection (incl. CUSTOM) is optional, so a CUSTOM
+     * line isn't forced to carry a measurement. Keyed on the bare category
+     * name (the slug's trailing "-<id>" stripped).
+     */
+    private function isSizeOptionalCategory(\Bayti\Api\Domain\Catalog\Product $product): bool
+    {
+        $slug = $product->getCategory()?->getSlug() ?? '';
+        $key = strtolower((string) preg_replace('/-\d+$/', '', $slug));
+        return in_array($key, ['bags', 'accessories', 'kaftans', 'mukhawars'], true);
     }
 
     private function buildReturnUrl(string $orderReference): string

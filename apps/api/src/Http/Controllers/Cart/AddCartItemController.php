@@ -91,8 +91,12 @@ final class AddCartItemController
 
         // CUSTOM size is made-to-order: it must carry the customer's body
         // measurement snapshot. Server-authoritative on the size value so a
-        // spoofed is_custom flag can't bypass it.
-        if (strtoupper((string) $input->size) === 'CUSTOM' && trim((string) $input->measurement) === '') {
+        // spoofed is_custom flag can't bypass it. Skipped for size-optional
+        // categories (bags / accessories / kaftans / mukhawars).
+        if (strtoupper((string) $input->size) === 'CUSTOM'
+            && !$this->isSizeOptionalCategory($product)
+            && trim((string) $input->measurement) === ''
+        ) {
             throw HttpException::validation([
                 'measurement' => ['Measurements are required for a custom size.'],
             ]);
@@ -138,5 +142,17 @@ final class AddCartItemController
         $cart = new Cart(user: $user);
         $this->em->persist($cart);
         return $cart;
+    }
+
+    /**
+     * Categories where size selection (incl. CUSTOM) is optional, so a CUSTOM
+     * line isn't forced to carry a measurement. Keyed on the bare category
+     * name (the slug's trailing "-<id>" stripped).
+     */
+    private function isSizeOptionalCategory(Product $product): bool
+    {
+        $slug = $product->getCategory()?->getSlug() ?? '';
+        $key = strtolower((string) preg_replace('/-\d+$/', '', $slug));
+        return in_array($key, ['bags', 'accessories', 'kaftans', 'mukhawars'], true);
     }
 }

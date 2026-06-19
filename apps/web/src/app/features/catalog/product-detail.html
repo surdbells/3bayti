@@ -250,8 +250,9 @@
             </fieldset>
           }
 
-          <!-- CUSTOM size: body-measurement form (signed-in) or sign-in prompt -->
-          @if (isCustomSize()) {
+          <!-- CUSTOM size: body-measurement form (signed-in) or sign-in prompt.
+               Skipped for size-optional categories. -->
+          @if (isCustomSize() && !isSizeOptional()) {
             @if (isAuthenticated()) {
               <fieldset class="pdp-options pdp-measure" data-testid="pdp-custom-measurement">
                 <legend>{{ 'product.customSizeTitle' | translate }}</legend>
@@ -314,7 +315,7 @@
               {{ adding() ? ('product.adding' | translate) : (p.in_stock ? ('product.addToCart' | translate) : ('product.outOfStock' | translate)) }}
             </ui-button>
           </div>
-          @if (p.in_stock && hasSizes() && !selectedSize()) {
+          @if (p.in_stock && hasSizes() && !selectedSize() && !isSizeOptional()) {
             <p class="pdp-buybox__hint" data-testid="pdp-hint-size">
               <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                 <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
@@ -344,7 +345,7 @@
               <span>{{ 'product.hintMeasurement' | translate }}</span>
             </p>
           }
-          @if (p.in_stock && isCustomSize() && isAuthenticated() && !customMeasurementComplete()) {
+          @if (p.in_stock && isCustomSize() && !isSizeOptional() && isAuthenticated() && !customMeasurementComplete()) {
             <p class="pdp-buybox__hint" data-testid="pdp-hint-custom">
               <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                 <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
