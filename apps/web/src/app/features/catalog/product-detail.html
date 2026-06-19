@@ -250,6 +250,40 @@
             </fieldset>
           }
 
+          <!-- CUSTOM size: body-measurement form (signed-in) or sign-in prompt -->
+          @if (isCustomSize()) {
+            @if (isAuthenticated()) {
+              <fieldset class="pdp-options pdp-measure" data-testid="pdp-custom-measurement">
+                <legend>{{ 'product.customSizeTitle' | translate }}</legend>
+                <div class="pdp-measure__grid">
+                  @for (f of measurementFields; track f) {
+                    <label class="pdp-measure__field">
+                      <span class="pdp-measure__label">{{ ('account.measurements.fields.' + f) | translate }}</span>
+                      <input
+                        type="number"
+                        inputmode="decimal"
+                        min="0"
+                        max="500"
+                        step="0.1"
+                        class="pdp-measure__input"
+                        [value]="customMeasurementValue(f)"
+                        (input)="onCustomMeasurementInput(f, $event)"
+                        [attr.aria-label]="('account.measurements.fields.' + f) | translate"
+                        [attr.data-testid]="'pdp-meas-' + f"
+                      />
+                    </label>
+                  }
+                </div>
+                <p class="pdp-measure__unit">{{ 'product.customSizeUnit' | translate }}</p>
+              </fieldset>
+            } @else {
+              <p class="pdp-measure__signin" data-testid="pdp-custom-signin">
+                {{ 'product.customSizeSignIn' | translate }}
+                <a routerLink="/login" [queryParams]="{ returnUrl: loginReturnUrl() }">{{ 'product.customSizeSignInLink' | translate }}</a>
+              </p>
+            }
+          }
+
           <!-- Buy box: quantity + add to cart -->
           <div class="pdp-buybox">
             @if (p.in_stock) {
@@ -308,6 +342,16 @@
                 <circle cx="12" cy="8" r="1" fill="currentColor"></circle>
               </svg>
               <span>{{ 'product.hintMeasurement' | translate }}</span>
+            </p>
+          }
+          @if (p.in_stock && isCustomSize() && isAuthenticated() && !customMeasurementComplete()) {
+            <p class="pdp-buybox__hint" data-testid="pdp-hint-custom">
+              <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>
+                <line x1="12" y1="11" x2="12" y2="16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line>
+                <circle cx="12" cy="8" r="1" fill="currentColor"></circle>
+              </svg>
+              <span>{{ 'product.hintCustomMeasurement' | translate }}</span>
             </p>
           }
           @if (addError(); as err) {

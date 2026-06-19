@@ -337,6 +337,101 @@ final class AddCartItemControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function rejectsCustomSizeWithoutMeasurementWith422(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $product = $this->makeProduct(id: 100, name: 'Custom Abaya', price: '799.00');
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('find')->with(100)->willReturn($product);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $productRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Product::class, $productRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/cart/items', [
+                'product_id' => 100,
+                'quantity' => 1,
+                'size' => 'CUSTOM',
+                /* no measurement supplied */
+            ], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(422, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+        self::assertSame('VALIDATION_FAILED', $body['error']['code']);
+        self::assertArrayHasKey('measurement', $body['error']['details']['fields']);
+    }
+
+    #[Test]
+    public function acceptsCustomSizeWithMeasurementWith201(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $product = $this->makeProduct(id: 100, name: 'Custom Abaya', price: '799.00');
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('find')->with(100)->willReturn($product);
+
+        $cartRepo = $this->createMock(CartRepository::class);
+        $cartRepo->method('findActiveForUser')->with($user)->willReturn(null);
+        $cartRepo->method('saveWithItems')->willReturnCallback(
+            function (Cart $cart): void {
+                $this->setEntityId($cart, 42);
+                foreach ($cart->getItems() as $item) {
+                    if ($item->getId() === null) {
+                        $this->setEntityId($item, 999);
+                    }
+                }
+            },
+        );
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $cartRepo, $productRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Cart::class, $cartRepo],
+                [Product::class, $productRepo],
+            ]);
+            $em->method('persist');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/cart/items', [
+                'product_id' => 100,
+                'quantity' => 1,
+                'size' => 'CUSTOM',
+                'is_custom' => true,
+                'measurement' => '{"bust_chest":92,"waist":74}',
+            ], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(201, $response->getStatusCode());
+        $line = $this->jsonBody($response)['cart']['items'][0];
+        self::assertSame('CUSTOM', $line['size']);
+        self::assertTrue($line['is_custom']);
+        self::assertSame('{"bust_chest":92,"waist":74}', $line['measurement']);
+    }
+
+    #[Test]
     public function requiresAuth(): void
     {
         $response = $this->handle(

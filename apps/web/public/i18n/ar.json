@@ -912,6 +912,11 @@
     "measurementTitle": "قياسات إضافية",
     "measurementPlaceholder": "أي قياسات إضافية يطلبها البائع (مثل: الطول بالإنش)",
     "hintMeasurement": "أضيفي القياسات الإضافية للمتابعة.",
+    "customSizeTitle": "قياساتك",
+    "customSizeUnit": "جميع القياسات بالسنتيمتر (سم).",
+    "customSizeSignIn": "سجّلي الدخول لإدخال قياساتك للمقاس المخصّص.",
+    "customSizeSignInLink": "تسجيل الدخول",
+    "hintCustomMeasurement": "أدخلي قياساتك للمتابعة.",
     "addError": "تعذّرت إضافة هذا المنتج إلى سلّتك. يُرجى المحاولة مرة أخرى.",
     "trust": {
       "aria": "التوصيل والإرجاع والدفع",

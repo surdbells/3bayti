@@ -3,7 +3,7 @@ import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { PLATFORM_ID } from '@angular/core';
+import { PLATFORM_ID, signal } from '@angular/core';
 import { of } from 'rxjs';
 
 import { ProductDetailComponent } from './product-detail';
@@ -12,6 +12,8 @@ import { SeoService } from '../../core/seo/seo.service';
 import { RecommendationsService } from './recommendations.service';
 import { CartService } from '../../core/cart/cart.service';
 import { CartDrawerService } from '../../core/cart/cart-drawer.service';
+import { AuthService } from '../../core/auth/auth.service';
+import { MeasurementService } from '../account/measurement.service';
 import { provideI18n } from '../../core/i18n';
 import type { ProductDetail } from './product.model';
 
@@ -49,7 +51,15 @@ function makeProduct(overrides: Partial<ProductDetail> = {}): ProductDetail {
 let addItemMock: ReturnType<typeof vi.fn>;
 let openDrawerMock: ReturnType<typeof vi.fn>;
 
-function setup(product: ProductDetail = makeProduct()): ComponentFixture<ProductDetailComponent> {
+interface SetupOpts {
+  authenticated?: boolean;
+  savedMeasurement?: Record<string, number> | null;
+}
+
+function setup(
+  product: ProductDetail = makeProduct(),
+  opts: SetupOpts = {},
+): ComponentFixture<ProductDetailComponent> {
   addItemMock = vi.fn(() => Promise.resolve({}));
   openDrawerMock = vi.fn();
 
@@ -65,6 +75,15 @@ function setup(product: ProductDetail = makeProduct()): ComponentFixture<Product
       { provide: RecommendationsService, useValue: { forProduct: vi.fn(() => Promise.resolve([])) } },
       { provide: CartService, useValue: { addItem: addItemMock } },
       { provide: CartDrawerService, useValue: { open: openDrawerMock } },
+      { provide: AuthService, useValue: { isAuthenticated: signal(opts.authenticated ?? false).asReadonly() } },
+      {
+        provide: MeasurementService,
+        useValue: {
+          getDefault: vi.fn(() =>
+            Promise.resolve(opts.savedMeasurement ? { values: opts.savedMeasurement } : null),
+          ),
+        },
+      },
       { provide: PLATFORM_ID, useValue: 'browser' },
     ],
   });
@@ -163,6 +182,8 @@ describe('ProductDetail buy box', () => {
         quantity: 2,
         size: 'M',
         color: 'Black',
+        is_custom: false,
+        measurement: null,
         extra_measurement: null,
       });
       expect(openDrawerMock).toHaveBeenCalledOnce();
@@ -178,6 +199,8 @@ describe('ProductDetail buy box', () => {
         quantity: 1,
         size: null,
         color: null,
+        is_custom: false,
+        measurement: null,
         extra_measurement: null,
       });
     });
@@ -241,8 +264,70 @@ describe('ProductDetail buy box', () => {
         quantity: 1,
         size: null,
         color: null,
+        is_custom: false,
+        measurement: null,
         extra_measurement: 'Length 56 inches',
       });
+    });
+  });
+
+  describe('custom size', () => {
+    const customProduct = (): ProductDetail =>
+      makeProduct({ sizes: [{ label: 'CUSTOM', in_stock: true }], colors: [] });
+
+    function fillMeasurements(c: ProductDetailComponent): void {
+      for (const f of c.measurementFields) {
+        c.onCustomMeasurementInput(f, { target: { value: '80' } } as unknown as Event);
+      }
+    }
+
+    it('blocks add-to-cart and shows a sign-in prompt when not signed in', () => {
+      const fix = setup(customProduct(), { authenticated: false });
+      const c = fix.componentInstance;
+      c.selectSize({ label: 'CUSTOM', in_stock: true });
+      fix.detectChanges();
+      expect(c.isCustomSize()).toBe(true);
+      expect(c.canAddToCart()).toBe(false);
+      expect(
+        (fix.nativeElement as HTMLElement).querySelector('[data-testid="pdp-custom-signin"]'),
+      ).not.toBeNull();
+    });
+
+    it('requires a complete measurement before add-to-cart when signed in', () => {
+      const c = setup(customProduct(), { authenticated: true }).componentInstance;
+      c.selectSize({ label: 'CUSTOM', in_stock: true });
+      expect(c.canAddToCart()).toBe(false);
+      fillMeasurements(c);
+      expect(c.customMeasurementComplete()).toBe(true);
+      expect(c.canAddToCart()).toBe(true);
+    });
+
+    it('snapshots is_custom + the measurement JSON on add-to-cart', async () => {
+      const c = setup(customProduct(), { authenticated: true }).componentInstance;
+      c.selectSize({ label: 'CUSTOM', in_stock: true });
+      fillMeasurements(c);
+      await c.addToCart();
+
+      const payload = addItemMock.mock.calls[0][0] as Record<string, unknown>;
+      expect(payload['is_custom']).toBe(true);
+      expect(payload['size']).toBe('CUSTOM');
+      const snap = JSON.parse(payload['measurement'] as string);
+      expect(snap.bust_chest).toBe(80);
+      expect(Object.keys(snap)).toHaveLength(c.measurementFields.length);
+    });
+
+    it('prefills the form from the saved account default', async () => {
+      const fix = setup(customProduct(), {
+        authenticated: true,
+        savedMeasurement: { bust_chest: 92, waist: 74, hips: 96, shoulder: 38, sleeve_length: 58, height: 165 },
+      });
+      const c = fix.componentInstance;
+      c.selectSize({ label: 'CUSTOM', in_stock: true });
+      fix.detectChanges();   // runs the prefill effect -> getDefault()
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(c.customMeasurementValue('bust_chest')).toBe('92');
+      expect(c.customMeasurementComplete()).toBe(true);
     });
   });
 });

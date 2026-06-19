@@ -190,6 +190,16 @@ final class InitiateCheckoutController
                     ),
                 );
             }
+            // CUSTOM size must carry the body-measurement snapshot.
+            if (strtoupper((string) $cartItem->getSize()) === 'CUSTOM' && trim((string) $cartItem->getMeasurement()) === '') {
+                throw HttpException::businessRuleViolation(
+                    ErrorCodes::VALIDATION_FAILED,
+                    sprintf(
+                        '"%s" is a custom size — add your measurements before checking out.',
+                        $itemProduct->getName(),
+                    ),
+                );
+            }
         }
 
         /** @var AddressRepository $addresses */

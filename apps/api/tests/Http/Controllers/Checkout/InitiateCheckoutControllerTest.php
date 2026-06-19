@@ -683,6 +683,45 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
         self::assertStringContainsString('measure', strtolower($body['error']['message']));
     }
 
+    #[Test]
+    public function rejectsCustomSizeItemWithEmptyMeasurementWith422(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $cart = $this->makeCustomSizeCart($user);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $cartRepo = $this->createMock(CartRepository::class);
+        $cartRepo->method('findActiveForUser')->with($user)->willReturn($cart);
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('initiateCheckout');
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $cartRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Cart::class, $cartRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', [], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(422, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
+        $body = $this->jsonBody($response);
+        self::assertSame('VALIDATION_FAILED', $body['error']['code']);
+        self::assertStringContainsString('custom size', strtolower($body['error']['message']));
+    }
+
     // ----------------- helpers -----------------
 
     /**
@@ -718,6 +757,22 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
         // is_custom false + measurement null → the un-fulfillable state the
         // checkout backstop must reject.
         $item = new CartItem(product: $product, quantity: 1, unitPriceSnapshot: '799.00');
+        $this->setEntityId($item, 555);
+        $cart->addItem($item);
+
+        return $cart;
+    }
+
+    private function makeCustomSizeCart(User $user): Cart
+    {
+        $vendor = $this->makeVendor(id: 5);
+        $product = $this->makeProduct(id: 100, name: 'Custom Abaya', price: '799.00', vendor: $vendor);
+
+        $cart = new Cart(user: $user);
+        $this->setEntityId($cart, 42);
+        // size CUSTOM + measurement null → the un-fulfillable state the
+        // checkout backstop must reject.
+        $item = new CartItem(product: $product, quantity: 1, unitPriceSnapshot: '799.00', size: 'CUSTOM');
         $this->setEntityId($item, 555);
         $cart->addItem($item);
 

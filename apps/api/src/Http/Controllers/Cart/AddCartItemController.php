@@ -89,6 +89,15 @@ final class AddCartItemController
             ]);
         }
 
+        // CUSTOM size is made-to-order: it must carry the customer's body
+        // measurement snapshot. Server-authoritative on the size value so a
+        // spoofed is_custom flag can't bypass it.
+        if (strtoupper((string) $input->size) === 'CUSTOM' && trim((string) $input->measurement) === '') {
+            throw HttpException::validation([
+                'measurement' => ['Measurements are required for a custom size.'],
+            ]);
+        }
+
         /** @var CartRepository $carts */
         $carts = $this->em->getRepository(Cart::class);
         $cart = $carts->findActiveForUser($user) ?? $this->createCartFor($user);

@@ -10,7 +10,7 @@ import {
   AfterViewChecked,
   OnDestroy,
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { catchError, from, map, of, switchMap, tap } from 'rxjs';
@@ -38,6 +38,8 @@ import { CartService } from '../../core/cart/cart.service';
 import { CartDrawerService } from '../../core/cart/cart-drawer.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
+import { AuthService } from '../../core/auth/auth.service';
+import { MeasurementService, MEASUREMENT_FIELDS } from '../account/measurement.service';
 
 /**
  * Product detail page (PDP) — `/product/:slug`.
@@ -85,6 +87,7 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
     ProductCardComponent,
     ShareButtonsComponent,
     TranslatePipe,
+    RouterLink,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './product-detail.html',
@@ -98,6 +101,10 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   private cart = inject(CartService);
   private cartDrawer = inject(CartDrawerService);
   private i18n = inject(TranslateService);
+  private auth = inject(AuthService);
+  private measurements = inject(MeasurementService);
+  /** Signed-in state — gates the custom-size measurement form. */
+  protected readonly isAuthenticated = this.auth.isAuthenticated;
 
   /** True if the API returned 404 for this slug. */
   readonly notFound = signal(false);
@@ -359,6 +366,33 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /** Optional on-PDP guidance shown beside the extra-measurement field. */
   readonly measurementInstructions = computed(() => this.product()?.measurement_instructions ?? null);
 
+  /** Whether the chosen size is the made-to-order "CUSTOM" option. */
+  readonly isCustomSize = computed(() => (this.selectedSize() ?? '').toUpperCase() === 'CUSTOM');
+  /** Canonical body-measurement fields (mirrors the account profile). */
+  readonly measurementFields = MEASUREMENT_FIELDS;
+  /** Custom-size body measurements: field -> input string (cm). */
+  readonly customMeasurement = signal<Record<string, string>>({});
+  /** True once every measurement field holds a positive number. */
+  readonly customMeasurementComplete = computed(() => {
+    const m = this.customMeasurement();
+    return this.measurementFields.every((f) => {
+      const v = parseFloat(m[f] ?? '');
+      return Number.isFinite(v) && v > 0;
+    });
+  });
+  /** Guards a one-time prefill from the saved account default. */
+  private readonly customPrefilled = signal(false);
+  /** Where to send the shopper back after a sign-in prompt. */
+  readonly loginReturnUrl = computed(() => {
+    const slug = this.product()?.slug;
+    return slug ? `/product/${slug}` : '/';
+  });
+
+  /** Read a custom-measurement field's current input string (for the template). */
+  customMeasurementValue(field: string): string {
+    return this.customMeasurement()[field] ?? '';
+  }
+
   /**
    * True when every required variant axis has an in-stock selection.
    * Validates against the CURRENT product's options (not just "non-null")
@@ -379,6 +413,11 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     }
     /* Products that ask for an extra measurement need it filled in. */
     if (p.requires_measurement === true && this.extraMeasurement().trim() === '') return false;
+    /* CUSTOM size requires a signed-in shopper with a complete measurement. */
+    if (this.isCustomSize()) {
+      if (!this.isAuthenticated()) return false;
+      if (!this.customMeasurementComplete()) return false;
+    }
     return true;
   });
 
@@ -506,8 +545,20 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       this.selectedSize.set(null);
       this.selectedColor.set(null);
       this.extraMeasurement.set('');
+      this.customMeasurement.set({});
+      this.customPrefilled.set(false);
       this.quantity.set(1);
       this.addError.set(null);
+    });
+
+    /* Prefill the custom-size form from the saved account default the first
+       time a signed-in shopper selects CUSTOM. Order-only: we never write
+       back to their account default from here. */
+    effect(() => {
+      if (this.isCustomSize() && this.isAuthenticated() && !this.customPrefilled()) {
+        this.customPrefilled.set(true);
+        void this.prefillCustomMeasurement();
+      }
     });
 
     /* Apply SEO via effect() so it runs within Angular's CD cycle.
@@ -702,11 +753,16 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     this.adding.set(true);
     this.addError.set(null);
     try {
+      const custom = this.isCustomSize();
       await this.cart.addItem({
         product_id: p.id,
         quantity: this.quantity(),
         size: this.selectedSize(),
         color: this.selectedColor(),
+        is_custom: custom,
+        // CUSTOM size: snapshot the entered body measurements onto THIS order
+        // (order-only — we never write back to the account default here).
+        measurement: custom ? JSON.stringify(this.customMeasurementValues()) : null,
         extra_measurement: this.requiresExtraMeasurement() ? this.extraMeasurement().trim() : null,
       });
       this.cartDrawer.open();
@@ -720,6 +776,39 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /** Bind the extra-measurement textarea to its signal. */
   onExtraMeasurementInput(event: Event): void {
     this.extraMeasurement.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  /** Bind a custom-size measurement input to its field in the signal map. */
+  onCustomMeasurementInput(field: string, event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.customMeasurement.update((m) => ({ ...m, [field]: value }));
+  }
+
+  /** Parse the custom-measurement string map into a numeric values map. */
+  private customMeasurementValues(): Record<string, number> {
+    const m = this.customMeasurement();
+    const out: Record<string, number> = {};
+    for (const f of this.measurementFields) {
+      const v = parseFloat(m[f] ?? '');
+      if (Number.isFinite(v)) out[f] = v;
+    }
+    return out;
+  }
+
+  /** Prefill the custom-size form from the saved account default (if any). */
+  private async prefillCustomMeasurement(): Promise<void> {
+    try {
+      const saved = await this.measurements.getDefault();
+      if (saved === null) return;
+      const next: Record<string, string> = {};
+      for (const f of this.measurementFields) {
+        const v = saved.values[f];
+        next[f] = v !== undefined && v !== null ? String(v) : '';
+      }
+      this.customMeasurement.set(next);
+    } catch {
+      /* Non-fatal: the shopper can fill the form in manually. */
+    }
   }
 
   /** Format Money (AED 530.00 → "AED 530"). */

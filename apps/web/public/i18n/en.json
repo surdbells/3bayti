@@ -912,6 +912,11 @@
     "measurementTitle": "Extra measurements",
     "measurementPlaceholder": "Any extra measurements the seller needs (e.g. length in inches)",
     "hintMeasurement": "Add the extra measurements to continue.",
+    "customSizeTitle": "Your measurements",
+    "customSizeUnit": "All measurements in centimetres (cm).",
+    "customSizeSignIn": "Sign in to enter your measurements for a custom size.",
+    "customSizeSignInLink": "Sign in",
+    "hintCustomMeasurement": "Enter your measurements to continue.",
     "addError": "We couldn't add this to your cart. Please try again.",
     "trust": {
       "aria": "Delivery, returns and payment",
