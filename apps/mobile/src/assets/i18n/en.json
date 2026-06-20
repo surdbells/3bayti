@@ -889,5 +889,6 @@
   "aria_select_color": "Select",
   "ph_extra_measurements": "Enter additional measurements...",
   "pyjamas": "Pyjamas",
-  "label_category_name": "Category name"
+  "label_category_name": "Category name",
+  "placeholder_select_emirate": "Select emirate"
 }

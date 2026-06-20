@@ -889,5 +889,6 @@
   "show_more": "عرض المزيد",
   "you_no_styles": "ليس لديك أنماط بعد",
   "pyjamas": "بيجامات",
-  "label_category_name": "اسم الفئة"
+  "label_category_name": "اسم الفئة",
+  "placeholder_select_emirate": "اختر الإمارة"
 }

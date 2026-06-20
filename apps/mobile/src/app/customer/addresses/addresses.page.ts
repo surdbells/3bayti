@@ -8,8 +8,6 @@ import {
   IonContent,
   IonHeader,
   IonRow,
-  IonSelect,
-  IonSelectOption,
   IonTitle,
   IonToolbar, NavController, Platform
 } from '@ionic/angular/standalone';
@@ -44,8 +42,6 @@ import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
     IonCol,
     IonRow,
     IonButton,
-    IonSelect,
-    IonSelectOption,
     CartIconComponent,
     TranslatePipe,
     AxIconComponent,

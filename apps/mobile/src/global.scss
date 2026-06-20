@@ -1530,3 +1530,41 @@ ion-header.md ion-toolbar {
 }
 
 /* End M59 utility */
+
+/* ----------------------------------------------------------------------------
+   Native <select> for use INSIDE custom CDK-overlay bottom sheets (e.g. the
+   add-address sheet). An ion-select with interface="action-sheet" teleports its
+   overlay into <ion-app>, which sits in a sibling stacking context BELOW the
+   CDK overlay container (z-index 1000) that hosts the sheet — so the picker
+   renders behind the sheet and is invisible. A native <select> uses the OS
+   picker (drawn above the webview), sidestepping the z-index trap entirely.
+   Styled to match the surrounding ax-text-field inputs.
+   ------------------------------------------------------------------------- */
+.ax-native-select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  margin: 6px 0 4px;
+  padding: 13px 40px 13px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  line-height: 1.3;
+  color: var(--ax-color-text-primary, #2e241c);
+  background-color: var(--ax-color-bg-surface, #ffffff);
+  border: 1px solid rgba(46, 36, 28, 0.16);
+  border-radius: 12px;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="%23807468" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+
+  &:focus {
+    outline: none;
+    border-color: var(--ax-color-accent, #b89b72);
+  }
+}
+
+[dir='rtl'] .ax-native-select {
+  padding: 13px 14px 13px 40px;
+  background-position: left 14px center;
+}

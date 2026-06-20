@@ -357,17 +357,18 @@
       <ion-row>
         <ion-col>
           <label class="checkout-field-label">{{ 'label_emirate' | translate }}</label>
-          <ion-select
-            class="ion-margin-vertical"
-            [label]="'label_emirate' | translate"
-            labelPlacement="stacked"
-            interface="action-sheet"
+          <!-- Native <select> (NOT ion-select): this form lives inside a CDK
+               overlay bottom sheet; an ion-select action-sheet would teleport
+               behind the sheet (see .ax-native-select in global.scss). -->
+          <select
+            class="ax-native-select"
             [(ngModel)]="newAddress.emirate"
             name="new_emirate">
+            <option value="" disabled>{{ 'placeholder_select_emirate' | translate }}</option>
             @for (e of emirates; track e) {
-              <ion-select-option [value]="e">{{ e }}</ion-select-option>
+              <option [value]="e">{{ e }}</option>
             }
-          </ion-select>
+          </select>
         </ion-col>
         <ion-col>
           <ax-text-field

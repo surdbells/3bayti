@@ -61,21 +61,21 @@
       <ion-row class="ion-padding-bottom">
         <ion-col>
           <label class="address-field-label">{{ 'label_emirate' | translate }}</label>
-          <ion-select
-            class="ion-margin-vertical"
-            [label]="'label_emirate' | translate"
-            labelPlacement="stacked"
-            interface="action-sheet"
+          <!-- Native <select> (NOT ion-select) so the picker is never trapped
+               behind a CDK-overlay sheet — see .ax-native-select in global.scss. -->
+          <select
+            class="ax-native-select"
             [(ngModel)]="update.city"
             name="emirate">
-            <ion-select-option [value]="'Abu Dhabi'">Abu Dhabi</ion-select-option>
-            <ion-select-option [value]="'Dubai'">Dubai</ion-select-option>
-            <ion-select-option [value]="'Sharjah'">Sharjah</ion-select-option>
-            <ion-select-option [value]="'Ajman'">Ajman</ion-select-option>
-            <ion-select-option [value]="'Umm Al-Quwain'">Umm Al-Quwain</ion-select-option>
-            <ion-select-option [value]="'Ras Al Khaimah'">Ras Al Khaimah</ion-select-option>
-            <ion-select-option [value]="'Fujairah'">Fujairah</ion-select-option>
-          </ion-select>
+            <option value="" disabled>{{ 'placeholder_select_emirate' | translate }}</option>
+            <option value="Abu Dhabi">Abu Dhabi</option>
+            <option value="Dubai">Dubai</option>
+            <option value="Sharjah">Sharjah</option>
+            <option value="Ajman">Ajman</option>
+            <option value="Umm Al-Quwain">Umm Al-Quwain</option>
+            <option value="Ras Al Khaimah">Ras Al Khaimah</option>
+            <option value="Fujairah">Fujairah</option>
+          </select>
         </ion-col>
         <ion-col>
           <ax-text-field
