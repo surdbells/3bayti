@@ -129,10 +129,6 @@ export const routes: Routes = [
     loadComponent: () => import('./public/home/home.page').then( m => m.HomePage)
   },
   {
-    path: 'single',
-    loadComponent: () => import('./public/single/single.page').then( m => m.SinglePage)
-  },
-  {
     path: 'styles',
     loadComponent: () => import('./customer/styles/styles.page').then( m => m.StylesPage)
   },
