@@ -34,7 +34,6 @@ import {
   translateRequestBody,
   toLegacyEnvelope,
 } from './mobile-network-adapter';
-import { resolveRouteKey } from './url-route-resolver';
 
 describe('translateRequestBody', () => {
   it('extracts token to Authorization header and drops id', () => {
@@ -152,68 +151,5 @@ describe('toLegacyEnvelope', () => {
     const env = toLegacyEnvelope({ data: { x: 1 } });
     expect(env.response_code).toBe(200);
     expect(env.status).toBe('success');
-  });
-});
-
-describe('resolveRouteKey', () => {
-  const base = 'https://api.3bayti.ae/';
-
-  it('resolves POST /users/login to POST /auth/login', () => {
-    const key = resolveRouteKey(`${base}users/login`, 'POST', base);
-    expect(key).toBe('POST /auth/login');
-  });
-
-  it('resolves POST /customer/settings/billing/read-billings', () => {
-    const key = resolveRouteKey(
-      `${base}customer/settings/billing/read-billings`,
-      'POST',
-      base,
-    );
-    // The ENDPOINT_ROUTING entry is GET /me/billing-address (server
-    // uses GET). Mobile code uses post_request (legacy convention),
-    // so the resolver should return null because POST is NOT registered.
-    // This drives a fall-through to legacy, which is correct behaviour
-    // until the call site is migrated to use the GET pathway.
-    expect(key).toBeNull();
-  });
-
-  it('returns null for URLs not in the routing table', () => {
-    const key = resolveRouteKey(`${base}chat/get_messages`, 'POST', base);
-    expect(key).toBeNull();
-  });
-
-  it('returns null for 3rd-party URLs (not on configured base)', () => {
-    const key = resolveRouteKey(
-      'https://shipperapi.topex.ae/api/CommonAPI/Cities',
-      'GET',
-      base,
-    );
-    expect(key).toBeNull();
-  });
-
-  it('strips query string before lookup', () => {
-    const key = resolveRouteKey(
-      `${base}users/login?foo=bar`,
-      'POST',
-      base,
-    );
-    expect(key).toBe('POST /auth/login');
-  });
-
-  it('tolerates base URL without trailing slash', () => {
-    const baseNoSlash = 'https://api.3bayti.ae';
-    const key = resolveRouteKey(
-      `${baseNoSlash}/users/login`,
-      'POST',
-      baseNoSlash,
-    );
-    expect(key).toBe('POST /auth/login');
-  });
-
-  it('returns null when path matches but method does not', () => {
-    // /users/login is POST-only in ENDPOINT_ROUTING. A GET on the
-    // same path should NOT resolve.
-    const key = resolveRouteKey(`${base}users/login`, 'GET', base);
-    expect(key).toBeNull();
   });
 });

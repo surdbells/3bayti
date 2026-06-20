@@ -20,17 +20,17 @@ import {
 } from '@3bayti/api-client';
 
 import { GlobalComponent } from '../../global-component';
-import { NetworkService } from '../../service/network.service';
-import { resolveRouteKey, resolveRouteKeyAnyMethod, type HttpMethod } from './url-route-resolver';
-import { CATALOG_REQUEST_TRANSFORMS, asRecord, type BodyToRouteArgs } from './transforms/catalog-request.transforms';
 import { CATALOG_RESPONSE_TRANSFORMS, type ResponseTransform } from './transforms/catalog-response.transforms';
-import {
-  MUTATION_REQUEST_TRANSFORMS,
-  type MutationBodyToRequest,
-  type MutationTransformOutput,
-} from './transforms/mutation-request.transforms';
 import { MUTATION_RESPONSE_TRANSFORMS } from './transforms/mutation-response.transforms';
-import { AUTHED_GET_REQUEST_TRANSFORMS } from './transforms/order-request.transforms';
+
+/**
+ * HTTP method narrowed to the five verbs the v3 client issues.
+ *
+ * Previously imported from the (now-removed) url-route-resolver, which
+ * served the legacy strangler-fig path. The v3-direct client is the only
+ * remaining consumer, so the type lives here.
+ */
+type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 /**
  * Extract auth credentials from a legacy request body.
@@ -137,92 +137,52 @@ export function toLegacyEnvelope(v3Response: unknown): {
 }
 
 /**
- * MobileNetworkAdapter — drop-in replacement for NetworkService that
- * routes through @3bayti/api-client's ENDPOINT_ROUTING when possible.
+ * MobileNetworkAdapter — the mobile app's v3 API client.
  *
- * Why this exists
- * ===============
- * The mobile app has 120+ call sites using `networkService.post_request`
- * and `networkService.get_request` with full legacy URLs:
+ * Every page calls v3 endpoints DIRECTLY by route-key via the typed
+ * methods get_v3 / post_v3 / patch_v3 / put_v3 / delete_v3 (→ callV3Direct).
+ * A route-key (e.g. 'GET /cart') is resolved to its URL through
+ * @3bayti/api-client's ENDPOINT_ROUTING (resolveConfig / resolveUrl); the
+ * request hits v3BaseUrl with an `Authorization: Bearer <token>` header
+ * when the call passes { authToken }, plus optional pathParams/queryParams.
  *
- *   networkService.post_request(body, GlobalComponent.UserLogin)
- *     // body has {id, token, ...} for authenticated calls
+ * Response envelope + transforms
+ * ==============================
+ * The raw v3 response is wrapped into the legacy envelope shape
+ *   { response_code: 200, status: 'success', data, message: '' }
+ * via toLegacyEnvelope, then the registered RESPONSE transform for the
+ * route-key (CATALOG_RESPONSE_TRANSFORMS / MUTATION_RESPONSE_TRANSFORMS)
+ * reshapes `data` into what the page binds. So call sites keep their
+ * `if (response.response_code === 200) { use response.data }` pattern.
+ * NOTE: the *_v3 methods do NOT apply a request transform — each call site
+ * passes the explicit v3 body / query params.
  *
- * Migrating each of those 120 sites individually to a new client would
- * be a massive change with high regression risk. Instead this adapter
- * provides the SAME public API as NetworkService (`post_request` /
- * `get_request`) but internally:
+ * Errors
+ * ======
+ * HTTP failures are surfaced through the SUCCESS channel as
+ *   { response_code: <status>, status: 'error', message, error_code,
+ *     error_details, data: null }
+ * (translateError) so call sites read them in their `next` handler;
+ * only network-level errors (status 0) propagate via the rxjs error channel.
  *
- *   1. Checks if the URL is in ENDPOINT_ROUTING
- *      - If yes AND target='new': route to v3
- *      - If yes AND target='old': route to legacy (via NetworkService)
- *      - If no entry: fall through to legacy (via NetworkService)
- *
- *   2. For v3 routes: translates the legacy request body to v3 shape
- *      - Extract `token` from body → Authorization: Bearer header
- *      - Extract `id` from body → drop (v3 derives user from token)
- *      - Anything else in body → forward unchanged
- *
- *   3. For v3 responses: translates back to the legacy envelope shape
- *      `{response_code: 200, status: 'success', data: ..., message: ''}`
- *      so call sites that check `response.response_code === 200` keep
- *      working. This is critical for "no call site changes" — the
- *      adapter is transparent.
- *
- *   4. For errors: maps HTTP errors back to the legacy error envelope
- *      shape so call sites' `subscribe({ error: ... })` handlers
- *      continue working.
- *
- * This is the strangler-fig pattern at the data-layer level. Once all
- * call sites are migrated, NetworkService can be removed and call
- * sites can use the adapter (or its successor) directly.
- *
- * Why mobile uses token-in-body legacy + Bearer headers for v3
- * =============================================================
- * Legacy mobile attaches `{id, token}` to every authenticated request
- * body. The legacy PHP backend reads these to authenticate. v3 (Slim
- * 4) uses standard `Authorization: Bearer <jwt>` headers via
- * AuthMiddleware. The adapter bridges the two.
- *
- * Edge case: when the body lacks token (e.g. unauthenticated calls
- * like /users/login), the adapter forwards an empty Authorization
- * header. v3's AuthMiddleware will 401 if the endpoint requires auth;
- * unauthenticated endpoints (login, register, validate-phone) work
- * regardless.
- *
- * Edge case: when token IS present but empty string, we DON'T inject
- * the header (some legacy code paths populate token: "" for unauth
- * endpoints; preserve that intent).
- *
- * Response envelope translation
- * =============================
- * v3 responses are typically `{data: ...}` (Shape A) or
- * `{data: [...], meta: {...}}` (Shape B for paginated). Mobile call
- * sites expect:
- *
- *   { response_code: 200, status: 'success', data: ..., message: '' }
- *
- * The adapter wraps the v3 payload into this shape. The `data` field
- * passes through (whether scalar, object, array, or paginated wrapper);
- * call sites get the same data shape they would have under legacy.
- *
- * For v3 errors, the adapter constructs:
- *   { response_code: <status>, status: 'error', message: '<msg>', data: null }
- *
- * NOT in scope
+ * Auth refresh
  * ============
- *   - Token refresh on 401 (M4 hardening / M3.1.3+ if needed)
- *   - Retry on transient failures (M4 / call-site-level)
- *   - Caching (call sites already manage their own caches)
- *   - Path parameter substitution for routed calls — currently
- *     ENDPOINT_ROUTING entries with :params (e.g. `/me/addresses/:id`)
- *     don't yet have mobile consumers; M3.1.3+ will wire those when
- *     specific call sites are flipped
+ * A 401 with a stored refresh_token triggers a single-flight
+ * POST /v3/auth/refresh (refreshInFlight$); the original request retries
+ * once with the new access token. Refresh failure clears the stored user
+ * and surfaces the 401 (call sites treat that as "session expired").
+ *
+ * History
+ * =======
+ * This began as the strangler-fig adapter bridging 120+ legacy
+ * post_request / get_request call sites to v3. All call sites are now on
+ * direct v3, and the legacy machinery (post_request, get_request, route,
+ * tryConvertPostToGet, the legacy callV3, the request transforms, and
+ * url-route-resolver) has been deleted — this is now a pure v3 client.
  */
 @Injectable({ providedIn: 'root' })
 export class MobileNetworkAdapter {
   private http = inject(HttpClient);
-  private legacyNetwork = inject(NetworkService);
 
   /** v3 backend base URL. Hard-coded for now; M4 may move to env config. */
   private readonly v3BaseUrl = 'https://api-v3.3bayti.ae';
@@ -257,35 +217,6 @@ export class MobileNetworkAdapter {
    * coordinate; keeping it here makes refresh-on-401 transparent.
    */
   private refreshInFlight$: Observable<string | null> | null = null;
-
-  /**
-   * POST a request. Drop-in replacement for NetworkService.post_request.
-   *
-   * Behavior:
-   *   - If URL matches a 'new'-target ENDPOINT_ROUTING entry: send to
-   *     v3 with translated body + Bearer header, then wrap response
-   *     in legacy envelope.
-   *   - Otherwise: delegate to NetworkService (full legacy path).
-   *
-   * Always returns Observable<any> with the legacy envelope shape so
-   * call sites see the same `response.response_code === 200` pattern
-   * they always have.
-   */
-  post_request(body: unknown, legacyUrl: string): Observable<unknown> {
-    return this.route('POST', body, legacyUrl);
-  }
-
-  /**
-   * GET a request. Drop-in replacement for NetworkService.get_request.
-   *
-   * Note: legacy mobile rarely uses GET; most reads are POST with a
-   * body. This is here for API parity.
-   */
-  get_request(legacyUrl: string): Observable<unknown> {
-    // GETs don't carry tokens-in-body. We still try routing but with
-    // empty body — the resolver decides based on URL alone.
-    return this.route('GET', null, legacyUrl);
-  }
 
   /**
    * Call a v3 endpoint directly by routeKey, without any legacy-URL
@@ -395,157 +326,6 @@ export class MobileNetworkAdapter {
   /* ------ Internals ----------------------------------------------- */
 
   /**
-   * Core routing decision. Returns an Observable wrapped in the legacy
-   * envelope so call sites don't need to care which backend served them.
-   *
-   * Three paths:
-   *   1. Exact match (URL + method in ENDPOINT_ROUTING for the caller's
-   *      verb): route to v3 if target === 'new', else legacy. Same
-   *      behaviour as M3.1.4.
-   *   2. Cross-verb match (URL is in routing table but for a different
-   *      method, AND we have a registered request transform for that
-   *      routeKey): convert the body to path/query params and issue
-   *      the request with the routing entry's method. This is the
-   *      M3.1.5b POST->GET conversion path — mobile call sites are
-   *      POST-with-body by legacy convention, but v3 catalog reads
-   *      are GET-with-query.
-   *   3. No match: fall through to legacy unchanged.
-   */
-  private route(
-    method: HttpMethod,
-    body: unknown,
-    legacyUrl: string,
-  ): Observable<unknown> {
-    const routeKey = resolveRouteKey(legacyUrl, method, GlobalComponent.baseURL);
-
-    // Path 1 — exact method match in routing table.
-    if (routeKey !== null) {
-      let cfg: EndpointConfig;
-      try {
-        cfg = resolveConfig(routeKey);
-      } catch {
-        // resolveConfig throws on missing key. Shouldn't happen because
-        // the resolver only returns keys it found in ENDPOINT_ROUTING.
-        // Defensive fall-back to legacy.
-        return method === 'POST'
-          ? this.legacyNetwork.post_request(body, legacyUrl)
-          : this.legacyNetwork.get_request(legacyUrl);
-      }
-
-      if (cfg.target === 'old') {
-        // Routing entry says use legacy. Honour it.
-        return method === 'POST'
-          ? this.legacyNetwork.post_request(body, legacyUrl)
-          : this.legacyNetwork.get_request(legacyUrl);
-      }
-
-      // target === 'new' — route to v3.
-      return this.callV3(method, routeKey, cfg, body);
-    }
-
-    // Path 2 — cross-verb match. The exact-method lookup failed; check
-    // if the URL is in the routing table under a different method that
-    // we know how to convert to.
-    //
-    // Currently the only conversion direction we support is mobile's
-    // POST-with-body -> v3's GET-with-query. M3.1.5c populates
-    // CATALOG_REQUEST_TRANSFORMS with the per-endpoint extractors.
-    if (method === 'POST') {
-      const converted = this.tryConvertPostToGet(body, legacyUrl);
-      if (converted !== null) {
-        return converted;
-      }
-    }
-
-    // Path 3 — unrouted URL OR unconverted method mismatch. Fall
-    // through to legacy. Most current mobile calls land here (only a
-    // subset of endpoints are in ENDPOINT_ROUTING).
-    return method === 'POST'
-      ? this.legacyNetwork.post_request(body, legacyUrl)
-      : this.legacyNetwork.get_request(legacyUrl);
-  }
-
-  /**
-   * Attempt to convert a POST-with-body call into a v3 GET-with-query.
-   *
-   * Returns the Observable for the converted request if all conditions
-   * are met:
-   *   1. The URL exists in the routing table under SOME method (any)
-   *   2. That method-map has a GET entry (the only conversion direction
-   *      we currently support)
-   *   3. The GET entry's target === 'new' (no point converting to hit
-   *      legacy via v3)
-   *   4. We have a registered request transform for that routeKey in
-   *      EITHER:
-   *      - CATALOG_REQUEST_TRANSFORMS  (anonymous reads — no auth attached)
-   *      - AUTHED_GET_REQUEST_TRANSFORMS (authenticated reads — auth
-   *        header extracted from POST body via translateRequestBody)
-   *
-   * Returns null if any condition fails (caller falls through to legacy).
-   *
-   * Auth distinction: catalog endpoints (new-arrivals, featured, etc.)
-   * are anonymous; order endpoints (orders list) require the user's JWT.
-   * The two registries let us route the request to the right path
-   * with or without the Bearer token from the legacy body's `token`.
-   */
-  private tryConvertPostToGet(
-    body: unknown,
-    legacyUrl: string,
-  ): Observable<unknown> | null {
-    const methodMap = resolveRouteKeyAnyMethod(legacyUrl, GlobalComponent.baseURL);
-    if (methodMap === undefined) return null;
-
-    const getRouteKey = methodMap.GET;
-    if (getRouteKey === undefined) return null;
-
-    let cfg: EndpointConfig;
-    try {
-      cfg = resolveConfig(getRouteKey);
-    } catch {
-      return null;
-    }
-    if (cfg.target !== 'new') return null;
-
-    // Check both transform registries.
-    const catalogTransform: BodyToRouteArgs | undefined = CATALOG_REQUEST_TRANSFORMS[getRouteKey];
-    const authedTransform: BodyToRouteArgs | undefined = AUTHED_GET_REQUEST_TRANSFORMS[getRouteKey];
-
-    if (catalogTransform === undefined && authedTransform === undefined) return null;
-
-    // Authenticated branch: extract auth header from body via
-    // translateRequestBody (drops id/token, returns Bearer header).
-    if (authedTransform !== undefined) {
-      const { authHeader } = translateRequestBody(body);
-      const { pathParams, queryParams } = authedTransform(asRecord(body));
-      const url = this.buildV3UrlWithQuery(getRouteKey, pathParams, queryParams);
-
-      // Pass routeKey to withRefreshRetry so MUTATION_RESPONSE_TRANSFORMS
-      // applies (e.g. transformOrderListResponse adds the 'date' alias).
-      return this.withRefreshRetry(
-        authHeader,
-        (currentAuthHeader) =>
-          this.executeHttpRequest('GET', url, null, currentAuthHeader),
-        getRouteKey,
-      );
-    }
-
-    // Anonymous catalog branch (unchanged from M3.1.5).
-    // Type guard: we already ensured catalogTransform !== undefined
-    // by the early-return above. TypeScript needs a non-null assertion
-    // because the OR-undefined check on both was a disjunction.
-    const transform = catalogTransform!;
-    const { pathParams, queryParams } = transform(asRecord(body));
-    const url = this.buildV3UrlWithQuery(getRouteKey, pathParams, queryParams);
-
-    return this.withRefreshRetry(
-      null,
-      (currentAuthHeader) =>
-        this.executeHttpRequest('GET', url, null, currentAuthHeader),
-      getRouteKey,
-    );
-  }
-
-  /**
    * Build a v3 URL with both path-param substitution and query string.
    *
    * resolveUrl handles path params (`:foo` -> pathParams.foo). Query
@@ -576,69 +356,6 @@ export class MobileNetworkAdapter {
     }
     const separator = baseUrl.includes('?') ? '&' : '?';
     return `${baseUrl}${separator}${params.toString()}`;
-  }
-
-  /**
-   * Issue a request to the v3 backend, translating body/headers in and
-   * envelope out so call sites stay legacy-shaped.
-   *
-   * 401 handling
-   * ============
-   * If the response is 401 AND the call had an Authorization header
-   * (i.e. wasn't anonymous), the adapter transparently:
-   *   1. Triggers a refresh-token flow (single-flight; concurrent 401s
-   *      wait on one refresh call)
-   *   2. On refresh success: retries the original request with the new
-   *      access token, then surfaces the retry result to the caller
-   *   3. On refresh failure: clears stored credentials, surfaces the
-   *      original 401 (call sites should redirect to /login)
-   * See withRefreshRetry + tryRefresh for the implementation.
-   */
-  private callV3(
-    method: HttpMethod,
-    routeKey: string,
-    cfg: EndpointConfig,
-    body: unknown,
-  ): Observable<unknown> {
-    // Strip id/token from body and extract auth header. ALWAYS runs;
-    // every v3 endpoint expects the JWT in a header, never in the body.
-    const { translatedBody, authHeader } = translateRequestBody(body);
-
-    // M3.1.6i.2: consult MUTATION_REQUEST_TRANSFORMS for endpoints that
-    // need body reshape and/or path-param extraction (e.g. cart-item
-    // mutations where the item id needs to move from body to URL path).
-    //
-    // Absent transform = pass translated body through unchanged. This
-    // preserves backwards compatibility — endpoints whose v3 shape
-    // matches the legacy shape work without registering a transform.
-    const mutationTransform: MutationBodyToRequest | undefined =
-      MUTATION_REQUEST_TRANSFORMS[routeKey];
-
-    let pathParams: Record<string, string> | undefined;
-    let finalBody: unknown = translatedBody;
-
-    if (mutationTransform !== undefined) {
-      // Pass the ORIGINAL body to the transform, not translatedBody.
-      // Some transforms inspect keys that translateRequestBody strips
-      // (it shouldn't — translateRequestBody only strips id/token —
-      // but defensive: transforms get the full picture).
-      const out: MutationTransformOutput = mutationTransform(body);
-      pathParams = out.pathParams;
-      finalBody = out.body; // null is intentional for DELETE-style endpoints
-    }
-
-    const url = resolveUrl(
-      routeKey,
-      { old: GlobalComponent.baseURL, new: this.v3BaseUrl },
-      pathParams,
-    );
-
-    return this.withRefreshRetry(
-      authHeader,
-      (currentAuthHeader) =>
-        this.executeHttpRequest(method, url, finalBody, currentAuthHeader),
-      routeKey,
-    );
   }
 
   /**
