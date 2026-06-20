@@ -8,6 +8,8 @@ import {
   IonContent,
   IonHeader,
   IonRow,
+  IonSelect,
+  IonSelectOption,
   IonTitle,
   IonToolbar, NavController, Platform
 } from '@ionic/angular/standalone';
@@ -18,10 +20,7 @@ import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
-import {GlobalComponent} from "../../global-component";
 import {Billing} from "../../class/billing";
-import {City} from "../../class/city";
-import {Area} from "../../class/area";
 import {CartIconComponent} from "../../cart-icon.component";
 import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
@@ -29,7 +28,6 @@ import {TranslatePipe} from "../../translate.pipe";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
-import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 @Component({
   selector: 'app-addresses',
   templateUrl: './addresses.page.html',
@@ -46,21 +44,18 @@ import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
     IonCol,
     IonRow,
     IonButton,
+    IonSelect,
+    IonSelectOption,
     CartIconComponent,
     TranslatePipe,
     AxIconComponent,
     AxLoaderComponent,
     AxTextFieldComponent,
-    AxBottomSheetComponent,
   ]
 })
 export class AddressesPage implements OnInit, OnDestroy {
   billing: Billing[] = [];
-  city: City[] = [];
-  area: Area[] = [];
   isOnline = true;
-  isCityOpen = false;
-  isAreaOpen = false;
   private sub: Subscription;
   private backSub?: Subscription;
   constructor(
@@ -114,7 +109,7 @@ export class AddressesPage implements OnInit, OnDestroy {
     phone: '',
     email: '',
     city: 'Dubai',
-    area: 'Al Marmoom',
+    area: '',
     street: '',
     villa_number: ''
   };
@@ -144,8 +139,6 @@ export class AddressesPage implements OnInit, OnDestroy {
       this.update.phone = this.single_user.phone;
       this.update.email = this.single_user.email;
       this.get_billing();
-      this.getCities();
-      this.getArea(2);
     }
   }
   get_billing() {
@@ -182,33 +175,6 @@ export class AddressesPage implements OnInit, OnDestroy {
           }
         }
       }))
-  }
-  getCities() {
-    this.ui_controls.is_loading = true;
-    this.networkService.get_request(GlobalComponent.topexCities)
-      .subscribe(({
-        next: (response) => {
-          this.city = response.data;
-          this.ui_controls.is_loading = false;
-        }
-      }))
-  }
-  getArea(city: number) {
-    this.ui_controls.is_loading_area = true;
-    this.networkService.get_request(GlobalComponent.topexAreaURL+city)
-      .subscribe(({
-        next: (response) => {
-          this.area = response.data;
-          this.ui_controls.is_loading_area = false;
-        }
-      }))
-  }
-  selectCode(d: string, id: number) {
-    this.update.city = d;
-    this.getArea(id);
-  }
-  selectArea(d: string) {
-    this.update.area = d;
   }
   update_billing() {
     if(this.isOnline){

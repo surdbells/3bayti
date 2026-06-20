@@ -140,25 +140,30 @@
           </ion-row>
           <ion-row>
             <ion-col>
-              <label class="checkout-field-label">{{ 'label_city' | translate }}</label>
-              <ion-button expand="block" class="ion-margin-vertical" type="button" (click)="isCityOpen = true">
-                <span class="cc-code">{{ update.city }}</span>
-                <ax-icon name="chevron-down" slot="end" [style.color]="'var(--ion-color-secondary)'"/>
-              </ion-button>
+              <label class="checkout-field-label">{{ 'label_emirate' | translate }}</label>
+              <ion-select
+                class="ion-margin-vertical"
+                [label]="'label_emirate' | translate"
+                labelPlacement="stacked"
+                interface="action-sheet"
+                [(ngModel)]="update.city"
+                name="emirate">
+                <ion-select-option [value]="'Abu Dhabi'">Abu Dhabi</ion-select-option>
+                <ion-select-option [value]="'Dubai'">Dubai</ion-select-option>
+                <ion-select-option [value]="'Sharjah'">Sharjah</ion-select-option>
+                <ion-select-option [value]="'Ajman'">Ajman</ion-select-option>
+                <ion-select-option [value]="'Umm Al-Quwain'">Umm Al-Quwain</ion-select-option>
+                <ion-select-option [value]="'Ras Al Khaimah'">Ras Al Khaimah</ion-select-option>
+                <ion-select-option [value]="'Fujairah'">Fujairah</ion-select-option>
+              </ion-select>
             </ion-col>
             <ion-col>
-              @if (ui_controls.is_loading_area) {
-                <div class="loader-row">
-                  <ax-loader></ax-loader>
-                </div>
-              }
-              @if (!ui_controls.is_loading_area) {
-                <label class="checkout-field-label">{{ 'label_area' | translate }}</label>
-                <ion-button expand="block" class="ion-margin-vertical" type="button" (click)="isAreaOpen = true">
-                  <span class="cc-code">{{ update.area }}</span>
-                  <ax-icon name="chevron-down" slot="end" [style.color]="'var(--ion-color-secondary)'"/>
-                </ion-button>
-              }
+              <ax-text-field
+                [label]="'label_area' | translate"
+                type="text"
+                [(ngModel)]="update.area"
+                name="area">
+              </ax-text-field>
             </ion-col>
           </ion-row>
           <ion-row>
@@ -384,41 +389,6 @@
         </div>
       }
     </section>
-  }
-
-  @if (!ui_controls.is_loading) {
-    <ax-bottom-sheet
-      [isOpen]="isCityOpen"
-      (didDismiss)="isCityOpen = false"
-      [snapPoints]="[0.5, 0.9]"
-      [initialSnap]="0"
-      [title]="'title_select_city' | translate">
-
-      <ul class="picker-list">
-        @for (cities of city; track cities) {
-          <li class="picker-list__item" (click)="selectCode(cities.name, cities.city_ID); isCityOpen = false" role="button" tabindex="0">
-            <span class="picker-list__name">{{ cities.name }}</span>
-          </li>
-        }
-      </ul>
-    </ax-bottom-sheet>
-  }
-  @if (!ui_controls.is_loading_area) {
-    <ax-bottom-sheet
-      [isOpen]="isAreaOpen"
-      (didDismiss)="isAreaOpen = false"
-      [snapPoints]="[0.5, 0.9]"
-      [initialSnap]="0"
-      [title]="'title_select_area' | translate">
-
-      <ul class="picker-list">
-        @for (areas of area; track areas) {
-          <li class="picker-list__item" (click)="selectArea(areas.name); isAreaOpen = false" role="button" tabindex="0">
-            <span class="picker-list__name">{{ areas.name }}</span>
-          </li>
-        }
-      </ul>
-    </ax-bottom-sheet>
   }
 
   <ax-bottom-sheet
