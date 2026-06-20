@@ -21,7 +21,7 @@ import { AxIconComponent } from '../ax-mobile/icon';
  * pull-to-refresh instead of routing — that page keeps its
  * footer inline rather than using this component.
  */
-export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'profile';
+export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'profile';
 
 @Component({
   selector: 'app-tab-bar',
@@ -70,6 +70,14 @@ export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'profile';
           <ion-label>{{ 'nav_style_hub' | translate }}</ion-label>
         </ion-tab-button>
         <ion-tab-button
+          (click)="go('gift')"
+          tab="gift"
+          class="m6f-tab"
+          [class.m6f-tab--active]="active === 'gift'">
+          <ax-icon name="gift" />
+          <ion-label>{{ 'tab_gifts' | translate }}</ion-label>
+        </ion-tab-button>
+        <ion-tab-button
           (click)="go('profile')"
           tab="profile"
           class="m6f-tab"
@@ -92,6 +100,7 @@ export class AppTabBarComponent {
    *    explore -> /explore
    *    cart    -> /cart
    *    sketch  -> /styles
+   *    gift    -> /gift-cards (gift-card purchase landing)
    *    profile -> /settings
    */
   private static readonly ROUTES: Record<AppTabBarTab, string> = {
@@ -99,6 +108,7 @@ export class AppTabBarComponent {
     explore: '/explore',
     cart: '/cart',
     sketch: '/styles',
+    gift: '/gift-cards',
     profile: '/settings',
   };
 

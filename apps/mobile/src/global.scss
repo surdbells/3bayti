@@ -504,7 +504,11 @@ ion-header.md ion-toolbar {
   padding-bottom: 4px;
 }
 
-/* Each tab — by default muted grey. */
+/* Each tab — by default muted grey. The bar now holds 6 tabs
+   (Home / Explore / Cart / Style hub / Gifts / Profile), so icon
+   and label sizing is tightened to keep all six on one row without
+   overflowing on narrow phones. Padding is trimmed and labels are
+   single-line ellipsis as a safety net for long translations. */
 .m6f-tab {
   --color: var(--ax-color-text-tertiary);
   --color-selected: var(--ax-color-text-tertiary);
@@ -512,20 +516,36 @@ ion-header.md ion-toolbar {
   --background-focused: transparent;
   --background-hover: transparent;
   --ripple-color: transparent;
+  --padding-start: 2px;
+  --padding-end: 2px;
+  min-width: 0;
 
   ax-icon {
-    font-size: 22px;
+    font-size: 21px;
     color: var(--ax-color-text-tertiary);  /* #a8a092 */
   }
 
   ion-label {
     font-family: inherit;
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: 400;
     color: var(--ax-color-text-tertiary);
-    margin-top: 4px;
+    margin-top: 3px;
     text-transform: none;
     letter-spacing: 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Very narrow phones — give labels a hair more breathing room by
+   shrinking the icon slightly so 6 tabs never clip. */
+@media (max-width: 360px) {
+  .m6f-tab {
+    ax-icon { font-size: 20px; }
+    ion-label { font-size: 9px; }
   }
 }
 

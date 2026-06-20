@@ -105,6 +105,41 @@
     </div>
   }
 
+  <!-- Gift-card advertorial promo -->
+  <section class="section ion-padding-horizontal">
+    <article class="gift-promo">
+      <!-- decorative gold sparkle + medallion motif -->
+      <span class="gift-promo__glow" aria-hidden="true"></span>
+      <span class="gift-promo__sparkle gift-promo__sparkle--1" aria-hidden="true">
+        <ax-icon name="sparkles" [size]="14" />
+      </span>
+      <span class="gift-promo__sparkle gift-promo__sparkle--2" aria-hidden="true">
+        <ax-icon name="sparkles" [size]="10" />
+      </span>
+
+      <div class="gift-promo__medallion" aria-hidden="true">
+        <ax-icon name="gift" [size]="26" />
+      </div>
+
+      <div class="gift-promo__body">
+        <span class="gift-promo__eyebrow">{{ 'gift_cards' | translate }}</span>
+        <h2 class="gift-promo__heading">{{ 'gift_promo_heading' | translate }}</h2>
+        <p class="gift-promo__subtitle">{{ 'gift_promo_subtitle' | translate }}</p>
+
+        <div class="gift-promo__actions">
+          <a class="gift-promo__cta" routerLink="/gift-cards">
+            <ax-icon name="gift" [size]="16" />
+            <span>{{ 'gift_promo_cta_buy' | translate }}</span>
+          </a>
+          <a class="gift-promo__link" routerLink="/gift-card-redeem">
+            {{ 'gift_promo_cta_redeem' | translate }}
+            <ax-icon name="arrow-right" [size]="14" />
+          </a>
+        </div>
+      </div>
+    </article>
+  </section>
+
   <!-- Best Sellers Section -->
   @if (!ui_controls.is_loading){
     <section class="section ion-padding-horizontal">
@@ -315,6 +350,10 @@
     <ion-tab-button (click)="user_styles()" tab="sketch" class="m6f-tab">
       <ax-icon name="blocks" />
       <ion-label>{{ 'nav_style_hub' | translate }}</ion-label>
+    </ion-tab-button>
+    <ion-tab-button routerLink="/gift-cards" tab="gift" class="m6f-tab">
+      <ax-icon name="gift" />
+      <ion-label>{{ 'tab_gifts' | translate }}</ion-label>
     </ion-tab-button>
     <ion-tab-button (click)="user_profile()" tab="profile" class="m6f-tab">
       <ax-icon name="user-pen" />
