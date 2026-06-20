@@ -36,8 +36,12 @@ Verify: `xcodebuild -version`, `node -v` (≥22), `pnpm -v` (9.15.0), `pod --ver
 git clone <REPO_URL> 3bayti
 cd 3bayti
 
-# use the repo's Node version
+# use the repo's Node version (Corepack ships with Node)
 cd apps/mobile && nvm use && cd ../..      # reads apps/mobile/.nvmrc (24.12.0)
+
+# enable the pinned pnpm — fixes "command not found: pnpm"
+corepack enable && corepack prepare pnpm@9.15.0 --activate
+pnpm -v                                    # should print 9.15.0
 
 # install the whole pnpm workspace from the repo root (NOT inside apps/mobile)
 pnpm install
@@ -121,6 +125,7 @@ To put a build in front of testers who don't have the repo:
 
 | Symptom | Fix |
 |---|---|
+| `command not found: pnpm` | `corepack enable && corepack prepare pnpm@9.15.0 --activate` (open a new terminal after). If `corepack` is also missing, install Node first (`nvm install 24.12.0`). |
 | `npx cap sync ios` fails on Pods | `cd apps/mobile/ios/App && pod install --repo-update` |
 | "Unable to find www" / blank app | run `pnpm --filter @3bayti/mobile build` **before** `cap sync` |
 | Web changes don't appear | `rm -rf apps/mobile/.angular/cache`, rebuild, re-sync |
