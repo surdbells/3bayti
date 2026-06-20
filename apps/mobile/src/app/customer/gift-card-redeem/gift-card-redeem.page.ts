@@ -7,6 +7,7 @@ import {
   IonSpinner, NavController,
 } from '@ionic/angular/standalone';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { Preferences } from '@capacitor/preferences';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -29,12 +30,23 @@ export class GiftCardRedeemPage {
   preview: any = null;   // balance preview result
   ui = { checking: false, redeeming: false };
 
+  private authToken = '';
+
   constructor(
     private router: Router,
     private navCtrl: NavController,
     private network: MobileNetworkAdapter,
     private notify: AxNotificationService,
-  ) {}
+  ) {
+    this.loadAuthToken();
+  }
+
+  private async loadAuthToken() {
+    const ret: any = await Preferences.get({ key: 'user' });
+    if (ret?.value) {
+      try { this.authToken = JSON.parse(ret.value)?.token ?? ''; } catch { /* ignore */ }
+    }
+  }
 
   goBack() { this.navCtrl.back(); }
 
@@ -54,35 +66,52 @@ export class GiftCardRedeemPage {
     const raw = this.code.replace(/-/g, '');
     if (raw.length !== 16) { this.notify.error('Please enter a full 16-character code.'); return; }
     this.ui.checking = true;
-    this.network.get_v3(`/v3/gift-cards/balance?code=${this.code}`).subscribe({
+    // PUBLIC endpoint — no authToken. Send the normalized (de-hyphenated) code.
+    // v3-direct surfaces HTTP errors through the SUCCESS channel as a legacy
+    // envelope ({ status:'error', message, data:null }); only network-level
+    // failures hit `error`.
+    this.network.get_v3('GET /gift-cards/balance', { queryParams: { code: raw } }).subscribe({
       next: (res: any) => {
         this.ui.checking = false;
         if (res?.data) { this.preview = res.data; }
-        else { this.notify.error('Gift card not found.'); }
+        else { this.notify.error(res?.message ?? 'Gift card not found.'); }
       },
-      error: (err: any) => {
+      error: () => {
         this.ui.checking = false;
-        this.notify.error(err?.error?.message ?? 'Gift card not found.');
+        this.notify.error('Gift card not found.');
       },
     });
   }
 
   redeemCard() {
     if (this.ui.redeeming) return;
+    // Normalize to the bare 16-char code the server expects (strip the display
+    // hyphens + uppercase). The balance check already does this; redeem must too,
+    // or the server gets "XXXX-XXXX-..." and returns card-not-found.
+    const code = this.code.replace(/[\s-]/g, '').toUpperCase();
+    if (code.length !== 16) { this.notify.error('Enter the full 16-character gift card code.'); return; }
     this.ui.redeeming = true;
-    this.network.post_v3('/v3/gift-cards/redeem', { code: this.code }).subscribe({
+    this.network.post_v3('POST /gift-cards/redeem', { code }, { authToken: this.authToken }).subscribe({
       next: (res: any) => {
         this.ui.redeeming = false;
         if (res?.data?.id) {
           this.notify.success('Gift card added to your wallet!');
           this.router.navigate(['/gift-card-detail'], { state: { card: res.data } });
-        } else {
-          this.notify.error(res?.message ?? 'Could not redeem this code.');
+          return;
         }
+        // v3-direct surfaces HTTP errors through this success channel as a
+        // legacy envelope ({ response_code, status:'error', message }). Redeem
+        // requires auth — on 401 send the user to login, returning here (web
+        // uses returnUrl=/gift-cards/redeem).
+        if (res?.response_code === 401) {
+          this.router.navigate(['/login'], { queryParams: { returnUrl: '/gift-cards/redeem' } });
+          return;
+        }
+        this.notify.error(res?.message ?? 'Could not redeem this code.');
       },
-      error: (err: any) => {
+      error: () => {
         this.ui.redeeming = false;
-        this.notify.error(err?.error?.message ?? 'Could not redeem this code.');
+        this.notify.error('Could not redeem this code.');
       },
     });
   }

@@ -7,6 +7,7 @@ import {
   IonToolbar, IonSpinner, IonIcon, NavController,
 } from '@ionic/angular/standalone';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { Preferences } from '@capacitor/preferences';
 import { InAppBrowser } from '@capgo/inappbrowser';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
@@ -87,6 +88,10 @@ export class GiftCardsPage implements OnInit {
   paymentState: { orderReference: string; giftCardId: number } | null = null;
   ui_checking_out = false;
 
+  // Auth token for authed gift-card calls (purchase / checkout / status /
+  // photo upload). Loaded from the stored user in Preferences.
+  private authToken = '';
+
   constructor(
     private router: Router,
     private navCtrl: NavController,
@@ -95,12 +100,21 @@ export class GiftCardsPage implements OnInit {
   ) {}
 
   ngOnInit() {
+    this.loadAuthToken();
     this.loadThemes();
+  }
+
+  private async loadAuthToken() {
+    const ret: any = await Preferences.get({ key: 'user' });
+    if (ret?.value) {
+      try { this.authToken = JSON.parse(ret.value)?.token ?? ''; } catch { /* ignore */ }
+    }
   }
 
   loadThemes() {
     this.ui.loading_themes = true;
-    this.network.get_v3('/v3/gift-cards/themes').subscribe({
+    // PUBLIC endpoint — no authToken. res.data is a Record<theme, themeMeta>.
+    this.network.get_v3('GET /gift-cards/themes').subscribe({
       next: (res: any) => {
         this.ui.loading_themes = false;
         if (res?.data) {
@@ -144,6 +158,20 @@ export class GiftCardsPage implements OnInit {
     if (n < 100 || n > 10000) {
       this.notify.error('Amount must be between AED 100 and AED 10,000.'); return;
     }
+    // Validation parity with web: recipient_name max 60, message max 200.
+    if ((this.form.recipient_name || '').length > 60) {
+      this.notify.error('Recipient name must be 60 characters or fewer.'); return;
+    }
+    if ((this.form.recipient_message || '').length > 200) {
+      this.notify.error('Personal message must be 200 characters or fewer.'); return;
+    }
+    // Scheduled delivery, if set, must be in the future.
+    if (this.form.scheduled_delivery_at) {
+      const when = new Date(this.form.scheduled_delivery_at).getTime();
+      if (isNaN(when) || when <= Date.now()) {
+        this.notify.error('Scheduled delivery date must be in the future.'); return;
+      }
+    }
     this.ui.step = 3;
   }
 
@@ -159,17 +187,14 @@ export class GiftCardsPage implements OnInit {
     const file = input.files?.[0];
     if (!file) return;
 
-    const sessionRaw = sessionStorage.getItem('SESSION') ?? '';
-    const session = sessionRaw ? JSON.parse(atob(sessionRaw)) : {};
-    const token = session?.token ?? '';
+    const token = this.authToken;
     const form = new FormData();
     form.append('image', file, file.name);
-    const headers = { Authorization: `Bearer ${token}` };
 
-    const http = (await import('@angular/common/http')).HttpClient;
-    // Simple fetch for the upload since we don't have HttpClient injected here
+    // Simple fetch for the upload since we don't have HttpClient injected here.
+    // Authed endpoint — set Authorization: Bearer <token>.
     try {
-      const resp = await fetch(`${this.v3BaseUrl}/v3/upload?context=gift_card_photo`, {
+      const resp = await fetch(`${this.v3BaseUrl}/v3/gift-cards/photo`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: form,
@@ -200,14 +225,14 @@ export class GiftCardsPage implements OnInit {
     const payload: any = {
       denomination: denominationStr,
       theme: this.form.theme,
-      recipient_name: this.form.recipient_name || null,
-      recipient_message: this.form.recipient_message || null,
+      recipient_name: (this.form.recipient_name || '').trim() || null,
+      recipient_message: (this.form.recipient_message || '').trim() || null,
       recipient_photo_url: this.form.recipient_photo_url,
       scheduled_delivery_at: this.form.scheduled_delivery_at,
     };
 
     // Step 1: Create the pending_payment gift card
-    this.network.post_v3('/v3/gift-cards/purchase', payload).subscribe({
+    this.network.post_v3('POST /gift-cards/purchase', payload, { authToken: this.authToken }).subscribe({
       next: (res: any) => {
         this.ui.purchasing = false;
         if (res?.data?.id) {
@@ -232,7 +257,7 @@ export class GiftCardsPage implements OnInit {
       channel: 'MOBILE',
     };
 
-    this.network.post_v3('/v3/checkout/initiate', initPayload).subscribe({
+    this.network.post_v3('POST /checkout/initiate', initPayload, { authToken: this.authToken }).subscribe({
       next: (res: any) => {
         this.ui_checking_out = false;
 
@@ -243,7 +268,8 @@ export class GiftCardsPage implements OnInit {
           return;
         }
 
-        const checkoutUrl = res?.data?.checkout_url ?? res?.data?.url;
+        // transformInitiatePaymentResponse maps checkout_url -> url.
+        const checkoutUrl = res?.data?.url ?? res?.data?.checkout_url;
         const orderReference = res?.data?.order_reference ?? '';
 
         if (!checkoutUrl || !orderReference) {
@@ -308,7 +334,10 @@ export class GiftCardsPage implements OnInit {
     }
 
     setTimeout(() => {
-      this.network.get_v3(`/v3/checkout/status/${orderReference}`).subscribe({
+      this.network.get_v3('GET /checkout/status/:order_reference', {
+        authToken: this.authToken,
+        pathParams: { order_reference: orderReference },
+      }).subscribe({
         next: (res: any) => {
           const data = res?.data ?? res;
           if (data?.paid === true || data?.status === 'paid') {

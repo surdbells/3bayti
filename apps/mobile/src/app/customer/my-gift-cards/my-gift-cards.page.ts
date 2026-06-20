@@ -6,6 +6,7 @@ import {
   IonRefresher, IonRefresherContent, NavController,
 } from '@ionic/angular/standalone';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { Preferences } from '@capacitor/preferences';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -28,6 +29,8 @@ export class MyGiftCardsPage implements OnInit {
   cards: any[] = [];
   ui = { loading: true };
 
+  private authToken = '';
+
   readonly cfImage = cfImage;
 
   // Status display map
@@ -47,11 +50,21 @@ export class MyGiftCardsPage implements OnInit {
     private notify: AxNotificationService,
   ) {}
 
-  ngOnInit() { this.load(); }
+  async ngOnInit() {
+    await this.loadAuthToken();
+    this.load();
+  }
+
+  private async loadAuthToken() {
+    const ret: any = await Preferences.get({ key: 'user' });
+    if (ret?.value) {
+      try { this.authToken = JSON.parse(ret.value)?.token ?? ''; } catch { /* ignore */ }
+    }
+  }
 
   load(event?: any) {
     this.ui.loading = true;
-    this.network.get_v3('/v3/gift-cards/mine').subscribe({
+    this.network.get_v3('GET /gift-cards/mine', { authToken: this.authToken }).subscribe({
       next: (res: any) => {
         this.ui.loading = false;
         this.cards = res?.data ?? [];

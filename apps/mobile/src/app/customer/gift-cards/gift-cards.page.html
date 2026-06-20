@@ -123,7 +123,7 @@
       <ax-text-field
         label="Recipient name (optional)"
         type="text"
-        [maxlength]="100"
+        [maxlength]="60"
         [(ngModel)]="form.recipient_name"
         name="recipient_name"
         placeholder="e.g. Sara"
@@ -131,16 +131,16 @@
 
       <!-- Personal message -->
       <div class="gc-textarea-wrap">
-        <label class="gc-label gc-label--sm">Personal message (optional, max 150 chars)</label>
+        <label class="gc-label gc-label--sm">Personal message (optional, max 200 chars)</label>
         <textarea
           class="gc-textarea"
-          maxlength="150"
+          maxlength="200"
           [(ngModel)]="form.recipient_message"
           name="recipient_message"
           placeholder="Write a heartfelt message…"
           rows="3"
         ></textarea>
-        <span class="gc-char-count">{{ (form.recipient_message || '').length }}/150</span>
+        <span class="gc-char-count">{{ (form.recipient_message || '').length }}/200</span>
       </div>
 
       <!-- Schedule delivery -->

@@ -217,7 +217,7 @@ export class AccountPage implements OnInit, OnDestroy {
   }
 
   loadGiftCardBalance() {
-    this.networkAdapter.get_v3('/v3/gift-cards/mine').subscribe({
+    this.networkAdapter.get_v3('GET /gift-cards/mine', { authToken: this.single_user.token }).subscribe({
       next: (res: any) => {
         this.activeGiftCards = (res?.data ?? []).filter(
           (c: any) => c.status === 'active' || c.status === 'partially_used'
@@ -232,7 +232,6 @@ export class AccountPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    this.loadGiftCardBalance();
     this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
     this.getObject();
   }
@@ -243,6 +242,9 @@ export class AccountPage implements OnInit, OnDestroy {
       this.router.navigate(['/', 'login']);
     }else{
       this.single_user = JSON.parse(ret.value);
+      // Load gift-card balance only after the token is available — the call
+      // is authed (GET /gift-cards/mine with single_user.token).
+      this.loadGiftCardBalance();
       this.get_best_sellers();
       this.get_new_arrivals();
       this.get_featured_products();
