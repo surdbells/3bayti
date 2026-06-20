@@ -19,13 +19,14 @@
           <swiper-slide class="slide">
             <div class="hero">
               <div class="img-wrap" [class.loaded]="imgLoaded[$index]">
-                <ion-img
+                <img
                   [src]="product"
                   [alt]="single.name"
                   class="model"
-                  (ionImgWillLoad)="onWillLoad($index)"
-                  (ionImgDidLoad)="onDidLoad($index)">
-                </ion-img>
+                  loading="eager"
+                  decoding="async"
+                  (load)="onDidLoad($index)"
+                  (error)="onDidLoad($index)" />
                 @if(!imgLoaded[$index]){
                   <div class="skeleton"></div>
                 }

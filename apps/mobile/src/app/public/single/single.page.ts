@@ -13,7 +13,6 @@ import {
   IonCard,
   IonCardContent,
   IonContent,
-  IonImg,
   NavController
 } from '@ionic/angular/standalone';
 import { I18nService } from '../../i18n.service';
@@ -40,7 +39,6 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
     IonButton,
     IonCard,
     IonCardContent,
-    IonImg,
     FormsModule,
     TranslatePipe,
     AxIconComponent,
