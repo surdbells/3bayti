@@ -1,120 +1,177 @@
 <ion-content [fullscreen]="true" class="app-bg ion-padding">
-  <ion-grid class="h-100">
-    <ion-row class="h-100 ion-justify-content-center">
-      <ion-col class="ion-padding" size="12">
-        <div class="stack app-fade-in">
-          <img class="auth-logo" src="assets/images/logo.png" alt="">
-          <h1 class="title ion-text-center">{{ 'title' | translate }}</h1>
-          <p class="subtitle ion-text-center">{{ 'subtitle' | translate }}</p>
-        </div>
+  <div class="auth-container">
+    <!-- Header -->
+    <div class="stack app-fade-in">
+      <img class="auth-logo" src="assets/images/logo.png" alt="">
+      <h1 class="title ion-text-center">{{ 'title' | translate }}</h1>
+      <p class="subtitle ion-text-center">{{ 'reset_subtitle' | translate }}</p>
+    </div>
 
-        @if(!ui_controls.loading && ui_controls.stage === 1){
-          <ion-row>
-            <ion-col>
-              <ax-text-field
-                [label]="'email_Address' | translate"
-                type="email"
-                [required]="true"
-                [placeholder]="'e_email_Address' | translate"
-                autocomplete="email"
-                [(ngModel)]="reset_p.email"
-                name="email">
-              </ax-text-field>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col>
-              <ion-button (click)="send_reset_otp()" expand="block" class="ion-margin-vertical" type="button">
-                {{ 'request_otp' | translate }}
-              </ion-button>
-            </ion-col>
-          </ion-row>
-        }
+    <!-- Step indicator (2 steps) -->
+    <div class="step-indicator" aria-hidden="true">
+      @for (s of [1,2]; track s) {
+        <span class="step-dot"
+              [class.is-active]="ui_controls.step === s"
+              [class.is-done]="ui_controls.step > s"></span>
+      }
+    </div>
 
-        @if(!ui_controls.loading && ui_controls.stage === 2){
-          <ion-row class="ion-padding-bottom">
-            <ion-col>
-              <ion-text>
-                {{ 'otp_sent_to_email' | translate }} {{ reset_p.email }}
-              </ion-text>
-            </ion-col>
-          </ion-row>
-          <ion-row class="ion-padding-bottom">
-            <ion-col class="ion-no-padding">
-              <ax-text-field
-                [label]="'otp' | translate"
-                type="text"
-                inputmode="numeric"
-                [required]="true"
-                autocomplete="one-time-code"
-                [(ngModel)]="reset_p.code"
-                name="input_otp">
-              </ax-text-field>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col class="ion-no-padding">
-              <ax-text-field
-                class="ion-margin-bottom"
-                [label]="'new_password' | translate"
-                type="password"
-                [required]="true"
-                autocomplete="new-password"
-                [(ngModel)]="reset_p.new_password"
-                name="new_password">
-              </ax-text-field>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col class="ion-no-padding">
-              <ax-text-field
-                class="ion-margin-bottom"
-                [label]="'confirm_password' | translate"
-                type="password"
-                [required]="true"
-                autocomplete="new-password"
-                [(ngModel)]="reset_p.confirm_password"
-                name="confirm_password">
-              </ax-text-field>
-            </ion-col>
-          </ion-row>
-          <ion-button (click)="reset_password()" expand="block" class="ion-margin-vertical" type="button">
-            {{ 'reset_button' | translate }}
-          </ion-button>
-          <ion-row class="ion-padding-top">
-            <ion-col>
-              <ion-text> {{ 'error_dnd' | translate }} </ion-text>
-              <ion-text> {{ 'error_dnd_more' | translate }} </ion-text>
-            </ion-col>
-          </ion-row>
-          <ion-row class="ion-padding-top">
-            <ion-col>
-              <ion-button (click)="back_to_email()" expand="block" size="small" class="ion-margin-vertical" type="button" fill="outline">
-                {{ 'change_email' | translate }}
-              </ion-button>
-            </ion-col>
-            <ion-col>
-              <ion-button (click)="resend_otp()" expand="block" size="small" class="ion-margin-vertical" type="button" fill="outline">
-                {{ 'resend_otp' | translate }}
-              </ion-button>
-            </ion-col>
-          </ion-row>
-        }
+    @if (ui_controls.loading) {
+      <div class="loader-row">
+        <ax-loader></ax-loader>
+      </div>
+    }
 
-        @if(!ui_controls.loading){
-          <p class="back-to-login-link">
-            <ion-text class="back-to-login-action" (click)="sign_in()">
-              {{ 'back_to_login' | translate }}
-            </ion-text>
-          </p>
-        }
+    <!-- ================= STEP 1: CHANNEL + IDENTIFIER ================= -->
+    @if (!ui_controls.loading && ui_controls.step === 1) {
+      <ion-segment [value]="ui_controls.channel" class="channel-segment">
+        <ion-segment-button value="email" (click)="setChannel('email')">
+          <ion-label>{{ 'channel_email' | translate }}</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="phone" (click)="setChannel('phone')">
+          <ion-label>{{ 'channel_phone' | translate }}</ion-label>
+        </ion-segment-button>
+      </ion-segment>
 
-        @if (ui_controls.loading) {
-          <div class="loader-row">
-            <ax-loader></ax-loader>
+      @if (ui_controls.channel === 'email') {
+        <ax-text-field
+          class="block-mb"
+          [label]="'email_Address' | translate"
+          type="email"
+          [required]="true"
+          [placeholder]="'e_email_Address' | translate"
+          autocomplete="email"
+          [(ngModel)]="reset_p.email"
+          name="email">
+        </ax-text-field>
+      }
+
+      @if (ui_controls.channel === 'phone') {
+        <div class="phone-row">
+          <div class="cc-field">
+            <label class="field-label">{{ 'label_dial_code' | translate }}</label>
+            <button type="button" class="cc-button" (click)="isCountryCodeOpen = true">
+              <span class="cc-flag">{{ selectedDial?.flag }}</span>
+              <span class="cc-code">{{ reset_p.countryCode }}</span>
+              <ax-icon name="chevron-down"></ax-icon>
+            </button>
           </div>
-        }
-      </ion-col>
-    </ion-row>
-  </ion-grid>
+          <div class="phone-field">
+            <ax-text-field
+              [label]="'phone_number' | translate"
+              type="tel"
+              inputmode="numeric"
+              [required]="true"
+              [maxlength]="15"
+              [placeholder]="'enter_phone' | translate"
+              autocomplete="tel-national"
+              [(ngModel)]="reset_p.phone"
+              name="phone">
+            </ax-text-field>
+          </div>
+        </div>
+      }
+
+      <ion-button (click)="send_reset_otp()" expand="block" class="primary-btn" type="button">
+        {{ 'send_code_button' | translate }}
+      </ion-button>
+    }
+
+    <!-- ================= STEP 2: CODE + NEW PASSWORD ================= -->
+    @if (!ui_controls.loading && ui_controls.step === 2) {
+      <p class="step-caption ion-text-center">
+        {{ 'otp_sent_to' | translate }} <strong>{{ sentTo }}</strong>
+      </p>
+
+      <ax-text-field
+        class="block-mb"
+        [label]="'otp' | translate"
+        type="text"
+        inputmode="numeric"
+        [required]="true"
+        autocomplete="one-time-code"
+        [(ngModel)]="reset_p.code"
+        name="input_otp">
+      </ax-text-field>
+
+      <ax-text-field
+        class="block-mb"
+        [label]="'new_password' | translate"
+        type="password"
+        [required]="true"
+        [hint]="'password_hint_min_8' | translate"
+        autocomplete="new-password"
+        [(ngModel)]="reset_p.new_password"
+        name="new_password">
+      </ax-text-field>
+
+      <ax-text-field
+        class="block-mb"
+        [label]="'confirm_password' | translate"
+        type="password"
+        [required]="true"
+        autocomplete="new-password"
+        [(ngModel)]="reset_p.confirm_password"
+        name="confirm_password">
+      </ax-text-field>
+
+      <ion-button (click)="reset_password()" expand="block" class="primary-btn" type="button">
+        {{ 'reset_button' | translate }}
+      </ion-button>
+
+      <div class="secondary-row">
+        <ion-text class="secondary-link" (click)="back_to_identifier()">
+          {{ 'button_back' | translate }}
+        </ion-text>
+        <ion-text class="secondary-link" (click)="resend_otp()">
+          {{ 'resend_otp' | translate }}
+        </ion-text>
+      </div>
+    }
+
+    <!-- Footer: back to login -->
+    @if (!ui_controls.loading) {
+      <p class="back-to-login-link">
+        <ion-text class="back-to-login-action" (click)="sign_in()">
+          {{ 'back_to_login' | translate }}
+        </ion-text>
+      </p>
+    }
+  </div>
+
+  <!-- Country-code picker sheet -->
+  <ax-bottom-sheet
+    [isOpen]="isCountryCodeOpen"
+    (didDismiss)="isCountryCodeOpen = false"
+    [snapPoints]="[0.8, 0.95]"
+    [initialSnap]="0">
+
+    <div ax-sheet-header class="cc-sheet__header">
+      <div class="cc-sheet__title-row">
+        <h2 class="cc-sheet__title">{{ 'title_select_country_code' | translate }}</h2>
+        <button type="button" class="cc-sheet__close" (click)="isCountryCodeOpen = false">
+          {{ 'close' | translate }}
+        </button>
+      </div>
+      <ion-searchbar
+        [(ngModel)]="codeSearch"
+        debounce="100"
+        placeholder="{{ 'placeholder_search_country_or_code' | translate }}">
+      </ion-searchbar>
+    </div>
+
+    <ul class="cc-list">
+      @for (c of filteredDialCodes(); track c.code) {
+        <li class="cc-list__item" (click)="selectCode(c); isCountryCodeOpen = false" role="button" tabindex="0">
+          <span class="cc-list__flag">{{ c.flag }}</span>
+          <span class="cc-list__name">{{ c.name }}</span>
+          <span class="cc-list__code">{{ c.code }}</span>
+        </li>
+      }
+    </ul>
+
+    @if (filteredDialCodes().length === 0) {
+      <div class="cc-list__empty">{{ 'label_no_results' | translate }}</div>
+    }
+  </ax-bottom-sheet>
 </ion-content>

@@ -6,24 +6,30 @@ ion-content.app-bg {
 }
 
 @media (prefers-color-scheme: dark) {
-  ion-content.app-bg {
-    --background: var(--ax-color-bg-canvas);
-  }
+  ion-content.app-bg { --background: var(--ax-color-bg-canvas); }
 }
-
 @media (orientation: landscape) {
-  ion-content.app-bg {
-    --background: var(--ax-color-bg-canvas);
-  }
+  ion-content.app-bg { --background: var(--ax-color-bg-canvas); }
 }
 
-/* Header stack (logo + title + subtitle) */
+/* ----- Auth container — centered single column (matches login) ----- */
+.auth-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 1.5rem 0;
+}
+
+/* ----- Header stack (logo + title + subtitle) ----- */
 .stack {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .auth-logo {
@@ -32,9 +38,8 @@ ion-content.app-bg {
   margin-bottom: 0.5rem;
 }
 
-/* Title & subtitle — M2 typography (Poltawski display + Inter) */
 .title {
-  font-family: var(--ax-font-display);   /* Poltawski Nowy */
+  font-family: var(--ax-font-display);
   font-weight: 400;
   font-size: 26px;
   letter-spacing: -0.005em;
@@ -44,15 +49,139 @@ ion-content.app-bg {
 }
 
 .subtitle {
-  font-family: inherit;                  /* Inter */
+  font-family: inherit;
   font-weight: 400;
-  margin: 0.4rem 0 .6rem;
+  margin: 0.4rem 0 .2rem;
   color: var(--ax-color-text-secondary);
   font-size: 14px;
   line-height: 1.5;
 }
 
-/* Loader row — centered (matches login + reset pattern) */
+/* ----- Step indicator (segmented dots) ----- */
+.step-indicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 0.5rem 0 1.25rem;
+}
+
+.step-dot {
+  width: 28px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--ax-color-border-default);
+  transition: background-color 0.2s ease;
+
+  &.is-active { background: var(--ax-color-text-brand); }
+  &.is-done   { background: var(--ax-color-text-brand); opacity: 0.55; }
+}
+
+.step-caption {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ax-color-text-secondary);
+  margin: 0 0 1.25rem;
+  line-height: 1.5;
+
+  strong { color: var(--ax-color-text-primary); font-weight: 600; }
+}
+
+.field-label {
+  display: block;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+  margin-bottom: 6px;
+}
+
+/* ----- Phone row: dial-code button + phone field ----- */
+.phone-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.cc-field { flex: 0 0 116px; }
+.phone-field { flex: 1 1 auto; }
+
+.cc-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 48px;
+  padding: 0 10px;
+  border: 1px solid var(--ax-color-border-default);
+  border-radius: 12px;
+  background: var(--ax-color-bg-surface, #fff);
+  color: var(--ax-color-text-primary);
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+
+  .cc-flag { font-size: 18px; }
+  .cc-code { font-weight: 500; }
+  ax-icon { margin-inline-start: auto; }
+
+  &:active { opacity: 0.7; }
+}
+
+/* ----- Two-column input row ----- */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.block-mb { display: block; margin-bottom: 1rem; }
+
+/* ----- Terms checkbox row ----- */
+.terms-row { margin: 0.25rem 0 1.25rem; }
+
+/* ----- Primary button ----- */
+.primary-btn { margin: 0.5rem 0; }
+
+/* ----- Secondary links row (resend / change) ----- */
+.secondary-row {
+  display: flex;
+  justify-content: space-between;
+  margin: 1rem 0 0;
+
+  &--center { justify-content: center; }
+}
+
+.secondary-link {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ax-color-text-brand);
+  cursor: pointer;
+
+  &:active { opacity: 0.7; }
+}
+
+/* ----- Sign-in link line ----- */
+.signup-link {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ax-color-text-secondary);
+  text-align: center;
+  margin: 1.5rem 0 0;
+  line-height: 1.5;
+}
+
+.signup-link-action {
+  color: var(--ax-color-text-brand);
+  font-weight: 500;
+  cursor: pointer;
+  margin-inline-start: 4px;
+
+  &:active { opacity: 0.7; }
+}
+
+/* ----- Loader row ----- */
 .loader-row {
   display: flex;
   justify-content: center;
@@ -60,10 +189,53 @@ ion-content.app-bg {
   padding: 1rem 0;
 }
 
+/* ----- Country-code picker sheet (mirrors profile page) ----- */
+.cc-sheet__header { padding: 0 4px 8px; }
+.cc-sheet__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.cc-sheet__title {
+  font-family: var(--ax-font-display);
+  font-size: 18px;
+  margin: 0;
+  color: var(--ax-color-text-primary);
+}
+.cc-sheet__close {
+  background: none;
+  border: none;
+  color: var(--ax-color-text-brand);
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.cc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cc-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 0.5px solid var(--ax-color-border-default);
+  cursor: pointer;
+
+  &:active { background: var(--ax-color-bg-canvas); }
+}
+.cc-list__flag { font-size: 20px; }
+.cc-list__name { flex: 1; color: var(--ax-color-text-primary); font-size: 15px; }
+.cc-list__code { color: var(--ax-color-text-secondary); font-size: 14px; }
+.cc-list__empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--ax-color-text-tertiary);
+}
+
 /* Terms-of-service modal: scale down body text on narrow screens */
 @media (max-width: 360px) {
   div[dir="ltr"],
-  div[dir="rtl"] {
-    font-size: 13px !important;
-  }
+  div[dir="rtl"] { font-size: 13px !important; }
 }
