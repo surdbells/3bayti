@@ -879,6 +879,25 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/cart/merge',
     shape: 'v3-envelope',
   },
+  // Promo-code quote: validates a promo and returns server-authoritative
+  // totals { currency, subtotal, delivery_fee, discount, total, applied_promo }.
+  // First-class v3 capability; no legacy equivalent. Called directly via post_v3
+  // ('POST /cart/quote') from the checkout review step.
+  'POST /cart/quote': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/cart/quote',
+    shape: 'v3-envelope',
+  },
+  // Gift-card preview at checkout: returns { code, theme, gift_card_amount,
+  // gateway_amount, balance_remaining, cart_total, currency } for the cart.
+  // First-class v3 capability. Called directly via post_v3 ('POST /cart/gift-card').
+  'POST /cart/gift-card': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/cart/gift-card',
+    shape: 'v3-envelope',
+  },
   // M3.1.6f1 backend uses POST /v3/checkout/initiate (more specific
   // than the previous /v3/checkout entry). Corrected; flipped back to
   // 'old' pending mobile rewrite.

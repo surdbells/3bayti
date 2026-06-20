@@ -342,7 +342,11 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
     this.request.id = this.single_user.id;
-    this.networkAdapter.post_request(this.request, GlobalComponent.customerCart)
+    // Direct v3 (GET /v3/cart). The transformCartListResponse response
+    // transform still applies via get_v3, so response.data keeps the
+    // {items, bill, ...} shape — the dual-shape handling below is left
+    // intact (the v3 branch is the one that runs).
+    this.networkAdapter.get_v3('GET /cart', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200) {
@@ -420,7 +424,18 @@ export class CheckoutPage implements OnInit, OnDestroy {
     const v3ReturnPrefix = 'https://api-v3.3bayti.ae/v3/checkout/return/';
     let listenerHandle: any = null;
     let processed = false; // ensure we only handle the redirect once
-    this.networkAdapter.post_request(this.checkout, GlobalComponent.initiatePayment)
+    // Direct v3 (POST /v3/checkout/initiate). The server derives the cart,
+    // the customer's default address, and all totals from the authenticated
+    // session — delivery_fee/discount are ignored server-side and promo is a
+    // later stage. So we send only the channel + optional gift card code,
+    // NOT the big Noon `checkout` object. The registered
+    // transformInitiatePaymentResponse maps v3 'checkout_url' -> 'url', so the
+    // response handling below (response.data.url) is unchanged.
+    const initiateBody = {
+      channel: 'MOBILE',
+      gift_card_code: this.giftCard.applied ? this.giftCard.code : undefined,
+    };
+    this.networkAdapter.post_v3('POST /checkout/initiate', initiateBody, { authToken: this.single_user.token })
       .subscribe({
         next: (response: any) => {
           this.ui_controls.checking_out = false;
@@ -624,7 +639,13 @@ export class CheckoutPage implements OnInit, OnDestroy {
     const raw = this.giftCard.code.replace(/-/g, '');
     if (raw.length !== 16) { this.error_notification('Enter a full 16-character gift card code.'); return; }
     this.giftCard.checking = true;
-    this.networkAdapter.post_v3('/v3/cart/gift-card', { code: this.giftCard.code }).subscribe({
+    // Direct v3 (POST /v3/cart/gift-card). Must pass the route-key form, not
+    // a raw path — resolveConfig throws on a non-route-key, so the previous
+    // '/v3/cart/gift-card' literal broke the call. 'POST /cart/gift-card' is
+    // registered in feature-flags. Response.data shape:
+    // { code, theme, gift_card_amount, gateway_amount, balance_remaining,
+    //   cart_total, currency } — the page reads gift_card_amount/gateway_amount.
+    this.networkAdapter.post_v3('POST /cart/gift-card', { code: this.giftCard.code }, { authToken: this.single_user.token }).subscribe({
       next: (res: any) => {
         this.giftCard.checking = false;
         if (res?.data?.gift_card_amount) {
@@ -689,11 +710,41 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   get_billing() {
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readBilling)
+    // Direct v3 (GET /v3/me/billing-address). No response transform is
+    // registered for this route-key, so response.data is the raw v3
+    // envelope payload: { address: <AddressSerializer.publicShape> | null }.
+    // Map the v3 field names onto the page's `update` object (template
+    // binds update.name/phone/email/city/area/street/villa_number) AND
+    // onto single_user.billing_* (which checkout_initiate() reads), so
+    // downstream code is unchanged. Mirrors addresses.page.ts get_billing.
+    this.networkAdapter.get_v3('GET /me/billing-address', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
-            this.update = response.data;
+            const address = response.data?.address;
+            if (address) {
+              this.update.name = address.recipient_name ?? this.update.name;
+              this.update.phone = address.recipient_phone ?? this.update.phone;
+              this.update.email = address.email ?? this.update.email;
+              this.update.city = address.emirate ?? this.update.city;
+              this.update.area = address.area ?? this.update.area;
+              this.update.street = address.street_address ?? '';
+              this.update.villa_number = address.building_details ?? '';
+
+              // Mirror onto the billing_* fields checkout_initiate() reads
+              // so the downstream payment flow sees the saved address.
+              this.single_user.billing_name = this.update.name;
+              this.single_user.billing_phone = this.update.phone;
+              this.single_user.billing_email = this.update.email;
+              this.single_user.billing_city = this.update.city;
+              this.single_user.billing_area = this.update.area;
+              this.single_user.billing_street = this.update.street;
+              this.single_user.villa_number = this.update.villa_number;
+            } else {
+              // No billing address set yet (new user) — keep the
+              // prefilled defaults from getObject().
+              this.ui_controls.is_empty = true;
+            }
             this.ui_controls.is_loading = false;
           }else{
             this.ui_controls.is_empty = true;
@@ -924,7 +975,26 @@ export class CheckoutPage implements OnInit, OnDestroy {
         return;
       }
       this.ui_controls.is_updating = true;
-      this.networkAdapter.post_request(this.update, GlobalComponent.updateBilling, )
+      // Direct v3 (PATCH /v3/me/billing-address, upsert). Request transforms
+      // do NOT apply to direct calls, so build the v3 body explicitly from
+      // UpsertBillingAddressInput's field names/types. recipient_phone must
+      // be E.164 ("+" + country code); the user's stored phone is already
+      // E.164 (login transform), but normalize defensively for the
+      // tel-national input by prefixing the UAE code when "+" is missing.
+      // Mirrors addresses.page.ts update_billing.
+      const phone = this.update.phone?.trim() ?? '';
+      const recipient_phone = phone.startsWith('+')
+        ? phone
+        : '+971' + phone.replace(/^0+/, '');
+      const v3Body = {
+        recipient_name: this.update.name,
+        recipient_phone,
+        emirate: this.update.city,
+        area: this.update.area,
+        street_address: this.update.street,
+        building_details: this.update.villa_number,
+      };
+      this.networkAdapter.patch_v3('PATCH /me/billing-address', v3Body, { authToken: this.single_user.token })
         .subscribe(({
           next: (response: any) => {
             if (response.response_code === 200 && response.status === "success") {
