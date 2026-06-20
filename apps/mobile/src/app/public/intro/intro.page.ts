@@ -50,21 +50,21 @@ export class IntroPage implements OnInit, OnDestroy, AfterViewInit {
   slides: IntroSlide[] = [
     {
       id: 1,
-      image: 'assets/img/intro/slide-1.jpg',
+      image: 'assets/img/intro/slide1.png',
       title: 'slide1_title',
       description: 'slide1_desc',
       imageLoaded: false
     },
     {
       id: 2,
-      image: 'assets/img/intro/slide-2.jpg',
+      image: 'assets/img/intro/slide2.png',
       title: 'slide2_title',
       description: 'slide2_desc',
       imageLoaded: false
     },
     {
       id: 3,
-      image: 'assets/img/intro/slide-3.jpg',
+      image: 'assets/img/intro/slide3.png',
       title: 'slide3_title',
       description: 'slide3_desc',
       imageLoaded: false
