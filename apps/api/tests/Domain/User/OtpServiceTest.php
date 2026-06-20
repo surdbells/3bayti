@@ -82,7 +82,20 @@ final class OtpServiceTest extends TestCase
      */
     private function makeService(): OtpService
     {
-        return new OtpService($this->provider, $this->em, $this->cache);
+        return new OtpService($this->provider, $this->em, $this->cache, $this->makeEmailProvider());
+    }
+
+    /**
+     * Build a LocalEmailOtpProvider over the shared mock EM + an
+     * in-memory mailer. The SMS-channel tests in this class never hit
+     * the email path, but the constructor requires the dependency.
+     */
+    private function makeEmailProvider(): \Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider
+    {
+        return new \Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider(
+            em: $this->em,
+            mailer: new \Bayti\Api\Notification\InMemoryMailer(),
+        );
     }
 
     // -------------------------------------------------------------------
@@ -153,7 +166,7 @@ final class OtpServiceTest extends TestCase
             new \Bayti\Api\Infrastructure\Otp\OtpProviderException('network', 'simulated')
         );
 
-        $service = new OtpService($failingProvider, $this->em, $this->cache);
+        $service = new OtpService($failingProvider, $this->em, $this->cache, $this->makeEmailProvider());
 
         $threw = false;
         try {
@@ -230,6 +243,100 @@ final class OtpServiceTest extends TestCase
 
         $result = $service->verify($vid, '000000');
         self::assertSame(VerifyResult::Expired, $result);
+    }
+
+    // -------------------------------------------------------------------
+    // Email channel — local generation + verification
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function emailSendPersistsHashedCodeAndEmails(): void
+    {
+        $mailer = new \Bayti\Api\Notification\InMemoryMailer();
+        $emailProvider = new \Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider(
+            em: $this->em,
+            mailer: $mailer,
+        );
+        $service = new OtpService($this->provider, $this->em, $this->cache, $emailProvider);
+
+        $vid = $service->send(
+            'user@example.com',
+            OtpAttempt::PURPOSE_PASSWORD_RESET,
+            OtpAttempt::CHANNEL_EMAIL,
+        );
+
+        self::assertStringStartsWith('em-', $vid);
+        $row = $this->persisted[$vid];
+        self::assertTrue($row->isEmailChannel());
+        self::assertSame('user@example.com', $row->getEmail());
+        // The plaintext code is NEVER persisted — only a hash.
+        self::assertNotNull($row->getCodeHash());
+        // An email was actually dispatched.
+        self::assertCount(1, $mailer->sent());
+    }
+
+    #[Test]
+    public function emailVerifyHappyPathConsumesRow(): void
+    {
+        // Stage an email-channel row directly with a known code.
+        $attempt = new OtpAttempt(
+            verificationId: 'em-known',
+            phone: '',
+            purpose: OtpAttempt::PURPOSE_PASSWORD_RESET,
+            expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+            channel: OtpAttempt::CHANNEL_EMAIL,
+            codeHash: password_hash('424242', PASSWORD_BCRYPT),
+            email: 'user@example.com',
+        );
+        $this->persisted['em-known'] = $attempt;
+
+        $service = $this->makeService();
+        self::assertSame(VerifyResult::Success, $service->verify('em-known', '424242'));
+        self::assertTrue($attempt->isConsumed());
+    }
+
+    #[Test]
+    public function emailVerifyWrongCodeIncrementsAttempts(): void
+    {
+        $attempt = new OtpAttempt(
+            verificationId: 'em-known',
+            phone: '',
+            purpose: OtpAttempt::PURPOSE_PASSWORD_RESET,
+            expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+            channel: OtpAttempt::CHANNEL_EMAIL,
+            codeHash: password_hash('424242', PASSWORD_BCRYPT),
+            email: 'user@example.com',
+        );
+        $this->persisted['em-known'] = $attempt;
+
+        $service = $this->makeService();
+        self::assertSame(VerifyResult::WrongCode, $service->verify('em-known', '111111'));
+        self::assertSame(1, $attempt->getAttempts());
+        self::assertFalse($attempt->isConsumed());
+    }
+
+    #[Test]
+    public function emailVerifyBurnsRowAfterAttemptCap(): void
+    {
+        $attempt = new OtpAttempt(
+            verificationId: 'em-known',
+            phone: '',
+            purpose: OtpAttempt::PURPOSE_PASSWORD_RESET,
+            expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+            channel: OtpAttempt::CHANNEL_EMAIL,
+            codeHash: password_hash('424242', PASSWORD_BCRYPT),
+            email: 'user@example.com',
+        );
+        // Pre-load to the cap.
+        for ($i = 0; $i < OtpAttempt::MAX_EMAIL_ATTEMPTS; $i++) {
+            $attempt->incrementAttempts();
+        }
+        $this->persisted['em-known'] = $attempt;
+
+        $service = $this->makeService();
+        // Even the CORRECT code is refused once the cap is hit.
+        self::assertSame(VerifyResult::WrongCode, $service->verify('em-known', '424242'));
+        self::assertFalse($attempt->isConsumed());
     }
 
     // -------------------------------------------------------------------
@@ -315,7 +422,7 @@ final class OtpServiceTest extends TestCase
             public function ping(): bool { return false; }
         };
 
-        $service = new OtpService($this->provider, $this->em, $brokenCache);
+        $service = new OtpService($this->provider, $this->em, $brokenCache, $this->makeEmailProvider());
 
         // Send should succeed despite Redis throwing.
         $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);

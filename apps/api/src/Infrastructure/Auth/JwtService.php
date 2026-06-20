@@ -65,6 +65,19 @@ final class JwtService
     public const AUDIENCE_ACCESS = 'access';
     public const AUDIENCE_REFRESH = 'refresh';
 
+    /**
+     * Audience for the short-lived registration token minted between
+     * phone-OTP verification and account creation in the phone-first
+     * registration flow. DISTINCT from access/refresh so a registration
+     * token can never be presented as a session token (and vice versa)
+     * — verifyAccessToken/verifyRefreshToken reject this audience, and
+     * verifyRegistrationToken rejects access/refresh tokens.
+     */
+    public const AUDIENCE_REGISTER = 'register';
+
+    /** Lifetime of a registration token — 15 minutes. */
+    public const REGISTRATION_TTL_SECONDS = 900;
+
     public function __construct(
         private readonly JwtSettings $settings,
     ) {
@@ -102,6 +115,87 @@ final class JwtService
             refreshTokenExpiresAt: $refreshExp,
             refreshTokenJti: $refreshJti,
         );
+    }
+
+    /**
+     * Mint a short-lived registration token binding a verified phone
+     * (+ country code) to the registration flow.
+     *
+     * Used in the phone-first registration sequence: after the user
+     * proves possession of their phone via SMS-OTP
+     * (/register/verify-phone), we hand back this token. The user then
+     * presents it to /register/submit, which extracts the phone from
+     * the (signature-verified) token rather than trusting a
+     * client-supplied phone — so a client cannot create an account for
+     * a phone they didn't verify.
+     *
+     * NOT a session token: aud='register', no roles/email/sub. It
+     * carries a 'phone' + 'country_code' + 'purpose'='register' claim.
+     * sub is '0' (no user exists yet) — present only to satisfy the
+     * shared verify() required-claims check.
+     */
+    public function issueRegistrationToken(string $phone, string $countryCode): string
+    {
+        $now = new DateTimeImmutable();
+        $exp = $now->modify("+" . self::REGISTRATION_TTL_SECONDS . " seconds");
+
+        $payload = [
+            'iss' => $this->settings->issuer,
+            'sub' => '0', // no user yet
+            'aud' => self::AUDIENCE_REGISTER,
+            'iat' => $now->getTimestamp(),
+            'exp' => $exp->getTimestamp(),
+            'jti' => (string) Uuid::uuid7(),
+            'purpose' => 'register',
+            'phone' => $phone,
+            'country_code' => $countryCode,
+        ];
+
+        return JWT::encode($payload, $this->settings->signingSecret, self::ALGORITHM);
+    }
+
+    /**
+     * Verify a registration token and return its bound phone +
+     * country_code, or null on ANY failure (bad signature, expired,
+     * wrong audience, missing claims) — same no-oracle-leak contract
+     * as the access/refresh verifiers.
+     *
+     * @return array{phone: string, country_code: string}|null
+     */
+    public function verifyRegistrationToken(string $token): ?array
+    {
+        JWT::$leeway = $this->settings->clockSkewSeconds;
+
+        try {
+            $decoded = JWT::decode(
+                $token,
+                new Key($this->settings->signingSecret, self::ALGORITHM),
+            );
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (!isset($decoded->iss, $decoded->aud, $decoded->exp, $decoded->phone)) {
+            return null;
+        }
+        if ($decoded->iss !== $this->settings->issuer) {
+            return null;
+        }
+        if ($decoded->aud !== self::AUDIENCE_REGISTER) {
+            return null;
+        }
+        if (!is_string($decoded->phone) || $decoded->phone === '') {
+            return null;
+        }
+
+        $countryCode = isset($decoded->country_code) && is_string($decoded->country_code)
+            ? $decoded->country_code
+            : 'AE';
+
+        return [
+            'phone' => $decoded->phone,
+            'country_code' => $countryCode,
+        ];
     }
 
     // -------------------------------------------------------------------

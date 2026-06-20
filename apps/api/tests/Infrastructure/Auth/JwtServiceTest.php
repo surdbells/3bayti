@@ -328,6 +328,42 @@ final class JwtServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
+    // Registration token (phone-first registration)
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function registrationTokenRoundTripsPhoneAndCountry(): void
+    {
+        $token = $this->jwt->issueRegistrationToken('+971501234567', 'AE');
+        $claims = $this->jwt->verifyRegistrationToken($token);
+
+        self::assertNotNull($claims);
+        self::assertSame('+971501234567', $claims['phone']);
+        self::assertSame('AE', $claims['country_code']);
+    }
+
+    #[Test]
+    public function registrationTokenIsNotAcceptedAsAccessToken(): void
+    {
+        // Distinct audience — a registration token must NOT authenticate
+        // as a session token, and an access token must NOT pass the
+        // registration verifier.
+        $regToken = $this->jwt->issueRegistrationToken('+971501234567', 'AE');
+        self::assertNull($this->jwt->verifyAccessToken($regToken));
+        self::assertNull($this->jwt->verifyRefreshToken($regToken));
+
+        $pair = $this->jwt->issueTokenPair($this->makeUser());
+        self::assertNull($this->jwt->verifyRegistrationToken($pair->accessToken));
+        self::assertNull($this->jwt->verifyRegistrationToken($pair->refreshToken));
+    }
+
+    #[Test]
+    public function registrationTokenRejectsGarbage(): void
+    {
+        self::assertNull($this->jwt->verifyRegistrationToken('not-a-jwt'));
+    }
+
+    // -------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------
 

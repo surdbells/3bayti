@@ -134,4 +134,104 @@ final class ResetControllerTest extends HttpTestCase
         $response = $this->handle($this->jsonRequest('POST', '/v3/auth/reset', []));
         self::assertSame(422, $response->getStatusCode());
     }
+
+    // -------------------------------------------------------------------
+    // Two-channel reset (email / phone)
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function emailChannelSendsEmailOtp(): void
+    {
+        $user = $this->makeUser(active: true, phoneVerified: true);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findByEmail')->willReturn($user);
+
+        $persistedOtps = [];
+        $otpRepo = $this->createMock(OtpAttemptRepository::class);
+        $otpRepo->method('countRecentSendsForPhone')->willReturn(0);
+        $otpRepo->method('save')->willReturnCallback(function (OtpAttempt $a) use (&$persistedOtps) {
+            $persistedOtps[] = $a;
+        });
+
+        $em = $this->stubEm(fn ($em) =>
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [OtpAttempt::class, $otpRepo],
+            ]));
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle($this->jsonRequest('POST', '/v3/auth/reset', [
+            'channel' => 'email',
+            'email' => $user->getEmail(),
+        ]));
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+        // Email-OTP verification ids carry the 'em-' prefix.
+        self::assertStringStartsWith('em-', $body['verification_id']);
+        // SMS provider was NOT hit (email is local).
+        self::assertEmpty($this->otpProvider->allIssued());
+        // A password-reset, email-channel OTP row was persisted.
+        self::assertCount(1, $persistedOtps);
+        self::assertTrue($persistedOtps[0]->isEmailChannel());
+        self::assertSame(OtpAttempt::PURPOSE_PASSWORD_RESET, $persistedOtps[0]->getPurpose());
+    }
+
+    #[Test]
+    public function emailChannelReturnsFakeVidForUnknownEmail(): void
+    {
+        // Anti-enumeration must hold on the email channel too.
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findByEmail')->willReturn(null);
+
+        $em = $this->stubEm(fn ($em) =>
+            $em->method('getRepository')->with(User::class)->willReturn($userRepo));
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle($this->jsonRequest('POST', '/v3/auth/reset', [
+            'channel' => 'email',
+            'email' => 'unknown@example.com',
+        ]));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringStartsWith('fake-', $this->jsonBody($response)['verification_id']);
+    }
+
+    #[Test]
+    public function phoneChannelSendsSmsToRegisteredPhone(): void
+    {
+        $user = $this->makeUser(active: true, phoneVerified: true);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findByPhone')->willReturn($user);
+
+        $otpRepo = $this->createMock(OtpAttemptRepository::class);
+        $otpRepo->method('countRecentSendsForPhone')->willReturn(0);
+
+        $em = $this->stubEm(fn ($em) =>
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [OtpAttempt::class, $otpRepo],
+            ]));
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle($this->jsonRequest('POST', '/v3/auth/reset', [
+            'channel' => 'phone',
+            'phone' => $user->getPhone(),
+        ]));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringStartsWith('inmem-', $this->jsonBody($response)['verification_id']);
+        self::assertNotEmpty($this->otpProvider->allIssued());
+    }
+
+    #[Test]
+    public function phoneChannelRequiresPhone(): void
+    {
+        $response = $this->handle($this->jsonRequest('POST', '/v3/auth/reset', [
+            'channel' => 'phone',
+        ]));
+        self::assertSame(422, $response->getStatusCode());
+    }
 }

@@ -6,8 +6,10 @@ namespace Bayti\Api\Domain\User;
 
 use Bayti\Api\Infrastructure\Cache\KeyValueStore;
 use Bayti\Api\Infrastructure\Cache\KeyValueStoreException;
+use Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider;
 use Bayti\Api\Infrastructure\Otp\OtpProvider;
 use Bayti\Api\Infrastructure\Otp\OtpProviderException;
+use Bayti\Api\Notification\MailerException;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -125,6 +127,7 @@ final class OtpService
         private readonly OtpProvider $provider,
         private readonly EntityManagerInterface $em,
         private readonly KeyValueStore $cache,
+        private readonly LocalEmailOtpProvider $emailProvider,
         ?LoggerInterface $logger = null,
     ) {
         // Logger defaults to NullLogger so callers (including tests)
@@ -144,21 +147,32 @@ final class OtpService
      * @throws OtpProviderException  When the CPaaS rejects the send.
      */
     public function send(
-        string $phone,
+        string $to,
         string $purpose,
+        string $channel = OtpAttempt::CHANNEL_SMS,
         ?User $user = null,
         ?string $requestedIp = null,
     ): string {
         if (!in_array($purpose, OtpAttempt::ALL_PURPOSES, true)) {
             throw new \InvalidArgumentException("Unknown OTP purpose: {$purpose}");
         }
+        if (!in_array($channel, OtpAttempt::ALL_CHANNELS, true)) {
+            throw new \InvalidArgumentException("Unknown OTP channel: {$channel}");
+        }
 
         // Rate limit check via Redis. Atomic INCR returns the new
         // count after this hit. If it exceeds the cap, refuse.
         // On Redis failure, we log and fail open — see class
-        // docblock for the rationale.
-        $this->enforceRateLimit($phone);
+        // docblock for the rationale. We key on the destination (phone
+        // for SMS, email for the email channel) so each target gets the
+        // same hourly cap.
+        $this->enforceRateLimit($to);
 
+        if ($channel === OtpAttempt::CHANNEL_EMAIL) {
+            return $this->sendEmail($to, $purpose, $user, $requestedIp);
+        }
+
+        // ---- SMS channel (MessageCentral) ----
         // Ask CPaaS to send. If this throws, we don't insert any
         // local record — provider failures don't pollute our audit
         // trail with sends that didn't happen.
@@ -169,7 +183,7 @@ final class OtpService
         // limit a "send attempts" cap rather than "successful sends",
         // which is the right semantic for cost / abuse protection
         // (each attempt costs us a CPaaS call regardless of outcome).
-        $verificationId = $this->provider->send($phone);
+        $verificationId = $this->provider->send($to);
 
         // Persist the local audit row. Single transaction — flush
         // after both the row and the provider call have succeeded.
@@ -178,15 +192,49 @@ final class OtpService
         $repo = $this->em->getRepository(OtpAttempt::class);
         $attempt = new OtpAttempt(
             verificationId: $verificationId,
-            phone: $phone,
+            phone: $to,
             purpose: $purpose,
             expiresAt: $expiresAt,
             user: $user,
             requestedIp: $requestedIp,
+            channel: OtpAttempt::CHANNEL_SMS,
         );
         $repo->save($attempt);
 
         return $verificationId;
+    }
+
+    /**
+     * Email-channel send — delegate to LocalEmailOtpProvider, which
+     * generates the code, persists the OtpAttempt (with code_hash),
+     * and emails the plaintext. Translate a transport failure into the
+     * same OtpProviderException the SMS path raises so controllers have
+     * one error model.
+     *
+     * The audit row records the recipient as `email`; we pass the
+     * user's phone (when available) into the NOT-NULL `phone` column so
+     * the row shape is consistent — but rate-limiting + lookup for this
+     * row key off the email/verification_id.
+     */
+    private function sendEmail(
+        string $email,
+        string $purpose,
+        ?User $user,
+        ?string $requestedIp,
+    ): string {
+        $phone = $user?->getPhone() ?? '';
+
+        try {
+            return $this->emailProvider->send(
+                email: $email,
+                purpose: $purpose,
+                phone: $phone,
+                user: $user,
+                requestedIp: $requestedIp,
+            );
+        } catch (MailerException $e) {
+            throw new OtpProviderException('email_transport', $e->getMessage(), $e);
+        }
     }
 
     /**
@@ -268,7 +316,11 @@ final class OtpService
             return VerifyResult::Expired;
         }
 
-        // Delegate the actual code comparison to the CPaaS.
+        if ($attempt->isEmailChannel()) {
+            return $this->verifyEmail($attempt, $code);
+        }
+
+        // ---- SMS channel: delegate the code comparison to the CPaaS. ----
         $ok = $this->provider->verify($verificationId, $code);
         if (!$ok) {
             return VerifyResult::WrongCode;
@@ -276,6 +328,53 @@ final class OtpService
 
         // Mark consumed and persist. Caller can do further user-state
         // updates (mark phone verified, etc.) in their own transaction.
+        $attempt->markConsumed();
+        $this->em->flush();
+
+        return VerifyResult::Success;
+    }
+
+    /**
+     * LOCAL verification for the email channel.
+     *
+     * Security invariants:
+     *   - attempt cap: once attempts >= MAX_EMAIL_ATTEMPTS the row is
+     *     burned (returns WrongCode without comparing) so online
+     *     brute-force is bounded.
+     *   - constant-time compare: password_verify() against code_hash.
+     *     We never compare plaintext, never load the code (we don't
+     *     have it — only its hash).
+     *   - increment-before-decide: every wrong guess increments the
+     *     counter and persists, so concurrent guesses still consume
+     *     attempts.
+     *   - on success: mark consumed (single-use) and persist.
+     *
+     * Expiry + consumed-at were already checked by the caller.
+     */
+    private function verifyEmail(OtpAttempt $attempt, string $code): VerifyResult
+    {
+        // Burn-on-exhaustion: refuse further guesses once the cap is
+        // reached. The row stays unusable until it expires / is purged.
+        if ($attempt->hasExhaustedAttempts()) {
+            return VerifyResult::WrongCode;
+        }
+
+        $hash = $attempt->getCodeHash();
+        if ($hash === null) {
+            // Defensive: an email-channel row with no hash can never
+            // match. Treat as a generic failure.
+            return VerifyResult::WrongCode;
+        }
+
+        if (!password_verify($code, $hash)) {
+            // Count the failed attempt and persist so the cap is
+            // enforced across requests.
+            $attempt->incrementAttempts();
+            $this->em->flush();
+            return VerifyResult::WrongCode;
+        }
+
+        // Correct code — consume (single-use) and persist.
         $attempt->markConsumed();
         $this->em->flush();
 

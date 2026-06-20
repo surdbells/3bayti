@@ -432,6 +432,33 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/auth/register',
     shape: 'v3-envelope',
   },
+  // Phone-first registration (4-step). v3-only; no legacy 1:1, so
+  // oldPath is '' and routing is by routeKey (see MobileNetworkAdapter).
+  // These are ADDITIVE — 'POST /auth/register' above still works.
+  'POST /auth/register/initiate': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/register/initiate',
+    shape: 'v3-envelope',
+  },
+  'POST /auth/register/verify-phone': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/register/verify-phone',
+    shape: 'v3-envelope',
+  },
+  'POST /auth/register/submit': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/register/submit',
+    shape: 'v3-envelope',
+  },
+  'POST /auth/register/confirm-email': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/register/confirm-email',
+    shape: 'v3-envelope',
+  },
   'POST /auth/validate-phone': {
     target: 'new',
     oldPath: '/users/verifyPhone',

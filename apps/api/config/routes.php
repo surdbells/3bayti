@@ -101,6 +101,18 @@ return function (App $app): void {
         $group->post('/send-otp', SendOtpController::class);
         $group->post('/confirm', ConfirmController::class);
 
+        // Phone-first registration (4-step; anonymous). ADDITIVE — the
+        // /register + /confirm endpoints above stay intact for the web
+        // app + current mobile.
+        //   1. initiate     — check phone free, SMS-OTP
+        //   2. verify-phone — verify SMS-OTP, mint registration token
+        //   3. submit       — create account, email-OTP
+        //   4. confirm-email— verify email-OTP, issue session
+        $group->post('/register/initiate', \Bayti\Api\Http\Controllers\Auth\RegisterInitiateController::class);
+        $group->post('/register/verify-phone', \Bayti\Api\Http\Controllers\Auth\RegisterVerifyPhoneController::class);
+        $group->post('/register/submit', \Bayti\Api\Http\Controllers\Auth\RegisterSubmitController::class);
+        $group->post('/register/confirm-email', \Bayti\Api\Http\Controllers\Auth\RegisterConfirmEmailController::class);
+
         // M1.4.4 — password reset flows (anonymous)
         $group->post('/reset', ResetController::class);
         $group->post('/reset/confirm', ResetConfirmController::class);

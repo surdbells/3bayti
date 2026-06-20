@@ -69,6 +69,35 @@ class OtpAttempt
         self::PURPOSE_LOGIN_2FA,
     ];
 
+    /**
+     * Delivery channel for the OTP.
+     *
+     *   - CHANNEL_SMS:   delegated to MessageCentral CPaaS (code is
+     *                    generated + verified on their side; code_hash
+     *                    stays null). This is the legacy default — all
+     *                    rows created before the email-OTP work have
+     *                    channel='sms'.
+     *   - CHANNEL_EMAIL: generated + verified LOCALLY. We store a
+     *                    password_hash() of the 6-digit code in
+     *                    code_hash, the recipient address in email, and
+     *                    count failed verify tries in attempts. The
+     *                    plaintext code is NEVER persisted.
+     */
+    public const CHANNEL_SMS = 'sms';
+    public const CHANNEL_EMAIL = 'email';
+
+    public const ALL_CHANNELS = [
+        self::CHANNEL_SMS,
+        self::CHANNEL_EMAIL,
+    ];
+
+    /**
+     * Max local verify attempts for an email-OTP before the row is
+     * burned. SMS attempt-capping happens on MessageCentral's side;
+     * this only applies to the locally-verified email channel.
+     */
+    public const MAX_EMAIL_ATTEMPTS = 5;
+
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
     #[ORM\Column(type: 'bigint')]
@@ -106,6 +135,39 @@ class OtpAttempt
     #[ORM\Column(type: 'string', length: 30)]
     private string $purpose;
 
+    /**
+     * Delivery channel — 'sms' (MessageCentral) or 'email' (local).
+     * Defaults to 'sms' so existing rows + the legacy SMS path keep
+     * working without code changes.
+     */
+    #[ORM\Column(type: 'string', length: 10, options: ['default' => self::CHANNEL_SMS])]
+    private string $channel = self::CHANNEL_SMS;
+
+    /**
+     * password_hash() of the 6-digit code, for the LOCAL email channel
+     * only. Null for SMS (MessageCentral holds the code). We store a
+     * one-way hash and compare with password_verify() — the plaintext
+     * code is never persisted or returned.
+     */
+    #[ORM\Column(name: 'code_hash', type: 'string', length: 255, nullable: true)]
+    private ?string $codeHash = null;
+
+    /**
+     * Recipient email address for the email channel. Null for SMS
+     * (the destination there is `phone`). Lets us rate-limit + audit
+     * email-OTP sends keyed by address, mirroring the phone path.
+     */
+    #[ORM\Column(name: 'email', type: 'string', length: 255, nullable: true)]
+    private ?string $email = null;
+
+    /**
+     * Count of failed LOCAL verify attempts for the email channel.
+     * Capped at MAX_EMAIL_ATTEMPTS; once reached the row is unusable.
+     * Always 0 for SMS (MessageCentral tracks its own retries).
+     */
+    #[ORM\Column(type: 'smallint', options: ['default' => 0])]
+    private int $attempts = 0;
+
     #[ORM\Column(name: 'created_at', type: 'datetimetz_immutable')]
     private DateTimeImmutable $createdAt;
 
@@ -137,9 +199,15 @@ class OtpAttempt
         DateTimeImmutable $expiresAt,
         ?User $user = null,
         ?string $requestedIp = null,
+        string $channel = self::CHANNEL_SMS,
+        ?string $codeHash = null,
+        ?string $email = null,
     ) {
         if (!in_array($purpose, self::ALL_PURPOSES, true)) {
             throw new \InvalidArgumentException("Unknown OTP purpose: {$purpose}");
+        }
+        if (!in_array($channel, self::ALL_CHANNELS, true)) {
+            throw new \InvalidArgumentException("Unknown OTP channel: {$channel}");
         }
         $this->verificationId = $verificationId;
         $this->phone = $phone;
@@ -147,6 +215,10 @@ class OtpAttempt
         $this->expiresAt = $expiresAt;
         $this->user = $user;
         $this->requestedIp = $requestedIp;
+        $this->channel = $channel;
+        $this->codeHash = $codeHash;
+        $this->email = $email;
+        $this->attempts = 0;
         $this->createdAt = new DateTimeImmutable();
     }
 
@@ -155,6 +227,10 @@ class OtpAttempt
     public function getPhone(): string                  { return $this->phone; }
     public function getUser(): ?User                    { return $this->user; }
     public function getPurpose(): string                { return $this->purpose; }
+    public function getChannel(): string                { return $this->channel; }
+    public function getCodeHash(): ?string              { return $this->codeHash; }
+    public function getEmail(): ?string                 { return $this->email; }
+    public function getAttempts(): int                  { return $this->attempts; }
     public function getCreatedAt(): DateTimeImmutable   { return $this->createdAt; }
     public function getExpiresAt(): DateTimeImmutable   { return $this->expiresAt; }
     public function getConsumedAt(): ?DateTimeImmutable { return $this->consumedAt; }
@@ -162,6 +238,32 @@ class OtpAttempt
 
     public function isExpired(): bool { return $this->expiresAt <= new DateTimeImmutable(); }
     public function isConsumed(): bool { return $this->consumedAt !== null; }
+
+    public function isEmailChannel(): bool { return $this->channel === self::CHANNEL_EMAIL; }
+    public function isSmsChannel(): bool   { return $this->channel === self::CHANNEL_SMS; }
+
+    public function setChannel(string $channel): void
+    {
+        if (!in_array($channel, self::ALL_CHANNELS, true)) {
+            throw new \InvalidArgumentException("Unknown OTP channel: {$channel}");
+        }
+        $this->channel = $channel;
+    }
+
+    public function setCodeHash(?string $codeHash): void { $this->codeHash = $codeHash; }
+    public function setEmail(?string $email): void       { $this->email = $email; }
+
+    /**
+     * Record a failed local verify attempt (email channel). Capped at
+     * MAX_EMAIL_ATTEMPTS by the caller — this just increments.
+     */
+    public function incrementAttempts(): void { $this->attempts++; }
+
+    /** True once the local email-OTP attempt cap is hit. */
+    public function hasExhaustedAttempts(): bool
+    {
+        return $this->attempts >= self::MAX_EMAIL_ATTEMPTS;
+    }
 
     /** True when the OTP can still be verified against (not expired, not consumed). */
     public function isUsable(): bool

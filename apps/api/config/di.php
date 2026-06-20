@@ -622,6 +622,14 @@ return [
         );
     },
 
+    /**
+     * Local email-OTP provider — generates + emails + persists the
+     * email-channel OTP. Autowires: EntityManagerInterface (bound
+     * above), MailerInterface (NullMailer in dev/test, ZeptoMail in
+     * prod — bound in the notification block), LoggerInterface.
+     */
+    \Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider::class => \DI\autowire(),
+
     OtpService::class => \DI\autowire(),
 
     // -------------------------------------------------------------------
@@ -907,6 +915,14 @@ return [
     \Bayti\Api\Http\Controllers\Auth\RegisterController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\SendOtpController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\ConfirmController::class => \DI\autowire(),
+
+    // Phone-first registration (4 anonymous endpoints) — autowire;
+    // all deps (RequestValidator, EntityManagerInterface, OtpService,
+    // JwtService, UserSerializer) are already bound.
+    \Bayti\Api\Http\Controllers\Auth\RegisterInitiateController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\RegisterVerifyPhoneController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\RegisterSubmitController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\RegisterConfirmEmailController::class => \DI\autowire(),
 
     // M1.4.4 — password reset
     \Bayti\Api\Http\Controllers\Auth\ResetController::class => \DI\autowire(),

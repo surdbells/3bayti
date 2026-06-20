@@ -105,8 +105,9 @@ final class SendOtpController
 
         try {
             $verificationId = $this->otp->send(
-                phone: $user->getPhone(),
+                to: $user->getPhone(),
                 purpose: OtpAttempt::PURPOSE_REGISTRATION,
+                channel: OtpAttempt::CHANNEL_SMS,
                 user: $user,
                 requestedIp: $this->extractIp($request),
             );

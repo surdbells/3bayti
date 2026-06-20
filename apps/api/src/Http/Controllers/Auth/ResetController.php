@@ -77,25 +77,95 @@ final class ResetController
     {
         $input = $this->validator->parse($request, ResetInput::class);
 
-        /** @var UserRepository $users */
-        $users = $this->em->getRepository(User::class);
-        $user = $users->findByEmail($input->email);
-
-        // Bail-with-fake conditions:
-        //   - No such user
-        //   - User is deactivated (is_active=false)
-        //   - User hasn't completed registration (is_phone_verified=false)
-        // Any of these → return a consistent-looking fake vid.
-        if ($user === null || !$user->isActive() || !$user->isPhoneVerified() || $user->getPhone() === null) {
-            return $this->ok([
-                'verification_id' => 'fake-' . bin2hex(random_bytes(12)),
-            ]);
+        // channel=email → email-OTP to the supplied email.
+        // channel=phone → SMS-OTP to the registered phone (looked up by phone).
+        // channel=sms (DEFAULT, back-compat) → look up by email, SMS to
+        //   the user's registered phone. This is exactly the legacy
+        //   email-only flow, so existing mobile clients that post just
+        //   { email } keep working.
+        if ($input->channel === 'email') {
+            return $this->resetViaEmail($request, $input->email);
         }
 
+        return $this->resetViaSms($request, $input->channel, $input->email, $input->phone);
+    }
+
+    /**
+     * Email channel: look up by email, send an email-OTP to that email.
+     */
+    private function resetViaEmail(ServerRequestInterface $request, ?string $email): ResponseInterface
+    {
+        /** @var UserRepository $users */
+        $users = $this->em->getRepository(User::class);
+        $user = $email !== null ? $users->findByEmail($email) : null;
+
+        // Anti-enumeration: fake vid for unknown / inactive / unverified.
+        // We also require the email to be present + the user's email be
+        // verified is NOT required (a half-verified phone-first account
+        // can still reset via email it owns) — but the account must be
+        // active and have completed registration (phone verified).
+        if ($user === null || !$user->isActive() || !$user->isPhoneVerified() || $email === null) {
+            return $this->fakeVid();
+        }
+
+        return $this->dispatch(
+            request: $request,
+            to: $email,
+            channel: OtpAttempt::CHANNEL_EMAIL,
+            user: $user,
+        );
+    }
+
+    /**
+     * SMS channel (including the back-compat default): resolve the user
+     * by phone (channel=phone) or by email (default), then SMS their
+     * registered phone.
+     */
+    private function resetViaSms(
+        ServerRequestInterface $request,
+        string $channel,
+        ?string $email,
+        ?string $phone,
+    ): ResponseInterface {
+        /** @var UserRepository $users */
+        $users = $this->em->getRepository(User::class);
+
+        $user = null;
+        if ($channel === 'phone' && $phone !== null) {
+            $user = $users->findByPhone($phone);
+        } elseif ($email !== null) {
+            // Default 'sms' channel: legacy email-first lookup.
+            $user = $users->findByEmail($email);
+        }
+
+        if ($user === null || !$user->isActive() || !$user->isPhoneVerified() || $user->getPhone() === null) {
+            return $this->fakeVid();
+        }
+
+        return $this->dispatch(
+            request: $request,
+            to: $user->getPhone(),
+            channel: OtpAttempt::CHANNEL_SMS,
+            user: $user,
+        );
+    }
+
+    /**
+     * Send the reset OTP through the chosen channel + map provider
+     * errors. Shared by both channels so the response shape stays
+     * identical.
+     */
+    private function dispatch(
+        ServerRequestInterface $request,
+        string $to,
+        string $channel,
+        User $user,
+    ): ResponseInterface {
         try {
             $verificationId = $this->otp->send(
-                phone: $user->getPhone(),
+                to: $to,
                 purpose: OtpAttempt::PURPOSE_PASSWORD_RESET,
+                channel: $channel,
                 user: $user,
                 requestedIp: $this->extractIp($request),
             );
@@ -113,6 +183,13 @@ final class ResetController
 
         return $this->ok([
             'verification_id' => $verificationId,
+        ]);
+    }
+
+    private function fakeVid(): ResponseInterface
+    {
+        return $this->ok([
+            'verification_id' => 'fake-' . bin2hex(random_bytes(12)),
         ]);
     }
 }

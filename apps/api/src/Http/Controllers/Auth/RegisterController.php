@@ -149,8 +149,9 @@ final class RegisterController
         // (deliberate — see class docblock).
         try {
             $verificationId = $this->otp->send(
-                phone: $input->phone,
+                to: $input->phone,
                 purpose: OtpAttempt::PURPOSE_REGISTRATION,
+                channel: OtpAttempt::CHANNEL_SMS,
                 user: $user,
                 requestedIp: $this->extractIp($request),
             );
