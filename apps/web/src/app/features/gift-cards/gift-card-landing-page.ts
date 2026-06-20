@@ -12,7 +12,7 @@ import { FormsModule, Validators } from '@angular/forms';
 import type { AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
-import { TranslatePipe } from '@ngx-translate/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { PhoneInputComponent, parseE164 } from '../../shared/forms';
 import { GiftCardVisualComponent } from './gift-card-visual';
@@ -363,6 +363,7 @@ export class GiftCardLandingPageComponent implements OnInit {
   private readonly seo = inject(SeoService);
   private readonly router = inject(Router);
   private readonly platformId = inject(PLATFORM_ID);
+  private readonly i18n = inject(TranslateService);
 
   protected readonly loadState = signal<LoadState>('loading');
   protected readonly themes = signal<GiftCardThemeOption[]>([]);
@@ -458,10 +459,8 @@ export class GiftCardLandingPageComponent implements OnInit {
 
   ngOnInit(): void {
     this.seo.set({
-      title: 'Gift Cards · 3bayti',
-      description:
-        'Give the gift of choice with a beautifully designed 3bayti gift card — ' +
-        'six occasions, delivered instantly or scheduled for the perfect moment.',
+      title: this.i18n.instant('giftCards.landing.seoTitle'),
+      description: this.i18n.instant('giftCards.landing.seoDescription'),
     });
     void this.loadThemes();
   }

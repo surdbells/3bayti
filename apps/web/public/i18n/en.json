@@ -62,7 +62,13 @@
     "shipping": "Shipping policy",
     "copyright": "© {{year}} 3bayti. All rights reserved.",
     "socialAria": "Social media",
-    "paymentsAria": "Accepted payment methods"
+    "paymentsAria": "Accepted payment methods",
+    "payments": {
+      "visa": "Visa",
+      "mastercard": "Mastercard",
+      "applePay": "Apple Pay",
+      "tabby": "Tabby"
+    }
   },
   "locale": {
     "switchToArabic": "Switch to Arabic",
@@ -690,7 +696,9 @@
       "buy": "Buy gift card",
       "submitting": "Starting your purchase…",
       "errorSubmit": "Something went wrong starting your purchase. Please try again.",
-      "reassure": "You'll be taken to our secure checkout to pay."
+      "reassure": "You'll be taken to our secure checkout to pay.",
+      "seoTitle": "Gift Cards · 3bayti",
+      "seoDescription": "Give the gift of choice with a beautifully designed 3bayti gift card — six occasions, delivered instantly or scheduled for the perfect moment."
     },
     "mine": {
       "title": "My Gift Cards",
@@ -1092,5 +1100,89 @@
     "body": "The page you're looking for doesn't exist, may have moved, or is no longer available. Let's get you back to the collections.",
     "home": "Back to home",
     "categories": "Browse categories"
+  },
+  "routeTitles": {
+    "home": "3bayti — Premium Abayas, Kaftans & Modest Wear",
+    "categories": "Shop by Category · 3bayti",
+    "product": "Product · 3bayti",
+    "stores": "Stores · 3bayti",
+    "storeDetail": "Store · 3bayti",
+    "bestSellers": "Best Sellers · 3bayti",
+    "newArrivals": "New Arrivals · 3bayti",
+    "giftCards": "Gift Cards · 3bayti",
+    "giftCardRedeem": "Redeem a Gift Card · 3bayti",
+    "sell": "Sell on 3bayti",
+    "devComponents": "Component preview · 3bayti",
+    "login": "Sign in · 3bayti",
+    "register": "Create account · 3bayti",
+    "verifyPhone": "Verify your phone · 3bayti",
+    "forgotPassword": "Forgot password · 3bayti",
+    "resetPassword": "Reset password · 3bayti",
+    "cart": "Your bag · 3bayti",
+    "account": "My account · 3bayti",
+    "accountProfile": "Profile · 3bayti",
+    "accountPassword": "Change password · 3bayti",
+    "accountMeasurements": "My measurements · 3bayti",
+    "accountDelete": "Delete account · 3bayti",
+    "accountWishlist": "My wishlist · 3bayti",
+    "accountGiftCards": "My Gift Cards · 3bayti",
+    "accountGiftCardDetail": "Gift Card · 3bayti",
+    "accountAddresses": "Saved addresses · 3bayti",
+    "accountOrders": "Your orders · 3bayti",
+    "accountOrderDetail": "Order details · 3bayti",
+    "accountOrderReturn": "Request a return · 3bayti",
+    "checkoutAddress": "Checkout — Shipping · 3bayti",
+    "checkoutReview": "Checkout — Review · 3bayti",
+    "checkoutPayment": "Checkout — Payment · 3bayti",
+    "checkoutReturn": "Confirming payment · 3bayti",
+    "checkoutSuccess": "Order placed · 3bayti",
+    "notFound": "Page not found · 3bayti"
+  },
+  "devComponents": {
+    "seo": {
+      "title": "Component preview",
+      "description": "Internal UI primitive showcase."
+    },
+    "title": "Component preview",
+    "intro": "Visual showcase of the shared UI primitives. Add a new component here when you ship one — keeps the design language consistent and lets you eyeball every state at once.",
+    "headings": {
+      "title": "Headings",
+      "note": "Decoupled semantic level (h1..h6) from visual size.",
+      "sample": "The brown fox jumped"
+    },
+    "text": {
+      "title": "Text",
+      "note": "Body copy with size + tone variants.",
+      "sizesLabel": "Sizes",
+      "sizeSample": "Discover handcrafted abayas and kaftans from independent UAE designers.",
+      "tonesLabel": "Tones",
+      "toneSample": "The quick brown fox jumped over the lazy dog."
+    },
+    "buttons": {
+      "title": "Buttons",
+      "note": "3 variants × 3 sizes. Renders as button, anchor, or routerLink based on props.",
+      "disabled": "disabled",
+      "asLinkLabel": "As link (href)",
+      "anchorSample": "External-style anchor",
+      "routerSample": "router link"
+    },
+    "container": {
+      "title": "Container",
+      "note": "Width-constrained content wrapper. Sizes shown in dashed boxes.",
+      "fill": "Container content area"
+    },
+    "stack": {
+      "title": "Stack",
+      "note": "Flex container with consistent spacing scale (4 / 8 / 16 / 24 / 40 / 64 px).",
+      "gapPresetsLabel": "Gap presets (vertical)",
+      "horizontalLabel": "Horizontal direction with align/justify",
+      "pillStart": "Start",
+      "pillMiddle": "Middle",
+      "pillEnd": "End"
+    },
+    "productCards": {
+      "title": "Product Cards",
+      "note": "Reusable card for product grids on /category/:slug, PDP related-products, /designer/:slug, and search. Renders all branches: image present + missing, on sale + regular price, in stock + out of stock, with rating + without, and the defensive \"no slug\" fallback (renders as div, not anchor)."
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
+import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import {
   ButtonComponent,
   ContainerComponent,
@@ -35,6 +36,7 @@ import type { Product } from '../catalog/product.model';
     TextComponent,
     StackComponent,
     ProductCardComponent,
+    TranslatePipe,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './dev-components.html',
@@ -42,11 +44,12 @@ import type { Product } from '../catalog/product.model';
 })
 export class DevComponentsComponent {
   private seo = inject(SeoService);
+  private readonly i18n = inject(TranslateService);
 
   constructor() {
     this.seo.set({
-      title: 'Component preview',
-      description: 'Internal UI primitive showcase.',
+      title: this.i18n.instant('devComponents.seo.title'),
+      description: this.i18n.instant('devComponents.seo.description'),
       url: `${environment.SITE_URL}/_dev/components`,
       robots: 'noindex,nofollow',
     });

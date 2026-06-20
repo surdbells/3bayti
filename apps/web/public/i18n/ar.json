@@ -62,7 +62,13 @@
     "shipping": "سياسة الشحن",
     "copyright": "© {{year}} 3bayti. جميع الحقوق محفوظة.",
     "socialAria": "وسائل التواصل الاجتماعي",
-    "paymentsAria": "طرق الدفع المقبولة"
+    "paymentsAria": "طرق الدفع المقبولة",
+    "payments": {
+      "visa": "Visa",
+      "mastercard": "Mastercard",
+      "applePay": "Apple Pay",
+      "tabby": "Tabby"
+    }
   },
   "locale": {
     "switchToArabic": "التبديل إلى العربية",
@@ -690,7 +696,9 @@
       "buy": "اشتري بطاقة هدية",
       "submitting": "جارٍ بدء عملية الشراء…",
       "errorSubmit": "حدث خطأ أثناء بدء عملية الشراء. يُرجى المحاولة مرة أخرى.",
-      "reassure": "سيتم تحويلك إلى صفحة الدفع الآمنة لإتمام العملية."
+      "reassure": "سيتم تحويلك إلى صفحة الدفع الآمنة لإتمام العملية.",
+      "seoTitle": "بطاقات الهدايا · 3bayti",
+      "seoDescription": "امنح هدية الاختيار مع بطاقة هدايا 3bayti المصممة بأناقة — ست مناسبات، تُسلَّم فورًا أو مجدولة للحظة المثالية."
     },
     "mine": {
       "title": "بطاقات الهدايا الخاصة بي",
@@ -1092,5 +1100,89 @@
     "body": "الصفحة التي تبحثين عنها غير موجودة، أو ربما انتقلت، أو لم تعد متاحة. لنُعِدكِ إلى المجموعات.",
     "home": "العودة إلى الرئيسية",
     "categories": "تصفّحي الفئات"
+  },
+  "routeTitles": {
+    "home": "3bayti — عبايات وقفاطين وأزياء محتشمة فاخرة",
+    "categories": "التسوق حسب الفئة · 3bayti",
+    "product": "المنتج · 3bayti",
+    "stores": "المتاجر · 3bayti",
+    "storeDetail": "المتجر · 3bayti",
+    "bestSellers": "الأكثر مبيعًا · 3bayti",
+    "newArrivals": "وصل حديثًا · 3bayti",
+    "giftCards": "بطاقات الهدايا · 3bayti",
+    "giftCardRedeem": "استبدال بطاقة هدية · 3bayti",
+    "sell": "البيع على 3bayti",
+    "devComponents": "معاينة المكوّنات · 3bayti",
+    "login": "تسجيل الدخول · 3bayti",
+    "register": "إنشاء حساب · 3bayti",
+    "verifyPhone": "تأكيد رقم هاتفك · 3bayti",
+    "forgotPassword": "نسيت كلمة المرور · 3bayti",
+    "resetPassword": "إعادة تعيين كلمة المرور · 3bayti",
+    "cart": "حقيبتك · 3bayti",
+    "account": "حسابي · 3bayti",
+    "accountProfile": "الملف الشخصي · 3bayti",
+    "accountPassword": "تغيير كلمة المرور · 3bayti",
+    "accountMeasurements": "مقاساتي · 3bayti",
+    "accountDelete": "حذف الحساب · 3bayti",
+    "accountWishlist": "قائمة أمنياتي · 3bayti",
+    "accountGiftCards": "بطاقات الهدايا الخاصة بي · 3bayti",
+    "accountGiftCardDetail": "بطاقة هدية · 3bayti",
+    "accountAddresses": "العناوين المحفوظة · 3bayti",
+    "accountOrders": "طلباتك · 3bayti",
+    "accountOrderDetail": "تفاصيل الطلب · 3bayti",
+    "accountOrderReturn": "طلب إرجاع · 3bayti",
+    "checkoutAddress": "إتمام الشراء — الشحن · 3bayti",
+    "checkoutReview": "إتمام الشراء — المراجعة · 3bayti",
+    "checkoutPayment": "إتمام الشراء — الدفع · 3bayti",
+    "checkoutReturn": "تأكيد الدفع · 3bayti",
+    "checkoutSuccess": "تم تقديم الطلب · 3bayti",
+    "notFound": "الصفحة غير موجودة · 3bayti"
+  },
+  "devComponents": {
+    "seo": {
+      "title": "معاينة المكوّنات",
+      "description": "عرض داخلي لمكوّنات واجهة المستخدم الأساسية."
+    },
+    "title": "معاينة المكوّنات",
+    "intro": "عرض مرئي لمكوّنات واجهة المستخدم المشتركة. أضِف مكوّنًا جديدًا هنا عند إطلاقه — يحافظ ذلك على اتساق لغة التصميم ويتيح لك معاينة كل الحالات دفعة واحدة.",
+    "headings": {
+      "title": "العناوين",
+      "note": "فصل المستوى الدلالي (h1..h6) عن الحجم المرئي.",
+      "sample": "قفز الثعلب البنّي"
+    },
+    "text": {
+      "title": "النصوص",
+      "note": "نص أساسي بتنويعات الحجم والدرجة اللونية.",
+      "sizesLabel": "الأحجام",
+      "sizeSample": "اكتشف العبايات والقفاطين المصنوعة يدويًا من مصممين إماراتيين مستقلين.",
+      "tonesLabel": "الدرجات اللونية",
+      "toneSample": "قفز الثعلب البنّي السريع فوق الكلب الكسول."
+    },
+    "buttons": {
+      "title": "الأزرار",
+      "note": "٣ تنويعات × ٣ أحجام. يُعرض كزرّ أو رابط أو routerLink حسب الخصائص.",
+      "disabled": "معطّل",
+      "asLinkLabel": "كرابط (href)",
+      "anchorSample": "رابط بنمط خارجي",
+      "routerSample": "رابط توجيه"
+    },
+    "container": {
+      "title": "الحاوية",
+      "note": "غلاف محتوى محدود العرض. الأحجام معروضة داخل صناديق متقطّعة.",
+      "fill": "منطقة محتوى الحاوية"
+    },
+    "stack": {
+      "title": "التكديس",
+      "note": "حاوية مرنة بمقياس تباعد متّسق (٤ / ٨ / ١٦ / ٢٤ / ٤٠ / ٦٤ بكسل).",
+      "gapPresetsLabel": "إعدادات الفجوة المسبقة (عمودي)",
+      "horizontalLabel": "اتجاه أفقي مع المحاذاة/التوزيع",
+      "pillStart": "البداية",
+      "pillMiddle": "الوسط",
+      "pillEnd": "النهاية"
+    },
+    "productCards": {
+      "title": "بطاقات المنتجات",
+      "note": "بطاقة قابلة لإعادة الاستخدام لشبكات المنتجات في /category/:slug وصفحة المنتج للمنتجات ذات الصلة و/designer/:slug والبحث. تعرض جميع الحالات: مع صورة وبدونها، بسعر مخفّض وبالسعر العادي، متوفّر وغير متوفّر، مع تقييم وبدونه، إضافة إلى الحالة الاحترازية \"بدون slug\" (تُعرض كـ div وليس كرابط)."
+    }
   }
 }

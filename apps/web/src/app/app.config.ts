@@ -1,7 +1,7 @@
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, TitleStrategy } from '@angular/router';
 
-import { routes } from './app.routes';
+import { routes, I18nTitleStrategy } from './app.routes';
 import { provideI18n } from './core/i18n';
 import { provideAuth } from './core/auth/auth.providers';
 import { provideMonitoring } from './core/monitoring';
@@ -37,5 +37,6 @@ export const appConfig: ApplicationConfig = {
     provideI18n(),
     provideAuth(),
     provideMonitoring(),
+    { provide: TitleStrategy, useClass: I18nTitleStrategy },
   ],
 };

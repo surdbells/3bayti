@@ -3,11 +3,9 @@
     <ui-stack gap="2xl">
 
       <header class="dev-header">
-        <ui-heading level="h1" size="display">Component preview</ui-heading>
+        <ui-heading level="h1" size="display">{{ 'devComponents.title' | translate }}</ui-heading>
         <ui-text size="lg" tone="secondary">
-          Visual showcase of the shared UI primitives. Add a new component here
-          when you ship one — keeps the design language consistent and lets you
-          eyeball every state at once.
+          {{ 'devComponents.intro' | translate }}
         </ui-text>
       </header>
 
@@ -15,14 +13,14 @@
       <!-- Headings                                                       -->
       <!-- ============================================================ -->
       <section>
-        <ui-heading level="h2" size="md">Headings</ui-heading>
-        <p class="dev-note">Decoupled semantic level (h1..h6) from visual size.</p>
+        <ui-heading level="h2" size="md">{{ 'devComponents.headings.title' | translate }}</ui-heading>
+        <p class="dev-note">{{ 'devComponents.headings.note' | translate }}</p>
         <div class="dev-card">
           <ui-stack gap="md">
             @for (s of headingSizes; track s) {
               <div class="dev-row">
                 <code class="dev-tag">size="{{ s }}"</code>
-                <ui-heading level="h3" [size]="s">The brown fox jumped</ui-heading>
+                <ui-heading level="h3" [size]="s">{{ 'devComponents.headings.sample' | translate }}</ui-heading>
               </div>
             }
           </ui-stack>
@@ -33,31 +31,31 @@
       <!-- Text                                                          -->
       <!-- ============================================================ -->
       <section>
-        <ui-heading level="h2" size="md">Text</ui-heading>
-        <p class="dev-note">Body copy with size + tone variants.</p>
+        <ui-heading level="h2" size="md">{{ 'devComponents.text.title' | translate }}</ui-heading>
+        <p class="dev-note">{{ 'devComponents.text.note' | translate }}</p>
         <div class="dev-card">
           <ui-stack gap="lg">
             <div>
-              <p class="dev-label">Sizes</p>
+              <p class="dev-label">{{ 'devComponents.text.sizesLabel' | translate }}</p>
               <ui-stack gap="sm">
                 @for (s of textSizes; track s) {
                   <div class="dev-row">
                     <code class="dev-tag">size="{{ s }}"</code>
                     <ui-text [size]="s">
-                      Discover handcrafted abayas and kaftans from independent UAE designers.
+                      {{ 'devComponents.text.sizeSample' | translate }}
                     </ui-text>
                   </div>
                 }
               </ui-stack>
             </div>
             <div>
-              <p class="dev-label">Tones</p>
+              <p class="dev-label">{{ 'devComponents.text.tonesLabel' | translate }}</p>
               <ui-stack gap="sm">
                 @for (t of textTones; track t) {
                   <div class="dev-row">
                     <code class="dev-tag">tone="{{ t }}"</code>
                     <ui-text [tone]="t">
-                      The quick brown fox jumped over the lazy dog.
+                      {{ 'devComponents.text.toneSample' | translate }}
                     </ui-text>
                   </div>
                 }
@@ -71,8 +69,8 @@
       <!-- Buttons                                                       -->
       <!-- ============================================================ -->
       <section>
-        <ui-heading level="h2" size="md">Buttons</ui-heading>
-        <p class="dev-note">3 variants × 3 sizes. Renders as button, anchor, or routerLink based on props.</p>
+        <ui-heading level="h2" size="md">{{ 'devComponents.buttons.title' | translate }}</ui-heading>
+        <p class="dev-note">{{ 'devComponents.buttons.note' | translate }}</p>
         <div class="dev-card">
           <ui-stack gap="lg">
             @for (size of buttonSizes; track size) {
@@ -85,16 +83,16 @@
                     </ui-button>
                   }
                   <ui-button [variant]="'primary'" [size]="size" [disabled]="true">
-                    disabled
+                    {{ 'devComponents.buttons.disabled' | translate }}
                   </ui-button>
                 </ui-stack>
               </div>
             }
             <div>
-              <p class="dev-label">As link (href)</p>
+              <p class="dev-label">{{ 'devComponents.buttons.asLinkLabel' | translate }}</p>
               <ui-stack direction="horizontal" gap="md">
-                <ui-button href="/about">External-style anchor</ui-button>
-                <ui-button variant="secondary" routerLink="/">router link</ui-button>
+                <ui-button href="/about">{{ 'devComponents.buttons.anchorSample' | translate }}</ui-button>
+                <ui-button variant="secondary" routerLink="/">{{ 'devComponents.buttons.routerSample' | translate }}</ui-button>
               </ui-stack>
             </div>
           </ui-stack>
@@ -105,15 +103,15 @@
       <!-- Container                                                     -->
       <!-- ============================================================ -->
       <section>
-        <ui-heading level="h2" size="md">Container</ui-heading>
-        <p class="dev-note">Width-constrained content wrapper. Sizes shown in dashed boxes.</p>
+        <ui-heading level="h2" size="md">{{ 'devComponents.container.title' | translate }}</ui-heading>
+        <p class="dev-note">{{ 'devComponents.container.note' | translate }}</p>
         <ui-stack gap="md">
           @for (s of containerSizes; track s) {
             <div class="dev-container-demo">
               <code class="dev-tag dev-tag--inset">size="{{ s }}"</code>
               <ui-container [size]="s">
                 <div class="dev-container-fill">
-                  Container content area
+                  {{ 'devComponents.container.fill' | translate }}
                 </div>
               </ui-container>
             </div>
@@ -125,12 +123,12 @@
       <!-- Stack                                                         -->
       <!-- ============================================================ -->
       <section>
-        <ui-heading level="h2" size="md">Stack</ui-heading>
-        <p class="dev-note">Flex container with consistent spacing scale (4 / 8 / 16 / 24 / 40 / 64 px).</p>
+        <ui-heading level="h2" size="md">{{ 'devComponents.stack.title' | translate }}</ui-heading>
+        <p class="dev-note">{{ 'devComponents.stack.note' | translate }}</p>
         <div class="dev-card">
           <ui-stack gap="lg">
             <div>
-              <p class="dev-label">Gap presets (vertical)</p>
+              <p class="dev-label">{{ 'devComponents.stack.gapPresetsLabel' | translate }}</p>
               <ui-stack direction="horizontal" gap="md" [wrap]="true">
                 @for (g of stackGaps; track g) {
                   <div class="dev-stack-demo">
@@ -145,12 +143,12 @@
               </ui-stack>
             </div>
             <div>
-              <p class="dev-label">Horizontal direction with align/justify</p>
+              <p class="dev-label">{{ 'devComponents.stack.horizontalLabel' | translate }}</p>
               <ui-stack direction="horizontal" gap="md" align="center" justify="between"
                         class="dev-stack-h-demo">
-                <div class="dev-pill">Start</div>
-                <div class="dev-pill">Middle</div>
-                <div class="dev-pill">End</div>
+                <div class="dev-pill">{{ 'devComponents.stack.pillStart' | translate }}</div>
+                <div class="dev-pill">{{ 'devComponents.stack.pillMiddle' | translate }}</div>
+                <div class="dev-pill">{{ 'devComponents.stack.pillEnd' | translate }}</div>
               </ui-stack>
             </div>
           </ui-stack>
@@ -161,12 +159,9 @@
       <!-- Product Cards (catalog feature) — W2.1 prep                  -->
       <!-- ============================================================ -->
       <section>
-        <ui-heading level="h2" size="md">Product Cards</ui-heading>
+        <ui-heading level="h2" size="md">{{ 'devComponents.productCards.title' | translate }}</ui-heading>
         <p class="dev-note">
-          Reusable card for product grids on /category/:slug, PDP related-products,
-          /designer/:slug, and search. Renders all branches: image present + missing,
-          on sale + regular price, in stock + out of stock, with rating + without,
-          and the defensive "no slug" fallback (renders as div, not anchor).
+          {{ 'devComponents.productCards.note' | translate }}
         </p>
         <div class="dev-card dev-card--product-grid">
           <div class="dev-product-grid">

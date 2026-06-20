@@ -1,6 +1,30 @@
-import { Routes } from '@angular/router';
+import { Routes, TitleStrategy, RouterStateSnapshot } from '@angular/router';
+import { Injectable, inject } from '@angular/core';
+import { Title } from '@angular/platform-browser';
+import { TranslateService } from '@ngx-translate/core';
 import { HomeComponent } from './features/home/home';
 import { guestActivateGuard, authActivateGuard } from './core/auth/auth.guards';
+
+/**
+ * Route titles are stored as i18n KEYS (e.g. `routeTitles.home`) rather than
+ * literal English, so the browser <title> is localized. This TitleStrategy
+ * resolves the key through TranslateService whenever the active route changes.
+ *
+ * Register it in the app config:
+ *   { provide: TitleStrategy, useClass: I18nTitleStrategy }
+ */
+@Injectable({ providedIn: 'root' })
+export class I18nTitleStrategy extends TitleStrategy {
+  private readonly title = inject(Title);
+  private readonly translate = inject(TranslateService);
+
+  override updateTitle(snapshot: RouterStateSnapshot): void {
+    const key = this.buildTitle(snapshot);
+    if (key !== undefined) {
+      this.title.setTitle(this.translate.instant(key));
+    }
+  }
+}
 
 /**
  * Top-level route table for the public web app.
@@ -20,7 +44,7 @@ export const routes: Routes = [
     path: '',
     pathMatch: 'full',
     component: HomeComponent,
-    title: '3bayti — Premium Abayas, Kaftans & Modest Wear',
+    title: 'routeTitles.home',
   },
   {
     /* Categories index — `/category`. Lazy-loaded; fetches the live
@@ -28,7 +52,7 @@ export const routes: Routes = [
     path: 'category',
     loadComponent: () =>
       import('./features/categories/categories').then(m => m.CategoriesComponent),
-    title: 'Shop by Category · 3bayti',
+    title: 'routeTitles.categories',
   },
   {
     /* Category detail — `/category/:slug`. Renders category metadata +
@@ -39,7 +63,7 @@ export const routes: Routes = [
     /* Title is set dynamically via SeoService once the data loads;
        the static title here is a fallback for the brief moment before
        hydration and for crawlers that ignore <title> updates. */
-    title: 'Shop by Category · 3bayti',
+    title: 'routeTitles.categories',
   },
   {
     /* Product detail — `/product/:slug`. The PDP. Renders the product
@@ -50,7 +74,7 @@ export const routes: Routes = [
       import('./features/catalog/product-detail').then(m => m.ProductDetailComponent),
     /* Title set dynamically via SeoService. Fallback for crawlers
        that miss the dynamic title update. */
-    title: 'Product · 3bayti',
+    title: 'routeTitles.product',
   },
   {
     /* Stores directory — `/stores`. Public storefront page:
@@ -59,7 +83,7 @@ export const routes: Routes = [
     path: 'stores',
     loadComponent: () =>
       import('./features/stores/store-directory-page').then(m => m.StoreDirectoryPageComponent),
-    title: 'Stores · 3bayti',
+    title: 'routeTitles.stores',
   },
   {
     /* Store detail — `/stores/:slug`. Store header + their product grid.
@@ -67,7 +91,7 @@ export const routes: Routes = [
     path: 'stores/:slug',
     loadComponent: () =>
       import('./features/stores/store-detail-page').then(m => m.StoreDetailPageComponent),
-    title: 'Store · 3bayti',
+    title: 'routeTitles.storeDetail',
   },
   /* Legacy /designer URLs (pre-rename — indexed + bookmarked) → /stores.
      Param-preserving so deep links to a specific store survive. */
@@ -87,7 +111,7 @@ export const routes: Routes = [
         'Shop the most-loved abayas, kaftans and modest wear on 3bayti — ' +
         'our best-selling pieces from independent UAE designers.',
     },
-    title: 'Best Sellers · 3bayti',
+    title: 'routeTitles.bestSellers',
   },
   {
     /* New Arrivals — curated product listing sorted by recency. */
@@ -103,7 +127,7 @@ export const routes: Routes = [
         'The latest abayas, kaftans and modest wear just added to 3bayti — ' +
         'fresh pieces from independent UAE designers.',
     },
-    title: 'New Arrivals · 3bayti',
+    title: 'routeTitles.newArrivals',
   },
   {
     /* Gift Cards — browse the themed designs + purchase (Phase E2).
@@ -112,7 +136,7 @@ export const routes: Routes = [
     path: 'gift-cards',
     loadComponent: () =>
       import('./features/gift-cards/gift-card-landing-page').then(m => m.GiftCardLandingPageComponent),
-    title: 'Gift Cards · 3bayti',
+    title: 'routeTitles.giftCards',
   },
   {
     /* Redeem a gift card / check balance (Phase E4). Public; the redeem
@@ -120,7 +144,7 @@ export const routes: Routes = [
     path: 'gift-cards/redeem',
     loadComponent: () =>
       import('./features/gift-cards/gift-card-redeem-page').then(m => m.GiftCardRedeemPageComponent),
-    title: 'Redeem a Gift Card · 3bayti',
+    title: 'routeTitles.giftCardRedeem',
   },
   {
     /* Sell on 3bayti — vendor recruitment pitch (Phase F). Public; seller
@@ -128,7 +152,7 @@ export const routes: Routes = [
     path: 'sell',
     loadComponent: () =>
       import('./features/sell/sell-page').then(m => m.SellPageComponent),
-    title: 'Sell on 3bayti',
+    title: 'routeTitles.sell',
   },
   {
     /* Dev-only component preview. noindex'd via SeoService inside the
@@ -137,7 +161,7 @@ export const routes: Routes = [
     path: '_dev/components',
     loadComponent: () =>
       import('./features/dev-components/dev-components').then(m => m.DevComponentsComponent),
-    title: 'Component preview · 3bayti',
+    title: 'routeTitles.devComponents',
   },
   /* --- Auth (M3.2.Y.1) ---------------------------------------------------
      Each auth page is lazy-loaded so the catalog bundle stays clean for
@@ -149,14 +173,14 @@ export const routes: Routes = [
     canActivate: [guestActivateGuard],
     loadComponent: () =>
       import('./features/auth/login/login').then(m => m.LoginComponent),
-    title: 'Sign in · 3bayti',
+    title: 'routeTitles.login',
   },
   {
     path: 'register',
     canActivate: [guestActivateGuard],
     loadComponent: () =>
       import('./features/auth/register/register').then(m => m.RegisterComponent),
-    title: 'Create account · 3bayti',
+    title: 'routeTitles.register',
   },
   {
     /* /verify-phone is intentionally NOT guarded. Two flows land here:
@@ -168,21 +192,21 @@ export const routes: Routes = [
     path: 'verify-phone',
     loadComponent: () =>
       import('./features/auth/verify-phone/verify-phone').then(m => m.VerifyPhoneComponent),
-    title: 'Verify your phone · 3bayti',
+    title: 'routeTitles.verifyPhone',
   },
   {
     path: 'forgot-password',
     canActivate: [guestActivateGuard],
     loadComponent: () =>
       import('./features/auth/forgot-password/forgot-password').then(m => m.ForgotPasswordComponent),
-    title: 'Forgot password · 3bayti',
+    title: 'routeTitles.forgotPassword',
   },
   {
     path: 'reset-password',
     canActivate: [guestActivateGuard],
     loadComponent: () =>
       import('./features/auth/reset-password/reset-password').then(m => m.ResetPasswordComponent),
-    title: 'Reset password · 3bayti',
+    title: 'routeTitles.resetPassword',
   },
   /* --- Cart + Checkout (M3.2.Y.2) --------------------------------------
      /cart is public — guests and authenticated users both see their
@@ -191,7 +215,7 @@ export const routes: Routes = [
     path: 'cart',
     loadComponent: () =>
       import('./features/cart/cart-page').then(m => m.CartPageComponent),
-    title: 'Your bag · 3bayti',
+    title: 'routeTitles.cart',
   },
   /* --- Account section (M3.2.Y.2 begins; Y.5 expands) -------------------
      All routes under /account require auth. Y.2-C ships /account/addresses;
@@ -202,42 +226,42 @@ export const routes: Routes = [
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/account/account-hub-page').then(m => m.AccountHubPageComponent),
-    title: 'My account · 3bayti',
+    title: 'routeTitles.account',
   },
   {
     path: 'account/profile',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/account/account-profile-page').then(m => m.AccountProfilePageComponent),
-    title: 'Profile · 3bayti',
+    title: 'routeTitles.accountProfile',
   },
   {
     path: 'account/password',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/account/account-password-page').then(m => m.AccountPasswordPageComponent),
-    title: 'Change password · 3bayti',
+    title: 'routeTitles.accountPassword',
   },
   {
     path: 'account/measurements',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/account/account-measurements-page').then(m => m.AccountMeasurementsPageComponent),
-    title: 'My measurements · 3bayti',
+    title: 'routeTitles.accountMeasurements',
   },
   {
     path: 'account/delete',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/account/account-delete-page').then(m => m.AccountDeletePageComponent),
-    title: 'Delete account · 3bayti',
+    title: 'routeTitles.accountDelete',
   },
   {
     path: 'account/wishlist',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/wishlist/account-wishlist-page').then(m => m.AccountWishlistPageComponent),
-    title: 'My wishlist · 3bayti',
+    title: 'routeTitles.accountWishlist',
   },
   {
     /* Gift cards the buyer owns (purchased + redeemed) — Phase E3. */
@@ -245,42 +269,42 @@ export const routes: Routes = [
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/gift-cards/my-gift-cards-page').then(m => m.MyGiftCardsPageComponent),
-    title: 'My Gift Cards · 3bayti',
+    title: 'routeTitles.accountGiftCards',
   },
   {
     path: 'account/gift-cards/:id',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/gift-cards/gift-card-detail-page').then(m => m.GiftCardDetailPageComponent),
-    title: 'Gift Card · 3bayti',
+    title: 'routeTitles.accountGiftCardDetail',
   },
   {
     path: 'account/addresses',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/addresses/address-book').then(m => m.AddressBookPageComponent),
-    title: 'Saved addresses · 3bayti',
+    title: 'routeTitles.accountAddresses',
   },
   {
     path: 'account/orders',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/orders/account-orders-page').then(m => m.AccountOrdersPageComponent),
-    title: 'Your orders · 3bayti',
+    title: 'routeTitles.accountOrders',
   },
   {
     path: 'account/orders/:id',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/orders/account-order-detail-page').then(m => m.AccountOrderDetailPageComponent),
-    title: 'Order details · 3bayti',
+    title: 'routeTitles.accountOrderDetail',
   },
   {
     path: 'account/orders/:id/return',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/orders/account-order-return-page').then(m => m.AccountOrderReturnPageComponent),
-    title: 'Request a return · 3bayti',
+    title: 'routeTitles.accountOrderReturn',
   },
   /* --- Checkout (M3.2.Y.2-D onwards) ----------------------------------
      Three-step flow: address → review → payment handoff.
@@ -290,35 +314,35 @@ export const routes: Routes = [
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/checkout/checkout-address-page').then(m => m.CheckoutAddressPageComponent),
-    title: 'Checkout — Shipping · 3bayti',
+    title: 'routeTitles.checkoutAddress',
   },
   {
     path: 'checkout/review',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/checkout/checkout-review-page').then(m => m.CheckoutReviewPageComponent),
-    title: 'Checkout — Review · 3bayti',
+    title: 'routeTitles.checkoutReview',
   },
   {
     path: 'checkout/payment',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/checkout/checkout-payment-page').then(m => m.CheckoutPaymentPageComponent),
-    title: 'Checkout — Payment · 3bayti',
+    title: 'routeTitles.checkoutPayment',
   },
   {
     path: 'checkout/return',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/checkout/checkout-return-page').then(m => m.CheckoutReturnPageComponent),
-    title: 'Confirming payment · 3bayti',
+    title: 'routeTitles.checkoutReturn',
   },
   {
     path: 'checkout/success/:id',
     canActivate: [authActivateGuard],
     loadComponent: () =>
       import('./features/checkout/checkout-success-page').then(m => m.CheckoutSuccessPageComponent),
-    title: 'Order placed · 3bayti',
+    title: 'routeTitles.checkoutSuccess',
   },
   {
     /* Catch-all 404 — MUST remain last. This is a client route (not a
@@ -328,6 +352,6 @@ export const routes: Routes = [
     path: '**',
     loadComponent: () =>
       import('./features/not-found/not-found-page').then(m => m.NotFoundPageComponent),
-    title: 'Page not found · 3bayti',
+    title: 'routeTitles.notFound',
   },
 ];
