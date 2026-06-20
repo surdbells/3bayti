@@ -239,12 +239,14 @@ export class CartPage implements OnInit, OnDestroy {
               // v3 doesn't compute delivery/discount/total breakdowns
               // until checkout (they appear on the Order, not the Cart);
               // keep defaults until checkout.page.ts populates them.
+              // Transform now provides the full legacy bill shape (count,
+              // subtotal, f_subtotal, f_delivery, f_discount, total, f_total);
+              // spread it over the default so the summary lines (which bind
+              // f_* + total) populate. Delivery/discount stay 0.00 until
+              // checkout.page.ts computes them on the Order.
               this.bill = {
                 ...this.bill,
-                count: typeof data.bill?.count === 'number' ? data.bill.count : 0,
-                subtotal: typeof data.bill?.subtotal === 'string'
-                  ? data.bill.subtotal
-                  : (data.bill?.subtotal ?? 0),
+                ...(data.bill ?? {}),
               };
             } else {
               // Defensive fallback — empty cart

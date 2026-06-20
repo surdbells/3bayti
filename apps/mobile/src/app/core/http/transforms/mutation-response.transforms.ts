@@ -146,7 +146,11 @@ export function transformCartListResponse(data: unknown): unknown {
       // Both keys forwarded for template compat:
       price: it['unit_price'] ?? '0.00',
       unit_price: it['unit_price'] ?? '0.00',
-      line_total: it['line_total'] ?? '0.00',
+      // cart.page.html binds `cart.price_formatted`; v3 has no formatted
+      // field (unit_price is already a 2dp string).
+      price_formatted: typeof it['unit_price'] === 'string' ? it['unit_price'] : '0.00',
+      // v3 item key is `line_subtotal`, not `line_total`.
+      line_total: it['line_subtotal'] ?? it['line_total'] ?? '0.00',
       size: it['size'] ?? '',
       color: it['color'] ?? '',
       is_custom: it['is_custom'] ?? false,
@@ -163,6 +167,15 @@ export function transformCartListResponse(data: unknown): unknown {
     bill: {
       count: itemCount,
       subtotal,
+      // The cart-page summary binds f_subtotal / f_delivery / f_discount /
+      // total. Pre-checkout the cart carries no delivery/discount (those are
+      // computed on the Order at checkout), so total == subtotal here and the
+      // breakdown lines read 0.00 until checkout populates them.
+      f_subtotal: subtotal,
+      f_delivery: '0.00',
+      f_discount: '0.00',
+      total: subtotal,
+      f_total: subtotal,
       currency,
     },
     cart_id: v3['id'] ?? 0,
