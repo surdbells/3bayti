@@ -33,6 +33,11 @@ import { InfiniteScrollCustomEvent } from "@ionic/angular";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import {
+  AxProductFilterSheetComponent,
+  type ProductFacets,
+  type ProductFilterState,
+} from '../../shared/ax-mobile/product-filter-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { I18nService } from '../../i18n.service';
 import { cfImage } from '../../shared/cf-image';
@@ -57,7 +62,8 @@ import { cfImage } from '../../shared/cf-image';
     IonRefresher,
     IonRefresherContent,
     IonRow,
-    TranslatePipe, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent]
+    TranslatePipe, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent,
+    AxProductFilterSheetComponent]
 })
 export class CategoryPage implements OnInit, OnDestroy {
   /** Expose cfImage for template usage. */
@@ -76,6 +82,19 @@ export class CategoryPage implements OnInit, OnDestroy {
 
   // Selected filter for UI feedback
   selectedFilter: number | 'all' = 'all';
+
+  // ── Web-parity filtering (sort / size / colour / price) ──────────────
+  /** This page's identity sort. */
+  readonly defaultSort = 'newest' as const;
+  isFilterOpen = false;
+  facets: ProductFacets | null = null;
+  filterState: ProductFilterState = {
+    sort: 'newest',
+    sizes: [],
+    colors: [],
+    minPrice: null,
+    maxPrice: null,
+  };
 
   constructor(
     private nav: NavController,
@@ -162,6 +181,7 @@ export class CategoryPage implements OnInit, OnDestroy {
       this.single_user = JSON.parse(ret.value);
       this.initial.id = this.single_user.id;
       this.initial.token = this.single_user.token;
+      this.loadFacets();
       this.productCategory();
     }
   }
@@ -237,20 +257,67 @@ export class CategoryPage implements OnInit, OnDestroy {
 
   /**
    * Build the GET /mobile/category-listing query params from the current
-   * `initial` request object, replicating transformCategoryListingRequest:
-   * limit/offset always; category_id omitted when category === 0 (the
-   * "all products" signal); max_price carried from maxPrice.
+   * `initial` request object + the active filterState. limit/offset always;
+   * category_id omitted when category === 0 (the "all products" signal);
+   * sort + min_price/max_price + sizes/colors (CSV) from the filter set.
+   * A sheet max_price takes precedence over the legacy price-chip ceiling.
    */
   private buildListingQuery(): Record<string, string | number | boolean> {
     const query: Record<string, string | number | boolean> = {
+      sort: this.filterState.sort,
       limit: this.initial.limit,
       offset: this.initial.offset,
-      max_price: this.initial.maxPrice,
+      max_price: this.filterState.maxPrice !== null ? this.filterState.maxPrice : this.initial.maxPrice,
     };
+    if (this.filterState.minPrice !== null) {
+      query['min_price'] = this.filterState.minPrice;
+    }
+    if (this.filterState.sizes.length > 0) {
+      query['sizes'] = this.filterState.sizes.join(',');
+    }
+    if (this.filterState.colors.length > 0) {
+      query['colors'] = this.filterState.colors.join(',');
+    }
     if (this.initial.category !== 0) {
       query['category_id'] = this.initial.category;
     }
     return query;
+  }
+
+  /**
+   * Fetch facet counts once for the page's base context: the page sort +
+   * category_id (so size/colour/price options reflect this category).
+   */
+  private loadFacets(): void {
+    const query: Record<string, string | number> = { sort: this.defaultSort };
+    if (this.initial.category !== 0) {
+      query['category_id'] = this.initial.category;
+    }
+    this.networkAdapter.get_v3('GET /products/facets', { queryParams: query })
+      .subscribe({
+        next: (response: any) => {
+          if (response.response_code === 200 && response.status === 'success') {
+            this.facets = response.data as ProductFacets;
+            this.cdr.markForCheck();
+          }
+        },
+      });
+  }
+
+  /** Filter sheet trigger + apply. */
+  openFilter(): void {
+    this.isFilterOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  onFilterApply(state: ProductFilterState): void {
+    this.filterState = state;
+    // The sheet is now the sole price authority — reset the legacy chip
+    // ceiling so a stale chip value doesn't leak through buildListingQuery's
+    // fallback when the sheet leaves max_price unset.
+    this.selectedFilter = 'all';
+    this.initial.maxPrice = 20000;
+    this.productCategory();
   }
 
   filterByPrice(maxPrice: number) {
@@ -258,6 +325,9 @@ export class CategoryPage implements OnInit, OnDestroy {
     this.ui_controls.is_empty = false;
     this.initial.maxPrice = maxPrice;
     this.initial.offset = 0;
+    // The legacy price chip is a max ceiling; clear any sheet price so the
+    // chip's ceiling takes effect via buildListingQuery's fallback.
+    this.filterState = { ...this.filterState, minPrice: null, maxPrice: null };
     this.resetImageStates();
     this.cdr.markForCheck();
 
@@ -369,6 +439,14 @@ export class CategoryPage implements OnInit, OnDestroy {
 
   handleRefresh(event: any) {
     this.selectedFilter = 'all';
+    this.initial.maxPrice = 20000;
+    this.filterState = {
+      sort: this.defaultSort,
+      sizes: [],
+      colors: [],
+      minPrice: null,
+      maxPrice: null,
+    };
     this.resetImageStates();
     this.productCategory();
     setTimeout(() => {

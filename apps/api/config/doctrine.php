@@ -110,6 +110,17 @@ return [
             \Bayti\Api\Doctrine\DqlFunction\TsRankFunction::class
         );
 
+        // JSONB_EXISTS_ANY(jsonb_column, :values) → BOOLEAN — wraps
+        // `jsonb_exists_any(<col>, array[<values>]::text[])`. Used by the
+        // product listing to refine by sizes/colors with "contains ANY of"
+        // semantics, mirroring FacetAggregator's raw-SQL clause. Registered
+        // as a string function (DQL has no boolean category) and compared to
+        // TRUE at the call site, exactly like TSMATCH.
+        $config->addCustomStringFunction(
+            'JSONB_EXISTS_ANY',
+            \Bayti\Api\Doctrine\DqlFunction\JsonbExistsAnyFunction::class
+        );
+
         return $config;
     },
 

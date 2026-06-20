@@ -6,6 +6,11 @@
       </ion-button>
     </ion-buttons>
     <ion-title class="m7-title">{{ 'best_seller' | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="openFilter()" class="m7-header-back" [attr.aria-label]="'filter_title' | translate">
+        <ax-icon name="sliders-horizontal" />
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
   <div class="m7-subtitle">{{ 'subtitle_best_sellers' | translate }}</div>
   <div class="m7-filter-chips">
@@ -172,4 +177,14 @@
       </div>
     }
   </ax-bottom-sheet>
+
+  <!-- Web-parity filter sheet (sort / size / colour / price) -->
+  <ax-product-filter-sheet
+    [isOpen]="isFilterOpen"
+    [facets]="facets"
+    [state]="filterState"
+    [defaultSort]="defaultSort"
+    (apply)="onFilterApply($event)"
+    (didDismiss)="isFilterOpen = false">
+  </ax-product-filter-sheet>
 </ion-content>

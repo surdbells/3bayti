@@ -41,6 +41,11 @@ import { InfiniteScrollCustomEvent } from "@ionic/angular";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import {
+  AxProductFilterSheetComponent,
+  type ProductFacets,
+  type ProductFilterState,
+} from '../../shared/ax-mobile/product-filter-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { I18nService } from '../../i18n.service';
 import { cfImage } from '../../shared/cf-image';
@@ -66,7 +71,8 @@ import { cfImage } from '../../shared/cf-image';
     IonInfiniteScrollContent,
     IonRefresher,
     IonRefresherContent,
-    TranslatePipe, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent]
+    TranslatePipe, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent,
+    AxProductFilterSheetComponent]
 })
 export class BestSellersPage implements OnInit, OnDestroy {
   /** Expose cfImage for template usage. */
@@ -83,6 +89,19 @@ export class BestSellersPage implements OnInit, OnDestroy {
   // Price filter options
   priceFilters: number[] = [100, 300, 500, 1000, 2000, 3000, 5000];
   selectedFilter: number | 'all' = 'all';
+
+  // ── Web-parity filtering (sort / size / colour / price) ──────────────
+  /** This page's identity sort. */
+  readonly defaultSort = 'best_seller' as const;
+  isFilterOpen = false;
+  facets: ProductFacets | null = null;
+  filterState: ProductFilterState = {
+    sort: 'best_seller',
+    sizes: [],
+    colors: [],
+    minPrice: null,
+    maxPrice: null,
+  };
 
   ui_controls = {
     is_loading: false,
@@ -164,6 +183,7 @@ export class BestSellersPage implements OnInit, OnDestroy {
       this.single_user = JSON.parse(ret.value);
       this.initial.id = this.single_user.id;
       this.initial.token = this.single_user.token;
+      this.loadFacets();
       this.bestSellers();
     }
   }
@@ -200,27 +220,81 @@ export class BestSellersPage implements OnInit, OnDestroy {
   // API Methods
   // ========================================
 
+  /**
+   * Build the GET /mobile/best-sellers-listing query params from the
+   * current `initial` paging state + the active filterState. Mirrors the
+   * v3 GET /v3/products vocabulary: sort, min_price/max_price, sizes/colors
+   * (CSV), limit/offset. max_price from the filter takes precedence over
+   * the legacy price-chip ceiling when set.
+   */
+  private buildQuery(): Record<string, string | number> {
+    const query: Record<string, string | number> = {
+      sort: this.filterState.sort,
+      limit: this.initial.limit,
+      offset: this.initial.offset,
+    };
+    if (this.filterState.maxPrice !== null) {
+      query['max_price'] = this.filterState.maxPrice;
+    } else {
+      query['max_price'] = this.initial.maxPrice;
+    }
+    if (this.filterState.minPrice !== null) {
+      query['min_price'] = this.filterState.minPrice;
+    }
+    if (this.filterState.sizes.length > 0) {
+      query['sizes'] = this.filterState.sizes.join(',');
+    }
+    if (this.filterState.colors.length > 0) {
+      query['colors'] = this.filterState.colors.join(',');
+    }
+    return query;
+  }
+
+  /** Fetch facet counts once for the page's base context (sort only). */
+  private loadFacets(): void {
+    this.networkAdapter.get_v3('GET /products/facets', {
+      queryParams: { sort: this.defaultSort },
+    })
+      .subscribe({
+        next: (response: any) => {
+          if (response.response_code === 200 && response.status === 'success') {
+            this.facets = response.data as ProductFacets;
+            this.cdr.markForCheck();
+          }
+        },
+      });
+  }
+
+  /** Filter sheet trigger + apply. */
+  openFilter(): void {
+    this.isFilterOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  onFilterApply(state: ProductFilterState): void {
+    this.filterState = state;
+    // The sheet is now the sole price authority — reset the legacy chip
+    // ceiling so a stale chip value doesn't leak through buildQuery's
+    // fallback when the sheet leaves max_price unset.
+    this.selectedFilter = 'all';
+    this.initial.maxPrice = 20000;
+    this.bestSellers();
+  }
+
   bestSellers(): void {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
     this.initial.limit = 10;
     this.initial.offset = 0;
-    this.initial.maxPrice = 20000;
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    // Direct v3 (GET /v3/products, sort=best_seller). This is a public
-    // catalog read — no authToken. transformBestSellersListingRequest
-    // maps limit/offset/maxPrice into the v3 query params, and the
+    // Direct v3 (GET /v3/products). Public catalog read — no authToken. The
     // registered response transform still applies via get_v3, so
-    // response.data keeps the legacy Products[] shape.
+    // response.data keeps the legacy Products[] shape. Query params now
+    // carry the full sort/size/colour/price filter set (buildQuery).
     this.networkAdapter.get_v3('GET /mobile/best-sellers-listing', {
-      queryParams: {
-        sort: 'best_seller',
-        limit: this.initial.limit,
-        offset: this.initial.offset,
-        max_price: this.initial.maxPrice,
-      },
+      queryParams: this.buildQuery(),
     })
       .subscribe({
         next: (response: any) => {
@@ -247,19 +321,17 @@ export class BestSellersPage implements OnInit, OnDestroy {
     this.ui_controls.is_empty = false;
     this.initial.maxPrice = maxPrice;
     this.initial.offset = 0;
+    // The legacy price chip is a max ceiling; clear any sheet price so the
+    // chip's ceiling takes effect via buildQuery's fallback.
+    this.filterState = { ...this.filterState, minPrice: null, maxPrice: null };
     this.resetImageStates();
     this.cdr.markForCheck();
 
     // Direct v3 (GET /v3/products, sort=best_seller) — public catalog
-    // read, no authToken. The price band rides through as the maxPrice
-    // query param (mapped to max_price by transformBestSellersListingRequest).
+    // read, no authToken. The price band rides through as the max_price
+    // query param (buildQuery).
     this.networkAdapter.get_v3('GET /mobile/best-sellers-listing', {
-      queryParams: {
-        sort: 'best_seller',
-        limit: this.initial.limit,
-        offset: this.initial.offset,
-        max_price: this.initial.maxPrice,
-      },
+      queryParams: this.buildQuery(),
     })
       .subscribe({
         next: (response: any) => {
@@ -284,16 +356,11 @@ export class BestSellersPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    // Direct v3 (GET /v3/products, sort=best_seller) — paginated read for
-    // infinite scroll, advancing offset. Public catalog read, no authToken.
-    // Shape unchanged (response transform still applies via get_v3).
+    // Direct v3 (GET /v3/products) — paginated read for infinite scroll,
+    // advancing offset. Public catalog read, no authToken. buildQuery
+    // preserves the active sort/size/colour/price filter across pages.
     this.networkAdapter.get_v3('GET /mobile/best-sellers-listing', {
-      queryParams: {
-        sort: 'best_seller',
-        limit: this.initial.limit,
-        offset: this.initial.offset,
-        max_price: this.initial.maxPrice,
-      },
+      queryParams: this.buildQuery(),
     })
       .subscribe({
         next: (response: any) => {
@@ -321,6 +388,14 @@ export class BestSellersPage implements OnInit, OnDestroy {
 
   handleRefresh(event: any): void {
     this.selectedFilter = 'all';
+    this.initial.maxPrice = 20000;
+    this.filterState = {
+      sort: this.defaultSort,
+      sizes: [],
+      colors: [],
+      minPrice: null,
+      maxPrice: null,
+    };
     this.resetImageStates();
     this.bestSellers();
     setTimeout(() => {

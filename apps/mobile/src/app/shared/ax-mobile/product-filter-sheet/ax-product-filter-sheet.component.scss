@@ -1,0 +1,213 @@
+/* ============================================================================
+   AxProductFilterSheet — web-parity SORT / SIZE / COLOR / PRICE refinement
+   ============================================================================ */
+
+.axpf {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-bottom: 8px;
+}
+
+.axpf__group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.axpf__group-title {
+  margin: 0;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--ax-color-text-secondary);
+}
+
+/* ----- Single-select option rows (sort + price bands) ----------- */
+
+.axpf__opts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.axpf__opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
+  background: transparent;
+  border: 0.5px solid transparent;
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--ax-color-text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  text-align: start;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  &:active {
+    background: var(--ax-palette-beige-100);
+  }
+}
+
+.axpf__opt--active {
+  background: var(--ax-palette-beige-100);
+  border-color: var(--ax-color-border-default);
+  font-weight: 500;
+}
+
+.axpf__opt-text {
+  flex: 1 1 auto;
+}
+
+.axpf__opt-count {
+  font-size: 12px;
+  color: var(--ax-color-text-tertiary);
+}
+
+.axpf__opt-check {
+  font-size: 18px;
+  color: var(--ax-color-bg-brand);
+}
+
+/* ----- Multi-select chips (size + colour) ----------------------- */
+
+.axpf__chips {
+  display: flex;
+  flex-flow: row wrap;
+  gap: 8px;
+}
+
+.axpf__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--ax-color-bg-surface);
+  border: 0.5px solid var(--ax-color-border-default);
+  border-radius: 999px;
+  padding: 8px 14px;
+  color: var(--ax-color-text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &:active {
+    background: var(--ax-palette-beige-100);
+  }
+}
+
+.axpf__chip--active {
+  background: var(--ax-color-bg-brand);
+  color: var(--ax-palette-neutral-0);
+  border-color: var(--ax-color-bg-brand);
+
+  .axpf__chip-count {
+    color: var(--ax-palette-neutral-0);
+    opacity: 0.85;
+  }
+}
+
+.axpf__chip-count {
+  font-size: 11px;
+  color: var(--ax-color-text-tertiary);
+}
+
+.axpf__swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 0.5px solid var(--ax-color-border-default);
+  flex-shrink: 0;
+}
+
+/* ----- Min-price input ------------------------------------------ */
+
+.axpf__minprice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 2px 8px;
+}
+
+.axpf__minprice-label {
+  font-size: 14px;
+  color: var(--ax-color-text-primary);
+}
+
+.axpf__minprice-input {
+  width: 120px;
+  background: var(--ax-color-bg-surface);
+  border: 0.5px solid var(--ax-color-border-default);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ax-color-text-primary);
+  text-align: end;
+}
+
+.axpf__no-facets {
+  margin: 0;
+  font-size: 13px;
+  color: var(--ax-color-text-tertiary);
+  text-align: center;
+  padding: 12px 0;
+}
+
+/* ----- Sticky footer -------------------------------------------- */
+
+.axpf__foot {
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top: 0.5px solid var(--ax-color-border-default);
+  background: var(--ax-color-bg-surface);
+}
+
+.axpf__clear {
+  flex: 1 1 0;
+  background: transparent;
+  border: 0.5px solid var(--ax-color-border-default);
+  border-radius: 999px;
+  padding: 13px 16px;
+  color: var(--ax-color-text-primary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.axpf__apply {
+  flex: 2 1 0;
+  background: var(--ax-color-bg-brand);
+  border: none;
+  border-radius: 999px;
+  padding: 13px 16px;
+  color: var(--ax-palette-neutral-0);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:active {
+    opacity: 0.9;
+  }
+}

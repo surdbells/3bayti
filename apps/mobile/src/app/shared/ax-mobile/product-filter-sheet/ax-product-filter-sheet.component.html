@@ -1,0 +1,138 @@
+<ax-bottom-sheet
+  [isOpen]="isOpen"
+  (didDismiss)="onDismiss()"
+  [snapPoints]="[0.85, 0.95]"
+  [initialSnap]="0"
+  [title]="'filter_title' | translate">
+
+  <div class="axpf">
+    <!-- SORT -->
+    <section class="axpf__group">
+      <h3 class="axpf__group-title">{{ 'filter_sort' | translate }}</h3>
+      <ul class="axpf__opts" role="list">
+        @for (s of sorts; track s) {
+          <li>
+            <button
+              type="button"
+              class="axpf__opt"
+              [class.axpf__opt--active]="isSortActive(s)"
+              (click)="setSort(s)">
+              <span class="axpf__opt-text">{{ sortKeys[s] | translate }}</span>
+              @if (isSortActive(s)) {
+                <ax-icon name="check" class="axpf__opt-check"></ax-icon>
+              }
+            </button>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <!-- SIZE -->
+    @if (sizeValues().length > 0) {
+      <section class="axpf__group">
+        <h3 class="axpf__group-title">{{ 'filter_size' | translate }}</h3>
+        <div class="axpf__chips">
+          @for (v of sizeValues(); track v.value) {
+            <button
+              type="button"
+              class="axpf__chip"
+              [class.axpf__chip--active]="isChipActive('sizes', v.value)"
+              (click)="toggleChip('sizes', v.value)">
+              <span class="axpf__chip-label">{{ v.value }}</span>
+              <span class="axpf__chip-count">{{ v.count }}</span>
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- COLOR -->
+    @if (colorValues().length > 0) {
+      <section class="axpf__group">
+        <h3 class="axpf__group-title">{{ 'filter_colour' | translate }}</h3>
+        <div class="axpf__chips">
+          @for (v of colorValues(); track v.value) {
+            <button
+              type="button"
+              class="axpf__chip"
+              [class.axpf__chip--active]="isChipActive('colors', v.value)"
+              (click)="toggleChip('colors', v.value)">
+              <span class="axpf__swatch" [style.background]="swatch(v.value)"></span>
+              <span class="axpf__chip-label">{{ v.value | titlecase }}</span>
+              <span class="axpf__chip-count">{{ v.count }}</span>
+            </button>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- PRICE -->
+    @if (priceValues().length > 0) {
+      <section class="axpf__group">
+        <h3 class="axpf__group-title">{{ 'filter_price' | translate }}</h3>
+
+        <label class="axpf__minprice">
+          <span class="axpf__minprice-label">{{ 'filter_min_price' | translate }}</span>
+          <input
+            type="number"
+            inputmode="numeric"
+            min="0"
+            class="axpf__minprice-input"
+            [value]="draft.minPrice ?? ''"
+            (input)="onMinPriceInput($any($event.target).value)"
+            [placeholder]="'filter_min_price_placeholder' | translate" />
+        </label>
+
+        <ul class="axpf__opts" role="list">
+          <li>
+            <button
+              type="button"
+              class="axpf__opt"
+              [class.axpf__opt--active]="isPriceAnyActive()"
+              (click)="setPriceAny()">
+              <span class="axpf__opt-text">{{ 'filter_price_any' | translate }}</span>
+              @if (isPriceAnyActive()) {
+                <ax-icon name="check" class="axpf__opt-check"></ax-icon>
+              }
+            </button>
+          </li>
+          @for (v of priceValues(); track v.value) {
+            <li>
+              <button
+                type="button"
+                class="axpf__opt"
+                [class.axpf__opt--active]="isBandActive(v)"
+                (click)="setBand(v)">
+                <span class="axpf__opt-text">
+                  @if (bandMax(v) === null) {
+                    {{ 'label_over' | translate }} Ð{{ bandMin(v) | number }}
+                  } @else {
+                    {{ 'label_under' | translate }} Ð{{ bandMax(v) | number }}
+                  }
+                </span>
+                <span class="axpf__opt-count">{{ v.count }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (!hasAnySection()) {
+      <p class="axpf__no-facets">{{ 'filter_no_options' | translate }}</p>
+    }
+  </div>
+
+  <div ax-sheet-footer class="axpf__foot">
+    <button
+      type="button"
+      class="axpf__clear"
+      [disabled]="activeCount() === 0 && draft.sort === defaultSort"
+      (click)="onClearAll()">
+      {{ 'filter_clear_all' | translate }}
+    </button>
+    <button type="button" class="axpf__apply" (click)="onApply()">
+      {{ 'filter_apply' | translate }}
+    </button>
+  </div>
+</ax-bottom-sheet>

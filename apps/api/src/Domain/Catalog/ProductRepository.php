@@ -182,6 +182,24 @@ class ProductRepository extends EntityRepository
         if (!empty($filters['maxPrice'])) {
             $qb->andWhere('p.price <= :maxPrice')->setParameter('maxPrice', $filters['maxPrice']);
         }
+
+        // Refining filters: sizes, colors. JSONB "contains ANY of the
+        // requested values" — same semantics FacetAggregator applies, so
+        // the listing and the facet counts agree. JSONB_EXISTS_ANY is a
+        // custom DQL function (config/doctrine.php) wrapping
+        // `jsonb_exists_any(<col>, array[:values]::text[])`; the params are
+        // bound with ArrayParameterType::STRING so Doctrine expands the
+        // placeholder into the array literal. Compared to TRUE because DQL
+        // has no boolean function category (mirrors the TSMATCH pattern).
+        if (!empty($filters['sizes']) && is_array($filters['sizes'])) {
+            $qb->andWhere('JSONB_EXISTS_ANY(p.availableSizes, :sizes) = TRUE')
+               ->setParameter('sizes', $filters['sizes'], \Doctrine\DBAL\ArrayParameterType::STRING);
+        }
+        if (!empty($filters['colors']) && is_array($filters['colors'])) {
+            $qb->andWhere('JSONB_EXISTS_ANY(p.availableColors, :colors) = TRUE')
+               ->setParameter('colors', $filters['colors'], \Doctrine\DBAL\ArrayParameterType::STRING);
+        }
+
         if (!empty($filters['isFeatured'])) {
             $qb->andWhere('p.isFeatured = TRUE');
         }
