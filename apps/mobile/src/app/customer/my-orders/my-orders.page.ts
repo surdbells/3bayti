@@ -152,7 +152,15 @@ export class MyOrdersPage implements OnInit {
     this.ui_controls.is_empty = false;
     this.initial.limit = 10;
     this.initial.offset = 0;
-    this.networkAdapter.post_request(this.initial, GlobalComponent.read_orders_listing)
+    // Direct v3 (GET /v3/orders). transformOrderListResponse still applies
+    // via get_v3, so response.data keeps the {orders, pagination} shape that
+    // extractOrders() handles. limit/offset come from the existing `initial`
+    // request object; no status filter is sent (the chips filter client-side).
+    this.networkAdapter
+      .get_v3('GET /orders', {
+        authToken: this.single_user.token,
+        queryParams: { limit: this.initial.limit, offset: this.initial.offset },
+      })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -202,7 +210,13 @@ export class MyOrdersPage implements OnInit {
     this.initial.id = this.single_user.id;
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit
-    this.networkAdapter.post_request(this.initial, GlobalComponent.read_orders_listing)
+    // Direct v3 (GET /v3/orders) — same paginated read as order_listing(),
+    // advancing offset for infinite scroll. Shape unchanged (transform applies).
+    this.networkAdapter
+      .get_v3('GET /orders', {
+        authToken: this.single_user.token,
+        queryParams: { limit: this.initial.limit, offset: this.initial.offset },
+      })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

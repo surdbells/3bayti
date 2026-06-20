@@ -215,7 +215,11 @@ export class CartPage implements OnInit, OnDestroy {
     }
 
     this.request.id = this.single_user.id;
-    this.networkAdapter.post_request(this.request, GlobalComponent.customerCart)
+    // Direct v3 (GET /v3/cart). The transformCartListResponse response
+    // transform still applies via get_v3, so response.data keeps the
+    // {items, bill, ...} shape — the dual-shape handling below is left
+    // intact (the v3 branch is the one that runs).
+    this.networkAdapter.get_v3('GET /cart', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200) {
@@ -326,11 +330,18 @@ export class CartPage implements OnInit, OnDestroy {
     }
 
     this.remove.item = item;
-    this.networkAdapter.post_request(this.remove, GlobalComponent.RemoveCartItem)
+    // Direct v3 (DELETE /v3/cart/items/:id). The cart item id is `item`
+    // (bound from cart.item in the template). v3 returns the updated cart
+    // shape (200, not 204), so the envelope check below still passes; the
+    // page reloads the cart regardless.
+    this.networkAdapter.delete_v3('DELETE /cart/items/:id', {
+      authToken: this.single_user.token,
+      pathParams: { id: String(item) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
-            this.success_notification(response.message);
+            this.success_notification(this.i18n.t('text_item_removed'));
             this.load_cart();
           }
         }
@@ -348,7 +359,14 @@ export class CartPage implements OnInit, OnDestroy {
 
     this.increase.item = item;
     this.increase.quantity = newQty;
-    this.networkAdapter.post_request(this.increase, GlobalComponent.IncreaseItem)
+    // Direct v3 (PATCH /v3/cart/items/:id). `item` is the cart item id and
+    // `quantity` passed in is the CURRENT quantity, so send the new absolute
+    // quantity (newQty = quantity + 1). v3 caps at 999; the +1 step never
+    // exceeds that in practice.
+    this.networkAdapter.patch_v3('PATCH /cart/items/:id', { quantity: newQty }, {
+      authToken: this.single_user.token,
+      pathParams: { id: String(item) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -371,7 +389,15 @@ export class CartPage implements OnInit, OnDestroy {
 
     this.decrease.item = item;
     this.decrease.quantity = newQty;
-    this.networkAdapter.post_request(this.decrease, GlobalComponent.DecreaseItem)
+    // Direct v3 (PATCH /v3/cart/items/:id). `item` is the cart item id and
+    // `quantity` passed in is the CURRENT quantity, so send the new absolute
+    // quantity (newQty = quantity - 1). The decrease control is disabled at
+    // quantity === 1 in cart.page.html, so newQty never drops below the v3
+    // minimum of 1 (DELETE is the path to remove the last unit).
+    this.networkAdapter.patch_v3('PATCH /cart/items/:id', { quantity: newQty }, {
+      authToken: this.single_user.token,
+      pathParams: { id: String(item) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
