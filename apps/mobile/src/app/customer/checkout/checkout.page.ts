@@ -9,6 +9,7 @@ import {
   IonButton,
   IonButtons,
   IonCard,
+  IonCheckbox,
   IonCol,
   IonContent,
   IonHeader,
@@ -46,7 +47,7 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxPlaceAutocompleteComponent, PlaceDetails } from '../../shared/ax-mobile/place-autocomplete';
-import { AddressService, SavedAddress } from '../../core/services/address.service';
+import { AddressService, SavedAddress, NewAddress } from '../../core/services/address.service';
 @Component({
   selector: 'app-checkout',
   templateUrl: './checkout.page.html',
@@ -61,6 +62,7 @@ import { AddressService, SavedAddress } from '../../core/services/address.servic
     IonContent,
     IonButton,
     IonButtons,
+    IonCheckbox,
     IonToolbar,
     IonHeader,
     RouterLink,
@@ -98,6 +100,27 @@ export class CheckoutPage implements OnInit, OnDestroy {
   isAddressPickerOpen = false;
   selectedAddressId: number | null = null;
   isLoadingAddresses = false;
+
+  /* Add-new-address bottom sheet (web parity — mirrors address-form.ts). */
+  isAddAddressOpen = false;
+  isSavingAddress = false;
+  /* The 7 UAE emirates — same option set the inline form used. */
+  readonly emirates: string[] = [
+    'Abu Dhabi', 'Dubai', 'Sharjah', 'Ajman',
+    'Umm Al-Quwain', 'Ras Al Khaimah', 'Fujairah',
+  ];
+  /* Field set matches web address-form.ts exactly. */
+  newAddress = {
+    label: '',
+    recipient_name: '',
+    recipient_phone: '',
+    emirate: '',
+    area: '',
+    street_address: '',
+    building_details: '',
+    postal_code: '',
+    is_default: false,
+  };
   private sub: Subscription;
   @ViewChild('accordionGroup', { static: true }) accordionGroup!: IonAccordionGroup;
   @ViewChild(IonContent) content?: IonContent;
@@ -453,15 +476,13 @@ export class CheckoutPage implements OnInit, OnDestroy {
    * On failure, surface the existing delivery-info prompt and stay on step 1.
    */
   goToReview() {
-    // The delivery address must be CONFIRMED + persisted server-side before
-    // advancing to review/payment. `isConfirmBilling` is set true ONLY by
-    // applySavedAddress() (a saved address — already server-side) or by
-    // update_billing() success (the inline "Confirm delivery info" PATCH).
-    // Do NOT advance on raw typed-but-unsaved fields: checkout_initiate derives
-    // the shipping address from the server, so an unpersisted inline address
-    // would silently ship the order to the user's previously stored address.
-    if (!this.isConfirmBilling) {
-      this.error_notification(this.i18n.t('text_confirm_delivery_info'));
+    // A saved address must be selected before advancing to review/payment.
+    // applySavedAddress() (picking from the list or adding a new one) sets
+    // selectedAddressId + isConfirmBilling. The address now comes ONLY from a
+    // saved address, which is already persisted server-side, and its id is
+    // forwarded to checkout_initiate() as shipping/billing_address_id.
+    if (this.selectedAddressId === null || !this.isConfirmBilling) {
+      this.error_notification(this.i18n.t('text_select_delivery_address'));
       return;
     }
 
@@ -538,6 +559,11 @@ export class CheckoutPage implements OnInit, OnDestroy {
       channel: 'MOBILE',
       gift_card_code: this.giftCard.applied ? this.giftCard.code : undefined,
       promo_code: this.promo.applied ? this.promo.code : undefined,
+      // Ship + bill to the SELECTED saved address (web parity). Without these
+      // the server falls back to the customer's default address, ignoring the
+      // user's pick. v3 InitiateCheckoutInput accepts both as optional.
+      shipping_address_id: this.selectedAddressId ?? undefined,
+      billing_address_id: this.selectedAddressId ?? undefined,
     };
     this.networkAdapter.post_v3('POST /checkout/initiate', initiateBody, { authToken: this.single_user.token })
       .subscribe({
@@ -987,6 +1013,131 @@ export class CheckoutPage implements OnInit, OnDestroy {
   openAddressPicker() {
     if (this.savedAddresses.length > 0) {
       this.isAddressPickerOpen = true;
+    }
+  }
+
+  /**
+   * Open the add-new-address bottom sheet (web parity). Resets the form to
+   * a clean slate so a previous (cancelled) entry doesn't leak in. Closes
+   * the saved-address picker if it happened to be open.
+   */
+  openAddAddress() {
+    this.newAddress = {
+      label: '',
+      recipient_name: '',
+      recipient_phone: '',
+      emirate: '',
+      area: '',
+      street_address: '',
+      building_details: '',
+      postal_code: '',
+      is_default: false,
+    };
+    this.isAddressPickerOpen = false;
+    this.isAddAddressOpen = true;
+  }
+
+  /**
+   * User selected a Google Places suggestion inside the add-new sheet.
+   * Autofill the street field from the structured place details. Emirate is a
+   * fixed dropdown and area is free text (web parity), so we don't auto-match.
+   */
+  async onNewAddressPlaceSelected(place: PlaceDetails): Promise<void> {
+    if (place.street) {
+      this.newAddress.street_address = place.street;
+      this.toast.success(
+        this.i18n.t('text_address_autofilled'),
+        { position: 'top-center' }
+      );
+    }
+  }
+
+  /**
+   * Validate + create a new saved address (web parity with address-form.ts).
+   * Required: recipient_name, recipient_phone, emirate, area, street_address —
+   * each surfaces a SPECIFIC error, never a generic message. On success the
+   * new address is added to the list, selected (applySavedAddress), and the
+   * sheet closes. On failure the SERVER message is surfaced.
+   */
+  async saveNewAddress(): Promise<void> {
+    if (!this.isOnline) {
+      this.error_notification(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+
+    const name = this.newAddress.recipient_name.trim();
+    const phoneRaw = this.newAddress.recipient_phone.trim();
+    const emirate = this.newAddress.emirate.trim();
+    const area = this.newAddress.area.trim();
+    const street = this.newAddress.street_address.trim();
+
+    // Specific per-field validation (no generic "please fill all fields").
+    if (name.length === 0) {
+      this.error_notification(this.i18n.t('text_name_required'));
+      return;
+    }
+    if (phoneRaw.length === 0) {
+      this.error_notification(this.i18n.t('text_phone_required'));
+      return;
+    }
+    if (emirate.length === 0) {
+      this.error_notification(this.i18n.t('text_emirate_required'));
+      return;
+    }
+    if (area.length === 0) {
+      this.error_notification(this.i18n.t('text_area_required'));
+      return;
+    }
+    if (street.length === 0) {
+      this.error_notification(this.i18n.t('text_street_required'));
+      return;
+    }
+
+    // E.164 normalization — identical to update_billing(): prefix +971 and
+    // strip leading zeros when there's no leading "+".
+    const recipient_phone = phoneRaw.startsWith('+')
+      ? phoneRaw
+      : '+971' + phoneRaw.replace(/^0+/, '');
+
+    const optionalOrNull = (s: string): string | null => {
+      const trimmed = s.trim();
+      return trimmed === '' ? null : trimmed;
+    };
+
+    const payload: NewAddress = {
+      recipient_name: name,
+      recipient_phone,
+      emirate,
+      area,
+      street_address: street,
+      label: optionalOrNull(this.newAddress.label),
+      building_details: optionalOrNull(this.newAddress.building_details),
+      postal_code: optionalOrNull(this.newAddress.postal_code),
+      is_default_shipping: this.newAddress.is_default,
+      is_default_billing: this.newAddress.is_default,
+    };
+
+    this.isSavingAddress = true;
+    try {
+      const created = await this.addressService.create(this.single_user.token, payload);
+      if (!created) {
+        this.error_notification(this.i18n.t('text_unable_to_save_billing_address'));
+        return;
+      }
+      // Refresh the book, then select the freshly-created address so it's the
+      // delivery target. Reloading keeps default flags server-authoritative;
+      // we re-select by id so the right row stays highlighted.
+      await this.loadSavedAddresses();
+      const fresh = this.savedAddresses.find(a => a.id === created.id) ?? created;
+      this.applySavedAddress(fresh);
+      this.isAddAddressOpen = false;
+      this.success_notification(this.i18n.t('text_address_saved'));
+    } catch (err: any) {
+      const msg = err?.error?.error?.message || err?.error?.message;
+      this.error_notification(msg || this.i18n.t('text_unable_to_save_billing_address'));
+    } finally {
+      this.isSavingAddress = false;
+      this.cdr.markForCheck();
     }
   }
 

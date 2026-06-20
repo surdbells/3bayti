@@ -65,142 +65,58 @@
   @if (step === 1) {
     <section class="checkout-section" aria-label="Delivery information">
       <div class="ion-padding-vertical">
-        @if (savedAddresses.length > 0) {
-          <div class="saved-address-picker" data-testid="saved-address-picker">
-            @if (selectedAddressId !== null) {
-              <div class="saved-address-selected" data-testid="selected-address">
-                @for (a of savedAddresses; track a.id) {
-                  @if (a.id === selectedAddressId) {
-                    <div class="saved-address-card">
-                      <div class="saved-address-card__body">
-                        <span class="saved-address-card__label">
-                          {{ a.label || a.recipient_name }}
-                          @if (a.is_default || a.is_default_shipping) {
-                            <span class="saved-address-card__default">{{ 'address_default' | translate }}</span>
-                          }
-                        </span>
-                        <span class="saved-address-card__line">{{ addressSummary(a) }}</span>
-                        @if (a.recipient_phone) {
-                          <span class="saved-address-card__line">{{ a.recipient_phone }}</span>
-                        }
-                      </div>
-                    </div>
-                  }
-                }
-              </div>
-            }
-            <ion-button
-              fill="outline"
-              size="small"
-              expand="block"
-              (click)="openAddressPicker()"
-              data-testid="change-address-btn"
-            >
-              <ax-icon name="map-pin" slot="start"></ax-icon>
-              {{ (selectedAddressId !== null ? 'address_use_different' : 'address_select_saved') | translate }}
-            </ion-button>
-            <div class="saved-address-divider">
-              <span>{{ 'or_enter_manually' | translate }}</span>
-            </div>
+        <h2 class="checkout-address-heading">{{ 'heading_delivery_where' | translate }}</h2>
+
+        @if (isLoadingAddresses) {
+          <div class="loader-row">
+            <ax-loader></ax-loader>
           </div>
-        }
-        @if (!ui_controls.is_loading){
-          <ion-row>
-            <ion-col>
-              <ax-text-field
-                [label]="'label_name' | translate"
-                type="text"
-                [maxlength]="15"
-                autocomplete="name"
-                [(ngModel)]="update.name"
-                name="name">
-              </ax-text-field>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col>
-              <ax-text-field
-                [label]="'label_phone' | translate"
-                type="tel"
-                inputmode="numeric"
-                autocomplete="tel-national"
-                [(ngModel)]="update.phone"
-                name="phone">
-              </ax-text-field>
-            </ion-col>
-            <ion-col>
-              <ax-text-field
-                [label]="'label_email' | translate"
-                type="email"
-                autocomplete="email"
-                [(ngModel)]="update.email"
-                name="email">
-              </ax-text-field>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col>
-              <label class="checkout-field-label">{{ 'label_emirate' | translate }}</label>
-              <ion-select
-                class="ion-margin-vertical"
-                [label]="'label_emirate' | translate"
-                labelPlacement="stacked"
-                interface="action-sheet"
-                [(ngModel)]="update.city"
-                name="emirate">
-                <ion-select-option [value]="'Abu Dhabi'">Abu Dhabi</ion-select-option>
-                <ion-select-option [value]="'Dubai'">Dubai</ion-select-option>
-                <ion-select-option [value]="'Sharjah'">Sharjah</ion-select-option>
-                <ion-select-option [value]="'Ajman'">Ajman</ion-select-option>
-                <ion-select-option [value]="'Umm Al-Quwain'">Umm Al-Quwain</ion-select-option>
-                <ion-select-option [value]="'Ras Al Khaimah'">Ras Al Khaimah</ion-select-option>
-                <ion-select-option [value]="'Fujairah'">Fujairah</ion-select-option>
-              </ion-select>
-            </ion-col>
-            <ion-col>
-              <ax-text-field
-                [label]="'label_area' | translate"
-                type="text"
-                [(ngModel)]="update.area"
-                name="area">
-              </ax-text-field>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col>
-              <ax-place-autocomplete
-                [label]="'label_street_address' | translate"
-                [placeholder]="'placeholder_search_address' | translate"
-                autocomplete="street-address"
-                [(ngModel)]="update.street"
-                name="street"
-                (placeSelected)="onPlaceSelected($event)">
-              </ax-place-autocomplete>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col>
-              <ax-text-field
-                [label]="'label_villa_number' | translate"
-                type="text"
-                [(ngModel)]="update.villa_number"
-                name="villa_number">
-              </ax-text-field>
-            </ion-col>
-          </ion-row>
-          <ion-row>
-            <ion-col>
-              @if (!ui_controls.is_updating) {
-                <ion-button (click)="update_billing()" expand="block" class="ion-margin-vertical" type="button"> {{ 'confirm_delivery_info' | translate }}
-                </ion-button>
+        } @else {
+          <!-- Selectable (radio-style) list of saved addresses. -->
+          @if (savedAddresses.length > 0) {
+            <ul class="address-radio-list" role="radiogroup" data-testid="address-radio-list">
+              @for (a of savedAddresses; track a.id) {
+                <li
+                  class="address-radio"
+                  [class.address-radio--selected]="a.id === selectedAddressId"
+                  role="radio"
+                  [attr.aria-checked]="a.id === selectedAddressId"
+                  tabindex="0"
+                  (click)="applySavedAddress(a)"
+                  (keydown.enter)="applySavedAddress(a)"
+                  (keydown.space)="applySavedAddress(a); $event.preventDefault()"
+                  [attr.data-testid]="'address-radio-' + a.id"
+                >
+                  <span class="address-radio__dot" aria-hidden="true"></span>
+                  <span class="address-radio__body">
+                    <span class="address-radio__label">
+                      {{ a.label || a.recipient_name }}
+                      @if (a.is_default || a.is_default_shipping) {
+                        <span class="saved-address-card__default">{{ 'address_default' | translate }}</span>
+                      }
+                    </span>
+                    <span class="address-radio__line">{{ addressSummary(a) }}</span>
+                    @if (a.recipient_phone) {
+                      <span class="address-radio__line">{{ a.recipient_phone }}</span>
+                    }
+                  </span>
+                </li>
               }
-              @if (ui_controls.is_updating) {
-                <div class="loader-row">
-                  <ax-loader></ax-loader>
-                </div>
-              }
-            </ion-col>
-          </ion-row>
+            </ul>
+          } @else {
+            <p class="checkout-address-empty">{{ 'address_none_add_one' | translate }}</p>
+          }
+
+          <ion-button
+            fill="outline"
+            expand="block"
+            class="ion-margin-vertical"
+            (click)="openAddAddress()"
+            data-testid="add-address-btn"
+          >
+            <ax-icon name="plus" slot="start"></ax-icon>
+            {{ 'address_add_new' | translate }}
+          </ion-button>
         }
       </div>
     </section>
@@ -391,34 +307,136 @@
     </section>
   }
 
+  <!-- ══════════ ADD-NEW-ADDRESS BOTTOM SHEET (web parity) ══════════ -->
   <ax-bottom-sheet
-    [isOpen]="isAddressPickerOpen"
-    (didDismiss)="isAddressPickerOpen = false"
-    [snapPoints]="[0.5, 0.9]"
+    [isOpen]="isAddAddressOpen"
+    (didDismiss)="isAddAddressOpen = false"
+    [snapPoints]="[0.9, 0.98]"
     [initialSnap]="0"
-    [title]="'address_select_saved' | translate">
+    [title]="'address_add_new' | translate">
 
-    <ul class="picker-list" data-testid="address-picker-list">
-      @for (a of savedAddresses; track a.id) {
-        <li
-          class="picker-list__item address-pick"
-          [class.address-pick--active]="a.id === selectedAddressId"
-          (click)="applySavedAddress(a)"
-          role="button"
-          tabindex="0"
-        >
-          <span class="address-pick__label">
-            {{ a.label || a.recipient_name }}
-            @if (a.is_default || a.is_default_shipping) {
-              <span class="saved-address-card__default">{{ 'address_default' | translate }}</span>
+    <div class="add-address-form" data-testid="add-address-form">
+      <ion-row>
+        <ion-col>
+          <ax-text-field
+            [label]="'label_address_label' | translate"
+            type="text"
+            [(ngModel)]="newAddress.label"
+            name="new_label">
+          </ax-text-field>
+        </ion-col>
+      </ion-row>
+
+      <ion-row>
+        <ion-col>
+          <ax-text-field
+            [label]="'label_name' | translate"
+            type="text"
+            [required]="true"
+            autocomplete="name"
+            [(ngModel)]="newAddress.recipient_name"
+            name="new_name">
+          </ax-text-field>
+        </ion-col>
+      </ion-row>
+
+      <ion-row>
+        <ion-col>
+          <ax-text-field
+            [label]="'label_phone' | translate"
+            type="tel"
+            inputmode="numeric"
+            [required]="true"
+            autocomplete="tel-national"
+            [(ngModel)]="newAddress.recipient_phone"
+            name="new_phone">
+          </ax-text-field>
+        </ion-col>
+      </ion-row>
+
+      <ion-row>
+        <ion-col>
+          <label class="checkout-field-label">{{ 'label_emirate' | translate }}</label>
+          <ion-select
+            class="ion-margin-vertical"
+            [label]="'label_emirate' | translate"
+            labelPlacement="stacked"
+            interface="action-sheet"
+            [(ngModel)]="newAddress.emirate"
+            name="new_emirate">
+            @for (e of emirates; track e) {
+              <ion-select-option [value]="e">{{ e }}</ion-select-option>
             }
-          </span>
-          <span class="address-pick__line">{{ addressSummary(a) }}</span>
-          @if (a.recipient_phone) {
-            <span class="address-pick__line">{{ a.recipient_phone }}</span>
+          </ion-select>
+        </ion-col>
+        <ion-col>
+          <ax-text-field
+            [label]="'label_area' | translate"
+            type="text"
+            [required]="true"
+            [(ngModel)]="newAddress.area"
+            name="new_area">
+          </ax-text-field>
+        </ion-col>
+      </ion-row>
+
+      <ion-row>
+        <ion-col>
+          <ax-place-autocomplete
+            [label]="'label_street_address' | translate"
+            [placeholder]="'placeholder_search_address' | translate"
+            [required]="true"
+            autocomplete="street-address"
+            [(ngModel)]="newAddress.street_address"
+            name="new_street"
+            (placeSelected)="onNewAddressPlaceSelected($event)">
+          </ax-place-autocomplete>
+        </ion-col>
+      </ion-row>
+
+      <ion-row>
+        <ion-col>
+          <ax-text-field
+            [label]="'label_building_details' | translate"
+            type="text"
+            [(ngModel)]="newAddress.building_details"
+            name="new_building">
+          </ax-text-field>
+        </ion-col>
+        <ion-col>
+          <ax-text-field
+            [label]="'label_postal_code' | translate"
+            type="text"
+            [(ngModel)]="newAddress.postal_code"
+            name="new_postal">
+          </ax-text-field>
+        </ion-col>
+      </ion-row>
+
+      <ion-row>
+        <ion-col>
+          <ion-checkbox
+            labelPlacement="end"
+            [(ngModel)]="newAddress.is_default"
+            name="new_is_default">
+            {{ 'address_set_default' | translate }}
+          </ion-checkbox>
+        </ion-col>
+      </ion-row>
+
+      <ion-row>
+        <ion-col>
+          @if (!isSavingAddress) {
+            <ion-button (click)="saveNewAddress()" expand="block" class="ion-margin-vertical" type="button" data-testid="save-address-btn">
+              {{ 'button_save_address' | translate }}
+            </ion-button>
+          } @else {
+            <div class="loader-row">
+              <ax-loader></ax-loader>
+            </div>
           }
-        </li>
-      }
-    </ul>
+        </ion-col>
+      </ion-row>
+    </div>
   </ax-bottom-sheet>
 </ion-content>
