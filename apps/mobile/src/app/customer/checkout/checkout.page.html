@@ -25,16 +25,46 @@
     </div>
   }
 
+  <!-- ── Multistep stepper header ──────────────────────────────────── -->
+  <ol class="checkout-stepper" aria-label="Checkout steps">
+    <li
+      class="checkout-stepper__step"
+      [class.is-active]="step === 1 && !ui_controls.checking_out"
+      [class.is-complete]="step === 2 || ui_controls.checking_out"
+      [attr.aria-current]="(step === 1 && !ui_controls.checking_out) ? 'step' : null">
+      <span class="checkout-stepper__index">1</span>
+      <span class="checkout-stepper__label">{{ 'step_address' | translate }}</span>
+    </li>
+    <li
+      class="checkout-stepper__step"
+      [class.is-active]="step === 2 && !ui_controls.checking_out"
+      [class.is-complete]="ui_controls.checking_out"
+      [attr.aria-current]="(step === 2 && !ui_controls.checking_out) ? 'step' : null">
+      <span class="checkout-stepper__index">2</span>
+      <span class="checkout-stepper__label">{{ 'step_review' | translate }}</span>
+    </li>
+    <li
+      class="checkout-stepper__step"
+      [class.is-active]="ui_controls.checking_out"
+      [attr.aria-current]="ui_controls.checking_out ? 'step' : null">
+      <span class="checkout-stepper__index">3</span>
+      <span class="checkout-stepper__label">{{ 'step_payment' | translate }}</span>
+    </li>
+  </ol>
+
   <!-- Info notices -->
   <div class="info-notice">{{ 'review_info' | translate }}</div>
   <div class="info-notice">{{ 'delivery_time_multiple' | translate }}</div>
 
-  <ion-accordion-group class="ion-margin-vertical" #accordionGroup [value]="['first']">
-    <ion-accordion value="first">
-      <ion-item slot="header" color="light">
-        <ion-label>{{ 'delivery_info' | translate }}</ion-label>
-      </ion-item>
-      <div class="ion-padding" slot="content">
+  <!-- accordionGroup ref retained (always rendered, hidden) so the
+       {static:true} ViewChild + toggleAccordion()/checkout_initiate()
+       defensive guard keep working under the step gates. -->
+  <ion-accordion-group #accordionGroup [value]="['first']" hidden></ion-accordion-group>
+
+  <!-- ══════════════ STEP 1 — ADDRESS ══════════════ -->
+  @if (step === 1) {
+    <section class="checkout-section" aria-label="Delivery information">
+      <div class="ion-padding-vertical">
         @if (savedAddresses.length > 0) {
           <div class="saved-address-picker" data-testid="saved-address-picker">
             @if (selectedAddressId !== null) {
@@ -168,12 +198,19 @@
           </ion-row>
         }
       </div>
-    </ion-accordion>
-    <ion-accordion value="second">
-      <ion-item slot="header" color="light">
-        <ion-label>{{ 'order_summary' | translate }}</ion-label>
-      </ion-item>
-      <div class="ion-padding" slot="content">
+    </section>
+
+    <!-- Step 1 footer action -->
+    <ion-button (click)="goToReview()" expand="block" class="checkout-cta ion-margin-vertical" type="button" data-testid="checkout-continue">
+      {{ 'button_continue' | translate }}
+      <ax-icon name="arrow-right" slot="end" />
+    </ion-button>
+  }
+
+  <!-- ══════════════ STEP 2 — REVIEW ══════════════ -->
+  @if (step === 2) {
+    <section class="checkout-section" aria-label="Review order">
+      <div class="ion-padding-vertical">
         @if (!ui_controls.is_loading){
           <ion-card class="cart-card">
             <ion-title class="cart-card__title">{{ 'order_summary' | translate }}</ion-title>
@@ -211,8 +248,6 @@
           </ion-card>
         }
       </div>
-    </ion-accordion>
-  </ion-accordion-group>
 
   <!-- ── Promo code (additive — M-promo) ──────────────────────────── -->
   <div class="promo-section">
@@ -346,21 +381,30 @@
     }
   </div>
 
-  <ion-button (click)="checkout_initiate()" expand="block" class="checkout-cta ion-margin-vertical" type="button">
-    <ax-icon name="shopping-cart" slot="start" />
-    @if (giftCard.applied && gcGatewayAmount === 0) {
-      Complete with gift card
-    } @else if (giftCard.applied) {
-      Pay AED {{ gcGatewayAmount | number:'1.2-2' }}
-    } @else {
-      {{ 'button_checkout' | translate }}
-    }
-  </ion-button>
+      <!-- Step 2 footer actions -->
+      <div class="checkout-step-actions">
+        <ion-button (click)="backToAddress()" expand="block" fill="outline" class="ion-margin-vertical" type="button" data-testid="checkout-back">
+          <ax-icon name="arrow-left" slot="start" />
+          {{ 'button_back' | translate }}
+        </ion-button>
+        <ion-button (click)="checkout_initiate()" expand="block" class="checkout-cta ion-margin-vertical" type="button">
+          <ax-icon name="shopping-cart" slot="start" />
+          @if (giftCard.applied && gcGatewayAmount === 0) {
+            Complete with gift card
+          } @else if (giftCard.applied) {
+            Pay AED {{ gcGatewayAmount | number:'1.2-2' }}
+          } @else {
+            {{ 'button_checkout' | translate }}
+          }
+        </ion-button>
+      </div>
 
-  @if (ui_controls.checking_out){
-    <div class="loader-row">
-      <ax-loader></ax-loader>
-    </div>
+      @if (ui_controls.checking_out){
+        <div class="loader-row">
+          <ax-loader></ax-loader>
+        </div>
+      }
+    </section>
   }
 
   @if (!ui_controls.is_loading) {

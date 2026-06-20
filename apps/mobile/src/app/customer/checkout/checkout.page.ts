@@ -89,6 +89,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
   categories: Labels[] = [];
   isOnline = true;
   isConfirmBilling = false;
+  /* Multistep flow (web parity): 1 = Address, 2 = Review. Payment is
+     implicit — the Noon webview opens from step 2 on Place Order, so
+     there is no explicit step-3 state. */
+  step: 1 | 2 = 1;
   isCityOpen = false;
   isAreaOpen = false;
   /* Z.2 — saved-address book picker. */
@@ -98,6 +102,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
   isLoadingAddresses = false;
   private sub: Subscription;
   @ViewChild('accordionGroup', { static: true }) accordionGroup!: IonAccordionGroup;
+  @ViewChild(IonContent) content?: IonContent;
   constructor(
     private nav: NavController,
     private net: ConnectionService,
@@ -425,6 +430,50 @@ export class CheckoutPage implements OnInit, OnDestroy {
           }
         }
       }))
+  }
+
+  /**
+   * Step 1 -> Step 2. Validate that a delivery address is ready: either a
+   * saved address is selected, OR the inline form carries the same required
+   * fields the existing confirm/checkout logic relies on (isConfirmBilling).
+   * On success, mark billing confirmed and advance to Review (scroll top).
+   * On failure, surface the existing delivery-info prompt and stay on step 1.
+   */
+  goToReview() {
+    // The delivery address must be CONFIRMED + persisted server-side before
+    // advancing to review/payment. `isConfirmBilling` is set true ONLY by
+    // applySavedAddress() (a saved address — already server-side) or by
+    // update_billing() success (the inline "Confirm delivery info" PATCH).
+    // Do NOT advance on raw typed-but-unsaved fields: checkout_initiate derives
+    // the shipping address from the server, so an unpersisted inline address
+    // would silently ship the order to the user's previously stored address.
+    if (!this.isConfirmBilling) {
+      this.error_notification(this.i18n.t('text_confirm_delivery_info'));
+      return;
+    }
+
+    this.step = 2;
+    this.scrollContentToTop();
+  }
+
+  /** Step 2 -> Step 1 (back to the address step). */
+  backToAddress() {
+    this.step = 1;
+    this.scrollContentToTop();
+  }
+
+  /** Convenience alias for back-to-review semantics from step 2. */
+  backToReview() {
+    this.step = 1;
+    this.scrollContentToTop();
+  }
+
+  private scrollContentToTop() {
+    try {
+      this.content?.scrollToTop(200);
+    } catch {
+      /* Non-fatal: scrolling is a nicety, not required. */
+    }
   }
 
   checkout_initiate() {

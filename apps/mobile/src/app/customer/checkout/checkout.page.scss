@@ -327,3 +327,102 @@
   padding: 0;
   align-self: flex-start;
 }
+
+/* ----- Multistep stepper header --------------------------------------- */
+
+.checkout-stepper {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 12px 0 4px;
+  padding: 0;
+}
+
+.checkout-stepper__step {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  text-align: center;
+
+  /* Connector line to the next step. */
+  &:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 13px;
+    left: calc(50% + 16px);
+    right: calc(-50% + 16px);
+    height: 2px;
+    background: var(--ax-color-border-subtle, rgba(46, 36, 28, 0.12));
+  }
+
+  &.is-complete:not(:last-child)::after {
+    background: var(--ax-color-brand-primary, #2E241C);
+  }
+}
+
+.checkout-stepper__index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  background: var(--ax-color-bg-muted, #f5f0eb);
+  color: var(--ax-color-text-secondary, #6b6056);
+  border: 1.5px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.12));
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+  z-index: 1;
+}
+
+.checkout-stepper__label {
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+
+.checkout-stepper__step.is-active {
+  .checkout-stepper__index {
+    background: var(--ax-color-brand-primary, #2E241C);
+    border-color: var(--ax-color-brand-primary, #2E241C);
+    color: #fff;
+  }
+  .checkout-stepper__label {
+    color: var(--ax-color-text-primary, #2E241C);
+    font-weight: 600;
+  }
+}
+
+.checkout-stepper__step.is-complete {
+  .checkout-stepper__index {
+    background: var(--ax-color-bg-brand-subtle, #f3ede2);
+    border-color: var(--ax-color-brand-primary, #2E241C);
+    color: var(--ax-color-brand-primary, #2E241C);
+  }
+  .checkout-stepper__label {
+    color: var(--ax-color-text-primary, #2E241C);
+  }
+}
+
+/* ----- Step section wrapper + footer actions -------------------------- */
+
+.checkout-section {
+  display: block;
+}
+
+.checkout-step-actions {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+
+  ion-button {
+    flex: 1 1 0;
+  }
+}
