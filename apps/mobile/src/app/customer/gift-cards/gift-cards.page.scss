@@ -462,3 +462,68 @@
   border-top: 1px solid var(--ax-color-border-subtle);
   z-index: 100;
 }
+
+// ── Recipient auto-delivery (email + phone) ───────────────────
+
+.gc-hint--deliver {
+  margin-top: 4px;
+  line-height: 1.45;
+}
+
+.gc-phone-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.gc-cc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.gc-cc-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 48px;
+  padding: 0 12px;
+  border: 1.5px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.15));
+  border-radius: 12px;
+  background: var(--ax-color-bg-surface, #fff);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ax-color-text-primary, #2e241c);
+  cursor: pointer;
+}
+
+.gc-cc-flag { font-size: 18px; line-height: 1; }
+.gc-cc-code { font-weight: 600; }
+
+.gc-phone-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// Picker list inside the bottom sheet
+.gc-cc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.08));
+
+    &:active { background: var(--ax-color-bg-muted, #f5f0eb); }
+  }
+
+  &__flag { font-size: 22px; line-height: 1; }
+  &__name { flex: 1 1 auto; font-size: 14px; color: var(--ax-color-text-primary, #2e241c); }
+  &__code { font-size: 14px; font-weight: 600; color: var(--ax-color-text-secondary, #8B6F47); }
+}

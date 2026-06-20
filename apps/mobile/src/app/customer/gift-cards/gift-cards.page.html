@@ -143,6 +143,41 @@
         <span class="gc-char-count">{{ (form.recipient_message || '').length }}/200</span>
       </div>
 
+      <!-- Auto-delivery: recipient email + phone (both optional) -->
+      <p class="gc-hint gc-hint--deliver">{{ 'gift_card_auto_delivery_hint' | translate }}</p>
+
+      <ax-text-field
+        [label]="'gift_card_recipient_email' | translate"
+        type="email"
+        inputmode="email"
+        autocomplete="off"
+        [(ngModel)]="form.recipient_email"
+        name="recipient_email"
+        placeholder="e.g. sara@example.com"
+      />
+
+      <div class="gc-phone-row">
+        <div class="gc-cc-field">
+          <label class="gc-label gc-label--sm">{{ 'gift_card_recipient_phone' | translate }}</label>
+          <button type="button" class="gc-cc-button" (click)="dialCodeOpen = true" aria-label="Select country code">
+            <span class="gc-cc-flag">{{ selectedDial?.flag }}</span>
+            <span class="gc-cc-code">{{ dialCode }}</span>
+            <ax-icon name="chevron-down" [size]="14" />
+          </button>
+        </div>
+        <div class="gc-phone-field">
+          <ax-text-field
+            [label]="' '"
+            type="tel"
+            inputmode="tel"
+            [maxlength]="15"
+            [(ngModel)]="form.recipient_phone"
+            name="recipient_phone"
+            placeholder="50 123 4567"
+          />
+        </div>
+      </div>
+
       <!-- Schedule delivery -->
       <div class="gc-row">
         <label class="gc-label gc-label--sm">Schedule delivery (optional)</label>
@@ -264,5 +299,24 @@
       </ion-button>
     </div>
   }
+
+  <!-- Recipient dial-code picker sheet -->
+  <ax-bottom-sheet
+    [isOpen]="dialCodeOpen"
+    (didDismiss)="dialCodeOpen = false"
+    [snapPoints]="[0.6, 0.85]"
+    [initialSnap]="0"
+    [title]="'gift_card_recipient_phone' | translate">
+
+    <ul class="gc-cc-list">
+      @for (c of dialCodes; track c.code) {
+        <li class="gc-cc-list__item" (click)="selectDial(c)" role="button" tabindex="0">
+          <span class="gc-cc-list__flag">{{ c.flag }}</span>
+          <span class="gc-cc-list__name">{{ c.name }}</span>
+          <span class="gc-cc-list__code">{{ c.code }}</span>
+        </li>
+      }
+    </ul>
+  </ax-bottom-sheet>
 
 </ion-content>

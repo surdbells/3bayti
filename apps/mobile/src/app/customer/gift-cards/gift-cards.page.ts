@@ -12,9 +12,11 @@ import { InAppBrowser } from '@capgo/inappbrowser';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
+import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { TranslatePipe } from '../../translate.pipe';
 import { GlobalComponent } from '../../global-component';
+import { DIAL_CODES, DialCode } from '../../public/shared/dial-codes';
 
 export interface GiftCardTheme {
   label: string;
@@ -37,6 +39,7 @@ export interface GiftCardTheme {
     IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent,
     IonSpinner, IonIcon,
     AxLoaderComponent, AxIconComponent, AxTextFieldComponent,
+    AxBottomSheetComponent,
   ],
 })
 export class GiftCardsPage implements OnInit {
@@ -60,9 +63,36 @@ export class GiftCardsPage implements OnInit {
     custom_amount: '',
     recipient_name: '',
     recipient_message: '',
+    recipient_email: '',
+    recipient_phone: '',
     recipient_photo_url: null as string | null,
     scheduled_delivery_at: null as string | null,
   };
+
+  // Dial-code picker (reuses the shared list; default UAE +971).
+  readonly dialCodes: DialCode[] = DIAL_CODES;
+  dialCodeOpen = false;
+  dialCode = '+971';
+
+  get selectedDial(): DialCode | undefined {
+    return this.dialCodes.find(c => c.code === this.dialCode);
+  }
+
+  selectDial(c: DialCode) {
+    this.dialCode = c.code;
+    this.dialCodeOpen = false;
+  }
+
+  /**
+   * Full international recipient phone: dial code + national digits, digits
+   * only after the '+'. Empty string when no national digits entered (so the
+   * field stays optional / backward-compatible).
+   */
+  get recipientPhoneFull(): string {
+    const national = (this.form.recipient_phone || '').replace(/\D/g, '');
+    if (national.length === 0) return '';
+    return `${this.dialCode}${national}`;
+  }
 
   // Preset denomination options (filtered for the selected theme)
   get presets(): string[] {
@@ -165,6 +195,16 @@ export class GiftCardsPage implements OnInit {
     if ((this.form.recipient_message || '').length > 200) {
       this.notify.error('Personal message must be 200 characters or fewer.'); return;
     }
+    // Recipient email/phone are OPTIONAL: empty = valid (buyer shares the code
+    // manually). When provided, validate format so auto-delivery succeeds.
+    const recipientEmail = (this.form.recipient_email || '').trim();
+    if (recipientEmail && !GlobalComponent.validateEmail(recipientEmail)) {
+      this.notify.error('Please enter a valid recipient email, or leave it blank.'); return;
+    }
+    const recipientPhoneDigits = (this.form.recipient_phone || '').replace(/\D/g, '');
+    if (recipientPhoneDigits.length > 0 && (recipientPhoneDigits.length < 6 || recipientPhoneDigits.length > 15)) {
+      this.notify.error('Please enter a valid recipient phone number, or leave it blank.'); return;
+    }
     // Scheduled delivery, if set, must be in the future.
     if (this.form.scheduled_delivery_at) {
       const when = new Date(this.form.scheduled_delivery_at).getTime();
@@ -227,6 +267,10 @@ export class GiftCardsPage implements OnInit {
       theme: this.form.theme,
       recipient_name: (this.form.recipient_name || '').trim() || null,
       recipient_message: (this.form.recipient_message || '').trim() || null,
+      // Optional auto-delivery targets. Send null (not '') when blank so the
+      // backend treats them as absent and nothing is auto-sent.
+      recipient_email: (this.form.recipient_email || '').trim() || null,
+      recipient_phone: this.recipientPhoneFull || null,
       recipient_photo_url: this.form.recipient_photo_url,
       scheduled_delivery_at: this.form.scheduled_delivery_at,
     };
