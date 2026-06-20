@@ -20,8 +20,8 @@
             <div class="hero">
               <div class="img-wrap" [class.loaded]="imgLoaded[$index]">
                 <ion-img
-                  src="{{product}}"
-                  alt="{{single.name}}"
+                  [src]="product"
+                  [alt]="single.name"
                   class="model"
                   (ionImgWillLoad)="onWillLoad($index)"
                   (ionImgDidLoad)="onDidLoad($index)">
