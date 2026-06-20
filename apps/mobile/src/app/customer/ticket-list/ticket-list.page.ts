@@ -112,7 +112,12 @@ export class TicketListPage implements OnInit {
   get_tickets() {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
-    this.networkAdapter.post_request(this.user_tickets, GlobalComponent.readTicket)
+    // v3: GET /me/tickets — owner-scoped from the Bearer token. No
+    // request transform is registered for this key, so no path/query
+    // params (the legacy {id, token} body carried no other fields).
+    this.networkAdapter.get_v3('GET /me/tickets', {
+      authToken: this.single_user.token,
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

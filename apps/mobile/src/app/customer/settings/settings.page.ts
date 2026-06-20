@@ -19,7 +19,6 @@ import { Subscription } from 'rxjs';
 import { ConnectionService } from '../../service/connection.service';
 import { NetworkService } from '../../service/network.service';
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
-import { GlobalComponent } from '../../global-component';
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from '../../translate.pipe';
 import { LanguageSwitcherComponent } from '../../language-switcher.component';
@@ -89,6 +88,18 @@ export class SettingsPage implements OnInit, OnDestroy {
     token: '',
     location: ''
   };
+
+  /**
+   * Structured place data captured from the last Google Places selection.
+   * The legacy endpoint took a single free-form `location` string; the v3
+   * endpoint (PATCH /v3/me/location) instead stores structured fields
+   * (city + lat/lng + permission flag) and has NO free-form field. We
+   * capture these here so update_location() can build the v3 body. Stays
+   * null when the user only typed a manual string (no Places selection),
+   * in which case we send just the city-less coordinate-less body — see
+   * update_location().
+   */
+  private selectedPlace: { city: string | null; latitude: number; longitude: number } | null = null;
 
   constructor(
     private router: Router,
@@ -236,6 +247,18 @@ export class SettingsPage implements OnInit, OnDestroy {
     if (display) {
       this.u_location.location = display;
     }
+    // Capture the structured fields the v3 endpoint actually stores. We
+    // keep city + lat/lng; we deliberately do NOT keep place.country because
+    // it's the long-form country NAME ("United Arab Emirates"), whereas the
+    // v3 DTO's country_code expects ISO 3166-1 alpha-2 (would 422). lat/lng
+    // must travel as a pair per the controller's coordinate-pairing rule.
+    if (place.location) {
+      this.selectedPlace = {
+        city: place.city ?? null,
+        latitude: place.location.latitude,
+        longitude: place.location.longitude,
+      };
+    }
   }
 
   async update_location(): Promise<void> {
@@ -251,10 +274,36 @@ export class SettingsPage implements OnInit, OnDestroy {
 
     this.ui_controls.updating_location = true;
 
-    this.networkAdapter.post_request(this.u_location, GlobalComponent.UpdateLocation)
+    // Direct v3 (PATCH /v3/me/location, upsert, RFC 7396 merge-patch). The v3
+    // UpdateLocationInput accepts latitude/longitude (must pair)/city/
+    // country_code (ISO alpha-2)/permission_granted — all optional — and has
+    // NO free-form `location` field. Build the body from the structured place
+    // captured in onLocationSelected(); omit fields we don't have so we never
+    // send a half coordinate pair or an empty city. permission_granted: true
+    // reflects that the user actively selected/confirmed a location.
+    // Request transforms don't apply to direct v3 calls, so the body is built
+    // explicitly here.
+    const body: {
+      latitude?: number;
+      longitude?: number;
+      city?: string;
+      permission_granted: boolean;
+    } = { permission_granted: true };
+    if (this.selectedPlace) {
+      body.latitude = this.selectedPlace.latitude;
+      body.longitude = this.selectedPlace.longitude;
+      if (this.selectedPlace.city) {
+        body.city = this.selectedPlace.city;
+      }
+    }
+
+    this.networkAdapter.patch_v3('PATCH /me/location', body, { authToken: this.u_location.token })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === 'success') {
+            // v3 returns { location: <structured> } and does NOT echo a
+            // free-form label; keep persisting the display string locally so
+            // the account screen still shows the readable address.
             this.single_user.location = this.u_location.location;
             Preferences.set({
               key: 'user',

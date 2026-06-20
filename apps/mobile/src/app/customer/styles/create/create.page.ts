@@ -194,7 +194,16 @@ export class CreatePage {
   }
   get_vendors() {
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.initial, GlobalComponent.vendors_listing)
+    // Direct v3 (GET /v3/vendors). Public store-directory read — no authToken.
+    // There is no GET /vendors request transform (the legacy id/token pair is
+    // dropped; v3 derives nothing from them); the only thing the legacy body
+    // carried that v3 honours is paging, so forward limit/offset as query
+    // params (v3 clamps limit 1..48, offset >= 0). The registered response
+    // transform (transformVendorListResponse) still applies via get_v3, so
+    // response.data keeps the legacy {store_id, store_name, ...} picker shape.
+    this.networkAdapter.get_v3('GET /vendors', {
+      queryParams: { limit: this.initial.limit, offset: this.initial.offset },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -212,7 +221,16 @@ export class CreatePage {
     this.product_handler.token = this.single_user.token;
     this.product_handler.storeId = storeId;
 
-    this.networkAdapter.post_request(this.product_handler, GlobalComponent.vendors_products_listing)
+    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}/products). Public read — no
+    // authToken. transformVendorsProductsListingRequest maps storeId into the
+    // {id} path param and ONLY adds limit/offset query params when the legacy
+    // body carried them; product_handler is {id, token, storeId} (no paging),
+    // so the transform produces pathParams only — replicate that exactly here.
+    // The response transform (transformProductListResponse) applies via get_v3,
+    // so response.data keeps the legacy product-card shape.
+    this.networkAdapter.get_v3('GET /mobile/vendors-products', {
+      pathParams: { id: String(storeId) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -299,7 +317,13 @@ export class CreatePage {
     this.initial.id = this.single_user.id;
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit
-    this.networkAdapter.post_request(this.initial, GlobalComponent.vendors_listing)
+    // Direct v3 (GET /v3/vendors) — paginated load-more. Same migration as
+    // get_vendors(): public read, no request transform, forward the bumped
+    // limit/offset as query params. transformVendorListResponse applies via
+    // get_v3 so the appended rows keep the legacy picker shape.
+    this.networkAdapter.get_v3('GET /vendors', {
+      queryParams: { limit: this.initial.limit, offset: this.initial.offset },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

@@ -136,7 +136,12 @@ export class MessagesPage implements OnInit, OnDestroy {
   }
   get_conversations() {
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readMessages)
+    // v3: GET /chat/conversation-stores — auth-scoped (cart/me-style),
+    // resolved from the Bearer token. No path/query params (the legacy
+    // {id, token} body had no other fields to forward).
+    this.networkAdapter.get_v3('GET /chat/conversation-stores', {
+      authToken: this.single_user.token,
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

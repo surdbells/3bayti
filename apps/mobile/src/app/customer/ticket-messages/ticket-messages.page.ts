@@ -118,7 +118,13 @@ export class TicketMessagesPage implements OnInit, OnDestroy {
     if (show_loading){
       this.ui_controls.is_loading = true;
     }
-    this.networkAdapter.post_request(this.request, GlobalComponent.readTicketMessages)
+    // v3: GET /me/tickets/:id/messages — owner-scoped (Bearer token).
+    // transformReadTicketMessagesRequest puts the ticket id in the path
+    // as {id}; no query params.
+    this.networkAdapter.get_v3('GET /me/tickets/:id/messages', {
+      authToken: this.single_user.token,
+      pathParams: { id: String(this.request.ticket) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -139,7 +145,16 @@ export class TicketMessagesPage implements OnInit, OnDestroy {
       return;
     }
     this.ui_controls.sending = true;
-    this.networkAdapter.post_request(this.message, GlobalComponent.sendTicketMessage)
+    // v3: POST /me/tickets/:id/messages — ticket id in the path, body is
+    // just { message } (CreateMyTicketMessageController reads body.message
+    // ?? body.body; user resolved from the Bearer token). Re-opens a
+    // resolved/closed ticket server-side.
+    this.networkAdapter.post_v3('POST /me/tickets/:id/messages', {
+      message: this.message.message,
+    }, {
+      authToken: this.single_user.token,
+      pathParams: { id: String(this.message.ticket) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

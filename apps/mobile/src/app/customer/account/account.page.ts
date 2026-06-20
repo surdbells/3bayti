@@ -29,7 +29,6 @@ import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { ConnectionService } from '../../service/connection.service';
-import {GlobalComponent} from "../../global-component";
 import { I18nService } from '../../i18n.service';
 import { WishlistService } from '../../core/services/wishlist.service';
 import {Products} from "../../class/products";
@@ -342,12 +341,12 @@ export class AccountPage implements OnInit, OnDestroy {
     this.best_seller.id = this.single_user.id;
     this.best_seller.token = this.single_user.token;
     this.rqst_param_products_by_category.category = 0;
-    // M3.2.X.1-C: routes through MobileNetworkAdapter, which consults
-    // the 'GET /mobile/best-sellers' feature flag. Initially target='old'
-    // (shadow mode); flips to 'new' in M3.2.X.1-C-FLIP after 7-day clean
-    // shadow window. The post_request signature is drop-in compatible
-    // with NetworkService.post_request.
-    this.networkAdapter.post_request(this.best_seller, GlobalComponent.best_sellers)
+    // Direct v3 (GET /v3/products with sort=best_seller). Public catalog
+    // read — anonymous, so no authToken. transformBestSellersRequest drops
+    // the legacy {id, token} body, so only the sort query param carries over.
+    // transformBestSellersResponse still applies via get_v3, so response.data
+    // shape is unchanged.
+    this.networkAdapter.get_v3('GET /mobile/best-sellers', { queryParams: { sort: 'best_seller' } })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -365,8 +364,12 @@ export class AccountPage implements OnInit, OnDestroy {
     this.best_seller.id = this.single_user.id;
     this.best_seller.token = this.single_user.token;
     this.rqst_param_products_by_category.category = 0;
-    // M3.2.X.1.5-A: 'GET /mobile/new-arrivals' flag (target='new' since M3.1.5).
-    this.networkAdapter.post_request(this.best_seller, GlobalComponent.new_arrivals)
+    // Direct v3 (GET /v3/products with sort=newest). Public catalog read —
+    // anonymous, so no authToken. transformNewArrivalsRequest drops the
+    // legacy {id, token} body, so only the sort query param carries over.
+    // The response transform still applies via get_v3, so response.data
+    // shape is unchanged.
+    this.networkAdapter.get_v3('GET /mobile/new-arrivals', { queryParams: { sort: 'newest' } })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -381,8 +384,13 @@ export class AccountPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.get_featured.id = this.single_user.id;
     this.get_featured.token = this.single_user.token;
-    // M3.2.X.1.5-A: 'GET /mobile/featured' flag (target='new' since M3.1.5).
-    this.networkAdapter.post_request(this.get_featured, GlobalComponent.featured)
+    // Direct v3 (GET /v3/featured-vendors). Public catalog read — anonymous,
+    // so no authToken. transformFeaturedRequest carries over limit/offset from
+    // the existing `get_featured` request object. The response transform still
+    // applies via get_v3, so response.data shape is unchanged.
+    this.networkAdapter.get_v3('GET /mobile/featured', {
+      queryParams: { limit: this.get_featured.limit, offset: this.get_featured.offset },
+    })
       .subscribe(({
         next: (response: any) => {
           this.vendor_featured = response.data;
@@ -484,9 +492,10 @@ export class AccountPage implements OnInit, OnDestroy {
   load_cart() {
     this.rqst_param.id = this.single_user.id;
     this.rqst_param.token = this.single_user.token;
-    // M3.2.X.1.5-A: 'GET /mobile/customer-cart' read; adapter routes
-    // per existing flag (target='new' for cart reads).
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.customerCart)
+    // Direct v3 (GET /v3/cart). Authed read — pass the user token as authToken.
+    // transformCartListResponse still applies via get_v3, preserving the legacy
+    // v2 envelope: response.message carries the bill summary the strip reads.
+    this.networkAdapter.get_v3('GET /cart', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200) {
@@ -505,7 +514,14 @@ export class AccountPage implements OnInit, OnDestroy {
     this.get_featured.id = this.single_user.id;
     this.get_featured.token = this.single_user.token;
     this.get_featured.offset = this.get_featured.offset + this.get_featured.limit
-    this.networkAdapter.post_request(this.get_featured, GlobalComponent.featured)
+    // Direct v3 (GET /v3/featured-vendors) — same paginated read as
+    // get_featured_products(), advancing offset for infinite scroll.
+    // Anonymous catalog read (no authToken); limit/offset carry over from
+    // the `get_featured` request object. Response shape unchanged (transform
+    // applies).
+    this.networkAdapter.get_v3('GET /mobile/featured', {
+      queryParams: { limit: this.get_featured.limit, offset: this.get_featured.offset },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

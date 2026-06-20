@@ -131,7 +131,14 @@ export class CreateTicketPage implements OnInit, OnDestroy {
   }
   get_vendors() {
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.request, GlobalComponent.readCustomerOrders)
+    // v3: GET /orders (read-customer-orders is an oldPathAlias of this
+    // routeKey). Auth-scoped from the Bearer token. transformReadOrders-
+    // ListingRequest forwards limit/offset; the legacy {id, token} body
+    // had neither, so the transform defaults (limit 10, offset 0) apply.
+    this.networkAdapter.get_v3('GET /orders', {
+      authToken: this.single_user.token,
+      queryParams: { limit: 10, offset: 0 },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -157,7 +164,21 @@ export class CreateTicketPage implements OnInit, OnDestroy {
       this.error_notification(this.i18n.t('text_reference_required'));
       return;
     }
-    this.networkAdapter.post_request(this.create, GlobalComponent.createTicket)
+    // v3: POST /me/tickets. CreateMyTicketController body is
+    // { subject, message, vendor_id? } — user resolved from the Bearer
+    // token; it reads body.body ?? body.message for the text. vendor_id
+    // is the legacy `store` (only sent when > 0, mirroring the request
+    // transform). Validation above already guarantees store != 0.
+    const ticketBody: { subject: string; message: string; vendor_id?: number } = {
+      subject: this.create.subject,
+      message: this.create.message,
+    };
+    if (this.create.store > 0) {
+      ticketBody.vendor_id = this.create.store;
+    }
+    this.networkAdapter.post_v3('POST /me/tickets', ticketBody, {
+      authToken: this.single_user.token,
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200) {
