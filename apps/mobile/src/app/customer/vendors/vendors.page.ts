@@ -15,7 +15,6 @@ import {ActionSheetController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
-import {GlobalComponent} from "../../global-component";
 import {Labels} from "../../class/labels";
 import {Products} from "../../class/products";
 import {TranslatePipe} from "../../translate.pipe";
@@ -170,7 +169,15 @@ goToReviews(id: number, name: string) {
   get_latest() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.store_latest)
+    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}/products). Public catalog
+    // read — no authToken. transformStoreLatestRequest maps store_id into the
+    // {id} path param (and drops the legacy id/token/label); the v3 endpoint
+    // hardcodes sort=newest, so no query params are needed. The registered
+    // response transform still applies via get_v3, so response.data keeps the
+    // legacy Products[] shape.
+    this.networkAdapter.get_v3('GET /mobile/store-latest', {
+      pathParams: { id: String(this.rqst_param.store_id) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -185,7 +192,13 @@ goToReviews(id: number, name: string) {
       }))
   }
   get_vendor() {
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.read_vendor)
+    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}). Public read — no
+    // authToken. transformReadVendorRequest maps store_id into the {id} path
+    // param. Response transform applies via get_v3, so response.data keeps the
+    // legacy storefront-header shape.
+    this.networkAdapter.get_v3('GET /mobile/read-vendor', {
+      pathParams: { id: String(this.rqst_param.store_id) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -195,7 +208,14 @@ goToReviews(id: number, name: string) {
       }))
   }
   user_follow_vendor() {
-    this.networkAdapter.post_request(this.follow_vendor, GlobalComponent.follow_vendor)
+    // Direct v3 (POST /v3/me/following/{vendorId}). Authenticated write.
+    // transformFollowVendorRequest moves legacy body.store_id into the
+    // {vendorId} path param and sends an empty body (the controller reads
+    // the vendor from the path and the user from the token).
+    this.networkAdapter.post_v3('POST /following/:vendorId', {}, {
+      authToken: this.follow_vendor.token,
+      pathParams: { vendorId: String(this.follow_vendor.store_id) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -208,7 +228,14 @@ goToReviews(id: number, name: string) {
       }))
   }
   user_unfollow_vendor() {
-    this.networkAdapter.post_request(this.unfollow_vendor, GlobalComponent.unfollow_vendor)
+    // Direct v3 (DELETE /v3/me/following/{vendorId}). Authenticated write.
+    // transformUnfollowVendorRequest moves legacy body.store_id into the
+    // {vendorId} path param; DELETE carries no body. 204 → still passes the
+    // response_code === 200 envelope check via the adapter's wrap.
+    this.networkAdapter.delete_v3('DELETE /following/:vendorId', {
+      authToken: this.unfollow_vendor.token,
+      pathParams: { vendorId: String(this.unfollow_vendor.store_id) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -223,7 +250,20 @@ goToReviews(id: number, name: string) {
   get_product_by_label() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.products_by_labels)
+    // Direct v3 (GET /v3/products). Public catalog read — no authToken.
+    // transformProductsByLabelsRequest maps the legacy label → label_id and
+    // store_id → vendor_id query params, omitting each when it's 0 (the
+    // "no filter" signal). Replicate that exactly here.
+    const labelQuery: Record<string, string | number | boolean> = {};
+    if (this.rqst_param.label !== 0) {
+      labelQuery['label_id'] = this.rqst_param.label;
+    }
+    if (this.rqst_param.store_id !== 0) {
+      labelQuery['vendor_id'] = this.rqst_param.store_id;
+    }
+    this.networkAdapter.get_v3('GET /mobile/products-by-labels', {
+      queryParams: labelQuery,
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -239,7 +279,13 @@ goToReviews(id: number, name: string) {
   get_label() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.store_labels)
+    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}/labels). Public read — no
+    // authToken. transformStoreLabelsRequest maps store_id into the {id} path
+    // param (dropping the legacy id/token/label/store_name). Response transform
+    // applies via get_v3, so response.data keeps the legacy Labels[] shape.
+    this.networkAdapter.get_v3('GET /mobile/store-labels', {
+      pathParams: { id: String(this.rqst_param.store_id) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

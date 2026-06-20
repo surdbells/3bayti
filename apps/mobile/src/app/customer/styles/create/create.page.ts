@@ -234,7 +234,18 @@ export class CreatePage {
     this.ui_controls.is_creating = true;
     this.create_style.id = this.single_user.id;
     this.create_style.token = this.single_user.token;
-    this.networkAdapter.post_request(this.create_style, GlobalComponent.create_style)
+    // Direct v3 (POST /v3/me/styles). Authed — token rides the
+    // Authorization header via opts.authToken, not the body. The v3
+    // CreateStyleController reads only `name` and `products` (CSV);
+    // legacy `category`/`isPrivate` have no v3 equivalent and are dropped.
+    this.networkAdapter.post_v3(
+      'POST /me/styles',
+      {
+        name: this.create_style.name,
+        products: this.create_style.products,
+      },
+      { authToken: this.single_user.token },
+    )
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

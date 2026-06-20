@@ -135,7 +135,15 @@ export class StoreReviewsPage implements OnInit, OnDestroy {
   get_reviews() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.store_reviews, GlobalComponent.storeReviews)
+    // Direct v3 (GET /v3/vendors/:vendorId/reviews) — public list of a
+    // store's approved reviews, no authToken. The legacy request transform
+    // (transformVendorReviewsListRequest) moved the store id from the body
+    // (store_id/store) into the vendorId path param; replicated here. The
+    // registered response transform still applies via get_v3, so
+    // response.data keeps the legacy Reviews[] shape.
+    this.networkAdapter.get_v3('GET /vendors/:vendorId/reviews', {
+      pathParams: { vendorId: String(this.store_reviews.store) },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

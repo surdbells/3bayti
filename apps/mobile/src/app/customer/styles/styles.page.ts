@@ -191,7 +191,18 @@ export class StylesPage implements OnInit, OnDestroy {
     this.ui_controls.is_empty = false;
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.styles_list)
+    // Direct v3 (GET /v3/styles). Public catalog read — no authToken.
+    // transformStylesListRequest mapped type/limit/offset straight through
+    // as query params; we replicate that here. The registered response
+    // transform (transformStylesListResponse) still applies via get_v3, so
+    // response.data keeps the legacy Styles[] shape.
+    this.networkAdapter.get_v3('GET /mobile/styles-list', {
+      queryParams: {
+        type: this.initial.type,
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -217,7 +228,16 @@ export class StylesPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.styles_list)
+    // Direct v3 (GET /v3/styles) — paginated read for infinite scroll,
+    // advancing offset. Public catalog read, no authToken. Shape unchanged
+    // (response transform still applies via get_v3).
+    this.networkAdapter.get_v3('GET /mobile/styles-list', {
+      queryParams: {
+        type: this.initial.type,
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

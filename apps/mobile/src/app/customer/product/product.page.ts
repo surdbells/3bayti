@@ -530,7 +530,15 @@ export class ProductPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.single_product)
+    // Direct v3 (GET /v3/products/by-legacy-id/:id). The single_product
+    // request transform put the legacy `product` id into the {id} path
+    // param (transformSingleProductRequest); replicate that here. The
+    // response transform (transformProductDetailResponse) still applies
+    // via get_v3, so response.data keeps the legacy detail shape. Public
+    // catalog read — no authToken.
+    this.networkAdapter.get_v3('GET /mobile/single-product', {
+      pathParams: { id: String(this.rqst_param.product) },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -592,16 +600,23 @@ export class ProductPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading_measurement = true;
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readMeasurement)
+    // Direct v3 (GET /v3/me/measurements). Authed (derives the user from
+    // the JWT) so authToken is required. The transformMeasurementsReadResponse
+    // response transform still applies via get_v3, so response.data keeps the
+    // legacy [{...flat numeric values}] shape this page reads. v3 values are
+    // numbers, matching the numeric `update` fields here (unlike
+    // measurements.page whose form fields are strings).
+    this.networkAdapter.get_v3('GET /me/measurements', { authToken: this.single_user.token })
       .subscribe({
         next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.update.bust = response.data[0].bust;
-            this.update.armhole = response.data[0].armhole;
-            this.update.shoulder = response.data[0].shoulder;
-            this.update.length = response.data[0].length;
-            this.update.hip = response.data[0].hip;
-            this.update.arm = response.data[0].arm;
+          const m = response.data?.[0];
+          if (response.response_code === 200 && response.status === "success" && m) {
+            this.update.bust = m.bust;
+            this.update.armhole = m.armhole;
+            this.update.shoulder = m.shoulder;
+            this.update.length = m.length;
+            this.update.hip = m.hip;
+            this.update.arm = m.arm;
             this.add_cart.measurement = JSON.stringify(this.update);
           } else {
             this.ui_controls.is_empty = true;
@@ -617,6 +632,15 @@ export class ProductPage implements OnInit, OnDestroy {
   }
 
   get_store_measurement() {
+    // NOT migrated to v3-direct intentionally. The only v3 size-chart
+    // endpoint (GET /v3/vendor/measurements, VendorSizeChartController::list)
+    // is vendor-self-scoped: it resolves the vendor from the caller's JWT
+    // (findIdsByOwnerUser) and 403s for non-vendors. This call is a CUSTOMER
+    // fetching a STORE's published size guide by store id — there is no
+    // public/customer v3 route for that. So this stays on the legacy
+    // strangler path (which already falls through to legacy: no request
+    // transform is registered for GET /vendor/measurements). When a public
+    // store size-chart endpoint lands in v3, flip this to get_v3.
     this.networkAdapter.post_request(this.store_m, GlobalComponent.readStoreMeasurement)
       .subscribe({
         next: (response: any) => {
@@ -629,16 +653,39 @@ export class ProductPage implements OnInit, OnDestroy {
   }
 
   load_cart() {
+    // Guests have no server cart; their cart lives in IndexedDB and the
+    // "already in cart" indicator isn't shown for the guest add flow.
+    // Skip the authed read entirely (no token to send).
+    if (this.isGuest) {
+      this.ui_controls.is_loading = false;
+      return;
+    }
     this.rqst_param.id = this.single_user.id;
     this.rqst_param.token = this.single_user.token;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.customerCart)
+    // Direct v3 (GET /v3/cart). Authed — authToken required. The
+    // transformCartListResponse response transform still applies via
+    // get_v3, so response.data is the v3 {items, bill, ...} shape (NOT
+    // the legacy array). Handle both shapes defensively, mirroring
+    // cart.page.ts: legacy put the item array in `data` and the bill in
+    // `message`; v3 puts {items, bill} in `data` and leaves `message` ''.
+    this.networkAdapter.get_v3('GET /cart', { authToken: this.single_user.token })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200) {
-            this.bill = response.message;
-            this.product = response.data;
+            const data = response.data;
+            if (Array.isArray(data)) {
+              // Legacy shape
+              this.product = data;
+              this.bill = response.message;
+            } else if (data && typeof data === 'object' && Array.isArray(data.items)) {
+              // v3 shape (post-transform)
+              this.product = data.items;
+              this.bill = { ...this.bill, ...(data.bill ?? {}) };
+            } else {
+              this.product = [];
+            }
             this.ui_controls.is_loading = false;
-            this.itemExists = response.data.some((item: any) => item.product_id === this.single.product);
+            this.itemExists = this.product.some((item: any) => item.product_id === this.single.product);
             this.cdr.markForCheck();
           }
         }
@@ -708,7 +755,26 @@ export class ProductPage implements OnInit, OnDestroy {
       return;
     }
 
-    this.networkAdapter.post_request(this.add_cart, GlobalComponent.addToCart)
+    // Direct v3 (POST /v3/cart/items). Authed — authToken required. Build
+    // the body EXPLICITLY per AddCartItemInput (product_id, quantity, size,
+    // color, is_custom, measurement, extra_measurement, note). The server
+    // derives everything else (price, store, customer, product snapshot) —
+    // the legacy display fields on `add_cart` are intentionally NOT sent.
+    // extra_measurement is included for made-to-measure products
+    // (require_extra_msmt); the server rejects an empty value for those.
+    // The transformAddCartResponse response transform applies via post_v3,
+    // so response.data = {success, count, cart} — handled below.
+    const cartBody = {
+      product_id: this.add_cart.product_id,
+      quantity: this.add_cart.quantity,
+      size: this.add_cart.size,
+      color: this.add_cart.color,
+      is_custom: this.add_cart.is_custom === true,
+      measurement: this.add_cart.measurement,
+      extra_measurement: this.add_cart.extra_measurement,
+      note: this.add_cart.note,
+    };
+    this.networkAdapter.post_v3('POST /cart/items', cartBody, { authToken: this.single_user.token })
       .subscribe({
         next: (response: any) => {
           // Dual-shape support during M3.1.6 strangler-fig migration.
@@ -761,7 +827,16 @@ export class ProductPage implements OnInit, OnDestroy {
       this.ui_controls.is_loading_measurement = true;
       this.cdr.markForCheck();
 
-      this.networkAdapter.post_request(this.update, GlobalComponent.updateMeasurement)
+      // Direct v3 (PUT /v3/me/measurements/default) — SAME as
+      // measurements.page.ts. v3 wants a numeric `values` map (cm, 0-500);
+      // send only the fields the user filled. `update` fields are already
+      // numbers here, so coerce + filter to positive values.
+      const values: Record<string, number> = {};
+      for (const k of ['bust', 'shoulder', 'armhole', 'length', 'hip', 'arm'] as const) {
+        const n = Number(this.update[k]);
+        if (Number.isFinite(n) && n > 0) values[k] = n;
+      }
+      this.networkAdapter.put_v3('PUT /me/measurements/default', { values }, { authToken: this.single_user.token })
         .subscribe({
           next: (response: any) => {
             if (response.response_code === 200 && response.status === "success") {
