@@ -136,6 +136,39 @@ export class ProfileService {
   }
 
   /**
+   * Upload (or replace) the authenticated user's avatar.
+   *
+   * POST /v3/me/avatar with a base64 data-URL body { image }. The
+   * endpoint stores the image on public Flysystem storage and returns
+   * the resulting { data: { avatar_url } }. We push the new URL into
+   * the cached auth user (via applyProfile) so the header user-menu and
+   * any other avatar consumers update immediately, with no /me refetch.
+   *
+   * Uses the direct Bearer HttpClient (auth attached by interceptor)
+   * because this endpoint isn't in the RoutedHttpClient registry —
+   * same approach as deleteAccount.
+   */
+  async uploadAvatar(dataUrl: string): Promise<string> {
+    this._isSaving.set(true);
+    try {
+      const res = await firstValueFrom(
+        this.directHttp.post<{ data: { avatar_url: string } }>(
+          `${V3_BASE}/v3/me/avatar`,
+          { image: dataUrl },
+        ),
+      );
+      const avatarUrl = res.data.avatar_url;
+      const current = this.auth.currentUser();
+      if (current !== null) {
+        this.auth.applyProfile({ ...current, avatar_url: avatarUrl });
+      }
+      return avatarUrl;
+    } finally {
+      this._isSaving.set(false);
+    }
+  }
+
+  /**
    * Delete the authenticated user's account.
    *
    * DELETE /v3/me with a current_password body (re-auth, Q6.2). The

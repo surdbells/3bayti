@@ -40,6 +40,8 @@ export interface AuthUser {
   is_store_active: boolean;
   /** ISO 8601 datetime (ATOM format), or null if never logged in. */
   last_login_at: string | null;
+  /** Public URL of the user's avatar, or null if none uploaded. */
+  avatar_url: string | null;
 }
 
 /**

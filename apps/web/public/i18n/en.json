@@ -536,6 +536,18 @@
       "save": "Save changes",
       "saved": "Your profile has been updated.",
       "noChanges": "No changes to save.",
+      "avatar": {
+        "alt": "Your profile picture",
+        "change": "Change photo",
+        "hint": "Square image, JPG, PNG or WebP (max 5 MB).",
+        "updated": "Your profile picture has been updated.",
+        "errors": {
+          "type": "Please choose an image file.",
+          "tooLarge": "That image is too large (max 5 MB).",
+          "read": "We couldn't read that image. Please try another.",
+          "uploadFailed": "We couldn't update your profile picture. Please try again."
+        }
+      },
       "errors": {
         "invalid": "Please check this field.",
         "tooLong": "This is too long.",

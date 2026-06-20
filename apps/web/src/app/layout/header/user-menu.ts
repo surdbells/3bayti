@@ -53,7 +53,16 @@ import type { AuthUser } from '../../core/auth/auth.types';
         aria-haspopup="menu"
         data-testid="user-menu-trigger"
       >
-        <span class="user-menu__avatar" aria-hidden="true">{{ initials() }}</span>
+        <span class="user-menu__avatar" aria-hidden="true">
+          <img
+            *ngIf="user.avatar_url; else avatarInitials"
+            class="user-menu__avatar-img"
+            [src]="user.avatar_url"
+            alt=""
+            data-testid="user-menu-avatar-img"
+          />
+          <ng-template #avatarInitials>{{ initials() }}</ng-template>
+        </span>
         <span class="user-menu__name">{{ displayName() }}</span>
         <span class="user-menu__chevron" aria-hidden="true">▾</span>
       </button>
@@ -137,6 +146,15 @@ import type { AuthUser } from '../../core/auth/auth.types';
         justify-content: center;
         font-size: 12px;
         font-weight: 600;
+        overflow: hidden;
+      }
+
+      .user-menu__avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        border-radius: 50%;
       }
 
       .user-menu__name {

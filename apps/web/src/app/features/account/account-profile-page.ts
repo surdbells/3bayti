@@ -49,6 +49,37 @@ const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
         <h1 class="account-profile__title">{{ 'account.profile.title' | translate }}</h1>
 
         <ng-container *ngIf="!isLoading(); else loadingState">
+          <!-- Avatar upload -->
+          <div class="account-profile__avatar" data-testid="prof-avatar">
+            <span class="account-profile__avatar-img" aria-hidden="true">
+              <img
+                *ngIf="avatarUrl(); else avatarPlaceholder"
+                [src]="avatarUrl()"
+                [alt]="'account.profile.avatar.alt' | translate"
+                data-testid="prof-avatar-img"
+              />
+              <ng-template #avatarPlaceholder>
+                <span class="account-profile__avatar-initials">{{ initials() }}</span>
+              </ng-template>
+            </span>
+            <div class="account-profile__avatar-control">
+              <label class="account-profile__avatar-btn" [class.is-disabled]="isSaving()">
+                {{ (isSaving() ? 'common.saving' : 'account.profile.avatar.change') | translate }}
+                <input
+                  type="file"
+                  accept="image/*"
+                  class="account-profile__avatar-input"
+                  (change)="onAvatarSelected($event)"
+                  [disabled]="isSaving()"
+                  data-testid="prof-avatar-input"
+                />
+              </label>
+              <span class="account-profile__avatar-hint">
+                {{ 'account.profile.avatar.hint' | translate }}
+              </span>
+            </div>
+          </div>
+
           <form
             class="account-profile__form"
             [formGroup]="form"
@@ -215,6 +246,21 @@ export class AccountProfilePageComponent implements OnInit {
   protected phone = (): string => this._user()?.phone ?? '';
   protected emailVerified = (): boolean => this._user()?.is_email_verified ?? false;
   protected phoneVerified = (): boolean => this._user()?.is_phone_verified ?? false;
+  protected avatarUrl = (): string | null => this._user()?.avatar_url ?? null;
+
+  /** Initials shown as a placeholder when no avatar is set. */
+  protected initials(): string {
+    const u = this._user();
+    const first = u?.first_name?.trim() ?? '';
+    const last = u?.last_name?.trim() ?? '';
+    if (first !== '' && last !== '') return (first[0] + last[0]).toUpperCase();
+    if (first !== '') return first.substring(0, 2).toUpperCase();
+    const localPart = (u?.email ?? '').split('@')[0] ?? '';
+    return localPart.substring(0, 2).toUpperCase();
+  }
+
+  /** Max avatar upload size: 5 MB. */
+  private static readonly MAX_AVATAR_BYTES = 5 * 1024 * 1024;
 
   protected readonly form: FormGroup<{
     first_name: FormControl<string>;
@@ -255,6 +301,51 @@ export class AccountProfilePageComponent implements OnInit {
       this.form.markAsPristine();
     } catch {
       this.toast.error('account.profile.errors.loadFailed');
+    }
+  }
+
+  /**
+   * Avatar file picker: validate (image type, <=5 MB), read as a base64
+   * data URL, then POST it. On success the new avatar_url is reflected
+   * both here and in the auth user (header user-menu) via the service.
+   */
+  protected onAvatarSelected(event: Event): void {
+    if (this.isSaving()) return;
+    const input = event.target as HTMLInputElement;
+    const file = input.files && input.files[0];
+    input.value = ''; // allow re-picking the same file
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      this.toast.error('account.profile.avatar.errors.type');
+      return;
+    }
+    if (file.size > AccountProfilePageComponent.MAX_AVATAR_BYTES) {
+      this.toast.error('account.profile.avatar.errors.tooLarge');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      void this.uploadAvatar(reader.result as string);
+    };
+    reader.onerror = () => this.toast.error('account.profile.avatar.errors.read');
+    reader.readAsDataURL(file);
+  }
+
+  private async uploadAvatar(dataUrl: string): Promise<void> {
+    try {
+      const avatarUrl = await this.profileService.uploadAvatar(dataUrl);
+      const user = this._user();
+      if (user !== null) this._user.set({ ...user, avatar_url: avatarUrl });
+      this.toast.success('account.profile.avatar.updated');
+    } catch (err) {
+      const result = mapApiErrors(err, this.form, {});
+      if (result.isNetworkError) {
+        this.toast.error('common.errors.network');
+      } else {
+        this.toast.error('account.profile.avatar.errors.uploadFailed');
+      }
     }
   }
 
