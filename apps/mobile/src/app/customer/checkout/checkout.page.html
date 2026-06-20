@@ -254,7 +254,7 @@
               <ion-item lines="none" detail="false">
                 <ion-label><strong>{{ 'text_amount_due' | translate }}</strong></ion-label>
                 <ion-text slot="end">
-                  <strong>AED {{ (giftCard.applied ? gcGatewayAmount : (+(promo.quote?.total ?? 0))) | number:'1.2-2' }}</strong>
+                  <strong>AED {{ amountDue | number:'1.2-2' }}</strong>
                 </ion-text>
               </ion-item>
             </ion-list>

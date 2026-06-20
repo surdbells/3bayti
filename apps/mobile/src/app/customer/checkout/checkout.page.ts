@@ -1,4 +1,4 @@
-import {Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
+import {ChangeDetectorRef, Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import {DecimalPipe} from '@angular/common';
 import {Cart} from "../../class/cart";
 import {Labels} from "../../class/labels";
@@ -112,6 +112,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     private toast: AxNotificationService,
     private i18n: I18nService,
     private addressService: AddressService,
+    private cdr: ChangeDetectorRef,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -260,6 +261,19 @@ export class CheckoutPage implements OnInit, OnDestroy {
     return this.giftCard.applied
       ? Number(this.giftCard.preview?.gateway_amount ?? this.bill.total)
       : Number(this.bill.total) || 0;
+  }
+
+  /**
+   * Amount due now. The quote (POST /v3/cart/quote) is the source of truth
+   * for the order total (subtotal + delivery − promo discount); a gift card
+   * reduces that by its applied credit. Using quote.total (not the gift-card
+   * endpoint's own gateway_amount) keeps the figure consistent with the rest
+   * of the breakdown when a promo and a gift card are both applied. The server
+   * reconciles the exact charge (incl. full-cover gateway-skip) at initiate.
+   */
+  get amountDue(): number {
+    const total = Number(this.promo.quote?.total ?? this.bill.total) || 0;
+    return this.giftCard.applied ? Math.max(0, total - this.gcAppliedAmount) : total;
   }
 
   // ── Promo code ─────────────────────────────────────────────────────
@@ -415,6 +429,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
             }
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = this.carts.length === 0;
+            this.cdr.markForCheck();
             // Fetch server-authoritative base totals for the breakdown
             // card once the cart is loaded. Guard on token (set in
             // getObject before load_cart runs). Promo additive (M-promo).
@@ -424,6 +439,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
           }else{
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = true;
+            this.cdr.markForCheck();
           }
         }
       }))
@@ -746,10 +762,12 @@ export class CheckoutPage implements OnInit, OnDestroy {
         } else {
           this.error_notification(res?.message ?? 'This gift card cannot be applied.');
         }
+        this.cdr.markForCheck();
       },
       error: (err: any) => {
         this.giftCard.checking = false;
         this.error_notification(err?.error?.message ?? 'Gift card not valid.');
+        this.cdr.markForCheck();
       },
     });
   }
@@ -758,6 +776,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.giftCard.preview = null;
     this.giftCard.applied = false;
     this.giftCard.code    = '';
+    this.cdr.markForCheck();
   }
 
   // ── Promo code methods ────────────────────────────────────────────
@@ -807,6 +826,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
             this.promo.applied = false;
           }
           this.promo.checking = false;
+          this.cdr.markForCheck();
         },
         error: (err: any) => {
           // Raw HttpErrorResponse (network error or, defensively, a 4xx
@@ -831,6 +851,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
       // Re-fetch base totals so the breakdown isn't left empty.
       this.quoteCart(null);
     }
+    this.cdr.markForCheck();
   }
 
   applyPromo() {
@@ -926,9 +947,11 @@ export class CheckoutPage implements OnInit, OnDestroy {
               this.ui_controls.is_empty = true;
             }
             this.ui_controls.is_loading = false;
+            this.cdr.markForCheck();
           }else{
             this.ui_controls.is_empty = true;
             this.ui_controls.is_loading = false;
+            this.cdr.markForCheck();
           }
         }
       }))
