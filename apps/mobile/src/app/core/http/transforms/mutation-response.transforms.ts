@@ -134,7 +134,14 @@ export function transformCartListResponse(data: unknown): unknown {
     const it = asObj(raw);
     return {
       id: it['id'] ?? 0,
+      // Legacy Cart shape (class/cart.ts): `item` is the cart-item id and
+      // `product` is the product id. The cart template + the inc/dec/remove
+      // controls read cart.item, and open-product + add-to-wishlist read
+      // cart.product — WITHOUT these aliases those values are undefined and
+      // every control silently no-ops (calls .../items/undefined).
+      item: it['id'] ?? 0,
       product_id: it['product_id'] ?? 0,
+      product: it['product_id'] ?? 0,
       product_name: it['product_name'] ?? '',
       product_image: it['product_image'] ?? '',
       vendor_id: it['vendor_id'] ?? 0,
