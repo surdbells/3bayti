@@ -294,6 +294,15 @@ export class OrderDetailPage implements OnInit {
       .subscribe({
         next: (response: any) => {
           this.ui_controls.is_cancelling = false;
+          // Diagnostic: exact API outcome (404 route / 401 auth / 422
+          // cancellation_not_allowed) if cancel appears to "do nothing".
+          console.warn('[cancel-order:detail]', {
+            id: order.id,
+            response_code: response?.response_code,
+            status: response?.status,
+            error_code: response?.error_code,
+            message: response?.message,
+          });
           if (response.response_code === 200 && response.status === 'success') {
             order.status = 'cancelled';
             const wasIdempotent =
@@ -303,12 +312,15 @@ export class OrderDetailPage implements OnInit {
                 ? this.i18n.t('order_detail_already_cancelled')
                 : this.i18n.t('order_detail_cancelled'),
             );
+            // Re-load so the detail authoritatively reflects the new status.
+            this.loadOrder();
           } else {
             this.toast.error(response.message || this.i18n.t('order_detail_cancel_failed'));
           }
         },
-        error: () => {
+        error: (err: any) => {
           this.ui_controls.is_cancelling = false;
+          console.warn('[cancel-order:detail] network/transport error', err);
           this.toast.error(this.i18n.t('order_detail_network_error'));
         },
       });

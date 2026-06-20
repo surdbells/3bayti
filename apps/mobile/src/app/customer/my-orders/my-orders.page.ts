@@ -300,8 +300,17 @@ export class MyOrdersPage implements OnInit {
       })
       .subscribe({
         next: (response: any) => {
+          // Diagnostic: surfaces the exact API outcome (404=route not found,
+          // 401=auth, 422=cancellation_not_allowed) when a cancel appears to
+          // "do nothing". Check the device console if cancel still fails.
+          console.warn('[cancel-order]', {
+            id: order.id,
+            response_code: response?.response_code,
+            status: response?.status,
+            error_code: response?.error_code,
+            message: response?.message,
+          });
           if (response.response_code === 200 && response.status === 'success') {
-            // Optimistic local update + success toast.
             order.status = 'cancelled';
             const wasIdempotent = response.data?.cancellation?.was_already_cancelled === true;
             this.toast.success(
@@ -309,11 +318,15 @@ export class MyOrdersPage implements OnInit {
                 ? this.i18n.t('cancel_order_already_cancelled')
                 : this.i18n.t('cancel_order_success'),
             );
+            // Re-fetch so the list authoritatively reflects the new status
+            // (covers any optimistic-render edge / stale list).
+            this.order_listing();
           } else {
             this.toast.error(response.message || this.i18n.t('cancel_order_unable'));
           }
         },
-        error: () => {
+        error: (err: any) => {
+          console.warn('[cancel-order] network/transport error', err);
           this.toast.error(this.i18n.t('cancel_order_network_error'));
         },
       });
