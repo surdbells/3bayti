@@ -21,10 +21,9 @@ import {
   AlertController,
   ToastController
 } from '@ionic/angular/standalone';
-import { Subscription } from 'rxjs';
+import { Subscription, forkJoin } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
 
-import { GlobalComponent } from '../../global-component';
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from '../../translate.pipe';
 import {NetworkService} from "../../service/network.service";
@@ -166,18 +165,64 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
     this.isLoading = true;
     this.cdr.markForCheck();
 
-    const sub = this.networkAdapter.post_request(
-      { id: this.userId, token: this.userToken },
-      GlobalComponent.vendor_dashboard
-    ).subscribe({
-      next: (response: any) => {
-        if (response.status === 'success') {
-          this.storeData = response.data.store;
-          this.stats = {
-            ...this.stats,
-            ...response.data.stats
+    // v3 split: the dashboard calculator (GET /vendor/dashboard) returns the
+    // aggregated stats (catalog/sales/operations), but NOT store identity or
+    // the active flag. The store profile (GET /vendor/store) carries
+    // name/logo/is_active. Fetch both in parallel and merge.
+    const sub = forkJoin({
+      dashboard: this.networkAdapter.get_v3('GET /vendor/dashboard', {
+        authToken: this.userToken,
+      }),
+      store: this.networkAdapter.get_v3('GET /vendor/store', {
+        authToken: this.userToken,
+      }),
+    }).subscribe({
+      next: ({ dashboard, store }) => {
+        const dRes = dashboard as { status?: string; data?: any };
+        const sRes = store as { status?: string; data?: any };
+
+        // --- Store identity + active flag (GET /vendor/store, adminShape) ---
+        if (sRes?.status === 'success' && sRes.data) {
+          const v = sRes.data;
+          this.storeData = {
+            store_id: v.id,
+            name: v.name,
+            logo: v.logo_url ?? null,
+            banner: v.cover_image_url ?? null,
+            description: v.description ?? null,
+            is_active: !!v.is_active,
+            rating: null,
+            review_count: 0,
+            created_at: v.created_at,
           };
         }
+
+        // --- Aggregated stats (GET /vendor/dashboard, compute()) ----------
+        if (dRes?.status === 'success' && dRes.data) {
+          const d = dRes.data;
+          const catalog = d.catalog ?? {};
+          const sales = d.sales ?? {};
+          const ops = d.operations ?? {};
+          this.stats = {
+            ...this.stats,
+            // Catalog health
+            total_products: catalog.total_products ?? 0,
+            active_products: catalog.active ?? 0,
+            out_of_stock: catalog.out_of_stock ?? 0,
+            low_stock_items: catalog.low_stock ?? 0,
+            // Sales — period revenue is the 30-day default window = "this month"
+            monthly_earnings: sales.revenue ?? 0,
+            total_earnings: sales.all_time_revenue ?? 0,
+            completed_orders: sales.orders ?? 0,
+            total_orders: sales.all_time_orders ?? 0,
+            // Operations queue (order fulfilment)
+            pending_orders: ops.awaiting_acceptance ?? 0,
+            processing_orders: ops.to_ship ?? 0,
+            // Not provided by the v3 dashboard calculator; left at default 0.
+            // (pending_payout, unread_messages, pending_reviews)
+          };
+        }
+
         this.isLoading = false;
         this.cdr.markForCheck();
       },
@@ -252,24 +297,27 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
     this.isTogglingStatus = true;
     this.cdr.markForCheck();
 
-    const sub = this.networkAdapter.post_request(
-      {
-        id: this.userId,
-        token: this.userToken,
-        is_active: isActive ? 1 : 0
-      },
-      GlobalComponent.vendor_toggle_status
+    const sub = this.networkAdapter.patch_v3(
+      'PATCH /vendor/store/status',
+      { store_status: isActive },
+      { authToken: this.userToken }
     ).subscribe({
       next: async (response: any) => {
         if (response.status === 'success') {
+          // The controller echoes the new state in data.store_status; trust
+          // it over the optimistic value in case the server toggled instead.
+          const confirmed =
+            response.data && typeof response.data.store_status === 'boolean'
+              ? response.data.store_status
+              : isActive;
           if (this.storeData) {
-            this.storeData.is_active = isActive;
+            this.storeData.is_active = confirmed;
           }
           const toast = await this.toastCtrl.create({
-            message: isActive ? 'Store is now active' : 'Store is now hidden',
+            message: confirmed ? 'Store is now active' : 'Store is now hidden',
             duration: 2000,
             position: 'bottom',
-            color: isActive ? 'success' : 'warning'
+            color: confirmed ? 'success' : 'warning'
           });
           await toast.present();
         } else {
