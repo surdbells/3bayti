@@ -214,6 +214,83 @@
     </ion-accordion>
   </ion-accordion-group>
 
+  <!-- ── Promo code (additive — M-promo) ──────────────────────────── -->
+  <div class="promo-section">
+    <label class="checkout-field-label">{{ 'text_promo_code' | translate }}</label>
+    @if (!promo.applied) {
+      <div class="promo-input-row">
+        <input
+          class="promo-code-input"
+          type="text"
+          [(ngModel)]="promo.code"
+          [placeholder]="'text_promo_code' | translate"
+          autocorrect="off"
+          autocapitalize="characters"
+        />
+        <button
+          type="button"
+          class="promo-apply-btn"
+          (click)="applyPromo()"
+          [disabled]="promo.checking || !promo.code.trim()">
+          {{ 'text_apply' | translate }}
+        </button>
+      </div>
+    } @else {
+      <div class="promo-applied-row">
+        <span class="promo-applied-label">
+          {{ 'text_promo_applied' | translate }} ({{ promo.code }})
+        </span>
+        <button type="button" class="promo-remove-btn" (click)="removePromo()">
+          {{ 'text_remove' | translate }}
+        </button>
+      </div>
+    }
+    @if (promo.error) {
+      <div class="promo-error">{{ promo.error }}</div>
+    }
+  </div>
+
+  <!-- ── Totals breakdown (additive — M-promo) ────────────────────── -->
+  @if (promo.quote) {
+    <ion-card class="cart-card breakdown-card">
+      <ion-list lines="none" class="contact-list">
+        <ion-item lines="none" detail="false">
+          <ion-label>{{ 'text_subtotal' | translate }}</ion-label>
+          <ion-text slot="end">AED {{ (+promo.quote.subtotal) | number:'1.2-2' }}</ion-text>
+        </ion-item>
+        <ion-item lines="none" detail="false">
+          <ion-label>{{ 'text_delivery' | translate }}</ion-label>
+          <ion-text slot="end">AED {{ (+promo.quote.delivery_fee) | number:'1.2-2' }}</ion-text>
+        </ion-item>
+        @if (promo.applied && promo.quote.applied_promo && (+promo.quote.applied_promo.discount_amount) > 0) {
+          <ion-item lines="none" detail="false">
+            <ion-label>{{ 'text_discount' | translate }} ({{ promo.quote.applied_promo.code }})</ion-label>
+            <ion-text slot="end" class="breakdown-credit">
+              −AED {{ (+promo.quote.applied_promo.discount_amount) | number:'1.2-2' }}
+            </ion-text>
+          </ion-item>
+        }
+        @if (giftCard.applied) {
+          <ion-item lines="none" detail="false">
+            <ion-label>{{ 'text_gift_card_credit' | translate }}</ion-label>
+            <ion-text slot="end" class="breakdown-credit">
+              −AED {{ gcAppliedAmount | number:'1.2-2' }}
+            </ion-text>
+          </ion-item>
+        }
+        <ion-item detail="false">
+          <hr class="summary-divider" />
+        </ion-item>
+        <ion-item lines="none" detail="false">
+          <ion-label><strong>{{ 'text_amount_due' | translate }}</strong></ion-label>
+          <ion-text slot="end">
+            <strong>AED {{ (giftCard.applied ? gcGatewayAmount : (+promo.quote.total)) | number:'1.2-2' }}</strong>
+          </ion-text>
+        </ion-item>
+      </ion-list>
+    </ion-card>
+  }
+
   <!-- ── Gift card section ──────────────────────────────────────── -->
   <div class="gc-apply-section">
     <button type="button" class="gc-apply-toggle" (click)="toggleGiftCardSection()">

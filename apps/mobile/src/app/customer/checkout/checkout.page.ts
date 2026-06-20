@@ -258,6 +258,41 @@ export class CheckoutPage implements OnInit, OnDestroy {
       ? Number(this.giftCard.preview?.gateway_amount ?? this.bill.total)
       : Number(this.bill.total) || 0;
   }
+
+  // ── Promo code ─────────────────────────────────────────────────────
+  // Additive (M-promo). The server is authoritative for all totals via
+  // POST /v3/cart/quote — `promo.quote` holds the last response.data so
+  // the breakdown card renders server-computed money (DECIMAL STRINGS).
+  promo = {
+    code:     '',          // user-entered promo code
+    applied:  false,       // a promo is currently applied
+    checking: false,       // an applyPromo() round-trip is in flight
+    error:    '',          // localized error message (shown inline)
+    quote:    null as any,  // last POST /cart/quote response.data
+  };
+
+  /**
+   * Map a v3 PROMO_* / cart error code to a localized message. Returns a
+   * generic fallback for unknown codes so we never surface a raw code.
+   */
+  private promoErrorMessage(code: string | null | undefined, details?: any): string {
+    switch (code) {
+      case 'PROMO_NOT_FOUND':            return this.i18n.t('text_promo_not_found');
+      case 'PROMO_INACTIVE':             return this.i18n.t('text_promo_inactive');
+      case 'PROMO_NOT_YET_VALID':        return this.i18n.t('text_promo_not_yet_valid');
+      case 'PROMO_EXPIRED':              return this.i18n.t('text_promo_expired');
+      case 'PROMO_CURRENCY_MISMATCH':    return this.i18n.t('text_promo_currency_mismatch');
+      case 'PROMO_MIN_SUBTOTAL_NOT_MET':
+        return this.i18n.t('text_promo_min_subtotal_not_met', {
+          min_subtotal: details?.min_subtotal ?? '',
+          currency: details?.currency ?? '',
+        });
+      case 'PROMO_GLOBAL_LIMIT_REACHED': return this.i18n.t('text_promo_global_limit_reached');
+      case 'PROMO_USER_LIMIT_REACHED':   return this.i18n.t('text_promo_user_limit_reached');
+      case 'BUSINESS_RULE_VIOLATION':    return this.i18n.t('text_promo_cart_empty');
+      default:                           return this.i18n.t('text_promo_invalid');
+    }
+  }
   checkout = {
     apiOperation: "INITIATE",
     order: {
@@ -378,6 +413,12 @@ export class CheckoutPage implements OnInit, OnDestroy {
             }
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = this.carts.length === 0;
+            // Fetch server-authoritative base totals for the breakdown
+            // card once the cart is loaded. Guard on token (set in
+            // getObject before load_cart runs). Promo additive (M-promo).
+            if (this.single_user.token) {
+              this.quoteCart(null);
+            }
           }else{
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = true;
@@ -434,6 +475,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     const initiateBody = {
       channel: 'MOBILE',
       gift_card_code: this.giftCard.applied ? this.giftCard.code : undefined,
+      promo_code: this.promo.applied ? this.promo.code : undefined,
     };
     this.networkAdapter.post_v3('POST /checkout/initiate', initiateBody, { authToken: this.single_user.token })
       .subscribe({
@@ -666,6 +708,94 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.giftCard.preview = null;
     this.giftCard.applied = false;
     this.giftCard.code    = '';
+  }
+
+  // ── Promo code methods ────────────────────────────────────────────
+
+  /**
+   * Re-quote the cart against the server (POST /v3/cart/quote).
+   *
+   * `promoCode` of null/'' clears any applied promo and fetches base
+   * totals. A non-empty code asks the server to evaluate the promo.
+   *
+   * The MobileNetworkAdapter routes HTTP 4xx (e.g. the 422 promo
+   * errors) through the SUCCESS channel as an error envelope
+   * ({ status:'error', error_code, message }), while network-level
+   * failures go through the error callback. We handle the promo error
+   * in BOTH places so the code is read from whichever path fires:
+   *   - envelope (next):  response.error_code
+   *   - raw HttpError (error cb): err?.error?.error?.code (v3 envelope)
+   * On any promo error we clear `applied` and re-quote with null so the
+   * breakdown still shows server-authoritative base totals.
+   */
+  private quoteCart(promoCode: string | null) {
+    this.networkAdapter
+      .post_v3('POST /cart/quote', { promo_code: promoCode }, { authToken: this.single_user.token })
+      .subscribe({
+        next: (response: any) => {
+          // Error envelope surfaced via the success channel (4xx).
+          if (response?.status === 'error' || (response?.response_code && response.response_code !== 200)) {
+            const code = response?.error_code ?? response?.error?.code;
+            // translateError surfaces v3 structured details as `error_details`
+            // on the success-channel envelope (422s never reach the error cb).
+            const details = response?.error_details ?? response?.error?.details;
+            this.handlePromoError(promoCode, code, details);
+            return;
+          }
+
+          const data = response?.data;
+          this.promo.quote = data;
+
+          if (promoCode && data?.applied_promo) {
+            this.promo.applied = true;
+            this.promo.error = '';
+          } else if (promoCode) {
+            // Server accepted the request but didn't apply a promo.
+            this.promo.applied = false;
+          } else {
+            // Base re-quote (clearing): nothing applied.
+            this.promo.applied = false;
+          }
+          this.promo.checking = false;
+        },
+        error: (err: any) => {
+          // Raw HttpErrorResponse (network error or, defensively, a 4xx
+          // that reached this channel). Read the v3 envelope's code.
+          const code = err?.error?.error?.code ?? err?.error?.code;
+          const details = err?.error?.error?.details ?? err?.error?.details;
+          this.handlePromoError(promoCode, code, details);
+        },
+      });
+  }
+
+  /**
+   * Shared promo-failure handler: localize the error, mark not-applied,
+   * and re-quote with null so base totals remain visible. Guards against
+   * recursion (only the original promo attempt re-quotes the base).
+   */
+  private handlePromoError(attemptedCode: string | null, code: string | null | undefined, details?: any) {
+    this.promo.applied = false;
+    this.promo.checking = false;
+    if (attemptedCode) {
+      this.promo.error = this.promoErrorMessage(code, details);
+      // Re-fetch base totals so the breakdown isn't left empty.
+      this.quoteCart(null);
+    }
+  }
+
+  applyPromo() {
+    const code = this.promo.code.trim();
+    if (!code) { return; }
+    this.promo.code = code;
+    this.promo.checking = true;
+    this.quoteCart(code);
+  }
+
+  removePromo() {
+    this.promo.code = '';
+    this.promo.applied = false;
+    this.promo.error = '';
+    this.quoteCart(null);
   }
 
   error_notification(message: string) {

@@ -1051,17 +1051,26 @@ export class MobileNetworkAdapter {
     // backend that returned response_code !== 200.
     let message = 'Request failed';
     let errorCode: string | null = null;
+    let errorDetails: unknown = null;
     const body = err.error;
     if (body && typeof body === 'object') {
       const e = (body as Record<string, unknown>)['error'];
       if (e && typeof e === 'object') {
         const code = (e as Record<string, unknown>)['code'];
         const msg = (e as Record<string, unknown>)['message'];
+        const details = (e as Record<string, unknown>)['details'];
         if (typeof code === 'string') {
           errorCode = code;
         }
         if (typeof msg === 'string' && msg.length > 0) {
           message = msg;
+        }
+        // v3 structured errors carry a `details` object (e.g. PROMO_MIN_
+        // SUBTOTAL_NOT_MET -> { min_subtotal, currency }). 422s are surfaced
+        // here via the success channel, so propagate details too — otherwise
+        // call sites that interpolate them (promo messages) render blanks.
+        if (details !== undefined) {
+          errorDetails = details;
         }
       }
     }
@@ -1071,6 +1080,7 @@ export class MobileNetworkAdapter {
       status: 'error',
       message,
       error_code: errorCode, // extension field; legacy didn't have this
+      error_details: errorDetails, // extension field; v3 structured error details
       data: null,
     });
   }
