@@ -78,7 +78,7 @@ describe('CheckoutStatusPollService', () => {
         }),
       ];
 
-      service.fetchStatus('https://api.example/v3/checkout/status/V3-001').subscribe(
+      service.fetchStatus('https://api.example/v3/checkout/status/V3-001', 'tok').subscribe(
         (status: CheckoutStatus) => {
           expect(status.order_reference).toBe('V3-001');
           expect(status.terminal).toBe(true);
@@ -92,7 +92,7 @@ describe('CheckoutStatusPollService', () => {
     it('coerces missing/null fields to defaults', (done) => {
       mockNet.responses = [of({ data: {} })];
 
-      service.fetchStatus('url').subscribe((status: CheckoutStatus) => {
+      service.fetchStatus('url', 'tok').subscribe((status: CheckoutStatus) => {
         expect(status.order_reference).toBe('');
         expect(status.status).toBe('unknown');
         expect(status.terminal).toBe(false);
@@ -116,7 +116,7 @@ describe('CheckoutStatusPollService', () => {
         }),
       ];
 
-      service.fetchStatus('url').subscribe((status: CheckoutStatus) => {
+      service.fetchStatus('url', 'tok').subscribe((status: CheckoutStatus) => {
         expect(status.order_reference).toBe('V3-DIRECT');
         expect(status.status).toBe('pending_payment');
         done();
@@ -126,7 +126,7 @@ describe('CheckoutStatusPollService', () => {
     it('propagates errors from the network service', (done) => {
       mockNet.responses = [throwError(() => new Error('network down'))];
 
-      service.fetchStatus('url').subscribe({
+      service.fetchStatus('url', 'tok').subscribe({
         next: () => fail('should have errored'),
         error: (err) => {
           expect((err as Error).message).toBe('network down');
@@ -138,7 +138,7 @@ describe('CheckoutStatusPollService', () => {
 
   describe('pollUntilTerminal', () => {
     it('returns an error outcome immediately for missing reference', (done) => {
-      service.pollUntilTerminal('').subscribe((outcome: PollOutcome) => {
+      service.pollUntilTerminal('', 'tok').subscribe((outcome: PollOutcome) => {
         expect(outcome.kind).toBe('error');
         done();
       });
@@ -160,7 +160,7 @@ describe('CheckoutStatusPollService', () => {
         }),
       ];
 
-      service.pollUntilTerminal('V3-001').subscribe((outcome: PollOutcome) => {
+      service.pollUntilTerminal('V3-001', 'tok').subscribe((outcome: PollOutcome) => {
         expect(outcome.kind).toBe('paid');
         if (outcome.kind === 'paid') {
           expect(outcome.status.order_reference).toBe('V3-001');
@@ -186,7 +186,7 @@ describe('CheckoutStatusPollService', () => {
         }),
       ];
 
-      service.pollUntilTerminal('V3-002').subscribe((outcome: PollOutcome) => {
+      service.pollUntilTerminal('V3-002', 'tok').subscribe((outcome: PollOutcome) => {
         expect(outcome.kind).toBe('failed');
         if (outcome.kind === 'failed') {
           expect(outcome.status.status).toBe('failed');
