@@ -209,7 +209,19 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.new_arrivals_listing)
+    // Direct v3 (GET /v3/products) — public catalog read, no auth. The
+    // transformNewArrivalsListingResponse transform still applies via
+    // get_v3, so response.data keeps its product-array shape. limit/offset/
+    // maxPrice come from the existing `initial` request object (maxPrice ->
+    // max_price query param, per transformNewArrivalsListingRequest).
+    this.networkAdapter.get_v3('GET /mobile/new-arrivals-listing', {
+      queryParams: {
+        sort: 'newest',
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+        max_price: this.initial.maxPrice,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -236,7 +248,17 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.new_arrivals_listing)
+    // Direct v3 (GET /v3/products) — public catalog read, no auth. Same
+    // paginated listing as newArrivals() with a price ceiling; maxPrice maps
+    // to the v3 max_price query param (transformNewArrivalsListingRequest).
+    this.networkAdapter.get_v3('GET /mobile/new-arrivals-listing', {
+      queryParams: {
+        sort: 'newest',
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+        max_price: this.initial.maxPrice,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -260,7 +282,16 @@ export class NewArrivalsPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.new_arrivals_listing)
+    // Direct v3 (GET /v3/products) — public catalog read, no auth. Advances
+    // offset for infinite scroll; shape unchanged (transform applies).
+    this.networkAdapter.get_v3('GET /mobile/new-arrivals-listing', {
+      queryParams: {
+        sort: 'newest',
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+        max_price: this.initial.maxPrice,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

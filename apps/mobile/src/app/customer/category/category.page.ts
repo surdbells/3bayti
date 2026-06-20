@@ -208,7 +208,12 @@ export class CategoryPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.category_listing)
+    // Direct v3 (GET /v3/products). transformCategoryListingResponse still
+    // applies via get_v3, so response.data keeps the legacy Products[] shape.
+    // Public catalog read — no authToken. Query params mirror what
+    // transformCategoryListingRequest produced from `initial`: limit/offset
+    // always, category_id only when category !== 0, max_price from maxPrice.
+    this.networkAdapter.get_v3('GET /mobile/category-listing', { queryParams: this.buildListingQuery() })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -230,6 +235,24 @@ export class CategoryPage implements OnInit, OnDestroy {
       });
   }
 
+  /**
+   * Build the GET /mobile/category-listing query params from the current
+   * `initial` request object, replicating transformCategoryListingRequest:
+   * limit/offset always; category_id omitted when category === 0 (the
+   * "all products" signal); max_price carried from maxPrice.
+   */
+  private buildListingQuery(): Record<string, string | number | boolean> {
+    const query: Record<string, string | number | boolean> = {
+      limit: this.initial.limit,
+      offset: this.initial.offset,
+      max_price: this.initial.maxPrice,
+    };
+    if (this.initial.category !== 0) {
+      query['category_id'] = this.initial.category;
+    }
+    return query;
+  }
+
   filterByPrice(maxPrice: number) {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
@@ -238,7 +261,8 @@ export class CategoryPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.category_listing)
+    // Direct v3 (GET /v3/products) — public catalog read, no authToken.
+    this.networkAdapter.get_v3('GET /mobile/category-listing', { queryParams: this.buildListingQuery() })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -317,7 +341,8 @@ export class CategoryPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.category_listing)
+    // Direct v3 (GET /v3/products) — public catalog read, no authToken.
+    this.networkAdapter.get_v3('GET /mobile/category-listing', { queryParams: this.buildListingQuery() })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

@@ -21,7 +21,6 @@ import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
-import {GlobalComponent} from "../../global-component";
 import {Search} from "../../class/search";
 import {Labels} from "../../class/labels";
 import {TranslatePipe} from "../../translate.pipe";
@@ -165,7 +164,12 @@ export class SearchPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
     this.imageLoaded = {};
-    this.networkAdapter.post_request(this.search, GlobalComponent.search)
+    // Direct v3 (GET /v3/products via 'GET /mobile/search'). Public catalog
+    // read — no auth token. The search request transform maps the legacy
+    // body's `search` field to the v3 `q` query param; pass it explicitly.
+    // The response transform still applies via get_v3, so response.data keeps
+    // the legacy Search[] shape — subscribe logic below is unchanged.
+    this.networkAdapter.get_v3('GET /mobile/search', { queryParams: { q: this.search.search } })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

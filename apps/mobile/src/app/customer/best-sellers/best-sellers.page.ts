@@ -209,11 +209,19 @@ export class BestSellersPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    // M3.2.X.1-C: routes through MobileNetworkAdapter to consult the
-    // 'GET /mobile/best-sellers-listing' feature flag. Drop-in
-    // signature; legacy envelope preserved by the adapter on the v3
-    // path.
-    this.networkAdapter.post_request(this.initial, GlobalComponent.best_sellers_listing)
+    // Direct v3 (GET /v3/products, sort=best_seller). This is a public
+    // catalog read — no authToken. transformBestSellersListingRequest
+    // maps limit/offset/maxPrice into the v3 query params, and the
+    // registered response transform still applies via get_v3, so
+    // response.data keeps the legacy Products[] shape.
+    this.networkAdapter.get_v3('GET /mobile/best-sellers-listing', {
+      queryParams: {
+        sort: 'best_seller',
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+        max_price: this.initial.maxPrice,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -242,7 +250,17 @@ export class BestSellersPage implements OnInit, OnDestroy {
     this.resetImageStates();
     this.cdr.markForCheck();
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.best_sellers_listing)
+    // Direct v3 (GET /v3/products, sort=best_seller) — public catalog
+    // read, no authToken. The price band rides through as the maxPrice
+    // query param (mapped to max_price by transformBestSellersListingRequest).
+    this.networkAdapter.get_v3('GET /mobile/best-sellers-listing', {
+      queryParams: {
+        sort: 'best_seller',
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+        max_price: this.initial.maxPrice,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -266,7 +284,17 @@ export class BestSellersPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    this.networkAdapter.post_request(this.initial, GlobalComponent.best_sellers_listing)
+    // Direct v3 (GET /v3/products, sort=best_seller) — paginated read for
+    // infinite scroll, advancing offset. Public catalog read, no authToken.
+    // Shape unchanged (response transform still applies via get_v3).
+    this.networkAdapter.get_v3('GET /mobile/best-sellers-listing', {
+      queryParams: {
+        sort: 'best_seller',
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+        max_price: this.initial.maxPrice,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

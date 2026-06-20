@@ -368,7 +368,12 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.explore.token = this.single_user.token;
     this.explore.offset = 0;
 
-    this.networkAdapter.post_request(this.explore, GlobalComponent.explore_listing)
+    this.networkAdapter.get_v3('GET /mobile/explore-listing', {
+      queryParams: {
+        limit: this.explore.limit,
+        offset: this.explore.offset,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           console.log('[Vertican] Products:', response.data?.length);
@@ -410,7 +415,12 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.explore.token = this.single_user.token;
     this.explore.offset += this.explore.limit;
 
-    this.networkAdapter.post_request(this.explore, GlobalComponent.explore_listing)
+    this.networkAdapter.get_v3('GET /mobile/explore-listing', {
+      queryParams: {
+        limit: this.explore.limit,
+        offset: this.explore.offset,
+      },
+    })
       .subscribe({
         next: (response: any) => {
           if (response.response_code !== 200 || response.status !== 'success') {

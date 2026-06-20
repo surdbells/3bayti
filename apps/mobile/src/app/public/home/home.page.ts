@@ -22,7 +22,6 @@ import {BlockerService} from "../../blocker.service";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
-import {GlobalComponent} from "../../global-component";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 interface Category {
@@ -160,7 +159,12 @@ export class HomePage implements OnInit, OnDestroy {
     // wasn't in the initial inspection of best_sellers usage).
     // Same shadow → flip lifecycle as account.page::get_best_sellers
     // and best-sellers.page methods.
-    this.networkAdapter.post_request(this.best_seller, GlobalComponent.best_sellers)
+    // Direct v3 (GET /v3/products with sort=best_seller). Public catalog
+    // read — anonymous, so no authToken. transformBestSellersRequest drops
+    // the legacy {id, token} body, so no query params carry over.
+    // transformBestSellersResponse still applies via get_v3, so response.data
+    // shape is unchanged.
+    this.networkAdapter.get_v3('GET /mobile/best-sellers', { queryParams: { sort: 'best_seller' } })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -178,7 +182,11 @@ export class HomePage implements OnInit, OnDestroy {
     // M3.2.X.1.5-A: route through MobileNetworkAdapter to consult
     // 'GET /mobile/new-arrivals' feature flag (already target='new'
     // since M3.1.5).
-    this.networkAdapter.post_request(this.best_seller, GlobalComponent.new_arrivals)
+    // Direct v3 (GET /v3/products with sort=newest). Public catalog read —
+    // anonymous, so no authToken. transformNewArrivalsRequest drops the
+    // legacy {id, token} body, so no query params carry over. The response
+    // transform still applies via get_v3, so response.data shape is unchanged.
+    this.networkAdapter.get_v3('GET /mobile/new-arrivals', { queryParams: { sort: 'newest' } })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -191,7 +199,13 @@ export class HomePage implements OnInit, OnDestroy {
   get_featured_products() {
     this.ui_controls.is_loading = true;
     // M3.2.X.1.5-A: 'GET /mobile/featured' flag (target='new' since M3.1.5).
-    this.networkAdapter.post_request(this.get_featured, GlobalComponent.featured)
+    // Direct v3 (GET /v3/featured-vendors). Public catalog read — anonymous,
+    // so no authToken. transformFeaturedRequest carries over limit/offset from
+    // the existing `get_featured` request object. The response transform still
+    // applies via get_v3, so response.data shape is unchanged.
+    this.networkAdapter.get_v3('GET /mobile/featured', {
+      queryParams: { limit: this.get_featured.limit, offset: this.get_featured.offset },
+    })
       .subscribe(({
         next: (response: any) => {
           this.vendor_featured = response.data;
@@ -220,7 +234,14 @@ export class HomePage implements OnInit, OnDestroy {
   }
   getMoreItems() {
     this.get_featured.offset = this.get_featured.offset + this.get_featured.limit
-    this.networkAdapter.post_request(this.get_featured, GlobalComponent.featured)
+    // Direct v3 (GET /v3/featured-vendors) — same paginated read as
+    // get_featured_products(), advancing offset for infinite scroll.
+    // Anonymous catalog read (no authToken); limit/offset carry over from
+    // the `get_featured` request object. Response shape unchanged (transform
+    // applies).
+    this.networkAdapter.get_v3('GET /mobile/featured', {
+      queryParams: { limit: this.get_featured.limit, offset: this.get_featured.offset },
+    })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
