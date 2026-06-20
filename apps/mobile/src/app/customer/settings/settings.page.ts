@@ -27,7 +27,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxPlaceAutocompleteComponent, PlaceDetails } from '../../shared/ax-mobile/place-autocomplete';
-import { PushManager } from '../../core/services/push-manager.service';
+import { AuthSessionService } from '../../core/services/auth-session.service';
 
 @Component({
   selector: 'app-settings',
@@ -111,7 +111,7 @@ export class SettingsPage implements OnInit, OnDestroy {
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
-    private pushManager: PushManager,
+    private authSession: AuthSessionService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -341,15 +341,10 @@ export class SettingsPage implements OnInit, OnDestroy {
           text: this.i18n.t('button_sign_out'),
           role: 'destructive',
           handler: async () => {
-            // M3.2.Z.5-B — deactivate this device's push token BEFORE
-            // clearing the session (Q-Z5.2). onSignedOutReadingToken
-            // reads the still-valid auth token from Preferences('user'),
-            // so it must run before that key is removed. Fire-safe:
-            // PushManager swallows all errors and is a no-op on web.
-            await this.pushManager.onSignedOutReadingToken();
-            await Preferences.remove({ key: 'keep_session' });
-            await Preferences.remove({ key: 'user' });
-            this.router.navigate(['/home']);
+            // Full session teardown: revoke the server RefreshToken,
+            // deactivate the device push token, clear local session +
+            // guest cart, and reset the nav stack to /home.
+            await this.authSession.logout();
           }
         },
         {

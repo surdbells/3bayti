@@ -31,6 +31,7 @@ import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { ConnectionService } from '../../service/connection.service';
 import { I18nService } from '../../i18n.service';
 import { WishlistService } from '../../core/services/wishlist.service';
+import { AuthSessionService } from '../../core/services/auth-session.service';
 import {Products} from "../../class/products";
 import {Labels} from "../../class/labels";
 import {CartIconComponent} from "../../cart-icon.component";
@@ -131,6 +132,7 @@ export class AccountPage implements OnInit, OnDestroy {
     private toast: AxNotificationService,
     private i18n: I18nService,
     private wishlistService: WishlistService,
+    private authSession: AuthSessionService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -323,10 +325,11 @@ export class AccountPage implements OnInit, OnDestroy {
         {
           text: this.i18n.t('button_sign_out'),
           role: 'destructive',
-          handler: () => {
-            Preferences.remove({key: 'keep_session'});
-            Preferences.remove({key: 'user'});
-            this.router.navigate(['/', 'login']);
+          handler: async () => {
+            // Full session teardown: revoke the server RefreshToken,
+            // deactivate the device push token, clear local session +
+            // guest cart, and reset the nav stack to /home.
+            await this.authSession.logout();
           }
         }, {
           text: this.i18n.t('cancel'),
