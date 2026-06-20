@@ -273,6 +273,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     applied:  false,       // a promo is currently applied
     checking: false,       // an applyPromo() round-trip is in flight
     error:    '',          // localized error message (shown inline)
+    is_open:  false,       // collapsible-card open state (mirrors giftCard.is_open)
     quote:    null as any,  // last POST /cart/quote response.data
   };
 
@@ -717,6 +718,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   toggleGiftCardSection() {
     this.giftCard.is_open = !this.giftCard.is_open;
+  }
+
+  togglePromoSection() {
+    this.promo.is_open = !this.promo.is_open;
   }
 
   onGiftCodeInput(event: any) {

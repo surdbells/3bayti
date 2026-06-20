@@ -250,38 +250,50 @@
       </div>
 
   <!-- ── Promo code (additive — M-promo) ──────────────────────────── -->
-  <div class="promo-section">
-    <label class="checkout-field-label">{{ 'text_promo_code' | translate }}</label>
-    @if (!promo.applied) {
-      <div class="promo-input-row">
-        <input
-          class="promo-code-input"
-          type="text"
-          [(ngModel)]="promo.code"
-          [placeholder]="'text_promo_code' | translate"
-          autocorrect="off"
-          autocapitalize="characters"
-        />
-        <button
-          type="button"
-          class="promo-apply-btn"
-          (click)="applyPromo()"
-          [disabled]="promo.checking || !promo.code.trim()">
-          {{ 'text_apply' | translate }}
-        </button>
+  <div class="gc-apply-section">
+    <button type="button" class="gc-apply-toggle" (click)="togglePromoSection()">
+      <div class="gc-apply-toggle__left">
+        <ax-icon name="sparkles" [size]="18" />
+        <span>{{ promo.applied ? ('text_promo_applied' | translate) : ('text_have_promo_code' | translate) }}</span>
       </div>
-    } @else {
-      <div class="promo-applied-row">
-        <span class="promo-applied-label">
-          {{ 'text_promo_applied' | translate }} ({{ promo.code }})
-        </span>
-        <button type="button" class="promo-remove-btn" (click)="removePromo()">
-          {{ 'text_remove' | translate }}
-        </button>
+      @if (promo.applied && promo.quote?.applied_promo) {
+        <span class="gc-apply-toggle__saved">−AED {{ (+promo.quote.applied_promo.discount_amount) | number:'1.2-2' }}</span>
+      }
+      <ax-icon [name]="promo.is_open ? 'chevron-up' : 'chevron-down'" [size]="16" />
+    </button>
+
+    @if (promo.is_open) {
+      <div class="gc-apply-body">
+        @if (!promo.applied) {
+          <input
+            class="gc-code-input"
+            type="text"
+            [(ngModel)]="promo.code"
+            [placeholder]="'text_promo_code' | translate"
+            autocorrect="off"
+            autocapitalize="characters"
+          />
+          <button type="button" class="gc-apply-btn"
+                  (click)="applyPromo()"
+                  [disabled]="promo.checking || !promo.code.trim()">
+            @if (promo.checking) { {{ 'text_checking' | translate }} } @else { {{ 'text_apply' | translate }} }
+          </button>
+        } @else {
+          <!-- Applied state -->
+          <div class="gc-apply-result">
+            <div class="gc-apply-result__row gc-apply-result__row--total">
+              <span>{{ 'text_promo_applied' | translate }} ({{ promo.code }})</span>
+              <span class="gc-apply-result__saving">−AED {{ (+promo.quote?.applied_promo?.discount_amount) | number:'1.2-2' }}</span>
+            </div>
+            <button type="button" class="gc-remove-btn" (click)="removePromo()">
+              <ax-icon name="x" [size]="14" /> {{ 'text_remove' | translate }}
+            </button>
+          </div>
+        }
+        @if (promo.error) {
+          <div class="promo-error">{{ promo.error }}</div>
+        }
       </div>
-    }
-    @if (promo.error) {
-      <div class="promo-error">{{ promo.error }}</div>
     }
   </div>
 

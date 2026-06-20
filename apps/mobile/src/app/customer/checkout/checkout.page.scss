@@ -260,6 +260,13 @@
   gap: 10px;
 }
 
+// Inline promo validation error (the promo card reuses the gc-apply-* design).
+.promo-error {
+  color: var(--ax-color-danger, #c0392b);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
 .gc-code-input {
   font-family: monospace;
   font-size: 16px;
