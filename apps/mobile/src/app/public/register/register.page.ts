@@ -35,6 +35,7 @@ import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 
 import {transformLegacyRegisterRequest} from "./register-request.transform";
 import {transformV3LoginResponse} from "../login/login-response.transform";
+import {CartMergeService} from "../../core/services/cart-merge.service";
 
 /**
  * Mobile registration page — restructured in M3.1.4c for v3.
@@ -136,6 +137,7 @@ export class RegisterPage implements OnInit, OnDestroy {
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
+    private cartMerge: CartMergeService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -292,6 +294,14 @@ export class RegisterPage implements OnInit, OnDestroy {
         if (response.response_code === 200 && response.status === 'success') {
           const userToStore = transformV3LoginResponse(response.data) ?? response.data;
           Preferences.set({ key: 'user', value: JSON.stringify(userToStore) });
+          // Merge the device-local guest cart into the server cart so a guest
+          // who REGISTERS keeps everything they added (parity with login —
+          // login.page already does this; register didn't). Non-blocking.
+          const authBody = {
+            id: typeof (userToStore as any)?.id === 'number' ? (userToStore as any).id : 0,
+            token: typeof (userToStore as any)?.token === 'string' ? (userToStore as any).token : '',
+          };
+          this.cartMerge.mergeIfAny(authBody).catch((err) => console.warn('[Register] cart merge failed (non-fatal)', err));
           this.router.navigate(['/account'], { replaceUrl: true });
           this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
         } else {
