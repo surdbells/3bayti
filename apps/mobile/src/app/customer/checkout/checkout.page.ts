@@ -745,7 +745,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   previewGiftCard() {
     const raw = this.giftCard.code.replace(/-/g, '');
-    if (raw.length !== 16) { this.error_notification('Enter a full 16-character gift card code.'); return; }
+    if (raw.length !== 16) { this.error_notification(this.i18n.t('text_gift_card_enter_full')); return; }
     this.giftCard.checking = true;
     // Direct v3 (POST /v3/cart/gift-card). Must pass the route-key form, not
     // a raw path — resolveConfig throws on a non-route-key, so the previous
@@ -760,13 +760,17 @@ export class CheckoutPage implements OnInit, OnDestroy {
           this.giftCard.preview = res.data;
           this.giftCard.applied = true;
         } else {
-          this.error_notification(res?.message ?? 'This gift card cannot be applied.');
+          // Prefer the server's specific message (e.g. "Gift card not found.",
+          // "This gift card is not spendable") over a generic one.
+          this.error_notification(res?.message || res?.error?.message || this.i18n.t('text_gift_card_cannot_apply'));
         }
         this.cdr.markForCheck();
       },
       error: (err: any) => {
         this.giftCard.checking = false;
-        this.error_notification(err?.error?.message ?? 'Gift card not valid.');
+        console.warn('[checkout] /cart/gift-card error', err?.status, err?.error);
+        const msg = err?.error?.error?.message || err?.error?.message;
+        this.error_notification(msg || this.i18n.t('text_gift_card_invalid'));
         this.cdr.markForCheck();
       },
     });
@@ -808,11 +812,13 @@ export class CheckoutPage implements OnInit, OnDestroy {
             // translateError surfaces v3 structured details as `error_details`
             // on the success-channel envelope (422s never reach the error cb).
             const details = response?.error_details ?? response?.error?.details;
+            console.warn('[checkout] /cart/quote error envelope', { code, message: response?.message, response });
             this.handlePromoError(promoCode, code, details);
             return;
           }
 
           const data = response?.data;
+          console.log('[checkout] /cart/quote ok', { promoCode, subtotal: data?.subtotal, delivery_fee: data?.delivery_fee, total: data?.total });
           this.promo.quote = data;
 
           if (promoCode && data?.applied_promo) {
@@ -831,6 +837,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
         error: (err: any) => {
           // Raw HttpErrorResponse (network error or, defensively, a 4xx
           // that reached this channel). Read the v3 envelope's code.
+          console.warn('[checkout] /cart/quote http error', err?.status, err?.error);
           const code = err?.error?.error?.code ?? err?.error?.code;
           const details = err?.error?.error?.details ?? err?.error?.details;
           this.handlePromoError(promoCode, code, details);

@@ -1073,6 +1073,15 @@ export class MobileNetworkAdapter {
           errorDetails = details;
         }
       }
+      // Some v3 errors are "unstructured" — the human message sits at the top
+      // level (`{ message: "Gift card not found." }`) rather than under `error`.
+      // Surface it so call sites show a specific message, not a generic one.
+      if (message === 'Request failed') {
+        const topMsg = (body as Record<string, unknown>)['message'];
+        if (typeof topMsg === 'string' && topMsg.length > 0) {
+          message = topMsg;
+        }
+      }
     }
 
     return of({
