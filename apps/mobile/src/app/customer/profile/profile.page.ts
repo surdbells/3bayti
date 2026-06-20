@@ -9,6 +9,7 @@ import {
     IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonCol,
     IonContent,
     IonHeader, IonRow, IonSearchbar,
+    IonSelect, IonSelectOption,
     IonTitle,
     IonToolbar, NavController, Platform
 } from '@ionic/angular/standalone';
@@ -55,6 +56,8 @@ const V3_BASE = 'https://api-v3.3bayti.ae';
     IonCardHeader,
     IonCardSubtitle,
     IonCardTitle,
+    IonSelect,
+    IonSelectOption,
     TranslatePipe,
     AxIconComponent,
     AxLoaderComponent,
@@ -116,8 +119,19 @@ export class ProfilePage implements OnInit, OnDestroy {
     first_name: "",
     last_name: "",
     countryCode: "+971",
-    phone: ""
+    phone: "",
+    // Profile parity with web (UpdateProfileInput): gender, dob (YYYY-MM-DD),
+    // locale. Empty string = unset / "prefer not to say" — the tristate is
+    // respected in update_profile() (an empty value omits the key).
+    gender: "",
+    dob: "",
+    locale: "en"
   };
+  // Mirror web exactly (account-profile-page.ts).
+  readonly genderOptions = ['male', 'female', 'other', 'prefer_not_to_say'];
+  readonly localeOptions = ['en', 'ar', 'en-AE', 'ar-AE'];
+  // Cap the date-of-birth picker at today.
+  readonly maxDob = new Date().toISOString().slice(0, 10);
   dialCodes: DialCode[] = DIAL_CODES;
   codeSearch = '';
   get selectedDial(): DialCode | undefined {
@@ -191,6 +205,12 @@ export class ProfilePage implements OnInit, OnDestroy {
                 this.update.countryCode = u.country_code;
               }
               this.update.phone = u.phone ?? '';
+              // Profile parity: gender / dob / locale. dob comes back as an
+              // ISO datetime — slice to YYYY-MM-DD for the date input. Empty
+              // values map to the "unset" select option.
+              this.update.gender = u.gender ?? '';
+              this.update.dob = u.dob ? String(u.dob).slice(0, 10) : '';
+              this.update.locale = u.locale ?? 'en';
               if (u.avatar_url) {
                 this.single_user.avatar = u.avatar_url;
               }
@@ -215,13 +235,32 @@ export class ProfilePage implements OnInit, OnDestroy {
       this.ui_controls.is_updating = true;
       // Direct v3 (PATCH /v3/me/profile, RFC 7396 merge-patch). Build the
       // body explicitly — request transforms don't apply to direct calls.
-      // The v3 UpdateProfileInput only accepts first_name/last_name/gender/
+      // The v3 UpdateProfileInput accepts first_name/last_name/gender/
       // dob/locale/timezone (all strings); phone/countryCode are not
-      // editable here (disabled in the template), so send only the names.
-      const body = {
+      // editable here (disabled in the template), so they're never sent.
+      //
+      // Respect the DTO tristate: only include gender/dob/locale when they
+      // hold a non-empty value. An empty value omits the key (do NOT send
+      // "" expecting to clear).
+      const body: {
+        first_name: string;
+        last_name: string;
+        gender?: string;
+        dob?: string;
+        locale?: string;
+      } = {
         first_name: this.update.first_name,
         last_name: this.update.last_name,
       };
+      if (this.update.gender) {
+        body.gender = this.update.gender;
+      }
+      if (this.update.dob) {
+        body.dob = this.update.dob;
+      }
+      if (this.update.locale) {
+        body.locale = this.update.locale;
+      }
       this.networkAdapter.patch_v3('PATCH /me/profile', body, { authToken: this.single_user.token })
         .subscribe(({
           next: (response: any) => {

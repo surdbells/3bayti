@@ -91,6 +91,52 @@
             </ion-col>
           </ion-row>
         }
+        @if (!ui_controls.is_loading || !ui_controls.is_updating) {
+          <ion-row class="ion-padding-bottom">
+            <ion-col class="ion-no-padding">
+              <label class="profile-field-label">{{ 'label_gender' | translate }}</label>
+              <ion-select
+                class="ion-margin-vertical"
+                [label]="'label_gender' | translate"
+                labelPlacement="stacked"
+                interface="action-sheet"
+                [(ngModel)]="update.gender"
+                name="gender">
+                <ion-select-option [value]="''">{{ 'gender_prefer_not_to_say' | translate }}</ion-select-option>
+                @for (g of genderOptions; track g) {
+                  <ion-select-option [value]="g">{{ 'gender_' + g | translate }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+            <ion-col class="ion-no-padding ion-padding-start">
+              <label class="profile-field-label">{{ 'label_date_of_birth' | translate }}</label>
+              <input
+                class="profile-date-input ion-margin-vertical"
+                type="date"
+                [max]="maxDob"
+                [(ngModel)]="update.dob"
+                name="dob" />
+            </ion-col>
+          </ion-row>
+        }
+        @if (!ui_controls.is_loading || !ui_controls.is_updating) {
+          <ion-row class="ion-padding-bottom">
+            <ion-col class="ion-no-padding">
+              <label class="profile-field-label">{{ 'label_preferred_language' | translate }}</label>
+              <ion-select
+                class="ion-margin-vertical"
+                [label]="'label_preferred_language' | translate"
+                labelPlacement="stacked"
+                interface="action-sheet"
+                [(ngModel)]="update.locale"
+                name="locale">
+                @for (l of localeOptions; track l) {
+                  <ion-select-option [value]="l">{{ 'locale_' + l | translate }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-col>
+          </ion-row>
+        }
         <ion-row>
           <ion-col>
             @if (!ui_controls.is_loading) {

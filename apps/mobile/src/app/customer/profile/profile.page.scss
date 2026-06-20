@@ -25,6 +25,27 @@
   margin-bottom: 6px;
 }
 
+/* Native date input for date-of-birth — styled to sit alongside the
+   migrated <ax-text-field> / <ion-select> controls. */
+.profile-date-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--ax-color-text, var(--text));
+  background: var(--ion-item-background, #fff);
+  border: 1px solid var(--ax-color-border, rgba(0, 0, 0, 0.15));
+  border-radius: 10px;
+  appearance: none;
+}
+
+.profile-date-input:focus {
+  outline: none;
+  border-color: var(--ion-color-primary, #1f6feb);
+}
+
 /* ----- Country-code picker — flag + code displayed inside the dial-code button */
 .cc-flag { font-size: 1rem; line-height: 1; }
 .cc-code { font-weight: 600; }
