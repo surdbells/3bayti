@@ -80,6 +80,19 @@ export const environment = {
   SITE_URL: ${JSON.stringify(SITE_URL)},
   SENTRY_DSN: ${JSON.stringify(SENTRY_DSN)},
   GA4_MEASUREMENT_ID: ${JSON.stringify(GA4_MEASUREMENT_ID)},
+
+  /* Google Places API (New) — powers the street-address autocomplete on the
+     checkout/address form (apps/web/src/app/core/places). If apiKey is empty
+     the autocomplete degrades gracefully to a plain text input.
+
+     SECURITY: this is currently the same key the mobile app ships. For web it
+     SHOULD be replaced with an HTTP-referrer-restricted web key (restricted to
+     the 3bayti.ae origins) + a usage quota cap in Google Cloud Console. */
+  googlePlaces: {
+    apiKey: 'AIzaSyAHERMyCn9KfrhZF5zpKynzLp0SjXpQpKU',
+    /* ISO 3166-1 alpha-2 country code(s) to restrict autocomplete to. */
+    regions: ['AE'],
+  },
 } as const;
 `;
 

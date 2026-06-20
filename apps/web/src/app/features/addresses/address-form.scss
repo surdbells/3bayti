@@ -3,6 +3,53 @@
   flex-direction: column;
 }
 
+/* Street-address Google Places autocomplete. The input keeps the shared
+   .auth-input look; the dropdown is absolutely positioned below it. */
+.addr-street-ac {
+  position: relative;
+}
+
+.addr-street-ac__list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 260px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+
+.addr-street-ac__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+
+  &:hover,
+  &:focus {
+    background: var(--color-bg-muted, #f4f0ea);
+  }
+}
+
+.addr-street-ac__main {
+  font-size: 14px;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.addr-street-ac__secondary {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b6056);
+}
+
 .address-form__row-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;

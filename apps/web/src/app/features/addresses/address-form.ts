@@ -7,6 +7,7 @@ import {
   inject,
   signal,
   OnInit,
+  OnDestroy,
 } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
 import {
@@ -19,6 +20,8 @@ import {
 import { TranslatePipe } from '@ngx-translate/core';
 import { AddressService, UAE_EMIRATES } from '../../core/addresses';
 import type { Address } from '../../core/addresses';
+import { PlacesService } from '../../core/places';
+import type { PlaceSuggestion } from '../../core/places';
 import {
   FormFieldComponent,
   PhoneInputComponent,
@@ -165,14 +168,45 @@ import {
         [control]="form.controls.street_address"
         [errorMap]="commonErrors"
       >
-        <input
-          id="addr-street"
-          type="text"
-          autocomplete="street-address"
-          formControlName="street_address"
-          class="auth-input"
-          data-testid="addr-street"
-        />
+        <!-- street_address has live Google Places autocomplete wired to it.
+             When the API key is missing (placesAvailable === false) the
+             dropdown logic is inert and this stays a plain text field. -->
+        <div class="addr-street-ac">
+          <input
+            id="addr-street"
+            type="text"
+            autocomplete="off"
+            formControlName="street_address"
+            class="auth-input"
+            data-testid="addr-street"
+            [attr.role]="placesAvailable ? 'combobox' : null"
+            [attr.aria-expanded]="placesAvailable ? streetOpen() : null"
+            [attr.aria-autocomplete]="placesAvailable ? 'list' : null"
+            (input)="onStreetInput($event)"
+            (focus)="onStreetFocus()"
+            (blur)="onStreetBlur()"
+          />
+
+          <ul
+            *ngIf="placesAvailable && streetOpen() && streetSuggestions().length > 0"
+            class="addr-street-ac__list"
+            role="listbox"
+            data-testid="addr-street-suggestions"
+          >
+            <li
+              *ngFor="let s of streetSuggestions()"
+              class="addr-street-ac__item"
+              role="option"
+              [attr.aria-selected]="false"
+              (mousedown)="onSelectSuggestion(s, $event)"
+            >
+              <span class="addr-street-ac__main">{{ s.mainText }}</span>
+              <span class="addr-street-ac__secondary" *ngIf="s.secondaryText">{{
+                s.secondaryText
+              }}</span>
+            </li>
+          </ul>
+        </div>
       </ui-form-field>
 
       <div class="address-form__row-2col">
@@ -241,7 +275,7 @@ import {
   `,
   styleUrl: './address-form.scss',
 })
-export class AddressFormComponent implements OnInit {
+export class AddressFormComponent implements OnInit, OnDestroy {
   /** Existing address for edit mode; null for create. */
   @Input() address: Address | null = null;
 
@@ -250,6 +284,24 @@ export class AddressFormComponent implements OnInit {
 
   protected readonly emirates = UAE_EMIRATES;
   protected readonly submitting = signal(false);
+
+  /* ----- Google Places autocomplete (street_address only) ----- */
+  private readonly places = inject(PlacesService);
+  /** Whether the Places API key is configured. When false the dropdown
+      logic is inert and the street field is a plain text input. */
+  protected readonly placesAvailable = this.places.isAvailable;
+  /** Current suggestions driving the dropdown. */
+  protected readonly streetSuggestions = signal<PlaceSuggestion[]>([]);
+  /** Whether the dropdown is visible (focused + has results). */
+  protected readonly streetOpen = signal(false);
+
+  /** Debounce timer for autocomplete requests. */
+  private streetDebounce: ReturnType<typeof setTimeout> | null = null;
+  /** Most recent query sent — used to drop stale responses. */
+  private streetLastQuery = '';
+  /** True while a details fetch is in flight after a selection — keeps
+      blur from closing the dropdown before the mousedown handler runs. */
+  private streetFetchingDetails = false;
 
   protected readonly form: FormGroup<{
     label: FormControl<string>;
@@ -305,6 +357,91 @@ export class AddressFormComponent implements OnInit {
         postal_code: this.address.postal_code ?? '',
         is_default: false, /* not editable in edit mode */
       });
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.streetDebounce !== null) {
+      clearTimeout(this.streetDebounce);
+    }
+  }
+
+  /* ----- Street autocomplete handlers ----- */
+
+  /** User typed in the street field. The reactive FormControl already
+      reflects the value via formControlName; here we additionally drive
+      the Places autocomplete dropdown. */
+  protected onStreetInput(event: Event): void {
+    if (!this.placesAvailable) return;
+
+    const text = (event.target as HTMLInputElement).value;
+    /* Begin a session on the first keystroke of an interaction. The
+       service starts one lazily too, but calling it here keeps the
+       session aligned with the user's typing as the mobile form does. */
+    if (text.trim().length > 0 && this.streetLastQuery === '') {
+      this.places.startSession();
+    }
+
+    if (this.streetDebounce !== null) {
+      clearTimeout(this.streetDebounce);
+    }
+    /* 250ms balances responsiveness against per-keystroke quota. */
+    this.streetDebounce = setTimeout(() => this.fetchStreetSuggestions(text), 250);
+  }
+
+  protected onStreetFocus(): void {
+    if (this.streetSuggestions().length > 0) {
+      this.streetOpen.set(true);
+    }
+  }
+
+  protected onStreetBlur(): void {
+    /* A mousedown on a suggestion is handled before blur closes the list;
+       but if a details fetch is in flight, keep it open until it lands. */
+    if (this.streetFetchingDetails) return;
+    /* Delay so a suggestion mousedown can register before we hide. */
+    setTimeout(() => this.streetOpen.set(false), 150);
+  }
+
+  private async fetchStreetSuggestions(input: string): Promise<void> {
+    this.streetLastQuery = input;
+    if (!input || input.trim().length < 2) {
+      this.streetSuggestions.set([]);
+      this.streetOpen.set(false);
+      return;
+    }
+
+    const results = await this.places.autocomplete(input);
+    /* Drop stale responses if a newer query has since been issued. */
+    if (this.streetLastQuery !== input) return;
+
+    this.streetSuggestions.set(results);
+    this.streetOpen.set(results.length > 0);
+  }
+
+  /** User picked a suggestion. Resolve details and patch street_address
+      with the resolved street (preferring Google's parsed street, then the
+      suggestion's main text, then the formatted address). Emirate + area
+      are intentionally left user-controlled. */
+  protected async onSelectSuggestion(s: PlaceSuggestion, event: Event): Promise<void> {
+    /* mousedown fires before blur — prevent default so the input keeps
+       focus and the blur-close race never starts. */
+    event.preventDefault();
+
+    this.streetFetchingDetails = true;
+    /* Immediate feedback: show the main line while details load. */
+    this.form.controls.street_address.setValue(s.mainText);
+    this.streetSuggestions.set([]);
+    this.streetOpen.set(false);
+
+    const details = await this.places.details(s.placeId);
+    this.streetFetchingDetails = false;
+    this.streetLastQuery = '';
+
+    const resolved = details?.street ?? s.mainText ?? details?.formattedAddress ?? '';
+    if (resolved) {
+      this.form.controls.street_address.setValue(resolved);
+      this.form.controls.street_address.markAsDirty();
     }
   }
 
