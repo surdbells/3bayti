@@ -259,7 +259,26 @@ final class ProductSerializer
             $p->getAvailableColors(),
         );
 
+        // Override the list-shape vendor block ({slug, name}) with the
+        // detail-shape vendor block that ALSO carries the legacy store id.
+        // The mobile PDP resolves the store's published size guide via the
+        // legacy-id route (GET /v3/vendors/by-legacy-id/{id}/size-chart), so
+        // the detail shape must surface the legacy id — without it the PDP's
+        // `this.single.store` was 0 and the size-guide fetch hit store 0
+        // (empty). `legacy_id` matches the resolver the featured/directory
+        // shapes use ($vendor->getLegacyVendorId()); `id` is the v3 id.
+        $vendor = $p->getVendor();
+        $vendorBlock = $vendor->getSlug() !== ''
+            ? [
+                'slug' => $vendor->getSlug(),
+                'name' => $vendor->getName(),
+                'legacy_id' => $vendor->getLegacyVendorId(),
+                'id' => $vendor->getId(),
+            ]
+            : null;
+
         $detail = array_merge($base, [
+            'vendor' => $vendorBlock,
             'description' => $p->getDescription() ?? '',
             'images' => $this->imagesArray($p),
             'sizes' => $sizes,

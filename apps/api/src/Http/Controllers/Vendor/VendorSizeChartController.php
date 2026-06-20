@@ -192,6 +192,20 @@ final class VendorSizeChartController
     /** @return array<string, mixed> */
     private function shape(VendorSizeChart $c): array
     {
+        return self::shapeRow($c);
+    }
+
+    /**
+     * Canonical size-chart row shape, shared with the public customer-facing
+     * endpoint (StoreSizeChartByLegacyIdController) so shoppers and vendors
+     * see the same row structure: { id, size, values:{...}, created_at,
+     * updated_at }. Extracted as a static so the public controller can reuse
+     * it without depending on auth/vendor-resolution state.
+     *
+     * @return array<string, mixed>
+     */
+    public static function shapeRow(VendorSizeChart $c): array
+    {
         return [
             'id'         => $c->getId(),
             'size'       => $c->getSize(),

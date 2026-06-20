@@ -28,7 +28,6 @@ import { ConnectionService } from "../../service/connection.service";
 import { NetworkService } from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
-import { GlobalComponent } from "../../global-component";
 import { Preferences } from "@capacitor/preferences";
 import { SizeChipsComponent } from "../../size-chips/size-chips.component";
 import { I18nService } from '../../i18n.service';
@@ -328,12 +327,6 @@ export class ProductPage implements OnInit, OnDestroy {
     product_name: ""
   };
 
-  store_m = {
-    id: 0,
-    token: "",
-    store: 0
-  };
-
   add_cart = {
     id: 0,
     token: "",
@@ -515,8 +508,6 @@ export class ProductPage implements OnInit, OnDestroy {
       this.single_user = JSON.parse(ret.value);
       this.rqst_param.id = this.single_user.id;
       this.rqst_param.token = this.single_user.token;
-      this.store_m.id = this.single_user.id;
-      this.store_m.token = this.single_user.token;
       this.get_measurement();
       this.get_single();
       this.add_cart.id = this.single_user.id;
@@ -560,7 +551,6 @@ export class ProductPage implements OnInit, OnDestroy {
             this.add_cart.product_image = this.single.image_1;
             this.add_cart.price = this.single.price;
             this.add_cart.store = this.single.store;
-            this.store_m.store = this.single.store;
             this.get_store_measurement();
             this.apiSizes = {
               'NORMAL': this.single.size_normal,
@@ -638,24 +628,54 @@ export class ProductPage implements OnInit, OnDestroy {
   }
 
   get_store_measurement() {
-    // NOT migrated to v3-direct intentionally. The only v3 size-chart
-    // endpoint (GET /v3/vendor/measurements, VendorSizeChartController::list)
-    // is vendor-self-scoped: it resolves the vendor from the caller's JWT
-    // (findIdsByOwnerUser) and 403s for non-vendors. This call is a CUSTOMER
-    // fetching a STORE's published size guide by store id — there is no
-    // public/customer v3 route for that. So this stays on the legacy
-    // strangler path (which already falls through to legacy: no request
-    // transform is registered for GET /vendor/measurements). When a public
-    // store size-chart endpoint lands in v3, flip this to get_v3.
-    this.networkAdapter.post_request(this.store_m, GlobalComponent.readStoreMeasurement)
-      .subscribe({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.store_measurement = response.data;
-            this.cdr.markForCheck();
-          }
+    // PUBLIC customer read of the store's published size guide via the v3
+    // by-legacy-id endpoint (GET /v3/vendors/by-legacy-id/{store}/size-chart,
+    // StoreSizeChartByLegacyIdController). No authToken — shoppers view it.
+    //
+    // `this.single.store` is the LEGACY store id now surfaced by v3's
+    // detailShape vendor block (mapped in transformProductDetailResponse).
+    // GUARD: if it's falsy/0 there's no store to resolve, so skip the call
+    // and leave store_measurement empty (the size-guide sheet shows the
+    // "no size guide" empty state).
+    const storeId = Number(this.single.store);
+    if (!storeId) {
+      return;
+    }
+
+    this.networkAdapter.get_v3('GET /vendors/:vendorId/size-chart', {
+      pathParams: { vendorId: String(storeId) },
+    }).subscribe({
+      next: (response: any) => {
+        if (response.response_code === 200 && response.status === "success") {
+          // v3 returns rows shaped { id, size, values: {bust, waist, hip,
+          // length, neck, arm, armhole, shoulder, ...} }. The size-guide UI
+          // binds FLAT fields (item.size, item.bust, ...), so flatten each
+          // row's `values` map up to the top level (mirrors the legacy
+          // wire shape this page used to read).
+          const rows = Array.isArray(response.data) ? response.data : [];
+          this.store_measurement = rows.map((row: any) => {
+            const values = row && typeof row.values === 'object' && row.values !== null
+              ? row.values
+              : {};
+            return {
+              id: Number(row?.id ?? 0),
+              token: "",
+              measurement: 0,
+              size: String(row?.size ?? ""),
+              bust: Number(values.bust ?? 0),
+              waist: Number(values.waist ?? 0),
+              hip: Number(values.hip ?? 0),
+              length: Number(values.length ?? 0),
+              neck: Number(values.neck ?? 0),
+              arm: Number(values.arm ?? 0),
+              armhole: Number(values.armhole ?? 0),
+              shoulder: Number(values.shoulder ?? 0),
+            } as StoreMeasurement;
+          });
+          this.cdr.markForCheck();
         }
-      });
+      }
+    });
   }
 
   load_cart() {

@@ -107,7 +107,7 @@ describe('transformProductDetailResponse', () => {
     sale_price: { amount: 249, currency: 'AED' },
     primary_image: { url: 'https://cdn/p.jpg', alt: 'Silk Abaya', width: null, height: null },
     category_slug: 'abayas',
-    vendor: { slug: 'almas-fashion', name: 'Almas Fashion' },
+    vendor: { slug: 'almas-fashion', name: 'Almas Fashion', legacy_id: 77, id: 9 },
     rating: 4.5,
     review_count: 10,
     in_stock: true,
@@ -167,8 +167,10 @@ describe('transformProductDetailResponse', () => {
     expect(r['stock_status']).toBe('in_stock');
     expect(r['in_stock']).toBe(true);
 
-    // Vendor:
-    expect(r['store']).toBe(0); // M3.1.5 gap — flagged
+    // Vendor: v3 now emits the legacy store id in the detail vendor block,
+    // so `store` carries the real legacy id (used by the PDP to fetch the
+    // store's size guide via GET /v3/vendors/by-legacy-id/{store}/size-chart).
+    expect(r['store']).toBe(77);
     expect(r['store_name']).toBe('Almas Fashion');
     expect(r['vendor_slug']).toBe('almas-fashion');
 
@@ -182,6 +184,22 @@ describe('transformProductDetailResponse', () => {
     expect(r['custom_delivery_time']).toBe('');
     expect(r['extra_msmt']).toBe('');
     expect(r['require_extra_msmt']).toBe(false);
+  });
+
+  it('falls back to the v3 vendor id when legacy_id is absent', () => {
+    const r = transformProductDetailResponse({
+      ...sampleV3Detail,
+      vendor: { slug: 'almas-fashion', name: 'Almas Fashion', id: 9 },
+    }) as Record<string, unknown>;
+    expect(r['store']).toBe(9);
+  });
+
+  it('emits store 0 when the vendor block has no id at all', () => {
+    const r = transformProductDetailResponse({
+      ...sampleV3Detail,
+      vendor: { slug: 'almas-fashion', name: 'Almas Fashion' },
+    }) as Record<string, unknown>;
+    expect(r['store']).toBe(0);
   });
 
   it('synthesises all 22 legacy size flags from v3 sizes array', () => {

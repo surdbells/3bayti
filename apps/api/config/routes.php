@@ -486,6 +486,10 @@ return function (App $app): void {
     $app->get('/v3/products/by-legacy-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetProductByLegacyIdController::class);
     $app->get('/v3/vendors/by-legacy-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetVendorByLegacyIdController::class);
     $app->get('/v3/vendors/by-legacy-id/{id}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsByLegacyIdController::class);
+    // PUBLIC store size guide (no auth) — shoppers view the chart from the
+    // mobile PDP. Resolves the vendor by legacy id and returns the same row
+    // shape as the vendor-self-scoped GET /v3/vendor/measurements.
+    $app->get('/v3/vendors/by-legacy-id/{id}/size-chart', \Bayti\Api\Http\Controllers\Catalog\StoreSizeChartByLegacyIdController::class);
 
     // M3.1.5.5e — Vendor labels (per-vendor merchandising collections).
     // Slug variant for web/canonical use; by-legacy-id variant for

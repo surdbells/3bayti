@@ -367,15 +367,15 @@ export function transformProductDetailResponse(data: unknown): unknown {
     stock_status: data['in_stock'] === true ? 'in_stock' : 'out_of_stock',
     in_stock: data['in_stock'] === true,
 
-    // Vendor — legacy mobile reads `single.store` as a numeric id but
-    // v3 only exposes the slug. We surface 0 here and the vendor
-    // slug separately as `vendor_slug` so future code can use it.
-    // Pages that re-issue calls to other endpoints based on store_id
-    // will break — flagged in device test as "vendor-followup
-    // navigation may not work from detail page". M3.1.5 doesn't fix
-    // this gap; M4 hardening should add the legacy_vendor_id to
-    // detailShape.
-    store: 0,
+    // Vendor — legacy mobile reads `single.store` as a numeric LEGACY
+    // store id, used to resolve the store's published size guide via
+    // GET /v3/vendors/by-legacy-id/{store}/size-chart. Use ONLY the
+    // legacy_id (not the v3 id) — the size-chart route resolves by legacy
+    // id, so a v3-native vendor with no legacy_id must stay 0 so the PDP
+    // guard skips the fetch (a v3 id there would 404 the by-legacy-id route).
+    store: isRecord(data['vendor'])
+      ? asNumber(data['vendor']['legacy_id'], 0)
+      : 0,
     vendor_slug: isRecord(data['vendor']) ? asString(data['vendor']['slug']) : '',
     store_name: vendorName(data['vendor']),
 

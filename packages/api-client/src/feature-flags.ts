@@ -575,6 +575,25 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/reviews',
     shape: 'v3-envelope',
   },
+  // PUBLIC store size guide (mobile PDP size-chart sheet). Replaces the
+  // legacy POST vendors/measurement/get-measurements call, which fetched
+  // by store id but broke under v3 (detailShape emitted no vendor id, so
+  // the PDP sent store 0). The v3 endpoint resolves the vendor by LEGACY
+  // id and returns the store's published size chart. No auth (shoppers
+  // view it). :vendorId matches resolveUrl's pathParams key.
+  //
+  // oldPath is intentionally empty: the mobile PDP calls this directly by
+  // routeKey via get_v3('GET /vendors/:vendorId/size-chart', ...), so no
+  // URL→routeKey resolution is needed. Reusing the legacy
+  // `/vendors/measurement/get-measurements` path here would collide with
+  // the portal's `GET /vendor/measurements` entry (same oldPath+method) in
+  // the mobile reverse index, so we leave it blank.
+  'GET /vendors/:vendorId/size-chart': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/vendors/by-legacy-id/:vendorId/size-chart',
+    shape: 'v3-envelope',
+  },
   'DELETE /me/reviews/:id': {
     target: 'new',
     oldPath: '/customer/settings/delete-review',
