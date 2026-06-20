@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  3bayti lettermark for the Android-12+ system splash.
+
+  The raw @mipmap/ic_launcher_foreground fills ~75% of its 432x432 frame — fine
+  for the launcher (the adaptive icon adds a 16.7% inset), but the Android-12
+  splash shows only the icon's central 2/3 "safe zone" and clips anything past it,
+  which cropped the tall lettermark's feet. Insetting ~20% shrinks the logo to sit
+  comfortably inside that circle, fully visible. Tune the inset % if the logo reads
+  too large or too small.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@mipmap/ic_launcher_foreground"
+    android:inset="20%" />
