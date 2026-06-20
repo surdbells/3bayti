@@ -1,5 +1,5 @@
 <ion-content fullscreen="true" class="page-bg">
-  <button type="button" class="floating-back-btn" (click)="triggerBack()" aria-label="Back">
+  <button type="button" class="floating-back-btn" (click)="triggerBack()" [attr.aria-label]="'button_back' | translate">
     <ax-icon name="arrow-left"></ax-icon>
   </button>
   <div class="safe-area">
@@ -106,7 +106,7 @@
                   class="color-pill"
                   [class.selected]="add_cart.color === color"
                   (click)="selectColor(color)"
-                  [attr.aria-label]="'Select ' + getColorLabel(color)">
+                  [attr.aria-label]="('aria_select_color' | translate) + ' ' + getColorLabel(color)">
                   <span
                     class="color-preview"
                     [style.background]="getColorHex(color)"
@@ -330,7 +330,7 @@
               [multiline]="true"
               [rows]="3"
               [maxlength]="200"
-              placeholder="Enter additional measurements..."
+              [placeholder]="'ph_extra_measurements' | translate"
               [(ngModel)]="add_cart.extra_measurement"
               name="extra_measurement">
             </ax-text-field>

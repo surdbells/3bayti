@@ -36,7 +36,7 @@
         <ion-col>
           <div class="m6-search app-fade-in" (click)="user_search()">
             <ax-icon name="search" class="m6-search-icon"/>
-            <span class="m6-search-placeholder">Search abaya, kaftans</span>
+            <span class="m6-search-placeholder">{{ 'account_search_placeholder' | translate }}</span>
           </div>
         </ion-col>
 <!--    <ion-col (click)="isFilterOpen = true" style="margin-top: 10px;" size="2">
@@ -77,7 +77,7 @@
               </button>
                <button class="m6-chip" type="button" (click)="open_category(8, 'Pyjamas');">
                 <span class="m6-chip-ico"><ion-icon src="assets/icon/dress.svg"></ion-icon></span>
-                <span class="m6-chip-text">{{ 'Pyjamas' | translate }}</span>
+                <span class="m6-chip-text">{{ 'pyjamas' | translate }}</span>
               </button>
             </div>
           </section>
@@ -94,12 +94,12 @@
       <div class="gc-balance-widget__left">
         <ax-icon name="gift" [size]="22" />
         <div>
-          <div class="gc-balance-widget__label">Gift Card Balance</div>
+          <div class="gc-balance-widget__label">{{ 'gift_card_balance_label' | translate }}</div>
           <div class="gc-balance-widget__amount">AED {{ totalGiftCardBalance }}</div>
         </div>
       </div>
       <div class="gc-balance-widget__right">
-        <span class="gc-balance-widget__count">{{ activeGiftCards.length }} card{{ activeGiftCards.length > 1 ? 's' : '' }}</span>
+        <span class="gc-balance-widget__count">{{ activeGiftCards.length }} {{ (activeGiftCards.length > 1 ? 'gift_card_count_plural' : 'gift_card_count_singular') | translate }}</span>
         <ax-icon name="chevron-right" [size]="16" />
       </div>
     </div>
@@ -163,7 +163,7 @@
                 (error)="onImageError('best-' + best_seller.product_id)"
                 [src]="cfImage(best_seller.image_1, 'card')"
                 alt="{{best_seller.product_name}}" />
-              <button (click)="startAddToCloset(best_seller.product_id, best_seller.product_name, best_seller.image_1)" class="m6d-like" type="button" aria-label="Add to closet">
+              <button (click)="startAddToCloset(best_seller.product_id, best_seller.product_name, best_seller.image_1)" class="m6d-like" type="button" [attr.aria-label]="'account_add_to_closet' | translate">
                 <ax-icon name="heart-plus" />
               </button>
               <span class="m6d-vendor-badge">{{best_seller.store_name}}</span>
@@ -172,7 +172,7 @@
               <p class="m6d-name">{{best_seller.product_name}}</p>
               <div class="m6d-price-row">
                 <span class="m6d-price">Ð{{best_seller.price}}</span>
-                <button (click)="open_product(best_seller.product_id); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
+                <button (click)="open_product(best_seller.product_id); $event.stopPropagation()" class="m6d-add-to-cart" type="button" [attr.aria-label]="'account_add_to_cart' | translate">
                   <ax-icon name="plus" />
                 </button>
               </div>
@@ -206,7 +206,7 @@
                 (error)="onImageError('new-' + new_arrival.product_id)"
                 [src]="cfImage(new_arrival.image_1, 'card')"
                 alt="{{new_arrival.product_name}}" />
-              <button (click)="startAddToCloset(new_arrival.product_id, new_arrival.product_name, new_arrival.image_1)" class="m6d-like" type="button" aria-label="Add to closet">
+              <button (click)="startAddToCloset(new_arrival.product_id, new_arrival.product_name, new_arrival.image_1)" class="m6d-like" type="button" [attr.aria-label]="'account_add_to_closet' | translate">
                 <ax-icon name="heart-plus" />
               </button>
               <span class="m6d-vendor-badge">{{new_arrival.store_name}}</span>
@@ -215,7 +215,7 @@
               <p class="m6d-name">{{new_arrival.product_name}}</p>
               <div class="m6d-price-row">
                 <span class="m6d-price">Ð{{new_arrival.price}}</span>
-                <button (click)="open_product(new_arrival.product_id); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
+                <button (click)="open_product(new_arrival.product_id); $event.stopPropagation()" class="m6d-add-to-cart" type="button" [attr.aria-label]="'account_add_to_cart' | translate">
                   <ax-icon name="plus" />
                 </button>
               </div>
@@ -248,7 +248,7 @@
                 @if(vendor_feature.rating_count !== 0){
                   <div class="m6e-featured-rating" (click)="open_reviews(vendor_feature.store_id, vendor_feature.store_name); $event.stopPropagation()">
                     <ax-icon name="star" class="m6e-rating-star" />
-                    <span>{{ vendor_feature.rating }} · {{ vendor_feature.rating_count }} reviews</span>
+                    <span>{{ vendor_feature.rating }} · {{ vendor_feature.rating_count }} {{ 'label_reviews_count' | translate }}</span>
                   </div>
                 }
               </div>
@@ -292,7 +292,7 @@
 
   @if(!ui_controls.is_empty){
     <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)">
-      <ion-infinite-scroll-content loadingText="Please wait..." loadingSpinner="dots"></ion-infinite-scroll-content>
+      <ion-infinite-scroll-content [loadingText]="'please_wait' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
     </ion-infinite-scroll>
   }
 

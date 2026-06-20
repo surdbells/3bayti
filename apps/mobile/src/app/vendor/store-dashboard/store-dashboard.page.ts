@@ -259,7 +259,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
    *  of navigating to a non-existent route (which dead-ended on a blank page). */
   async comingSoon(): Promise<void> {
     const toast = await this.toastCtrl.create({
-      message: 'This feature is coming soon.',
+      message: this.i18n.t('store_dashboard_coming_soon'),
       duration: 2000,
       position: 'bottom',
       color: 'medium',
@@ -280,13 +280,15 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
 
     // Show confirmation dialog
     const alert = await this.alertCtrl.create({
-      header: newStatus ? 'Activate Store' : 'Deactivate Store',
+      header: newStatus
+        ? this.i18n.t('store_dashboard_activate_store')
+        : this.i18n.t('store_dashboard_deactivate_store'),
       message: newStatus
-        ? 'Your store will be visible to customers. Are you sure?'
-        : 'Your store will be hidden from customers. Existing orders will still be processed. Are you sure?',
+        ? this.i18n.t('store_dashboard_activate_confirm')
+        : this.i18n.t('store_dashboard_deactivate_confirm'),
       buttons: [
         {
-          text: 'Cancel',
+          text: this.i18n.t('cancel'),
           role: 'cancel',
           handler: () => {
             // Revert toggle
@@ -297,7 +299,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
           }
         },
         {
-          text: 'Confirm',
+          text: this.i18n.t('store_dashboard_confirm'),
           handler: () => {
             this.updateStoreStatus(newStatus);
           }
@@ -329,7 +331,9 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
             this.storeData.is_active = confirmed;
           }
           const toast = await this.toastCtrl.create({
-            message: confirmed ? 'Store is now active' : 'Store is now hidden',
+            message: confirmed
+              ? this.i18n.t('store_dashboard_store_now_active')
+              : this.i18n.t('store_dashboard_store_now_hidden'),
             duration: 2000,
             position: 'bottom',
             color: confirmed ? 'success' : 'warning'
@@ -340,7 +344,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
           if (this.storeData) {
             this.storeData.is_active = !isActive;
           }
-          this.showErrorToast('Failed to update store status');
+          this.showErrorToast(this.i18n.t('store_dashboard_status_update_failed'));
         }
         this.isTogglingStatus = false;
         this.cdr.markForCheck();

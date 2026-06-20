@@ -2,7 +2,7 @@
   <ion-header class="m7-header-shadow ion-no-border">
   <ion-toolbar class="m7-toolbar ion-no-border">
     <ion-buttons slot="start">
-      <ion-button [routerLink]="['/settings']" class="m7-header-back" aria-label="Back">
+      <ion-button [routerLink]="['/settings']" class="m7-header-back" [attr.aria-label]="'button_back' | translate">
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
@@ -17,7 +17,7 @@
             <img
               class="profile-avatar"
               [src]="single_user.avatar || 'assets/images/avatar.png'"
-              alt="Profile picture" />
+              [attr.alt]="'alt_profile_picture' | translate" />
             <button
               type="button"
               class="profile-avatar-btn"
@@ -47,7 +47,7 @@
               <ax-text-field
                 [label]="'label_first_name' | translate"
                 type="text"
-                placeholder="Enter your first name"
+                [placeholder]="'placeholder_first_name' | translate"
                 autocomplete="given-name"
                 [(ngModel)]="update.first_name"
                 name="first_name">
@@ -57,7 +57,7 @@
               <ax-text-field
                 [label]="'label_last_name' | translate"
                 type="text"
-                placeholder="Enter your last name"
+                [placeholder]="'placeholder_last_name' | translate"
                 autocomplete="family-name"
                 [(ngModel)]="update.last_name"
                 name="last_name">

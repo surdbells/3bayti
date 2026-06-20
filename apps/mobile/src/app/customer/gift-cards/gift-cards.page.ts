@@ -15,6 +15,7 @@ import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { TranslatePipe } from '../../translate.pipe';
+import { I18nService } from '../../i18n.service';
 import { GlobalComponent } from '../../global-component';
 import { DIAL_CODES, DialCode } from '../../public/shared/dial-codes';
 
@@ -127,6 +128,7 @@ export class GiftCardsPage implements OnInit {
     private navCtrl: NavController,
     private network: MobileNetworkAdapter,
     private notify: AxNotificationService,
+    private i18n: I18nService,
   ) {}
 
   ngOnInit() {
@@ -154,7 +156,7 @@ export class GiftCardsPage implements OnInit {
       },
       error: () => {
         this.ui.loading_themes = false;
-        this.notify.error('Failed to load themes. Please try again.');
+        this.notify.error(this.i18n.t('gc_error_load_themes'));
       },
     });
   }
@@ -182,34 +184,34 @@ export class GiftCardsPage implements OnInit {
   nextToConfirm() {
     const amount = this.effectiveDenomination;
     if (!amount || isNaN(Number(amount))) {
-      this.notify.error('Please select or enter an amount.'); return;
+      this.notify.error(this.i18n.t('gc_error_select_amount')); return;
     }
     const n = Number(amount);
     if (n < 100 || n > 10000) {
-      this.notify.error('Amount must be between AED 100 and AED 10,000.'); return;
+      this.notify.error(this.i18n.t('gc_error_amount_range')); return;
     }
     // Validation parity with web: recipient_name max 60, message max 200.
     if ((this.form.recipient_name || '').length > 60) {
-      this.notify.error('Recipient name must be 60 characters or fewer.'); return;
+      this.notify.error(this.i18n.t('gc_error_name_too_long')); return;
     }
     if ((this.form.recipient_message || '').length > 200) {
-      this.notify.error('Personal message must be 200 characters or fewer.'); return;
+      this.notify.error(this.i18n.t('gc_error_message_too_long')); return;
     }
     // Recipient email/phone are OPTIONAL: empty = valid (buyer shares the code
     // manually). When provided, validate format so auto-delivery succeeds.
     const recipientEmail = (this.form.recipient_email || '').trim();
     if (recipientEmail && !GlobalComponent.validateEmail(recipientEmail)) {
-      this.notify.error('Please enter a valid recipient email, or leave it blank.'); return;
+      this.notify.error(this.i18n.t('gift_card_recipient_email_invalid')); return;
     }
     const recipientPhoneDigits = (this.form.recipient_phone || '').replace(/\D/g, '');
     if (recipientPhoneDigits.length > 0 && (recipientPhoneDigits.length < 6 || recipientPhoneDigits.length > 15)) {
-      this.notify.error('Please enter a valid recipient phone number, or leave it blank.'); return;
+      this.notify.error(this.i18n.t('gift_card_recipient_phone_invalid')); return;
     }
     // Scheduled delivery, if set, must be in the future.
     if (this.form.scheduled_delivery_at) {
       const when = new Date(this.form.scheduled_delivery_at).getTime();
       if (isNaN(when) || when <= Date.now()) {
-        this.notify.error('Scheduled delivery date must be in the future.'); return;
+        this.notify.error(this.i18n.t('gc_error_schedule_future')); return;
       }
     }
     this.ui.step = 3;
@@ -242,10 +244,10 @@ export class GiftCardsPage implements OnInit {
       const data = await resp.json();
       if (data?.data?.url) {
         this.form.recipient_photo_url = data.data.url;
-        this.notify.success('Photo uploaded!');
+        this.notify.success(this.i18n.t('gc_photo_uploaded'));
       }
     } catch {
-      this.notify.error('Photo upload failed. Please try again.');
+      this.notify.error(this.i18n.t('gc_error_photo_upload'));
     }
   }
 
@@ -282,12 +284,12 @@ export class GiftCardsPage implements OnInit {
         if (res?.data?.id) {
           this.initiateGiftCardPayment(res.data.id);
         } else {
-          this.notify.error(res?.message ?? 'Could not create gift card. Please try again.');
+          this.notify.error(res?.message ?? this.i18n.t('gc_error_create_card'));
         }
       },
       error: (err: any) => {
         this.ui.purchasing = false;
-        this.notify.error(err?.error?.message ?? 'Purchase failed. Please try again.');
+        this.notify.error(err?.error?.message ?? this.i18n.t('gc_error_purchase_failed'));
       },
     });
   }
@@ -307,7 +309,7 @@ export class GiftCardsPage implements OnInit {
 
         // Gateway skipped (card denomination = 0 — shouldn't happen but handle it)
         if (res?.data?.gateway_skipped === true) {
-          this.notify.success('Gift card activated!');
+          this.notify.success(this.i18n.t('gc_activated'));
           this.router.navigate(['/my-gift-cards']);
           return;
         }
@@ -317,7 +319,7 @@ export class GiftCardsPage implements OnInit {
         const orderReference = res?.data?.order_reference ?? '';
 
         if (!checkoutUrl || !orderReference) {
-          this.notify.error('Could not start payment. Please try again.');
+          this.notify.error(this.i18n.t('gc_error_start_payment'));
           return;
         }
 
@@ -326,7 +328,7 @@ export class GiftCardsPage implements OnInit {
       },
       error: (err: any) => {
         this.ui_checking_out = false;
-        this.notify.error(err?.error?.message ?? 'Could not start payment. Please try again.');
+        this.notify.error(err?.error?.message ?? this.i18n.t('gc_error_start_payment'));
       },
     });
   }
@@ -337,9 +339,9 @@ export class GiftCardsPage implements OnInit {
     let listenerHandle: any = null;
     const returnPrefix = this.v3ReturnPrefix;
 
-    InAppBrowser.openWebView({ url, title: 'Pay for Gift Card' }).catch((err: any) => {
+    InAppBrowser.openWebView({ url, title: this.i18n.t('gc_webview_title') }).catch((err: any) => {
       console.error('openWebView failed', err);
-      this.notify.error('Could not open payment page. Please try again.');
+      this.notify.error(this.i18n.t('gc_error_open_payment_page'));
     });
 
     InAppBrowser.addListener('urlChangeEvent', (info: any) => {
@@ -372,7 +374,7 @@ export class GiftCardsPage implements OnInit {
   // Step 4: Poll checkout status until paid/failed, then navigate
   private pollGiftCardPayment(orderReference: string, giftCardId: number, attempts = 0) {
     if (attempts > 12) { // 12 × 2.5s = 30s timeout
-      this.notify.error('Payment confirmation timed out. Check My Gift Cards to see your card status.');
+      this.notify.error(this.i18n.t('gc_error_payment_timeout'));
       this.router.navigate(['/my-gift-cards']);
       return;
     }
@@ -385,10 +387,10 @@ export class GiftCardsPage implements OnInit {
         next: (res: any) => {
           const data = res?.data ?? res;
           if (data?.paid === true || data?.status === 'paid') {
-            this.notify.success('Gift card activated! 🎁');
+            this.notify.success(this.i18n.t('gc_activated_emoji'));
             this.router.navigate(['/my-gift-cards']);
           } else if (data?.status === 'failed' || data?.status === 'cancelled') {
-            this.notify.error('Payment was not completed. Your gift card has not been charged.');
+            this.notify.error(this.i18n.t('gc_error_payment_incomplete'));
             this.router.navigate(['/gift-cards']);
           } else {
             // Not yet terminal — poll again

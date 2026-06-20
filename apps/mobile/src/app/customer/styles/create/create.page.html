@@ -1,7 +1,7 @@
 <ion-header class="m7-header-shadow ion-no-border">
   <ion-toolbar class="m7-toolbar ion-no-border">
     <ion-buttons slot="start">
-      <ion-button (click)="triggerBack()" class="m7-header-back" aria-label="Back">
+      <ion-button (click)="triggerBack()" class="m7-header-back" [attr.aria-label]="'button_back' | translate">
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
@@ -24,40 +24,40 @@
       <ion-item lines="none" class="input-frame">
         <ion-select interface="action-sheet" [placeholder]="'placeholder_select_category' | translate" [(ngModel)]="create_style.category">
           <!-- Classic & Timeless -->
-          <ion-select-option value="classic">Classic</ion-select-option>
-          <ion-select-option value="minimalist">Minimalist</ion-select-option>
-          <ion-select-option value="preppy">Preppy</ion-select-option>
-          <ion-select-option value="elegant">Elegant</ion-select-option>
+          <ion-select-option value="classic">{{ 'style_category_classic' | translate }}</ion-select-option>
+          <ion-select-option value="minimalist">{{ 'style_category_minimalist' | translate }}</ion-select-option>
+          <ion-select-option value="preppy">{{ 'style_category_preppy' | translate }}</ion-select-option>
+          <ion-select-option value="elegant">{{ 'style_category_elegant' | translate }}</ion-select-option>
 
           <!-- Casual & Street -->
-          <ion-select-option value="casual">Casual</ion-select-option>
-          <ion-select-option value="streetwear">Streetwear</ion-select-option>
-          <ion-select-option value="athleisure">Athleisure</ion-select-option>
-          <ion-select-option value="normcore">Normcore</ion-select-option>
+          <ion-select-option value="casual">{{ 'style_category_casual' | translate }}</ion-select-option>
+          <ion-select-option value="streetwear">{{ 'style_category_streetwear' | translate }}</ion-select-option>
+          <ion-select-option value="athleisure">{{ 'style_category_athleisure' | translate }}</ion-select-option>
+          <ion-select-option value="normcore">{{ 'style_category_normcore' | translate }}</ion-select-option>
 
           <!-- Artistic & Expressive -->
-          <ion-select-option value="bohemian">Bohemian</ion-select-option>
-          <ion-select-option value="vintage">Vintage</ion-select-option>
-          <ion-select-option value="retro">Retro</ion-select-option>
-          <ion-select-option value="artsy">Artsy</ion-select-option>
+          <ion-select-option value="bohemian">{{ 'style_category_bohemian' | translate }}</ion-select-option>
+          <ion-select-option value="vintage">{{ 'style_category_vintage' | translate }}</ion-select-option>
+          <ion-select-option value="retro">{{ 'style_category_retro' | translate }}</ion-select-option>
+          <ion-select-option value="artsy">{{ 'style_category_artsy' | translate }}</ion-select-option>
 
           <!-- Bold & Alternative -->
-          <ion-select-option value="gothic">Gothic</ion-select-option>
-          <ion-select-option value="punk">Punk</ion-select-option>
-          <ion-select-option value="grunge">Grunge</ion-select-option>
-          <ion-select-option value="emo">Emo</ion-select-option>
+          <ion-select-option value="gothic">{{ 'style_category_gothic' | translate }}</ion-select-option>
+          <ion-select-option value="punk">{{ 'style_category_punk' | translate }}</ion-select-option>
+          <ion-select-option value="grunge">{{ 'style_category_grunge' | translate }}</ion-select-option>
+          <ion-select-option value="emo">{{ 'style_category_emo' | translate }}</ion-select-option>
 
           <!-- Cultural & Lifestyle -->
-          <ion-select-option value="traditional">Traditional / Cultural</ion-select-option>
-          <ion-select-option value="modest">Modest Fashion</ion-select-option>
-          <ion-select-option value="afrocentric">Afrocentric</ion-select-option>
-          <ion-select-option value="western">Western</ion-select-option>
+          <ion-select-option value="traditional">{{ 'style_category_traditional' | translate }}</ion-select-option>
+          <ion-select-option value="modest">{{ 'style_category_modest' | translate }}</ion-select-option>
+          <ion-select-option value="afrocentric">{{ 'style_category_afrocentric' | translate }}</ion-select-option>
+          <ion-select-option value="western">{{ 'style_category_western' | translate }}</ion-select-option>
 
           <!-- Modern & Trend -->
-          <ion-select-option value="high-fashion">High Fashion</ion-select-option>
-          <ion-select-option value="chic">Chic</ion-select-option>
-          <ion-select-option value="glam">Glam</ion-select-option>
-          <ion-select-option value="y2k">Y2K</ion-select-option>
+          <ion-select-option value="high-fashion">{{ 'style_category_high_fashion' | translate }}</ion-select-option>
+          <ion-select-option value="chic">{{ 'style_category_chic' | translate }}</ion-select-option>
+          <ion-select-option value="glam">{{ 'style_category_glam' | translate }}</ion-select-option>
+          <ion-select-option value="y2k">{{ 'style_category_y2k' | translate }}</ion-select-option>
         </ion-select>
       </ion-item>
     </div>
@@ -81,7 +81,7 @@
           <ion-col size="6" sizeSm="6">
             <ion-card (click)="removeProduct(p.product_id)" class="product-card">
               <ion-img [src]="p.image_1" class="product-image"></ion-img>
-              <button class="remove-btn" type="button" aria-label="Remove">
+              <button class="remove-btn" type="button" [attr.aria-label]="'button_remove' | translate">
                 <ax-icon name="x" />
               </button>
               <ion-card-header class="ion-no-padding">

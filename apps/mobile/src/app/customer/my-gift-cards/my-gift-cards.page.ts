@@ -12,6 +12,8 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { GlobalComponent } from '../../global-component';
 import { cfImage } from '../../shared/cf-image';
+import { TranslatePipe } from '../../translate.pipe';
+import { I18nService } from '../../i18n.service';
 
 @Component({
   selector: 'app-my-gift-cards',
@@ -21,7 +23,7 @@ import { cfImage } from '../../shared/cf-image';
   imports: [
     CommonModule, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
     IonContent, IonRefresher, IonRefresherContent,
-    AxLoaderComponent, AxIconComponent,
+    AxLoaderComponent, AxIconComponent, TranslatePipe,
   ],
 })
 export class MyGiftCardsPage implements OnInit {
@@ -34,21 +36,24 @@ export class MyGiftCardsPage implements OnInit {
   readonly cfImage = cfImage;
 
   // Status display map
-  readonly statusMeta: Record<string, { label: string; color: string }> = {
-    pending_payment: { label: 'Pending payment', color: '#F5A623' },
-    active:          { label: 'Active',           color: '#2D7D4F' },
-    partially_used:  { label: 'Partially used',   color: '#2D7D4F' },
-    exhausted:       { label: 'Used up',           color: '#8B6F47' },
-    expired:         { label: 'Expired',           color: '#C0392B' },
-    voided:          { label: 'Voided',            color: '#C0392B' },
-  };
+  readonly statusMeta: Record<string, { label: string; color: string }>;
 
   constructor(
     private router: Router,
     private navCtrl: NavController,
     private network: MobileNetworkAdapter,
     private notify: AxNotificationService,
-  ) {}
+    private i18n: I18nService,
+  ) {
+    this.statusMeta = {
+      pending_payment: { label: this.i18n.t('mgc_status_pending_payment'), color: '#F5A623' },
+      active:          { label: this.i18n.t('gift_card_status_active'),    color: '#2D7D4F' },
+      partially_used:  { label: this.i18n.t('gift_card_status_partial'),   color: '#2D7D4F' },
+      exhausted:       { label: this.i18n.t('gift_card_status_exhausted'), color: '#8B6F47' },
+      expired:         { label: this.i18n.t('gift_card_status_expired'),   color: '#C0392B' },
+      voided:          { label: this.i18n.t('mgc_status_voided'),          color: '#C0392B' },
+    };
+  }
 
   async ngOnInit() {
     await this.loadAuthToken();
@@ -72,7 +77,7 @@ export class MyGiftCardsPage implements OnInit {
       },
       error: () => {
         this.ui.loading = false;
-        this.notify.error('Could not load gift cards.');
+        this.notify.error(this.i18n.t('mgc_load_error'));
         event?.target?.complete();
       },
     });

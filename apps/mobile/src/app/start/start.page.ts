@@ -11,12 +11,13 @@ import { IonContent, IonButton } from '@ionic/angular/standalone';
 import { Router } from '@angular/router';
 import { register } from 'swiper/element/bundle';
 import { AxIconComponent } from '../shared/ax-mobile/icon';
+import { TranslatePipe } from '../translate.pipe';
 register();
 
 @Component({
   standalone: true,
   selector: 'app-start',
-  imports: [IonContent, IonButton, AxIconComponent],
+  imports: [IonContent, IonButton, AxIconComponent, TranslatePipe],
   templateUrl: './start.page.html',
   styleUrls: ['./start.page.scss'],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

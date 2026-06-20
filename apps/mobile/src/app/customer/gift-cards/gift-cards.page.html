@@ -1,14 +1,14 @@
 <ion-header class="m7-header-shadow ion-no-border">
   <ion-toolbar class="m7-toolbar ion-no-border">
     <ion-buttons slot="start">
-      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+      <ion-button (click)="goBack()" class="m7-header-back" [attr.aria-label]="'gc_back' | translate">
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
     <ion-title class="m7-title">
-      @if (ui.step === 1) { Gift Cards }
-      @else if (ui.step === 2) { Personalise }
-      @else { Confirm Order }
+      @if (ui.step === 1) { {{ 'gift_cards' | translate }} }
+      @else if (ui.step === 2) { {{ 'gc_step_personalise' | translate }} }
+      @else { {{ 'gift_card_confirm' | translate }} }
     </ion-title>
   </ion-toolbar>
 </ion-header>
@@ -18,15 +18,15 @@
   <!-- Step indicator -->
   <div class="gc-steps">
     <div class="gc-step" [class.active]="ui.step >= 1" [class.done]="ui.step > 1">
-      <span class="gc-step__dot">1</span><span class="gc-step__label">Theme</span>
+      <span class="gc-step__dot">1</span><span class="gc-step__label">{{ 'gc_step_theme' | translate }}</span>
     </div>
     <div class="gc-step__line" [class.active]="ui.step >= 2"></div>
     <div class="gc-step" [class.active]="ui.step >= 2" [class.done]="ui.step > 2">
-      <span class="gc-step__dot">2</span><span class="gc-step__label">Personalise</span>
+      <span class="gc-step__dot">2</span><span class="gc-step__label">{{ 'gc_step_personalise' | translate }}</span>
     </div>
     <div class="gc-step__line" [class.active]="ui.step >= 3"></div>
     <div class="gc-step" [class.active]="ui.step >= 3">
-      <span class="gc-step__dot">3</span><span class="gc-step__label">Confirm</span>
+      <span class="gc-step__dot">3</span><span class="gc-step__label">{{ 'gc_step_confirm' | translate }}</span>
     </div>
   </div>
 
@@ -36,8 +36,8 @@
       <div class="gc-loader"><ax-loader /></div>
     } @else {
       <div class="gc-intro">
-        <h2 class="gc-intro__title">Send a 3bayti Gift Card</h2>
-        <p class="gc-intro__sub">Choose a design for the occasion</p>
+        <h2 class="gc-intro__title">{{ 'gc_intro_title' | translate }}</h2>
+        <p class="gc-intro__sub">{{ 'gc_intro_sub' | translate }}</p>
       </div>
 
       <div class="gc-theme-grid">
@@ -90,7 +90,7 @@
 
     <div class="gc-form ion-padding-horizontal">
       <!-- Denomination presets -->
-      <p class="gc-label">Select amount (AED)</p>
+      <p class="gc-label">{{ 'gc_select_amount_aed' | translate }}</p>
       <div class="gc-presets">
         @for (p of presets; track p) {
           <button
@@ -105,39 +105,39 @@
           class="gc-preset-chip gc-preset-chip--custom"
           [class.selected]="ui.show_custom_amount"
           (click)="toggleCustomAmount()"
-        >Custom</button>
+        >{{ 'label_custom' | translate }}</button>
       </div>
 
       @if (ui.show_custom_amount) {
         <ax-text-field
-          label="Custom amount (AED 100 – 10,000)"
+          [label]="'gc_custom_amount_range' | translate"
           type="number"
           inputmode="decimal"
           [(ngModel)]="form.custom_amount"
           name="custom_amount"
-          placeholder="e.g. 750"
+          [placeholder]="'gc_custom_amount_placeholder' | translate"
         />
       }
 
       <!-- Recipient name -->
       <ax-text-field
-        label="Recipient name (optional)"
+        [label]="'gc_recipient_name_optional' | translate"
         type="text"
         [maxlength]="60"
         [(ngModel)]="form.recipient_name"
         name="recipient_name"
-        placeholder="e.g. Sara"
+        [placeholder]="'gc_recipient_name_placeholder' | translate"
       />
 
       <!-- Personal message -->
       <div class="gc-textarea-wrap">
-        <label class="gc-label gc-label--sm">Personal message (optional, max 200 chars)</label>
+        <label class="gc-label gc-label--sm">{{ 'gc_personal_message_label' | translate }}</label>
         <textarea
           class="gc-textarea"
           maxlength="200"
           [(ngModel)]="form.recipient_message"
           name="recipient_message"
-          placeholder="Write a heartfelt message…"
+          [placeholder]="'gc_personal_message_placeholder' | translate"
           rows="3"
         ></textarea>
         <span class="gc-char-count">{{ (form.recipient_message || '').length }}/200</span>
@@ -153,13 +153,13 @@
         autocomplete="off"
         [(ngModel)]="form.recipient_email"
         name="recipient_email"
-        placeholder="e.g. sara@example.com"
+        [placeholder]="'gc_recipient_email_placeholder' | translate"
       />
 
       <div class="gc-phone-row">
         <div class="gc-cc-field">
           <label class="gc-label gc-label--sm">{{ 'gift_card_recipient_phone' | translate }}</label>
-          <button type="button" class="gc-cc-button" (click)="dialCodeOpen = true" aria-label="Select country code">
+          <button type="button" class="gc-cc-button" (click)="dialCodeOpen = true" [attr.aria-label]="'gc_select_country_code' | translate">
             <span class="gc-cc-flag">{{ selectedDial?.flag }}</span>
             <span class="gc-cc-code">{{ dialCode }}</span>
             <ax-icon name="chevron-down" [size]="14" />
@@ -173,30 +173,30 @@
             [maxlength]="15"
             [(ngModel)]="form.recipient_phone"
             name="recipient_phone"
-            placeholder="50 123 4567"
+            [placeholder]="'gc_recipient_phone_placeholder' | translate"
           />
         </div>
       </div>
 
       <!-- Schedule delivery -->
       <div class="gc-row">
-        <label class="gc-label gc-label--sm">Schedule delivery (optional)</label>
+        <label class="gc-label gc-label--sm">{{ 'gc_schedule_delivery_optional' | translate }}</label>
         <input
           class="gc-date-input"
           type="datetime-local"
           [(ngModel)]="form.scheduled_delivery_at"
           name="scheduled_delivery_at"
         />
-        <p class="gc-hint">Leave blank to deliver when payment is confirmed.</p>
+        <p class="gc-hint">{{ 'gc_schedule_hint' | translate }}</p>
       </div>
 
       <!-- Recipient photo (luxury only) -->
       @if (isPhotoTheme) {
         <div class="gc-photo-section">
-          <p class="gc-label">Add recipient photo <span class="gc-badge--luxury">Luxury only</span></p>
+          <p class="gc-label">{{ 'gift_card_photo' | translate }} <span class="gc-badge--luxury">{{ 'gc_luxury_only' | translate }}</span></p>
           @if (form.recipient_photo_url) {
             <div class="gc-photo-preview">
-              <img [src]="form.recipient_photo_url" alt="Recipient" class="gc-photo-img" />
+              <img [src]="form.recipient_photo_url" [alt]="'gc_recipient_photo_alt' | translate" class="gc-photo-img" />
               <button type="button" class="gc-photo-remove" (click)="removePhoto()">
                 <ax-icon name="x" [size]="16" />
               </button>
@@ -204,7 +204,7 @@
           } @else {
             <label class="gc-photo-upload" for="gc-photo-input">
               <ax-icon name="camera" [size]="24" />
-              <span>Upload photo</span>
+              <span>{{ 'gc_upload_photo' | translate }}</span>
               <input id="gc-photo-input" type="file" accept="image/*" (change)="onPhotoSelected($event)" />
             </label>
           }
@@ -214,7 +214,7 @@
 
     <div class="gc-footer ion-padding-horizontal">
       <ion-button expand="block" (click)="nextToConfirm()" [disabled]="!effectiveDenomination">
-        Continue
+        {{ 'button_continue' | translate }}
       </ion-button>
     </div>
   }
@@ -233,12 +233,12 @@
         </div>
         @if (form.recipient_photo_url) {
           <div class="gc-card-preview__photo-ring">
-            <img [src]="form.recipient_photo_url" alt="Recipient" />
+            <img [src]="form.recipient_photo_url" [alt]="'gc_recipient_photo_alt' | translate" />
           </div>
         }
         <div class="gc-card-preview__amount">AED {{ effectiveDenomination }}</div>
         @if (form.recipient_name) {
-          <div class="gc-card-preview__to">For {{ form.recipient_name }}</div>
+          <div class="gc-card-preview__to">{{ 'gc_card_for' | translate:{ name: form.recipient_name } }}</div>
         }
         @if (form.recipient_message) {
           <div class="gc-card-preview__message">"{{ form.recipient_message }}"</div>
@@ -249,35 +249,35 @@
       <!-- Summary -->
       <div class="gc-summary-card">
         <div class="gc-summary-row">
-          <span>Design</span>
+          <span>{{ 'gc_summary_design' | translate }}</span>
           <span>{{ selectedTheme.label }}</span>
         </div>
         <div class="gc-summary-row">
-          <span>Value</span>
+          <span>{{ 'gc_summary_value' | translate }}</span>
           <strong>AED {{ effectiveDenomination }}</strong>
         </div>
         @if (form.recipient_name) {
           <div class="gc-summary-row">
-            <span>For</span>
+            <span>{{ 'gift_card_for' | translate }}</span>
             <span>{{ form.recipient_name }}</span>
           </div>
         }
         @if (form.scheduled_delivery_at) {
           <div class="gc-summary-row">
-            <span>Send on</span>
+            <span>{{ 'gc_summary_send_on' | translate }}</span>
             <span>{{ form.scheduled_delivery_at | date:'medium' }}</span>
           </div>
         } @else {
           <div class="gc-summary-row">
-            <span>Delivery</span>
-            <span>Immediately on payment</span>
+            <span>{{ 'gc_summary_delivery' | translate }}</span>
+            <span>{{ 'gc_summary_immediately' | translate }}</span>
           </div>
         }
       </div>
 
       <div class="gc-notice">
         <ax-icon name="info" [size]="16" />
-        Valid for 12 months from activation. Redeemable in the 3bayti app only.
+        {{ 'gc_notice_validity' | translate }}
       </div>
     </div>
 
@@ -289,12 +289,12 @@
       >
         @if (ui.purchasing) {
           <ion-spinner slot="start" name="crescent"></ion-spinner>
-          Creating card…
+          {{ 'gc_creating_card' | translate }}
         } @else if (ui_checking_out) {
           <ion-spinner slot="start" name="crescent"></ion-spinner>
-          Opening payment…
+          {{ 'gc_opening_payment' | translate }}
         } @else {
-          Pay AED {{ effectiveDenomination }}
+          {{ 'gc_pay_aed' | translate:{ amount: effectiveDenomination } }}
         }
       </ion-button>
     </div>

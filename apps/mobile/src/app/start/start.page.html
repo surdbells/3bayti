@@ -11,9 +11,9 @@
           <img src="assets/onboarding/model1.png" alt="Model 1" class="model" />
         </div>
         <div class="cta">
-          <h1 class="title">MAKING EMIRATI MODEST FASHION<br/>MORE ACCESSIBLE</h1>
+          <h1 class="title" [innerHTML]="'start_slide1_title' | translate"></h1>
           <p class="subtitle">
-            Explore curated modest collections that celebrate your unique style and cultural elegance
+            {{ 'start_slide1_desc' | translate }}
           </p>
         </div>
       </swiper-slide>
@@ -23,9 +23,9 @@
           <img src="assets/onboarding/model2.png" alt="Model 2" class="model" />
         </div>
         <div class="cta">
-          <h1 class="title">SHOP MODERN MODEST<br/>COLLECTIONS WITH EASE</h1>
+          <h1 class="title" [innerHTML]="'start_slide2_title' | translate"></h1>
           <p class="subtitle">
-            Browse our boutique-inspired collections with warmth, sophistication, and cultural authenticity
+            {{ 'start_slide2_desc' | translate }}
           </p>
         </div>
       </swiper-slide>
@@ -35,9 +35,9 @@
           <img src="assets/onboarding/model3.png" alt="Model 3" class="model" />
         </div>
         <div class="cta">
-          <h1 class="title">SECURE CHECKOUT, FAST DELIVERY<br/>&amp; REWARDS</h1>
+          <h1 class="title" [innerHTML]="'start_slide3_title' | translate"></h1>
           <p class="subtitle">
-            Experience seamless shopping with secure payments, swift delivery, and exclusive member benefits
+            {{ 'start_slide3_desc' | translate }}
           </p>
         </div>
       </swiper-slide>
@@ -55,7 +55,7 @@
         shape="round"
         class="cta-btn"
         (click)="next(swiper)">
-        {{ index() === 2 ? 'Get Started' : 'Next' }}
+        {{ (index() === 2 ? 'get_started' : 'next') | translate }}
         <ax-icon name="chevron-right" class="ion-text-start ion-padding-horizontal" [style.color]="'var(--ion-color-secondary-contrast)'"/>
       </ion-button>
     </div>

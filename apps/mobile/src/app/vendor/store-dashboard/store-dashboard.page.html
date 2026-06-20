@@ -1,13 +1,13 @@
 <ion-header class="m7-header-shadow ion-no-border">
   <ion-toolbar class="m7-toolbar ion-no-border">
     <ion-buttons slot="start">
-      <ion-button (click)="goBack()" class="m7-header-back" aria-label="Back">
+      <ion-button (click)="goBack()" class="m7-header-back" [attr.aria-label]="'button_back' | translate">
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
     <ion-title class="m7-title">{{ 'store_dashboard' | translate }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="openSettings()" class="m7-header-action" aria-label="Settings">
+      <ion-button (click)="openSettings()" class="m7-header-action" [attr.aria-label]="'settings' | translate">
         <ax-icon name="settings" />
       </ion-button>
     </ion-buttons>
@@ -55,7 +55,7 @@
             </div>
           }
         </div>
-        <button type="button" class="edit-store-btn" (click)="editStoreProfile()" aria-label="Edit">
+        <button type="button" class="edit-store-btn" (click)="editStoreProfile()" [attr.aria-label]="'store_dashboard_edit' | translate">
           <ax-icon name="pencil"></ax-icon>
         </button>
       </div>

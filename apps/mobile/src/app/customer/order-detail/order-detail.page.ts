@@ -22,6 +22,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '../../translate.pipe';
 import { Preferences } from '@capacitor/preferences';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { I18nService } from '../../i18n.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
@@ -145,6 +146,7 @@ export class OrderDetailPage implements OnInit {
     private toast: AxNotificationService,
     private actionSheetCtrl: ActionSheetController,
     private mobileAdapter: MobileNetworkAdapter,
+    private i18n: I18nService,
   ) {}
 
   async ngOnInit() {
@@ -159,7 +161,7 @@ export class OrderDetailPage implements OnInit {
     const idParam = this.route.snapshot.paramMap.get('id');
     this.orderId = idParam ? parseInt(idParam, 10) : 0;
     if (this.orderId <= 0) {
-      this.toast.error('Invalid order id.');
+      this.toast.error(this.i18n.t('order_detail_invalid_id'));
       this.router.navigate(['/', 'my-orders']);
       return;
     }
@@ -207,13 +209,13 @@ export class OrderDetailPage implements OnInit {
           } else if (response.response_code === 404) {
             this.ui_controls.not_found = true;
           } else {
-            this.toast.error(response.message || 'Failed to load order.');
+            this.toast.error(response.message || this.i18n.t('order_detail_load_failed'));
           }
         },
         error: () => {
           this.ui_controls.is_loading = false;
           if (done) done();
-          this.toast.error('Network error.');
+          this.toast.error(this.i18n.t('order_detail_network_error'));
         },
       });
   }
@@ -267,14 +269,14 @@ export class OrderDetailPage implements OnInit {
     if (order === null || !this.canCancel()) return;
 
     const sheet = await this.actionSheetCtrl.create({
-      header: 'Cancel this order? This cannot be undone.',
+      header: this.i18n.t('order_detail_cancel_confirm'),
       buttons: [
         {
-          text: 'Yes, cancel order',
+          text: this.i18n.t('order_detail_cancel_yes'),
           role: 'destructive',
           handler: () => this.executeCancel(),
         },
-        { text: 'Keep order', role: 'cancel' },
+        { text: this.i18n.t('order_detail_cancel_keep'), role: 'cancel' },
       ],
     });
     await sheet.present();
@@ -297,15 +299,17 @@ export class OrderDetailPage implements OnInit {
             const wasIdempotent =
               response.data?.cancellation?.was_already_cancelled === true;
             this.toast.success(
-              wasIdempotent ? 'This order was already cancelled.' : 'Order cancelled.',
+              wasIdempotent
+                ? this.i18n.t('order_detail_already_cancelled')
+                : this.i18n.t('order_detail_cancelled'),
             );
           } else {
-            this.toast.error(response.message || 'Unable to cancel order.');
+            this.toast.error(response.message || this.i18n.t('order_detail_cancel_failed'));
           }
         },
         error: () => {
           this.ui_controls.is_cancelling = false;
-          this.toast.error('Network error.');
+          this.toast.error(this.i18n.t('order_detail_network_error'));
         },
       });
   }

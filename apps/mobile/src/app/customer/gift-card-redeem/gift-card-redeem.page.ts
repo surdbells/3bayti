@@ -13,6 +13,7 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { TranslatePipe } from '../../translate.pipe';
+import { I18nService } from '../../i18n.service';
 
 @Component({
   selector: 'app-gift-card-redeem',
@@ -38,6 +39,7 @@ export class GiftCardRedeemPage {
     private navCtrl: NavController,
     private network: MobileNetworkAdapter,
     private notify: AxNotificationService,
+    private i18n: I18nService,
   ) {
     this.loadAuthToken();
   }
@@ -65,7 +67,7 @@ export class GiftCardRedeemPage {
 
   checkBalance() {
     const raw = this.code.replace(/-/g, '');
-    if (raw.length !== 16) { this.notify.error('Please enter a full 16-character code.'); return; }
+    if (raw.length !== 16) { this.notify.error(this.i18n.t('gift_card_redeem_full_code_required')); return; }
     this.ui.checking = true;
     // PUBLIC endpoint — no authToken. Send the normalized (de-hyphenated) code.
     // v3-direct surfaces HTTP errors through the SUCCESS channel as a legacy
@@ -75,11 +77,11 @@ export class GiftCardRedeemPage {
       next: (res: any) => {
         this.ui.checking = false;
         if (res?.data) { this.preview = res.data; }
-        else { this.notify.error(res?.message ?? 'Gift card not found.'); }
+        else { this.notify.error(res?.message ?? this.i18n.t('gift_card_redeem_not_found')); }
       },
       error: () => {
         this.ui.checking = false;
-        this.notify.error('Gift card not found.');
+        this.notify.error(this.i18n.t('gift_card_redeem_not_found'));
       },
     });
   }
@@ -90,13 +92,13 @@ export class GiftCardRedeemPage {
     // hyphens + uppercase). The balance check already does this; redeem must too,
     // or the server gets "XXXX-XXXX-..." and returns card-not-found.
     const code = this.code.replace(/[\s-]/g, '').toUpperCase();
-    if (code.length !== 16) { this.notify.error('Enter the full 16-character gift card code.'); return; }
+    if (code.length !== 16) { this.notify.error(this.i18n.t('gift_card_redeem_full_code_required')); return; }
     this.ui.redeeming = true;
     this.network.post_v3('POST /gift-cards/redeem', { code }, { authToken: this.authToken }).subscribe({
       next: (res: any) => {
         this.ui.redeeming = false;
         if (res?.data?.id) {
-          this.notify.success('Gift card added to your account!');
+          this.notify.success(this.i18n.t('gift_card_redeem_added_success'));
           this.router.navigate(['/gift-card-detail'], { state: { card: res.data } });
           return;
         }
@@ -108,11 +110,11 @@ export class GiftCardRedeemPage {
           this.router.navigate(['/login'], { queryParams: { returnUrl: '/gift-cards/redeem' } });
           return;
         }
-        this.notify.error(res?.message ?? 'Could not redeem this code.');
+        this.notify.error(res?.message ?? this.i18n.t('gift_card_redeem_failed'));
       },
       error: () => {
         this.ui.redeeming = false;
-        this.notify.error('Could not redeem this code.');
+        this.notify.error(this.i18n.t('gift_card_redeem_failed'));
       },
     });
   }

@@ -15,6 +15,7 @@ import {
   Platform
 } from '@ionic/angular/standalone';
 import {TranslatePipe} from "../../translate.pipe";
+import {I18nService} from "../../i18n.service";
 import {ConnectionService} from "../../service/connection.service";
 import {ActivatedRoute, Router} from "@angular/router";
 import {ActionSheetController, InfiniteScrollCustomEvent} from "@ionic/angular";
@@ -104,6 +105,7 @@ export class MyOrdersPage implements OnInit {
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private mobileAdapter: MobileNetworkAdapter,
+    private i18n: I18nService,
   ) {}
   ui_controls = {
     is_empty: false,
@@ -270,11 +272,11 @@ export class MyOrdersPage implements OnInit {
 
   async confirmCancel(order: Order) {
     const sheet = await this.actionSheetCtrl.create({
-      header: 'Cancel this order?',
-      subHeader: 'You have not been charged for pending orders.',
+      header: this.i18n.t('cancel_order_confirm_header'),
+      subHeader: this.i18n.t('cancel_order_confirm_subheader'),
       buttons: [
         {
-          text: 'Yes, cancel order',
+          text: this.i18n.t('cancel_order_confirm_yes'),
           role: 'destructive',
           handler: () => {
             this.executeCancel(order);
@@ -282,7 +284,7 @@ export class MyOrdersPage implements OnInit {
           },
         },
         {
-          text: 'Keep order',
+          text: this.i18n.t('cancel_order_keep'),
           role: 'cancel',
         },
       ],
@@ -304,15 +306,15 @@ export class MyOrdersPage implements OnInit {
             const wasIdempotent = response.data?.cancellation?.was_already_cancelled === true;
             this.toast.success(
               wasIdempotent
-                ? 'This order was already cancelled.'
-                : 'Order cancelled.',
+                ? this.i18n.t('cancel_order_already_cancelled')
+                : this.i18n.t('cancel_order_success'),
             );
           } else {
-            this.toast.error(response.message || 'Unable to cancel order.');
+            this.toast.error(response.message || this.i18n.t('cancel_order_unable'));
           }
         },
         error: () => {
-          this.toast.error('Network error. Please try again.');
+          this.toast.error(this.i18n.t('cancel_order_network_error'));
         },
       });
   }

@@ -122,7 +122,7 @@ export class VendorOrderDetailPage implements OnInit {
     this.token = user.token;
 
     if (!user.is_vendor) {
-      this.toast.error('Vendor access required for this page.');
+      this.toast.error(this.i18n.t('vendor_access_required'));
       this.router.navigate(['/', 'home']);
       return;
     }
@@ -130,7 +130,7 @@ export class VendorOrderDetailPage implements OnInit {
     const idParam = this.route.snapshot.paramMap.get('id');
     this.orderId = idParam ? parseInt(idParam, 10) : 0;
     if (this.orderId <= 0) {
-      this.toast.error('Invalid order id.');
+      this.toast.error(this.i18n.t('vendor_order_invalid_id'));
       this.router.navigate(['/', 'vendor-orders']);
       return;
     }
@@ -165,19 +165,19 @@ export class VendorOrderDetailPage implements OnInit {
                 items: Array.isArray(o.items) ? o.items : [],
               };
             } else {
-              this.toast.error('Order not found.');
+              this.toast.error(this.i18n.t('vendor_order_not_found'));
               this.router.navigate(['/', 'vendor-orders']);
             }
           } else if (response.response_code === 404) {
-            this.toast.error('Order not found.');
+            this.toast.error(this.i18n.t('vendor_order_not_found'));
             this.router.navigate(['/', 'vendor-orders']);
           } else {
-            this.toast.error(response.message || 'Failed to load order.');
+            this.toast.error(response.message || this.i18n.t('vendor_order_load_failed'));
           }
         },
         error: () => {
           this.ui_controls.is_loading = false;
-          this.toast.error('Network error.');
+          this.toast.error(this.i18n.t('vendor_order_network_error'));
         },
       });
   }
@@ -212,14 +212,14 @@ export class VendorOrderDetailPage implements OnInit {
       subHeader: item.product_name,
       buttons: [
         {
-          text: 'Confirm',
+          text: this.i18n.t('vendor_order_confirm'),
           role: newStatus === 'rejected' ? 'destructive' : undefined,
           handler: () => {
             this.executeTransition(item, newStatus);
             return true;
           },
         },
-        { text: 'Cancel', role: 'cancel' },
+        { text: this.i18n.t('cancel'), role: 'cancel' },
       ],
     });
     await sheet.present();
@@ -250,19 +250,21 @@ export class VendorOrderDetailPage implements OnInit {
           this.ui_controls.is_transitioning = false;
           if (response.response_code === 200 && response.status === 'success') {
             // Refresh from server to pick up order-level rollup
-            this.toast.success(`Item marked ${newStatus}.`);
+            this.toast.success(
+              this.i18n.t('vendor_order_item_marked', { status: newStatus }),
+            );
             this.loadOrder();
           } else {
             // Rollback optimistic update
             item.item_status = originalStatus;
-            this.toast.error(response.message || 'Transition failed.');
+            this.toast.error(response.message || this.i18n.t('vendor_order_transition_failed'));
           }
         },
         error: () => {
           // Rollback optimistic update
           item.item_status = originalStatus;
           this.ui_controls.is_transitioning = false;
-          this.toast.error('Network error during transition.');
+          this.toast.error(this.i18n.t('vendor_order_transition_network_error'));
         },
       });
   }

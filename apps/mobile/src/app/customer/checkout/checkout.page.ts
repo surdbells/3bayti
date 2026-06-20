@@ -635,7 +635,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
           InAppBrowser.openWebView({
             url: webviewUrl,
-            title: 'Checkout'
+            title: this.i18n.t('button_checkout')
           })
             .then(openRes => {
               console.log('webview opened', openRes);

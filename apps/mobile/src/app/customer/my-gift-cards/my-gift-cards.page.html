@@ -5,7 +5,7 @@
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
-    <ion-title class="m7-title">My Gift Cards</ion-title>
+    <ion-title class="m7-title">{{ 'gift_card_wallet' | translate }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -22,20 +22,20 @@
     <div class="mgc-actions ion-padding-horizontal">
       <button type="button" class="mgc-action-btn" (click)="buyNew()">
         <ax-icon name="gift" [size]="20" />
-        <span>Buy a gift card</span>
+        <span>{{ 'gift_promo_cta_buy' | translate }}</span>
       </button>
       <button type="button" class="mgc-action-btn mgc-action-btn--outline" (click)="redeemCode()">
         <ax-icon name="scan-line" [size]="20" />
-        <span>Redeem a code</span>
+        <span>{{ 'mgc_redeem_code' | translate }}</span>
       </button>
     </div>
 
     @if (cards.length === 0) {
       <div class="mgc-empty">
         <ax-icon name="gift" [size]="48" />
-        <h3>No gift cards yet</h3>
-        <p>Buy a gift card for someone special, or enter a code you received.</p>
-        <button type="button" class="mgc-cta" (click)="buyNew()">Buy a gift card</button>
+        <h3>{{ 'mgc_empty_title' | translate }}</h3>
+        <p>{{ 'mgc_empty_subtitle' | translate }}</p>
+        <button type="button" class="mgc-cta" (click)="buyNew()">{{ 'gift_promo_cta_buy' | translate }}</button>
       </div>
     } @else {
       <div class="mgc-list ion-padding-horizontal">
@@ -65,7 +65,7 @@
                 <div>
                   <div class="mgc-card__amount">{{ card.currency }} {{ card.balance }}</div>
                   @if (card.balance !== card.denomination) {
-                    <div class="mgc-card__denom">of {{ card.currency }} {{ card.denomination }}</div>
+                    <div class="mgc-card__denom">{{ 'mgc_of_amount' | translate }} {{ card.currency }} {{ card.denomination }}</div>
                   }
                 </div>
                 <div class="mgc-card__status"
@@ -75,13 +75,13 @@
               </div>
 
               @if (card.recipient_name) {
-                <div class="mgc-card__to">For {{ card.recipient_name }}</div>
+                <div class="mgc-card__to">{{ 'gift_card_for' | translate }} {{ card.recipient_name }}</div>
               }
 
               @if (card.expires_at) {
                 <div class="mgc-card__expiry">
                   <ax-icon name="clock" [size]="12" />
-                  Expires {{ card.expires_at | date:'mediumDate' }}
+                  {{ 'gift_card_expires' | translate }} {{ card.expires_at | date:'mediumDate' }}
                 </div>
               }
             </div>

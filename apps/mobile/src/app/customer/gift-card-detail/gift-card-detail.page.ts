@@ -8,6 +8,8 @@ import {
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { cfImage } from '../../shared/cf-image';
+import { TranslatePipe } from '../../translate.pipe';
+import { I18nService } from '../../i18n.service';
 
 @Component({
   selector: 'app-gift-card-detail',
@@ -16,7 +18,7 @@ import { cfImage } from '../../shared/cf-image';
   standalone: true,
   imports: [
     CommonModule, IonHeader, IonToolbar, IonTitle, IonButtons, IonButton,
-    IonContent, AxIconComponent,
+    IonContent, AxIconComponent, TranslatePipe,
   ],
 })
 export class GiftCardDetailPage implements OnInit {
@@ -27,6 +29,7 @@ export class GiftCardDetailPage implements OnInit {
     private router: Router,
     private navCtrl: NavController,
     private notify: AxNotificationService,
+    private i18n: I18nService,
   ) {}
 
   ngOnInit() {
@@ -48,13 +51,13 @@ export class GiftCardDetailPage implements OnInit {
 
   async shareCard() {
     const code = this.card?.code ?? '';
-    const text = `Here's a 3bayti gift card for you! Code: ${code}\nRedeem it in the 3bayti app.`;
+    const text = this.i18n.t('gcd_share_text', { code });
     try {
       if (navigator.share) {
-        await navigator.share({ title: '3bayti Gift Card', text });
+        await navigator.share({ title: this.i18n.t('gcd_share_title'), text });
       } else {
         await navigator.clipboard.writeText(text);
-        this.notify.success('Gift card details copied!');
+        this.notify.success(this.i18n.t('gcd_details_copied'));
       }
     } catch {
       // User dismissed — no-op
@@ -64,7 +67,7 @@ export class GiftCardDetailPage implements OnInit {
   async copyCode() {
     try {
       await navigator.clipboard.writeText(this.card?.code ?? '');
-      this.notify.success('Code copied to clipboard!');
+      this.notify.success(this.i18n.t('gcd_code_copied'));
     } catch {
       this.notify.info(this.card?.code ?? '');
     }

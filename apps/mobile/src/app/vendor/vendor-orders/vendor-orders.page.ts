@@ -24,6 +24,7 @@ import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { I18nService } from '../../i18n.service';
 
 /**
  * Vendor's view of their own orders.
@@ -122,6 +123,7 @@ export class VendorOrdersPage implements OnInit {
     private platform: Platform,
     private toast: AxNotificationService,
     private mobileAdapter: MobileNetworkAdapter,
+    private i18n: I18nService,
   ) {}
 
   async ngOnInit() {
@@ -136,7 +138,7 @@ export class VendorOrdersPage implements OnInit {
     // Gate: only vendor users get past this page. If a non-vendor
     // somehow navigates here, kick them back to the dashboard.
     if (!user.is_vendor) {
-      this.toast.error('Vendor access required for this page.');
+      this.toast.error(this.i18n.t('vendor_access_required'));
       this.router.navigate(['/', 'home']);
       return;
     }
@@ -210,7 +212,7 @@ export class VendorOrdersPage implements OnInit {
           },
           error: () => {
             this.ui_controls.is_loading = false;
-            this.toast.error('Network error. Pull to refresh.');
+            this.toast.error(this.i18n.t('network_error_retry'));
             resolve();
           },
         });

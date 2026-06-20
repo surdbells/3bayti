@@ -5,7 +5,7 @@
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
-    <ion-title class="m7-title">Gift Card</ion-title>
+    <ion-title class="m7-title">{{ 'gcd_title' | translate }}</ion-title>
     <ion-buttons slot="end">
       <ion-button fill="clear" (click)="shareCard()">
         <ax-icon name="share-2" />
@@ -39,12 +39,12 @@
             <div class="gcd-hero__progress-track">
               <div class="gcd-hero__progress-fill" [style.width.%]="balancePct"></div>
             </div>
-            <span class="gcd-hero__progress-label">{{ balancePct }}% remaining of {{ card.currency }} {{ card.denomination }}</span>
+            <span class="gcd-hero__progress-label">{{ balancePct }}{{ 'gcd_remaining_of' | translate }} {{ card.currency }} {{ card.denomination }}</span>
           </div>
         }
 
         @if (card.recipient_name) {
-          <div class="gcd-hero__to">For {{ card.recipient_name }}</div>
+          <div class="gcd-hero__to">{{ 'gift_card_for' | translate }} {{ card.recipient_name }}</div>
         }
         @if (card.recipient_message) {
           <div class="gcd-hero__msg">"{{ card.recipient_message }}"</div>
@@ -54,7 +54,7 @@
 
     <!-- Code section -->
     <div class="gcd-section ion-padding-horizontal">
-      <p class="gcd-section__title">Card Code</p>
+      <p class="gcd-section__title">{{ 'gift_card_code' | translate }}</p>
       <button type="button" class="gcd-code-row" (click)="copyCode()">
         <span class="gcd-code">{{ card.code }}</span>
         <ax-icon name="copy" [size]="18" />
@@ -64,25 +64,25 @@
     <!-- Info row -->
     <div class="gcd-info ion-padding-horizontal">
       <div class="gcd-info-item">
-        <span class="gcd-info-item__label">Status</span>
+        <span class="gcd-info-item__label">{{ 'status' | translate }}</span>
         <span class="gcd-info-item__value">{{ card.status | titlecase }}</span>
       </div>
       @if (card.expires_at) {
         <div class="gcd-info-item">
-          <span class="gcd-info-item__label">Expires</span>
+          <span class="gcd-info-item__label">{{ 'gift_card_expires' | translate }}</span>
           <span class="gcd-info-item__value">{{ card.expires_at | date:'mediumDate' }}</span>
         </div>
       }
       <div class="gcd-info-item">
-        <span class="gcd-info-item__label">Redeemable at</span>
-        <span class="gcd-info-item__value">3bayti app only</span>
+        <span class="gcd-info-item__label">{{ 'gcd_redeemable_at' | translate }}</span>
+        <span class="gcd-info-item__value">{{ 'gcd_app_only' | translate }}</span>
       </div>
     </div>
 
     <!-- Transaction history -->
     @if (transactions.length > 0) {
       <div class="gcd-section ion-padding-horizontal">
-        <p class="gcd-section__title">Spend history</p>
+        <p class="gcd-section__title">{{ 'gift_card_spend_history' | translate }}</p>
         @for (tx of transactions; track tx.id) {
           <div class="gcd-tx" [class.gcd-tx--credit]="tx.type === 'credit'">
             <div class="gcd-tx__icon">
@@ -90,8 +90,8 @@
             </div>
             <div class="gcd-tx__body">
               <div class="gcd-tx__desc">
-                @if (tx.type === 'debit') { Order {{ tx.order_reference }} }
-                @else { Refund from {{ tx.order_reference }} }
+                @if (tx.type === 'debit') { {{ 'gcd_tx_order' | translate:{ ref: tx.order_reference } }} }
+                @else { {{ 'gcd_tx_refund' | translate:{ ref: tx.order_reference } }} }
               </div>
               <div class="gcd-tx__date">{{ tx.created_at | date:'mediumDate' }}</div>
             </div>
