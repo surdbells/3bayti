@@ -1,44 +1,11 @@
 <ion-content [fullscreen]="true" class="app-bg ion-padding">
   <div class="auth-container">
+    <!-- Header: logo + title + subtitle -->
     <div class="stack app-fade-in">
       <img class="auth-logo" src="assets/images/logo.png" alt="">
       <h1 class="title ion-text-center">{{ 'welcome_back' | translate }}</h1>
       <p class="subtitle ion-text-center">{{ 'sub_title' | translate }}</p>
     </div>
-
-    <ax-text-field
-      class="ion-margin-bottom"
-      [label]="'email_Address' | translate"
-      type="email"
-      [required]="true"
-      autocomplete="email"
-      [(ngModel)]="login.email"
-      name="email">
-    </ax-text-field>
-
-    <ax-text-field
-      class="ion-margin-bottom"
-      [label]="'password' | translate"
-      type="password"
-      [required]="true"
-      autocomplete="current-password"
-      [(ngModel)]="login.password"
-      name="password">
-    </ax-text-field>
-
-    @if (!ui_controls.login_loading) {
-      <div class="forgot-password-row">
-        <ion-text class="forgot-password-link" (click)="forgot_password()">
-          {{ 'forgot_password' | translate }}
-        </ion-text>
-      </div>
-    }
-
-    @if (!ui_controls.login_loading) {
-      <ion-button (click)="signIn()" expand="block" class="ion-margin-vertical">
-        {{ 'sign_in' | translate }}
-      </ion-button>
-    }
 
     @if (ui_controls.login_loading) {
       <div class="loader-row">
@@ -47,11 +14,42 @@
     }
 
     @if (!ui_controls.login_loading) {
+      <ax-text-field
+        class="block-mb"
+        [label]="'email_Address' | translate"
+        type="email"
+        [required]="true"
+        [placeholder]="'e_email_Address' | translate"
+        autocomplete="email"
+        [(ngModel)]="login.email"
+        name="email">
+      </ax-text-field>
+
+      <ax-text-field
+        class="block-mb"
+        [label]="'password' | translate"
+        type="password"
+        [required]="true"
+        autocomplete="current-password"
+        [(ngModel)]="login.password"
+        name="password">
+      </ax-text-field>
+
+      <div class="forgot-password-row">
+        <ion-text class="secondary-link" (click)="forgot_password()">
+          {{ 'forgot_password' | translate }}
+        </ion-text>
+      </div>
+
+      <ion-button (click)="signIn()" expand="block" class="primary-btn" type="button">
+        {{ 'sign_in' | translate }}
+      </ion-button>
+
       <div class="login-divider">
         <span>{{ 'or' | translate }}</span>
       </div>
 
-      <ion-button (click)="goHome()" expand="block" fill="outline" class="ion-margin-vertical">
+      <ion-button (click)="goHome()" expand="block" fill="outline" class="secondary-btn" type="button">
         {{ 'continue_as_guest' | translate }}
       </ion-button>
 

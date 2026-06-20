@@ -6,21 +6,14 @@ ion-content.app-bg {
 }
 
 @media (prefers-color-scheme: dark) {
-  ion-content.app-bg {
-    --background: var(--ax-color-bg-canvas);
-  }
+  ion-content.app-bg { --background: var(--ax-color-bg-canvas); }
 }
-
 @media (orientation: landscape) {
-  ion-content.app-bg {
-    --background: var(--ax-color-bg-canvas);
-  }
+  ion-content.app-bg { --background: var(--ax-color-bg-canvas); }
 }
 
-/* ----- Auth container — centered column with breathing room ----- */
+/* ----- Auth container — centered single column (matches register/reset) ----- */
 .auth-container {
-  /* Replaces the old <ion-grid> + <ion-row> + <ion-col> framing.
-     A single full-width column centered on the page. */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -36,7 +29,7 @@ ion-content.app-bg {
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .auth-logo {
@@ -49,7 +42,7 @@ ion-content.app-bg {
 .title {
   font-family: var(--ax-font-display);
   font-weight: 400;
-  font-size: 30px;
+  font-size: 26px;
   letter-spacing: -0.005em;
   margin: 0;
   color: var(--ax-color-text-primary);
@@ -59,38 +52,37 @@ ion-content.app-bg {
 .subtitle {
   font-family: inherit;
   font-weight: 400;
-  margin: 0;
+  margin: 0.4rem 0 .2rem;
   color: var(--ax-color-text-secondary);
   font-size: 14px;
   line-height: 1.5;
 }
 
-/* ----- Forgot password link — right-aligned, subtle ----- */
+/* ----- Inputs ----- */
+.block-mb { display: block; margin-bottom: 1rem; }
+
+/* ----- Forgot-password link — right-aligned, subtle ----- */
 .forgot-password-row {
   display: flex;
   justify-content: flex-end;
-  margin: 4px 0 12px;
+  margin: 0 0 0.5rem;
 }
 
-.forgot-password-link {
+/* ----- Primary button ----- */
+.primary-btn { margin: 0.5rem 0; }
+
+/* ----- Secondary (outline) button ----- */
+.secondary-btn { margin: 0.5rem 0; }
+
+/* ----- Secondary links (brand-colored, e.g. forgot password) ----- */
+.secondary-link {
   font-family: inherit;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--ax-color-text-brand);   /* M2 brown */
   cursor: pointer;
-  text-decoration: none;
-  padding: 4px 0;
 
-  &:active {
-    opacity: 0.7;
-  }
-}
-
-/* ----- Loader row — centered ----- */
-.loader-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 1rem 0;
+  &:active { opacity: 0.7; }
 }
 
 /* ----- "or" divider — line · text · line ----- */
@@ -112,9 +104,7 @@ ion-content.app-bg {
     background: var(--ax-color-border-default);
   }
 
-  span {
-    flex-shrink: 0;
-  }
+  span { flex-shrink: 0; }
 }
 
 /* ----- Sign-up link line ("Don't have an account? Sign up") ----- */
@@ -133,7 +123,13 @@ ion-content.app-bg {
   cursor: pointer;
   margin-inline-start: 4px;
 
-  &:active {
-    opacity: 0.7;
-  }
+  &:active { opacity: 0.7; }
+}
+
+/* ----- Loader row — centered ----- */
+.loader-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 1rem 0;
 }
