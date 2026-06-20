@@ -143,8 +143,12 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   open_product(id: number) {
+    // Use the full product detail page — same as best-sellers / new-arrivals /
+    // category / cart. The legacy `/single` page is an incomplete preview (its
+    // "Add to Cart" only redirects to sign-in and it has no size/measurement
+    // UI), so home was the only surface sending users to a dead-end PDP.
     this.router.navigate(
-      ['/', 'single'],
+      ['/', 'product'],
       { queryParams: { id } }
     );
   }
