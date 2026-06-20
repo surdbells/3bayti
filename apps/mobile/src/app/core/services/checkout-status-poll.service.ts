@@ -2,8 +2,7 @@ import { Injectable } from '@angular/core';
 import { Observable, Subject, of, throwError, timer } from 'rxjs';
 import { catchError, map, switchMap, takeUntil, takeWhile } from 'rxjs/operators';
 
-import { NetworkService } from '../../service/network.service';
-import { GlobalComponent } from '../../global-component';
+import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
 
 /**
  * Status returned by GET /v3/checkout/status/{order_reference}.
@@ -94,7 +93,7 @@ const POLL_MAX_TICKS = Math.ceil(POLL_TIMEOUT_MS / POLL_INTERVAL_MS); // 30
  */
 @Injectable({ providedIn: 'root' })
 export class CheckoutStatusPollService {
-  constructor(private readonly networkService: NetworkService) {}
+  constructor(private readonly networkAdapter: MobileNetworkAdapter) {}
 
   /**
    * Start polling. Emits exactly ONE PollOutcome and completes.
@@ -113,12 +112,11 @@ export class CheckoutStatusPollService {
    * 'timeout' outcome rather than 'error' — the order may have
    * completed via webhook; user shouldn't see a hard failure.
    */
-  pollUntilTerminal(orderReference: string): Observable<PollOutcome> {
+  pollUntilTerminal(orderReference: string, authToken: string): Observable<PollOutcome> {
     if (!orderReference || typeof orderReference !== 'string') {
       return of<PollOutcome>({ kind: 'error', error: new Error('Missing order_reference') });
     }
 
-    const url = `${GlobalComponent.baseURL}v3/checkout/status/${encodeURIComponent(orderReference)}`;
     const stop$ = new Subject<void>();
     let tickCount = 0;
     let lastStatus: CheckoutStatus | null = null;
@@ -134,7 +132,7 @@ export class CheckoutStatusPollService {
           stop$.complete();
           return of<PollOutcome>({ kind: 'timeout', lastStatus });
         }
-        return this.fetchStatus(url).pipe(
+        return this.fetchStatus(orderReference, authToken).pipe(
           map((status): PollOutcome | null => {
             lastStatus = status;
             if (status.terminal) {
@@ -167,13 +165,19 @@ export class CheckoutStatusPollService {
    * Single status fetch — also exposed for unit testability without
    * standing up the full poll machinery.
    */
-  fetchStatus(url: string): Observable<CheckoutStatus> {
-    return this.networkService.get_request(url).pipe(
+  fetchStatus(orderReference: string, authToken: string): Observable<CheckoutStatus> {
+    // Direct v3 (GET /v3/checkout/status/:order_reference). Uses the v3 host +
+    // Bearer auth (the endpoint is user-scoped — a raw GET to the legacy host
+    // without auth previously failed every tick and fell back to 'timeout').
+    // transformCheckoutStatusResponse applies via get_v3, so response.data is
+    // the CheckoutStatus shape.
+    return this.networkAdapter.get_v3('GET /checkout/status/:order_reference', {
+      authToken,
+      pathParams: { order_reference: orderReference },
+    }).pipe(
       map((response: any): CheckoutStatus => {
-        // The adapter has already applied transformCheckoutStatusResponse
-        // and wrapped in the legacy envelope, so the v3 shape is at
-        // response.data. Dual-shape defence for the off-chance the
-        // response comes through unwrapped or pre-transform.
+        // Post-transform the v3 shape is at response.data. Dual-shape defence
+        // for the off-chance the response comes through unwrapped.
         const raw = response?.data ?? response;
         return {
           order_reference: typeof raw?.order_reference === 'string' ? raw.order_reference : '',

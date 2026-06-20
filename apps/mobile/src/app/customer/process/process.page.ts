@@ -140,7 +140,7 @@ finalize() {
         return;
       }
 
-      this.pollService.pollUntilTerminal(reference).subscribe({
+      this.pollService.pollUntilTerminal(reference, this.single_user.token).subscribe({
         next: (outcome: PollOutcome) => {
           this.ui_controls.confirming_transaction = false;
           switch (outcome.kind) {
