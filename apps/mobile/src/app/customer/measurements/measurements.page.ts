@@ -151,16 +151,20 @@ export class MeasurementsPage implements OnInit, OnDestroy {
   }
   get_measurement() {
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readMeasurement)
+    // Direct v3 (GET /v3/me/measurements). The response transform still applies
+    // via get_v3, so response.data keeps the legacy [{...values}] shape. v3
+    // values are numbers, so coerce to the string-typed form fields.
+    this.networkAdapter.get_v3('GET /me/measurements', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.update.bust =  response.data[0].bust
-            this.update.armhole = response.data[0].armhole
-            this.update.shoulder = response.data[0].shoulder
-            this.update.length = response.data[0].length
-            this.update.hip = response.data[0].hip
-            this.update.arm = response.data[0].arm
+          const m = response.data?.[0];
+          if (response.response_code === 200 && response.status === "success" && m) {
+            this.update.bust = m.bust != null ? String(m.bust) : '';
+            this.update.armhole = m.armhole != null ? String(m.armhole) : '';
+            this.update.shoulder = m.shoulder != null ? String(m.shoulder) : '';
+            this.update.length = m.length != null ? String(m.length) : '';
+            this.update.hip = m.hip != null ? String(m.hip) : '';
+            this.update.arm = m.arm != null ? String(m.arm) : '';
             this.ui_controls.is_loading = false;
           }else{
             this.ui_controls.is_empty = true;
@@ -171,19 +175,24 @@ export class MeasurementsPage implements OnInit, OnDestroy {
   }
   update_measurement() {
     if(this.isOnline){
-      this.update.id = this.single_user.id;
-      this.update.token = this.single_user.token;
       this.ui_controls.is_loading = true;
-      this.networkAdapter.post_request(this.update, GlobalComponent.updateMeasurement)
+      // Direct v3 (PUT /v3/me/measurements/default). v3 wants a numeric `values`
+      // map (cm, 0-500); send only the fields the user filled.
+      const values: Record<string, number> = {};
+      for (const k of ['bust', 'shoulder', 'armhole', 'length', 'hip', 'arm'] as const) {
+        const n = Number(this.update[k]);
+        if (Number.isFinite(n) && n > 0) values[k] = n;
+      }
+      this.networkAdapter.put_v3('PUT /me/measurements/default', { values }, { authToken: this.single_user.token })
         .subscribe(({
           next: (response: any) => {
             if (response.response_code === 200 && response.status === "success") {
-              this.success_notification(response.message);
+              this.success_notification(response.message || this.i18n.t('text_measurement_saved'));
               this.ui_controls.is_loading = false;
               this.get_measurement();
             }else{
               this.ui_controls.is_loading = false
-              this.error_notification(response.message);
+              this.error_notification(response.message || this.i18n.t('text_unable_to_save_measurement'));
             }
           },
           error: () => {
