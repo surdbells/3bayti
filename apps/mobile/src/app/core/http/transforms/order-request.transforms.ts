@@ -140,9 +140,34 @@ export function transformReadCartRequest(_body: unknown): {
   return { queryParams: {} };
 }
 
+/**
+ * Generic authenticated read with no path params, forwarding optional
+ * limit/offset (paginated reads like my-reviews; ignored when absent).
+ *
+ * Account reads (measurements, my-reviews, …) are POSTed by the mobile pages
+ * but v3 serves them as auth-scoped GETs. Without a request transform here the
+ * POST->GET conversion has nothing to match, so the call falls THROUGH to the
+ * legacy backend (api.3bayti.ae) — the root cause of the "still calling legacy"
+ * reports for these endpoints.
+ */
+export function transformAuthedRead(body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  const b = asRecord(body);
+  const q: Record<string, string | number | boolean> = {};
+  if (typeof b['limit'] === 'number') q['limit'] = b['limit'];
+  if (typeof b['offset'] === 'number') q['offset'] = b['offset'];
+  return { queryParams: q };
+}
+
 export const AUTHED_GET_REQUEST_TRANSFORMS: Record<string, BodyToRouteArgs> = {
   'GET /orders': transformReadOrdersListingRequest,
   'GET /cart': transformReadCartRequest,
+  // Account reads — v3 resolves them from the auth token (response transforms
+  // already registered in catalog-response.transforms.ts). Registering these
+  // is what stops the read from falling through to legacy.
+  'GET /me/measurements': transformAuthedRead,
+  'GET /me/reviews': transformAuthedRead,
   // 'GET /orders/:id' — would go here if mobile started calling
   // it via POST with the id in the body. Currently my-orders.page
   // navigates to a detail page that already uses GET; if it sends
