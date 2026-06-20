@@ -84,6 +84,10 @@ final class NoonWebhookController
         // signature-algorithm confirmation. No-op unless NOON_WEBHOOK_CAPTURE
         // is enabled; safe to inject unconditionally.
         private readonly \Bayti\Api\Payment\Noon\NoonWebhookCaptureRecorder $captureRecorder,
+        // Required (no default) so PHP-DI autowires it — same convention as
+        // $logger above. Used to deliver a gift card to its recipient the
+        // moment its funding payment is confirmed (deliverIfDue).
+        private readonly \Bayti\Api\Notification\GiftCardDeliveryService $giftCardDelivery,
     ) {
     }
 
@@ -732,6 +736,12 @@ final class NoonWebhookController
         try {
             $card->activate($ref);
             $gcRepo->save($card);
+
+            // Immediate recipient delivery now that payment is confirmed.
+            // No-op for a future-scheduled card (the dispatch-scheduled cron
+            // handles those). deliverIfDue is non-blocking, but it sits inside
+            // this try so it can never break webhook processing of a paid order.
+            $this->giftCardDelivery->deliverIfDue($card);
         } catch (\Throwable $e) {
             // Log but never throw — the order is already paid.
             $this->logger->error('webhook: gift card activation failed', [

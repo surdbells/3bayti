@@ -5,6 +5,7 @@ use Bayti\Api\Domain\GiftCard\GiftCard;
 use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Responder;
+use Bayti\Api\Notification\GiftCardDeliveryService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -24,6 +25,7 @@ final class ActivateGiftCardController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly GiftCardDeliveryService $deliveryService,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 
@@ -46,6 +48,15 @@ final class ActivateGiftCardController
         }
 
         $repo->save($card);
+
+        // Immediate recipient delivery (no-op for a future-scheduled card —
+        // the gift-cards:dispatch-scheduled cron handles those). deliverIfDue
+        // is already non-blocking; the catch is belt-and-braces so a delivery
+        // failure can never fail the activation webhook.
+        try {
+            $this->deliveryService->deliverIfDue($card);
+        } catch (\Throwable) {
+        }
 
         return $this->ok(['data' => GiftCardSerializer::shape($card)]);
     }

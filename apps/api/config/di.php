@@ -375,6 +375,72 @@ return [
         );
     },
 
+    // ── Gift-card recipient delivery (email + SMS) ────────────────────
+    //
+    // Renderer is a pure service — safe to autowire.
+    \Bayti\Api\Notification\GiftCardEmailTemplateRenderer::class => \DI\autowire(),
+
+    // SMS sender selection (env-gated). Defaults to NullSmsSender so the
+    // container ALWAYS boots — even in production WITHOUT SMS config —
+    // and gift-card SMS delivery simply no-ops + logs. The real
+    // MessageCentral sender is chosen ONLY when the operator explicitly
+    // opts in via MESSAGECENTRAL_SMS_ENABLED=true AND the shared
+    // MessageCentral creds are present. The exact send endpoint is
+    // unconfirmed, hence the explicit enable flag + the env-overridable
+    // path (see MessageCentralSmsSender for the operator checklist).
+    \Bayti\Api\Sms\SmsSenderInterface::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Sms\SmsSenderInterface {
+        $logger = $c->get(\Psr\Log\LoggerInterface::class);
+
+        $enabled = filter_var(
+            $_ENV['MESSAGECENTRAL_SMS_ENABLED'] ?? 'false',
+            FILTER_VALIDATE_BOOLEAN,
+        );
+
+        $customerId = $_ENV['MESSAGECENTRAL_CUSTOMER_ID'] ?? '';
+        $apiKey     = $_ENV['MESSAGECENTRAL_KEY'] ?? '';
+        $email      = $_ENV['MESSAGECENTRAL_EMAIL'] ?? '';
+        $senderId   = $_ENV['MESSAGECENTRAL_SMS_SENDER_ID'] ?? '';
+
+        if (!$enabled || $customerId === '' || $apiKey === '' || $email === '' || $senderId === '') {
+            return new \Bayti\Api\Sms\NullSmsSender($logger);
+        }
+
+        $http = new GuzzleClient([
+            'base_uri' => $_ENV['MESSAGECENTRAL_BASE_URL'] ?? 'https://cpaas.messagecentral.com',
+            'timeout' => 10,
+            'connect_timeout' => 5,
+        ]);
+
+        return new \Bayti\Api\Sms\MessageCentralSmsSender(
+            http: $http,
+            customerId: $customerId,
+            apiKey: $apiKey,
+            email: $email,
+            senderId: $senderId,
+            sendPath: $_ENV['MESSAGECENTRAL_SMS_PATH'] ?? \Bayti\Api\Sms\MessageCentralSmsSender::DEFAULT_SEND_PATH,
+            country: $_ENV['MESSAGECENTRAL_COUNTRY'] ?? '971',
+            logger: $logger,
+        );
+    },
+
+    // Delivery orchestrator. Factory-bound (not autowired) because its
+    // logger param has a null-coalesced default and we want an explicit
+    // container logger — also keeps it consistent with the other
+    // notification services in this block.
+    \Bayti\Api\Notification\GiftCardDeliveryService::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Notification\GiftCardDeliveryService {
+        return new \Bayti\Api\Notification\GiftCardDeliveryService(
+            renderer: $c->get(\Bayti\Api\Notification\GiftCardEmailTemplateRenderer::class),
+            mailer: $c->get(\Bayti\Api\Notification\MailerInterface::class),
+            smsSender: $c->get(\Bayti\Api\Sms\SmsSenderInterface::class),
+            em: $c->get(\Doctrine\ORM\EntityManagerInterface::class),
+            logger: $c->get(\Psr\Log\LoggerInterface::class),
+        );
+    },
+
     // M3.2.Z.4-C — Push notifications (sender + orchestrator).
     //
     // PushSenderInterface binding selects the implementation based on

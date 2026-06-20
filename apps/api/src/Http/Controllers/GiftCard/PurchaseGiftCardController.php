@@ -76,6 +76,20 @@ final class PurchaseGiftCardController
             throw HttpException::badRequest("recipient_photo_url is only supported for the 'luxury' theme.");
         }
 
+        // Optional recipient contact for auto-delivery. Both optional;
+        // when absent the buyer shares the code manually (today's flow).
+        $recipientEmail = isset($body['recipient_email']) && trim((string) $body['recipient_email']) !== ''
+            ? trim((string) $body['recipient_email']) : null;
+        if ($recipientEmail !== null && !filter_var($recipientEmail, FILTER_VALIDATE_EMAIL)) {
+            throw HttpException::badRequest('recipient_email must be a valid email address.');
+        }
+
+        $recipientPhone = isset($body['recipient_phone']) && trim((string) $body['recipient_phone']) !== ''
+            ? trim((string) $body['recipient_phone']) : null;
+        if ($recipientPhone !== null && !preg_match('/^\+?[0-9]{7,15}$/', $recipientPhone)) {
+            throw HttpException::badRequest('recipient_phone must be a valid phone number (E.164-ish, 7-15 digits).');
+        }
+
         // Scheduled delivery
         $scheduledDeliveryAt = null;
         if (!empty($body['scheduled_delivery_at'])) {
@@ -98,6 +112,8 @@ final class PurchaseGiftCardController
                 recipientMessage: $recipientMessage ?: null,
                 recipientPhotoUrl: $recipientPhotoUrl,
                 scheduledDeliveryAt: $scheduledDeliveryAt,
+                recipientEmail: $recipientEmail,
+                recipientPhone: $recipientPhone,
             );
         } catch (\InvalidArgumentException $e) {
             throw HttpException::badRequest($e->getMessage());

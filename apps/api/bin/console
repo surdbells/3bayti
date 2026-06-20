@@ -21,6 +21,7 @@ declare(strict_types=1);
  */
 
 use Bayti\Api\Bootstrap;
+use Bayti\Api\Console\DispatchScheduledGiftCardsCommand;
 use Bayti\Api\Console\ReconcilePendingOrdersCommand;
 use Bayti\Api\Console\SendAbandonedCartRemindersCommand;
 use Bayti\Api\Domain\Cart\CartAbandonmentFinder;
@@ -127,6 +128,19 @@ try {
     $cli->add(new SendAbandonedCartRemindersCommand($em, $finder, $cartNotifications, $logger));
 } catch (\Throwable $e) {
     $logger->info('cart reminders command not registered', [
+        'reason' => $e->getMessage(),
+    ]);
+}
+
+// Gift-card scheduled/retry delivery. Resolves the delivery service
+// via DI (which env-gates the SMS sender, defaulting to a no-op). No
+// payment-gateway dependency, so it registers on a fresh sandbox too.
+try {
+    /** @var \Bayti\Api\Notification\GiftCardDeliveryService $giftDelivery */
+    $giftDelivery = $container->get(\Bayti\Api\Notification\GiftCardDeliveryService::class);
+    $cli->add(new DispatchScheduledGiftCardsCommand($em, $giftDelivery, $logger));
+} catch (\Throwable $e) {
+    $logger->info('gift-card dispatch command not registered', [
         'reason' => $e->getMessage(),
     ]);
 }

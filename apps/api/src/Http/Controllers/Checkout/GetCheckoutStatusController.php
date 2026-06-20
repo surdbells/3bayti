@@ -57,6 +57,7 @@ final class GetCheckoutStatusController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly \Bayti\Api\Notification\GiftCardDeliveryService $giftCardDelivery,
     ) {
     }
 
@@ -114,6 +115,10 @@ final class GetCheckoutStatusController
                 if ($card !== null && $card->getStatus() === GiftCard::STATUS_PENDING_PAYMENT) {
                     $card->activate($reference);
                     $gcRepo->save($card);
+
+                    // Webhook was delayed; deliver to the recipient now that
+                    // this poll has activated the card (no-op if future-scheduled).
+                    $this->giftCardDelivery->deliverIfDue($card);
                 }
             } catch (\Throwable) {
                 // Never fail the status poll due to activation error.

@@ -163,6 +163,35 @@ class GiftCard
     #[ORM\Column(name: 'recipient_photo_url', type: 'string', length: 500, nullable: true)]
     private ?string $recipientPhotoUrl = null;
 
+    // ── Recipient delivery (optional) ─────────────────────────────────
+    //
+    // When recipient_email / recipient_phone is set, the card is
+    // auto-delivered on activation (or by the scheduled-delivery cron).
+    // When null, the buyer shares the formatted code manually — the
+    // original, fully backward-compatible behaviour.
+
+    /** Optional recipient email for auto-delivery. Validated at creation. */
+    #[ORM\Column(name: 'recipient_email', type: 'string', length: 255, nullable: true)]
+    private ?string $recipientEmail = null;
+
+    /** Optional recipient phone (E.164-ish, stored as given) for SMS delivery. */
+    #[ORM\Column(name: 'recipient_phone', type: 'string', length: 32, nullable: true)]
+    private ?string $recipientPhone = null;
+
+    /**
+     * When the delivery email was sent. Null = not yet delivered.
+     * Non-null is the idempotency guard (never re-send the email).
+     */
+    #[ORM\Column(name: 'email_delivered_at', type: 'datetime_immutable', nullable: true)]
+    private ?DateTimeImmutable $emailDeliveredAt = null;
+
+    /**
+     * When the delivery SMS was sent. Null = not yet delivered.
+     * Non-null is the idempotency guard (never re-send the SMS).
+     */
+    #[ORM\Column(name: 'sms_delivered_at', type: 'datetime_immutable', nullable: true)]
+    private ?DateTimeImmutable $smsDeliveredAt = null;
+
     /**
      * Optional scheduled delivery date. When set, the card is NOT
      * immediately sent to the recipient — it's queued and delivered
@@ -208,6 +237,10 @@ class GiftCard
         ?string $recipientMessage = null,
         ?string $recipientPhotoUrl = null,
         ?DateTimeImmutable $scheduledDeliveryAt = null,
+        // Trailing params (appended so existing callers/tests are
+        // unaffected). Both optional; null = no auto-delivery.
+        ?string $recipientEmail = null,
+        ?string $recipientPhone = null,
     ) {
         $this->assertValidDenomination($denomination);
         $this->assertValidTheme($theme);
@@ -216,6 +249,13 @@ class GiftCard
             throw new \InvalidArgumentException(
                 "recipient_photo_url is only supported for the 'luxury' theme."
             );
+        }
+
+        if ($recipientEmail !== null) {
+            $this->assertValidEmail($recipientEmail);
+        }
+        if ($recipientPhone !== null) {
+            $this->assertValidPhone($recipientPhone);
         }
 
         $this->code         = strtoupper(bin2hex(random_bytes(8)));
@@ -228,6 +268,8 @@ class GiftCard
         $this->recipientMessage    = $recipientMessage !== null ? mb_substr($recipientMessage, 0, 150) : null;
         $this->recipientPhotoUrl   = $recipientPhotoUrl;
         $this->scheduledDeliveryAt = $scheduledDeliveryAt;
+        $this->recipientEmail      = $recipientEmail;
+        $this->recipientPhone      = $recipientPhone;
 
         $this->transactions = new ArrayCollection();
         $this->createdAt    = new DateTimeImmutable('now', new DateTimeZone('UTC'));
@@ -365,6 +407,38 @@ class GiftCard
         $this->recipientUser = $user;
     }
 
+    // ── Delivery ──────────────────────────────────────────────────────
+    //
+    // Each channel (email / SMS) is tracked independently for
+    // idempotency. needs*Delivery() returns true only when a recipient
+    // contact exists for that channel AND it has not yet been delivered.
+    // The GiftCardDeliveryService consults these before sending and
+    // calls mark*Delivered() after a successful send.
+
+    /** True when there is a recipient email that has not yet been delivered. */
+    public function needsEmailDelivery(): bool
+    {
+        return $this->recipientEmail !== null && $this->emailDeliveredAt === null;
+    }
+
+    /** True when there is a recipient phone that has not yet been delivered. */
+    public function needsSmsDelivery(): bool
+    {
+        return $this->recipientPhone !== null && $this->smsDeliveredAt === null;
+    }
+
+    public function markEmailDelivered(DateTimeImmutable $at): void
+    {
+        $this->emailDeliveredAt = $at;
+        $this->updatedAt = $at;
+    }
+
+    public function markSmsDelivered(DateTimeImmutable $at): void
+    {
+        $this->smsDeliveredAt = $at;
+        $this->updatedAt = $at;
+    }
+
     // ── Convenience queries ───────────────────────────────────────────
 
     public function isSpendable(): bool
@@ -407,6 +481,10 @@ class GiftCard
     public function getRecipientName(): ?string { return $this->recipientName; }
     public function getRecipientMessage(): ?string { return $this->recipientMessage; }
     public function getRecipientPhotoUrl(): ?string { return $this->recipientPhotoUrl; }
+    public function getRecipientEmail(): ?string { return $this->recipientEmail; }
+    public function getRecipientPhone(): ?string { return $this->recipientPhone; }
+    public function getEmailDeliveredAt(): ?DateTimeImmutable { return $this->emailDeliveredAt; }
+    public function getSmsDeliveredAt(): ?DateTimeImmutable { return $this->smsDeliveredAt; }
     public function getScheduledDeliveryAt(): ?DateTimeImmutable { return $this->scheduledDeliveryAt; }
     public function getActivatedAt(): ?DateTimeImmutable { return $this->activatedAt; }
     public function getExpiresAt(): ?DateTimeImmutable { return $this->expiresAt; }
@@ -474,6 +552,30 @@ class GiftCard
         if (!preg_match('/^\d+(\.\d{1,2})?$/', $v)) {
             throw new \InvalidArgumentException(
                 "{$field} must be a non-negative DECIMAL(10,2) string, got '{$v}'."
+            );
+        }
+    }
+
+    private function assertValidEmail(string $email): void
+    {
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            throw new \InvalidArgumentException("recipient_email '{$email}' is not a valid email address.");
+        }
+        if (mb_strlen($email) > 255) {
+            throw new \InvalidArgumentException('recipient_email must be at most 255 characters.');
+        }
+    }
+
+    /**
+     * Light E.164-ish validation: an optional leading '+' followed by
+     * 7–15 digits. We store the value exactly as given (no
+     * normalisation) — the SMS sender strips the country code itself.
+     */
+    private function assertValidPhone(string $phone): void
+    {
+        if (!preg_match('/^\+?[0-9]{7,15}$/', $phone)) {
+            throw new \InvalidArgumentException(
+                "recipient_phone '{$phone}' is not a valid phone number (expected E.164-ish, 7-15 digits)."
             );
         }
     }

@@ -111,6 +111,10 @@ final class GiftCardSerializer
             'recipient_name'        => $card->getRecipientName(),
             'recipient_message'     => $card->getRecipientMessage(),
             'recipient_photo_url'   => $card->getRecipientPhotoUrl(),
+            'recipient_email'       => self::maskEmail($card->getRecipientEmail()),
+            'recipient_phone'       => self::maskPhone($card->getRecipientPhone()),
+            'email_delivered_at'    => $card->getEmailDeliveredAt()?->format(\DateTimeInterface::ATOM),
+            'sms_delivered_at'      => $card->getSmsDeliveredAt()?->format(\DateTimeInterface::ATOM),
             'scheduled_delivery_at' => $card->getScheduledDeliveryAt()?->format(\DateTimeInterface::ATOM),
             'activated_at'          => $card->getActivatedAt()?->format(\DateTimeInterface::ATOM),
             'expires_at'            => $card->getExpiresAt()?->format(\DateTimeInterface::ATOM),
@@ -133,6 +137,43 @@ final class GiftCardSerializer
         }
 
         return $data;
+    }
+
+    /**
+     * Lightly mask a recipient email for the response shape, e.g.
+     * 'sara@domain.com' -> 's***@domain.com'. Null stays null.
+     */
+    private static function maskEmail(?string $email): ?string
+    {
+        if ($email === null) {
+            return null;
+        }
+        $at = strpos($email, '@');
+        if ($at === false || $at < 1) {
+            return '***';
+        }
+        $local  = substr($email, 0, $at);
+        $domain = substr($email, $at);
+        return $local[0] . '***' . $domain;
+    }
+
+    /**
+     * Lightly mask a recipient phone, keeping only the last 2 digits,
+     * e.g. '+971501234567' -> '+*********67'. Null stays null.
+     */
+    private static function maskPhone(?string $phone): ?string
+    {
+        if ($phone === null) {
+            return null;
+        }
+        $len = strlen($phone);
+        if ($len <= 2) {
+            return str_repeat('*', $len);
+        }
+        $plus = str_starts_with($phone, '+') ? '+' : '';
+        $last2 = substr($phone, -2);
+        $maskedCount = $len - strlen($plus) - 2;
+        return $plus . str_repeat('*', max(0, $maskedCount)) . $last2;
     }
 
     /**

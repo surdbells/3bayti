@@ -1,0 +1,205 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Bayti\Api\Tests\Notification;
+
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\User\User;
+use Bayti\Api\Notification\GiftCardDeliveryService;
+use Bayti\Api\Notification\GiftCardEmailTemplateRenderer;
+use Bayti\Api\Notification\InMemoryMailer;
+use Bayti\Api\Notification\MailerException;
+use Bayti\Api\Notification\MailerInterface;
+use Bayti\Api\Sms\InMemorySmsSender;
+use Doctrine\ORM\EntityManagerInterface;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
+use Psr\Log\NullLogger;
+
+#[CoversClass(GiftCardDeliveryService::class)]
+#[CoversClass(GiftCardEmailTemplateRenderer::class)]
+final class GiftCardDeliveryServiceTest extends TestCase
+{
+    private InMemoryMailer $mailer;
+    private InMemorySmsSender $sms;
+
+    protected function setUp(): void
+    {
+        $this->mailer = new InMemoryMailer();
+        $this->sms = new InMemorySmsSender();
+    }
+
+    #[Test]
+    public function emailOnlyCardDeliversEmailAndMarksDelivered(): void
+    {
+        $card = $this->makeCard(email: 'sara@example.com', phone: null);
+        $service = $this->makeService();
+
+        $service->deliver($card);
+
+        self::assertCount(1, $this->mailer->sent());
+        self::assertSame('sara@example.com', $this->mailer->sent()[0]['to']);
+        self::assertCount(0, $this->sms->sent());
+        self::assertNotNull($card->getEmailDeliveredAt());
+        self::assertNull($card->getSmsDeliveredAt());
+        self::assertFalse($card->needsEmailDelivery());
+    }
+
+    #[Test]
+    public function smsOnlyCardDeliversSmsAndMarksDelivered(): void
+    {
+        $card = $this->makeCard(email: null, phone: '+971501234567');
+        $service = $this->makeService();
+
+        $service->deliver($card);
+
+        self::assertCount(0, $this->mailer->sent());
+        self::assertCount(1, $this->sms->sent());
+        self::assertSame('+971501234567', $this->sms->sent()[0]['to']);
+        self::assertStringContainsString('3bayti gift card', $this->sms->sent()[0]['message']);
+        self::assertStringContainsString($card->formattedCode(), $this->sms->sent()[0]['message']);
+        self::assertNotNull($card->getSmsDeliveredAt());
+        self::assertNull($card->getEmailDeliveredAt());
+    }
+
+    #[Test]
+    public function bothChannelsDeliverWhenBothContactsPresent(): void
+    {
+        $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');
+        $service = $this->makeService();
+
+        $service->deliver($card);
+
+        self::assertCount(1, $this->mailer->sent());
+        self::assertCount(1, $this->sms->sent());
+        self::assertNotNull($card->getEmailDeliveredAt());
+        self::assertNotNull($card->getSmsDeliveredAt());
+    }
+
+    #[Test]
+    public function noContactDeliversNothing(): void
+    {
+        $card = $this->makeCard(email: null, phone: null);
+        $service = $this->makeService();
+
+        $service->deliver($card);
+
+        self::assertCount(0, $this->mailer->sent());
+        self::assertCount(0, $this->sms->sent());
+        self::assertNull($card->getEmailDeliveredAt());
+        self::assertNull($card->getSmsDeliveredAt());
+    }
+
+    #[Test]
+    public function redeliveringAlreadyDeliveredCardIsNoOp(): void
+    {
+        $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');
+        $service = $this->makeService();
+
+        $service->deliver($card);
+        $firstEmailAt = $card->getEmailDeliveredAt();
+        $firstSmsAt = $card->getSmsDeliveredAt();
+
+        // Second deliver() must not send again.
+        $service->deliver($card);
+
+        self::assertCount(1, $this->mailer->sent());
+        self::assertCount(1, $this->sms->sent());
+        self::assertSame($firstEmailAt, $card->getEmailDeliveredAt());
+        self::assertSame($firstSmsAt, $card->getSmsDeliveredAt());
+    }
+
+    #[Test]
+    public function mailerThrowsIsNonBlockingAndLeavesChannelUndelivered(): void
+    {
+        $throwingMailer = new class implements MailerInterface {
+            public int $attempts = 0;
+            public function send(string $to, string $subject, string $textBody, string $htmlBody, array $context = []): void
+            {
+                $this->attempts++;
+                throw new MailerException(MailerException::KIND_TRANSPORT, 'boom');
+            }
+        };
+
+        $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');
+        $service = new GiftCardDeliveryService(
+            renderer: new GiftCardEmailTemplateRenderer(),
+            mailer: $throwingMailer,
+            smsSender: $this->sms,
+            em: $this->makeEm(),
+            logger: new NullLogger(),
+        );
+
+        // Must NOT throw.
+        $service->deliver($card);
+
+        self::assertSame(1, $throwingMailer->attempts);
+        // Email failed -> still needs delivery (cron will retry).
+        self::assertNull($card->getEmailDeliveredAt());
+        self::assertTrue($card->needsEmailDelivery());
+        // SMS is independent -> delivered fine.
+        self::assertNotNull($card->getSmsDeliveredAt());
+        self::assertCount(1, $this->sms->sent());
+    }
+
+    #[Test]
+    public function smsThrowsIsNonBlockingAndEmailStillDelivers(): void
+    {
+        $throwingSms = new InMemorySmsSender(throwOnSend: true);
+        $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');
+        $service = new GiftCardDeliveryService(
+            renderer: new GiftCardEmailTemplateRenderer(),
+            mailer: $this->mailer,
+            smsSender: $throwingSms,
+            em: $this->makeEm(),
+            logger: new NullLogger(),
+        );
+
+        $service->deliver($card);
+
+        self::assertNotNull($card->getEmailDeliveredAt());
+        self::assertNull($card->getSmsDeliveredAt());
+        self::assertTrue($card->needsSmsDelivery());
+        self::assertCount(1, $this->mailer->sent());
+    }
+
+    // -----------------------------------------------------------------
+
+    private function makeService(): GiftCardDeliveryService
+    {
+        return new GiftCardDeliveryService(
+            renderer: new GiftCardEmailTemplateRenderer(),
+            mailer: $this->mailer,
+            smsSender: $this->sms,
+            em: $this->makeEm(),
+            logger: new NullLogger(),
+        );
+    }
+
+    private function makeEm(): EntityManagerInterface
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+        $em->method('flush'); // no-op
+        return $em;
+    }
+
+    private function makeCard(?string $email, ?string $phone): GiftCard
+    {
+        $buyer = new User('buyer@example.com', '+971500000000', password_hash('p', PASSWORD_BCRYPT), 'AE');
+        $buyer->setName('Omar', 'Khan');
+
+        return new GiftCard(
+            buyerUser: $buyer,
+            denomination: '500.00',
+            theme: 'birthday',
+            recipientName: 'Sara',
+            recipientMessage: 'Happy Birthday!',
+            recipientPhotoUrl: null,
+            scheduledDeliveryAt: null,
+            recipientEmail: $email,
+            recipientPhone: $phone,
+        );
+    }
+}
