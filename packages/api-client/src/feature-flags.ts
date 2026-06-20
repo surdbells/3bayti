@@ -315,10 +315,15 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/products',
     shape: 'v3-envelope',
   },
+  // "Trending stores" — curated vendors with embedded products, NOT a flat
+  // product list. Routes to /v3/featured-vendors (ListFeaturedVendorsController),
+  // mapped client-side by transformFeaturedVendorsResponse. (Was wrongly
+  // pointed at /v3/products, which returned products the store template
+  // couldn't render -> empty section.)
   'GET /mobile/featured': {
     target: 'new',
     oldPath: '/customer/featured',
-    newPath: '/v3/products',
+    newPath: '/v3/featured-vendors',
     shape: 'v3-envelope',
   },
   'GET /mobile/explore-listing': {

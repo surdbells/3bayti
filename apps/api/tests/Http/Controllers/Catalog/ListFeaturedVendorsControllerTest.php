@@ -457,7 +457,7 @@ final class ListFeaturedVendorsControllerTest extends HttpTestCase
 
         $body = $this->jsonBody($response);
         self::assertEqualsCanonicalizing(
-            ['slug', 'name', 'description', 'rating', 'rating_count', 'products'],
+            ['slug', 'store_id', 'name', 'description', 'rating', 'rating_count', 'products'],
             array_keys($body['data'][0]),
             'Exact FeaturedVendor key set must be preserved'
         );

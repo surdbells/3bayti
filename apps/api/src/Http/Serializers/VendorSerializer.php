@@ -154,6 +154,11 @@ final class VendorSerializer
     ): array {
         return [
             'slug' => $vendor->getSlug(),
+            // Legacy store id — apps/web navigates featured vendors by slug,
+            // but apps/mobile's trending-stores cards open the store + its
+            // reviews via the by-legacy-id vendor endpoints. Additive: web
+            // ignores it. Null for vendors with no legacy row.
+            'store_id' => $vendor->getLegacyVendorId(),
             'name' => $vendor->getName(),
             'description' => $vendor->getDescription(),
             // Rating: round to 1dp for display; null preserved as null
@@ -164,12 +169,17 @@ final class VendorSerializer
             'products' => array_map(
                 static fn (Product $p): array => [
                     'id' => $p->getId(),
+                    // Legacy product id + price for apps/mobile's thumbnail
+                    // cards (tap -> single product via by-legacy-id; price
+                    // shown under the thumbnail). Additive for apps/web.
+                    'legacy_product_id' => $p->getLegacyProductId(),
                     'slug' => $p->getSlug(),
                     // null primary_image_url falls back to empty string;
                     // apps/web's <img> would render a broken icon either way
                     // but empty string is the more honest representation.
                     'image_url' => $p->getPrimaryImageUrl() ?? '',
                     'name' => $p->getName(),
+                    'price' => (float) $p->getPrice(),
                 ],
                 $embeddedProducts,
             ),

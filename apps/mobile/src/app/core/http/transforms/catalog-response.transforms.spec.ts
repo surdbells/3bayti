@@ -390,8 +390,8 @@ describe('transformStylesListResponse', () => {
 });
 
 describe('CATALOG_RESPONSE_TRANSFORMS registry', () => {
-  it('contains exactly 14 entries (10 from M3.1.5, +4 from M3.1.5.5)', () => {
-    expect(Object.keys(CATALOG_RESPONSE_TRANSFORMS).length).toBe(14);
+  it('contains exactly 22 entries', () => {
+    expect(Object.keys(CATALOG_RESPONSE_TRANSFORMS).length).toBe(22);
   });
 
   it('every entry is callable and safely handles minimal input', () => {
@@ -411,7 +411,9 @@ describe('CATALOG_RESPONSE_TRANSFORMS registry', () => {
     const listEndpoints = [
       'GET /mobile/new-arrivals',
       'GET /mobile/new-arrivals-listing',
-      'GET /mobile/featured',
+      // best-sellers route to /v3/products like new-arrivals (sort=best_seller)
+      'GET /mobile/best-sellers',
+      'GET /mobile/best-sellers-listing',
       'GET /mobile/explore-listing',
       'GET /mobile/category-listing',
       'GET /mobile/vendors-products',
@@ -420,6 +422,8 @@ describe('CATALOG_RESPONSE_TRANSFORMS registry', () => {
       'GET /mobile/search',
       'GET /mobile/products-by-labels',
     ];
+    // NB: 'GET /mobile/featured' now uses transformFeaturedVendorsResponse
+    // (Trending stores = vendor list), so it is intentionally NOT here.
     for (const key of listEndpoints) {
       expect(CATALOG_RESPONSE_TRANSFORMS[key]).toBe(transformProductListResponse);
     }

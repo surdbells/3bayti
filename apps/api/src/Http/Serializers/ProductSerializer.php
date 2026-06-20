@@ -193,6 +193,12 @@ final class ProductSerializer
         return [
             'id' => $p->getId(),
             'slug' => $p->getSlug(),
+            // Legacy product id — mobile cards navigate to the single-product
+            // page via GET /v3/products/by-legacy-id/{id}, so the list must
+            // surface the legacy id (null for v3-native products with no
+            // legacy row). Without it the card sends the v3 id and the
+            // by-legacy-id lookup returns NOT_FOUND.
+            'legacy_product_id' => $p->getLegacyProductId(),
             'name' => $p->getName(),
             'sku' => null, // legacy has no SKU column; we may add later
             'price' => $this->money($p->getPrice()),

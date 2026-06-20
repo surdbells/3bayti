@@ -52,18 +52,20 @@ final class VendorSerializerFeaturedShapeTest extends TestCase
         self::assertSame(87, $shape['rating_count']);
         self::assertCount(2, $shape['products']);
 
-        // No surplus keys (apps/web type is strict)
+        // Exact key set. store_id is additive for apps/mobile (legacy
+        // vendor id for by-legacy-id navigation); apps/web ignores it.
         self::assertEqualsCanonicalizing(
-            ['slug', 'name', 'description', 'rating', 'rating_count', 'products'],
+            ['slug', 'store_id', 'name', 'description', 'rating', 'rating_count', 'products'],
             array_keys($shape),
-            'Top-level keys must match FeaturedVendor interface exactly.'
+            'Top-level keys must match the FeaturedVendor contract.'
         );
 
-        // Product shape
+        // Product shape. legacy_product_id + price are additive for
+        // apps/mobile (tap -> single-product via by-legacy-id; thumbnail price).
         self::assertEqualsCanonicalizing(
-            ['id', 'slug', 'image_url', 'name'],
+            ['id', 'legacy_product_id', 'slug', 'image_url', 'name', 'price'],
             array_keys($shape['products'][0]),
-            'Product keys must match FeaturedVendorProduct interface exactly.'
+            'Product keys must match the FeaturedVendorProduct contract.'
         );
         self::assertSame('silk-abaya', $shape['products'][0]['slug']);
         self::assertSame('Silk Abaya', $shape['products'][0]['name']);

@@ -264,7 +264,11 @@ function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
   if (!isRecord(item)) return {};
   return {
     // Primary legacy bindings (verified via field-binding audit):
-    product_id: asNumber(item['id']),
+    // Prefer the legacy product id: the single-product page looks the
+    // product up via /v3/products/by-legacy-id/{id}, so the card must carry
+    // the legacy id, not the v3 id (else the tap returns NOT_FOUND). Falls
+    // back to the v3 id for v3-native products that have no legacy row.
+    product_id: asNumberOrNull(item['legacy_product_id']) ?? asNumber(item['id']),
     product_name: asString(item['name']),
     image_1: flatImageUrl(item['primary_image']),
     price: flatPrice(item['price']),
@@ -637,6 +641,49 @@ function legacyStyleProductFromV3Product(item: unknown): Record<string, unknown>
 }
 
 /* ============================================================== *
+ * Featured-vendors transform (home "Trending stores")
+ * ============================================================== */
+
+/**
+ * v3 GET /v3/featured-vendors -> legacy "trending stores" Store[] shape the
+ * mobile home page binds: {store_id, store_name, store_desc, rating,
+ * rating_count, products: [{product_id, product_name, image, price}]}.
+ *
+ * Mobile navigates by LEGACY ids: store_id opens the store + its reviews
+ * (by-legacy-id vendor endpoints); product_id opens the single-product page
+ * (by-legacy-id). The v3 featuredShape now surfaces store_id +
+ * legacy_product_id + price for exactly this consumer (additive for web).
+ *
+ * Previously this endpoint was (incorrectly) routed to /v3/products and
+ * mapped with transformProductListResponse, yielding a flat product list
+ * with no `.products` array — so the store template rendered nothing.
+ */
+export function transformFeaturedVendorsResponse(data: unknown): unknown {
+  if (!Array.isArray(data)) return [];
+  return data.map((v) => {
+    if (!isRecord(v)) return {};
+    const products = Array.isArray(v['products']) ? v['products'] : [];
+    return {
+      store_id: asNumber(v['store_id']),
+      store_name: asString(v['name']),
+      store_desc: asString(v['description']),
+      rating: v['rating'] ?? null,
+      rating_count: asNumber(v['rating_count']),
+      products: products.map((p) => {
+        if (!isRecord(p)) return {};
+        return {
+          product_id: asNumberOrNull(p['legacy_product_id']) ?? asNumber(p['id']),
+          product_name: asString(p['name']),
+          image: asString(p['image_url']),
+          price: asNumber(p['price']),
+          slug: asString(p['slug']),
+        };
+      }),
+    };
+  });
+}
+
+/* ============================================================== *
  * Registry — keyed by routeKey
  * ============================================================== */
 
@@ -644,7 +691,15 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   // List-shape endpoints
   'GET /mobile/new-arrivals': transformProductListResponse,
   'GET /mobile/new-arrivals-listing': transformProductListResponse,
-  'GET /mobile/featured': transformProductListResponse,
+  // Best-sellers route to /v3/products like new-arrivals (sort=best_seller);
+  // they were flipped to target:'new' but the transform was never registered,
+  // so the raw v3 shape (price object, primary_image object) leaked to the
+  // legacy card bindings. Same mapper as new-arrivals.
+  'GET /mobile/best-sellers': transformProductListResponse,
+  'GET /mobile/best-sellers-listing': transformProductListResponse,
+  // Featured = "Trending stores" — a vendor list with embedded products,
+  // NOT a flat product list (see transformFeaturedVendorsResponse).
+  'GET /mobile/featured': transformFeaturedVendorsResponse,
   'GET /mobile/explore-listing': transformProductListResponse,
   'GET /mobile/category-listing': transformProductListResponse,
   'GET /mobile/vendors-products': transformProductListResponse,
