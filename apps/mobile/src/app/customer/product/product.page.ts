@@ -466,10 +466,6 @@ export class ProductPage implements OnInit, OnDestroy {
     this.router.navigate(['/', 'wishlist']);
   }
 
-  user_cart() {
-    this.router.navigate(['/', 'cart']);
-  }
-
   user_messages() {
     this.router.navigate(['/', 'messages']);
   }
@@ -766,10 +762,18 @@ export class ProductPage implements OnInit, OnDestroy {
       };
 
       this.localCart.add(localItem)
-        .then(() => {
+        .then(async () => {
           this.success_notification(this.i18n.t('text_added_to_cart'));
           this.ui_controls.is_adding_to_cart = false;
-          this.user_cart();
+          // Stay on the PDP (mirror web). Refresh the cart-count badge so
+          // the shopper gets feedback — read the new total from the local
+          // guest cart and persist it under Preferences('count').
+          try {
+            const count = await this.localCart.count();
+            await Preferences.set({ key: 'count', value: String(count) });
+          } catch {
+            /* badge refresh is best-effort */
+          }
           this.cdr.markForCheck();
         })
         .catch((err) => {
@@ -821,7 +825,16 @@ export class ProductPage implements OnInit, OnDestroy {
                 : this.i18n.t('text_added_to_cart');
             this.success_notification(successText);
             this.ui_controls.is_adding_to_cart = false;
-            this.user_cart();
+            // Stay on the PDP (mirror web). Refresh the cart-count badge —
+            // the transformAddCartResponse transform exposes the new total
+            // as response.data.count; persist it under Preferences('count').
+            const newCount =
+              response.data && typeof response.data === 'object' && response.data.count != null
+                ? response.data.count
+                : undefined;
+            if (newCount !== undefined) {
+              Preferences.set({ key: 'count', value: String(newCount) });
+            }
           } else {
             this.ui_controls.is_empty = true;
             this.ui_controls.is_adding_to_cart = false;
