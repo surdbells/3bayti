@@ -488,6 +488,12 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
     this.step = 2;
     this.scrollContentToTop();
+    // Safety net: the base quote is fetched on cart load, but if that raced
+    // or failed (leaving the order-summary totals at 0), re-fetch it now that
+    // the user is on the review step so delivery/total populate.
+    if (!this.promo.quote) {
+      this.quoteCart(this.promo.applied ? this.promo.code : null);
+    }
   }
 
   /** Step 2 -> Step 1 (back to the address step). */
