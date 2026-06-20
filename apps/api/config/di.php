@@ -628,7 +628,14 @@ return [
      * above), MailerInterface (NullMailer in dev/test, ZeptoMail in
      * prod — bound in the notification block), LoggerInterface.
      */
-    \Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider::class => \DI\autowire(),
+    \Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider::class => \DI\autowire()
+        // Bind the logger explicitly via get() — the constructor has a
+        // `LoggerInterface $logger = new NullLogger()` default, and PHP-DI's
+        // COMPILED container cannot serialise a literal object default
+        // ("objects cannot be compiled"). MessageCentral/InMemory providers
+        // dodge this by being factory-bound; this one is autowired, so we
+        // override the param to a container reference so it compiles.
+        ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
 
     OtpService::class => \DI\autowire(),
 
