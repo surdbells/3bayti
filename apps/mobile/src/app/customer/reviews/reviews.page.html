@@ -24,8 +24,8 @@
           <ion-card (click)="start_delete_review(item.id)" class="review-card">
             <ion-card-content>
               <div class="review-card__header">
-                <ax-icon name="store" class="review-card__icon" />
-                <span class="review-card__store">{{ item?.store_name || '—' }}</span>
+                <ax-icon name="package" class="review-card__icon" />
+                <span class="review-card__store">{{ item?.product_name || '—' }}</span>
               </div>
               <div class="review-card__body">
                 <p class="review-card__comment">{{ item?.comment || '' }}</p>

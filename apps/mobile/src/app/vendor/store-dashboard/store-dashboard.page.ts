@@ -21,7 +21,7 @@ import {
   AlertController,
   ToastController
 } from '@ionic/angular/standalone';
-import { Subscription, forkJoin } from 'rxjs';
+import { Subscription, forkJoin, of, catchError } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
 
 import { I18nService } from '../../i18n.service';
@@ -176,8 +176,14 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
       store: this.networkAdapter.get_v3('GET /vendor/store', {
         authToken: this.userToken,
       }),
+      // Unread chat count — separate endpoint (the dashboard calculator
+      // doesn't include it). Resilient: a chat failure must not blank the
+      // whole dashboard, so swallow errors to a null result here.
+      unread: this.networkAdapter.get_v3('GET /vendor/chat/unread-count', {
+        authToken: this.userToken,
+      }).pipe(catchError(() => of(null))),
     }).subscribe({
-      next: ({ dashboard, store }) => {
+      next: ({ dashboard, store, unread }) => {
         const dRes = dashboard as { status?: string; data?: any };
         const sRes = store as { status?: string; data?: any };
 
@@ -219,9 +225,18 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
             pending_orders: ops.awaiting_acceptance ?? 0,
             processing_orders: ops.to_ship ?? 0,
             // Not provided by the v3 dashboard calculator; left at default 0.
-            // (pending_payout, unread_messages, pending_reviews)
+            // (pending_payout, pending_reviews)
           };
         }
+
+        // --- Unread chat count (GET /vendor/chat/unread-count) ------------
+        // Mapped separately from the dashboard stats (different endpoint);
+        // null when the call failed (catchError above) -> default 0.
+        const uRes = unread as { status?: string; data?: { unread_count?: number } } | null;
+        this.stats = {
+          ...this.stats,
+          unread_messages: uRes?.data?.unread_count ?? 0,
+        };
 
         this.isLoading = false;
         this.cdr.markForCheck();
