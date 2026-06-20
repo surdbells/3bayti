@@ -236,7 +236,9 @@ export class RegisterPage implements OnInit, OnDestroy {
     const v3Body = transformLegacyRegisterRequest(this.register);
 
     this.ui_controls.loading = true;
-    this.networkAdapter.post_request(v3Body, GlobalComponent.UserRegister)
+    // Direct v3 (POST /v3/auth/register). Route was already target='new';
+    // v3Body is already the v3-shaped payload, so this is behaviour-preserving.
+    this.networkAdapter.post_v3('POST /auth/register', v3Body)
       .subscribe({
         next: (response: any) => {
           this.ui_controls.loading = false;

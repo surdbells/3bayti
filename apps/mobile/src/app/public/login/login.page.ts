@@ -121,7 +121,11 @@ export class LoginPage implements OnInit, OnDestroy {
         Preferences.remove({key: 'keep_session'});
       }
       this.ui_controls.login_loading = true;
-      this.networkAdapter.post_request(this.login, GlobalComponent.UserLogin)
+      // Direct v3 (POST /v3/auth/login). Route was already target='new', so
+      // this is behaviour-preserving (post_request Path 1 already reached v3
+      // with this same body; no request transform is registered for auth).
+      // transformV3LoginResponse below still maps the v3 envelope -> single_user.
+      this.networkAdapter.post_v3('POST /auth/login', this.login)
         .subscribe(({
           next: (response: any) => {
             if (response.response_code === 200 && response.status === "success") {

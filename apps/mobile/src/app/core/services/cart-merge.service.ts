@@ -3,7 +3,6 @@ import { firstValueFrom } from 'rxjs';
 
 import { NetworkService } from '../../service/network.service';
 import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
-import { GlobalComponent } from '../../global-component';
 import { LocalCartService } from './local-cart.service';
 
 /**
@@ -97,30 +96,26 @@ export class CartMergeService {
       return { attempted: false, success: true, skipped: [], error: null };
     }
 
-    // Build the legacy-shaped body the adapter expects. The transform
-    // (transformMergeCartRequest) will strip non-v3 fields.
-    const body = {
-      id: authBody.id,
-      token: authBody.token,
-      items: localItems.map((it) => ({
-        product_id: it.product_id,
-        quantity: it.quantity,
-        size: it.size,
-        color: it.color,
-        is_custom: it.is_custom,
-        measurement: it.measurement,
-        extra_measurement: it.extra_measurement,
-        note: it.note,
-      })),
-    };
-
-    const mergeUrl = `${GlobalComponent.baseURL}v3/cart/merge`;
+    // Direct v3 (POST /v3/cart/merge). The request transform isn't applied
+    // to direct calls, so build the explicit v3 body here: map the local
+    // items to the v3 item shape (already v3 field names) and move the
+    // auth token to the Authorization header via opts.authToken.
+    const items = localItems.map((it) => ({
+      product_id: it.product_id,
+      quantity: it.quantity,
+      size: it.size,
+      color: it.color,
+      is_custom: it.is_custom,
+      measurement: it.measurement,
+      extra_measurement: it.extra_measurement,
+      note: it.note,
+    }));
 
     try {
-      // post_request returns Observable<any>; firstValueFrom turns
-      // it into a promise that resolves on the first emission.
+      // firstValueFrom turns the Observable into a promise that resolves
+      // on the first emission.
       const response: any = await firstValueFrom(
-        this.networkAdapter.post_request(body, mergeUrl),
+        this.networkAdapter.post_v3('POST /cart/merge', { items }, { authToken: authBody.token }),
       );
 
       // Detect success across both shapes (defensive — Phase F flip
