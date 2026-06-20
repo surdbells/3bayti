@@ -474,7 +474,7 @@ export function transformTicketMessagesResponse(data: unknown): unknown {
   if (!Array.isArray(data)) return data;
   return data.map((m) => {
     if (!isRecord(m)) return m;
-    return { ...m, message: asString(m['body']) };
+    return { ...m, message: asString(m['body']), timestamp: asString(m['created_at']) };
   });
 }
 

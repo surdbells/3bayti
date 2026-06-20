@@ -547,7 +547,13 @@ export class ProductPage implements OnInit, OnDestroy {
             this.colors = response.data.colors
               ? response.data.colors.split(',').map((c: string) => c.trim().toLowerCase())
               : [];
-            this.images = response.data.images || [];
+            // v3's transformProductDetailResponse emits `images` as a
+            // comma-joined string (imagesAsCsvString); split it into the URL
+            // array the gallery @for iterates — same handling as `colors` above.
+            // Without this, @for(image of images) iterates the string's chars.
+            this.images = response.data.images
+              ? String(response.data.images).split(',').map((s: string) => s.trim()).filter(Boolean)
+              : [];
             this.add_cart.product_id = this.single.product;
             this.add_cart.product_name = this.single.name;
             this.add_cart.product_desc = this.single.description;
@@ -834,7 +840,9 @@ export class ProductPage implements OnInit, OnDestroy {
       const values: Record<string, number> = {};
       for (const k of ['bust', 'shoulder', 'armhole', 'length', 'hip', 'arm'] as const) {
         const n = Number(this.update[k]);
-        if (Number.isFinite(n) && n > 0) values[k] = n;
+        // Clamp to the v3 range (cm, 0-500); drop out-of-range like the old
+        // request transform did (>500 would 422 the whole save).
+        if (Number.isFinite(n) && n > 0 && n <= 500) values[k] = n;
       }
       this.networkAdapter.put_v3('PUT /me/measurements/default', { values }, { authToken: this.single_user.token })
         .subscribe({

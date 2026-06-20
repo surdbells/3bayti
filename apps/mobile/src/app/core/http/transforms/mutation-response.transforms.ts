@@ -224,7 +224,10 @@ export function transformAddCartResponse(data: unknown): unknown {
  *   { success: true, count: <total items> }
  */
 export function transformCartItemMutationResponse(data: unknown): unknown {
-  const v3 = asObj(data);
+  const outer = asObj(data);
+  // UpdateCartItem/RemoveCartItem return { cart: listShape } — item_count is
+  // nested under `cart`, not at the top level.
+  const v3 = asObj(outer['cart'] ?? outer);
   const itemCount = typeof v3['item_count'] === 'number' ? v3['item_count'] : 0;
   return {
     success: true,

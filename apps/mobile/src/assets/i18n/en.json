@@ -46,6 +46,8 @@
   "payout_all_fields_required": "Please fill in all payout fields.",
   "payout_details_saved": "Payout details saved.",
   "text_measurement_saved": "Measurement saved.",
+  "text_ticket_created": "Your ticket has been created.",
+  "text_location_updated": "Location updated.",
   "welcome_back": "Hi",
   "delete_account_password_label": "Confirm your password",
   "delete_account_password_ph": "Your current password",

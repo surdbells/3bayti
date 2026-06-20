@@ -311,7 +311,7 @@ export class SettingsPage implements OnInit, OnDestroy {
             });
             this.ui_controls.updating_location = false;
             this.cancel();
-            this.showSuccess(response.message);
+            this.showSuccess(this.i18n.t('text_location_updated'));
           } else {
             this.ui_controls.updating_location = false;
             this.showError(response.message || this.i18n.t('text_failed_to_update_location'));

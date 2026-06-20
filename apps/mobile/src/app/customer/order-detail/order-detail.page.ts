@@ -249,8 +249,8 @@ export class OrderDetailPage implements OnInit {
       applied_promo: o.applied_promo
         ? {
             code: o.applied_promo.code,
-            type: o.applied_promo.type,
-            value: Number(o.applied_promo.value ?? 0),
+            type: o.applied_promo.discount_type,
+            value: Number(o.applied_promo.discount_value ?? 0),
             discount_amount: Number(o.applied_promo.discount_amount ?? 0),
           }
         : null,

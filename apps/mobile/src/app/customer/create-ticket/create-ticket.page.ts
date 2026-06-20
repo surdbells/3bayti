@@ -182,7 +182,7 @@ export class CreateTicketPage implements OnInit, OnDestroy {
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200) {
-            this.success_notification(response.message)
+            this.success_notification(this.i18n.t('text_ticket_created'))
             this.ui_controls.is_loading = false;
             this.router.navigate(['/', 'ticketlist']);
           }else{

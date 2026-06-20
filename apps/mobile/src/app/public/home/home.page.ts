@@ -164,7 +164,7 @@ export class HomePage implements OnInit, OnDestroy {
     // the legacy {id, token} body, so no query params carry over.
     // transformBestSellersResponse still applies via get_v3, so response.data
     // shape is unchanged.
-    this.networkAdapter.get_v3('GET /mobile/best-sellers', { queryParams: { sort: 'best_seller' } })
+    this.networkAdapter.get_v3('GET /mobile/best-sellers', { queryParams: { sort: 'best_seller', limit: 10 } })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -186,7 +186,7 @@ export class HomePage implements OnInit, OnDestroy {
     // anonymous, so no authToken. transformNewArrivalsRequest drops the
     // legacy {id, token} body, so no query params carry over. The response
     // transform still applies via get_v3, so response.data shape is unchanged.
-    this.networkAdapter.get_v3('GET /mobile/new-arrivals', { queryParams: { sort: 'newest' } })
+    this.networkAdapter.get_v3('GET /mobile/new-arrivals', { queryParams: { sort: 'newest', limit: 10 } })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

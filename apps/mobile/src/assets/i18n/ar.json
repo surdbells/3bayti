@@ -46,6 +46,8 @@
   "payout_all_fields_required": "يرجى تعبئة جميع حقول الدفع.",
   "payout_details_saved": "تم حفظ تفاصيل الدفع.",
   "text_measurement_saved": "تم حفظ القياسات.",
+  "text_ticket_created": "تم إنشاء تذكرتك.",
+  "text_location_updated": "تم تحديث الموقع.",
   "welcome_back": "أهلاً",
   "delete_account_password_label": "أكّد كلمة المرور",
   "delete_account_password_ph": "كلمة المرور الحالية",
