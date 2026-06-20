@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Brand canvas. Matches capacitor.config.ts SplashScreen.backgroundColor
+         and the iOS LaunchScreen so there is no colour shift between the native
+         launch screen, the Capacitor splash, and the web view. -->
+    <color name="splashBackground">#FAF8F5</color>
+</resources>

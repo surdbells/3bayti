@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--
+      Android 12+ (API 31) platform splash screen.
+
+      On API 31+ the OS draws its OWN splash from the launch theme and IGNORES
+      `android:windowBackground` / `android:background` (what the base
+      values/styles.xml launch theme sets). With no `windowSplashScreenBackground`
+      configured it falls back to the default window background — white — which is
+      the blank white flash seen before the Capacitor splash. Setting the brand
+      canvas here removes that flash; the animated icon shows the app logo centred,
+      and `postSplashScreenTheme` hands off cleanly to the normal app theme.
+    -->
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:windowSplashScreenBackground">@color/splashBackground</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>
+</resources>
