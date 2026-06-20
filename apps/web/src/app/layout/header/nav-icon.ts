@@ -100,6 +100,14 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
           <path d="M12 14.5v2.5" />
         </svg>
       }
+      @case ('lifeBuoy') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.5" />
+          <circle cx="12" cy="12" r="3.4" />
+          <path d="M9.6 9.6 6 6M14.4 9.6 18 6M14.4 14.4 18 18M9.6 14.4 6 18" />
+        </svg>
+      }
     }
   `,
   styles: [

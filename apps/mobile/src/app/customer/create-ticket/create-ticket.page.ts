@@ -149,7 +149,6 @@ export class CreateTicketPage implements OnInit, OnDestroy {
       }))
   }
   create_ticket() {
-    this.ui_controls.is_loading = true;
     this.create.id = this.single_user.id;
     this.create.token = this.single_user.token;
     if (this.create.subject.length == 0){
@@ -160,15 +159,15 @@ export class CreateTicketPage implements OnInit, OnDestroy {
       this.error_notification(this.i18n.t('text_message_required'));
       return;
     }
-    if (this.create.store == 0){
-      this.error_notification(this.i18n.t('text_reference_required'));
-      return;
-    }
+    // Set loading only after validation passes, so an early-return validation
+    // failure doesn't leave the form stuck in a loading state.
+    this.ui_controls.is_loading = true;
     // v3: POST /me/tickets. CreateMyTicketController body is
     // { subject, message, vendor_id? } — user resolved from the Bearer
     // token; it reads body.body ?? body.message for the text. vendor_id
-    // is the legacy `store` (only sent when > 0, mirroring the request
-    // transform). Validation above already guarantees store != 0.
+    // (the legacy `store`) is OPTIONAL: it's only sent when a store is
+    // chosen (> 0). When the customer picks "General support" (store 0)
+    // vendor_id is omitted and the backend treats it as a general ticket.
     const ticketBody: { subject: string; message: string; vendor_id?: number } = {
       subject: this.create.subject,
       message: this.create.message,

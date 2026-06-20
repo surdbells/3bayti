@@ -24,12 +24,15 @@ import {TranslatePipe} from "../../translate.pipe";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+type TicketStatus = 'open' | 'pending' | 'resolved' | 'closed';
+type TicketPriority = 'low' | 'medium' | 'high' | 'urgent';
+
 interface Ticket {
   id: number;
   subject: string;
   summary: string;
-  status: 'Open' | 'Pending' | 'Resolved';
-  priority?: 'Low' | 'Medium' | 'High';
+  status: TicketStatus;
+  priority?: TicketPriority;
   created: Date;
   email?: string;
 }
@@ -135,5 +138,19 @@ export class TicketListPage implements OnInit {
     this.router.navigate(['/', 'ticketmessages'],
       { queryParams: { ticket, subject } }
     );
+  }
+
+  // Normalise the raw API status (lowercase open/pending/resolved/closed)
+  // to a known key; anything unexpected falls back to 'open'.
+  statusKey(status: string | null | undefined): TicketStatus {
+    const s = (status ?? '').toLowerCase();
+    return (['open', 'pending', 'resolved', 'closed'] as const).includes(s as TicketStatus)
+      ? (s as TicketStatus)
+      : 'open';
+  }
+
+  // i18n label key for a status badge, e.g. 'status_open'.
+  statusLabel(status: string | null | undefined): string {
+    return 'status_' + this.statusKey(status);
   }
 }

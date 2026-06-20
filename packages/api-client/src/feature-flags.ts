@@ -562,6 +562,15 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/tickets',
     shape: 'v3-envelope',
   },
+  // Single ticket + full thread (GetMyTicketController). 404 if not the
+  // owner (no existence leak). Used by the web detail page to render the
+  // ticket header (subject/status/priority) alongside its messages.
+  'GET /me/tickets/:id': {
+    target: 'new',
+    oldPath: '/customer/read_ticket',
+    newPath: '/v3/me/tickets/:id',
+    shape: 'v3-envelope',
+  },
   'GET /me/tickets/:id/messages': {
     target: 'new',
     oldPath: '/customer/read-ticket-messages',

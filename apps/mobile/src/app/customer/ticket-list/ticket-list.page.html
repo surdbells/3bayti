@@ -31,7 +31,9 @@
           <p class="ticket-summary">{{ t.summary }}</p>
         }
         <p class="ticket-meta">
-          <span class="meta-status">{{ 'status' | translate }}: {{ t.status }}</span>
+          <span class="status-pill" [ngClass]="'status-pill--' + statusKey(t.status)">
+            {{ statusLabel(t.status) | translate }}
+          </span>
           <span class="meta-divider"></span>
           <span class="meta-date">{{ t.created | date:'short' }}</span>
         </p>

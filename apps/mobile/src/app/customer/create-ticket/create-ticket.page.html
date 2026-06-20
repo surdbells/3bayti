@@ -39,12 +39,14 @@
 
       <!-- Reference (store selector) -->
       <div class="form-field">
-        <label class="form-field__label">{{ 'label_reference' | translate }}</label>
+        <label class="form-field__label">{{ 'label_reference_optional' | translate }}</label>
         <ion-select
           [(ngModel)]="create.store"
           interface="action-sheet"
           class="form-select"
+          [placeholder]="'option_general_support' | translate"
           [interfaceOptions]="{ cssClass: 'ax-action-sheet' }">
+          <ion-select-option [value]="0">{{ 'option_general_support' | translate }}</ion-select-option>
           @for(t of stores; track t.store){
             <ion-select-option [value]="t.store">{{ t.store_name }}</ion-select-option>
           }

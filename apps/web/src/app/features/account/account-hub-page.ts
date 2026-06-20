@@ -126,6 +126,13 @@ import { NavIconComponent } from '../../layout/header/nav-icon';
               <span class="account-tile__desc">{{ 'account.hub.password.desc' | translate }}</span>
             </span>
           </a>
+          <a routerLink="/account/support" class="account-tile" data-testid="account-tile-support">
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="lifeBuoy" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">{{ 'account.hub.support.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.support.desc' | translate }}</span>
+            </span>
+          </a>
         </nav>
       </div>
     </main>
