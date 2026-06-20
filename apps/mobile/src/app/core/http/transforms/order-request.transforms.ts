@@ -127,8 +127,22 @@ export function transformReadTicketMessagesRequest(body: unknown): { pathParams:
  * registry matches, the adapter ALSO extracts the auth header from
  * the original POST body (via translateRequestBody).
  */
+/**
+ * GET /v3/cart — the mobile cart page POSTs {id, token} to the legacy
+ * read-cart URL; v3 resolves the cart from the auth token, so no path/query
+ * params are needed. Registering this is what makes the read-cart POST
+ * convert to a v3 GET instead of falling through to the legacy backend
+ * (which returned an empty cart -> the "cart is empty" + legacy call bug).
+ */
+export function transformReadCartRequest(_body: unknown): {
+  queryParams: Record<string, string | number | boolean>;
+} {
+  return { queryParams: {} };
+}
+
 export const AUTHED_GET_REQUEST_TRANSFORMS: Record<string, BodyToRouteArgs> = {
   'GET /orders': transformReadOrdersListingRequest,
+  'GET /cart': transformReadCartRequest,
   // 'GET /orders/:id' — would go here if mobile started calling
   // it via POST with the id in the body. Currently my-orders.page
   // navigates to a detail page that already uses GET; if it sends

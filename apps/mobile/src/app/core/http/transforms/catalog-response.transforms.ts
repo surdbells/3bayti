@@ -388,8 +388,8 @@ export function transformProductDetailResponse(data: unknown): unknown {
     // defaults so mobile's *ngIf and {{}} bindings render inertly:
     delivery_time: '',
     custom_delivery_time: '',
-    extra_msmt: '',
-    require_extra_msmt: false,
+    extra_msmt: asString(data['measurement_instructions']),
+    require_extra_msmt: data['requires_measurement'] === true,
 
     // Size flags — 22 booleans synthesized from v3's sizes array:
     ...sizeFlags,

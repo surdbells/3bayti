@@ -113,7 +113,15 @@ function asArr(v: unknown): unknown[] {
  * and response.data.bill (Phase B page integration).
  */
 export function transformCartListResponse(data: unknown): unknown {
-  const v3 = asObj(data);
+  const outer = asObj(data);
+  // v3 GET /v3/cart wraps the payload as { cart: {...} } and has no top-level
+  // `data` key, so the adapter's envelope leaves it nested under `cart`.
+  // Unwrap it; tolerate a flat shape too (POST /cart/items returns the cart
+  // directly in some paths).
+  const cartVal = outer['cart'];
+  const v3 = cartVal != null && typeof cartVal === 'object' && !Array.isArray(cartVal)
+    ? asObj(cartVal)
+    : outer;
   const v3Items = asArr(v3['items']);
   const subtotal = typeof v3['subtotal'] === 'string' ? v3['subtotal'] : '0.00';
   const itemCount = typeof v3['item_count'] === 'number' ? v3['item_count'] : 0;

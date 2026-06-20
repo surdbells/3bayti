@@ -1,4 +1,5 @@
 import {
+  ChangeDetectorRef,
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
   ElementRef,
@@ -62,6 +63,7 @@ export class SinglePage implements OnInit {
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
+    private cdr: ChangeDetectorRef,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -167,6 +169,11 @@ product = {
             this.single = response.data;
             this.colors = response.data.colors.split(',');
             this.images = response.data.images.split(',');
+            // Size the load-state array to the actual image count (was a fixed
+            // 4, so a 5th+ image's load never flipped its .loaded class -> the
+            // image stayed at opacity:0). markForCheck in onDidLoad surfaces
+            // the flip under this app's change-detection model.
+            this.imgLoaded = new Array(this.images.length).fill(false);
             this.store_m.store = this.single.store;
             this.apiSizes = {
               'xs': this.single.size_xs,
@@ -188,12 +195,13 @@ product = {
         }
       }))
   }
-  imgLoaded: boolean[] = [false, false, false, false];
+  imgLoaded: boolean[] = [];
   onWillLoad(index: number) {
     this.imgLoaded[index] = false;
   }
   onDidLoad(index: number) {
     this.imgLoaded[index] = true;
+    this.cdr.markForCheck();
   }
   triggerBack() {
     this.nav.back();
