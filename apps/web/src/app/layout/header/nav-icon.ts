@@ -7,7 +7,11 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
  * line icons (24×24, 1.7 stroke, currentColor) rendered by key. Shared
  * by both the desktop nav and the mobile drawer so the two stay in sync.
  *
- * Keys: 'categories' | 'stores' | 'bestSellers' | 'newArrivals' | 'gift'.
+ * Keys: 'categories' | 'stores' | 'bestSellers' | 'newArrivals' | 'gift'
+ *       | 'user' | 'shoppingBag' | 'mapPin' | 'ruler' | 'heart' | 'lock'.
+ *
+ * The account-hub tiles (Y.5) reuse this component for their leading
+ * glyphs, which is why the set extends beyond the primary-nav keys.
  */
 @Component({
   selector: 'app-nav-icon',
@@ -51,6 +55,49 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
           <path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
           <path d="M12 8v13" />
           <path d="M12 8S10.5 4 8 4.5 8.5 8 12 8zM12 8s1.5-4 4-3.5S15.5 8 12 8z" />
+        </svg>
+      }
+      @case ('user') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="8" r="3.6" />
+          <path d="M5 20v-1a5 5 0 0 1 5-5h4a5 5 0 0 1 5 5v1" />
+        </svg>
+      }
+      @case ('shoppingBag') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 7h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 7z" />
+          <path d="M9 7V5a3 3 0 0 1 6 0v2" />
+        </svg>
+      }
+      @case ('mapPin') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 21s6.5-5.4 6.5-10.5a6.5 6.5 0 0 0-13 0C5.5 15.6 12 21 12 21z" />
+          <circle cx="12" cy="10.5" r="2.4" />
+        </svg>
+      }
+      @case ('ruler') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2.8" y="8" width="18.4" height="8" rx="1.6"
+                transform="rotate(-45 12 12)" />
+          <path d="M9 7.5l1.5 1.5M11.5 5l1.5 1.5M14 2.5l1.5 1.5M6.5 10l1.5 1.5" />
+        </svg>
+      }
+      @case ('heart') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 20s-7-4.6-7-9.4A4.1 4.1 0 0 1 12 7.5 4.1 4.1 0 0 1 19 10.6C19 15.4 12 20 12 20z" />
+        </svg>
+      }
+      @case ('lock') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="4.5" y="10.5" width="15" height="9.5" rx="2" />
+          <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+          <path d="M12 14.5v2.5" />
         </svg>
       }
     }

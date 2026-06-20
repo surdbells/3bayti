@@ -124,9 +124,44 @@ export interface OrderListParams {
   offset?: number;
 }
 
-/** Paginated list response. The API returns a bare array currently;
- *  if pagination metadata lands we'll evolve this. */
-export type OrderListResponse = OrderListItem[];
+/** Pagination metadata echoed back by GET /v3/orders. */
+export interface OrderListPagination {
+  limit: number;
+  offset: number;
+  /** Number of items in this page. */
+  count: number;
+  /** Total number of orders for the user across all pages. */
+  total: number;
+}
+
+/** Paginated list response. The API returns an OBJECT body
+ *  `{ orders: OrderListItem[], pagination: {...} }` — NOT a bare array.
+ *  Read `response.orders` for the page and `response.pagination` for
+ *  the page metadata. */
+export interface OrderListResponse {
+  orders: OrderListItem[];
+  pagination: OrderListPagination;
+}
+
+/** Detail response. GET /v3/orders/:id wraps the order in `{ order }`. */
+export interface OrderDetailResponse {
+  order: Order;
+}
+
+/** Summary of a completed cancellation, returned alongside the updated
+ *  order by POST /v3/orders/:id/cancel. */
+export interface OrderCancellation {
+  was_already_cancelled: boolean;
+  refund_issued: boolean;
+  refund_amount: string | null;
+}
+
+/** Cancel response. POST /v3/orders/:id/cancel wraps the updated order
+ *  in `{ order, cancellation }`. */
+export interface OrderCancelResponse {
+  order: Order;
+  cancellation: OrderCancellation;
+}
 
 /** Customer return-request reasons, mirrors apps/api ALL_REASONS. */
 export type ReturnReason =

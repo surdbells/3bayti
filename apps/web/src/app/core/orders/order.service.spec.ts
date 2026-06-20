@@ -3,9 +3,30 @@ import { TestBed } from '@angular/core/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { OrderService } from './order.service';
-import type { Order, OrderListItem } from './order.types';
+import type {
+  Order,
+  OrderListItem,
+  OrderListResponse,
+  OrderListPagination,
+} from './order.types';
 
 const V3_BASE = 'https://api-v3.3bayti.ae';
+
+/** Wrap a page of items in the API's real `{ orders, pagination }` body. */
+function listBody(
+  items: OrderListItem[],
+  pagination: Partial<OrderListPagination> = {},
+): OrderListResponse {
+  return {
+    orders: items,
+    pagination: {
+      limit: pagination.limit ?? 10,
+      offset: pagination.offset ?? 0,
+      count: pagination.count ?? items.length,
+      total: pagination.total ?? items.length,
+    },
+  };
+}
 
 function makeListItem(overrides: Partial<OrderListItem> = {}): OrderListItem {
   return {
@@ -65,7 +86,7 @@ describe('OrderService', () => {
       const req = controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`);
       expect(req.request.params.get('limit')).toBe('10');
       expect(req.request.params.get('offset')).toBe('0');
-      req.flush([makeListItem(), makeListItem({ id: 2 })]);
+      req.flush(listBody([makeListItem(), makeListItem({ id: 2 })]));
       await promise;
       expect(service.listItems()).toHaveLength(2);
     });
@@ -73,16 +94,16 @@ describe('OrderService', () => {
     it('replaces accumulator when offset=0', async () => {
       const { service, controller } = setup();
       const p1 = service.loadMore();
-      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush([makeListItem({ id: 1 })]);
+      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush(listBody([makeListItem({ id: 1 })]));
       await p1;
       expect(service.listItems()).toHaveLength(1);
 
       /* Second load with offset=0 (e.g. on route re-entry) */
       const p2 = service.loadMore({ offset: 0 });
-      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush([
+      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush(listBody([
         makeListItem({ id: 5 }),
         makeListItem({ id: 6 }),
-      ]);
+      ]));
       await p2;
       expect(service.listItems()).toHaveLength(2);
       expect(service.listItems()[0].id).toBe(5);
@@ -91,19 +112,19 @@ describe('OrderService', () => {
     it('appends when offset > 0', async () => {
       const { service, controller } = setup();
       const p1 = service.loadMore();
-      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush([
+      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush(listBody([
         makeListItem({ id: 1 }), makeListItem({ id: 2 }), makeListItem({ id: 3 }),
         makeListItem({ id: 4 }), makeListItem({ id: 5 }), makeListItem({ id: 6 }),
         makeListItem({ id: 7 }), makeListItem({ id: 8 }), makeListItem({ id: 9 }),
         makeListItem({ id: 10 }),
-      ]);
+      ], { total: 11 }));
       await p1;
       expect(service.loadedCount()).toBe(10);
 
       const p2 = service.loadMore();
       const req2 = controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`);
       expect(req2.request.params.get('offset')).toBe('10');
-      req2.flush([makeListItem({ id: 11 })]);
+      req2.flush(listBody([makeListItem({ id: 11 })], { offset: 10, total: 11 }));
       await p2;
       expect(service.loadedCount()).toBe(11);
     });
@@ -111,14 +132,16 @@ describe('OrderService', () => {
     it('hasMore is true when last page filled, false when short', async () => {
       const { service, controller } = setup();
       const p1 = service.loadMore({ limit: 3 });
-      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush([
+      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush(listBody([
         makeListItem({ id: 1 }), makeListItem({ id: 2 }), makeListItem({ id: 3 }),
-      ]);
+      ], { limit: 3, total: 4 }));
       await p1;
       expect(service.hasMore()).toBe(true);
 
       const p2 = service.loadMore();
-      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush([makeListItem({ id: 4 })]);
+      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush(
+        listBody([makeListItem({ id: 4 })], { offset: 3, total: 4 }),
+      );
       await p2;
       expect(service.hasMore()).toBe(false);
     });
@@ -126,7 +149,7 @@ describe('OrderService', () => {
     it('hasMore is false on empty initial load', async () => {
       const { service, controller } = setup();
       const promise = service.loadMore();
-      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush([]);
+      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush(listBody([], { total: 0 }));
       await promise;
       expect(service.hasMore()).toBe(false);
     });
@@ -135,7 +158,7 @@ describe('OrderService', () => {
       const { service, controller } = setup();
       const promise = service.loadMore();
       expect(service.isLoadingList()).toBe(true);
-      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush([]);
+      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush(listBody([], { total: 0 }));
       await promise;
       expect(service.isLoadingList()).toBe(false);
     });
@@ -154,7 +177,7 @@ describe('OrderService', () => {
     it('clears the accumulator', async () => {
       const { service, controller } = setup();
       const promise = service.loadMore();
-      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush([makeListItem()]);
+      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush(listBody([makeListItem()]));
       await promise;
       expect(service.listItems()).toHaveLength(1);
 
@@ -170,7 +193,7 @@ describe('OrderService', () => {
       const promise = service.getById(42);
       const req = controller.expectOne(`${V3_BASE}/v3/orders/42`);
       expect(req.request.method).toBe('GET');
-      req.flush(makeOrder({ id: 42 }));
+      req.flush({ order: makeOrder({ id: 42 }) });
       const result = await promise;
       expect(result.id).toBe(42);
       expect(result.shipping_address).toBeDefined();
@@ -180,7 +203,7 @@ describe('OrderService', () => {
       const { service, controller } = setup();
       const promise = service.getById(1);
       expect(service.isLoadingDetail()).toBe(true);
-      controller.expectOne(`${V3_BASE}/v3/orders/1`).flush(makeOrder());
+      controller.expectOne(`${V3_BASE}/v3/orders/1`).flush({ order: makeOrder() });
       await promise;
       expect(service.isLoadingDetail()).toBe(false);
     });
@@ -192,7 +215,10 @@ describe('OrderService', () => {
       const promise = service.cancel(7);
       const req = controller.expectOne(`${V3_BASE}/v3/orders/7/cancel`);
       expect(req.request.method).toBe('POST');
-      req.flush(makeOrder({ id: 7, status: 'cancelled' }));
+      req.flush({
+        order: makeOrder({ id: 7, status: 'cancelled' }),
+        cancellation: { was_already_cancelled: false, refund_issued: false, refund_amount: null },
+      });
       const result = await promise;
       expect(result.status).toBe('cancelled');
     });
@@ -200,15 +226,18 @@ describe('OrderService', () => {
     it('patches the cached list item if loaded', async () => {
       const { service, controller } = setup();
       const p1 = service.loadMore();
-      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush([
+      controller.expectOne(r => r.url === `${V3_BASE}/v3/orders`).flush(listBody([
         makeListItem({ id: 1, status: 'pending_payment' }),
         makeListItem({ id: 2, status: 'paid' }),
-      ]);
+      ]));
       await p1;
 
       const p2 = service.cancel(1);
       controller.expectOne(`${V3_BASE}/v3/orders/1/cancel`)
-        .flush(makeOrder({ id: 1, status: 'cancelled' }));
+        .flush({
+          order: makeOrder({ id: 1, status: 'cancelled' }),
+          cancellation: { was_already_cancelled: false, refund_issued: false, refund_amount: null },
+        });
       await p2;
 
       const updated = service.listItems().find(o => o.id === 1);
@@ -221,7 +250,10 @@ describe('OrderService', () => {
       const { service, controller } = setup();
       const promise = service.cancel(99);
       controller.expectOne(`${V3_BASE}/v3/orders/99/cancel`)
-        .flush(makeOrder({ id: 99, status: 'cancelled' }));
+        .flush({
+          order: makeOrder({ id: 99, status: 'cancelled' }),
+          cancellation: { was_already_cancelled: false, refund_issued: false, refund_amount: null },
+        });
       await expect(promise).resolves.toBeDefined();
     });
   });

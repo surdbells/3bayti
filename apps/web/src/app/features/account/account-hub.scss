@@ -39,8 +39,9 @@
 
 .account-tile {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 14px;
   padding: 20px 22px;
   background: #fff;
   border-radius: 12px;
@@ -55,7 +56,36 @@
     transform: translateY(-2px);
     box-shadow: 0 6px 18px rgba(46, 36, 28, 0.07);
     outline: none;
+
+    .account-tile__icon {
+      border-color: var(--color-brand-500, #b18f1f);
+      color: var(--color-brand-600, #8c6f15);
+    }
   }
+}
+
+/* Leading glyph chip. Reuses the shared hand-authored line icons via
+   <app-nav-icon>; the chip gives them a soft brand-tinted backdrop so
+   they read as affordances rather than decoration. */
+.account-tile__icon {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--color-brand-50, #f6efda);
+  border: 1px solid var(--color-border-subtle, #e2dccc);
+  color: var(--color-brand-600, #8c6f15);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.account-tile__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
 }
 
 .account-tile__title {

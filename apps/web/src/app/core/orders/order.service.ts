@@ -6,6 +6,8 @@ import type {
   OrderListItem,
   OrderListParams,
   OrderListResponse,
+  OrderDetailResponse,
+  OrderCancelResponse,
   SubmitReturnInput,
   ReturnRequestResponse,
 } from './order.types';
@@ -13,10 +15,10 @@ import type {
 /**
  * OrderService — auth-required reads + cancel against `/v3/orders`.
  *
- * Endpoints:
- *   GET    /v3/orders?limit=&offset=        → OrderListItem[]
- *   GET    /v3/orders/:id                   → Order (detail with addresses)
- *   POST   /v3/orders/:id/cancel            → Order (now cancelled)
+ * Endpoints (all wrap their payload in an object — never a bare array):
+ *   GET    /v3/orders?limit=&offset=        → { orders: OrderListItem[], pagination }
+ *   GET    /v3/orders/:id                   → { order } (detail with addresses)
+ *   POST   /v3/orders/:id/cancel            → { order, cancellation }
  *
  * State surface (signals):
  *   - listItems()    Signal<OrderListItem[]>  — accumulating list for
@@ -51,11 +53,20 @@ export class OrderService {
   private readonly _lastPageSize = signal<number>(0);
   private readonly _requestedPageSize = signal<number>(10);
 
+  /** Total order count reported by the API's pagination block, or null
+   *  if no page has been loaded yet. When known it gives an exact
+   *  hasMore; otherwise we fall back to the page-size heuristic. */
+  private readonly _total = signal<number | null>(null);
+
   readonly listItems: Signal<OrderListItem[]> = this._listItems.asReadonly();
   readonly isLoadingList: Signal<boolean> = this._isLoadingList.asReadonly();
   readonly isLoadingDetail: Signal<boolean> = this._isLoadingDetail.asReadonly();
 
   readonly hasMore = computed(() => {
+    const total = this._total();
+    if (total !== null) {
+      return this._listItems().length < total;
+    }
     return this._lastPageSize() === this._requestedPageSize() && this._lastPageSize() > 0;
   });
 
@@ -71,6 +82,7 @@ export class OrderService {
   reset(): void {
     this._listItems.set([]);
     this._lastPageSize.set(0);
+    this._total.set(null);
   }
 
   /**
@@ -90,7 +102,9 @@ export class OrderService {
       const response = await firstValueFrom(
         this.http.get<OrderListResponse>(`${V3_BASE}/v3/orders`, { params: httpParams }),
       );
-      const page = Array.isArray(response) ? response : [];
+      /* The API returns an OBJECT body { orders, pagination } — unwrap
+         the array off `orders`. Defensive against a missing/odd shape. */
+      const page = Array.isArray(response?.orders) ? response.orders : [];
 
       /* Append or replace based on offset. If offset === 0 we're
          doing a fresh load and clobber the accumulator; otherwise
@@ -101,14 +115,24 @@ export class OrderService {
         this._listItems.set([...this._listItems(), ...page]);
       }
       this._lastPageSize.set(page.length);
+
+      /* Record the authoritative total so hasMore is exact. Guard the
+         shape defensively — fall back to the page-size heuristic when
+         pagination is absent or malformed. */
+      const total = response?.pagination?.total;
+      this._total.set(typeof total === 'number' ? total : null);
+
       return page;
     });
   }
 
-  /** Fetch a single order's full detail. */
+  /** Fetch a single order's full detail. The API wraps it in `{ order }`. */
   async getById(id: number): Promise<Order> {
     return this.runWithLoadingDetail(async () => {
-      return firstValueFrom(this.http.get<Order>(`${V3_BASE}/v3/orders/${id}`));
+      const response = await firstValueFrom(
+        this.http.get<OrderDetailResponse>(`${V3_BASE}/v3/orders/${id}`),
+      );
+      return response.order;
     });
   }
 
@@ -119,9 +143,11 @@ export class OrderService {
    */
   async cancel(id: number): Promise<Order> {
     return this.runWithLoadingDetail(async () => {
-      const updated = await firstValueFrom(
-        this.http.post<Order>(`${V3_BASE}/v3/orders/${id}/cancel`, {}),
+      const response = await firstValueFrom(
+        this.http.post<OrderCancelResponse>(`${V3_BASE}/v3/orders/${id}/cancel`, {}),
       );
+      /* The API wraps the updated order in `{ order, cancellation }`. */
+      const updated = response.order;
       /* Patch the cached list item if it's loaded. */
       const list = this._listItems();
       const idx = list.findIndex(o => o.id === id);

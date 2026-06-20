@@ -9,6 +9,7 @@ import { NgIf } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
+import { NavIconComponent } from '../../layout/header/nav-icon';
 
 /**
  * /account — account hub / dashboard.
@@ -25,7 +26,7 @@ import { AuthService } from '../../core/auth/auth.service';
 @Component({
   selector: 'app-account-hub',
   standalone: true,
-  imports: [NgIf, RouterLink, TranslatePipe],
+  imports: [NgIf, RouterLink, TranslatePipe, NavIconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="account-hub" data-testid="account-hub-page">
@@ -77,32 +78,53 @@ import { AuthService } from '../../core/auth/auth.service';
 
         <nav class="account-hub__grid" [attr.aria-label]="'account.hub.sectionsAria' | translate">
           <a routerLink="/account/profile" class="account-tile" data-testid="account-tile-profile">
-            <span class="account-tile__title">{{ 'account.hub.profile.title' | translate }}</span>
-            <span class="account-tile__desc">{{ 'account.hub.profile.desc' | translate }}</span>
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="user" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">{{ 'account.hub.profile.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.profile.desc' | translate }}</span>
+            </span>
           </a>
           <a routerLink="/account/orders" class="account-tile" data-testid="account-tile-orders">
-            <span class="account-tile__title">{{ 'account.hub.orders.title' | translate }}</span>
-            <span class="account-tile__desc">{{ 'account.hub.orders.desc' | translate }}</span>
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="shoppingBag" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">{{ 'account.hub.orders.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.orders.desc' | translate }}</span>
+            </span>
           </a>
           <a routerLink="/account/addresses" class="account-tile" data-testid="account-tile-addresses">
-            <span class="account-tile__title">{{ 'account.hub.addresses.title' | translate }}</span>
-            <span class="account-tile__desc">{{ 'account.hub.addresses.desc' | translate }}</span>
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="mapPin" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">{{ 'account.hub.addresses.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.addresses.desc' | translate }}</span>
+            </span>
           </a>
           <a routerLink="/account/measurements" class="account-tile" data-testid="account-tile-measurements">
-            <span class="account-tile__title">{{ 'account.hub.measurements.title' | translate }}</span>
-            <span class="account-tile__desc">{{ 'account.hub.measurements.desc' | translate }}</span>
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="ruler" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">{{ 'account.hub.measurements.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.measurements.desc' | translate }}</span>
+            </span>
           </a>
           <a routerLink="/account/wishlist" class="account-tile" data-testid="account-tile-wishlist">
-            <span class="account-tile__title">{{ 'account.hub.wishlist.title' | translate }}</span>
-            <span class="account-tile__desc">{{ 'account.hub.wishlist.desc' | translate }}</span>
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="heart" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">{{ 'account.hub.wishlist.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.wishlist.desc' | translate }}</span>
+            </span>
           </a>
           <a routerLink="/account/gift-cards" class="account-tile" data-testid="account-tile-gift-cards">
-            <span class="account-tile__title">{{ 'account.hub.giftCards.title' | translate }}</span>
-            <span class="account-tile__desc">{{ 'account.hub.giftCards.desc' | translate }}</span>
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="gift" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">{{ 'account.hub.giftCards.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.giftCards.desc' | translate }}</span>
+            </span>
           </a>
           <a routerLink="/account/password" class="account-tile" data-testid="account-tile-password">
-            <span class="account-tile__title">{{ 'account.hub.password.title' | translate }}</span>
-            <span class="account-tile__desc">{{ 'account.hub.password.desc' | translate }}</span>
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="lock" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">{{ 'account.hub.password.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.password.desc' | translate }}</span>
+            </span>
           </a>
         </nav>
       </div>
