@@ -140,7 +140,10 @@ export class ReviewsPage implements OnInit, OnDestroy {
 get_reviews() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readReviews)
+    // Direct v3 (GET /v3/me/reviews). The transformReviewDisplayResponse
+    // response transform still applies via get_v3, so response.data keeps
+    // the legacy Reviews[] shape — no field remapping needed here.
+    this.networkAdapter.get_v3('GET /me/reviews', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -155,11 +158,13 @@ get_reviews() {
   }
 delete_reviews(review: number) {
     if(this.isOnline){
-      this.delete.id = this.single_user.id;
-      this.delete.token = this.single_user.token;
-      this.delete.review = review;
       this.ui_controls.is_deleting = true;
-      this.networkAdapter.post_request(this.delete, GlobalComponent.deleteReview, )
+      // Direct v3 (DELETE /v3/me/reviews/{id}). The review id moves to the
+      // URL path; v3 derives the user from the JWT and takes no body.
+      this.networkAdapter.delete_v3('DELETE /me/reviews/:id', {
+        authToken: this.single_user.token,
+        pathParams: { id: String(review) },
+      })
         .subscribe(({
           next: (response: any) => {
             this.ui_controls.is_deleting = false;

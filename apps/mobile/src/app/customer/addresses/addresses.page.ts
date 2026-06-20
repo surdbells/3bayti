@@ -150,11 +150,30 @@ export class AddressesPage implements OnInit, OnDestroy {
   }
   get_billing() {
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readBilling)
+    // Direct v3 (GET /v3/me/billing-address). No response transform is
+    // registered for this route-key, so response.data is the raw v3
+    // envelope payload: { address: <AddressSerializer.publicShape> | null }.
+    // Map the v3 field names onto the page's `update` object (template
+    // binds update.name/phone/email/city/area/street/villa_number).
+    // Note: the v3 Address has no email field, so we keep the existing
+    // update.email (prefilled from the user profile in getObject).
+    this.networkAdapter.get_v3('GET /me/billing-address', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
-            this.update = response.data;
+            const address = response.data?.address;
+            if (address) {
+              this.update.name = address.recipient_name ?? this.update.name;
+              this.update.phone = address.recipient_phone ?? this.update.phone;
+              this.update.city = address.emirate ?? this.update.city;
+              this.update.area = address.area ?? this.update.area;
+              this.update.street = address.street_address ?? '';
+              this.update.villa_number = address.building_details ?? '';
+            } else {
+              // No billing address set yet (new user) — keep the
+              // prefilled defaults from getObject().
+              this.ui_controls.is_empty = true;
+            }
             this.ui_controls.is_loading = false;
           }else{
             this.ui_controls.is_empty = true;
@@ -212,7 +231,25 @@ export class AddressesPage implements OnInit, OnDestroy {
         return;
       }
       this.ui_controls.is_updating = true;
-      this.networkAdapter.post_request(this.update, GlobalComponent.updateBilling, )
+      // Direct v3 (PATCH /v3/me/billing-address, upsert). Request transforms
+      // do NOT apply to direct calls, so build the v3 body explicitly from
+      // UpsertBillingAddressInput's field names/types. recipient_phone must
+      // be E.164 ("+" + country code); the user's stored phone is already
+      // E.164 (login transform), but normalize defensively for the
+      // tel-national input by prefixing the UAE code when "+" is missing.
+      const phone = this.update.phone?.trim() ?? '';
+      const recipient_phone = phone.startsWith('+')
+        ? phone
+        : '+971' + phone.replace(/^0+/, '');
+      const v3Body = {
+        recipient_name: this.update.name,
+        recipient_phone,
+        emirate: this.update.city,
+        area: this.update.area,
+        street_address: this.update.street,
+        building_details: this.update.villa_number,
+      };
+      this.networkAdapter.patch_v3('PATCH /me/billing-address', v3Body, { authToken: this.single_user.token })
         .subscribe(({
           next: (response: any) => {
 

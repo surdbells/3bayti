@@ -173,13 +173,27 @@ export class ProfilePage implements OnInit, OnDestroy {
   }
   get_profile() {
     this.ui_controls.is_loading = true;
-    this.networkAdapter.post_request(this.rqst_param, GlobalComponent.readProfile)
+    // Direct v3 (GET /v3/me/profile). No response transform is registered
+    // for this route-key, so response.data is the raw v3 envelope payload
+    // `{ user: {...} }` (UserSerializer::publicProfile). Map the v3 user
+    // fields onto the page's `update` model explicitly — v3 returns
+    // first_name/last_name/phone/country_code/avatar_url as discrete
+    // fields (no legacy flat profile shape).
+    this.networkAdapter.get_v3('GET /me/profile', { authToken: this.single_user.token })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
-            this.update = response.data;
-            if (response.data?.avatar_url) {
-              this.single_user.avatar = response.data.avatar_url;
+            const u = response.data?.user;
+            if (u) {
+              this.update.first_name = u.first_name ?? '';
+              this.update.last_name = u.last_name ?? '';
+              if (u.country_code) {
+                this.update.countryCode = u.country_code;
+              }
+              this.update.phone = u.phone ?? '';
+              if (u.avatar_url) {
+                this.single_user.avatar = u.avatar_url;
+              }
             }
             this.ui_controls.is_loading = false;
           }
@@ -199,7 +213,16 @@ export class ProfilePage implements OnInit, OnDestroy {
         return;
       }
       this.ui_controls.is_updating = true;
-      this.networkAdapter.post_request(this.update, GlobalComponent.updateProfile)
+      // Direct v3 (PATCH /v3/me/profile, RFC 7396 merge-patch). Build the
+      // body explicitly — request transforms don't apply to direct calls.
+      // The v3 UpdateProfileInput only accepts first_name/last_name/gender/
+      // dob/locale/timezone (all strings); phone/countryCode are not
+      // editable here (disabled in the template), so send only the names.
+      const body = {
+        first_name: this.update.first_name,
+        last_name: this.update.last_name,
+      };
+      this.networkAdapter.patch_v3('PATCH /me/profile', body, { authToken: this.single_user.token })
         .subscribe(({
           next: (response: any) => {
 
