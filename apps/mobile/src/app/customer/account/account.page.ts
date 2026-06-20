@@ -32,6 +32,7 @@ import { ConnectionService } from '../../service/connection.service';
 import { I18nService } from '../../i18n.service';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { AuthSessionService } from '../../core/services/auth-session.service';
+import { CartCountService } from '../../core/services/cart-count.service';
 import {Products} from "../../class/products";
 import {Labels} from "../../class/labels";
 import {CartIconComponent} from "../../cart-icon.component";
@@ -133,6 +134,7 @@ export class AccountPage implements OnInit, OnDestroy {
     private i18n: I18nService,
     private wishlistService: WishlistService,
     private authSession: AuthSessionService,
+    public cartCount: CartCountService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -256,6 +258,11 @@ export class AccountPage implements OnInit, OnDestroy {
 
   ionViewDidEnter(){
     this.load_cart();
+    // Reactive cart badge: recompute from the authoritative store
+    // (guest local cart or authed GET /cart) every time the account
+    // page is shown, so the header badge reflects add/remove made
+    // elsewhere in the session.
+    void this.cartCount.refresh();
     }
 
   ngOnDestroy(): void {

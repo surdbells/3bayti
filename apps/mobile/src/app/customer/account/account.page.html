@@ -26,7 +26,7 @@
         <ax-icon name="message-square-more" [style.color]="'var(--text)'"/>
       </ion-button>
       <ion-button (click)="openCart()" fill="clear">
-        <app-cart-icon [count]="bill.count"></app-cart-icon>
+        <app-cart-icon [count]="cartCount.count()"></app-cart-icon>
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
@@ -111,10 +111,10 @@
       <!-- decorative gold sparkle + medallion motif -->
       <span class="gift-promo__glow" aria-hidden="true"></span>
       <span class="gift-promo__sparkle gift-promo__sparkle--1" aria-hidden="true">
-        <ax-icon name="sparkles" [size]="14" />
+        <ax-icon name="sparkles" [size]="28" />
       </span>
       <span class="gift-promo__sparkle gift-promo__sparkle--2" aria-hidden="true">
-        <ax-icon name="sparkles" [size]="10" />
+        <ax-icon name="sparkles" [size]="20" />
       </span>
 
       <div class="gift-promo__medallion" aria-hidden="true">

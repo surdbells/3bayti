@@ -43,7 +43,7 @@ import {Preferences} from "@capacitor/preferences";
 })
 export class CartIconComponent {
   /** number of items in cart */
-  @Input() count = 3;
+  @Input() count = 0;
   /** Maximum number to show before displaying 'max+' */
   @Input() maxDisplay = 99;
   get displayCount(): string {

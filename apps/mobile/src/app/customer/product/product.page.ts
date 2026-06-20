@@ -33,6 +33,7 @@ import { SizeChipsComponent } from "../../size-chips/size-chips.component";
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from "../../translate.pipe";
 import { LocalCartService, type LocalCartItem } from '../../core/services/local-cart.service';
+import { CartCountService } from '../../core/services/cart-count.service';
 import { Products } from "../../class/products";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -163,6 +164,7 @@ export class ProductPage implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private i18n: I18nService,
     private localCart: LocalCartService,
+    private cartCount: CartCountService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -484,6 +486,8 @@ export class ProductPage implements OnInit, OnDestroy {
 
   ionViewDidEnter() {
     this.load_cart();
+    // Keep the reactive cart badge in sync when the PDP is shown.
+    void this.cartCount.refresh();
   }
 
   // Track guest mode. When true, addToCart writes to LocalCartService
@@ -765,14 +769,16 @@ export class ProductPage implements OnInit, OnDestroy {
         .then(async () => {
           this.success_notification(this.i18n.t('text_added_to_cart'));
           this.ui_controls.is_adding_to_cart = false;
-          // Stay on the PDP (mirror web). Refresh the cart-count badge so
-          // the shopper gets feedback — read the new total from the local
-          // guest cart and persist it under Preferences('count').
+          // Stay on the PDP (mirror web). Update the reactive cart-count
+          // badge so the shopper gets immediate feedback — read the new
+          // total from the local guest cart and publish it via the shared
+          // CartCountService (replaces the write-only Preferences('count')).
           try {
             const count = await this.localCart.count();
-            await Preferences.set({ key: 'count', value: String(count) });
+            this.cartCount.setCount(count);
           } catch {
-            /* badge refresh is best-effort */
+            // Best-effort exact count; still bump so the badge moves.
+            this.cartCount.bump(this.add_cart.quantity);
           }
           this.cdr.markForCheck();
         })
@@ -825,15 +831,21 @@ export class ProductPage implements OnInit, OnDestroy {
                 : this.i18n.t('text_added_to_cart');
             this.success_notification(successText);
             this.ui_controls.is_adding_to_cart = false;
-            // Stay on the PDP (mirror web). Refresh the cart-count badge —
-            // the transformAddCartResponse transform exposes the new total
-            // as response.data.count; persist it under Preferences('count').
+            // Stay on the PDP (mirror web). Update the reactive cart-count
+            // badge — the transformAddCartResponse transform exposes the new
+            // total as response.data.count; publish it via the shared
+            // CartCountService (replaces the write-only Preferences('count')).
             const newCount =
               response.data && typeof response.data === 'object' && response.data.count != null
                 ? response.data.count
                 : undefined;
             if (newCount !== undefined) {
-              Preferences.set({ key: 'count', value: String(newCount) });
+              this.cartCount.setCount(Number(newCount));
+            } else {
+              // No authoritative count in the response — bump optimistically
+              // and reconcile from the server.
+              this.cartCount.bump(this.add_cart.quantity);
+              void this.cartCount.refresh();
             }
           } else {
             this.ui_controls.is_empty = true;

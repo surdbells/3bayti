@@ -30,6 +30,7 @@ import {Preferences} from "@capacitor/preferences";
 import {ActionSheetController} from "@ionic/angular";
 import {Labels} from "../../class/labels";
 import { LocalCartService, type LocalCartItem } from '../../core/services/local-cart.service';
+import { CartCountService } from '../../core/services/cart-count.service';
 import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -83,6 +84,7 @@ export class CartPage implements OnInit, OnDestroy {
     private toast: AxNotificationService,
     private i18n: I18nService,
     private localCart: LocalCartService,
+    private cartCount: CartCountService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -175,6 +177,10 @@ export class CartPage implements OnInit, OnDestroy {
   ngOnInit() {
     this.getObject();
   }
+  ionViewDidEnter() {
+    // Keep the reactive cart badge in sync whenever the cart page is shown.
+    void this.cartCount.refresh();
+  }
   // Track whether we're in guest mode (no auth). Used to route
   // cart operations to LocalCartService instead of NetworkService.
   isGuest = false;
@@ -257,7 +263,9 @@ export class CartPage implements OnInit, OnDestroy {
               this.carts = [];
               this.bill = { ...this.bill, count: 0, subtotal: 0 };
             }
-            Preferences.set({key: 'count', value: String(this.bill.count)});
+            // Reactive badge: publish the authed count from the bill
+            // (replaces the write-only Preferences('count')).
+            this.cartCount.setCount(Number(this.bill.count) || 0);
             this.ui_controls.is_loading = false;
             this.ui_controls.is_empty = this.carts.length === 0;
           }else{
@@ -278,30 +286,52 @@ export class CartPage implements OnInit, OnDestroy {
       const subtotal = await this.localCart.subtotal();
       const count = await this.localCart.count();
 
-      this.carts = items.map((it) => ({
-        // For guest carts, the line key is localId; the cart.page
-        // template references item.id for inc/dec/delete bindings,
-        // so expose localId under id too.
-        id: it.localId ?? 0,
-        product_id: it.product_id,
-        product_name: it.product_name,
-        product_image: it.product_image,
-        vendor_id: it.vendor_id,
-        store: it.vendor_id,
-        vendor_name: it.vendor_name,
-        quantity: it.quantity,
-        price: it.unit_price,
-        unit_price: it.unit_price,
-        size: it.size,
-        color: it.color,
-        is_custom: it.is_custom,
-        measurement: it.measurement,
-        extra_measurement: it.extra_measurement,
-        note: it.note,
-        in_stock: true,
-        // Computed line_total — local cart doesn't store it
-        line_total: (parseFloat(it.unit_price || '0') * (it.quantity || 0)).toFixed(2),
-      })) as unknown as Cart[];
+      this.carts = items.map((it) => {
+        const unitPrice = parseFloat(it.unit_price || '0');
+        // Build the variant/size+color description the template renders
+        // via [innerHTML]="cart.description" (mirrors how the authed cart
+        // surfaces a line subtitle). Skip blank parts so we don't show
+        // stray separators for products without a size/colour.
+        const descParts = [it.size, it.color].filter(
+          (p) => typeof p === 'string' && p.trim().length > 0,
+        );
+        return {
+          // For guest carts, the line key is localId; the cart.page
+          // template references item.id for inc/dec/delete bindings,
+          // so expose localId under id too.
+          id: it.localId ?? 0,
+          // The template's remove/increase/decrease handlers are bound to
+          // `cart.item`, and open_product to `cart.product`. The guest
+          // line key is the IndexedDB localId — expose it under `item` so
+          // LocalCartService.updateQuantity/remove (which guard localId<=0)
+          // receive the real id instead of undefined (silent no-op before).
+          item: it.localId ?? 0,
+          product: it.product_id,
+          product_id: it.product_id,
+          product_name: it.product_name,
+          product_image: it.product_image,
+          vendor_id: it.vendor_id,
+          store: it.vendor_id,
+          vendor_name: it.vendor_name,
+          quantity: it.quantity,
+          price: it.unit_price,
+          unit_price: it.unit_price,
+          // Template renders `cart.price_formatted` (2dp) and
+          // `cart.description`; the local mapper must populate both or the
+          // price/subtitle render blank for guests.
+          price_formatted: (Number.isFinite(unitPrice) ? unitPrice : 0).toFixed(2),
+          description: descParts.join(' / '),
+          size: it.size,
+          color: it.color,
+          is_custom: it.is_custom,
+          measurement: it.measurement,
+          extra_measurement: it.extra_measurement,
+          note: it.note,
+          in_stock: true,
+          // Computed line_total — local cart doesn't store it
+          line_total: ((Number.isFinite(unitPrice) ? unitPrice : 0) * (it.quantity || 0)).toFixed(2),
+        };
+      }) as unknown as Cart[];
 
       this.bill = {
         ...this.bill,
@@ -309,7 +339,9 @@ export class CartPage implements OnInit, OnDestroy {
         subtotal,
       };
 
-      Preferences.set({key: 'count', value: String(count)});
+      // Reactive badge: publish the guest count from the local cart
+      // (replaces the write-only Preferences('count')).
+      this.cartCount.setCount(count);
       this.ui_controls.is_loading = false;
       this.ui_controls.is_empty = this.carts.length === 0;
     } catch (err) {
