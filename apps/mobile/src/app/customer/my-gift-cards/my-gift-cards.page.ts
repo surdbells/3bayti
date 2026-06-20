@@ -72,7 +72,9 @@ export class MyGiftCardsPage implements OnInit {
     this.network.get_v3('GET /gift-cards/mine', { authToken: this.authToken }).subscribe({
       next: (res: any) => {
         this.ui.loading = false;
-        this.cards = res?.data ?? [];
+        // Hide unpaid (pending_payment) cards — an in-flight purchase that
+        // hasn't been funded isn't usable and shouldn't appear as balance.
+        this.cards = (res?.data ?? []).filter((c: any) => c?.status !== 'pending_payment');
         event?.target?.complete();
       },
       error: () => {

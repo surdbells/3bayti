@@ -128,7 +128,9 @@ export class MyGiftCardsPageComponent implements OnInit {
     this.loadState.set('loading');
     try {
       const list = await this.gift.listMine();
-      this.cards.set(list);
+      // Hide unpaid (pending_payment) cards — an unfunded, in-flight purchase
+      // isn't usable and shouldn't appear in the wallet as balance.
+      this.cards.set(list.filter((c) => c.status !== 'pending_payment'));
       this.loadState.set('ready');
     } catch {
       this.loadState.set('error');
