@@ -654,6 +654,12 @@
       "recipientNamePlaceholder": "Who is this for?",
       "recipientMessage": "Message (optional)",
       "recipientMessagePlaceholder": "Add a personal note…",
+      "recipientEmail": "Recipient email (optional)",
+      "recipientEmailPlaceholder": "name@example.com",
+      "recipientEmailInvalid": "Please enter a valid email address.",
+      "recipientPhone": "Recipient phone (optional)",
+      "recipientPhoneInvalid": "Please enter a valid phone number.",
+      "autoDeliverHint": "Add their email or phone and we'll deliver the gift card automatically. Leave blank to share the code yourself.",
       "deliveryWhen": "When to send",
       "deliveryNow": "Send now",
       "deliverySchedule": "Schedule",
@@ -849,6 +855,13 @@
       "point2": "Secure payments & daily payouts",
       "point3": "Go live in minutes",
       "cta": "Start selling"
+    },
+    "giftPromo": {
+      "eyebrow": "Gift Cards",
+      "heading": "Give the gift of choice",
+      "subtitle": "Buy a 3bayti gift card, then share the code yourself or let us deliver it automatically by email or SMS — perfect for birthdays, Eid and weddings.",
+      "ctaBuy": "Buy a gift card",
+      "ctaRedeem": "Have a code? Redeem"
     }
   },
   "product": {

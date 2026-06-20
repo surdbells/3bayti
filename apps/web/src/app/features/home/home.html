@@ -161,6 +161,57 @@
   }
 
   <!-- ===========================================================
+       GIFT CARD PROMO (marketing band)
+       Mirrors mobile's dashboard .gift-promo: a gilded card with a gift
+       motif funnelling to /gift-cards (buy) + /gift-cards/redeem. Placed
+       above best-sellers so it sits high in the shopping flow.
+       =========================================================== -->
+  <section class="home-section home-section--gift" aria-labelledby="gift-promo-title">
+    <article class="gift-promo">
+      <span class="gift-promo__glow" aria-hidden="true"></span>
+      <span class="gift-promo__sparkle gift-promo__sparkle--1" aria-hidden="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z" fill="currentColor"/>
+        </svg>
+      </span>
+      <span class="gift-promo__sparkle gift-promo__sparkle--2" aria-hidden="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 3l1.6 5.4L19 10l-5.4 1.6L12 17l-1.6-5.4L5 10l5.4-1.6z" fill="currentColor"/>
+        </svg>
+      </span>
+
+      <div class="gift-promo__medallion" aria-hidden="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8M2 8h20v4H2zM12 21V8M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5h4zM12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5h-4z"
+            fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <div class="gift-promo__body">
+        <p class="gift-promo__eyebrow">{{ 'home.giftPromo.eyebrow' | translate }}</p>
+        <h2 id="gift-promo-title" class="gift-promo__heading">{{ 'home.giftPromo.heading' | translate }}</h2>
+        <p class="gift-promo__subtitle">{{ 'home.giftPromo.subtitle' | translate }}</p>
+
+        <div class="gift-promo__actions">
+          <a routerLink="/gift-cards" class="gift-promo__cta">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 12v8a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8M2 8h20v4H2zM12 21V8M12 8S10.5 3 8 3a2.5 2.5 0 0 0 0 5h4zM12 8s1.5-5 4-5a2.5 2.5 0 0 1 0 5h-4z"
+                fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            {{ 'home.giftPromo.ctaBuy' | translate }}
+          </a>
+          <a routerLink="/gift-cards/redeem" class="gift-promo__link">
+            {{ 'home.giftPromo.ctaRedeem' | translate }}
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- ===========================================================
        TOP SELLERS (ranked)
        /v3/products?sort=popular — a ranked treatment. The numbering is
        meaningful here: the row genuinely is a most-loved ranking.

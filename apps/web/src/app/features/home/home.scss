@@ -695,3 +695,181 @@
   outline: 2px solid var(--color-brand-600, #b08642);
   outline-offset: 2px;
 }
+
+/* =====================================================================
+   GIFT CARD PROMO (marketing band)
+   A gilded, dark espresso card with a gold gift motif + sparkles —
+   mirrors mobile's dashboard .gift-promo intent in the web design
+   language. Centres within the page max-width like .sell-band.
+   ===================================================================== */
+.home-section--gift {
+  margin-block: clamp(1rem, 3vw, 2rem);
+}
+
+.gift-promo {
+  position: relative;
+  overflow: hidden;
+  max-width: var(--page-max-width, 1280px);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: clamp(1.25rem, 3vw, 2.5rem);
+  padding: clamp(1.75rem, 4vw, 2.75rem);
+  border-radius: var(--radius-xl, 28px);
+  border: 1px solid rgba(201, 162, 39, 0.35);
+  background:
+    radial-gradient(120% 160% at 100% 0%, rgba(201, 162, 39, 0.22) 0%, transparent 55%),
+    radial-gradient(120% 160% at 0% 100%, rgba(201, 162, 39, 0.12) 0%, transparent 55%),
+    linear-gradient(155deg, #2a1d14 0%, #3a281b 55%, #241811 100%);
+  color: #fbf4e6;
+}
+
+.gift-promo__glow {
+  position: absolute;
+  inset-block-start: -40%;
+  inset-inline-end: -10%;
+  width: 18rem;
+  height: 18rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201, 162, 39, 0.35), transparent 70%);
+  pointer-events: none;
+}
+
+.gift-promo__sparkle {
+  position: absolute;
+  color: rgba(232, 192, 64, 0.9);
+  pointer-events: none;
+}
+.gift-promo__sparkle svg {
+  display: block;
+}
+.gift-promo__sparkle--1 {
+  inset-block-start: 1.25rem;
+  inset-inline-end: 2.5rem;
+  width: 18px;
+  height: 18px;
+}
+.gift-promo__sparkle--2 {
+  inset-block-end: 1.5rem;
+  inset-inline-end: 6rem;
+  width: 12px;
+  height: 12px;
+  opacity: 0.75;
+}
+
+.gift-promo__medallion {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: clamp(3.5rem, 8vw, 4.75rem);
+  height: clamp(3.5rem, 8vw, 4.75rem);
+  border-radius: 50%;
+  color: #2a1d14;
+  background: linear-gradient(155deg, #f0d878, #c9a227 70%);
+  box-shadow: 0 8px 24px rgba(201, 162, 39, 0.35);
+}
+.gift-promo__medallion svg {
+  width: 50%;
+  height: 50%;
+}
+
+.gift-promo__body {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gift-promo__eyebrow {
+  margin: 0 0 0.4rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: #e8c040;
+}
+
+.gift-promo__heading {
+  margin: 0 0 0.5rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.5rem, 3.5vw, 2.1rem);
+  line-height: 1.1;
+  color: #fbf4e6;
+}
+
+.gift-promo__subtitle {
+  margin: 0 0 1.1rem;
+  max-width: 38rem;
+  color: rgba(251, 244, 230, 0.82);
+  line-height: 1.55;
+}
+
+.gift-promo__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+}
+
+.gift-promo__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.8rem 1.5rem;
+  border-radius: var(--radius-pill, 999px);
+  background: linear-gradient(155deg, #f0d878, #c9a227 75%);
+  color: #2a1d14;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.gift-promo__cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(201, 162, 39, 0.3);
+}
+.gift-promo__cta svg {
+  width: 18px;
+  height: 18px;
+}
+.gift-promo__cta:focus-visible {
+  outline: 2px solid #f0d878;
+  outline-offset: 2px;
+}
+
+.gift-promo__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #f0d878;
+  font-weight: 600;
+  text-decoration: none;
+}
+.gift-promo__link:hover {
+  text-decoration: underline;
+}
+.gift-promo__link svg {
+  width: 16px;
+  height: 16px;
+}
+:host-context([dir='rtl']) .gift-promo__cta svg,
+:host-context([dir='rtl']) .gift-promo__link svg {
+  transform: scaleX(-1);
+}
+.gift-promo__link:focus-visible {
+  outline: 2px solid #f0d878;
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  .gift-promo {
+    flex-direction: column;
+    text-align: center;
+  }
+  .gift-promo__actions {
+    justify-content: center;
+  }
+}

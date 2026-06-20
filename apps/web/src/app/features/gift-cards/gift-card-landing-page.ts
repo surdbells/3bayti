@@ -8,11 +8,13 @@ import {
   PLATFORM_ID,
 } from '@angular/core';
 import { isPlatformBrowser, DecimalPipe } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, Validators } from '@angular/forms';
+import type { AbstractControl } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HttpErrorResponse } from '@angular/common/http';
 import { TranslatePipe } from '@ngx-translate/core';
 
+import { PhoneInputComponent, parseE164 } from '../../shared/forms';
 import { GiftCardVisualComponent } from './gift-card-visual';
 import { GiftCardService } from './gift-card.service';
 import { CheckoutService } from '../../core/checkout/checkout.service';
@@ -44,16 +46,22 @@ type LoadState = 'loading' | 'ready' | 'error';
  * Auth: purchasing requires a signed-in buyer (the API returns 401
  * otherwise) — we catch that and send them to /login with a returnUrl.
  *
- * Luxury recipient photo is intentionally not wired yet: there is no
- * media-upload endpoint on the web app, so the luxury theme renders
- * without a photo and the form surfaces a "coming soon" note. The API
- * still accepts recipient_photo_url for when an upload path lands.
+ * Auto-delivery: the buyer may add a recipient email and/or phone. When
+ * either is present the API delivers the card automatically (email via
+ * ZeptoMail, SMS via MessageCentral); when both are blank, nothing is
+ * sent and the buyer shares the code themselves.
  */
 @Component({
   selector: 'app-gift-card-landing',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [FormsModule, TranslatePipe, DecimalPipe, GiftCardVisualComponent],
+  imports: [
+    FormsModule,
+    TranslatePipe,
+    DecimalPipe,
+    GiftCardVisualComponent,
+    PhoneInputComponent,
+  ],
   template: `
     <section class="gc">
       <header class="gc__header">
@@ -202,6 +210,51 @@ type LoadState = 'loading' | 'ready' | 'error';
                 ></textarea>
               </div>
 
+              <!-- Auto-delivery (optional email + phone) -->
+              <div class="gc__field">
+                <label class="gc__label" for="gc-recipient-email">
+                  {{ 'giftCards.landing.recipientEmail' | translate }}
+                </label>
+                <input
+                  id="gc-recipient-email"
+                  type="email"
+                  inputmode="email"
+                  autocomplete="off"
+                  class="gc__input"
+                  maxlength="120"
+                  name="recipientEmail"
+                  [class.gc__input--error]="!recipientEmailValid()"
+                  [ngModel]="recipientEmail()"
+                  (ngModelChange)="recipientEmail.set($event)"
+                  [attr.aria-invalid]="!recipientEmailValid()"
+                  [attr.placeholder]="'giftCards.landing.recipientEmailPlaceholder' | translate"
+                />
+                @if (!recipientEmailValid()) {
+                  <p class="gc__hint gc__hint--error" role="alert">
+                    {{ 'giftCards.landing.recipientEmailInvalid' | translate }}
+                  </p>
+                }
+              </div>
+
+              <div class="gc__field">
+                <label class="gc__label" for="gc-recipient-phone">
+                  {{ 'giftCards.landing.recipientPhone' | translate }}
+                </label>
+                <ui-phone-input
+                  inputId="gc-recipient-phone"
+                  name="recipientPhone"
+                  [nationalAriaLabel]="'giftCards.landing.recipientPhone' | translate"
+                  [ngModel]="recipientPhone()"
+                  (ngModelChange)="onPhoneChange($event)"
+                />
+                @if (!recipientPhoneValid()) {
+                  <p class="gc__hint gc__hint--error" role="alert">
+                    {{ 'giftCards.landing.recipientPhoneInvalid' | translate }}
+                  </p>
+                }
+                <p class="gc__hint">{{ 'giftCards.landing.autoDeliverHint' | translate }}</p>
+              </div>
+
               <!-- Delivery timing -->
               <div class="gc__field">
                 <span class="gc__label">{{ 'giftCards.landing.deliveryWhen' | translate }}</span>
@@ -320,6 +373,10 @@ export class GiftCardLandingPageComponent implements OnInit {
   protected readonly customMode = signal<boolean>(false);
   protected readonly recipientName = signal<string>('');
   protected readonly recipientMessage = signal<string>('');
+  /** Optional auto-delivery targets. Empty = nothing sent (buyer shares code). */
+  protected readonly recipientEmail = signal<string>('');
+  /** Full E.164 from ui-phone-input ('' when empty), e.g. '+971501234567'. */
+  protected readonly recipientPhone = signal<string>('');
   protected readonly scheduleEnabled = signal<boolean>(false);
   protected readonly scheduledAt = signal<string>('');
 
@@ -359,8 +416,39 @@ export class GiftCardLandingPageComponent implements OnInit {
     return Number.isInteger(n) && n >= this.min && n <= this.max;
   });
 
+  /**
+   * Optional recipient email. EMPTY is valid; a non-empty value must
+   * be a valid email (reuses Angular's Validators.email). Mirrors mobile.
+   */
+  protected readonly recipientEmailValid = computed<boolean>(() => {
+    const v = this.recipientEmail().trim();
+    if (v === '') return true;
+    return Validators.email({ value: v } as AbstractControl) === null;
+  });
+
+  /**
+   * Optional recipient phone. EMPTY is valid; a non-empty value must be
+   * a sane international number (ui-phone-input emits a full E.164 string
+   * with dial code, or '' when no national digits were entered). We
+   * validate the national-digit length against the parsed country, the
+   * same rule the phone-input's own validator applies.
+   */
+  protected readonly recipientPhoneValid = computed<boolean>(() => {
+    const v = this.recipientPhone().trim();
+    if (v === '') return true;
+    const parsed = parseE164(v);
+    if (parsed === null) return false;
+    const len = parsed.nationalDigits.length;
+    return len >= parsed.country.nationalDigits.min && len <= parsed.country.nationalDigits.max;
+  });
+
   protected readonly canSubmit = computed<boolean>(
-    () => this.loadState() === 'ready' && this.amountValid() && !this.submitting(),
+    () =>
+      this.loadState() === 'ready' &&
+      this.amountValid() &&
+      this.recipientEmailValid() &&
+      this.recipientPhoneValid() &&
+      !this.submitting(),
   );
 
   /** Amount as the 2dp string the API expects ("500.00"). */
@@ -468,6 +556,11 @@ export class GiftCardLandingPageComponent implements OnInit {
     this.denomination.set((value ?? '').replace(/[^\d]/g, ''));
   }
 
+  /** ui-phone-input emits the full E.164 string ('' when empty). */
+  protected onPhoneChange(value: string | null): void {
+    this.recipientPhone.set(value ?? '');
+  }
+
   protected setSchedule(enabled: boolean): void {
     this.scheduleEnabled.set(enabled);
     if (!enabled) {
@@ -499,6 +592,10 @@ export class GiftCardLandingPageComponent implements OnInit {
         recipient_message: this.recipientMessage().trim() || null,
         recipient_photo_url: this.theme() === 'luxury' ? this.recipientPhotoUrl() : null,
         scheduled_delivery_at: this.scheduledDeliveryIso(),
+        // Optional auto-delivery targets. Send blank as null (not "") so
+        // the API treats them as absent and skips delivery.
+        recipient_email: this.recipientEmail().trim() || null,
+        recipient_phone: this.recipientPhone().trim() || null,
       };
       const card = await this.gift.purchase(input);
       const res = await this.checkout.initiate({

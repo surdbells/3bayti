@@ -5,6 +5,7 @@ import {
   inject,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { RouterLink } from '@angular/router';
 import { catchError, from, map, of } from 'rxjs';
 
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
@@ -60,6 +61,7 @@ import { TranslatePipe } from '@ngx-translate/core';
     CampaignSectionComponent,
     TopSellersComponent,
     TranslatePipe,
+    RouterLink,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',

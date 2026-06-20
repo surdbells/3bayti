@@ -110,6 +110,14 @@ export interface GiftCardPurchaseInput {
   recipient_message?: string | null;
   recipient_photo_url?: string | null;
   scheduled_delivery_at?: string | null;
+  /**
+   * Optional auto-delivery targets. When either is present the API
+   * delivers the card automatically (email via ZeptoMail, SMS via
+   * MessageCentral); when both are blank, nothing is sent and the
+   * buyer shares the code themselves. Send blank values as null.
+   */
+  recipient_email?: string | null;
+  recipient_phone?: string | null;
 }
 
 /** Result of POST /v3/cart/gift-card — how much of a card applies to the cart. */

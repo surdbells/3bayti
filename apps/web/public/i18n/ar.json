@@ -654,6 +654,12 @@
       "recipientNamePlaceholder": "لمن هذه الهدية؟",
       "recipientMessage": "رسالة (اختياري)",
       "recipientMessagePlaceholder": "أضيفي رسالة شخصية…",
+      "recipientEmail": "البريد الإلكتروني للمُستلِم (اختياري)",
+      "recipientEmailPlaceholder": "name@example.com",
+      "recipientEmailInvalid": "يرجى إدخال بريد إلكتروني صحيح.",
+      "recipientPhone": "هاتف المُستلِم (اختياري)",
+      "recipientPhoneInvalid": "يرجى إدخال رقم هاتف صحيح.",
+      "autoDeliverHint": "أضيفي بريدهم الإلكتروني أو رقم هاتفهم وسنوصّل بطاقة الهدية تلقائيًا. اتركيها فارغة لمشاركة الرمز بنفسك.",
       "deliveryWhen": "موعد الإرسال",
       "deliveryNow": "إرسال الآن",
       "deliverySchedule": "جدولة",
@@ -849,6 +855,13 @@
       "point2": "مدفوعات آمنة وسحوبات يومية",
       "point3": "انطلقي خلال دقائق",
       "cta": "ابدئي البيع"
+    },
+    "giftPromo": {
+      "eyebrow": "بطاقات الهدايا",
+      "heading": "اهدِ حرية الاختيار",
+      "subtitle": "اشترِ بطاقة هدية من 3bayti، ثم شاركي الرمز بنفسك أو دعينا نوصّلها تلقائيًا عبر البريد الإلكتروني أو الرسائل القصيرة — مثالية لأعياد الميلاد والعيد والأعراس.",
+      "ctaBuy": "اشترِ بطاقة هدية",
+      "ctaRedeem": "لديك رمز؟ استبدليه"
     }
   },
   "product": {

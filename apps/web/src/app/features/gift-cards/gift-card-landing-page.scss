@@ -219,6 +219,11 @@
   border-color: var(--color-brand-600, #b08642);
 }
 
+.gc__input--error,
+.gc__input--error:focus {
+  border-color: #b3261e;
+}
+
 .gc__textarea {
   resize: vertical;
   min-height: 3.5rem;
