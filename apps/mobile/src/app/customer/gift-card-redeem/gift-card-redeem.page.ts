@@ -12,6 +12,7 @@ import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
+import { TranslatePipe } from '../../translate.pipe';
 
 @Component({
   selector: 'app-gift-card-redeem',
@@ -21,7 +22,7 @@ import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonSpinner,
-    AxLoaderComponent, AxIconComponent, AxTextFieldComponent,
+    AxLoaderComponent, AxIconComponent, AxTextFieldComponent, TranslatePipe,
   ],
 })
 export class GiftCardRedeemPage {
@@ -95,7 +96,7 @@ export class GiftCardRedeemPage {
       next: (res: any) => {
         this.ui.redeeming = false;
         if (res?.data?.id) {
-          this.notify.success('Gift card added to your wallet!');
+          this.notify.success('Gift card added to your account!');
           this.router.navigate(['/gift-card-detail'], { state: { card: res.data } });
           return;
         }
