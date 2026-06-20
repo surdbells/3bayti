@@ -11,8 +11,8 @@
 
 export const environment = {
   SITE_URL: "https://staging.3bayti.ae",
-  SENTRY_DSN: "",
-  GA4_MEASUREMENT_ID: "",
+  SENTRY_DSN: "https://822503d1eda33a1e983a6aa0a8f9dce7@o4511365625872384.ingest.us.sentry.io/4511365627772928",
+  GA4_MEASUREMENT_ID: "G-W2YF72TS3F",
 
   /* Google Places API (New) — powers the street-address autocomplete on the
      checkout/address form (apps/web/src/app/core/places). If apiKey is empty

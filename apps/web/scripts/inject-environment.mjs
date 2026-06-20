@@ -39,8 +39,8 @@ const ENV_FILE = join(__dirname, '..', 'src', 'environments', 'environment.ts');
 
 /* ----- Read env vars with defaults ----- */
 const SITE_URL = (process.env.SITE_URL || 'https://staging.3bayti.ae').replace(/\/$/, '');
-const SENTRY_DSN = (process.env.SENTRY_DSN || '').trim();
-const GA4_MEASUREMENT_ID = (process.env.GA4_MEASUREMENT_ID || '').trim();
+const SENTRY_DSN = (process.env.SENTRY_DSN || 'https://822503d1eda33a1e983a6aa0a8f9dce7@o4511365625872384.ingest.us.sentry.io/4511365627772928').trim();
+const GA4_MEASUREMENT_ID = (process.env.GA4_MEASUREMENT_ID || 'G-W2YF72TS3F').trim();
 
 /* Validate: SITE_URL must be a real https:// URL with no path. */
 try {
