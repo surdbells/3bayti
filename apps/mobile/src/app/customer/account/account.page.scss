@@ -683,7 +683,9 @@ ion-modal ion-content {
     pointer-events: none;
     ax-icon { color: #E8C040; }
 
-    &--1 { top: 12px;    right: 16px; }
+    // Shifted left so it clears the top-right dismiss (X) button (right:8–36px)
+    // instead of sitting hidden beneath it.
+    &--1 { top: 12px;    right: 48px; }
     &--2 { bottom: 14px; right: 38px; opacity: 0.55; }
   }
 
