@@ -106,8 +106,16 @@
   }
 
   <!-- Gift-card advertorial promo -->
+  @if (!giftPromoDismissed) {
   <section class="section ion-padding-horizontal">
     <article class="gift-promo">
+      <button
+        type="button"
+        class="gift-promo__close"
+        [attr.aria-label]="'gift_promo_dismiss' | translate"
+        (click)="dismissGiftPromo(); $event.stopPropagation()">
+        <ax-icon name="x" [size]="16" />
+      </button>
       <!-- decorative gold sparkle + medallion motif -->
       <span class="gift-promo__glow" aria-hidden="true"></span>
       <span class="gift-promo__sparkle gift-promo__sparkle--1" aria-hidden="true">
@@ -138,6 +146,7 @@
       </div>
     </article>
   </section>
+  }
 
   <!-- Best Sellers Section -->
   @if (!ui_controls.is_loading){

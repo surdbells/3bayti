@@ -55,12 +55,12 @@
   transition: background 0.15s ease, border-color 0.15s ease;
 
   &:active {
-    background: var(--ax-palette-beige-100);
+    background: var(--ax-color-bg-brand-subtle);
   }
 }
 
 .axpf__opt--active {
-  background: var(--ax-palette-beige-100);
+  background: var(--ax-color-bg-brand-subtle);
   border-color: var(--ax-color-border-default);
   font-weight: 500;
 }
@@ -104,7 +104,7 @@
   transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 
   &:active {
-    background: var(--ax-palette-beige-100);
+    background: var(--ax-color-bg-brand-subtle);
   }
 }
 

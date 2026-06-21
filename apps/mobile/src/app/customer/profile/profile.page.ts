@@ -267,7 +267,7 @@ export class ProfilePage implements OnInit, OnDestroy {
 
             if (response.response_code === 200 && response.status === "success") {
               this.ui_controls.is_updating = false;
-              this.success_notification(response.message);
+              this.success_notification(this.i18n.t('text_profile_updated'));
               this.get_profile();
             }else{
               this.ui_controls.is_updating = false

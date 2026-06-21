@@ -61,7 +61,7 @@ export class TicketListPage implements OnInit {
   isWishOpen = false; // or control this as you like
   private sub: Subscription;
   constructor(
-    private nav: NavController,
+    protected nav: NavController,
     private net: ConnectionService,
     private platform: Platform,
     private router: Router,

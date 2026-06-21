@@ -171,18 +171,18 @@ function vendorName(v: unknown): string {
 }
 
 /**
- * Format price as a legacy `price_formated` string ("AED 299" form).
- * Mobile's detail page displays this verbatim; we synthesize from v3's
- * structured price.
+ * Format price as the legacy `price_formated` string — amount only ("299"
+ * / "299.50"), no currency prefix. The PDP (the sole consumer) renders its
+ * own Dirham glyph in front of this value, so emitting the currency here
+ * would double it ("Ð AED 490"). We synthesize from v3's structured price.
  */
 function formatPrice(price: unknown): string {
   if (isRecord(price)) {
     const amount = asNumber(price['amount'], 0);
-    const currency = asString(price['currency'], 'AED');
-    // Integer formatting matches legacy ("AED 299" not "AED 299.00")
-    // for whole-number prices; preserves cents otherwise.
+    // Integer formatting matches legacy ("299" not "299.00") for
+    // whole-number prices; preserves cents otherwise.
     const amountStr = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
-    return `${currency} ${amountStr}`;
+    return amountStr;
   }
   return '';
 }
@@ -276,6 +276,20 @@ function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
     // Secondary bindings some pages may use (vendors.page reads
     // `vendor_products.image` not `vendor_products.image_1`):
     image: flatImageUrl(item['primary_image']),
+    // Gallery for the explore carousel. vertican.page getProductImages()
+    // reads `images` (CSV string -> split, or array) and swipes/dots over
+    // it, falling back to [image_1] when absent. The PDP detail shape
+    // surfaces the full gallery under `images` (array of {url, ...}); the
+    // list shape uses the same field name WHEN the backend includes it.
+    // We map it via the same imagesAsCsvString helper detailShape uses, so
+    // the carousel works the instant the backend listShape surfaces it.
+    // NOTE: as of this change ProductSerializer::listShape (apps/api) does
+    // NOT emit `images` (only `primary_image`), so item['images'] is
+    // undefined and this resolves to '' -> getProductImages falls back to a
+    // single image. A backend change is required to populate the gallery
+    // here (see ProductSerializer::listShape ~line 188-225: add
+    // 'images' => $this->imagesArray($p)).
+    images: imagesAsCsvString(item['images']),
     // Pass-through fields that are useful and unambiguous:
     slug: asString(item['slug']),
     in_stock: item['in_stock'] === true,

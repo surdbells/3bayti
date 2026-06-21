@@ -150,7 +150,7 @@ describe('transformProductDetailResponse', () => {
 
     // Pricing — flat number AND formatted string:
     expect(r['price']).toBe(299);
-    expect(r['price_formated']).toBe('AED 299');
+    expect(r['price_formated']).toBe('299');
     expect(r['sale_price']).toBe(249);
 
     // Slug + canonical image:
@@ -229,7 +229,7 @@ describe('transformProductDetailResponse', () => {
       ...sampleV3Detail,
       price: { amount: 299.5, currency: 'AED' },
     }) as Record<string, unknown>;
-    expect(r['price_formated']).toBe('AED 299.50');
+    expect(r['price_formated']).toBe('299.50');
     expect(r['price']).toBe(299.5);
   });
 

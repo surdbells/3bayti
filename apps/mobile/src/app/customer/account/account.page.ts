@@ -215,6 +215,9 @@ export class AccountPage implements OnInit, OnDestroy {
   // ── Gift card balance widget ──────────────────────────────────────
   activeGiftCards: any[] = [];
 
+  // Gift-card advertorial promo — dismissible, persisted in Preferences.
+  giftPromoDismissed = false;
+
   get totalGiftCardBalance(): string {
     const total = this.activeGiftCards.reduce((sum: number, c: any) => sum + Number(c.balance), 0);
     return total.toFixed(2);
@@ -235,12 +238,21 @@ export class AccountPage implements OnInit, OnDestroy {
     this.router.navigate(['/my-gift-cards']);
   }
 
+  async dismissGiftPromo() {
+    this.giftPromoDismissed = true;
+    await Preferences.set({ key: 'gift_promo_dismissed', value: '1' });
+  }
+
   ngOnInit() {
     this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
     this.getObject();
   }
 
   async getObject() {
+    const dismissed = await Preferences.get({ key: 'gift_promo_dismissed' });
+    if (dismissed.value === '1') {
+      this.giftPromoDismissed = true;
+    }
     const ret: any = await Preferences.get({ key: 'user' });
     if (ret.value == null){
       this.router.navigate(['/', 'login']);

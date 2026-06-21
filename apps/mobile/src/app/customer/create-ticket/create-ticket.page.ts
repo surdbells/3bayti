@@ -144,7 +144,12 @@ export class CreateTicketPage implements OnInit, OnDestroy {
           if (response.response_code === 200 && response.status === "success") {
             this.stores =  response.data;
             this.ui_controls.is_loading = false;
+          } else {
+            this.ui_controls.is_loading = false;
           }
+        },
+        error: () => {
+          this.ui_controls.is_loading = false;
         }
       }))
   }
