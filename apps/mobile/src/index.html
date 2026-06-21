@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <title>3bayti</title>
   <base href="/" />
-  <meta name="color-scheme" content="light" />
+  <meta name="color-scheme" content="light dark" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="format-detection" content="telephone=no" />
@@ -23,6 +23,24 @@
        mounts, eliminating the white flash between native splash dismissal
        and Angular bootstrap. Update if --ax-palette-neutral-50 changes. -->
   <style>html,body{background:#faf8f5;margin:0}</style>
+  <!-- Respect the device's light/dark appearance deterministically: set
+       data-ax-theme from the OS colour scheme BEFORE paint (the ax token system
+       keys dark mode off [data-ax-theme]). Avoids relying on the CSS media
+       query alone (which the iOS WKWebView can evaluate inconsistently) and
+       tracks live OS toggles. -->
+  <script>
+    (function () {
+      try {
+        var mq = window.matchMedia('(prefers-color-scheme: dark)');
+        var set = function (dark) {
+          document.documentElement.setAttribute('data-ax-theme', dark ? 'dark' : 'light');
+        };
+        set(mq.matches);
+        if (mq.addEventListener) { mq.addEventListener('change', function (e) { set(e.matches); }); }
+        else if (mq.addListener) { mq.addListener(function (e) { set(e.matches); }); }
+      } catch (e) { /* fall back to default styling */ }
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>
