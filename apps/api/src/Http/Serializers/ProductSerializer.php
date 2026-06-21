@@ -204,6 +204,10 @@ final class ProductSerializer
             'price' => $this->money($p->getPrice()),
             'sale_price' => $p->getSalePrice() !== null ? $this->money($p->getSalePrice()) : null,
             'primary_image' => $primaryImage,
+            // Full gallery so list-driven carousels (mobile explore) can show
+            // multiple images per product. imagesArray reads the already-hydrated
+            // in-memory images collection — no extra query / no N+1.
+            'images' => $this->imagesArray($p),
             'category_slug' => $p->getCategory()?->getSlug(),
             'vendor' => $p->getVendor()->getSlug() !== ''
                 ? ['slug' => $p->getVendor()->getSlug(), 'name' => $p->getVendor()->getName()]
