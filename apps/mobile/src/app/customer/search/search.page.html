@@ -48,9 +48,9 @@
                     [class.loaded]="imageLoaded[product.product_id]"
                     (load)="onImageLoad(product.product_id)"
                     (error)="onImageError(product.product_id)"
-                    [src]="cfImage(product.product_image, 'card')"
+                    [src]="cfImage(product.image_1, 'card')"
                     alt="{{product.product_name}}" />
-                  <button (click)="startAddToCloset(product.product_id, product.product_name, product.product_image); $event.stopPropagation()" class="m6d-like" type="button" aria-label="Add to closet">
+                  <button (click)="startAddToCloset(product.product_id, product.product_name, product.image_1); $event.stopPropagation()" class="m6d-like" type="button" aria-label="Add to closet">
                     <ax-icon name="heart-plus" />
                   </button>
                   <button (click)="open_vendor(product.store, product.store_name); $event.stopPropagation()" class="m6d-vendor-badge vendor-badge--tappable" type="button">&#64;{{product.store_name}}</button>
@@ -58,7 +58,7 @@
                 <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
                   <p class="m6d-name">{{product.product_name}}</p>
                   <div class="m6d-price-row">
-                    <span class="m6d-price">Ð{{product.price_formatted}}</span>
+                    <span class="m6d-price">Ð{{product.price}}</span>
                     <button (click)="open_product(product.product_id, product.product_name); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
                       <ax-icon name="plus" />
                     </button>
