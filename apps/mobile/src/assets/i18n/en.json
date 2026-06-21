@@ -898,5 +898,7 @@
   "ph_extra_measurements": "Enter additional measurements...",
   "pyjamas": "Pyjamas",
   "label_category_name": "Category name",
-  "placeholder_select_emirate": "Select emirate"
+  "placeholder_select_emirate": "Select emirate",
+  "sign_in_to_add_to_cart": "Sign in or sign up to be able to add to cart",
+  "sign_in_to_add_to_wishlist": "Sign in or sign up to be able to add to your wishlist"
 }

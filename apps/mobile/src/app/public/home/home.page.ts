@@ -273,7 +273,8 @@ export class HomePage implements OnInit, OnDestroy {
   }
 
   startAddToCloset(product_id: number, product_name: string, image_1: string) {
-    this.error_notification(this.i18n.t('text_signup_to_continue'));
+    // Guest wishlist tap -> prompt sign-in/up with the wishlist-specific message.
+    this.error_notification(this.i18n.t('sign_in_to_add_to_wishlist'));
   }
 
   newArrivals() {

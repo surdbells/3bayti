@@ -32,7 +32,6 @@ import { Preferences } from "@capacitor/preferences";
 import { SizeChipsComponent } from "../../size-chips/size-chips.component";
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from "../../translate.pipe";
-import { LocalCartService, type LocalCartItem } from '../../core/services/local-cart.service';
 import { CartCountService } from '../../core/services/cart-count.service';
 import { Products } from "../../class/products";
 
@@ -163,7 +162,6 @@ export class ProductPage implements OnInit, OnDestroy {
     private toast: AxNotificationService,
     private cdr: ChangeDetectorRef,
     private i18n: I18nService,
-    private localCart: LocalCartService,
     private cartCount: CartCountService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
@@ -490,17 +488,17 @@ export class ProductPage implements OnInit, OnDestroy {
     void this.cartCount.refresh();
   }
 
-  // Track guest mode. When true, addToCart writes to LocalCartService
-  // instead of POSTing /customer/addToCart. Guest users can browse,
-  // see prices, and add to cart without signing up.
+  // Track guest mode. When true, addToCart shows a friendly login prompt
+  // instead of POSTing /v3/cart/items. Guests can browse and see prices, but
+  // adding to cart (and wishlist) requires signing in or signing up.
   isGuest = false;
 
   async getObject() {
     const ret: any = await Preferences.get({ key: 'user' });
     if (ret.value == null) {
-      // M3.1.6i.2-E: guest mode — show the product, allow adding to
-      // local cart. Authenticated-only features (measurement save,
-      // wishlist add) remain gated.
+      // Guest mode — show the product and prices. Authenticated-only
+      // features (add to cart, measurement save, wishlist add) are gated
+      // behind a friendly sign-in / sign-up prompt.
       this.isGuest = true;
       this.get_single();
     } else {
@@ -743,13 +741,14 @@ export class ProductPage implements OnInit, OnDestroy {
     this.ui_controls.is_adding_to_cart = true;
     this.cdr.markForCheck();
 
-    // Guest OR an invalid/empty session -> local cart. Adding to cart never
-    // requires login (web-parity public cart); items merge into the account on
-    // sign-in. A stale 'user' blob with a dead token also lands here via the
-    // auth-failure fallback in the authed branch below, so a shopper never sees
-    // "Authentication required" when adding to cart.
+    // Guest OR an invalid/empty session -> require login. Adding to cart needs
+    // an account; show a friendly prompt and add nothing. A stale 'user' blob
+    // with a dead token also lands here via the auth-failure branch in the
+    // authed POST below, which shows the SAME prompt.
     if (this.isGuest || !this.single_user.token) {
-      this.addToLocalCart();
+      this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
+      this.ui_controls.is_adding_to_cart = false;
+      this.cdr.markForCheck();
       return;
     }
 
@@ -815,10 +814,10 @@ export class ProductPage implements OnInit, OnDestroy {
             response.error_code === 'AUTH_INVALID_TOKEN' ||
             (typeof response.error_code === 'string' && response.error_code.startsWith('AUTH_'))
           ) {
-            // Stale/invalid session -> fall back to the LOCAL cart instead of
-            // surfacing "Authentication required". Adding to cart never requires
-            // login; items merge into the account on sign-in.
-            this.addToLocalCart();
+            // Stale/invalid session -> require login. Show the same friendly
+            // prompt as the guest gate and add nothing.
+            this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
+            this.ui_controls.is_adding_to_cart = false;
           } else {
             this.ui_controls.is_empty = true;
             this.ui_controls.is_adding_to_cart = false;
@@ -834,54 +833,6 @@ export class ProductPage implements OnInit, OnDestroy {
           this.ui_controls.is_adding_to_cart = false;
           this.cdr.markForCheck();
         }
-      });
-  }
-
-  /**
-   * Add the current selection to the device-local guest cart (no network, no
-   * auth). Used for true guests, empty/invalid sessions, and as the fallback
-   * when the authed POST returns an auth error — so adding to cart always works
-   * without login (items merge into the account on sign-in). The caller has
-   * already set is_adding_to_cart = true.
-   */
-  private addToLocalCart(): void {
-    const localItem: LocalCartItem = {
-      product_id: this.add_cart.product_id,
-      quantity: this.add_cart.quantity,
-      size: this.add_cart.size || '',
-      color: this.add_cart.color || '',
-      is_custom: this.add_cart.is_custom === true,
-      measurement: this.add_cart.measurement || '',
-      extra_measurement: this.add_cart.extra_measurement || '',
-      note: this.add_cart.note || '',
-      // Display fields snapshotted at add time; v3 re-derives from product_id on merge.
-      product_name: this.single.name || '',
-      product_image: this.single.image_1 || '',
-      unit_price: String(this.single.price || '0'),
-      vendor_id: typeof this.single.store === 'string'
-        ? parseInt(this.single.store, 10) || 0
-        : (this.single.store || 0),
-      vendor_name: this.single.store_name || '',
-    };
-
-    this.localCart.add(localItem)
-      .then(async () => {
-        this.success_notification(this.i18n.t('text_added_to_cart'));
-        this.ui_controls.is_adding_to_cart = false;
-        this.itemExists = true; // flip the CTA to "Already in cart — View"
-        try {
-          const count = await this.localCart.count();
-          this.cartCount.setCount(count);
-        } catch {
-          this.cartCount.bump(this.add_cart.quantity);
-        }
-        this.cdr.markForCheck();
-      })
-      .catch((err) => {
-        console.warn('[Product] guest add failed', err);
-        this.error_notification(this.i18n.t('text_something_went_wrong'));
-        this.ui_controls.is_adding_to_cart = false;
-        this.cdr.markForCheck();
       });
   }
 

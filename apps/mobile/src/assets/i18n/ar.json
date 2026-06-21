@@ -898,5 +898,7 @@
   "you_no_styles": "ليس لديك أنماط بعد",
   "pyjamas": "بيجامات",
   "label_category_name": "اسم الفئة",
-  "placeholder_select_emirate": "اختر الإمارة"
+  "placeholder_select_emirate": "اختر الإمارة",
+  "sign_in_to_add_to_cart": "سجّل الدخول أو أنشئ حسابًا لتتمكن من الإضافة إلى السلة",
+  "sign_in_to_add_to_wishlist": "سجّل الدخول أو أنشئ حسابًا لتتمكن من الإضافة إلى قائمة رغباتك"
 }
