@@ -61,9 +61,6 @@ export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'pr
           class="m6f-tab"
           [class.m6f-tab--active]="active === 'cart'">
           <ax-icon name="shopping-cart" />
-          @if (cartCount.count() > 0) {
-            <ion-badge class="m6f-cart-badge" color="danger">{{ cartCount.count() }}</ion-badge>
-          }
           <ion-label>{{ 'title_my_cart' | translate }}</ion-label>
         </ion-tab-button>
         <ion-tab-button
