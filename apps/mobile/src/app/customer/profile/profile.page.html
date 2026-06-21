@@ -14,10 +14,17 @@
       @if (!ui_controls.is_loading || !ui_controls.is_updating) {
         <ion-card-header>
           <div class="profile-avatar-wrap">
-            <img
-              class="profile-avatar"
-              [src]="single_user.avatar || 'assets/images/avatar.png'"
-              [attr.alt]="'alt_profile_picture' | translate" />
+            <div class="profile-avatar-media">
+              <img
+                class="profile-avatar"
+                [src]="single_user.avatar || 'assets/images/avatar.png'"
+                [attr.alt]="'alt_profile_picture' | translate" />
+              @if (ui_controls.avatar_uploading) {
+                <div class="profile-avatar-overlay" role="status" [attr.aria-label]="'text_uploading' | translate">
+                  <ax-loader size="sm" color="#fff"></ax-loader>
+                </div>
+              }
+            </div>
             <button
               type="button"
               class="profile-avatar-btn"
@@ -40,9 +47,9 @@
           </ion-card-subtitle>
         </ion-card-header>
       }
-      <ion-card-content>
+      <ion-card-content class="profile-card-content">
         @if (!ui_controls.is_loading || !ui_controls.is_updating) {
-          <ion-row class="ion-padding-bottom">
+          <ion-row class="profile-row">
             <ion-col class="ion-no-padding">
               <ax-text-field
                 [label]="'label_first_name' | translate"
@@ -66,10 +73,10 @@
           </ion-row>
         }
         @if (!ui_controls.is_loading || !ui_controls.is_updating) {
-          <ion-row>
+          <ion-row class="profile-row">
             <ion-col size="4" class="ion-no-padding">
               <label class="profile-field-label">{{ 'label_dial_code' | translate }}</label>
-              <ion-button expand="block" class="ion-margin-vertical" type="button" [disabled]="true" (click)="isCountryCodeOpen = true">
+              <ion-button expand="block" class="profile-cc-btn" type="button" [disabled]="true" (click)="isCountryCodeOpen = true">
                 <span class="cc-flag">{{ selectedDial?.flag }}</span>
                 <span class="cc-code">{{ update.countryCode }}</span>
                 <ax-icon name="chevron-down" slot="end" [style.color]="'var(--ion-color-secondary)'"/>
@@ -92,11 +99,11 @@
           </ion-row>
         }
         @if (!ui_controls.is_loading || !ui_controls.is_updating) {
-          <ion-row class="ion-padding-bottom">
+          <ion-row class="profile-row">
             <ion-col class="ion-no-padding">
               <label class="profile-field-label">{{ 'label_gender' | translate }}</label>
               <ion-select
-                class="ion-margin-vertical"
+                class="profile-select"
                 [label]="'label_gender' | translate"
                 labelPlacement="stacked"
                 interface="action-sheet"
@@ -111,7 +118,7 @@
             <ion-col class="ion-no-padding ion-padding-start">
               <label class="profile-field-label">{{ 'label_date_of_birth' | translate }}</label>
               <input
-                class="profile-date-input ion-margin-vertical"
+                class="profile-date-input"
                 type="date"
                 [max]="maxDob"
                 [(ngModel)]="update.dob"
@@ -120,11 +127,11 @@
           </ion-row>
         }
         @if (!ui_controls.is_loading || !ui_controls.is_updating) {
-          <ion-row class="ion-padding-bottom">
+          <ion-row class="profile-row">
             <ion-col class="ion-no-padding">
               <label class="profile-field-label">{{ 'label_preferred_language' | translate }}</label>
               <ion-select
-                class="ion-margin-vertical"
+                class="profile-select"
                 [label]="'label_preferred_language' | translate"
                 labelPlacement="stacked"
                 interface="action-sheet"
@@ -137,10 +144,10 @@
             </ion-col>
           </ion-row>
         }
-        <ion-row>
-          <ion-col>
+        <ion-row class="profile-row profile-row--submit">
+          <ion-col class="ion-no-padding">
             @if (!ui_controls.is_loading) {
-              <ion-button (click)="update_profile()" expand="block" class="ion-margin-vertical" type="button">  {{ 'button_update' | translate }}
+              <ion-button (click)="update_profile()" expand="block" class="profile-submit-btn" type="button">  {{ 'button_update' | translate }}
               </ion-button>
             }
             @if (ui_controls.is_loading || ui_controls.is_updating) {
