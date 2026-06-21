@@ -1,9 +1,10 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonFooter, IonLabel, IonTabBar, IonTabButton } from '@ionic/angular/standalone';
+import { IonBadge, IonFooter, IonLabel, IonTabBar, IonTabButton } from '@ionic/angular/standalone';
 
 import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../ax-mobile/icon';
+import { CartCountService } from '../../core/services/cart-count.service';
 
 /**
  * Shared bottom tab bar component (app-shell).
@@ -31,6 +32,7 @@ export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'pr
     IonTabBar,
     IonTabButton,
     IonLabel,
+    IonBadge,
     AxIconComponent,
     TranslatePipe,
   ],
@@ -59,6 +61,9 @@ export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'pr
           class="m6f-tab"
           [class.m6f-tab--active]="active === 'cart'">
           <ax-icon name="shopping-cart" />
+          @if (cartCount.count() > 0) {
+            <ion-badge class="m6f-cart-badge" color="danger">{{ cartCount.count() }}</ion-badge>
+          }
           <ion-label>{{ 'title_my_cart' | translate }}</ion-label>
         </ion-tab-button>
         <ion-tab-button
@@ -89,7 +94,7 @@ export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'pr
     </ion-footer>
   `,
 })
-export class AppTabBarComponent {
+export class AppTabBarComponent implements OnInit {
   /** Which tab to mark as active. Pass undefined for none. */
   @Input() active?: AppTabBarTab;
 
@@ -112,7 +117,17 @@ export class AppTabBarComponent {
     profile: '/settings',
   };
 
-  constructor(private router: Router) {}
+  constructor(
+    private router: Router,
+    public cartCount: CartCountService,
+  ) {}
+
+  ngOnInit(): void {
+    // Refresh the shared cart count so the cart-tab badge reflects the current
+    // cart (guest local cart OR authed server cart) on whatever page mounts the
+    // tab bar — giving guests a visible indication of items in their local cart.
+    this.cartCount.refresh();
+  }
 
   go(tab: AppTabBarTab): void {
     const route = AppTabBarComponent.ROUTES[tab];

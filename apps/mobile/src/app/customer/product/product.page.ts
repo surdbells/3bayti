@@ -743,52 +743,13 @@ export class ProductPage implements OnInit, OnDestroy {
     this.ui_controls.is_adding_to_cart = true;
     this.cdr.markForCheck();
 
-    // M3.1.6i.2-E: guest path — write to IndexedDB, no network.
-    if (this.isGuest) {
-      const localItem: LocalCartItem = {
-        product_id: this.add_cart.product_id,
-        quantity: this.add_cart.quantity,
-        size: this.add_cart.size || '',
-        color: this.add_cart.color || '',
-        is_custom: this.add_cart.is_custom === true,
-        measurement: this.add_cart.measurement || '',
-        extra_measurement: this.add_cart.extra_measurement || '',
-        note: this.add_cart.note || '',
-        // Display fields snapshotted at add time. v3 will re-derive
-        // from product_id on merge; these are local-UI-only.
-        product_name: this.single.name || '',
-        product_image: this.single.image_1 || '',
-        unit_price: String(this.single.price || '0'),
-        vendor_id: typeof this.single.store === 'string'
-          ? parseInt(this.single.store, 10) || 0
-          : (this.single.store || 0),
-        vendor_name: this.single.store_name || '',
-      };
-
-      this.localCart.add(localItem)
-        .then(async () => {
-          this.success_notification(this.i18n.t('text_added_to_cart'));
-          this.ui_controls.is_adding_to_cart = false;
-          this.itemExists = true; // flip the CTA to "Already in cart — View"
-          // Stay on the PDP (mirror web). Update the reactive cart-count
-          // badge so the shopper gets immediate feedback — read the new
-          // total from the local guest cart and publish it via the shared
-          // CartCountService (replaces the write-only Preferences('count')).
-          try {
-            const count = await this.localCart.count();
-            this.cartCount.setCount(count);
-          } catch {
-            // Best-effort exact count; still bump so the badge moves.
-            this.cartCount.bump(this.add_cart.quantity);
-          }
-          this.cdr.markForCheck();
-        })
-        .catch((err) => {
-          console.warn('[Product] guest add failed', err);
-          this.error_notification(this.i18n.t('text_something_went_wrong'));
-          this.ui_controls.is_adding_to_cart = false;
-          this.cdr.markForCheck();
-        });
+    // Guest OR an invalid/empty session -> local cart. Adding to cart never
+    // requires login (web-parity public cart); items merge into the account on
+    // sign-in. A stale 'user' blob with a dead token also lands here via the
+    // auth-failure fallback in the authed branch below, so a shopper never sees
+    // "Authentication required" when adding to cart.
+    if (this.isGuest || !this.single_user.token) {
+      this.addToLocalCart();
       return;
     }
 
@@ -849,6 +810,15 @@ export class ProductPage implements OnInit, OnDestroy {
               this.cartCount.bump(this.add_cart.quantity);
               void this.cartCount.refresh();
             }
+          } else if (
+            response.response_code === 401 ||
+            response.error_code === 'AUTH_INVALID_TOKEN' ||
+            (typeof response.error_code === 'string' && response.error_code.startsWith('AUTH_'))
+          ) {
+            // Stale/invalid session -> fall back to the LOCAL cart instead of
+            // surfacing "Authentication required". Adding to cart never requires
+            // login; items merge into the account on sign-in.
+            this.addToLocalCart();
           } else {
             this.ui_controls.is_empty = true;
             this.ui_controls.is_adding_to_cart = false;
@@ -864,6 +834,54 @@ export class ProductPage implements OnInit, OnDestroy {
           this.ui_controls.is_adding_to_cart = false;
           this.cdr.markForCheck();
         }
+      });
+  }
+
+  /**
+   * Add the current selection to the device-local guest cart (no network, no
+   * auth). Used for true guests, empty/invalid sessions, and as the fallback
+   * when the authed POST returns an auth error — so adding to cart always works
+   * without login (items merge into the account on sign-in). The caller has
+   * already set is_adding_to_cart = true.
+   */
+  private addToLocalCart(): void {
+    const localItem: LocalCartItem = {
+      product_id: this.add_cart.product_id,
+      quantity: this.add_cart.quantity,
+      size: this.add_cart.size || '',
+      color: this.add_cart.color || '',
+      is_custom: this.add_cart.is_custom === true,
+      measurement: this.add_cart.measurement || '',
+      extra_measurement: this.add_cart.extra_measurement || '',
+      note: this.add_cart.note || '',
+      // Display fields snapshotted at add time; v3 re-derives from product_id on merge.
+      product_name: this.single.name || '',
+      product_image: this.single.image_1 || '',
+      unit_price: String(this.single.price || '0'),
+      vendor_id: typeof this.single.store === 'string'
+        ? parseInt(this.single.store, 10) || 0
+        : (this.single.store || 0),
+      vendor_name: this.single.store_name || '',
+    };
+
+    this.localCart.add(localItem)
+      .then(async () => {
+        this.success_notification(this.i18n.t('text_added_to_cart'));
+        this.ui_controls.is_adding_to_cart = false;
+        this.itemExists = true; // flip the CTA to "Already in cart — View"
+        try {
+          const count = await this.localCart.count();
+          this.cartCount.setCount(count);
+        } catch {
+          this.cartCount.bump(this.add_cart.quantity);
+        }
+        this.cdr.markForCheck();
+      })
+      .catch((err) => {
+        console.warn('[Product] guest add failed', err);
+        this.error_notification(this.i18n.t('text_something_went_wrong'));
+        this.ui_controls.is_adding_to_cart = false;
+        this.cdr.markForCheck();
       });
   }
 
