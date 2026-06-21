@@ -10,8 +10,17 @@
 </ion-header>
 
 <ion-content [fullscreen]="true" class="page-bg">
-  @if (!ui_controls.is_loading) {
-    <div class="form-sheet ion-padding">
+  <!-- The form stays mounted at all times. Earlier this whole block was
+       gated behind @if (!ui_controls.is_loading), so toggling is_loading
+       (true while get_vendors() runs, back to false on the HTTP response)
+       DESTROYED and RECREATED the ax-text-field / ion-button subtree from
+       inside an async subscribe callback. The recreated OnPush children
+       rendered with empty projected content (invisible labels, inputs and
+       button text). The working pages (login / register / profile) never
+       unmount their inputs on load — they overlay the loader instead. We
+       do the same here: render the form always, show the loader as an
+       overlay, and disable the submit button while loading. -->
+  <div class="form-sheet ion-padding" [class.is-busy]="ui_controls.is_loading">
 
       <!-- Subject -->
       <div class="form-field">
@@ -58,14 +67,16 @@
         (click)="create_ticket()"
         expand="block"
         class="submit-btn"
-        type="button">
+        type="button"
+        [disabled]="ui_controls.is_loading">
         {{ 'button_create_ticket' | translate }}
       </ion-button>
-    </div>
-  }
+  </div>
 
+  <!-- Loader overlay — sits on top of the (always-mounted) form while
+       vendors load or the ticket is being submitted. -->
   @if (ui_controls.is_loading) {
-    <div class="loader-row">
+    <div class="loader-overlay">
       <ax-loader></ax-loader>
     </div>
   }
