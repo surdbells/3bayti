@@ -5,7 +5,7 @@ starting from a clean `git clone`. macOS + Xcode only — you cannot build iOS o
 Windows/Linux.
 
 The committed iOS project already contains everything native (`apps/mobile/ios/App`,
-`GoogleService-Info.plist`, the `Podfile`), so you do **not** run `npx cap add ios`.
+`GoogleService-Info.plist`, the `Podfile`), so you do **not** run `pnpm exec cap add ios`.
 The web build output (`www/`) and CocoaPods (`Pods/`) are git-ignored, so you build
 those locally.
 
@@ -57,10 +57,10 @@ pnpm --filter @3bayti/mobile build
 
 # 2) Copy www into the native project + install Pods
 cd apps/mobile
-npx cap sync ios
+pnpm exec cap sync ios
 
 # 3) Open the project in Xcode
-npx cap open ios            # opens ios/App/App.xcworkspace
+pnpm exec cap open ios            # opens ios/App/App.xcworkspace
 ```
 
 > Always open **`App.xcworkspace`**, never `App.xcodeproj` (Pods won't be linked).
@@ -98,7 +98,7 @@ Native changes (icons, splash, plugins) and web changes both need a re-sync:
 # from repo root
 rm -rf apps/mobile/.angular/cache          # only if web changes don't show up
 pnpm --filter @3bayti/mobile build
-cd apps/mobile && npx cap sync ios
+cd apps/mobile && pnpm exec cap sync ios
 # then ▶ Run again in Xcode
 ```
 
@@ -126,12 +126,13 @@ To put a build in front of testers who don't have the repo:
 | Symptom | Fix |
 |---|---|
 | `command not found: pnpm` | `corepack enable && corepack prepare pnpm@9.15.0 --activate` (open a new terminal after). If `corepack` is also missing, install Node first (`nvm install 24.12.0`). |
-| `npx cap sync ios` fails on Pods | `cd apps/mobile/ios/App && pod install --repo-update` |
+| `npx cap ...` → "could not determine executable to run" | Use `pnpm exec cap ...` instead (npx doesn't resolve pnpm workspace binaries). Run it from `apps/mobile`. Confirm the CLI installed: `ls node_modules/.bin/cap`; if missing, re-run `pnpm install` at the repo root. |
+| `pnpm exec cap sync ios` fails on Pods | `cd apps/mobile/ios/App && pod install --repo-update` |
 | "Unable to find www" / blank app | run `pnpm --filter @3bayti/mobile build` **before** `cap sync` |
 | Web changes don't appear | `rm -rf apps/mobile/.angular/cache`, rebuild, re-sync |
 | Splash/icon stale | delete the app from Simulator/device, rebuild, re-run |
 | Signing error on device | set a Team + a unique bundle id (step 4) |
-| Weird build errors after a big change | Xcode → **Product → Clean Build Folder**, or `rm -rf apps/mobile/ios/App/Pods apps/mobile/ios/App/build && npx cap sync ios` |
+| Weird build errors after a big change | Xcode → **Product → Clean Build Folder**, or `rm -rf apps/mobile/ios/App/Pods apps/mobile/ios/App/build && pnpm exec cap sync ios` |
 | `pod` not found | `brew install cocoapods` |
 
 ---
@@ -143,7 +144,7 @@ git clone <REPO_URL> 3bayti && cd 3bayti
 cd apps/mobile && nvm use && cd ../..
 pnpm install
 pnpm --filter @3bayti/mobile build
-cd apps/mobile && npx cap sync ios && npx cap open ios
+cd apps/mobile && pnpm exec cap sync ios && pnpm exec cap open ios
 # Xcode: pick a simulator → ▶ Run
 ```
 
