@@ -769,6 +769,7 @@ export class ProductPage implements OnInit, OnDestroy {
         .then(async () => {
           this.success_notification(this.i18n.t('text_added_to_cart'));
           this.ui_controls.is_adding_to_cart = false;
+          this.itemExists = true; // flip the CTA to "Already in cart — View"
           // Stay on the PDP (mirror web). Update the reactive cart-count
           // badge so the shopper gets immediate feedback — read the new
           // total from the local guest cart and publish it via the shared
@@ -831,6 +832,7 @@ export class ProductPage implements OnInit, OnDestroy {
                 : this.i18n.t('text_added_to_cart');
             this.success_notification(successText);
             this.ui_controls.is_adding_to_cart = false;
+            this.itemExists = true; // flip the CTA to "Already in cart — View"
             // Stay on the PDP (mirror web). Update the reactive cart-count
             // badge — the transformAddCartResponse transform exposes the new
             // total as response.data.count; publish it via the shared
