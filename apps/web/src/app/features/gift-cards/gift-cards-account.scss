@@ -102,6 +102,67 @@
   border-radius: var(--radius-lg, 20px);
 }
 
+/* Unpaid (pending_payment) tile — non-clickable; dimmed card + pay CTA. */
+.gca__tile--unpaid {
+  position: relative;
+  cursor: default;
+}
+
+.gca__tile--unpaid:hover {
+  transform: none;
+}
+
+.gca__tile--unpaid ui-gift-card {
+  display: block;
+  opacity: 0.62;
+  filter: grayscale(0.25);
+}
+
+.gca__unpaid-badge {
+  position: absolute;
+  inset-block-start: 0.65rem;
+  inset-inline-end: 0.65rem;
+  z-index: 1;
+  padding: 0.25rem 0.7rem;
+  border-radius: var(--radius-pill, 999px);
+  background: var(--color-danger-600, #b4471f);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.gca__pay {
+  display: block;
+  inline-size: 100%;
+  margin-block-start: 0.75rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--text-primary, #2e241c);
+  border-radius: var(--radius-pill, 999px);
+  background: var(--text-primary, #2e241c);
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.gca__pay:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.gca__pay:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.gca__pay-error {
+  margin: 0.5rem 0 0;
+  color: var(--color-danger-700, #973a18);
+  font-size: 0.82rem;
+}
+
 .gca__skeleton {
   aspect-ratio: 1.586 / 1;
   border-radius: var(--radius-lg, 20px);

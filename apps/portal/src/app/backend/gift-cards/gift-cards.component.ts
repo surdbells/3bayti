@@ -2,7 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { of } from 'rxjs';
+import { throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
@@ -11,6 +11,7 @@ import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TranslatePipe } from '../../translate.pipe';
+import { I18nService } from '../../i18n.service';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -94,12 +95,12 @@ interface GiftCardFilters {
             <span class="ax-field-label">{{ 'gift_cards_admin.filter_status' | translate }}</span>
             <select class="ax-select ax-input-sm" [(ngModel)]="filters.status" (change)="applyFilters()">
               <option value="">{{ 'gift_cards_admin.filter_all' | translate }}</option>
-              <option value="pending_payment">{{ 'gift_cards_admin.status_pending_payment' | translate }}</option>
-              <option value="active">{{ 'gift_cards_admin.status_active' | translate }}</option>
-              <option value="partially_used">{{ 'gift_cards_admin.status_partially_used' | translate }}</option>
-              <option value="exhausted">{{ 'gift_cards_admin.status_exhausted' | translate }}</option>
-              <option value="expired">{{ 'gift_cards_admin.status_expired' | translate }}</option>
-              <option value="voided">{{ 'gift_cards_admin.status_voided' | translate }}</option>
+              <option value="pending_payment">{{ 'gift_cards_admin.status_label_pending_payment' | translate }}</option>
+              <option value="active">{{ 'gift_cards_admin.status_label_active' | translate }}</option>
+              <option value="partially_used">{{ 'gift_cards_admin.status_label_partially_used' | translate }}</option>
+              <option value="exhausted">{{ 'gift_cards_admin.status_label_exhausted' | translate }}</option>
+              <option value="expired">{{ 'gift_cards_admin.status_label_expired' | translate }}</option>
+              <option value="voided">{{ 'gift_cards_admin.status_label_voided' | translate }}</option>
             </select>
           </label>
 
@@ -264,6 +265,7 @@ export class GiftCardsAdminComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly adapter = inject(PortalCrudAdapter);
   private readonly toast = inject(HotToastService);
+  private readonly i18n = inject(I18nService);
 
   tab: 'issued' | 'themes' = 'issued';
 
@@ -338,15 +340,36 @@ export class GiftCardsAdminComponent implements OnInit {
 
     return this.adapter.get_v3('GET /admin/gift-cards', { query: q }).pipe(
       map((response: any): AxServerFetchResult<GiftCardRow> => {
-        const raw: any[] = Array.isArray(response?.data) ? response.data : response?.data?.items ?? [];
+        // The API only ever returns `data` as an array.
+        const raw: any[] = Array.isArray(response?.data) ? response.data : [];
         const rows = raw.map((g) => this.mapCard(g));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load gift cards at this time.');
-        return of({ rows: [], total: 0 } as AxServerFetchResult<GiftCardRow>);
+      catchError((err: any) => {
+        // Surface a clear, type-specific message (toast) and re-throw so the
+        // data table renders its error state instead of a silent empty grid.
+        this.toast.error(this.loadErrorMessage(err));
+        return throwError(() => err);
       }),
     );
+  }
+
+  /** Map an HTTP failure to a clear, admin-facing message. */
+  private loadErrorMessage(err: any): string {
+    const status = Number(err?.status ?? err?.error?.error?.status ?? 0);
+    if (status === 401 || status === 403) {
+      return this.t('gift_cards_admin.load_error_forbidden');
+    }
+    if (status === 404 || status === 0) {
+      return this.t('gift_cards_admin.load_error_unavailable');
+    }
+    const serverMessage = err?.error?.error?.message ?? err?.error?.message;
+    return serverMessage || this.t('gift_cards_admin.load_error_generic');
+  }
+
+  /** Resolve a flat i18n key. */
+  private t(key: string): string {
+    return this.i18n.t(key);
   }
 
   private mapCard(g: any): GiftCardRow {
@@ -367,9 +390,24 @@ export class GiftCardsAdminComponent implements OnInit {
     } as GiftCardRow;
   }
 
+  /**
+   * Friendly, bucketed status label for both the filter dropdown context and
+   * the badge column. The underlying query values stay the raw status strings.
+   */
   statusLabel(status: string): string {
+    const key = GiftCardsAdminComponent.STATUS_LABEL_KEYS[status];
+    if (key) return this.i18n.t(key);
     return String(status ?? '').replace(/_/g, ' ');
   }
+
+  private static readonly STATUS_LABEL_KEYS: Record<string, string> = {
+    pending_payment: 'gift_cards_admin.status_label_pending_payment',
+    active: 'gift_cards_admin.status_label_active',
+    partially_used: 'gift_cards_admin.status_label_partially_used',
+    exhausted: 'gift_cards_admin.status_label_exhausted',
+    expired: 'gift_cards_admin.status_label_expired',
+    voided: 'gift_cards_admin.status_label_voided',
+  };
 
   statusBadgeClass(status: string): string {
     switch (status) {

@@ -44,6 +44,7 @@
             type="button"
             class="mgc-card"
             [class.mgc-card--spent]="!isSpendable(card)"
+            [class.mgc-card--unpaid]="isUnpaid(card)"
             (click)="openCard(card)"
             [style.--gc-primary]="card.theme_meta?.primary_color ?? '#2E241C'"
             [style.--gc-accent]="card.theme_meta?.accent_color ?? '#FDF6F0'"
@@ -57,7 +58,12 @@
               }
               <span class="mgc-card__logo">3bayti</span>
               <span class="mgc-card__theme">{{ card.theme_meta?.label ?? card.theme }}</span>
-              <span class="mgc-card__code">{{ card.code }}</span>
+              <!-- Unpaid cards have no spendable code yet — keep it hidden. -->
+              @if (!isUnpaid(card)) {
+                <span class="mgc-card__code">{{ card.code }}</span>
+              } @else {
+                <span class="mgc-card__code mgc-card__code--locked">• • • •</span>
+              }
             </div>
 
             <div class="mgc-card__body">
@@ -78,7 +84,18 @@
                 <div class="mgc-card__to">{{ 'gift_card_for' | translate }} {{ card.recipient_name }}</div>
               }
 
-              @if (card.expires_at) {
+              @if (isUnpaid(card)) {
+                <!-- Resume checkout. The click is handled by the parent button's
+                     openCard(), which routes unpaid cards to completePayment(). -->
+                <span class="mgc-card__pay" [class.mgc-card__pay--busy]="payingCardId === card.id">
+                  @if (payingCardId === card.id) {
+                    {{ 'mgc_completing_payment' | translate }}
+                  } @else {
+                    <ax-icon name="banknote" [size]="14" />
+                    {{ 'mgc_complete_payment' | translate }}
+                  }
+                </span>
+              } @else if (card.expires_at) {
                 <div class="mgc-card__expiry">
                   <ax-icon name="clock" [size]="12" />
                   {{ 'gift_card_expires' | translate }} {{ card.expires_at | date:'mediumDate' }}

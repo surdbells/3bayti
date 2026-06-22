@@ -7,6 +7,7 @@ import {
 } from '@ionic/angular/standalone';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { Preferences } from '@capacitor/preferences';
+import { GiftCardPaymentService } from '../gift-cards/gift-card-payment.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -31,6 +32,9 @@ export class MyGiftCardsPage implements OnInit {
   cards: any[] = [];
   ui = { loading: true };
 
+  // Gift card id currently resuming payment (disables its button + shows label).
+  payingCardId: number | null = null;
+
   private authToken = '';
 
   readonly cfImage = cfImage;
@@ -44,6 +48,7 @@ export class MyGiftCardsPage implements OnInit {
     private network: MobileNetworkAdapter,
     private notify: AxNotificationService,
     private i18n: I18nService,
+    private giftCardPayment: GiftCardPaymentService,
   ) {
     this.statusMeta = {
       pending_payment: { label: this.i18n.t('mgc_status_pending_payment'), color: '#F5A623' },
@@ -72,9 +77,10 @@ export class MyGiftCardsPage implements OnInit {
     this.network.get_v3('GET /gift-cards/mine', { authToken: this.authToken }).subscribe({
       next: (res: any) => {
         this.ui.loading = false;
-        // Hide unpaid (pending_payment) cards — an in-flight purchase that
-        // hasn't been funded isn't usable and shouldn't appear as balance.
-        this.cards = (res?.data ?? []).filter((c: any) => c?.status !== 'pending_payment');
+        // Show ALL of the user's cards, including pending_payment (unpaid) ones
+        // so the buyer can resume an interrupted checkout. Unpaid cards render
+        // an inactive state with a "Complete payment" action (see template).
+        this.cards = res?.data ?? [];
         event?.target?.complete();
       },
       error: () => {
@@ -86,7 +92,39 @@ export class MyGiftCardsPage implements OnInit {
   }
 
   openCard(card: any) {
+    // Unpaid cards have no spendable code yet — tapping resumes payment
+    // instead of opening the (empty) detail view.
+    if (this.isUnpaid(card)) { this.completePayment(card); return; }
     this.router.navigate(['/gift-card-detail'], { state: { card } });
+  }
+
+  isUnpaid(card: any): boolean {
+    return card?.status === 'pending_payment';
+  }
+
+  /**
+   * Resume checkout for an unpaid card. /checkout/initiate is idempotent
+   * (returns the cached checkout URL), so this picks up where the buyer left
+   * off. On success we reload the wallet so the now-active card refreshes.
+   */
+  completePayment(card: any) {
+    if (this.payingCardId !== null) return; // a resume is already in flight
+    if (!card?.id) return;
+    this.payingCardId = card.id;
+    this.giftCardPayment.pay(card.id, this.authToken, {
+      onPaid: () => {
+        this.payingCardId = null;
+        this.load();
+      },
+      onFailed: () => {
+        this.payingCardId = null;
+        this.load();
+      },
+      onGatewaySkipped: () => {
+        this.payingCardId = null;
+        this.load();
+      },
+    });
   }
 
   buyNew() {

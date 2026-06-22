@@ -74,6 +74,16 @@
   &:active { transform: scale(0.99); box-shadow: none; }
   &--spent { opacity: 0.6; }
 
+  // Unpaid (pending_payment): inactive look — muted visual, dashed border —
+  // signalling the card isn't funded yet and shows a "Complete payment" action.
+  &--unpaid {
+    border-style: dashed;
+    border-color: #F5A623;
+    background: var(--ax-color-bg-surface, #fff);
+
+    .mgc-card__visual { filter: grayscale(0.55) brightness(0.9); }
+  }
+
   &__visual {
     width: 80px;
     height: 52px;
@@ -108,6 +118,23 @@
   &__logo { font-size: 9px; font-weight: 900; color: rgba(255,255,255,0.9); letter-spacing: 0.08em; }
   &__theme { font-size: 8px; color: rgba(255,255,255,0.6); }
   &__code { font-size: 7px; font-family: monospace; color: rgba(255,255,255,0.35); letter-spacing: 0.08em; }
+  &__code--locked { display: inline-flex; align-items: center; color: rgba(255,255,255,0.55); }
+
+  &__pay {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    align-self: flex-start;
+    margin-top: 2px;
+    padding: 5px 12px;
+    border-radius: 100px;
+    background: #F5A623;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+
+    &--busy { background: #C9881C; }
+  }
 
   &__body { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   &__top { display: flex; justify-content: space-between; align-items: flex-start; }

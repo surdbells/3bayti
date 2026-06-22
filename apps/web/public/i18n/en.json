@@ -768,7 +768,11 @@
       "emptyTitle": "No gift cards yet",
       "emptyBody": "Gift cards you buy or redeem will appear here.",
       "errorLoad": "We couldn't load your gift cards. Please try again.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "unpaidBadge": "Unpaid",
+      "completePayment": "Complete payment",
+      "resuming": "Redirecting to checkout…",
+      "resumeError": "We couldn't resume your payment. Please try again."
     },
     "detail": {
       "back": "Back to gift cards",

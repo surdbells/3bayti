@@ -5,12 +5,16 @@ import {
   signal,
   computed,
   OnInit,
+  PLATFORM_ID,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { isPlatformBrowser } from '@angular/common';
+import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 
 import { GiftCardVisualComponent } from './gift-card-visual';
 import { GiftCardService } from './gift-card.service';
+import { CheckoutService } from '../../core/checkout/checkout.service';
+import { markGiftCardCheckout } from './gift-card-checkout-handoff';
 import { SeoService } from '../../core/seo/seo.service';
 import type { GiftCard } from './gift-card.model';
 
@@ -83,13 +87,48 @@ type LoadState = 'loading' | 'ready' | 'error';
               <ul class="gca__grid" role="list" data-testid="my-gift-cards-list">
                 @for (c of cards(); track c.id) {
                   <li class="gca__item">
-                    <a
-                      [routerLink]="['/account/gift-cards', c.id]"
-                      class="gca__tile"
-                      [attr.data-card-id]="c.id"
-                    >
-                      <ui-gift-card [card]="c" [theme]="c.theme" />
-                    </a>
+                    @if (c.status === 'pending_payment') {
+                      <!-- Unpaid (in-flight) purchase: not yet funded, so it
+                           must NOT expose a spendable code or link to the
+                           detail view. Offer pay-resume instead. -->
+                      <div
+                        class="gca__tile gca__tile--unpaid"
+                        [attr.data-card-id]="c.id"
+                        data-testid="my-gift-card-unpaid"
+                      >
+                        <span class="gca__unpaid-badge">
+                          {{ 'giftCards.mine.unpaidBadge' | translate }}
+                        </span>
+                        <ui-gift-card [card]="c" [theme]="c.theme" />
+                        <button
+                          type="button"
+                          class="gca__pay"
+                          [disabled]="resumingId() === c.id"
+                          data-testid="my-gift-card-pay"
+                          (click)="completePayment(c)"
+                        >
+                          {{
+                            (resumingId() === c.id
+                              ? 'giftCards.mine.resuming'
+                              : 'giftCards.mine.completePayment'
+                            ) | translate
+                          }}
+                        </button>
+                        @if (resumeError() === c.id) {
+                          <p class="gca__pay-error" role="alert">
+                            {{ 'giftCards.mine.resumeError' | translate }}
+                          </p>
+                        }
+                      </div>
+                    } @else {
+                      <a
+                        [routerLink]="['/account/gift-cards', c.id]"
+                        class="gca__tile"
+                        [attr.data-card-id]="c.id"
+                      >
+                        <ui-gift-card [card]="c" [theme]="c.theme" />
+                      </a>
+                    }
                   </li>
                 }
               </ul>
@@ -103,10 +142,18 @@ type LoadState = 'loading' | 'ready' | 'error';
 })
 export class MyGiftCardsPageComponent implements OnInit {
   private readonly gift = inject(GiftCardService);
+  private readonly checkout = inject(CheckoutService);
+  private readonly router = inject(Router);
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly seo = inject(SeoService);
 
   protected readonly loadState = signal<LoadState>('loading');
   protected readonly cards = signal<GiftCard[]>([]);
+
+  /** Id of the unpaid card whose pay-resume is currently in flight (or null). */
+  protected readonly resumingId = signal<number | null>(null);
+  /** Id of the unpaid card whose last pay-resume failed (or null). */
+  protected readonly resumeError = signal<number | null>(null);
 
   protected readonly isEmpty = computed(
     () => this.loadState() === 'ready' && this.cards().length === 0,
@@ -127,13 +174,46 @@ export class MyGiftCardsPageComponent implements OnInit {
   private async load(): Promise<void> {
     this.loadState.set('loading');
     try {
+      // Show ALL cards the buyer owns, including unpaid (pending_payment)
+      // ones. Unpaid cards render as UNPAID with a pay-resume button instead
+      // of linking to the detail view (which would expose the code).
       const list = await this.gift.listMine();
-      // Hide unpaid (pending_payment) cards — an unfunded, in-flight purchase
-      // isn't usable and shouldn't appear in the wallet as balance.
-      this.cards.set(list.filter((c) => c.status !== 'pending_payment'));
+      this.cards.set(list);
       this.loadState.set('ready');
     } catch {
       this.loadState.set('error');
+    }
+  }
+
+  /**
+   * Resume payment for an unpaid (pending_payment) gift card. Re-initiates
+   * checkout for the same purchase and redirects to the Noon hosted page.
+   * The /v3/checkout/initiate { gift_card_purchase_id } call is idempotent,
+   * so a buyer who bailed earlier simply lands back at the payment step.
+   */
+  protected async completePayment(card: GiftCard): Promise<void> {
+    if (this.resumingId() !== null) return;
+    this.resumeError.set(null);
+    this.resumingId.set(card.id);
+    try {
+      const res = await this.checkout.initiate({
+        channel: 'web',
+        delivery_fee: '0.00',
+        discount: '0.00',
+        gift_card_purchase_id: card.id,
+      });
+      markGiftCardCheckout(res.order_reference);
+      this.redirectTo(res.checkout_url);
+    } catch {
+      this.resumingId.set(null);
+      this.resumeError.set(card.id);
+    }
+  }
+
+  /** Full-page navigation to the Noon hosted checkout. Isolated for tests. */
+  protected redirectTo(url: string): void {
+    if (isPlatformBrowser(this.platformId)) {
+      window.location.assign(url);
     }
   }
 }

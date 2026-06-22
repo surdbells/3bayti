@@ -6,9 +6,11 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 
 import { MyGiftCardsPageComponent } from './my-gift-cards-page';
 import { GiftCardService } from './gift-card.service';
+import { CheckoutService } from '../../core/checkout/checkout.service';
 import { SeoService } from '../../core/seo/seo.service';
 import { provideI18n } from '../../core/i18n';
 import type { GiftCard, GiftCardTheme } from './gift-card.model';
+import type { InitiateCheckoutInput, InitiateCheckoutResponse } from '../../core/checkout/checkout.types';
 
 function makeCard(id: number, theme: GiftCardTheme = 'birthday', o: Partial<GiftCard> = {}): GiftCard {
   return {
@@ -35,13 +37,33 @@ class StubGiftCardService {
   }
 }
 
-function setup(opts: { cards?: GiftCard[]; throws?: boolean } = {}): {
+class StubCheckoutService {
+  throws = false;
+  lastInput: InitiateCheckoutInput | null = null;
+  result: InitiateCheckoutResponse = {
+    checkout_url: 'https://noon.test/pay/resume',
+    order_reference: 'GC-RESUME-1',
+    provider_order_ref: 'NOON-1',
+    order_id: 99,
+  };
+  async initiate(input: InitiateCheckoutInput): Promise<InitiateCheckoutResponse> {
+    this.lastInput = input;
+    if (this.throws) throw new Error('initiate failed');
+    return this.result;
+  }
+}
+
+function setup(opts: { cards?: GiftCard[]; throws?: boolean; checkoutThrows?: boolean } = {}): {
   fixture: ComponentFixture<MyGiftCardsPageComponent>;
   gift: StubGiftCardService;
+  checkout: StubCheckoutService;
 } {
   const gift = new StubGiftCardService();
   gift.cards = opts.cards ?? [];
   if (opts.throws === true) gift.throws = true;
+
+  const checkout = new StubCheckoutService();
+  if (opts.checkoutThrows === true) checkout.throws = true;
 
   TestBed.configureTestingModule({
     imports: [MyGiftCardsPageComponent],
@@ -51,12 +73,13 @@ function setup(opts: { cards?: GiftCard[]; throws?: boolean } = {}): {
       provideHttpClientTesting(),
       provideI18n(),
       { provide: GiftCardService, useValue: gift },
+      { provide: CheckoutService, useValue: checkout },
       { provide: SeoService, useValue: { set: vi.fn(), setStructuredData: vi.fn() } },
     ],
   });
   const fixture = TestBed.createComponent(MyGiftCardsPageComponent);
   fixture.detectChanges();
-  return { fixture, gift };
+  return { fixture, gift, checkout };
 }
 
 async function flush(): Promise<void> {
@@ -94,5 +117,54 @@ describe('MyGiftCardsPageComponent', () => {
     await flush();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.gca__state--error')).not.toBeNull();
+  });
+
+  it('renders unpaid cards with a pay button and no detail link', async () => {
+    const { fixture } = setup({
+      cards: [makeCard(1), makeCard(2, 'birthday', { status: 'pending_payment' })],
+    });
+    await flush();
+    fixture.detectChanges();
+    // Both cards visible (unpaid no longer hidden).
+    expect(fixture.nativeElement.querySelectorAll('.gca__tile')).toHaveLength(2);
+    const unpaid = fixture.nativeElement.querySelector('[data-testid="my-gift-card-unpaid"]');
+    expect(unpaid).not.toBeNull();
+    // Unpaid tile is not an anchor → no link to the code-revealing detail view.
+    expect(unpaid.tagName.toLowerCase()).not.toBe('a');
+    expect(fixture.nativeElement.querySelector('[data-testid="my-gift-card-pay"]')).not.toBeNull();
+  });
+
+  it('resumes checkout for an unpaid card and redirects to Noon', async () => {
+    const { fixture, checkout } = setup({
+      cards: [makeCard(7, 'birthday', { status: 'pending_payment' })],
+    });
+    await flush();
+    fixture.detectChanges();
+
+    const redirect = vi
+      .spyOn(fixture.componentInstance as unknown as { redirectTo: (u: string) => void }, 'redirectTo')
+      .mockImplementation(() => {});
+
+    fixture.nativeElement.querySelector('[data-testid="my-gift-card-pay"]').click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(checkout.lastInput).toMatchObject({ channel: 'web', gift_card_purchase_id: 7 });
+    expect(redirect).toHaveBeenCalledWith('https://noon.test/pay/resume');
+  });
+
+  it('shows a resume error when checkout initiate fails', async () => {
+    const { fixture } = setup({
+      cards: [makeCard(8, 'birthday', { status: 'pending_payment' })],
+      checkoutThrows: true,
+    });
+    await flush();
+    fixture.detectChanges();
+
+    fixture.nativeElement.querySelector('[data-testid="my-gift-card-pay"]').click();
+    await flush();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.gca__pay-error')).not.toBeNull();
   });
 });

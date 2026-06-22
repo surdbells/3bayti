@@ -901,5 +901,7 @@
   "placeholder_select_emirate": "اختر الإمارة",
   "sign_in_to_add_to_cart": "سجّل الدخول أو أنشئ حسابًا لتتمكن من الإضافة إلى السلة",
   "sign_in_to_add_to_wishlist": "سجّل الدخول أو أنشئ حسابًا لتتمكن من الإضافة إلى قائمة رغباتك",
-  "session_expired_sign_in": "انتهت جلستك. يرجى تسجيل الدخول مجددًا."
+  "session_expired_sign_in": "انتهت جلستك. يرجى تسجيل الدخول مجددًا.",
+  "mgc_complete_payment": "إتمام الدفع",
+  "mgc_completing_payment": "جارٍ إتمام الدفع…"
 }
