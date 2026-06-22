@@ -79,9 +79,27 @@ export class AdminComponent implements OnInit {
   @ViewChild('chart') chart!: ChartComponent;
   public chartOptions: Partial<ChartOptions>;
 
-  // Recent orders pagination (replaces DataTables)
+  /** Rolling window (days) for the KPI metrics — keeps caption + metric in sync. */
+  windowDays = 30;
+
+  // Recent orders pagination (server-driven)
   pageIndex = 0;
   pageSize = 10;
+  recentTotal = 0;
+  statusFilter = '';
+  /** Status options for the recent-sales filter dropdown.
+   *  `value` is the lowercase DB status sent as ?status=; `label` is an i18n key. */
+  readonly statusOptions: { value: string; label: string }[] = [
+    { value: '',               label: 'all_statuses' },
+    { value: 'paid',           label: 'status_paid' },
+    { value: 'fulfilling',     label: 'status_fulfilling' },
+    { value: 'shipped',        label: 'status_shipped' },
+    { value: 'delivered',      label: 'status_delivered' },
+    { value: 'cancelled',      label: 'status_cancelled' },
+    { value: 'refunded',       label: 'status_refunded' },
+    { value: 'pending_payment',label: 'status_pending_payment' },
+    { value: 'failed',         label: 'status_failed' },
+  ];
   recent?: ROrders[];
   topProducts: { id: number; name: string; image: string; units_sold: number; revenue: number }[] = [];
 
@@ -176,11 +194,24 @@ export class AdminComponent implements OnInit {
     this.router.navigate(['/']).then(r => console.log(r));
   }
 
+  /** Build the analytics query params for the current pagination/filter state. */
+  private analyticsQuery(): Record<string, any> {
+    const query: Record<string, any> = {
+      days: this.windowDays,
+      page: this.pageIndex,
+      limit: this.pageSize,
+    };
+    if (this.statusFilter) {
+      query['status'] = this.statusFilter;
+    }
+    return query;
+  }
+
   get_dashboard() {
     this.stats.id = this.user_session.id;
     this.stats.token = this.user_session.token;
     this.ui_controls.is_loading = true;
-    this.adapter.get_v3('GET /admin/analytics', { query: { days: 30 } })
+    this.adapter.get_v3('GET /admin/analytics', { query: this.analyticsQuery() })
       .subscribe({
         next: (response) => {
           this.ui_controls.is_loading = false;
@@ -192,6 +223,40 @@ export class AdminComponent implements OnInit {
           this.ui_controls.is_loading = false;
         },
       });
+  }
+
+  /** Refetch ONLY the recent-orders list from the server (KPIs/chart unchanged). */
+  private fetch_recent(): void {
+    this.adapter.get_v3('GET /admin/analytics', { query: this.analyticsQuery() })
+      .subscribe({
+        next: (response) => {
+          if (response) {
+            this.recent = response.data;
+            this.recentTotal = response.recent_total ?? (response.data?.length ?? 0);
+            this.ui_controls.no_recent = this.recentTotal === 0;
+          }
+        },
+      });
+  }
+
+  /** Page index changed in the pagination control → refetch that page. */
+  onPageIndexChange(index: number): void {
+    this.pageIndex = index;
+    this.fetch_recent();
+  }
+
+  /** Rows-per-page changed → reset to first page and refetch. */
+  onPageSizeChange(size: number): void {
+    this.pageSize = size;
+    this.pageIndex = 0;
+    this.fetch_recent();
+  }
+
+  /** Status dropdown changed → reset to first page and refetch. */
+  onStatusFilterChange(status: string): void {
+    this.statusFilter = status;
+    this.pageIndex = 0;
+    this.fetch_recent();
   }
 
   /** Apply an analytics payload to the dashboard view (KPIs + chart + recent). */
@@ -268,22 +333,8 @@ export class AdminComponent implements OnInit {
     } as Partial<ChartOptions>;
 
     this.recent = response.data;
-    this.pageIndex = 0;
-    if (response.message === 0) {
-      this.ui_controls.no_recent = true;
-    }
-  }
-
-
-  /** Slice of `recent` for the current page (replaces DataTables paging). */
-  get pagedRecent(): ROrders[] {
-    if (!this.recent) return [];
-    const start = this.pageIndex * this.pageSize;
-    return this.recent.slice(start, start + this.pageSize);
-  }
-
-  onPageIndexChange(index: number): void {
-    this.pageIndex = index;
+    this.recentTotal = response.recent_total ?? (response.data?.length ?? 0);
+    this.ui_controls.no_recent = this.recentTotal === 0;
   }
 
   super_admin: Action[] = [

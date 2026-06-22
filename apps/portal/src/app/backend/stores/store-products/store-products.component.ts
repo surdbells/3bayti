@@ -1,8 +1,8 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
+import { Observable, of } from 'rxjs';
+import { map, catchError, switchMap, shareReplay } from 'rxjs/operators';
 
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
@@ -42,6 +42,8 @@ export class StoreProductsComponent implements OnInit {
   store_name = '';
   private storeId = 0;
   private vendorV3Id = 0;
+  /** Resolves the legacy store id → v3 vendor id once, then replays. */
+  private vendorV3Id$!: Observable<number>;
 
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
@@ -66,16 +68,26 @@ export class StoreProductsComponent implements OnInit {
     );
     this.storeId = Number(this.route.snapshot.queryParamMap.get('id'));
     this.store_name = this.route.snapshot.queryParamMap.get('name') ?? '';
-    this.resolveVendor();
+    // A v3 vendor id may be passed straight from the stores row; otherwise
+    // resolve it from the legacy id. Either way the products list is keyed
+    // by the v3 id (the admin route is ungated and works for inactive stores).
+    this.vendorV3Id = Number(this.route.snapshot.queryParamMap.get('vendor_id')) || 0;
+    this.vendorV3Id$ = this.resolveVendor().pipe(shareReplay(1));
     this.buildTable();
   }
 
-  /** Resolve legacy store id → v3 vendor id (needed to create products). */
-  private resolveVendor() {
-    this.adapter.get_v3('GET /vendors/by-legacy-id/:id', { params: { id: String(this.storeId) } }).subscribe({
-      next: (res: any) => { this.vendorV3Id = res?.data?.id ?? this.vendorV3Id; },
-      error: () => { /* falls back to meta.vendor_id from the list */ },
-    });
+  /** Resolve legacy store id → v3 vendor id (needed to list + create products). */
+  private resolveVendor(): Observable<number> {
+    if (this.vendorV3Id > 0) return of(this.vendorV3Id);
+    return this.adapter
+      .get_v3('GET /vendors/by-legacy-id/:id', { params: { id: String(this.storeId) } })
+      .pipe(
+        map((res: any) => {
+          this.vendorV3Id = res?.data?.id ?? res?.meta?.vendor_id ?? 0;
+          return this.vendorV3Id;
+        }),
+        catchError(() => of(0)),
+      );
   }
 
   private buildTable() {
@@ -113,20 +125,31 @@ export class StoreProductsComponent implements OnInit {
       offset: query.pageIndex * query.pageSize,
     };
     if (query.search) q.search = query.search;
-    return this.adapter.get_v3('GET /vendors/by-legacy-id/:id/products', {
-      params: { id: String(this.storeId) },
-      query: q,
-    }).pipe(
-      map((response: any): AxServerFetchResult<ProductRow> => {
-        // Capture the resolved v3 vendor id for create operations.
-        if (response?.meta?.vendor_id) this.vendorV3Id = response.meta.vendor_id;
-        const raw: any[] = response?.data ?? response?.products ?? [];
-        const rows = raw.map((p) => this.mapProduct(p));
-        return { rows, total: response?.meta?.total ?? rows.length };
-      }),
-      catchError(() => {
-        this.toast.error('Unable to load store products.');
-        return of({ rows: [], total: 0 } as AxServerFetchResult<ProductRow>);
+    // List via the ADMIN-scoped, ungated endpoint keyed by the v3 vendor id:
+    // returns ALL of the store's products in every state and works for
+    // inactive/pending stores (the public storefront route hides them, so
+    // admins used to see an empty list for real stores).
+    return this.vendorV3Id$.pipe(
+      switchMap((vendorId) => {
+        if (!vendorId) {
+          this.toast.error('Unable to load store products.');
+          return of({ rows: [], total: 0 } as AxServerFetchResult<ProductRow>);
+        }
+        return this.adapter.get_v3('GET /admin/vendors/:id/products', {
+          params: { id: String(vendorId) },
+          query: q,
+        }).pipe(
+          map((response: any): AxServerFetchResult<ProductRow> => {
+            if (response?.meta?.vendor_id) this.vendorV3Id = response.meta.vendor_id;
+            const raw: any[] = response?.data ?? response?.products ?? [];
+            const rows = raw.map((p) => this.mapProduct(p));
+            return { rows, total: response?.meta?.total ?? rows.length };
+          }),
+          catchError(() => {
+            this.toast.error('Unable to load store products.');
+            return of({ rows: [], total: 0 } as AxServerFetchResult<ProductRow>);
+          }),
+        );
       }),
     );
   }

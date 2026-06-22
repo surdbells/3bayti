@@ -1412,6 +1412,12 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/vendors/:id/metrics': {
     target: 'new', oldPath: '/admin/common/dashboard-activity', newPath: '/v3/admin/vendors/:id/metrics', shape: 'v3-envelope',
   },
+  // Admin-scoped vendor catalog (store-products manager). Keyed by v3 vendor
+  // id; UNGATED — returns ALL of the vendor's products in every state and
+  // works for inactive/pending stores (the public storefront route hides them).
+  'GET /admin/vendors/:id/products': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/vendors/:id/products', shape: 'v3-envelope',
+  },
   // Platform-wide admin analytics dashboard
   'GET /admin/analytics': {
     target: 'new', oldPath: '/admin/common/dashboard', newPath: '/v3/admin/analytics', shape: 'v3-envelope',

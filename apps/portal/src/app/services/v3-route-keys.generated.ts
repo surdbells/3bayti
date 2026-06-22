@@ -60,6 +60,7 @@ export type V3RouteKey =
   | 'GET /admin/vendors/:id/compliance'
   | 'GET /admin/vendors/:id/messages'
   | 'GET /admin/vendors/:id/metrics'
+  | 'GET /admin/vendors/:id/products'
   | 'GET /auth/me'
   | 'GET /campaigns/:slug'
   | 'GET /campaigns/active'
@@ -308,6 +309,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/vendors/:id/compliance',
   'GET /admin/vendors/:id/messages',
   'GET /admin/vendors/:id/metrics',
+  'GET /admin/vendors/:id/products',
   'GET /auth/me',
   'GET /campaigns/:slug',
   'GET /campaigns/active',

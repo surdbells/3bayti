@@ -393,6 +393,27 @@ export const routes: Routes = [
     title: 'Role editor'
   },
   {
+    // Create a staff member (routed; replaces the old in-page "Add staff" drawer).
+    path: 'adminusers/new',
+    loadComponent: () => import('./backend/users/staff-create/staff-create.component').then(m => m.StaffCreateComponent),
+    canActivate: [adminGuard],
+    title: 'Add staff'
+  },
+  {
+    // Assign roles to a staff member (replaces the old "Manage roles" drawer).
+    path: 'adminusers/:id/roles',
+    loadComponent: () => import('./backend/users/staff-roles/staff-roles.component').then(m => m.StaffRolesComponent),
+    canActivate: [adminGuard],
+    title: 'Manage roles'
+  },
+  {
+    // Reset a staff member's password (replaces the old "Reset password" drawer).
+    path: 'adminusers/:id/reset-password',
+    loadComponent: () => import('./backend/users/staff-password/staff-password.component').then(m => m.StaffPasswordComponent),
+    canActivate: [adminGuard],
+    title: 'Reset password'
+  },
+  {
     path: 'admin-gift-cards',
     loadComponent: () => import('./backend/gift-cards/gift-cards.component').then(m => m.GiftCardsAdminComponent),
     canActivate: [adminGuard],

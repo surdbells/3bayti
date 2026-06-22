@@ -27,6 +27,9 @@ interface CustomerRow extends Record<string, unknown> {
   phone: string;
   last_login: string;
   status: boolean;
+  is_email_verified: boolean;
+  is_phone_verified: boolean;
+  created_at: string;
 }
 
 @Component({
@@ -114,7 +117,7 @@ export class CustomersComponent implements OnInit {
     );
   }
 
-  /** Map publicProfile (last_login_at, is_store_active) into the row. */
+  /** Map the admin customer() shape (phone, country_code, is_active, verification flags). */
   private mapCustomer(u: any): CustomerRow {
     return {
       id: u.id,
@@ -123,7 +126,10 @@ export class CustomersComponent implements OnInit {
       email: u.email ?? '',
       phone: u.phone ? `${u.country_code ?? ''}${u.phone}` : '',
       last_login: u.last_login_at ?? u.last_login ?? '',
-      status: u.is_active ?? u.is_store_active ?? true,
+      status: u.is_active ?? true,
+      is_email_verified: u.is_email_verified ?? false,
+      is_phone_verified: u.is_phone_verified ?? false,
+      created_at: u.created_at ?? '',
     } as CustomerRow;
   }
 

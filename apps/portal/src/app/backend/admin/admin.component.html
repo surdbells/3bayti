@@ -99,7 +99,7 @@
             </div>
             <div class="ax-stat-card-value">{{ total_orders | number }}</div>
             <div class="ax-stat-card-footer">
-              <span class="ax-stat-card-caption">Total lifetime orders</span>
+              <span class="ax-stat-card-caption">{{ 'orders_in_window' | translate:{ days: windowDays } }}</span>
             </div>
           </div>
 
@@ -118,7 +118,7 @@
             </div>
             <div class="ax-stat-card-value">{{ products_sold | number }}</div>
             <div class="ax-stat-card-footer">
-              <span class="ax-stat-card-caption">Units moved to date</span>
+              <span class="ax-stat-card-caption">{{ 'units_in_window' | translate:{ days: windowDays } }}</span>
             </div>
           </div>
         </div>
@@ -162,17 +162,19 @@
             <h2 class="ax-card-title">Top-selling products</h2>
             <span class="ax-text-2xs ax-text-tertiary">Last 30 days</span>
           </div>
-          <ul class="adm-top-list">
-            <li *ngFor="let p of topProducts; let i = index" class="adm-top-row">
-              <span class="adm-top-rank">{{ i + 1 }}</span>
-              <img *ngIf="p.image" [src]="p.image" alt="" class="adm-top-img" />
-              <div class="adm-top-body">
-                <div class="adm-top-name" [title]="p.name">{{ p.name }}</div>
-                <div class="adm-top-meta">{{ p.units_sold | number }} sold</div>
-              </div>
-              <div class="adm-top-rev">AED {{ p.revenue | number:'1.2-2' }}</div>
-            </li>
-          </ul>
+          <div class="ax-card-body">
+            <ul class="adm-top-list">
+              <li *ngFor="let p of topProducts; let i = index" class="adm-top-row">
+                <span class="adm-top-rank">{{ i + 1 }}</span>
+                <img *ngIf="p.image" [src]="p.image" alt="" class="adm-top-img" />
+                <div class="adm-top-body">
+                  <div class="adm-top-name" [title]="p.name">{{ p.name }}</div>
+                  <div class="adm-top-meta">{{ p.units_sold | number }} sold</div>
+                </div>
+                <div class="adm-top-rev">AED {{ p.revenue | number:'1.2-2' }}</div>
+              </li>
+            </ul>
+          </div>
         </div>
       </section>
     </ng-container>
@@ -259,6 +261,21 @@
     <!-- ============== RECENT SALES TAB ============== -->
     <ng-container *ngIf="!ui_controls.is_loading && ui_controls.viewing_recent_orders">
       <section class="ax-page-section">
+        <!-- Status filter -->
+        <div class="ax-flex ax-justify-end ax-mb-4">
+          <label class="ax-flex ax-items-center ax-gap-2 ax-text-sm ax-text-secondary">
+            {{ 'table_status' | translate }}
+            <select class="ax-select ax-input-sm"
+                    [value]="statusFilter"
+                    (change)="onStatusFilterChange($any($event.target).value)"
+                    [attr.aria-label]="'filter_by_status' | translate">
+              <option *ngFor="let opt of statusOptions" [value]="opt.value">
+                {{ opt.label | translate }}
+              </option>
+            </select>
+          </label>
+        </div>
+
         <div *ngIf="!ui_controls.no_recent" class="ax-table-wrapper">
           <table class="ax-table ax-table-hover ax-table-interactive">
             <thead>
@@ -274,7 +291,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let a_recent of pagedRecent">
+              <tr *ngFor="let a_recent of recent">
                 <td class="ax-font-medium ax-text-primary">{{ a_recent.order_ref }}</td>
                 <td class="ax-text-secondary">{{ a_recent.added }}</td>
                 <td>{{ a_recent.customer_name }}</td>
@@ -283,24 +300,26 @@
                 <td class="ax-text-secondary">{{ a_recent.quantity }}</td>
                 <td class="ax-font-semibold">{{ a_recent.total_price }}</td>
                 <td>
-                  <span *ngIf="a_recent.status === 'Accepted'"          class="ax-badge ax-badge-warning">Accepted</span>
-                  <span *ngIf="a_recent.status === 'Ready for Delivery'" class="ax-badge ax-badge-info">Ready for delivery</span>
-                  <span *ngIf="a_recent.status === 'Delivered'"          class="ax-badge ax-badge-success">Delivered</span>
-                  <span *ngIf="a_recent.status === 'Return Requested'"   class="ax-badge ax-badge-warning">Return requested</span>
-                  <span *ngIf="a_recent.status === 'Returned'"           class="ax-badge ax-badge-neutral">Returned</span>
-                  <span *ngIf="a_recent.status === 'Cancelled'"          class="ax-badge ax-badge-danger">Cancelled</span>
-                  <span *ngIf="a_recent.status === 'Refunded'"           class="ax-badge ax-badge-brand">Refunded</span>
+                  <span *ngIf="a_recent.status === 'Pending Payment'" class="ax-badge ax-badge-neutral">Pending payment</span>
+                  <span *ngIf="a_recent.status === 'Paid'"            class="ax-badge ax-badge-info">Paid</span>
+                  <span *ngIf="a_recent.status === 'Fulfilling'"      class="ax-badge ax-badge-warning">Fulfilling</span>
+                  <span *ngIf="a_recent.status === 'Shipped'"         class="ax-badge ax-badge-info">Shipped</span>
+                  <span *ngIf="a_recent.status === 'Delivered'"       class="ax-badge ax-badge-success">Delivered</span>
+                  <span *ngIf="a_recent.status === 'Cancelled'"       class="ax-badge ax-badge-danger">Cancelled</span>
+                  <span *ngIf="a_recent.status === 'Refunded'"        class="ax-badge ax-badge-brand">Refunded</span>
+                  <span *ngIf="a_recent.status === 'Failed'"          class="ax-badge ax-badge-danger">Failed</span>
                 </td>
               </tr>
             </tbody>
           </table>
 
           <app-ax-pagination
-            *ngIf="recent && recent.length > pageSize"
-            [totalCount]="recent.length"
+            *ngIf="recentTotal > pageSize"
+            [totalCount]="recentTotal"
             [pageSize]="pageSize"
             [pageIndex]="pageIndex"
-            (pageIndexChange)="onPageIndexChange($event)">
+            (pageIndexChange)="onPageIndexChange($event)"
+            (pageSizeChange)="onPageSizeChange($event)">
           </app-ax-pagination>
         </div>
 

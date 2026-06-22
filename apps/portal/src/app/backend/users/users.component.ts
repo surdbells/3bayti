@@ -1,13 +1,11 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
-import { GlobalComponent } from '../../global-component';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { TranslatePipe } from '../../translate.pipe';
@@ -62,7 +60,6 @@ export interface CatalogPreset { slug: string; name: string; description: string
   imports: [
     AdminShellComponent,
     CommonModule,
-    FormsModule,
     AxDataTableComponent,
     AxCellDirective,
     AxCanDirective,
@@ -76,38 +73,12 @@ export class UsersComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
   protected readonly perms = inject(PermissionService);
 
-  // Drawer visibility
-  protected readonly createOpen = signal(false);
-  protected readonly pwOpen = signal(false);
-  protected readonly rolesOpen = signal(false);
-
   // View toggle (Staff | Roles)
   protected readonly view = signal<'staff' | 'roles'>('staff');
 
   ui = {
-    registering: false,
-    updating_password: false,
-    saving_roles: false,
-    roles_loading: false,
     roles_list_loading: false,
   };
-
-  register = {
-    first_name: '',
-    last_name: '',
-    email: '',
-    password: '',
-    confirm_password: '',
-  };
-
-  // Password reset target
-  pwTarget = { id: 0, first_name: '', last_name: '' };
-  pwValue = '';
-
-  // Role assignment state
-  rolesTarget: StaffUser | null = null;
-  allRoles: RoleOption[] = [];
-  selectedRoleIds: number[] = [];
 
   // Roles list (the matrix editor itself lives at /admin_role — RoleEditorComponent)
   rolesList: RoleDetail[] = [];
@@ -124,7 +95,6 @@ export class UsersComponent implements OnInit {
   ngOnInit() {
     this.perms.load();
     this.buildTable();
-    this.loadRoles();
   }
 
   // ── Table ────────────────────────────────────────────────────────────
@@ -211,6 +181,16 @@ export class UsersComponent implements OnInit {
     }
   }
 
+  // ── Routed sub-pages (replace the old in-page drawers) ────────────────
+  /** Open the routed create-staff page (/adminusers/new). */
+  openCreate() { this.router.navigate(['/adminusers/new']); }
+
+  /** Open the routed manage-roles page (/adminusers/:id/roles). */
+  openRoles(row: StaffUser) { this.router.navigate(['/adminusers', row.id, 'roles']); }
+
+  /** Open the routed reset-password page (/adminusers/:id/reset-password). */
+  openPassword(row: StaffUser) { this.router.navigate(['/adminusers', row.id, 'reset-password']); }
+
   private refresh() { this.dataSource.retry(); }
 
   // ── Activate / deactivate ────────────────────────────────────────────
@@ -236,101 +216,6 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  // ── Create staff ─────────────────────────────────────────────────────
-  openCreate() {
-    this.register = { first_name: '', last_name: '', email: '', password: '', confirm_password: '' };
-    this.createOpen.set(true);
-  }
-  closeCreate() { this.createOpen.set(false); }
-
-  user_register() {
-    const r = this.register;
-    if (!r.first_name) { this.toast.error('First name is required'); return; }
-    if (!r.last_name) { this.toast.error('Last name is required'); return; }
-    if (!r.email) { this.toast.error('Email address is required'); return; }
-    if (!GlobalComponent.validateEmail(r.email)) { this.toast.error('Invalid email format provided'); return; }
-    if (!r.password) { this.toast.error('Password is required'); return; }
-    if (r.password !== r.confirm_password) { this.toast.error('Password does not match'); return; }
-
-    this.ui.registering = true;
-    this.adapter.post_v3('POST /admin/users', this.register).subscribe({
-      next: (response: any) => {
-        if (response) {
-          this.toast.success('Staff member created. Assign roles to grant access.');
-          this.register = { first_name: '', last_name: '', email: '', password: '', confirm_password: '' };
-          this.createOpen.set(false);
-          this.refresh();
-        }
-        this.ui.registering = false;
-      },
-      error: () => { this.toast.error('Unable to complete your request at this time.'); this.ui.registering = false; },
-    });
-  }
-
-  // ── Roles ────────────────────────────────────────────────────────────
-  private loadRoles() {
-    this.ui.roles_loading = true;
-    this.adapter.get_v3('GET /admin/roles').subscribe({
-      next: (res: any) => {
-        this.allRoles = (res?.data ?? []).map((r: any) => ({
-          id: r.id, slug: r.slug, name: r.name, description: r.description ?? null, is_system: !!r.is_system,
-        }));
-        this.ui.roles_loading = false;
-      },
-      error: () => { this.ui.roles_loading = false; },
-    });
-  }
-
-  openRoles(row: StaffUser) {
-    this.rolesTarget = row;
-    this.selectedRoleIds = (row.assigned_roles ?? []).map((r) => r.id);
-    if (this.allRoles.length === 0) this.loadRoles();
-    this.rolesOpen.set(true);
-  }
-
-  closeRoles() { this.rolesOpen.set(false); this.rolesTarget = null; }
-
-  isRoleSelected(id: number): boolean { return this.selectedRoleIds.includes(id); }
-
-  toggleRole(id: number) {
-    this.selectedRoleIds = this.isRoleSelected(id)
-      ? this.selectedRoleIds.filter((x) => x !== id)
-      : [...this.selectedRoleIds, id];
-  }
-
-  saveRoles() {
-    if (!this.rolesTarget) return;
-    this.ui.saving_roles = true;
-    this.adapter.post_v3('POST /admin/users/:id/roles', { role_ids: this.selectedRoleIds }, { params: { id: String(this.rolesTarget.id) } }).subscribe({
-      next: (r: any) => {
-        if (r) { this.toast.success('Roles updated.'); this.closeRoles(); this.refresh(); }
-        this.ui.saving_roles = false;
-      },
-      error: () => { this.toast.error('Unable to update roles at this time.'); this.ui.saving_roles = false; },
-    });
-  }
-
-  // ── Password reset ───────────────────────────────────────────────────
-  openPassword(row: StaffUser) {
-    this.pwTarget = { id: row.id, first_name: row.first_name, last_name: row.last_name };
-    this.pwValue = '';
-    this.pwOpen.set(true);
-  }
-
-  closePassword() { this.pwOpen.set(false); }
-
-  update_password() {
-    if (!this.pwValue) { this.toast.error('New password is required.'); return; }
-    this.ui.updating_password = true;
-    this.adapter.patch_v3('PATCH /admin/users/:id/password', { password: this.pwValue }, { params: { id: String(this.pwTarget.id) } }).subscribe({
-      next: (response: any) => {
-        if (response) { this.toast.success('Password updated.'); this.pwValue = ''; this.pwOpen.set(false); }
-        this.ui.updating_password = false;
-      },
-      error: () => { this.toast.error('Unable to complete your request at this time.'); this.ui.updating_password = false; },
-    });
-  }
-
   // ── Roles management (matrix editor) ─────────────────────────────────
   switchView(v: 'staff' | 'roles') {
     this.view.set(v);
@@ -346,10 +231,6 @@ export class UsersComponent implements OnInit {
         this.rolesList = (res?.data ?? []).map((r: any) => ({
           id: r.id, slug: r.slug, name: r.name, description: r.description ?? null,
           is_system: !!r.is_system, permissions: Array.isArray(r.permissions) ? r.permissions : [],
-        }));
-        // Keep the assign-roles drawer options in sync with any new/edited roles.
-        this.allRoles = this.rolesList.map((r) => ({
-          id: r.id, slug: r.slug, name: r.name, description: r.description, is_system: r.is_system,
         }));
         this.ui.roles_list_loading = false;
       },
