@@ -52,13 +52,13 @@
                 <article
                   *ngFor="let a_message of message; let i = index"
                   class="ax-card ax-p-3"
-                  [style.background]="isSupport(a_message.sender) ? 'var(--ax-color-bg-canvas)' : 'var(--ax-color-bg-surface)'"
-                  [style.margin-right]="isSupport(a_message.sender) ? 'auto' : '0'"
-                  [style.margin-left]="isSupport(a_message.sender) ? '0' : 'auto'"
+                  [style.background]="isInbound(a_message) ? 'var(--ax-color-bg-canvas)' : 'var(--ax-color-bg-surface)'"
+                  [style.margin-right]="isInbound(a_message) ? 'auto' : '0'"
+                  [style.margin-left]="isInbound(a_message) ? '0' : 'auto'"
                   style="max-width: 85%;">
                   <div class="ax-flex ax-items-center ax-justify-between ax-gap-2 ax-mb-2">
                     <span class="ax-font-semibold ax-text-sm">{{ a_message.sender }}</span>
-                    <span class="ax-text-2xs ax-text-tertiary">{{ a_message.timestamp }}</span>
+                    <span class="ax-text-2xs ax-text-tertiary">{{ a_message.timestamp ? (a_message.timestamp | date: 'short') : '' }}</span>
                   </div>
                   <div class="ax-text-sm ax-text-primary" style="white-space: pre-wrap;">{{ a_message.message }}</div>
                 </article>

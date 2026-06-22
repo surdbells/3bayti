@@ -145,7 +145,7 @@ export class TicketsComponent implements OnInit {
     return {
       ...t,
       ticket_id: t.id,
-      ticket_ref: t.reference ?? `#${t.id}`,
+      ticket_ref: t.ticket_ref ?? `TKT-${t.id}`,
       store_name: t.vendor_name ?? (t.vendor_id ? `Store #${t.vendor_id}` : '—'),
       subject: t.subject ?? '',
       priority: t.priority ?? '',

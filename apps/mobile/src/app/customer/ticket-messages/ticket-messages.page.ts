@@ -1,5 +1,6 @@
 import {Component, HostListener, OnDestroy, OnInit, ViewChild} from '@angular/core';
 
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonButton,
@@ -26,13 +27,15 @@ export interface Messages {
   message: string;
   timestamp: string;
   currentId: number;
+  is_admin_reply: boolean;
+  author_name: string;
 }
 @Component({
   selector: 'app-conversations',
   templateUrl: './ticket-messages.page.html',
   styleUrls: ['./ticket-messages.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar, FormsModule, IonFooter, IonButton, IonButtons, RouterLink, TranslatePipe, AxIconComponent, AxLoaderComponent]
+  imports: [IonContent, IonHeader, IonTitle, IonToolbar, FormsModule, IonFooter, IonButton, IonButtons, RouterLink, TranslatePipe, AxIconComponent, AxLoaderComponent, DatePipe]
 })
 export class TicketMessagesPage implements OnInit, OnDestroy {
   isOnline = true;

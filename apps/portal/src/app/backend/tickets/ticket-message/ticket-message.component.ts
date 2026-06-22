@@ -10,10 +10,10 @@ import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.c
 import { IconComponent } from '../../../shared/icon/icon.component';
 export interface Message {
   id: number;
-  ticket: number;
   sender: string;
   message: string;
   timestamp: string;
+  isAdmin: boolean;
 }
 
 @Component({
@@ -85,8 +85,15 @@ export class TicketMessageComponent implements OnInit {
     const tmId = this.get_msg_t.ticket ?? this.get_msg_t.id;
     this.adapter.get_v3('GET /admin/tickets/:id/messages', { params: { id: String(tmId) } }).subscribe({
       next: (response: any) => {
-        this.message = response.data;
-        this.ui_controls.no_data = !this.message || this.message.length === 0;
+        const raw: any[] = response?.data ?? [];
+        this.message = raw.map((m): Message => ({
+          id: m.id,
+          sender: m.author_name,
+          message: m.body,
+          timestamp: m.created_at,
+          isAdmin: !!m.is_admin_reply,
+        }));
+        this.ui_controls.no_data = this.message.length === 0;
         this.ui_controls.is_loading = false;
       },
       error: () => {
@@ -117,9 +124,12 @@ export class TicketMessageComponent implements OnInit {
     });
   }
 
-  isSupport(sender: string): boolean {
-    // Best-effort: treat messages from admin/support users as inbound bubbles on the left
-    const s = (sender || '').toLowerCase();
-    return s.includes('support') || s.includes('admin') || s.includes('system');
+  /**
+   * The admin viewing this thread is the support side. Their own
+   * replies (is_admin_reply) render as outbound bubbles on the right;
+   * vendor/customer messages render inbound on the left.
+   */
+  isInbound(m: Message): boolean {
+    return !m.isAdmin;
   }
 }

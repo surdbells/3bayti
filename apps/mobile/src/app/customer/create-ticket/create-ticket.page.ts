@@ -20,7 +20,6 @@ import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
-import {StoreRecord} from "../messages/messages.page";
 import {NavController, Platform} from "@ionic/angular/standalone";
 import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
@@ -29,6 +28,13 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
+
+export interface StoreRecord {
+  store: number;
+  store_name: string;
+  store_address: string;
+  total_products: number;
+}
 @Component({
   selector: 'app-create-ticket',
   templateUrl: './create-ticket.page.html',
@@ -131,18 +137,20 @@ export class CreateTicketPage implements OnInit, OnDestroy {
   }
   get_vendors() {
     this.ui_controls.is_loading = true;
-    // v3: GET /orders (read-customer-orders is an oldPathAlias of this
-    // routeKey). Auth-scoped from the Bearer token. transformReadOrders-
-    // ListingRequest forwards limit/offset; the legacy {id, token} body
-    // had neither, so the transform defaults (limit 10, offset 0) apply.
-    this.networkAdapter.get_v3('GET /orders', {
+    // v3: GET /chat/conversation-stores — auth-scoped (Bearer token).
+    // This is the same vendor source the messages inbox uses: each item
+    // is already a StoreRecord { store, store_name, ... }, so the ticket
+    // store dropdown can bind value=store / label=store_name directly.
+    // The previous GET /orders source returned an { orders, pagination }
+    // object whose items carried no store/store_name, so the dropdown
+    // only ever showed "General support".
+    this.networkAdapter.get_v3('GET /chat/conversation-stores', {
       authToken: this.single_user.token,
-      queryParams: { limit: 10, offset: 0 },
     })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
-            this.stores =  response.data;
+            this.stores = Array.isArray(response.data) ? response.data : [];
             this.ui_controls.is_loading = false;
           } else {
             this.ui_controls.is_loading = false;

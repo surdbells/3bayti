@@ -13,11 +13,14 @@
   @if (!ui_controls.is_loading){
     <div class="thread ion-padding-horizontal">
       @for (conversation of messages; track $index){
-        <div class="message">
+        <div class="message" [class.message--admin]="conversation.is_admin_reply" [class.message--customer]="!conversation.is_admin_reply">
+          @if (conversation.is_admin_reply && conversation.author_name){
+            <span class="message-author">{{ conversation.author_name }}</span>
+          }
           <div class="message-bubble">
             <p class="message-text">{{ conversation.message }}</p>
           </div>
-          <span class="message-time">{{ conversation.timestamp }}</span>
+          <span class="message-time">{{ conversation.timestamp | date:'MMM d, y, h:mm a' }}</span>
         </div>
       }
     </div>

@@ -488,7 +488,13 @@ export function transformTicketMessagesResponse(data: unknown): unknown {
   if (!Array.isArray(data)) return data;
   return data.map((m) => {
     if (!isRecord(m)) return m;
-    return { ...m, message: asString(m['body']), timestamp: asString(m['created_at']) };
+    return {
+      ...m,
+      message: asString(m['body']),
+      timestamp: asString(m['created_at']),
+      is_admin_reply: m['is_admin_reply'] === true,
+      author_name: asString(m['author_name']),
+    };
   });
 }
 

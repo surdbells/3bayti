@@ -26,12 +26,17 @@ class TicketRepository extends EntityRepository
         ?string $priority = null,
         ?int $vendorId = null,
         ?int $userId = null,
+        ?string $search = null,
     ): array {
         $qb = $this->createQueryBuilder('t')
             ->orderBy('t.id', 'DESC')
             ->setMaxResults($limit)
             ->setFirstResult($offset);
 
+        if ($search !== null && trim($search) !== '') {
+            $qb->andWhere('LOWER(t.subject) LIKE :search')
+               ->setParameter('search', '%' . strtolower(trim($search)) . '%');
+        }
         if ($status !== null) {
             $qb->andWhere('t.status = :status')->setParameter('status', $status);
         }
