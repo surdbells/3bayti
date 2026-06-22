@@ -67,10 +67,11 @@ export class HomePage implements OnInit, OnDestroy {
   best_sellers: Products[] = [];
   new_arrivals: Products[] = [];
   vendor_featured: Store[] = [];
-  // GET /v3/featured-vendors is a CURATED, non-paginated spotlight (it ignores
-  // offset and never returns has_more), so there is no "next page". Once the
-  // first (and only) page is loaded this stays false to stop the infinite
-  // scroll from re-appending the same stores.
+  // GET /v3/vendors (the PAGINATED public store directory) honours
+  // limit/offset, so the "Popular stores" section supports real infinite
+  // scroll. hasMoreStores stays true while the last page came back full
+  // (length === limit) and flips false once a short/empty page signals the
+  // end of the directory.
   hasMoreStores = true;
   isOnline = true;
   categories: Labels[] = [];
@@ -203,22 +204,25 @@ export class HomePage implements OnInit, OnDestroy {
   }
   get_featured_products() {
     this.ui_controls.is_loading = true;
-    // M3.2.X.1.5-A: 'GET /mobile/featured' flag (target='new' since M3.1.5).
-    // Direct v3 (GET /v3/featured-vendors). Public catalog read — anonymous,
-    // so no authToken. transformFeaturedRequest carries over limit/offset from
-    // the existing `get_featured` request object. The response transform still
-    // applies via get_v3, so response.data shape is unchanged.
-    this.networkAdapter.get_v3('GET /mobile/featured', {
+    this.get_featured.offset = 0;
+    this.hasMoreStores = true;
+    // Paginated PUBLIC store directory (GET /v3/vendors via 'GET /mobile/stores').
+    // Anonymous catalog read (no authToken). limit/offset go straight through as
+    // query params; the directory honours offset. transformFeaturedVendorsResponse
+    // reshapes the directoryShape into the Store card (store_id/store_name/rating
+    // + products[{product_id,image,price}]), so the binding is unchanged.
+    this.networkAdapter.get_v3('GET /mobile/stores', {
       queryParams: { limit: this.get_featured.limit, offset: this.get_featured.offset },
     })
       .subscribe(({
         next: (response: any) => {
-          this.vendor_featured = response.data;
+          const page: Store[] = response.data ?? [];
+          this.vendor_featured = page;
           this.meta = response.message;
           this.ui_controls.is_loading = false;
-          // Curated spotlight: there is no second page. Disable further
-          // infinite-scroll fetches so the same stores aren't re-appended.
-          this.hasMoreStores = false;
+          // A full page means there may be more; a short/empty page is the
+          // end of the directory.
+          this.hasMoreStores = page.length === this.get_featured.limit;
         }
       }))
   }
@@ -241,34 +245,31 @@ export class HomePage implements OnInit, OnDestroy {
     this.router.navigate(['/', 'login']);
   }
   getMoreItems() {
-    // The featured-vendors endpoint is a curated, non-paginated spotlight, so
-    // there is nothing to fetch beyond the first page. Guard against re-fetching
-    // (and re-appending) the same stores.
+    // Guard against a fetch past the end of the directory.
     if (!this.hasMoreStores) return;
     this.get_featured.offset = this.get_featured.offset + this.get_featured.limit
-    // Direct v3 (GET /v3/featured-vendors) — same paginated read as
-    // get_featured_products(), advancing offset for infinite scroll.
-    // Anonymous catalog read (no authToken); limit/offset carry over from
-    // the `get_featured` request object. Response shape unchanged (transform
-    // applies).
-    this.networkAdapter.get_v3('GET /mobile/featured', {
+    // Paginated PUBLIC store directory (GET /v3/vendors) — same read as
+    // get_featured_products(), advancing offset for infinite scroll. Anonymous
+    // catalog read (no authToken). Response shape unchanged (transform applies).
+    this.networkAdapter.get_v3('GET /mobile/stores', {
       queryParams: { limit: this.get_featured.limit, offset: this.get_featured.offset },
     })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
-            // Client-side dedupe by store_id as a guard against the curated set
-            // re-appearing.
+            const page: Store[] = response.data ?? [];
+            // Dedupe by store_id so a store can't appear twice across pages.
             const existingIds = new Set(this.vendor_featured.map(s => s.store_id));
-            const deduped = (response.data ?? []).filter(
+            const deduped = page.filter(
               (s: Store) => s && !existingIds.has(s.store_id)
             );
             this.vendor_featured.push(...deduped);
+            // Stop once a page comes back short (end of directory).
+            this.hasMoreStores = page.length === this.get_featured.limit;
           }else{
             this.ui_controls.is_empty = true;
+            this.hasMoreStores = false;
           }
-          // Curated spotlight: no further pages — stop the infinite scroll.
-          this.hasMoreStores = false;
         }
       }))
   }

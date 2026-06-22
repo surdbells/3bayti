@@ -714,6 +714,10 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   // Featured = "Trending stores" — a vendor list with embedded products,
   // NOT a flat product list (see transformFeaturedVendorsResponse).
   'GET /mobile/featured': transformFeaturedVendorsResponse,
+  // Paginated PUBLIC store directory (GET /v3/vendors). directoryShape now
+  // carries the same legacy store_id + per-product legacy_product_id/price as
+  // featuredShape, so the exact same transform reshapes it into the Store card.
+  'GET /mobile/stores': transformFeaturedVendorsResponse,
   'GET /mobile/explore-listing': transformProductListResponse,
   'GET /mobile/category-listing': transformProductListResponse,
   'GET /mobile/vendors-products': transformProductListResponse,

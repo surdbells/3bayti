@@ -10,6 +10,22 @@
 </ion-header>
 
 <ion-content fullscreen="true" class="page-bg ion-padding">
+  <!-- Status filter chips — horizontal scroll row. Drives server-side
+       ?status= filtering; tapping refetches from offset 0. -->
+  <div class="status-filters horizontal-scroll" role="tablist">
+    @for (chip of statuses; track chip.value) {
+      <button
+        type="button"
+        role="tab"
+        class="status-chip"
+        [class.status-chip--active]="selectedStatus === chip.value"
+        [attr.aria-selected]="selectedStatus === chip.value"
+        (click)="selectStatus(chip.value)">
+        {{ chip.labelKey | translate }}
+      </button>
+    }
+  </div>
+
   @if (ui_controls.is_loading){
     <div class="loader-row">
       <ax-loader></ax-loader>
@@ -21,7 +37,7 @@
       <div class="empty-icon-wrap">
         <ax-icon name="shopping-cart" />
       </div>
-      <h2>{{ 'heading_no_orders' | translate }}</h2>
+      <h2>{{ emptyHeadingKey() | translate }}</h2>
     </div>
   } @else {
     @for (order of orders; track order.id; let i = $index) {
@@ -29,11 +45,26 @@
         <!-- Order Header -->
         <div class="order-header">
           <div class="order-info">
-            <h4 class="order-id">{{ order.id }}</h4>
+            <h4 class="order-id">{{ order.order_reference || order.id }}</h4>
             <span class="order-date">{{ order.date | date:'MMM d, y' }}</span>
           </div>
-          <span class="status-pill" [ngClass]="'status-pill--' + order.status">{{ order.status | uppercase }}</span>
+          <span class="status-pill" [ngClass]="'status-pill--' + order.status">{{ statusLabelKey(order.status) | translate }}</span>
         </div>
+
+        <!-- Compact summary: thumbnail strip + item count (collapsed view) -->
+        @if (!order.showItems && order.items?.length) {
+          <div class="order-summary">
+            <div class="thumb-strip">
+              @for (item of order.items.slice(0, 4); track item) {
+                <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="{{ item.product_name }}" class="thumb" />
+              }
+              @if (order.items.length > 4) {
+                <span class="thumb-more">+{{ order.items.length - 4 }}</span>
+              }
+            </div>
+            <span class="item-count">{{ itemCount(order) }} {{ (itemCount(order) === 1 ? 'orders_item_singular' : 'orders_item_plural') | translate }}</span>
+          </div>
+        }
 
         <!-- Collapsible items section -->
         @if (order.showItems) {

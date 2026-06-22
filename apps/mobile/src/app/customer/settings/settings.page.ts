@@ -146,7 +146,33 @@ export class SettingsPage implements OnInit, OnDestroy {
       this.u_location.id = this.single_user.id;
       this.u_location.token = this.single_user.token;
       this.u_location.location = this.single_user.location;
+      // Sync the avatar from the server for sessions whose cached 'user'
+      // blob predates login-time avatar persistence.
+      this.refreshProfileAvatar();
     }
+  }
+
+  /**
+   * Pull the freshest profile from GET /v3/me/profile and sync the avatar
+   * into single_user + the cached 'user' Preferences blob. The v3 profile
+   * emits the picture under `avatar_url` (UserSerializer::publicProfile);
+   * the template binds `single_user.avatar`. Silent on failure (the
+   * avatar.png fallback in the template applies).
+   */
+  refreshProfileAvatar(): void {
+    if (!this.single_user.token) return;
+    this.networkAdapter.get_v3('GET /me/profile', { authToken: this.single_user.token })
+      .subscribe({
+        next: (response: any) => {
+          if (response.response_code !== 200) return;
+          const user = response?.data?.user;
+          if (!user || typeof user.avatar_url !== 'string') return;
+          if (user.avatar_url === this.single_user.avatar) return;
+          this.single_user.avatar = user.avatar_url;
+          Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+        },
+        error: () => { /* silent — fallback avatar applies */ },
+      });
   }
 
   async loadNotificationPreference(): Promise<void> {

@@ -44,7 +44,24 @@ type OrderStatus =
   | 'cancelled'
   | 'refunded'
   | 'failed';
-type FilterStatus = 'all' | 'processing' | 'shipping' | 'delivered';
+// M3.1.7-I.6 — status filter chips. 'all' = no server filter; every other
+// value is a real Order status enum sent verbatim as ?status= to GET /v3/orders
+// (server-side filtering, so it composes with offset/infinite-scroll).
+type FilterStatus =
+  | 'all'
+  | 'pending_payment'
+  | 'paid'
+  | 'fulfilling'
+  | 'shipped'
+  | 'delivered'
+  | 'cancelled';
+
+interface StatusChip {
+  /** Filter bucket — 'all' or a real Order status. */
+  value: FilterStatus;
+  /** i18n key for the chip label. */
+  labelKey: string;
+}
 interface OrderItem {
   product_id: number;
   store: number;
@@ -57,6 +74,7 @@ interface OrderItem {
 
 interface Order {
   id: string;
+  order_reference?: string;
   date: Date;
   status: OrderStatus;
   items: OrderItem[];  // list of items in the order
@@ -91,8 +109,17 @@ export class MyOrdersPage implements OnInit {
   /** Expose cfImage for template usage. */
   readonly cfImage = cfImage;
   orders: Order[] = [];
-  // filter chips
-  statuses: FilterStatus[] = ['all', 'processing', 'shipping', 'delivered'];
+  // filter chips — order matches the customer order lifecycle. Each value
+  // (except 'all') is a real Order status sent server-side as ?status=.
+  statuses: StatusChip[] = [
+    { value: 'all', labelKey: 'orders_filter_all' },
+    { value: 'pending_payment', labelKey: 'orders_filter_pending_payment' },
+    { value: 'paid', labelKey: 'orders_filter_paid' },
+    { value: 'fulfilling', labelKey: 'orders_filter_fulfilling' },
+    { value: 'shipped', labelKey: 'orders_filter_shipped' },
+    { value: 'delivered', labelKey: 'orders_filter_delivered' },
+    { value: 'cancelled', labelKey: 'orders_filter_cancelled' },
+  ];
   selectedStatus: FilterStatus = 'all';
   constructor(
     private nav: NavController,
@@ -148,7 +175,20 @@ export class MyOrdersPage implements OnInit {
     is_vendor: false,
     is_customer: false
   }
-  // mock orders
+  // Build the query params for a list fetch, appending ?status= only when a
+  // non-'all' chip is selected. 'all' sends no status so the server returns
+  // every status.
+  private listQueryParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {
+      limit: this.initial.limit,
+      offset: this.initial.offset,
+    };
+    if (this.selectedStatus !== 'all') {
+      params['status'] = this.selectedStatus;
+    }
+    return params;
+  }
+
   order_listing() {
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
@@ -156,12 +196,13 @@ export class MyOrdersPage implements OnInit {
     this.initial.offset = 0;
     // Direct v3 (GET /v3/orders). transformOrderListResponse still applies
     // via get_v3, so response.data keeps the {orders, pagination} shape that
-    // extractOrders() handles. limit/offset come from the existing `initial`
-    // request object; no status filter is sent (the chips filter client-side).
+    // extractOrders() handles. limit/offset + the selected status filter
+    // (when not 'all') are sent server-side so filtering composes with
+    // offset/infinite-scroll.
     this.networkAdapter
       .get_v3('GET /orders', {
         authToken: this.single_user.token,
-        queryParams: { limit: this.initial.limit, offset: this.initial.offset },
+        queryParams: this.listQueryParams(),
       })
       .subscribe(({
         next: (response: any) => {
@@ -192,8 +233,59 @@ export class MyOrdersPage implements OnInit {
   toggleItems(index: number) {
     this.orders[index].showItems = !this.orders[index].showItems;
   }
+
+  // i18n key for the per-filter empty state. Each non-'all' chip gets a
+  // tailored "no <status> orders" message; 'all' falls back to the generic
+  // "no orders yet" heading.
+  emptyHeadingKey(): string {
+    switch (this.selectedStatus) {
+      case 'pending_payment': return 'orders_empty_pending_payment';
+      case 'paid': return 'orders_empty_paid';
+      case 'fulfilling': return 'orders_empty_fulfilling';
+      case 'shipped': return 'orders_empty_shipped';
+      case 'delivered': return 'orders_empty_delivered';
+      case 'cancelled': return 'orders_empty_cancelled';
+      default: return 'heading_no_orders';
+    }
+  }
+
+  // i18n key for an order's status badge — maps the raw enum to a
+  // customer-friendly label. Falls back to a humanised key so a new
+  // backend status still renders something sensible.
+  statusLabelKey(status: string): string {
+    switch (status) {
+      case 'pending_payment': return 'orders_status_pending_payment';
+      case 'paid': return 'orders_status_paid';
+      case 'processing': return 'orders_status_processing';
+      case 'fulfilling': return 'orders_status_fulfilling';
+      case 'shipping':
+      case 'shipped': return 'orders_status_shipped';
+      case 'delivered': return 'orders_status_delivered';
+      case 'cancelled': return 'orders_status_cancelled';
+      case 'refunded': return 'orders_status_refunded';
+      case 'failed': return 'orders_status_failed';
+      default: return 'orders_status_pending_payment';
+    }
+  }
+
+  // Total item count for the card summary (sum of line quantities; falls
+  // back to the number of line items when a quantity is missing).
+  itemCount(order: Order): number {
+    if (!order.items || order.items.length === 0) {
+      return 0;
+    }
+    return order.items.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0);
+  }
+  // Switch the active status chip and refetch from offset 0 so the list
+  // authoritatively reflects the server-side filtered page (rather than
+  // filtering the already-loaded — possibly partial — client list).
   selectStatus(s: FilterStatus) {
+    if (this.selectedStatus === s) {
+      return;
+    }
     this.selectedStatus = s;
+    this.orders = [];
+    this.order_listing();
   }
 
   goBack() {
@@ -213,11 +305,12 @@ export class MyOrdersPage implements OnInit {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit
     // Direct v3 (GET /v3/orders) — same paginated read as order_listing(),
-    // advancing offset for infinite scroll. Shape unchanged (transform applies).
+    // advancing offset for infinite scroll. Carries the active status filter
+    // so paged-in results stay scoped to the selected chip.
     this.networkAdapter
       .get_v3('GET /orders', {
         authToken: this.single_user.token,
-        queryParams: { limit: this.initial.limit, offset: this.initial.offset },
+        queryParams: this.listQueryParams(),
       })
       .subscribe(({
         next: (response: any) => {

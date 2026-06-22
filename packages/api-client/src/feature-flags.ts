@@ -360,6 +360,22 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/featured-vendors',
     shape: 'v3-envelope',
   },
+  // Paginated PUBLIC store directory for mobile's "Popular stores" section.
+  // Unlike /mobile/featured (curated, non-paginated Spotlight that ignores
+  // offset), this routes to GET /v3/vendors (ListVendorsController ->
+  // findActiveWithStatsPaginated), which is active+approved gated and honours
+  // limit/offset for real infinite scroll. The directoryShape carries the same
+  // legacy-shaped store_id + per-product legacy_product_id/price that the
+  // Spotlight shape does, so transformFeaturedVendorsResponse reshapes either
+  // one into the mobile Store card. oldPath is '' — mobile invokes this
+  // directly by routeKey via get_v3 (no URL->routeKey resolution needed), and
+  // the existing 'GET /vendors' entry already owns /customer/vendors_list.
+  'GET /mobile/stores': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/vendors',
+    shape: 'v3-envelope',
+  },
   'GET /mobile/explore-listing': {
     target: 'new',
     oldPath: '/customer/explore_listing',

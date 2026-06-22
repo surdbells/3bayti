@@ -134,6 +134,12 @@ export function transformV3LoginResponse(data: unknown): LegacyUserShape | null 
       is_vendor: isVendor,
       is_store_active: u['is_store_active'] === true,
       is_store_approved: u['is_store_approved'] === true,
+      // Avatar: v3 emits `avatar_url` (UserSerializer::publicProfile); the
+      // mobile single_user shape + /account + /settings templates bind
+      // `avatar`. Persist it at login so the avatar shows from the cached
+      // 'user' blob without a follow-up profile fetch. Empty string when the
+      // user has no avatar so the <img> fallback (avatar-placeholder) applies.
+      avatar: typeof u['avatar_url'] === 'string' ? (u['avatar_url'] as string) : '',
     };
   }
 

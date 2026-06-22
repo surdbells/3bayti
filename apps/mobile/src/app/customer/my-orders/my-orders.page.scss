@@ -6,6 +6,90 @@ ion-content.page-bg {
   --background: var(--ax-color-bg-canvas);
 }
 
+/* ----- Status filter chips ------------------------------ */
+
+.status-filters {
+  display: flex;
+  gap: 8px;
+  margin: 0 -4px 14px;
+  padding: 2px 4px 6px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.status-chip {
+  flex: 0 0 auto;
+  appearance: none;
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.12));
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-secondary);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &--active {
+    background: var(--ax-color-text-brand);
+    border-color: var(--ax-color-text-brand);
+    color: var(--ax-palette-neutral-0, #fff);
+    font-weight: 600;
+  }
+}
+
+/* ----- Collapsed order summary (thumbs + count) --------- */
+
+.order-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 4px 0 10px;
+}
+
+.thumb-strip {
+  display: flex;
+  align-items: center;
+}
+
+.thumb {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--ax-radius-sm, 8px);
+  object-fit: cover;
+  object-position: top center;
+  background: var(--ax-color-bg-brand-subtle);
+  border: 2px solid var(--ax-color-bg-surface);
+  margin-inline-start: -8px;
+
+  &:first-child {
+    margin-inline-start: 0;
+  }
+}
+
+.thumb-more {
+  margin-inline-start: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ax-color-text-secondary);
+}
+
+.item-count {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ax-color-text-secondary);
+  flex-shrink: 0;
+}
+
 /* ----- Order card --------------------------------------- */
 
 .order-card {
@@ -64,12 +148,17 @@ ion-content.page-bg {
   text-transform: uppercase;
   flex-shrink: 0;
 
-  &--processing {
+  /* paid / fulfilling / processing — in-progress (blue) */
+  &--processing,
+  &--paid,
+  &--fulfilling {
     background: rgba(59, 130, 246, 0.12);
     color: #1e6fdb;
   }
 
-  &--shipping {
+  /* shipping / shipped — in transit (amber) */
+  &--shipping,
+  &--shipped {
     background: rgba(245, 158, 11, 0.14);
     color: #b45309;
   }
@@ -79,12 +168,19 @@ ion-content.page-bg {
     color: #15803d;
   }
 
-  &--cancelled {
+  &--cancelled,
+  &--failed {
     background: rgba(192, 57, 43, 0.12);
     color: #c0392b;
   }
 
-  &--pending {
+  &--refunded {
+    background: rgba(139, 92, 246, 0.14);
+    color: #6d28d9;
+  }
+
+  &--pending,
+  &--pending_payment {
     background: rgba(46, 36, 28, 0.08);
     color: var(--ax-color-text-secondary);
   }
