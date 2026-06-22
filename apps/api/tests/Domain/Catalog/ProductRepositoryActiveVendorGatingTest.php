@@ -73,6 +73,85 @@ final class ProductRepositoryActiveVendorGatingTest extends TestCase
     }
 
     /**
+     * SEARCH #4: a non-empty searchQuery must widen matching across
+     * product name + description + store/vendor name + category name,
+     * using case-insensitive substring (LIKE) so short/prefix queries
+     * match. We assert the four OR'd LOWER(...) LIKE clauses and the
+     * category LEFT JOIN are present, and that the bound term is the
+     * lower-cased, wildcard-wrapped '%term%'.
+     */
+    #[Test]
+    public function searchMatchesNameDescriptionVendorAndCategory(): void
+    {
+        $dql = $this->captureFindActivePaginatedDql(['searchQuery' => 'Ab']);
+
+        // Category is left-joined (nullable) so its name is searchable
+        // without dropping uncategorised products.
+        self::assertMatchesRegularExpression('/LEFT JOIN\s+p\.category\s+sc\b/i', $dql);
+
+        // All four searched columns appear in a LOWER(...) LIKE form.
+        self::assertMatchesRegularExpression('/LOWER\(p\.name\)\s+LIKE\s+:searchTerm/i', $dql);
+        self::assertMatchesRegularExpression('/LOWER\(p\.description\)\s+LIKE\s+:searchTerm/i', $dql);
+        self::assertMatchesRegularExpression('/LOWER\(v\.name\)\s+LIKE\s+:searchTerm/i', $dql);
+        self::assertMatchesRegularExpression('/LOWER\(sc\.name\)\s+LIKE\s+:searchTerm/i', $dql);
+    }
+
+    /**
+     * The bound :searchTerm must be lower-cased and wrapped in % wildcards
+     * so a 2-char query like "Ab" becomes '%ab%' (substring, case-folded).
+     */
+    #[Test]
+    public function searchTermIsLowerCasedSubstring(): void
+    {
+        $em = $this->createMock(EntityManagerInterface::class);
+
+        /** @var list<QueryBuilder> $builders */
+        $builders = [];
+        $em->method('createQueryBuilder')->willReturnCallback(
+            function () use ($em, &$builders): QueryBuilder {
+                $qb = new QueryBuilder($em);
+                $builders[] = $qb;
+                return $qb;
+            },
+        );
+        $em->method('createQuery')->willReturnCallback(
+            fn (string $dql): Query => $this->stubQuery(),
+        );
+
+        $repo = new ProductRepository($em, new ClassMetadata(Product::class));
+        $repo->findActivePaginated(['searchQuery' => 'Ab']);
+
+        $boundValue = null;
+        foreach ($builders as $qb) {
+            $param = $qb->getParameter('searchTerm');
+            if ($param !== null) {
+                $boundValue = $param->getValue();
+                break;
+            }
+        }
+
+        self::assertSame('%ab%', $boundValue);
+    }
+
+    /**
+     * sort=relevance must no longer reference the removed :searchQuery
+     * parameter (which would throw "unbound parameter"); it ranks by a
+     * name-match CASE expression instead. Proves the relevance branch
+     * produces valid DQL alongside the new substring search.
+     */
+    #[Test]
+    public function relevanceSortWithSearchProducesValidDql(): void
+    {
+        $dql = $this->captureFindActivePaginatedDql([
+            'searchQuery' => 'ab',
+            'sort' => 'relevance',
+        ]);
+
+        self::assertStringNotContainsString(':searchQuery', $dql);
+        self::assertMatchesRegularExpression('/ORDER BY\s+relevanceRank/i', $dql);
+    }
+
+    /**
      * The :vendorApproved placeholder must be bound to STATUS_APPROVED,
      * so suspended/pending vendors (any other status value) are excluded.
      */

@@ -200,6 +200,18 @@ final class VendorSerializer
      * {@see featuredShape} so the same apps/web StoreCard works for both
      * the Spotlight and the directory grid.
      *
+     * Mobile parity (paginated store directory)
+     * =========================================
+     * apps/mobile's "Popular stores" card binds the SAME legacy-shaped
+     * fields it consumes from featuredShape: a legacy `store_id` (used to
+     * open the store + its reviews via the by-legacy-id vendor endpoints)
+     * and per-product `legacy_product_id` + `price` (tap → single product
+     * via by-legacy-id; price under the thumbnail). These are emitted
+     * additively here so transformFeaturedVendorsResponse can reshape a
+     * /v3/vendors page exactly as it reshapes a Spotlight page. apps/web
+     * ignores the extra fields. Null store_id/legacy_product_id for
+     * vendors/products with no legacy row.
+     *
      * @param list<Product> $embeddedProducts up to 5 (controller-clamped)
      * @return array<string, mixed>
      */
@@ -211,6 +223,9 @@ final class VendorSerializer
     ): array {
         return [
             'id' => $v->getId(),
+            // Legacy store id for apps/mobile's by-legacy-id navigation
+            // (open store + reviews). Additive: apps/web ignores it.
+            'store_id' => $v->getLegacyVendorId(),
             'slug' => $v->getSlug(),
             'name' => $v->getName(),
             'description' => $v->getDescription(),
@@ -222,9 +237,14 @@ final class VendorSerializer
             'products' => array_map(
                 static fn (Product $p): array => [
                     'id' => $p->getId(),
+                    // Legacy product id + price for apps/mobile's thumbnail
+                    // cards (tap -> single product via by-legacy-id; price
+                    // shown under the thumbnail). Additive for apps/web.
+                    'legacy_product_id' => $p->getLegacyProductId(),
                     'slug' => $p->getSlug(),
                     'image_url' => $p->getPrimaryImageUrl() ?? '',
                     'name' => $p->getName(),
+                    'price' => (float) $p->getPrice(),
                 ],
                 $embeddedProducts,
             ),

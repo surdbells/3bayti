@@ -151,12 +151,28 @@ final class CancelOrderService
             ]);
 
             // M3.1.7-H — notify customer + vendors. Fire-and-forget.
-            $this->notifications->orderCancelled($order, [
-                'refund_issued' => false,
-                'refund_amount' => null,
-                'reason' => $reason,
-            ]);
-            $this->pushNotifications->orderCancelled($order);
+            //
+            // The cancel has already been committed above (em->flush). The
+            // notification fan-out is best-effort: a failure here (e.g. a
+            // null-deref on a never-paid order with no associated user, a
+            // template-rendering bug, or a transient mailer/push fault) must
+            // NEVER turn a successful cancel into a 500. Wrap + swallow.
+            try {
+                $this->notifications->orderCancelled($order, [
+                    'refund_issued' => false,
+                    'refund_amount' => null,
+                    'reason' => $reason,
+                ]);
+                $this->pushNotifications->orderCancelled($order);
+            } catch (\Throwable $e) {
+                $this->logger->error('order.cancel.notification_failed', [
+                    'order_id' => $order->getId(),
+                    'order_reference' => $order->getOrderReference(),
+                    'previous_status' => $currentStatus,
+                    'error' => $e->getMessage(),
+                    'class' => $e::class,
+                ]);
+            }
 
             return new CancelOrderResult(
                 order: $order,
@@ -298,12 +314,27 @@ final class CancelOrderService
 
         // M3.1.7-H — notify customer + vendors of the cancellation.
         // Customer gets refund details if applicable. Fire-and-forget.
-        $this->notifications->orderCancelled($order, [
-            'refund_issued' => $refundIssued,
-            'refund_amount' => $refundAmount,
-            'reason' => $reason,
-        ]);
-        $this->pushNotifications->orderCancelled($order);
+        //
+        // As with the pending_payment branch: the cancel (and any refund)
+        // is already committed. A notification failure must NEVER surface
+        // as a 500 to the caller — the cancel succeeded. Wrap + swallow.
+        try {
+            $this->notifications->orderCancelled($order, [
+                'refund_issued' => $refundIssued,
+                'refund_amount' => $refundAmount,
+                'reason' => $reason,
+            ]);
+            $this->pushNotifications->orderCancelled($order);
+        } catch (\Throwable $e) {
+            $this->logger->error('order.cancel.notification_failed', [
+                'order_id' => $order->getId(),
+                'order_reference' => $order->getOrderReference(),
+                'previous_status' => $currentStatus,
+                'refund_issued' => $refundIssued,
+                'error' => $e->getMessage(),
+                'class' => $e::class,
+            ]);
+        }
 
         return new CancelOrderResult(
             order: $order,

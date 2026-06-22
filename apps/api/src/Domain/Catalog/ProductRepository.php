@@ -231,8 +231,49 @@ class ProductRepository extends EntityRepository
         $searchQuery = $filters['searchQuery'] ?? null;
         $hasSearch = is_string($searchQuery) && trim($searchQuery) !== '';
         if ($hasSearch) {
-            $qb->andWhere('TSMATCH(p.searchTsv, :searchQuery) = TRUE')
-               ->setParameter('searchQuery', trim((string) $searchQuery));
+            // Storefront search (SEARCH #4). Case-insensitive SUBSTRING
+            // match across four columns so the search is both meaningful
+            // and responsive to short / prefix queries:
+            //   - product name
+            //   - product description
+            //   - store / vendor name      (v is already inner-joined above)
+            //   - category name            (left-joined here; category is
+            //     nullable, so an inner join would drop uncategorised
+            //     products from EVERY listing, not just searches)
+            //
+            // Why substring (LOWER(col) LIKE '%term%') instead of the
+            // previous TSMATCH/websearch_to_tsquery: tsquery only matches
+            // whole stemmed lexemes, so 2-character queries ("ab", "si")
+            // returned nothing. Mobile fires search from 2 chars, so that
+            // was the common case. Substring match handles prefix, infix
+            // and 2-char input. Backed by pg_trgm trigram GIN indexes
+            // (Version20260622000003) on LOWER(...) of each column so the
+            // planner can accelerate these for >= 3-char terms.
+            //
+            // LOWER(col) LIKE :term is the DQL-portable form (mirrors the
+            // existing findForVendorPaginated search). The term is lower-
+            // cased and LIKE wildcards escaped so user input like "50%"
+            // can't act as a wildcard.
+            $term = strtolower(trim((string) $searchQuery));
+            $term = str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $term);
+
+            // category is nullable; LEFT JOIN keeps non-search behaviour
+            // identical while still letting us match on category name.
+            $qb->leftJoin('p.category', 'sc');
+
+            // Single raw-DQL OR predicate (rather than $qb->expr()->orX(),
+            // whose Orx-into-Andx composition Doctrine can silently drop in
+            // some builder states). A string predicate is always appended.
+            // ESCAPE '\' so the wildcards we escaped in $term are treated
+            // literally.
+            $qb->andWhere(
+                "("
+                . "LOWER(p.name) LIKE :searchTerm ESCAPE '\\' OR "
+                . "LOWER(p.description) LIKE :searchTerm ESCAPE '\\' OR "
+                . "LOWER(v.name) LIKE :searchTerm ESCAPE '\\' OR "
+                . "LOWER(sc.name) LIKE :searchTerm ESCAPE '\\'"
+                . ")"
+            )->setParameter('searchTerm', '%' . $term . '%');
         }
 
         // Total count for pagination (before limit/offset).
@@ -292,13 +333,31 @@ class ProductRepository extends EntityRepository
             // Tie-break by createdAt then id is applied via addOrderBy
             // below.
             $qb->addOrderBy('p.createdAt', 'DESC');
+        } elseif ($sort === 'relevance') {
+            // Relevance for the substring-based search (SEARCH #4).
+            //
+            // The previous implementation ranked by TSRANK against
+            // products.search_tsv, but the search is no longer tsvector-
+            // based and TSRANK yields 0 for short / prefix queries (the
+            // exact queries this overhaul fixes), so it would not order
+            // them at all. Instead we rank by WHERE the term hit:
+            // a product-name match is the strongest signal, so those sort
+            // first; everything else (description / store / category
+            // matches) falls back to newest. :searchTerm is the same
+            // bound, escaped, lower-cased '%term%' used by the WHERE
+            // clause above (guaranteed present — relevance only survives
+            // when $hasSearch is true).
+            $qb->addSelect(
+                "CASE WHEN LOWER(p.name) LIKE :searchTerm ESCAPE '\\' THEN 0 ELSE 1 END AS HIDDEN relevanceRank"
+            );
+            $qb->orderBy('relevanceRank', 'ASC');
+            $qb->addOrderBy('p.createdAt', 'DESC');
         } else {
             match ($sort) {
                 'price_asc' => $qb->orderBy('p.price', 'ASC'),
                 'price_desc' => $qb->orderBy('p.price', 'DESC'),
                 'oldest' => $qb->orderBy('p.createdAt', 'ASC'),
                 'newest' => $qb->orderBy('p.createdAt', 'DESC'),
-                'relevance' => $qb->orderBy('TSRANK(p.searchTsv, :searchQuery)', 'DESC'),
                 default => $qb->orderBy('p.createdAt', 'DESC'),
             };
         }

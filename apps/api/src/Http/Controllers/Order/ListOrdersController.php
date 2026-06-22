@@ -30,6 +30,14 @@ use Psr\Http\Message\ServerRequestInterface;
  * limit: 1-50 (default 10; matches mobile's initial.limit = 10)
  * offset: 0+ (default 0)
  *
+ * Filtering
+ * ---------
+ * status: optional single Order::STATUS_* value (pending_payment / paid /
+ * fulfilling / shipped / delivered / cancelled / refunded / failed). Drives
+ * the mobile My-Orders status chips. Applied SERVER-SIDE so it composes
+ * correctly with limit/offset infinite-scroll. An unknown / empty value is
+ * ignored (treated as "all").
+ *
  * Returns the order list ordered by created_at DESC (newest first;
  * matches mobile's display expectation).
  */
@@ -39,6 +47,21 @@ final class ListOrdersController
 
     private const DEFAULT_LIMIT = 10;
     private const MAX_LIMIT = 50;
+
+    /**
+     * Statuses the customer My-Orders surface is allowed to filter on.
+     * Anything else (incl. '' / 'all') is normalised to no filter.
+     */
+    private const ALLOWED_STATUSES = [
+        Order::STATUS_PENDING_PAYMENT,
+        Order::STATUS_PAID,
+        Order::STATUS_FULFILLING,
+        Order::STATUS_SHIPPED,
+        Order::STATUS_DELIVERED,
+        Order::STATUS_CANCELLED,
+        Order::STATUS_REFUNDED,
+        Order::STATUS_FAILED,
+    ];
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
@@ -65,10 +88,11 @@ final class ListOrdersController
         $query = $request->getQueryParams();
         $limit = $this->clampLimit($query['limit'] ?? null);
         $offset = $this->clampOffset($query['offset'] ?? null);
+        $status = $this->normalizeStatus($query['status'] ?? null);
 
         /** @var OrderRepository $orders */
         $orders = $this->em->getRepository(Order::class);
-        [$list, $total] = $orders->paginatedForUser($user, $limit, $offset);
+        [$list, $total] = $orders->paginatedForUser($user, $limit, $offset, $status);
 
         $items = array_map(
             fn (Order $o): array => $this->serializer->listShape($o),
@@ -82,8 +106,22 @@ final class ListOrdersController
                 'offset' => $offset,
                 'count' => count($items),
                 'total' => $total,
+                'status' => $status,
             ],
         ]);
+    }
+
+    /**
+     * Normalise the raw ?status= query value to a known Order status, or
+     * null for "all". Unknown / empty / 'all' values become null so a bad
+     * client param degrades to an unfiltered list rather than an error.
+     */
+    private function normalizeStatus(mixed $raw): ?string
+    {
+        if (!is_string($raw) || $raw === '') {
+            return null;
+        }
+        return in_array($raw, self::ALLOWED_STATUSES, true) ? $raw : null;
     }
 
     private function clampLimit(mixed $raw): int

@@ -75,20 +75,33 @@ class OrderRepository extends EntityRepository
      * vendor join here — the listing UI doesn't show vendor; the
      * detail page does).
      *
+     * A single Order::STATUS_* value may be passed to scope the list to
+     * that status (used by the mobile My-Orders status chips). Null or an
+     * empty string means "all statuses". The same filter is applied to
+     * both the count and the id-page query so pagination stays consistent.
+     *
      * @return array{0: list<Order>, 1: int} Tuple of [orders, total_count].
      */
-    public function paginatedForUser(User $user, int $limit, int $offset): array
-    {
+    public function paginatedForUser(
+        User $user,
+        int $limit,
+        int $offset,
+        ?string $statusFilter = null,
+    ): array {
         $limit = max(1, min($limit, 100));
         $offset = max(0, $offset);
 
+        $status = ($statusFilter !== null && $statusFilter !== '') ? $statusFilter : null;
+
         // Total count: simple, no joins
-        $total = (int) $this->createQueryBuilder('o')
+        $totalQb = $this->createQueryBuilder('o')
             ->select('COUNT(o.id)')
             ->where('o.user = :user')
-            ->setParameter('user', $user)
-            ->getQuery()
-            ->getSingleScalarResult();
+            ->setParameter('user', $user);
+        if ($status !== null) {
+            $totalQb->andWhere('o.status = :status')->setParameter('status', $status);
+        }
+        $total = (int) $totalQb->getQuery()->getSingleScalarResult();
 
         if ($total === 0) {
             return [[], 0];
@@ -97,15 +110,17 @@ class OrderRepository extends EntityRepository
         // Page of order ids first (paginate against the orders table only;
         // joining items into a paginated query would multiply rows and break
         // limit/offset semantics).
-        $idResult = $this->createQueryBuilder('o')
+        $idQb = $this->createQueryBuilder('o')
             ->select('o.id')
             ->where('o.user = :user')
             ->setParameter('user', $user)
             ->orderBy('o.createdAt', 'DESC')
             ->setMaxResults($limit)
-            ->setFirstResult($offset)
-            ->getQuery()
-            ->getScalarResult();
+            ->setFirstResult($offset);
+        if ($status !== null) {
+            $idQb->andWhere('o.status = :status')->setParameter('status', $status);
+        }
+        $idResult = $idQb->getQuery()->getScalarResult();
 
         $ids = array_map(static fn(array $row): int => (int) $row['id'], $idResult);
 

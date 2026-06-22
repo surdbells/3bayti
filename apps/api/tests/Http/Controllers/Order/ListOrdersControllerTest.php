@@ -123,10 +123,10 @@ final class ListOrdersControllerTest extends HttpTestCase
         $userRepo->method('findById')->with(7)->willReturn($user);
 
         $orderRepo = $this->createMock(OrderRepository::class);
-        // Verify the controller passed clamped values to repo
+        // Verify the controller passed clamped values to repo (no status filter)
         $orderRepo->expects(self::once())
             ->method('paginatedForUser')
-            ->with($user, 50, 20)
+            ->with($user, 50, 20, null)
             ->willReturn([[], 0]);
 
         $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo) {
@@ -151,6 +151,79 @@ final class ListOrdersControllerTest extends HttpTestCase
         $body = $this->jsonBody($response);
         self::assertSame(50, $body['pagination']['limit']);
         self::assertSame(20, $body['pagination']['offset']);
+    }
+
+    #[Test]
+    public function passesKnownStatusFilterToRepo(): void
+    {
+        $user = $this->makeUser(id: 7);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->expects(self::once())
+            ->method('paginatedForUser')
+            ->with($user, 10, 0, 'delivered')
+            ->willReturn([[], 0]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('GET', '/v3/orders?status=delivered', [], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+        self::assertSame('delivered', $body['pagination']['status']);
+    }
+
+    #[Test]
+    public function ignoresUnknownStatusFilter(): void
+    {
+        $user = $this->makeUser(id: 7);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        // 'bogus' is not a known Order status → controller normalises to null
+        $orderRepo->expects(self::once())
+            ->method('paginatedForUser')
+            ->with($user, 10, 0, null)
+            ->willReturn([[], 0]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('GET', '/v3/orders?status=bogus', [], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+        self::assertNull($body['pagination']['status']);
     }
 
     #[Test]
