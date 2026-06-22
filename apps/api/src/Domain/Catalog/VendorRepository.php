@@ -177,6 +177,8 @@ class VendorRepository extends EntityRepository
     {
         return $this->createQueryBuilder('v')
             ->where('v.isActive = true')
+            ->andWhere('v.status = :approved')
+            ->setParameter('approved', Vendor::STATUS_APPROVED)
             ->orderBy('v.name', 'ASC')
             ->setMaxResults($limit)
             ->setFirstResult($offset)
@@ -306,6 +308,8 @@ class VendorRepository extends EntityRepository
         return $this->createQueryBuilder('v')
             ->where('v.isActive = true')
             ->andWhere('v.isFeatured = true')
+            ->andWhere('v.status = :approved')
+            ->setParameter('approved', Vendor::STATUS_APPROVED)
             ->orderBy('v.name', 'ASC')
             ->setMaxResults($limit)
             ->setFirstResult($offset)
@@ -324,6 +328,8 @@ class VendorRepository extends EntityRepository
             ->select('COUNT(v.id)')
             ->where('v.isActive = true')
             ->andWhere('v.isFeatured = true')
+            ->andWhere('v.status = :approved')
+            ->setParameter('approved', Vendor::STATUS_APPROVED)
             ->getQuery()
             ->getSingleScalarResult();
     }
@@ -384,6 +390,8 @@ class VendorRepository extends EntityRepository
             )
             ->where('v.isActive = true')
             ->andWhere('v.isFeatured = true')
+            ->andWhere('v.status = :approved')
+            ->setParameter('approved', Vendor::STATUS_APPROVED)
             ->groupBy('v.id')
             ->orderBy('v.name', 'ASC')
             ->setMaxResults($limit)
@@ -439,6 +447,8 @@ class VendorRepository extends EntityRepository
             )
             ->where('v.isActive = true')
             ->andWhere('v.isVerified = true')
+            ->andWhere('v.status = :approved')
+            ->setParameter('approved', Vendor::STATUS_APPROVED)
             ->groupBy('v.id')
             ->orderBy('v.name', 'ASC')
             ->setMaxResults($limit)
@@ -487,6 +497,8 @@ class VendorRepository extends EntityRepository
                 "pr.vendor = v AND pr.status = 'approved'"
             )
             ->where('v.isActive = true')
+            ->andWhere('v.status = :approved')
+            ->setParameter('approved', Vendor::STATUS_APPROVED)
             ->groupBy('v.id')
             ->orderBy('v.name', 'ASC')
             ->setMaxResults($limit)
@@ -494,7 +506,9 @@ class VendorRepository extends EntityRepository
 
         $countQb = $this->createQueryBuilder('v')
             ->select('COUNT(v.id)')
-            ->where('v.isActive = true');
+            ->where('v.isActive = true')
+            ->andWhere('v.status = :approved')
+            ->setParameter('approved', Vendor::STATUS_APPROVED);
 
         $trimmed = $q !== null ? trim($q) : '';
         if ($trimmed !== '') {

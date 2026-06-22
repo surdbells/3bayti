@@ -7,6 +7,7 @@ namespace Bayti\Api\Http\Controllers\Catalog;
 use Bayti\Api\Domain\Catalog\Category;
 use Bayti\Api\Domain\Catalog\CategoryRepository;
 use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\ProductFilterParser;
 use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorLabel;
@@ -54,6 +55,7 @@ final class ListProductsController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly ProductSerializer $serializer,
+        private readonly ProductFilterParser $filterParser,
     ) {
     }
 
@@ -118,6 +120,14 @@ final class ListProductsController
             // Trim input and treat all-whitespace as absent so we don't
             // pollute query logs with junk searches.
             'searchQuery' => $this->parseSearchQuery($query['q'] ?? null),
+            // M3.2.X.10 refinements (sizes / colors). The repository's
+            // findActivePaginated already applies these via JSONB_EXISTS_ANY,
+            // but this controller previously omitted them — so ?colors=black
+            // / ?sizes=M were silently ignored. Parse them with the same
+            // CSV-or-array logic the facets endpoint uses (delegated to the
+            // shared ProductFilterParser) so listings and facet counts agree.
+            'sizes' => $this->filterParser->parseStringList($query['sizes'] ?? null),
+            'colors' => $this->filterParser->parseStringList($query['colors'] ?? null),
             'limit' => $limit,
             'offset' => $offset,
         ];

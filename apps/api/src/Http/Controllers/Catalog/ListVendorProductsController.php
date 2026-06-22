@@ -59,7 +59,7 @@ final class ListVendorProductsController
         /** @var VendorRepository $vendorRepo */
         $vendorRepo = $this->em->getRepository(Vendor::class);
         $vendor = $vendorRepo->findBySlug($slug);
-        if ($vendor === null || !$vendor->isActive()) {
+        if ($vendor === null || !$vendor->isActive() || !$vendor->isApproved()) {
             throw HttpException::notFound('Vendor not found.');
         }
 

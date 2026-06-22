@@ -47,7 +47,7 @@ final class GetVendorController
         /** @var VendorRepository $repo */
         $repo = $this->em->getRepository(Vendor::class);
         $vendor = $repo->findBySlug($slug);
-        if ($vendor === null || !$vendor->isActive()) {
+        if ($vendor === null || !$vendor->isActive() || !$vendor->isApproved()) {
             throw HttpException::notFound('Vendor not found.');
         }
 

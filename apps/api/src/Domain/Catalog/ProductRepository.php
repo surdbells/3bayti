@@ -162,7 +162,17 @@ class ProductRepository extends EntityRepository
     public function findActivePaginated(array $filters = []): array
     {
         $qb = $this->createQueryBuilder('p')
-            ->where('p.isActive = TRUE');
+            ->where('p.isActive = TRUE')
+            // Storefront gating: only surface products whose vendor is
+            // both active AND admin-approved. A pending/suspended vendor's
+            // products must never leak onto public listings (GET /v3/products,
+            // category, vendor storefront, featured embedded products).
+            // The inner join is compatible with the best_seller branch's
+            // groupBy(p.id) + LEFT JOIN OrderItem below.
+            ->innerJoin('p.vendor', 'v')
+            ->andWhere('v.isActive = TRUE')
+            ->andWhere('v.status = :vendorApproved')
+            ->setParameter('vendorApproved', Vendor::STATUS_APPROVED);
 
         if (!empty($filters['vendorId'])) {
             $qb->andWhere('p.vendor = :vendorId')->setParameter('vendorId', $filters['vendorId']);
