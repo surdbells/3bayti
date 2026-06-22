@@ -17,7 +17,19 @@ import {
   type AxDataTableConfig,
   type AxQueryState,
   type AxServerFetchResult,
+  type AxDateRange,
 } from '../../shared/data/enterprise';
+
+/** The seven UAE emirates (label === value; matched case-insensitively server-side). */
+const UAE_EMIRATES = [
+  'Dubai',
+  'Abu Dhabi',
+  'Sharjah',
+  'Ajman',
+  'Umm Al Quwain',
+  'Ras Al Khaimah',
+  'Fujairah',
+] as const;
 
 /** Row shape surfaced to the enterprise table (mapped from v3 vendor). */
 interface VendorRow extends Record<string, unknown> {
@@ -25,6 +37,7 @@ interface VendorRow extends Record<string, unknown> {
   store_name: string;
   store_email: string;
   store_phone: string;
+  emirate: string;
   country: string;
   last_login: string;
   status: boolean;
@@ -90,16 +103,55 @@ export class StoresComponent implements OnInit {
       emptyTitle: 'No stores found',
       emptyDescription: 'No vendor stores match your current filters.',
       export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'stores' },
+      filters: [
+        {
+          key: 'status', label: 'Status', type: 'select', placeholder: 'Any status',
+          options: [
+            { label: 'Pending', value: 'pending' },
+            { label: 'Approved', value: 'approved' },
+            { label: 'Suspended', value: 'suspended' },
+          ],
+        },
+        {
+          key: 'is_active', label: 'Active', type: 'select', placeholder: 'Any',
+          options: [
+            { label: 'Active', value: 'true' },
+            { label: 'Inactive', value: 'false' },
+          ],
+        },
+        {
+          key: 'is_verified', label: 'Verified', type: 'select', placeholder: 'Any',
+          options: [
+            { label: 'Verified', value: 'true' },
+            { label: 'Unverified', value: 'false' },
+          ],
+        },
+        {
+          key: 'is_featured', label: 'Featured', type: 'select', placeholder: 'Any',
+          options: [
+            { label: 'Featured', value: 'true' },
+            { label: 'Not featured', value: 'false' },
+          ],
+        },
+        {
+          key: 'emirate', label: 'Emirate', type: 'select', placeholder: 'Any emirate',
+          options: UAE_EMIRATES.map((e) => ({ label: e, value: e })),
+        },
+        { key: 'created', label: 'Join date', type: 'date-range' },
+      ],
       columns: [
         { key: 'store_name', label: 'Store', sortable: true, sticky: 'left', width: '16rem' },
         { key: 'store_email', label: 'Email', hideOnMobile: true },
         { key: 'store_phone', label: 'Phone', hideOnMobile: true },
-        { key: 'country', label: 'Country', align: 'center', hideOnMobile: true },
+        { key: 'emirate', label: 'Emirate', sortable: true, align: 'center', hideOnMobile: true,
+          value: (r) => r.emirate || '—' },
+        { key: 'country', label: 'Country', sortable: true, align: 'center', hideOnMobile: true,
+          value: (r) => r.country || '—' },
         {
-          key: 'last_login', label: 'Updated', hideOnMobile: true,
+          key: 'last_login', label: 'Updated', sortable: true, hideOnMobile: true,
           format: (v) => (v ? new Date(String(v)).toLocaleDateString() : '—'),
         },
-        { key: 'status', label: 'Status', align: 'center' },
+        { key: 'status', label: 'Status', sortable: true, align: 'center' },
         { key: 'approved', label: 'Approval', align: 'center' },
       ],
       rowActions: [
@@ -118,6 +170,15 @@ export class StoresComponent implements OnInit {
     };
   }
 
+  /** Map an AxDataTable column key → the backend sort whitelist key. */
+  private static readonly SORT_KEY_MAP: Record<string, string> = {
+    store_name: 'name',
+    emirate: 'emirate',
+    country: 'country',
+    last_login: 'updated_at',
+    status: 'status',
+  };
+
   /** v3 fetch → AxServerFetchResult. Maps vendor fields to VendorRow. */
   private fetchVendors(query: AxQueryState) {
     const q: any = {
@@ -125,11 +186,25 @@ export class StoresComponent implements OnInit {
       offset: query.pageIndex * query.pageSize,
     };
     if (query.search) q.search = query.search;
-    // Single-column server sort (the API currently orders by name).
+    // Single-column server sort, translated to the API's whitelist keys.
     if (query.sort.length > 0) {
-      q.sort = query.sort[0].key;
-      q.dir = query.sort[0].direction;
+      const mapped = StoresComponent.SORT_KEY_MAP[query.sort[0].key];
+      if (mapped) {
+        q.sort = mapped;
+        q.dir = query.sort[0].direction;
+      }
     }
+
+    // Filters → query params (only applied when set).
+    const f = query.filters;
+    if (f['status']) q.status = f['status'];
+    if (f['is_active'] != null && f['is_active'] !== '') q.is_active = f['is_active'];
+    if (f['is_verified'] != null && f['is_verified'] !== '') q.is_verified = f['is_verified'];
+    if (f['is_featured'] != null && f['is_featured'] !== '') q.is_featured = f['is_featured'];
+    if (f['emirate']) q.emirate = f['emirate'];
+    const range = f['created'] as AxDateRange | undefined;
+    if (range?.from) q.created_from = range.from;
+    if (range?.to) q.created_to = range.to;
 
     return this.adapter.get_v3('GET /admin/vendors', { query: q }).pipe(
       map((response: any): AxServerFetchResult<VendorRow> => {
@@ -139,7 +214,8 @@ export class StoresComponent implements OnInit {
           store_name: v.name,
           store_email: v.contact_email ?? '',
           store_phone: v.contact_phone ?? '',
-          country: v.country_code ?? '',
+          emirate: v.emirate ?? '',
+          country: v.country ?? '',
           last_login: v.updated_at ?? '',
           status: v.is_active === true,
           approved: v.status === 'approved',

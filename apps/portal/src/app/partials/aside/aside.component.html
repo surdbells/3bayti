@@ -88,94 +88,94 @@
       </ul>
     </div>
 
-    <div class="ax-sidenav-section" *ngIf="user_session.is_admin">
+    <div class="ax-sidenav-section" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
       <p class="ax-sidenav-section-title">Platform</p>
       <ul class="ax-sidenav-nav">
-        <li>
+        <li *axCan="'vendors.view'">
           <a routerLink="/stores" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="storefront" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Vendors</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'orders.view'">
           <a routerLink="/customers" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="group" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Customers</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'products.view'">
           <a routerLink="/admin_products" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="inventory_2" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Products</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'orders.view'">
           <a routerLink="/processing" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="receipt_long" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Orders</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'sales.view'">
           <a routerLink="/adminsales" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="trending_up" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Sales</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'tickets.view'">
           <a routerLink="/admintickets" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="confirmation_number" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Tickets</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'returns.view'">
           <a routerLink="/adminreturns" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="assignment_return" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Returns</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'notifications.send'">
           <a routerLink="/adminnotifications" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="campaign" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Push Notification</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'notifications.view'">
           <a routerLink="/notification-logs" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="mail_outline" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Notification Logs</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'payouts.view_commissions'">
           <a routerLink="/admincommissions" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="payments" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Commissions</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'logistics.view'">
           <a routerLink="/adminlogistics" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="local_shipping" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Logistics</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'catalog.collections_view'">
           <a routerLink="/collections" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="folder" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Collections</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'catalog.campaigns_view'">
           <a routerLink="/campaigns" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="campaign" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Campaigns</span>
           </a>
         </li>
-        <li>
+        <li *axCan="'gift_cards.view'">
           <a routerLink="/admin-gift-cards" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="card_giftcard" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Gift Cards</span>
           </a>
         </li>
-        <li>
+        <li *axCan="['users.view', 'roles.view']">
           <a routerLink="/adminusers" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="admin_panel_settings" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Users</span>

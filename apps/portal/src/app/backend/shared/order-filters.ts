@@ -21,6 +21,24 @@ export const ORDER_STATUS_OPTIONS: readonly AxFilterOption[] = [
 ];
 
 /**
+ * Fulfilment status set for the logistics / delivery board — the
+ * SHIPPED->DELIVERED range (in-progress + completed shipments). The API
+ * (Order::STATUS_*) has no `out_for_delivery` status, so the set is just
+ * shipped + delivered. Pre-shipment (pending_payment/paid/fulfilling) and
+ * terminal (cancelled/refunded/failed) orders are intentionally excluded so
+ * they never appear on the delivery board.
+ */
+export const FULFILMENT_STATUSES: readonly string[] = ['shipped', 'delivered'];
+
+/**
+ * Status filter options restricted to the fulfilment set, for the logistics
+ * Status dropdown. A subset of ORDER_STATUS_OPTIONS kept in lock-step via
+ * FULFILMENT_STATUSES so the two never drift.
+ */
+export const LOGISTICS_STATUS_OPTIONS: readonly AxFilterOption[] =
+  ORDER_STATUS_OPTIONS.filter((o) => FULFILMENT_STATUSES.includes(String(o.value)));
+
+/**
  * Async option provider for a "Store" (vendor) filter — fetches the admin
  * vendor list and maps it to {label,value}. Degrades to an empty list on
  * failure so the rest of the table stays usable.

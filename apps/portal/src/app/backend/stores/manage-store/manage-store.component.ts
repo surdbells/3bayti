@@ -37,6 +37,7 @@ export class ManageStoreComponent implements OnInit {
     sending_message: false,
     nav_open: false,
     acting: false,
+    saving: false,
   };
 
   private storeId = 0;
@@ -58,6 +59,12 @@ export class ManageStoreComponent implements OnInit {
 
   get_data = { id: 0, token: '', store: 0 };
 
+  /** The seven UAE emirates for the location select. */
+  readonly emirates = [
+    'Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman',
+    'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah',
+  ];
+
   store = {
     id: 0, token: '',
     first_name: '', last_name: '', email: '', phone: '',
@@ -65,6 +72,7 @@ export class ManageStoreComponent implements OnInit {
     license_doc: '', store_name: '', store_status: false,
     approved: false, store_email: '', store_phone: '',
     store_address: '', store_description: '',
+    emirate: '', country: '',
     vat_status: '', store_legal_name: '', trade_license_number: '',
     licensing_authority: '', tax_registration_number: '',
     vat_registration_effective_date: '', registered_tax_address: '',
@@ -128,6 +136,36 @@ export class ManageStoreComponent implements OnInit {
       },
     });
     this.loadCompliance();
+  }
+
+  /**
+   * Persist the store's emirate + country via PUT /admin/vendors/{id}.
+   * name + contact_email are required by the update endpoint, so we
+   * echo the current values back alongside the location fields.
+   */
+  saveLocation() {
+    if (!this.storeId) return;
+    this.ui_controls.saving = true;
+    const body = {
+      name: this.store.store_name,
+      contact_email: this.store.store_email || this.store.email,
+      emirate: this.store.emirate || null,
+      country: this.store.country || null,
+    };
+    this.adapter.put_v3('PUT /admin/vendors/:id', body, { params: { id: String(this.storeId) } })
+      .subscribe({
+        next: (r: any) => {
+          if (r) {
+            this.toast.success('Store location updated.');
+            if (r?.vendor) {
+              this.store.emirate = r.vendor.emirate ?? this.store.emirate;
+              this.store.country = r.vendor.country ?? this.store.country;
+            }
+          }
+          this.ui_controls.saving = false;
+        },
+        error: () => { this.toast.error('Unable to update store location.'); this.ui_controls.saving = false; },
+      });
   }
 
   // ── KYC compliance review ───────────────────────────────────────────

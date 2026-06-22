@@ -114,6 +114,33 @@
                 </div>
                 <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
                   <div class="ax-form-field">
+                    <label class="ax-label">Emirate</label>
+                    <select class="ax-input" [(ngModel)]="store.emirate" name="emirate">
+                      <option [ngValue]="''">— Select emirate —</option>
+                      <option *ngFor="let e of emirates" [ngValue]="e">{{ e }}</option>
+                    </select>
+                  </div>
+                  <div class="ax-form-field">
+                    <label class="ax-label">Country</label>
+                    <input
+                      type="text"
+                      class="ax-input"
+                      [maxlength]="60"
+                      [(ngModel)]="store.country"
+                      name="country"
+                      placeholder="United Arab Emirates" />
+                  </div>
+                </div>
+                <div class="ax-flex ax-justify-end ax-mb-3">
+                  <button type="button" class="ax-btn ax-btn-primary ax-btn-sm"
+                          (click)="saveLocation()" [disabled]="ui_controls.saving">
+                    <span *ngIf="ui_controls.saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                    <app-icon *ngIf="!ui_controls.saving" name="save" aria-hidden="true"></app-icon>
+                    Save location
+                  </button>
+                </div>
+                <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
+                  <div class="ax-form-field">
                     <label class="ax-label">Email</label>
                     <input
                       type="text"

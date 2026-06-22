@@ -14,14 +14,18 @@
  * flagged).
  */
 
-import { inject } from '@angular/core';
+import { inject, Injector, runInInjectionContext } from '@angular/core';
+import { toObservable } from '@angular/core/rxjs-interop';
 import {
   ActivatedRouteSnapshot,
   CanActivateFn,
   Router,
   RouterStateSnapshot,
+  UrlTree,
 } from '@angular/router';
+import { Observable, filter, map, take } from 'rxjs';
 
+import { PermissionService } from '../../services/permission.service';
 import {
   isAdminTier,
   isAuthenticated,
@@ -58,6 +62,54 @@ export const adminGuard: CanActivateFn = (
   // Authenticated but wrong role → send to the user's real home.
   return router.createUrlTree([homeRouteFor(session)]);
 };
+
+/**
+ * Permission-aware guard FACTORY (composes ON TOP of the admin gate).
+ *
+ * Usage in routes:  canActivate: [adminGuard, requirePermission('vendors.view')]
+ *
+ * adminGuard already covers auth + admin-tier (and bounces unauthenticated /
+ * wrong-role users), so this guard's only job is the granular per-permission
+ * check that mirrors the API's PermissionGuard. It uses the SAME catalog keys
+ * the backend enforces via `$perm->for('<key>')`, so a role-limited admin can
+ * never navigate to a module they lack — matching what the API would 403.
+ *
+ * Super admins (session is_admin) short-circuit synchronously. For role-limited
+ * sub-admins the effective permission set is fetched async from /me/profile, so
+ * the guard waits for PermissionService to finish loading before deciding,
+ * rather than racing the fetch and false-denying on first navigation.
+ *
+ * On a missing permission the user is redirected to the dashboard (/backend) —
+ * a guaranteed-safe landing for any admin-tier user — instead of a dead end.
+ */
+export function requirePermission(permission: string): CanActivateFn {
+  return (): boolean | UrlTree | Observable<boolean | UrlTree> => {
+    const router = inject(Router);
+    const perms = inject(PermissionService);
+    const injector = inject(Injector);
+
+    // Kick off the one-time load (idempotent). load() sets the super-admin flag
+    // synchronously from the session, so the check below is reliable on first nav.
+    perms.load();
+
+    // Super admin → unrestricted, no need to wait for the async profile fetch.
+    if (perms.isSuperAdmin()) return true;
+
+    const decide = (): boolean | UrlTree =>
+      perms.can(permission) ? true : router.createUrlTree(['/backend']);
+
+    if (perms.loaded()) return decide();
+
+    // Wait for the effective permissions to arrive, then evaluate exactly once.
+    return runInInjectionContext(injector, () =>
+      toObservable(perms.loaded).pipe(
+        filter((ready) => ready),
+        take(1),
+        map(decide),
+      ),
+    );
+  };
+}
 
 /** Must be logged in AND a vendor. */
 export const vendorGuard: CanActivateFn = (

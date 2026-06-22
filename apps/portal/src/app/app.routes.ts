@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard, vendorGuard } from './core/auth/auth.guard';
+import { authGuard, adminGuard, vendorGuard, requirePermission } from './core/auth/auth.guard';
 import { adminDashboardResolver } from './core/resolvers/admin-dashboard.resolver';
 export const routes: Routes = [
   {
@@ -83,7 +83,7 @@ export const routes: Routes = [
   {
     path: 'admin_order',
     loadComponent: () => import('./backend/admin-view-order/admin-view-order.component').then(m => m.AdminViewOrderComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('orders.view_detail')],
     title: 'Orders'
   },
   {
@@ -166,61 +166,63 @@ export const routes: Routes = [
   {
     path: 'collections',
     loadComponent: () => import('./backend/collections/collections.component').then(m => m.CollectionsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('catalog.collections_view')],
     title: 'Collections'
   },
   {
     path: 'create_collections',
     loadComponent: () => import('./backend/collections/create-collection/create-collection.component').then(m => m.CreateCollectionComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('catalog.collections_manage')],
     title: 'Create collection'
   },
   {
     path: 'edit_collection',
     loadComponent: () => import('./backend/collections/edit-collection/edit-collection.component').then(m => m.EditCollectionComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('catalog.collections_manage')],
     title: 'Edit collection'
   },
   {
     path: 'campaigns',
     loadComponent: () => import('./backend/campaigns/campaigns.component').then(m => m.CampaignsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('catalog.campaigns_view')],
     title: 'Campaigns'
   },
   {
     path: 'create_campaign',
     loadComponent: () => import('./backend/campaigns/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('catalog.campaigns_manage')],
     title: 'Create campaign'
   },
   {
     path: 'edit_campaign',
     loadComponent: () => import('./backend/campaigns/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('catalog.campaigns_manage')],
     title: 'Edit campaign'
   },
   {
     path: 'stores',
     loadComponent: () => import('./backend/stores/stores.component').then(m => m.StoresComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('vendors.view')],
     title: 'Stores'
   },
   {
     path: 'customers',
     loadComponent: () => import('./backend/customers/customers.component').then(m => m.CustomersComponent),
-    canActivate: [adminGuard],
+    // No dedicated customers.* catalog key exists; customer records are
+    // order/buyer data, so we gate on the closest key the API enforces.
+    canActivate: [adminGuard, requirePermission('orders.view')],
     title: 'Customers'
   },
   {
     path: 'manage_store',
     loadComponent: () => import('./backend/stores/manage-store/manage-store.component').then(m => m.ManageStoreComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('vendors.view_detail')],
     title: 'Manage store'
   },
   {
     path: 'product_sales',
     loadComponent: () => import('./backend/sales/sales.component').then(m => m.SalesComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('sales.view')],
     title: 'Product Sales'
   },
   {
@@ -238,7 +240,7 @@ export const routes: Routes = [
   {
     path: 'store_orders',
     loadComponent: () => import('./backend/stores/store-orders/store-orders.component').then(m => m.StoreOrdersComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('vendors.view_detail')],
     title: 'StoreOrders'
   },
   {
@@ -250,173 +252,173 @@ export const routes: Routes = [
   {
     path: 'store_messages',
     loadComponent: () => import('./backend/stores/store-messages/store-messages.component').then(m => m.StoreMessagesComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('vendors.view_detail')],
     title: 'Store messages'
   },
   {
     path: 'store_tickets',
     loadComponent: () => import('./backend/stores/store-tickets/store-tickets.component').then(m => m.StoreTicketsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('vendors.view_detail')],
     title: 'Store tickets'
   },
   {
     path: 'store_products',
     loadComponent: () => import('./backend/stores/store-products/store-products.component').then(m => m.StoreProductsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('products.view')],
     title: 'Store products'
   },
   {
     path: 'store_sales',
     loadComponent: () => import('./backend/stores/store-sales/store-sales.component').then(m => m.StoreSalesComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('sales.view')],
     title: 'Store sales'
   },
   {
     path: 'store_reviews',
     loadComponent: () => import('./backend/stores/store-reviews/store-reviews.component').then(m => m.StoreReviewsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('vendors.view_detail')],
     title: 'Store reviews'
   },
   {
     path: 'admin_products',
     loadComponent: () => import('./backend/admin-products/admin-products.component').then(m => m.AdminProductsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('products.view')],
     title: 'Products'
   },
   {
     path: 'admin_create_product',
     loadComponent: () => import('./vendor/create-product/create-product.component').then(m => m.CreateProductComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('products.create')],
     title: 'Create product'
   },
   {
     path: 'admin_edit_product',
     loadComponent: () => import('./vendor/edit-product/edit-product.component').then(m => m.EditProductComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('products.edit')],
     title: 'Edit product'
   },
   {
     path: 'adminviewproduct',
     loadComponent: () => import('./backend/admin-view-product/admin-view-product.component').then(m => m.AdminViewProductComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('products.view')],
     title: 'View product'
   },
   {
     path: 'adminsales',
     loadComponent: () => import('./backend/sales/sales.component').then(m => m.SalesComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('sales.view')],
     title: 'View sales'
   },
   {
     path: 'admintransactions',
     loadComponent: () => import('./backend/transactions/transactions.component').then(m => m.TransactionsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('payouts.view_transactions')],
     title: 'View transactions'
   },
   {
     path: 'admincommissions',
     loadComponent: () => import('./backend/commissions/commissions.component').then(m => m.CommissionsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('payouts.view_commissions')],
     title: 'View commission'
   },
   {
     path: 'adminreturns',
     loadComponent: () => import('./backend/returns/returns.component').then(m => m.ReturnsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('returns.view')],
     title: 'Returns'
   },
   {
     path: 'adminnotifications',
     loadComponent: () => import('./backend/notifications/notifications.component').then(m => m.NotificationsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('notifications.send')],
     title: 'Push notification'
   },
   {
     path: 'adminlogistics',
     loadComponent: () => import('./backend/logistics/logistics.component').then(m => m.LogisticsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('logistics.view')],
     title: 'View delivery'
   },
   {
     path: 'admintickets',
     loadComponent: () => import('./backend/tickets/tickets.component').then(m => m.TicketsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('tickets.view')],
     title: 'View ticket'
   },
   {
     path: 'notification-logs',
     loadComponent: () => import('./backend/notification-logs/notification-logs.component').then(m => m.NotificationLogsComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('notifications.view')],
     title: 'Notification Logs'
   },
   {
     path: 'ticket_messages',
     loadComponent: () => import('./backend/tickets/ticket-message/ticket-message.component').then(m => m.TicketMessageComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('tickets.view')],
     title: 'Ticket messages'
   },
   {
     path: 'processing',
     loadComponent: () => import('./backend/processing/processing.component').then(m => m.ProcessingComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('orders.view')],
     title: 'ORDER PROCESSING'
   },
   {
     path: 'single',
     loadComponent: () => import('./backend/processing/single/single.component').then(m => m.SingleComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('orders.view_detail')],
     title: 'MANAGE ORDER'
   },
   {
     path: 'plural',
     loadComponent: () => import('./backend/sales/plural/plural.component').then(m => m.PluralComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('sales.view')],
     title: 'VENDOR ORDERS'
   },
   {
     path: 'deliveries',
     loadComponent: () => import('./backend/logistics/deliveries/deliveries.component').then(m => m.DeliveriesComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('logistics.view')],
     title: 'VENDOR ORDERS'
   },
   {
     path: 'adminusers',
     loadComponent: () => import('./backend/users/users.component').then(m => m.UsersComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('users.view')],
     title: 'Platform Users'
   },
   {
     // Deep-linkable role + permission-matrix editor (?id= to edit, omit to create).
     path: 'admin_role',
     loadComponent: () => import('./backend/users/role-editor/role-editor.component').then(m => m.RoleEditorComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('roles.view')],
     title: 'Role editor'
   },
   {
     // Create a staff member (routed; replaces the old in-page "Add staff" drawer).
     path: 'adminusers/new',
     loadComponent: () => import('./backend/users/staff-create/staff-create.component').then(m => m.StaffCreateComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('users.create')],
     title: 'Add staff'
   },
   {
     // Assign roles to a staff member (replaces the old "Manage roles" drawer).
     path: 'adminusers/:id/roles',
     loadComponent: () => import('./backend/users/staff-roles/staff-roles.component').then(m => m.StaffRolesComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('users.manage_roles')],
     title: 'Manage roles'
   },
   {
     // Reset a staff member's password (replaces the old "Reset password" drawer).
     path: 'adminusers/:id/reset-password',
     loadComponent: () => import('./backend/users/staff-password/staff-password.component').then(m => m.StaffPasswordComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('users.edit')],
     title: 'Reset password'
   },
   {
     path: 'admin-gift-cards',
     loadComponent: () => import('./backend/gift-cards/gift-cards.component').then(m => m.GiftCardsAdminComponent),
-    canActivate: [adminGuard],
+    canActivate: [adminGuard, requirePermission('gift_cards.view')],
     title: 'Gift Cards'
   },
   {

@@ -18,7 +18,12 @@ import {
   type AxServerFetchResult,
   type AxDateRange,
 } from '../../shared/data/enterprise';
-import { ORDER_STATUS_OPTIONS, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
+import {
+  LOGISTICS_STATUS_OPTIONS,
+  FULFILMENT_STATUSES,
+  loadAdminVendorOptions,
+  prettyOrderStatus,
+} from '../shared/order-filters';
 
 interface DeliveryRow extends Record<string, unknown> {
   id: number;
@@ -76,7 +81,7 @@ export class LogisticsComponent implements OnInit {
       emptyDescription: 'No orders match the selected delivery filters.',
       export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'deliveries' },
       filters: [
-        { key: 'status', label: 'Status', type: 'select', options: ORDER_STATUS_OPTIONS },
+        { key: 'status', label: 'Status', type: 'select', options: LOGISTICS_STATUS_OPTIONS },
         { key: 'vendor', label: 'Store', type: 'select', optionsLoader: () => loadAdminVendorOptions(this.adapter) },
         { key: 'date', label: 'Date', type: 'date-range' },
       ],
@@ -99,7 +104,14 @@ export class LogisticsComponent implements OnInit {
       offset: query.pageIndex * query.pageSize,
     };
     if (query.search) q.search = query.search;
-    if (query.filters['status']) q.status = query.filters['status'];
+    // Logistics board is scoped to the fulfilment set (shipped + delivered).
+    // When the operator picks a specific status, send just that one; with no
+    // explicit pick, default to the whole fulfilment set as a CSV so the API
+    // (which accepts a comma-separated status list) excludes pre-shipment and
+    // terminal orders.
+    q.status = query.filters['status']
+      ? query.filters['status']
+      : FULFILMENT_STATUSES.join(',');
     if (query.filters['vendor']) q.vendor_id = query.filters['vendor'];
     const range = query.filters['date'] as AxDateRange | undefined;
     if (range?.from) q.since = range.from;

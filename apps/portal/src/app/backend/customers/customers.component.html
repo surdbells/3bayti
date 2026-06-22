@@ -11,6 +11,58 @@
       </div>
     </header>
 
+    <section class="ax-card ax-mb-4">
+      <div class="ax-filter-grid">
+        <label class="ax-field">
+          <span class="ax-field-label">{{ 'customers.filter_status' | translate }}</span>
+          <select class="ax-select ax-input-sm" [(ngModel)]="filters.status" (change)="applyFilters()">
+            <option value="">{{ 'customers.filter_all' | translate }}</option>
+            <option value="active">{{ 'customers.status_active' | translate }}</option>
+            <option value="inactive">{{ 'customers.status_inactive' | translate }}</option>
+          </select>
+        </label>
+
+        <label class="ax-field">
+          <span class="ax-field-label">{{ 'customers.filter_email_verified' | translate }}</span>
+          <select class="ax-select ax-input-sm" [(ngModel)]="filters.email_verified" (change)="applyFilters()">
+            <option value="">{{ 'customers.filter_all' | translate }}</option>
+            <option value="true">{{ 'customers.verified_yes' | translate }}</option>
+            <option value="false">{{ 'customers.verified_no' | translate }}</option>
+          </select>
+        </label>
+
+        <label class="ax-field">
+          <span class="ax-field-label">{{ 'customers.filter_phone_verified' | translate }}</span>
+          <select class="ax-select ax-input-sm" [(ngModel)]="filters.phone_verified" (change)="applyFilters()">
+            <option value="">{{ 'customers.filter_all' | translate }}</option>
+            <option value="true">{{ 'customers.verified_yes' | translate }}</option>
+            <option value="false">{{ 'customers.verified_no' | translate }}</option>
+          </select>
+        </label>
+
+        <label class="ax-field">
+          <span class="ax-field-label">{{ 'customers.filter_registered_from' | translate }}</span>
+          <input type="date" class="ax-input ax-input-sm" [(ngModel)]="filters.created_from" (change)="applyFilters()" />
+        </label>
+
+        <label class="ax-field">
+          <span class="ax-field-label">{{ 'customers.filter_registered_to' | translate }}</span>
+          <input type="date" class="ax-input ax-input-sm" [(ngModel)]="filters.created_to" (change)="applyFilters()" />
+        </label>
+
+        <label class="ax-field">
+          <span class="ax-field-label">{{ 'customers.filter_min_orders' | translate }}</span>
+          <input type="number" min="0" class="ax-input ax-input-sm" [(ngModel)]="filters.min_orders" (change)="applyFilters()" />
+        </label>
+
+        <div class="ax-field ax-filter-actions">
+          <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="clearFilters()">
+            <app-icon name="close" aria-hidden="true"></app-icon> {{ 'customers.filter_clear' | translate }}
+          </button>
+        </div>
+      </div>
+    </section>
+
     <section class="ax-card ax-p-0">
       <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
         <ng-template axCell="name" let-row>
