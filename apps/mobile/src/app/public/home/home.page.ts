@@ -67,6 +67,11 @@ export class HomePage implements OnInit, OnDestroy {
   best_sellers: Products[] = [];
   new_arrivals: Products[] = [];
   vendor_featured: Store[] = [];
+  // GET /v3/featured-vendors is a CURATED, non-paginated spotlight (it ignores
+  // offset and never returns has_more), so there is no "next page". Once the
+  // first (and only) page is loaded this stays false to stop the infinite
+  // scroll from re-appending the same stores.
+  hasMoreStores = true;
   isOnline = true;
   categories: Labels[] = [];
   @Input() rating: number = 4.5;
@@ -211,6 +216,9 @@ export class HomePage implements OnInit, OnDestroy {
           this.vendor_featured = response.data;
           this.meta = response.message;
           this.ui_controls.is_loading = false;
+          // Curated spotlight: there is no second page. Disable further
+          // infinite-scroll fetches so the same stores aren't re-appended.
+          this.hasMoreStores = false;
         }
       }))
   }
@@ -233,6 +241,10 @@ export class HomePage implements OnInit, OnDestroy {
     this.router.navigate(['/', 'login']);
   }
   getMoreItems() {
+    // The featured-vendors endpoint is a curated, non-paginated spotlight, so
+    // there is nothing to fetch beyond the first page. Guard against re-fetching
+    // (and re-appending) the same stores.
+    if (!this.hasMoreStores) return;
     this.get_featured.offset = this.get_featured.offset + this.get_featured.limit
     // Direct v3 (GET /v3/featured-vendors) — same paginated read as
     // get_featured_products(), advancing offset for infinite scroll.
@@ -245,10 +257,18 @@ export class HomePage implements OnInit, OnDestroy {
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
-            this.vendor_featured.push(...response.data);
+            // Client-side dedupe by store_id as a guard against the curated set
+            // re-appearing.
+            const existingIds = new Set(this.vendor_featured.map(s => s.store_id));
+            const deduped = (response.data ?? []).filter(
+              (s: Store) => s && !existingIds.has(s.store_id)
+            );
+            this.vendor_featured.push(...deduped);
           }else{
             this.ui_controls.is_empty = true;
           }
+          // Curated spotlight: no further pages — stop the infinite scroll.
+          this.hasMoreStores = false;
         }
       }))
   }

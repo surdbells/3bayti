@@ -258,6 +258,10 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
       const swiper = event?.target?.swiper;
       if (swiper) {
         this.ngZone.run(() => {
+          // Drive pagination off the swiper's own slide count, but drive the
+          // near-end "fetch more" check off the data length (this.products),
+          // NOT swiper.slides.length. swiper.slides can briefly lag the data
+          // after an append, which caused premature/duplicate fetches.
           const totalSlides = swiper.slides?.length || this.products.length;
           const currentIndex = swiper.activeIndex ?? 0;
 
@@ -267,8 +271,8 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
           this.index.set(currentIndex);
           this.updateVerticalPagination(currentIndex, totalSlides);
 
-          // Fetch more when near end
-          if (totalSlides - currentIndex <= 5 && !this.ui_controls.is_loading && this.ui_controls.hasMore) {
+          // Fetch more when near end (measured against the product data length)
+          if (this.products.length - currentIndex <= 5 && !this.ui_controls.is_loading && this.ui_controls.hasMore) {
             this.getMoreItems();
           }
 
@@ -405,20 +409,29 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   }
 
   getMoreItems() {
+    // Re-entrancy guard: this MUST be checked (and is_loading set) before we
+    // touch the offset or fire the request, so overlapping slide-change events
+    // during a fast scroll cannot kick off duplicate fetches.
     if (this.ui_controls.is_loading || !this.ui_controls.hasMore) return;
 
     console.log('[Vertican] getMoreItems');
+
+    // Set the guard BEFORE advancing offset / starting the request.
     this.ui_controls.is_loading = true;
     this.cdr.markForCheck();
 
     this.explore.id = this.single_user.id;
     this.explore.token = this.single_user.token;
-    this.explore.offset += this.explore.limit;
+
+    // Request the NEXT page without mutating the persisted offset yet — we only
+    // commit the advance after a successful, deduped, non-empty append. On an
+    // empty/failed page the offset stays put and we stop.
+    const nextOffset = this.explore.offset + this.explore.limit;
 
     this.networkAdapter.get_v3('GET /mobile/explore-listing', {
       queryParams: {
         limit: this.explore.limit,
-        offset: this.explore.offset,
+        offset: nextOffset,
       },
     })
       .subscribe({
@@ -430,14 +443,42 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
             return;
           }
 
-          this.products = [...this.products, ...response.data];
+          const incoming: any[] = Array.isArray(response.data) ? response.data : [];
 
-          if (response.data.length < this.explore.limit) {
+          // Dedupe against products already on screen by product_id.
+          const existingIds = new Set(this.products.map(p => p.product_id));
+          const deduped = incoming.filter(p => p && !existingIds.has(p.product_id));
+
+          // Empty (or fully-duplicate) page -> nothing new to show; stop and
+          // leave offset untouched so we don't loop on the same data.
+          if (deduped.length === 0) {
+            this.ui_controls.hasMore = false;
+            this.ui_controls.is_loading = false;
+            this.cdr.markForCheck();
+            return;
+          }
+
+          // Append in place (no full reassignment) so swiper does not re-render
+          // and reset the scroll/active index.
+          this.products.push(...deduped);
+
+          // Commit the offset advance only now that we've appended.
+          this.explore.offset = nextOffset;
+
+          // If the raw page came back short, there is no more data after this.
+          if (incoming.length < this.explore.limit) {
             this.ui_controls.hasMore = false;
           }
 
           this.ui_controls.is_loading = false;
           this.cdr.markForCheck();
+
+          // Let swiper pick up the newly appended slides so swiper.slides.length
+          // tracks the data, preserving the current active index.
+          setTimeout(() => {
+            const sw: any = this.verticalSwiper || (this.swiperEl?.nativeElement as any)?.swiper;
+            sw?.update?.();
+          }, 0);
         },
         error: () => {
           this.ui_controls.hasMore = false;

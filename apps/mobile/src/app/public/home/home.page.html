@@ -155,7 +155,7 @@
     </div>
   }
 
-  @if(!ui_controls.is_empty){
+  @if(!ui_controls.is_empty && hasMoreStores){
     <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)">
       <ion-infinite-scroll-content [loadingText]="'please_wait' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
     </ion-infinite-scroll>
