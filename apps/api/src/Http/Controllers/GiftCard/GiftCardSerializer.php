@@ -139,6 +139,147 @@ final class GiftCardSerializer
         return $data;
     }
 
+    // ── Admin shapes (M5 admin gift-card surface) ─────────────────────
+    //
+    // The admin surface is staff-only behind the permission stack, so
+    // unlike the customer shape it exposes UNMASKED purchaser + recipient
+    // contact details and the raw code (admins need to look cards up and
+    // support customers). The list shape is intentionally lean (no
+    // ledger, no theme_meta) for cheap pages; the detail shape adds the
+    // full ordered ledger + delivery block.
+
+    /**
+     * Lean admin LIST row. No ledger, no theme metadata — keeps the
+     * paginated payload small. The buyer/recipient are flattened to the
+     * fields an admin table needs to render + search against.
+     *
+     * @return array<string,mixed>
+     */
+    public static function adminListShape(GiftCard $card): array
+    {
+        $buyer     = $card->getBuyerUser();
+        $recipient = $card->getRecipientUser();
+
+        return [
+            'id'                 => $card->getId(),
+            'code'               => $card->formattedCode(),
+            'theme'              => $card->getTheme(),
+            'denomination'       => $card->getDenomination(),
+            'balance'            => $card->getBalance(),
+            'currency'           => $card->getCurrency(),
+            'status'             => $card->getStatus(),
+            'is_spendable'       => $card->isSpendable(),
+            'purchaser' => [
+                'id'    => $buyer->getId(),
+                'email' => $buyer->getEmail(),
+                'name'  => self::fullName($buyer),
+            ],
+            'recipient_name'     => $card->getRecipientName(),
+            'recipient_email'    => $card->getRecipientEmail(),
+            'recipient_user' => $recipient !== null ? [
+                'id'    => $recipient->getId(),
+                'email' => $recipient->getEmail(),
+                'name'  => self::fullName($recipient),
+            ] : null,
+            'is_delivered'       => $card->getEmailDeliveredAt() !== null || $card->getSmsDeliveredAt() !== null,
+            'scheduled_delivery_at' => $card->getScheduledDeliveryAt()?->format(\DateTimeInterface::ATOM),
+            'activated_at'       => $card->getActivatedAt()?->format(\DateTimeInterface::ATOM),
+            'expires_at'         => $card->getExpiresAt()?->format(\DateTimeInterface::ATOM),
+            'created_at'         => $card->getCreatedAt()->format(\DateTimeInterface::ATOM),
+        ];
+    }
+
+    /**
+     * @param iterable<GiftCard> $cards
+     * @return list<array<string,mixed>>
+     */
+    public static function adminListShapeMany(iterable $cards): array
+    {
+        $out = [];
+        foreach ($cards as $card) {
+            $out[] = self::adminListShape($card);
+        }
+        return $out;
+    }
+
+    /**
+     * Full admin DETAIL shape: list fields + theme_meta + the complete
+     * ordered transaction ledger + a delivery block.
+     *
+     * @return array<string,mixed>
+     */
+    public static function adminDetailShape(GiftCard $card): array
+    {
+        $data = self::adminListShape($card);
+
+        $data['theme_meta']        = (array) self::THEME_META[$card->getTheme()];
+        $data['recipient_message'] = $card->getRecipientMessage();
+        $data['recipient_photo_url'] = $card->getRecipientPhotoUrl();
+        $data['recipient_phone']   = $card->getRecipientPhone();
+        $data['purchase_order_reference'] = $card->getPurchaseOrderReference();
+        $data['updated_at']        = $card->getUpdatedAt()->format(\DateTimeInterface::ATOM);
+
+        // Delivery status block — recipient + channel + timestamps.
+        $data['delivery'] = [
+            'recipient_email'    => $card->getRecipientEmail(),
+            'recipient_phone'    => $card->getRecipientPhone(),
+            'scheduled_at'       => $card->getScheduledDeliveryAt()?->format(\DateTimeInterface::ATOM),
+            'email_delivered_at' => $card->getEmailDeliveredAt()?->format(\DateTimeInterface::ATOM),
+            'sms_delivered_at'   => $card->getSmsDeliveredAt()?->format(\DateTimeInterface::ATOM),
+            'channel'            => self::deliveryChannel($card),
+            'delivered'          => $card->getEmailDeliveredAt() !== null || $card->getSmsDeliveredAt() !== null,
+        ];
+
+        // Full ordered ledger (ASC by id — append-only, so chronological).
+        $data['ledger'] = array_map(
+            static fn(GiftCardTransaction $tx) => self::ledgerRow($tx),
+            $card->getTransactions()->toArray(),
+        );
+
+        return $data;
+    }
+
+    /**
+     * Shape a single ledger row — shared by the detail ledger + the
+     * adjust/void action responses (which return the new row).
+     *
+     * @return array<string,mixed>
+     */
+    public static function ledgerRow(GiftCardTransaction $tx): array
+    {
+        return [
+            'id'              => $tx->getId(),
+            'type'            => $tx->getType(),
+            'amount'          => $tx->getAmount(),
+            'balance_after'   => $tx->getBalanceAfter(),
+            'order_reference' => $tx->getOrderReference(),
+            'order_id'        => $tx->getOrderId(),
+            'reason'          => $tx->getReason(),
+            'actor_user_id'   => $tx->getActorUserId(),
+            'created_at'      => $tx->getCreatedAt()->format(\DateTimeInterface::ATOM),
+        ];
+    }
+
+    /** Which channel(s) the card has been delivered through. */
+    private static function deliveryChannel(GiftCard $card): ?string
+    {
+        $channels = [];
+        if ($card->getEmailDeliveredAt() !== null) {
+            $channels[] = 'email';
+        }
+        if ($card->getSmsDeliveredAt() !== null) {
+            $channels[] = 'sms';
+        }
+        return $channels === [] ? null : implode('+', $channels);
+    }
+
+    /** Best-effort display name from a user's first/last name. */
+    private static function fullName(\Bayti\Api\Domain\User\User $user): ?string
+    {
+        $name = trim(((string) $user->getFirstName()) . ' ' . ((string) $user->getLastName()));
+        return $name === '' ? null : $name;
+    }
+
     /**
      * Lightly mask a recipient email for the response shape, e.g.
      * 'sara@domain.com' -> 's***@domain.com'. Null stays null.

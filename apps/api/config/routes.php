@@ -737,6 +737,24 @@ return function (App $app): void {
         $group->delete('/promo-codes/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Admin\PromoCode\DeletePromoCodeController::class)->add($perm->for('coupons.delete'));
 
+        // M5 — Admin gift-card surface. List/detail are gated by
+        // gift_cards.view (the same key the portal route guard applies
+        // to /admin-gift-cards). Adjust = gift_cards.adjust_balance,
+        // void = gift_cards.delete ("Void gift cards"), issue =
+        // gift_cards.create. The literal POST '/gift-cards' (issue) and
+        // the {id}-scoped routes don't collide (Slim matches by method +
+        // segment count).
+        $group->get('/gift-cards',
+            \Bayti\Api\Http\Controllers\Admin\GiftCard\ListGiftCardsController::class)->add($perm->for('gift_cards.view'));
+        $group->post('/gift-cards',
+            \Bayti\Api\Http\Controllers\Admin\GiftCard\IssueGiftCardController::class)->add($perm->for('gift_cards.create'));
+        $group->get('/gift-cards/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\GiftCard\GetGiftCardController::class)->add($perm->for('gift_cards.view'));
+        $group->post('/gift-cards/{id:[0-9]+}/adjust',
+            \Bayti\Api\Http\Controllers\Admin\GiftCard\AdjustGiftCardController::class)->add($perm->for('gift_cards.adjust_balance'));
+        $group->post('/gift-cards/{id:[0-9]+}/void',
+            \Bayti\Api\Http\Controllers\Admin\GiftCard\VoidGiftCardController::class)->add($perm->for('gift_cards.delete'));
+
         // M3.2.X.18-F — Returns admin surface
         $group->get('/returns',
             \Bayti\Api\Http\Controllers\Admin\Order\ListAdminReturnsController::class)->add($perm->for('returns.view'));

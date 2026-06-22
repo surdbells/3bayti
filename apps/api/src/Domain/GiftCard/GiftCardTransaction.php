@@ -22,6 +22,8 @@ class GiftCardTransaction
 {
     public const TYPE_DEBIT  = 'debit';
     public const TYPE_CREDIT = 'credit';
+    /** Admin lifecycle entry: card voided (balance zeroed, status=voided). */
+    public const TYPE_VOID   = 'void';
 
     #[ORM\Id]
     #[ORM\GeneratedValue(strategy: 'IDENTITY')]
@@ -50,6 +52,21 @@ class GiftCardTransaction
     #[ORM\Column(name: 'order_id', type: 'bigint', nullable: true)]
     private ?int $orderId;
 
+    /**
+     * Admin-supplied rationale for a manual adjustment / void / issue.
+     * Null for ordinary checkout debits / cancellation credits — those
+     * are explained by the order_reference instead.
+     */
+    #[ORM\Column(name: 'reason', type: 'string', length: 255, nullable: true)]
+    private ?string $reason;
+
+    /**
+     * The admin user id who performed a manual entry (adjust / void /
+     * issue). Null for customer-driven checkout/cancellation movements.
+     */
+    #[ORM\Column(name: 'actor_user_id', type: 'bigint', nullable: true)]
+    private ?int $actorUserId;
+
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private DateTimeImmutable $createdAt;
 
@@ -60,6 +77,8 @@ class GiftCardTransaction
         string $balanceAfter,
         ?string $orderReference = null,
         ?int $orderId = null,
+        ?string $reason = null,
+        ?int $actorUserId = null,
     ) {
         $this->giftCard       = $giftCard;
         $this->type           = $type;
@@ -67,6 +86,8 @@ class GiftCardTransaction
         $this->balanceAfter   = $balanceAfter;
         $this->orderReference = $orderReference;
         $this->orderId        = $orderId;
+        $this->reason         = $reason;
+        $this->actorUserId    = $actorUserId;
         $this->createdAt      = new DateTimeImmutable('now', new DateTimeZone('UTC'));
     }
 
@@ -77,5 +98,7 @@ class GiftCardTransaction
     public function getBalanceAfter(): string { return $this->balanceAfter; }
     public function getOrderReference(): ?string { return $this->orderReference; }
     public function getOrderId(): ?int { return $this->orderId; }
+    public function getReason(): ?string { return $this->reason; }
+    public function getActorUserId(): ?int { return $this->actorUserId; }
     public function getCreatedAt(): DateTimeImmutable { return $this->createdAt; }
 }

@@ -422,6 +422,12 @@ export const routes: Routes = [
     title: 'Gift Cards'
   },
   {
+    path: 'admin-gift-cards/:id',
+    loadComponent: () => import('./backend/gift-cards/gift-card-detail.component').then(m => m.GiftCardDetailComponent),
+    canActivate: [adminGuard, requirePermission('gift_cards.view')],
+    title: 'Gift Card'
+  },
+  {
     path: 'coupons',
     loadComponent: () => import('./coupon/coupon-list/coupon-list.component').then(m => m.CouponListComponent),
     canActivate: [vendorGuard],

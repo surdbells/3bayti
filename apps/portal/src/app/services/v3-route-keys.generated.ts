@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 245 route keys.
+ * 250 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -38,6 +38,8 @@ export type V3RouteKey =
   | 'GET /admin/collections/:id'
   | 'GET /admin/commissions'
   | 'GET /admin/customers'
+  | 'GET /admin/gift-cards'
+  | 'GET /admin/gift-cards/:id'
   | 'GET /admin/notifications'
   | 'GET /admin/orders'
   | 'GET /admin/orders/:id'
@@ -176,6 +178,9 @@ export type V3RouteKey =
   | 'POST /admin/campaigns'
   | 'POST /admin/categories'
   | 'POST /admin/collections'
+  | 'POST /admin/gift-cards'
+  | 'POST /admin/gift-cards/:id/adjust'
+  | 'POST /admin/gift-cards/:id/void'
   | 'POST /admin/notifications'
   | 'POST /admin/notifications/mark-read'
   | 'POST /admin/orders/:id/cancel'
@@ -287,6 +292,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/collections/:id',
   'GET /admin/commissions',
   'GET /admin/customers',
+  'GET /admin/gift-cards',
+  'GET /admin/gift-cards/:id',
   'GET /admin/notifications',
   'GET /admin/orders',
   'GET /admin/orders/:id',
@@ -425,6 +432,9 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/campaigns',
   'POST /admin/categories',
   'POST /admin/collections',
+  'POST /admin/gift-cards',
+  'POST /admin/gift-cards/:id/adjust',
+  'POST /admin/gift-cards/:id/void',
   'POST /admin/notifications',
   'POST /admin/notifications/mark-read',
   'POST /admin/orders/:id/cancel',

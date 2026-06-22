@@ -100,4 +100,132 @@ class GiftCardRepository extends EntityRepository
             ->getResult();
         return $results;
     }
+
+    /**
+     * Admin list query — paginated, filterable, search-able.
+     *
+     * Joins the buyer + recipient user eagerly (addSelect) so the admin
+     * serializer can render purchaser/recipient emails with NO N+1: one
+     * query for the page, one for the count. The ledger is NOT loaded
+     * here (it's only needed in the detail endpoint) so the list stays
+     * cheap regardless of how many transactions a card has.
+     *
+     * Supported $filters keys (all optional; null/absent = no filter):
+     *   - search       string  — case-insensitive substring match across
+     *                            code (raw, hyphens stripped + UPPER),
+     *                            recipient_email, recipient_name,
+     *                            buyer.email
+     *   - status       string  — exact GiftCard::STATUS_* match
+     *   - minBalance   string  — balance >= (decimal string)
+     *   - maxBalance   string  — balance <= (decimal string)
+     *   - minValue     string  — denomination >= (decimal string)
+     *   - maxValue     string  — denomination <= (decimal string)
+     *   - createdFrom  DateTimeImmutable — created_at >=
+     *   - createdTo    DateTimeImmutable — created_at <=
+     *   - delivered    bool    — true: email OR sms delivered;
+     *                            false: neither channel delivered
+     *   - limit        int     (default 20)
+     *   - offset       int     (default 0)
+     *
+     * @param array<string, mixed> $filters
+     * @return array{items: list<GiftCard>, total: int}
+     */
+    public function findPaginatedForAdmin(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('g')
+            ->leftjoin('g.buyerUser', 'b')
+            ->leftJoin('g.recipientUser', 'r');
+
+        if (!empty($filters['search'])) {
+            $term = (string) $filters['search'];
+            // A code search wants the raw stored form (no hyphens, UPPER);
+            // the contact searches want a plain lowercased LIKE.
+            $codeNeedle = strtoupper(str_replace('-', '', $term));
+            $qb->andWhere(
+                'g.code LIKE :codeNeedle '
+                . 'OR LOWER(g.recipientEmail) LIKE :needle '
+                . 'OR LOWER(g.recipientName) LIKE :needle '
+                . 'OR LOWER(b.email) LIKE :needle'
+            )
+                ->setParameter('codeNeedle', '%' . $codeNeedle . '%')
+                ->setParameter('needle', '%' . mb_strtolower($term) . '%');
+        }
+
+        if (!empty($filters['status'])) {
+            $qb->andWhere('g.status = :status')
+                ->setParameter('status', $filters['status']);
+        }
+
+        if (isset($filters['minBalance']) && $filters['minBalance'] !== null) {
+            $qb->andWhere('g.balance >= :minBalance')
+                ->setParameter('minBalance', $filters['minBalance']);
+        }
+        if (isset($filters['maxBalance']) && $filters['maxBalance'] !== null) {
+            $qb->andWhere('g.balance <= :maxBalance')
+                ->setParameter('maxBalance', $filters['maxBalance']);
+        }
+        if (isset($filters['minValue']) && $filters['minValue'] !== null) {
+            $qb->andWhere('g.denomination >= :minValue')
+                ->setParameter('minValue', $filters['minValue']);
+        }
+        if (isset($filters['maxValue']) && $filters['maxValue'] !== null) {
+            $qb->andWhere('g.denomination <= :maxValue')
+                ->setParameter('maxValue', $filters['maxValue']);
+        }
+
+        if (!empty($filters['createdFrom'])) {
+            $qb->andWhere('g.createdAt >= :createdFrom')
+                ->setParameter('createdFrom', $filters['createdFrom']);
+        }
+        if (!empty($filters['createdTo'])) {
+            $qb->andWhere('g.createdAt <= :createdTo')
+                ->setParameter('createdTo', $filters['createdTo']);
+        }
+
+        if (isset($filters['delivered']) && $filters['delivered'] !== null) {
+            if ($filters['delivered'] === true) {
+                $qb->andWhere('g.emailDeliveredAt IS NOT NULL OR g.smsDeliveredAt IS NOT NULL');
+            } else {
+                $qb->andWhere('g.emailDeliveredAt IS NULL AND g.smsDeliveredAt IS NULL');
+            }
+        }
+
+        // Count BEFORE pagination + before the eager addSelect (a join
+        // fetch would break the COUNT DISTINCT). Clone the filtered qb.
+        $countQb = clone $qb;
+        $total = (int) $countQb->select('COUNT(g.id)')
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        // Eager-load the joined users only for the page query.
+        $qb->addSelect('b')->addSelect('r')
+            ->orderBy('g.id', 'DESC')
+            ->setMaxResults((int) ($filters['limit'] ?? 20))
+            ->setFirstResult((int) ($filters['offset'] ?? 0));
+
+        /** @var list<GiftCard> $items */
+        $items = $qb->getQuery()->getResult();
+
+        return ['items' => $items, 'total' => $total];
+    }
+
+    /**
+     * Detail fetch for the admin endpoint — eager-loads the full
+     * transaction ledger + buyer/recipient in ONE query so the detail
+     * serializer never lazy-loads. Returns null when not found.
+     */
+    public function findByIdForAdmin(int $id): ?GiftCard
+    {
+        /** @var GiftCard|null $card */
+        $card = $this->createQueryBuilder('g')
+            ->leftJoin('g.buyerUser', 'b')->addSelect('b')
+            ->leftJoin('g.recipientUser', 'r')->addSelect('r')
+            ->leftJoin('g.transactions', 't')->addSelect('t')
+            ->where('g.id = :id')
+            ->setParameter('id', $id)
+            ->orderBy('t.id', 'ASC')
+            ->getQuery()
+            ->getOneOrNullResult();
+        return $card;
+    }
 }

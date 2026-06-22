@@ -146,6 +146,40 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/admin/campaigns/:id',
     shape: 'v3-envelope',
   },
+  // ---- Admin gift cards (issued-card management; portal) ----
+  // Net-new v3-only. List/detail of issued gift cards + balance
+  // adjust, void, and issue actions. All admin-guarded behind the
+  // gift_cards.* permission family.
+  'GET /admin/gift-cards': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/gift-cards',
+    shape: 'v3-envelope',
+  },
+  'GET /admin/gift-cards/:id': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/gift-cards/:id',
+    shape: 'v3-envelope',
+  },
+  'POST /admin/gift-cards': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/gift-cards',
+    shape: 'v3-envelope',
+  },
+  'POST /admin/gift-cards/:id/adjust': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/gift-cards/:id/adjust',
+    shape: 'v3-envelope',
+  },
+  'POST /admin/gift-cards/:id/void': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/gift-cards/:id/void',
+    shape: 'v3-envelope',
+  },
   // Admin RBAC — roles, permission catalog, user-role assignment. These
   // endpoints exist in the portal + API but had gone missing from this map
   // (the generated route keys had drifted); restored here so both stay in
