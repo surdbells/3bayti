@@ -29,18 +29,35 @@ final class ListUsersController
         $q      = $request->getQueryParams();
         $limit  = max(1, min(100, (int) ($q['limit']  ?? 20)));
         $offset = max(0, (int) ($q['offset'] ?? 0));
+        $role   = is_string($q['role'] ?? null) ? $q['role'] : null;
 
-        /** @var UserRepository $repo */
-        $repo   = $this->em->getRepository(User::class);
-        $result = $repo->findPaginated([
-            'staff'  => true,
+        // Two listings share this endpoint:
+        //  - The Users admin page asks for staff (admins + anyone holding an
+        //    RBAC role) and renders the staff() shape.
+        //  - The Customers admin page asks for role=customer and needs the
+        //    real customer set with phone/verification/status fields, so it
+        //    gets the customer() shape instead.
+        $isCustomerListing = $role === 'customer';
+
+        $filters = [
             'search' => $q['search'] ?? null,
             'limit'  => $limit,
             'offset' => $offset,
-        ]);
+        ];
+        if ($isCustomerListing) {
+            $filters['role'] = 'customer';
+        } else {
+            $filters['staff'] = true;
+        }
+
+        /** @var UserRepository $repo */
+        $repo   = $this->em->getRepository(User::class);
+        $result = $repo->findPaginated($filters);
+
+        $shape = $isCustomerListing ? 'customer' : 'staff';
 
         return $this->ok([
-            'data' => array_map([$this->serializer, 'staff'], $result['items']),
+            'data' => array_map([$this->serializer, $shape], $result['items']),
             'meta' => ['total' => $result['total'], 'limit' => $limit, 'offset' => $offset],
         ]);
     }

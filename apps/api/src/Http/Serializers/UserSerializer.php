@@ -130,4 +130,35 @@ final class UserSerializer
             'last_login_at' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
         ];
     }
+
+    /**
+     * Admin customer-list shape: identity + contact + status + verification.
+     * Used by the Customers admin screen.
+     *
+     * Unlike staff(), this includes phone + country_code (so the Phone column
+     * renders) and the is_active / verification flags + registration date that
+     * the customer filter panel (Phase 2) will read.
+     *
+     * Note: the User entity has no created_at column yet, so registration date
+     * is emitted as null for forward-compatibility — the key is present so the
+     * portal can rely on its shape once the column lands.
+     *
+     * @return array<string, mixed>
+     */
+    public function customer(User $user): array
+    {
+        return [
+            'id' => $user->getId(),
+            'email' => $user->getEmail(),
+            'phone' => $user->getPhone(),
+            'country_code' => $user->getCountryCode(),
+            'first_name' => $user->getFirstName(),
+            'last_name' => $user->getLastName(),
+            'is_active' => $user->isActive(),
+            'is_email_verified' => $user->isEmailVerified(),
+            'is_phone_verified' => $user->isPhoneVerified(),
+            'last_login_at' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
+            'created_at' => null,
+        ];
+    }
 }

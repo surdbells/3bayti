@@ -37,6 +37,33 @@ final class GetAdminPlatformAnalyticsController
 {
     use Responder;
 
+    /**
+     * Order statuses that represent a completed/paid sale. Mirrors the
+     * Order::STATUS_* set used elsewhere in the codebase. Anything outside
+     * this set (pending_payment, failed, cancelled, refunded) is NOT counted
+     * toward order/units KPIs.
+     *
+     * @var list<string>
+     */
+    private const SALE_STATUSES = [
+        \Bayti\Api\Domain\Order\Order::STATUS_PAID,
+        \Bayti\Api\Domain\Order\Order::STATUS_FULFILLING,
+        \Bayti\Api\Domain\Order\Order::STATUS_SHIPPED,
+        \Bayti\Api\Domain\Order\Order::STATUS_DELIVERED,
+    ];
+
+    /** Lowercase DB status → title-case label the badge expects. */
+    private const STATUS_LABELS = [
+        'pending_payment' => 'Pending Payment',
+        'paid'            => 'Paid',
+        'fulfilling'      => 'Fulfilling',
+        'shipped'         => 'Shipped',
+        'delivered'       => 'Delivered',
+        'cancelled'       => 'Cancelled',
+        'refunded'        => 'Refunded',
+        'failed'          => 'Failed',
+    ];
+
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
@@ -66,22 +93,32 @@ final class GetAdminPlatformAnalyticsController
         $since   = $now->modify("-{$days} days")->format('Y-m-d H:i:s');
         $year    = (int) $now->format('Y');
 
+        // Completed/paid status set as an inline SQL placeholder list, e.g.
+        // "?,?,?,?" — bound positionally alongside the other params.
+        $saleStatuses     = self::SALE_STATUSES;
+        $salePlaceholders = implode(',', array_fill(0, count($saleStatuses), '?'));
+
         // ── KPI totals ─────────────────────────────────────────────
         $totalProducts = (int) $conn->fetchOne(
             "SELECT COUNT(*) FROM products WHERE status = 'active'"
         );
 
+        // Restrict order/units KPIs to completed/paid statuses so they reflect
+        // actual sales, not pending_payment/failed/cancelled/refunded noise.
         $totalOrders = (int) $conn->fetchOne(
-            "SELECT COUNT(*) FROM orders WHERE created_at >= ?",
-            [$since]
+            "SELECT COUNT(*) FROM orders
+             WHERE created_at >= ?
+               AND status IN ($salePlaceholders)",
+            [$since, ...$saleStatuses]
         );
 
         $productsSold = (int) ($conn->fetchOne(
             "SELECT COALESCE(SUM(oi.quantity), 0)
              FROM order_items oi
              JOIN orders o ON o.id = oi.order_id
-             WHERE o.created_at >= ?",
-            [$since]
+             WHERE o.created_at >= ?
+               AND o.status IN ($salePlaceholders)",
+            [$since, ...$saleStatuses]
         ) ?: 0);
 
         $returnOrders = (int) $conn->fetchOne(
@@ -152,22 +189,72 @@ final class GetAdminPlatformAnalyticsController
             }
         }
 
-        // ── Recent orders (20 most recent) ──────────────────────────
+        // ── Recent orders (paginated, optional ?status= filter) ─────
+        // Each row is per-order. An order can have many line items, so we
+        // surface the DOMINANT line — the item with the greatest quantity
+        // (ties broken by highest subtotal) — as the representative
+        // product_name + store_name, and sum the quantity across ALL items
+        // for the order's total units. This keeps one row per order while
+        // still giving a meaningful product/store at a glance.
+        [$page, $limit] = $this->parsePagination($query);
+        $offset         = $page * $limit;
+
+        $statusFilter = $this->parseStatusFilter($query['status'] ?? null);
+
+        // Build WHERE clause + bound params shared by count + page queries.
+        $where  = '';
+        $params = [];
+        if ($statusFilter !== null) {
+            $where    = 'WHERE o.status = ?';
+            $params[] = $statusFilter;
+        }
+
+        $recentTotal = (int) $conn->fetchOne(
+            "SELECT COUNT(*) FROM orders o {$where}",
+            $params
+        );
+
+        // Dominant line item per order via a LATERAL pick (Postgres).
         $recentRows = $conn->fetchAllAssociative(
             "SELECT
                o.id,
-               o.order_reference,
+               o.order_reference                   AS order_ref,
                o.status,
-               o.total,
+               o.total                             AS total_price,
                o.currency,
-               o.created_at,
-               u.first_name || ' ' || u.last_name AS customer_name,
-               u.email                             AS customer_email
+               o.created_at                        AS added,
+               u.first_name || ' ' || u.last_name  AS customer_name,
+               u.email                             AS customer_email,
+               COALESCE(dom.product_name_snapshot, '—') AS product_name,
+               COALESCE(v.name, '—')               AS store_name,
+               COALESCE(q.total_qty, 0)::int       AS quantity
              FROM orders o
              LEFT JOIN users u ON u.id = o.user_id
+             LEFT JOIN LATERAL (
+               SELECT oi.product_name_snapshot, oi.vendor_id
+               FROM order_items oi
+               WHERE oi.order_id = o.id
+               ORDER BY oi.quantity DESC, oi.subtotal DESC
+               LIMIT 1
+             ) dom ON true
+             LEFT JOIN vendors v ON v.id = dom.vendor_id
+             LEFT JOIN LATERAL (
+               SELECT COALESCE(SUM(oi.quantity), 0) AS total_qty
+               FROM order_items oi
+               WHERE oi.order_id = o.id
+             ) q ON true
+             {$where}
              ORDER BY o.created_at DESC
-             LIMIT 20"
+             LIMIT {$limit} OFFSET {$offset}",
+            $params
         );
+
+        // Normalize status to the title-case label the badge expects — done
+        // in exactly ONE place so the template binds against a stable form.
+        foreach ($recentRows as &$row) {
+            $row['status'] = self::STATUS_LABELS[$row['status']] ?? ucfirst((string) $row['status']);
+        }
+        unset($row);
 
         // ── Top-selling products (by units sold in window) ──────────
         // Parity with legacy admin/common/top-selling.php — a ranked
@@ -184,10 +271,11 @@ final class GetAdminPlatformAnalyticsController
              JOIN products p ON p.id = oi.product_id
              JOIN orders o   ON o.id = oi.order_id
              WHERE o.created_at >= ?
+               AND o.status IN ($salePlaceholders)
              GROUP BY p.id, p.name, p.slug, p.primary_image_url
              ORDER BY units_sold DESC
              LIMIT 5",
-            [$since]
+            [$since, ...$saleStatuses]
         );
 
         return $this->ok([
@@ -204,7 +292,47 @@ final class GetAdminPlatformAnalyticsController
             'return_orders_stats' => array_values($returnBy12Month),
             'top_products'        => $topProducts,
             'data'                => $recentRows,
+            // Pagination metadata for the recent-orders list (server-driven).
+            'recent_total'        => $recentTotal,
+            'page'                => $page,
+            'limit'               => $limit,
         ]);
+    }
+
+    /**
+     * @param array<string, mixed> $query
+     * @return array{0:int,1:int} [pageIndex (0-based), limit]
+     */
+    private function parsePagination(array $query): array
+    {
+        $page = 0;
+        if (isset($query['page']) && (is_string($query['page']) || is_int($query['page']))) {
+            $page = max(0, (int) ((string) $query['page']));
+        }
+
+        $limit = 10;
+        if (isset($query['limit']) && (is_string($query['limit']) || is_int($query['limit']))) {
+            $limit = (int) ((string) $query['limit']);
+        }
+        $limit = max(1, min(100, $limit));
+
+        return [$page, $limit];
+    }
+
+    /**
+     * Validate the optional ?status= filter against the known status set.
+     * Returns null when absent/blank/unknown (i.e. "all statuses").
+     */
+    private function parseStatusFilter(mixed $raw): ?string
+    {
+        if (!is_string($raw)) {
+            return null;
+        }
+        $val = strtolower(trim($raw));
+        if ($val === '' || $val === 'all') {
+            return null;
+        }
+        return array_key_exists($val, self::STATUS_LABELS) ? $val : null;
     }
 
     private function parseWindowDays(mixed $raw): int

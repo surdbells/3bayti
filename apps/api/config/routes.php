@@ -716,6 +716,14 @@ return function (App $app): void {
         $group->delete('/products/{id:[0-9]+}',
             \Bayti\Api\Http\Controllers\Admin\Product\DeleteAdminProductController::class)->add($perm->for('products.delete'));
 
+        // Admin-scoped vendor catalog listing (store-products manager). Keyed
+        // by v3 vendor id; UNGATED — returns ALL of the vendor's products in
+        // every state and works for inactive/pending stores, unlike the public
+        // storefront routes (which 404 inactive vendors and hide non
+        // active+approved products). See ListAdminVendorProductsController.
+        $group->get('/vendors/{id:[0-9]+}/products',
+            \Bayti\Api\Http\Controllers\Admin\Product\ListAdminVendorProductsController::class)->add($perm->for('products.view'));
+
         // M3.2.X.8-E — Promo code CRUD. Soft-delete preserves
         // promo_redemptions FK; hard-delete only when zero redemptions.
         $group->get('/promo-codes',
