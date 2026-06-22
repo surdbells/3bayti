@@ -99,17 +99,6 @@ export class GlobalComponent {
   public static product_by_categoryUtility = GlobalComponent.baseURL + 'utility/product_by_category';
 
 
-  public static chat_get_vendors = GlobalComponent.baseURL + 'chat/get_vendors';
-  public static chat_get_vendor_orders = GlobalComponent.baseURL + 'chat/get_vendor_orders';
-  public static chat_get_conversation = GlobalComponent.baseURL + 'chat/get_conversation';
-  public static chat_get_messages = GlobalComponent.baseURL + 'chat/get_messages';
-  public static chat_send_message = GlobalComponent.baseURL + 'chat/send_message';
-  public static chat_upload_image = GlobalComponent.baseURL + 'chat/upload_image';
-  public static chat_get_prompts = GlobalComponent.baseURL + 'chat/get_prompts';
-  public static chat_mark_read = GlobalComponent.baseURL + 'chat/mark_read';
-  public static chat_get_unread_count = GlobalComponent.baseURL + 'chat/get_unread_count';
-  public static chat_get_vendor_conversations = GlobalComponent.baseURL + 'chat/get_vendor_conversations.php';
-
   // VENDOR
   // ========================================
   // VENDOR DASHBOARD ENDPOINTS

@@ -4,12 +4,14 @@ import {
   inject,
   computed,
   signal,
+  OnInit,
 } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { NavIconComponent } from '../../layout/header/nav-icon';
+import { MessagesService } from '../messages/messages.service';
 
 /**
  * /account — account hub / dashboard.
@@ -91,6 +93,21 @@ import { NavIconComponent } from '../../layout/header/nav-icon';
               <span class="account-tile__desc">{{ 'account.hub.orders.desc' | translate }}</span>
             </span>
           </a>
+          <a routerLink="/account/messages" class="account-tile" data-testid="account-tile-messages">
+            <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="mail" /></span>
+            <span class="account-tile__body">
+              <span class="account-tile__title">
+                {{ 'account.hub.messages.title' | translate }}
+                <span
+                  *ngIf="unreadMessages() > 0"
+                  class="account-tile__badge"
+                  [attr.aria-label]="'account.messages.list.unreadAria' | translate: { count: unreadMessages() }"
+                  data-testid="account-tile-messages-badge"
+                >{{ unreadMessages() }}</span>
+              </span>
+              <span class="account-tile__desc">{{ 'account.hub.messages.desc' | translate }}</span>
+            </span>
+          </a>
           <a routerLink="/account/addresses" class="account-tile" data-testid="account-tile-addresses">
             <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="mapPin" /></span>
             <span class="account-tile__body">
@@ -139,11 +156,21 @@ import { NavIconComponent } from '../../layout/header/nav-icon';
   `,
   styleUrl: './account-hub.scss',
 })
-export class AccountHubPageComponent {
+export class AccountHubPageComponent implements OnInit {
   private readonly auth = inject(AuthService);
+  private readonly messages = inject(MessagesService);
+
+  /** Unread order-chat total — drives the Messages tile badge. */
+  protected readonly unreadMessages = this.messages.unreadTotal;
 
   /** Banner dismissed for this view (resets on navigation/reload). */
   private readonly bannerDismissed = signal(false);
+
+  async ngOnInit(): Promise<void> {
+    /* Best-effort; the service swallows failures and the badge just
+       stays hidden. */
+    await this.messages.refreshUnreadCount();
+  }
 
   /** First name from the cached user, or null for a generic greeting. */
   protected firstName(): string | null {

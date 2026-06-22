@@ -806,3 +806,24 @@ ion-modal ion-content {
     &__heading   { font-size: 17px; }
   }
 }
+
+/* Header Messages button — unread badge overlay. The badge floats over the
+   top-end corner of the message-square icon, mirroring the cart count badge. */
+.m6-msg-btn {
+  position: relative;
+  overflow: visible;
+}
+.m6-msg-badge {
+  position: absolute;
+  top: 2px;
+  inset-inline-end: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  line-height: 16px;
+  font-weight: 700;
+  --padding-start: 4px;
+  --padding-end: 4px;
+}

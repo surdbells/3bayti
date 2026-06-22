@@ -467,7 +467,7 @@ export class ProductPage implements OnInit, OnDestroy {
   }
 
   user_messages() {
-    this.router.navigate(['/', 'messages']);
+    this.router.navigate(['/', 'chat-vendors']);
   }
 
   openCart() {

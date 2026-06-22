@@ -50,13 +50,22 @@ export class ChatVendorsPage implements OnInit, OnDestroy {
     this.subscriptions.forEach((s) => s.unsubscribe());
   }
 
+  ionViewWillEnter(): void {
+    // Refresh the inbox each time the page is shown so unread counts, order
+    // references and last-message previews reflect activity that happened
+    // while the user was away — without needing to open a thread.
+    this.load();
+  }
+
   private async bootstrap(): Promise<void> {
     const userData = await Preferences.get({ key: 'user' });
     if (!userData.value) {
       this.router.navigate(['/login']);
       return;
     }
-    this.load();
+    // The initial load is driven by ionViewWillEnter (which fires after
+    // ngOnInit on first entry and on every subsequent return to the page),
+    // so we don't call load() here to avoid a duplicate first fetch.
   }
 
   load(event?: CustomEvent): void {

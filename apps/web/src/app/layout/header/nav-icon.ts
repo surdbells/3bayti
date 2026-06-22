@@ -8,7 +8,8 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
  * by both the desktop nav and the mobile drawer so the two stay in sync.
  *
  * Keys: 'categories' | 'stores' | 'bestSellers' | 'newArrivals' | 'gift'
- *       | 'user' | 'shoppingBag' | 'mapPin' | 'ruler' | 'heart' | 'lock'.
+ *       | 'user' | 'shoppingBag' | 'mapPin' | 'ruler' | 'heart' | 'lock'
+ *       | 'mail' | 'lifeBuoy'.
  *
  * The account-hub tiles (Y.5) reuse this component for their leading
  * glyphs, which is why the set extends beyond the primary-nav keys.
@@ -98,6 +99,13 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
           <rect x="4.5" y="10.5" width="15" height="9.5" rx="2" />
           <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
           <path d="M12 14.5v2.5" />
+        </svg>
+      }
+      @case ('mail') {
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="m3.5 6.5 8.5 6 8.5-6" />
         </svg>
       }
       @case ('lifeBuoy') {

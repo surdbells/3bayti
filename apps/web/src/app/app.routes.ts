@@ -279,6 +279,22 @@ export const routes: Routes = [
     title: 'routeTitles.accountSupportDetail',
   },
   {
+    /* Order chat inbox — the customer's conversations with vendors. */
+    path: 'account/messages',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/messages/messages-inbox-page').then(m => m.MessagesInboxPageComponent),
+    title: 'routeTitles.accountMessages',
+  },
+  {
+    /* A single order conversation (uuid-keyed) — thread + composer. */
+    path: 'account/messages/:uuid',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/messages/messages-thread-page').then(m => m.MessagesThreadPageComponent),
+    title: 'routeTitles.accountMessagesThread',
+  },
+  {
     path: 'account/wishlist',
     canActivate: [authActivateGuard],
     loadComponent: () =>

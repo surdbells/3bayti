@@ -167,7 +167,7 @@ export class ChatService {
       order_reference: c?.order_reference ?? '',
       unread_count: typeof c?.unread_count === 'number' ? c.unread_count : 0,
       last_message_at: c?.last_message_at ?? null,
-      preview: c?.preview ?? null,
+      preview: c?.last_message_preview ?? c?.preview ?? null,
       counterparty: {
         type: c?.counterparty?.type ?? '',
         name: c?.counterparty?.name ?? '',

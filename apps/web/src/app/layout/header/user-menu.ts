@@ -8,11 +8,13 @@ import {
   signal,
   HostListener,
   ElementRef,
+  OnInit,
 } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
+import { MessagesService } from '../../features/messages/messages.service';
 import type { AuthUser } from '../../core/auth/auth.types';
 
 /**
@@ -94,6 +96,21 @@ import type { AuthUser } from '../../core/auth/auth.types';
           data-testid="user-menu-orders"
         >
           {{ 'header.userMenu.orders' | translate }}
+        </a>
+        <a
+          routerLink="/account/messages"
+          role="menuitem"
+          class="user-menu__item user-menu__item--with-badge"
+          (click)="close()"
+          data-testid="user-menu-messages"
+        >
+          <span>{{ 'header.userMenu.messages' | translate }}</span>
+          <span
+            *ngIf="unreadMessages() > 0"
+            class="user-menu__badge"
+            [attr.aria-label]="'account.messages.list.unreadAria' | translate: { count: unreadMessages() }"
+            data-testid="user-menu-messages-badge"
+          >{{ unreadMessages() }}</span>
         </a>
         <button
           type="button"
@@ -235,11 +252,33 @@ import type { AuthUser } from '../../core/auth/auth.types';
           margin-top: 4px;
           padding-top: 11px;
         }
+
+        &--with-badge {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+      }
+
+      .user-menu__badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 20px;
+        height: 20px;
+        padding: 0 6px;
+        border-radius: 999px;
+        background: var(--color-brand-500, #b18f1f);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1;
       }
     `,
   ],
 })
-export class UserMenuComponent {
+export class UserMenuComponent implements OnInit {
   @Input({ required: true }) user!: AuthUser;
   @Output() signedOut = new EventEmitter<void>();
 
@@ -248,6 +287,17 @@ export class UserMenuComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly hostEl = inject(ElementRef);
+  private readonly messages = inject(MessagesService);
+
+  /** Unread order-chat total — drives the Messages item badge. */
+  protected readonly unreadMessages = this.messages.unreadTotal;
+
+  ngOnInit(): void {
+    /* The menu only renders for signed-in users, so it's safe to ask
+       for the unread count here. Best-effort; the service swallows
+       failures and the badge stays hidden. */
+    void this.messages.refreshUnreadCount();
+  }
 
   protected displayName(): string {
     const first = this.user.first_name?.trim() ?? '';

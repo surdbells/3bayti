@@ -22,8 +22,11 @@
       <ion-button (click)="user_wishlist()" fill="clear">
         <ax-icon name="heart" [style.color]="'var(--text)'"/>
       </ion-button>
-      <ion-button (click)="user_messages()" fill="clear">
+      <ion-button (click)="user_messages()" fill="clear" class="m6-msg-btn">
         <ax-icon name="message-square-more" [style.color]="'var(--text)'"/>
+        @if (unreadMessages() > 0) {
+          <ion-badge class="m6-msg-badge" color="danger">{{ unreadMessages() > 99 ? '99+' : unreadMessages() }}</ion-badge>
+        }
       </ion-button>
       <ion-button (click)="openCart()" fill="clear">
         <app-cart-icon [count]="cartCount.count()"></app-cart-icon>

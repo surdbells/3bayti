@@ -18,6 +18,7 @@
     "close": "إغلاق",
     "cancel": "إلغاء",
     "saving": "جارٍ الحفظ…",
+    "sending": "جارٍ الإرسال…",
     "errors": {
       "network": "خطأ في الشبكة. تحقّقي من اتصالك وحاولي مرة أخرى."
     },
@@ -88,6 +89,7 @@
     "userMenu": {
       "account": "حسابي",
       "orders": "الطلبات",
+      "messages": "الرسائل",
       "signOut": "تسجيل الخروج"
     },
     "verifyPhone": "تأكيد الهاتف",
@@ -490,6 +492,10 @@
         "title": "الطلبات",
         "desc": "تتبّعي طلباتك وراجعيها وأرجعيها."
       },
+      "messages": {
+        "title": "الرسائل",
+        "desc": "تحدّثي مع البائعين بشأن طلباتك."
+      },
       "addresses": {
         "title": "العناوين",
         "desc": "أديري عناوين التوصيل الخاصة بك."
@@ -611,6 +617,31 @@
         "loadFailed": "تعذّر تحميل مقاساتك. حاولي مرة أخرى.",
         "saveFailed": "تعذّر حفظ مقاساتك. حاولي مرة أخرى.",
         "clearFailed": "تعذّر مسح مقاساتك. حاولي مرة أخرى."
+      }
+    },
+    "messages": {
+      "title": "الرسائل",
+      "intro": "تحدّثي مع البائعين بشأن طلباتك. حافظي على خصوصيتك بعدم مشاركة معلومات التواصل في المحادثة.",
+      "list": {
+        "order": "الطلب {{ref}}",
+        "noMessages": "لا توجد رسائل بعد",
+        "unreadAria": "{{count}} رسائل غير مقروءة",
+        "empty": "لا توجد محادثات بعد",
+        "emptyBody": "عند تقديم طلب، تُفتح هنا محادثة مع البائع."
+      },
+      "thread": {
+        "empty": "لا توجد رسائل بعد. ابدئي المحادثة بإلقاء التحية.",
+        "replyLabel": "رسالتك",
+        "placeholder": "اكتبي رسالة…",
+        "send": "إرسال",
+        "notFound": "تعذّر العثور على هذه المحادثة.",
+        "backToList": "العودة إلى الرسائل",
+        "errors": {
+          "sendFailed": "تعذّر إرسال رسالتك. حاولي مرة أخرى."
+        }
+      },
+      "errors": {
+        "loadFailed": "تعذّر تحميل رسائلك. حاولي مرة أخرى."
       }
     },
     "support": {
@@ -1188,6 +1219,8 @@
     "accountPassword": "تغيير كلمة المرور · 3bayti",
     "accountMeasurements": "مقاساتي · 3bayti",
     "accountDelete": "حذف الحساب · 3bayti",
+    "accountMessages": "الرسائل · 3bayti",
+    "accountMessagesThread": "المحادثة · 3bayti",
     "accountSupport": "الدعم · 3bayti",
     "accountSupportNew": "تذكرة جديدة · 3bayti",
     "accountSupportDetail": "التذكرة · 3bayti",

@@ -464,7 +464,7 @@ export class CartPage implements OnInit, OnDestroy {
     this.router.navigate(['/', 'orders']);
   }
   user_messages() {
-    this.router.navigate(['/', 'messages']);
+    this.router.navigate(['/', 'chat-vendors']);
   }
   handleRefresh(event: any) {
     setTimeout(() => {

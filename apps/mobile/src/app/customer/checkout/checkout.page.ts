@@ -746,7 +746,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.router.navigate(['/', 'cart']);
   }
   user_messages() {
-    this.router.navigate(['/', 'messages']);
+    this.router.navigate(['/', 'chat-vendors']);
   }
   handleRefresh(event: any) {
     setTimeout(() => {

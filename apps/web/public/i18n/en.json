@@ -18,6 +18,7 @@
     "close": "Close",
     "cancel": "Cancel",
     "saving": "Saving…",
+    "sending": "Sending…",
     "errors": {
       "network": "Network error. Please check your connection and try again."
     },
@@ -88,6 +89,7 @@
     "userMenu": {
       "account": "My account",
       "orders": "Orders",
+      "messages": "Messages",
       "signOut": "Sign out"
     },
     "verifyPhone": "Verify phone",
@@ -490,6 +492,10 @@
         "title": "Orders",
         "desc": "Track, review, and return your orders."
       },
+      "messages": {
+        "title": "Messages",
+        "desc": "Chat with vendors about your orders."
+      },
       "addresses": {
         "title": "Addresses",
         "desc": "Manage your delivery addresses."
@@ -611,6 +617,31 @@
         "loadFailed": "We couldn’t load your measurements. Please try again.",
         "saveFailed": "We couldn’t save your measurements. Please try again.",
         "clearFailed": "We couldn’t clear your measurements. Please try again."
+      }
+    },
+    "messages": {
+      "title": "Messages",
+      "intro": "Chat with vendors about your orders. Keep contact details out of chat to stay protected.",
+      "list": {
+        "order": "Order {{ref}}",
+        "noMessages": "No messages yet",
+        "unreadAria": "{{count}} unread messages",
+        "empty": "No conversations yet",
+        "emptyBody": "When you place an order, a chat with the vendor opens here."
+      },
+      "thread": {
+        "empty": "No messages yet. Say hello to start the conversation.",
+        "replyLabel": "Your message",
+        "placeholder": "Type a message…",
+        "send": "Send",
+        "notFound": "We couldn’t find this conversation.",
+        "backToList": "Back to messages",
+        "errors": {
+          "sendFailed": "We couldn’t send your message. Please try again."
+        }
+      },
+      "errors": {
+        "loadFailed": "We couldn’t load your messages. Please try again."
       }
     },
     "support": {
@@ -1188,6 +1219,8 @@
     "accountPassword": "Change password · 3bayti",
     "accountMeasurements": "My measurements · 3bayti",
     "accountDelete": "Delete account · 3bayti",
+    "accountMessages": "Messages · 3bayti",
+    "accountMessagesThread": "Conversation · 3bayti",
     "accountSupport": "Support · 3bayti",
     "accountSupportNew": "New ticket · 3bayti",
     "accountSupportDetail": "Ticket · 3bayti",

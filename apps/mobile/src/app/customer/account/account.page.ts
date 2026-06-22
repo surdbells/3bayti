@@ -12,6 +12,7 @@ import {Preferences} from "@capacitor/preferences";
 import { Subscription } from 'rxjs';
 import {
   IonAvatar,
+  IonBadge,
   IonButton,
   IonButtons, IonCol,
   IonContent,
@@ -33,6 +34,7 @@ import { I18nService } from '../../i18n.service';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { AuthSessionService } from '../../core/services/auth-session.service';
 import { CartCountService } from '../../core/services/cart-count.service';
+import { ChatService } from '../../service/chat.service';
 import {Products} from "../../class/products";
 import {Labels} from "../../class/labels";
 import {CartIconComponent} from "../../cart-icon.component";
@@ -70,7 +72,7 @@ export interface Store {
   templateUrl: './account.page.html',
   styleUrls: ['./account.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonTabBar, IonTabButton, IonLabel, IonFooter, IonRow, IonCol, IonGrid, IonIcon, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent, RouterLink]
+  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonTabBar, IonTabButton, IonLabel, IonFooter, IonRow, IonCol, IonGrid, IonIcon, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent, RouterLink]
 })
 
 export class AccountPage implements OnInit, OnDestroy {
@@ -92,6 +94,13 @@ export class AccountPage implements OnInit, OnDestroy {
   @Input() rating: number = 4.5;
   @Input() ratingsCount: number | string = '100+';
   isActive = false;
+
+  // Customer unread-message badge (GET /v3/chat/unread-count). Refreshed
+  // every time the account page is shown plus a light interval poll while
+  // the page is active, so the header Messages icon reflects new vendor
+  // replies without opening a thread.
+  unreadMessages = signal(0);
+  private unreadPoll?: ReturnType<typeof setInterval>;
 
   // Track image loading states
   imageLoaded: { [key: string]: boolean } = {};
@@ -141,6 +150,7 @@ export class AccountPage implements OnInit, OnDestroy {
     private wishlistService: WishlistService,
     private authSession: AuthSessionService,
     public cartCount: CartCountService,
+    private chatService: ChatService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -274,6 +284,28 @@ export class AccountPage implements OnInit, OnDestroy {
     }
   }
 
+  ionViewWillEnter() {
+    // Refresh the unread-message badge each time the page is shown and start
+    // a light poll so vendor replies surface without reopening the inbox.
+    this.refreshUnreadMessages();
+    this.unreadPoll = setInterval(() => this.refreshUnreadMessages(), 30000);
+  }
+
+  ionViewWillLeave() {
+    // Stop polling while the page is not visible.
+    if (this.unreadPoll) {
+      clearInterval(this.unreadPoll);
+      this.unreadPoll = undefined;
+    }
+  }
+
+  /** Pull the customer's unread chat count (GET /v3/chat/unread-count). */
+  refreshUnreadMessages() {
+    this.chatService.getUnreadCount('customer').subscribe((n) => {
+      this.unreadMessages.set(n);
+    });
+  }
+
   ionViewDidEnter(){
     this.load_cart();
     // Reactive cart badge: recompute from the authoritative store
@@ -314,6 +346,10 @@ export class AccountPage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.blocker.unblock();
     this.sub?.unsubscribe();
+    if (this.unreadPoll) {
+      clearInterval(this.unreadPoll);
+      this.unreadPoll = undefined;
+    }
   }
 
   // ========================================

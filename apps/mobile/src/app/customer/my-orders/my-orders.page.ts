@@ -329,7 +329,7 @@ export class MyOrdersPage implements OnInit {
     }, 500);
   }
   user_messages() {
-    this.router.navigate(['/', 'messages']);
+    this.router.navigate(['/', 'chat-vendors']);
   }
   search() {
     this.router.navigate(['/', 'search']);
