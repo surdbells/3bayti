@@ -5,7 +5,7 @@
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
-    <ion-title class="m7-title">{{ style.style_name }}</ion-title>
+    <ion-title class="m7-title">{{ style?.style_name }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -34,6 +34,21 @@
         <span class="total-label">{{ 'label_total_style_price' | translate }}</span>
         <span class="total-price">Ð{{ getTotal() | number:'1.2-2' }}</span>
       </div>
+
+      <!-- Add the whole outfit to cart in one tap -->
+      <ion-button
+        type="button"
+        expand="block"
+        class="add-all-btn"
+        [disabled]="ui_controls.is_adding_all || !style.products.length"
+        (click)="addAllToCart()">
+        <ax-icon name="shopping-cart" slot="start"></ax-icon>
+        @if(ui_controls.is_adding_all){
+          {{ 'text_adding' | translate }}
+        } @else {
+          {{ 'button_add_all_to_cart' | translate }}
+        }
+      </ion-button>
     </div>
   }
   <!-- Section Title -->

@@ -131,6 +131,7 @@ class StyleRepository extends EntityRepository
      * @param list<int> $styleIds
      * @return array<int, list<array{
      *     id: int,
+     *     legacy_product_id: ?int,
      *     slug: string,
      *     name: string,
      *     primary_image_url: ?string,
@@ -152,7 +153,7 @@ class StyleRepository extends EntityRepository
         // gets us those without a separate Doctrine load.
         $sql = <<<'SQL'
             SELECT sp.style_id, sp.display_order,
-                   p.id AS product_id, p.slug, p.name,
+                   p.id AS product_id, p.legacy_product_id, p.slug, p.name,
                    p.primary_image_url, p.price
             FROM style_products sp
             JOIN products p ON p.id = sp.product_id
@@ -175,6 +176,12 @@ class StyleRepository extends EntityRepository
             }
             $byStyleId[$styleId][] = [
                 'id' => (int) $row['product_id'],
+                // The PDP loads by LEGACY id (GET /v3/products/by-legacy-id/:id),
+                // so mobile must navigate with this, not the v3 id. Null for
+                // v3-native products with no legacy row (mobile falls back to id).
+                'legacy_product_id' => $row['legacy_product_id'] !== null
+                    ? (int) $row['legacy_product_id']
+                    : null,
                 'slug' => (string) $row['slug'],
                 'name' => (string) $row['name'],
                 'primary_image_url' => $row['primary_image_url'] !== null

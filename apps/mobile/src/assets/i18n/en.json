@@ -927,5 +927,12 @@
   "orders_empty_delivered": "No delivered orders yet",
   "orders_empty_cancelled": "No cancelled orders",
   "orders_item_singular": "item",
-  "orders_item_plural": "items"
+  "orders_item_plural": "items",
+  "button_add_all_to_cart": "Add all to cart",
+  "text_adding": "Adding...",
+  "text_style_added_to_cart": "Style added to your cart",
+  "text_style_add_failed": "Couldn't add this style to your cart",
+  "text_product_not_found": "Product not found",
+  "text_product_unavailable": "This product is no longer available.",
+  "button_back_to_shop": "Back to shop"
 }

@@ -464,6 +464,17 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/me/styles',
     shape: 'v3-envelope',
   },
+  // Single style by slug — backs the style-view deep-link / hard-reload
+  // path (router state is wiped on a hard reload, so the page re-fetches
+  // the style and rebuilds it via the styles response transform). v3
+  // returns a single-style detailShape under `data`; the mobile transform
+  // (transformStyleDetailResponse) reshapes it to the legacy Styles shape.
+  'GET /mobile/style-detail': {
+    target: 'new',
+    oldPath: '/customer/styles_list',
+    newPath: '/v3/styles/:slug',
+    shape: 'v3-envelope',
+  },
 
   // ---- Auth (M1 shipped - all on v3) ----
   //

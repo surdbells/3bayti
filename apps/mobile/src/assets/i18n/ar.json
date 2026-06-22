@@ -927,5 +927,12 @@
   "orders_empty_delivered": "لا توجد طلبات تم توصيلها بعد",
   "orders_empty_cancelled": "لا توجد طلبات ملغاة",
   "orders_item_singular": "منتج",
-  "orders_item_plural": "منتجات"
+  "orders_item_plural": "منتجات",
+  "button_add_all_to_cart": "أضف الكل إلى السلة",
+  "text_adding": "جارٍ الإضافة...",
+  "text_style_added_to_cart": "تمت إضافة الإطلالة إلى سلتك",
+  "text_style_add_failed": "تعذّرت إضافة هذه الإطلالة إلى سلتك",
+  "text_product_not_found": "المنتج غير موجود",
+  "text_product_unavailable": "هذا المنتج لم يعد متوفّراً.",
+  "button_back_to_shop": "العودة إلى المتجر"
 }

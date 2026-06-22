@@ -295,7 +295,11 @@ export class ProductPage implements OnInit, OnDestroy {
     is_creating: false,
     is_adding_to_cart: false,
     is_loading_measurement: false,
-    is_empty: false
+    is_empty: false,
+    // True when get_single resolves to a 404 / non-200 (deleted or unknown
+    // product). Gates the not-found empty state; suppresses the normal
+    // content + footer so a missing product never shows placeholders.
+    product_missing: false
   };
 
   process_controls = {
@@ -579,12 +583,23 @@ export class ProductPage implements OnInit, OnDestroy {
               this.process_controls.is_custom = true;
             }
             this.ui_controls.is_loading = false;
+            this.ui_controls.product_missing = false;
+            this.cdr.markForCheck();
+          } else {
+            // Non-200 (e.g. 404 for a deleted/unknown product). Stop the
+            // skeleton and show the not-found empty state instead of
+            // spinning forever / rendering placeholder fields.
+            this.ui_controls.is_loading = false;
+            this.ui_controls.product_missing = true;
             this.cdr.markForCheck();
           }
           this.load_cart();
         },
         error: () => {
+          // Network/HTTP error (the v3 404 surfaces here for some transports).
+          // Same outcome as the non-200 branch: stop loading, show empty state.
           this.ui_controls.is_loading = false;
+          this.ui_controls.product_missing = true;
           this.cdr.markForCheck();
         }
       });

@@ -129,7 +129,10 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/styles/styles.page').then( m => m.StylesPage)
   },
   {
-    path: 'style-view',
+    // :slug makes the page deep-linkable + hard-reload-safe. When navigated
+    // from the list, the style still comes via router state (fast path); on
+    // a hard reload / shared link, the page re-fetches by this slug.
+    path: 'style-view/:slug',
     loadComponent: () => import('./customer/styles/style-view/style-view.page').then( m => m.StyleViewPage)
   },
   {

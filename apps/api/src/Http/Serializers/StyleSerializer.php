@@ -36,6 +36,7 @@ final class StyleSerializer
     /**
      * @param list<array{
      *     id: int,
+     *     legacy_product_id: ?int,
      *     slug: string,
      *     name: string,
      *     primary_image_url: ?string,
@@ -69,6 +70,7 @@ final class StyleSerializer
      * @param list<Style> $styles
      * @param array<int, list<array{
      *     id: int,
+     *     legacy_product_id: ?int,
      *     slug: string,
      *     name: string,
      *     primary_image_url: ?string,
@@ -86,6 +88,28 @@ final class StyleSerializer
             ),
             $styles,
         );
+    }
+
+    /**
+     * Single-style detail shape for GET /v3/styles/{slug}. Mirrors
+     * listShape (same fields + embedded products incl. legacy_product_id)
+     * so the mobile deep-link / hard-reload path can rebuild the style via
+     * the same transformStylesListResponse mapper used for the list.
+     *
+     * @param list<array{
+     *     id: int,
+     *     legacy_product_id: ?int,
+     *     slug: string,
+     *     name: string,
+     *     primary_image_url: ?string,
+     *     price: string,
+     *     display_order: int
+     * }> $products
+     * @return array<string, mixed>
+     */
+    public function detailShape(Style $s, array $products): array
+    {
+        return $this->listShape($s, $products);
     }
 
     private function styleTypeLabel(int $type): string

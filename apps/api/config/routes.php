@@ -515,6 +515,10 @@ return function (App $app): void {
     // M3.1.5.5f — Styles (curated outfits, community + editorial).
     // Read-only in this phase; admin/future-admin-UI manages writes.
     $app->get('/v3/styles', \Bayti\Api\Http\Controllers\Catalog\ListStylesController::class);
+    // Single style by slug — backs the mobile deep-link / hard-reload path
+    // (style-view re-fetches when router state is wiped). Registered after
+    // the bare /v3/styles list so Slim matches the literal path first.
+    $app->get('/v3/styles/{slug}', \Bayti\Api\Http\Controllers\Catalog\GetStyleController::class);
 
     // M2.2 — Sitemap data for apps/web build-time generator
     $app->get('/v3/sitemap-data', \Bayti\Api\Http\Controllers\Catalog\GetSitemapDataController::class);

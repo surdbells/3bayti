@@ -107,6 +107,17 @@ ion-content.page-bg {
   }
 }
 
+/* ----- Add all to cart -------------------------------------- */
+.add-all-btn {
+  margin-top: 14px;
+  --background: var(--ax-color-bg-brand);
+  --background-activated: var(--ax-color-bg-brand-hover);
+  --color: var(--ax-color-text-on-brand, #fff);
+  --border-radius: var(--ax-radius-md);
+  font-weight: 600;
+  text-transform: none;
+}
+
 /* ----- Section header --------------------------------------- */
 
 .section-header {

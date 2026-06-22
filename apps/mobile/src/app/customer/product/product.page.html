@@ -2,6 +2,24 @@
   <button type="button" class="floating-back-btn" (click)="triggerBack()" [attr.aria-label]="'button_back' | translate">
     <ax-icon name="arrow-left"></ax-icon>
   </button>
+
+  <!-- Not-found empty state: shown when the product was deleted / is unknown
+       (get_single resolved to a 404). Replaces the whole PDP so a missing
+       product never renders placeholder image/price/size fields. -->
+  @if(!ui_controls.is_loading && ui_controls.product_missing){
+    <div class="product-missing">
+      <div class="product-missing__icon">
+        <ax-icon name="package-x"></ax-icon>
+      </div>
+      <h2 class="product-missing__title">{{ 'text_product_not_found' | translate }}</h2>
+      <p class="product-missing__desc">{{ 'text_product_unavailable' | translate }}</p>
+      <button type="button" class="product-missing__cta" (click)="triggerBack()">
+        {{ 'button_back_to_shop' | translate }}
+      </button>
+    </div>
+  }
+
+  @if(!ui_controls.product_missing){
   <div class="safe-area">
     <!-- Image Slider -->
     <div class="slides-wrapper">
@@ -332,17 +350,18 @@
       }
     </ax-bottom-sheet>
   }
+  }
 </ion-content>
 
 <!-- Footer -->
 <ion-footer class="product-footer ion-no-border">
-  @if(ui_controls.is_adding_to_cart){
+  @if(ui_controls.is_adding_to_cart && !ui_controls.product_missing){
     <div class="loading-center">
       <ax-loader></ax-loader>
     </div>
   }
 
-  @if(!ui_controls.is_adding_to_cart && !ui_controls.is_loading){
+  @if(!ui_controls.is_adding_to_cart && !ui_controls.is_loading && !ui_controls.product_missing){
     <div class="footer-content">
       <div class="price-display">
         <span class="price-label">{{ 'total' | translate }}</span>

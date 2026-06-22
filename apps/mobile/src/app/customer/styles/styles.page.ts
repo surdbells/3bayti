@@ -36,6 +36,7 @@ export interface StyleProduct {
 
 export interface Styles {
   id: number;
+  slug: string;
   total_price: number;
   category: string;
   style_name: string;
@@ -313,7 +314,10 @@ export class StylesPage implements OnInit, OnDestroy {
   // ========================================
 
   open_style(style: Styles) {
-    this.router.navigate(['/style-view'], {
+    // Navigate by slug (deep-link-safe URL) AND pass the style in router
+    // state (fast path — avoids a re-fetch when coming from the list). On a
+    // hard reload the state is wiped, so style-view re-fetches by the slug.
+    this.router.navigate(['/style-view', style.slug], {
       state: { style }
     });
   }

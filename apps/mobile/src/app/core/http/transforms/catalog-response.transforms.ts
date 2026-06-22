@@ -627,6 +627,24 @@ export function transformStylesListResponse(data: unknown): unknown {
   return data.map(legacyStyleFromV3Style);
 }
 
+/**
+ * v3 single-style detail (GET /v3/styles/:slug) -> legacy Styles shape.
+ *
+ * Backs the style-view deep-link / hard-reload path: when router state is
+ * wiped, the page re-fetches the style by slug and rebuilds it. v3 returns
+ * a SINGLE style object under `data` (detailShape), so this reshapes one
+ * object via the same mapper the list uses — keeping the legacy
+ * {style_name, total_price, products[].{image, product_id, ...}} shape
+ * (incl. legacy_product_id on each product) identical to the list path.
+ *
+ * Returns {} if data isn't an object (defensive — the page treats a
+ * missing id as "not found" and stays on the loading/empty state).
+ */
+export function transformStyleDetailResponse(data: unknown): unknown {
+  if (!isRecord(data)) return {};
+  return legacyStyleFromV3Style(data);
+}
+
 function legacyStyleFromV3Style(item: unknown): Record<string, unknown> {
   if (!isRecord(item)) return {};
   const products = Array.isArray(item['products'])
@@ -647,10 +665,19 @@ function legacyStyleFromV3Style(item: unknown): Record<string, unknown> {
 }
 
 function legacyStyleProductFromV3Product(item: unknown): Record<string, unknown> {
-  if (!isRecord(item)) return { image: '' };
+  if (!isRecord(item)) return { image: '', product_id: 0 };
   return {
-    // Primary binding (styles.page HTML reads style.products[N].image):
+    // The style-view PDP tap opens the product via open_product(product_id),
+    // and the PDP loads by LEGACY id (GET /v3/products/by-legacy-id/:id). So
+    // navigate with the legacy id, falling back to the v3 id for v3-native
+    // products that have no legacy row (same pattern as featured-vendors /
+    // vendor-directory). Without this, product_id is undefined -> NaN ->
+    // placeholder PDP.
+    product_id: asNumberOrNull(item['legacy_product_id']) ?? asNumber(item['id']),
+    // styles.page card binds style.products[N].image:
     image: asString(item['primary_image_url']),
+    // style-view summary + cards bind product_name / price:
+    product_name: asString(item['name']),
     // Pass-through for any caller that wants to navigate to the
     // product detail page from a style:
     id: asNumber(item['id']),
@@ -751,4 +778,7 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   // v3 styles shape as styles-list, so it MUST use the same transform to
   // produce the legacy {style_name, total_price, products[].image} shape.
   'GET /mobile/my-styles': transformStylesListResponse,           // styles list (owner-scoped)
+  // Single style by slug (deep-link / hard-reload re-fetch). v3 returns one
+  // style object under `data`; reshape it to the legacy Styles shape.
+  'GET /mobile/style-detail': transformStyleDetailResponse,       // single style
 };
