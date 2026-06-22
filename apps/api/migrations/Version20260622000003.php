@@ -66,21 +66,6 @@ final class Version20260622000003 extends AbstractMigration
         return 'Storefront search — pg_trgm + trigram GIN indexes on product/vendor/category names for short & wide ILIKE search';
     }
 
-    /**
-     * Run WITHOUT the transaction wrapper. We probe for / attempt to enable
-     * pg_trgm and must tolerate a missing CREATE privilege (managed/shared
-     * Postgres where the app role can't create extensions). A failed
-     * CREATE EXTENSION inside a transaction poisons it (every later
-     * statement then errors with "current transaction is aborted"), so we
-     * opt out of the wrapper and degrade gracefully instead — skipping the
-     * trigram indexes while keeping the migration green. The ILIKE search
-     * still works unindexed; the indexes are a pure performance accelerator.
-     */
-    public function isTransactional(): bool
-    {
-        return false;
-    }
-
     public function up(Schema $schema): void
     {
         $this->abortIf(
@@ -88,32 +73,27 @@ final class Version20260622000003 extends AbstractMigration
             'This migration only supports PostgreSQL.'
         );
 
-        // Trigram extension powers index-accelerated ILIKE '%term%'. Probe
-        // first (so an already-present extension never triggers a needless
-        // privileged CREATE), then attempt to create it, tolerating a
-        // missing CREATE privilege.
+        // The trigram indexes require pg_trgm. Creating an extension needs a
+        // superuser / CREATE-on-database privilege the app role often lacks,
+        // and attempting CREATE EXTENSION here cannot be made safe: the project
+        // runs migrations all-or-nothing (every migration must be
+        // transactional), and a failed CREATE inside that transaction aborts
+        // the whole run. So this migration NEVER creates the extension — it
+        // builds the trigram indexes only when pg_trgm is ALREADY present, and
+        // otherwise skips them with a warning. The ILIKE search works unindexed;
+        // the indexes are a pure accelerator. To enable them, have a DB
+        // superuser run "CREATE EXTENSION pg_trgm;" first (then re-run), or
+        // create the four idx_*_trgm indexes manually afterwards.
         $hasTrgm = (bool) $this->connection->fetchOne(
             "SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'"
         );
         if (!$hasTrgm) {
-            try {
-                $this->connection->executeStatement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
-                $hasTrgm = (bool) $this->connection->fetchOne(
-                    "SELECT 1 FROM pg_extension WHERE extname = 'pg_trgm'"
-                );
-            } catch (\Throwable) {
-                $hasTrgm = false;
-            }
-        }
-
-        if (!$hasTrgm) {
             $this->warnIf(
                 true,
-                'pg_trgm is not enabled and the DB role cannot create it — skipping trigram '
-                . 'GIN indexes. Storefront search still works (unindexed scan). To enable '
-                . 'index acceleration, have a DB superuser run "CREATE EXTENSION pg_trgm;" then '
-                . 'create idx_{products_name,products_description,vendors_name,categories_name}_trgm '
-                . '(GIN on LOWER(col) gin_trgm_ops).'
+                'pg_trgm is not enabled in this database — skipping trigram GIN indexes. '
+                . 'Storefront search still works (unindexed scan). To enable index '
+                . 'acceleration, have a DB superuser run "CREATE EXTENSION pg_trgm;" then '
+                . 'create idx_{products_name,products_description,vendors_name,categories_name}_trgm.'
             );
 
             return;
