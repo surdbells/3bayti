@@ -900,5 +900,6 @@
   "label_category_name": "Category name",
   "placeholder_select_emirate": "Select emirate",
   "sign_in_to_add_to_cart": "Sign in or sign up to be able to add to cart",
-  "sign_in_to_add_to_wishlist": "Sign in or sign up to be able to add to your wishlist"
+  "sign_in_to_add_to_wishlist": "Sign in or sign up to be able to add to your wishlist",
+  "session_expired_sign_in": "Your session expired. Please sign in again."
 }

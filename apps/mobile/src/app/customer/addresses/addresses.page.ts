@@ -137,6 +137,61 @@ export class AddressesPage implements OnInit, OnDestroy {
       this.get_billing();
     }
   }
+  /**
+   * Guard against double session-expiry handling.
+   *
+   * When the access token is dead AND the adapter can't refresh it
+   * (refresh_token also expired / revoked), every authed call on the
+   * page 401s. Without a guard the page would fire one
+   * session-expired toast + /login navigation PER failing call (the
+   * "3 toasts" symptom). This latch ensures we surface the friendly
+   * message and redirect exactly once.
+   */
+  private sessionExpiredHandled = false;
+
+  /**
+   * True when an adapter response is a 401 the refresh-retry path
+   * could not recover (dead access token + un-refreshable session).
+   * The adapter already attempted a transparent refresh+retry; a 401
+   * reaching the page means refresh was genuinely impossible.
+   */
+  private isSessionExpired(response: any): boolean {
+    return response?.response_code === 401;
+  }
+
+  /**
+   * Friendly session-expired handling: one toast + redirect to /login.
+   * Idempotent via sessionExpiredHandled so concurrent authed calls
+   * that all 401 during the dead-session window don't stack toasts.
+   */
+  private handleSessionExpired() {
+    if (this.sessionExpiredHandled) {
+      return;
+    }
+    this.sessionExpiredHandled = true;
+    this.error_notification(this.i18n.t('session_expired_sign_in'));
+    this.router.navigate(['/', 'login']);
+  }
+
+  /**
+   * Pull the latest access token from Preferences('user') into the
+   * in-memory single_user, then re-fetch billing. The adapter persists
+   * rotated tokens to Preferences on a transparent refresh, so reading
+   * them back keeps subsequent authed calls on the current token
+   * instead of replaying a stale (already-rotated) one.
+   */
+  private async resyncTokenThenGetBilling() {
+    try {
+      const ret: any = await Preferences.get({ key: 'user' });
+      if (ret.value) {
+        this.single_user = JSON.parse(ret.value);
+      }
+    } catch {
+      /* malformed blob — fall through with the existing in-memory token */
+    }
+    this.get_billing();
+  }
+
   get_billing() {
     this.ui_controls.is_loading = true;
     // Direct v3 (GET /v3/me/billing-address). No response transform is
@@ -164,7 +219,15 @@ export class AddressesPage implements OnInit, OnDestroy {
               this.ui_controls.is_empty = true;
             }
             this.ui_controls.is_loading = false;
-          }else{
+          } else if (this.isSessionExpired(response)) {
+            // Access token expired AND the adapter could not refresh it
+            // (refresh_token dead too). Don't surface the raw
+            // "Authentication required" — show a friendly message and
+            // send the user to sign in. Idempotent across concurrent
+            // 401s so we don't stack toasts.
+            this.ui_controls.is_loading = false;
+            this.handleSessionExpired();
+          } else {
             this.ui_controls.is_empty = true;
             this.ui_controls.is_loading = false;
             this.error_notification(response.message);
@@ -230,8 +293,21 @@ export class AddressesPage implements OnInit, OnDestroy {
                 key: 'user',
                 value: JSON.stringify(this.single_user)
               });
-              this.get_billing();
-            }else{
+              // Re-sync the in-memory access token from Preferences
+              // before re-fetching. If the PATCH 401'd and the adapter
+              // transparently refreshed, it rotated the access +
+              // refresh tokens in Preferences('user'); re-using the
+              // stale in-memory token here would force ANOTHER refresh
+              // with an already-rotated (single-use) refresh token,
+              // which the server treats as reuse and revokes the whole
+              // session. Reading the fresh token avoids that cascade.
+              void this.resyncTokenThenGetBilling();
+            } else if (this.isSessionExpired(response)) {
+              // Session died mid-edit and refresh couldn't recover it.
+              // Friendly message + redirect rather than the raw 401.
+              this.ui_controls.is_updating = false;
+              this.handleSessionExpired();
+            } else {
               this.ui_controls.is_updating = false
               this.error_notification(response.message);
             }
