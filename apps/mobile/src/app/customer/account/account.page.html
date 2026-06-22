@@ -14,7 +14,7 @@
       </div>
     </ion-buttons>
     <ion-buttons slot="end">
-      @if(single_user.is_vendor && single_user.is_store_active && single_user.is_store_approved){
+      @if(single_user.is_vendor && single_user.is_store_active){
         <ion-button (click)="user_store()" fill="clear">
           <ax-icon name="store" [style.color]="'var(--text)'"/>
         </ion-button>

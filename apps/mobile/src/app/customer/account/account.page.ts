@@ -316,30 +316,65 @@ export class AccountPage implements OnInit, OnDestroy {
     // Refresh the avatar from the server so sessions that pre-date the
     // login-time avatar persistence (cached 'user' blob without avatar)
     // still show it.
-    this.refreshProfileAvatar();
+    this.refreshProfile();
     }
 
   /**
-   * Pull the freshest profile from GET /v3/me/profile and sync the avatar
-   * into single_user + the cached 'user' Preferences blob. The v3 profile
-   * emits the picture under `avatar_url` (UserSerializer::publicProfile);
-   * the template binds `single_user.avatar`, so we map across. Existing
-   * sessions whose cached blob predates avatar persistence get the avatar
-   * this way; silent on failure (the placeholder/initial fallback shows).
+   * Pull the freshest profile from GET /v3/me/profile and sync the avatar AND
+   * the vendor/store flags into single_user + the cached 'user' Preferences
+   * blob. The v3 profile (UserSerializer::publicProfile) emits:
+   *   - avatar_url        -> single_user.avatar     (template binds `avatar`)
+   *   - roles[] inc 'vendor' -> single_user.is_vendor
+   *   - is_store_active   -> single_user.is_store_active
+   *   - is_store_approved -> single_user.is_store_approved
+   *
+   * Why sync the flags here: the header "Store" button is gated on these
+   * flags, which previously came ONLY from the login transform. Existing
+   * sessions (or logins that omitted them) leave the flags stale/missing so
+   * the button stays hidden even for an active store. Re-reading the profile
+   * on every page entry re-derives them and persists back, so the @if gate
+   * re-evaluates and the button appears. Silent on failure (the placeholder
+   * avatar applies and flags keep their cached value).
    */
-  refreshProfileAvatar() {
+  refreshProfile() {
     if (!this.single_user.token) return;
     this.networkAdapter.get_v3('GET /me/profile', { authToken: this.single_user.token })
       .subscribe({
         next: (response: any) => {
           if (response.response_code !== 200) return;
           const user = response?.data?.user;
-          if (!user || typeof user.avatar_url !== 'string') return;
-          if (user.avatar_url === this.single_user.avatar) return;
-          this.single_user.avatar = user.avatar_url;
-          Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+          if (!user) return;
+
+          let changed = false;
+
+          if (typeof user.avatar_url === 'string' && user.avatar_url !== this.single_user.avatar) {
+            this.single_user.avatar = user.avatar_url;
+            changed = true;
+          }
+
+          // Vendor/store flags: re-derive from the profile so the header
+          // "Store" button reflects the current store state.
+          const isVendor = Array.isArray(user.roles) && user.roles.includes('vendor');
+          if (isVendor !== this.single_user.is_vendor) {
+            this.single_user.is_vendor = isVendor;
+            changed = true;
+          }
+          if (typeof user.is_store_active === 'boolean'
+              && user.is_store_active !== this.single_user.is_store_active) {
+            this.single_user.is_store_active = user.is_store_active;
+            changed = true;
+          }
+          if (typeof user.is_store_approved === 'boolean'
+              && user.is_store_approved !== this.single_user.is_store_approved) {
+            this.single_user.is_store_approved = user.is_store_approved;
+            changed = true;
+          }
+
+          if (changed) {
+            Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+          }
         },
-        error: () => { /* silent — fallback avatar applies */ },
+        error: () => { /* silent — fallback avatar applies, flags keep cached value */ },
       });
   }
 
