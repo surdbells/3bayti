@@ -136,16 +136,19 @@ final class UserSerializer
      * Used by the Customers admin screen.
      *
      * Unlike staff(), this includes phone + country_code (so the Phone column
-     * renders) and the is_active / verification flags + registration date that
-     * the customer filter panel (Phase 2) will read.
+     * renders), the is_active / verification flags, the real registration date
+     * (created_at — the users table has carried a NOT NULL TIMESTAMPTZ
+     * created_at since the initial schema, mapped via the Timestamps trait),
+     * and orders_count.
      *
-     * Note: the User entity has no created_at column yet, so registration date
-     * is emitted as null for forward-compatibility — the key is present so the
-     * portal can rely on its shape once the column lands.
+     * orders_count is supplied by the caller because it's computed in a single
+     * grouped LEFT JOIN at the repository layer (see
+     * UserRepository::findCustomersPaginated) rather than lazily per row — a
+     * per-row Order count would be an N+1 across the listing.
      *
      * @return array<string, mixed>
      */
-    public function customer(User $user): array
+    public function customer(User $user, int $ordersCount = 0): array
     {
         return [
             'id' => $user->getId(),
@@ -158,7 +161,8 @@ final class UserSerializer
             'is_email_verified' => $user->isEmailVerified(),
             'is_phone_verified' => $user->isPhoneVerified(),
             'last_login_at' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
-            'created_at' => null,
+            'created_at' => $user->getCreatedAt()->format(\DateTimeInterface::ATOM),
+            'orders_count' => $ordersCount,
         ];
     }
 }

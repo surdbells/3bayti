@@ -60,6 +60,12 @@ final class VendorSerializer
             // M3.2.X.7-D: Vendor email locale preference. null means
             // no preference (falls back to English at send time).
             'preferred_locale' => $v->getPreferredLocale(),
+            // Vendor location (UAE-only platform). emirate is one of the
+            // seven emirates (or null); country is conceptually always
+            // "United Arab Emirates" but emitted explicitly so the admin
+            // Stores table + store editor can surface/correct it.
+            'emirate' => $v->getEmirate(),
+            'country' => $v->getCountry(),
             'legacy_vendor_id' => $v->getLegacyVendorId(),
             'created_at' => $v->getCreatedAt()->format(DateTimeInterface::ATOM),
             'updated_at' => $v->getUpdatedAt()->format(DateTimeInterface::ATOM),

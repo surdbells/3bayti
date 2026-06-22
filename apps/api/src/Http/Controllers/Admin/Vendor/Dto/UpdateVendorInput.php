@@ -88,6 +88,22 @@ final class UpdateVendorInput
     )]
     public readonly ?string $preferred_locale;
 
+    /**
+     * Emirate the store operates from. One of the seven UAE emirates;
+     * null/omitted leaves the existing value unchanged. Empty string is
+     * normalised to null (clears the value).
+     */
+    #[Assert\Length(max: 60)]
+    public readonly ?string $emirate;
+
+    /**
+     * Store country (UAE-only platform, conceptually always
+     * "United Arab Emirates"). Null/omitted leaves the existing value
+     * unchanged; empty string clears it.
+     */
+    #[Assert\Length(max: 60)]
+    public readonly ?string $country;
+
     public function __construct(
         string $name = '',
         string $contact_email = '',
@@ -101,6 +117,8 @@ final class UpdateVendorInput
         ?bool $is_verified = null,
         ?bool $is_featured = null,
         ?string $preferred_locale = null,
+        ?string $emirate = null,
+        ?string $country = null,
     ) {
         $this->name = trim($name);
         $this->contact_email = trim($contact_email);
@@ -117,5 +135,9 @@ final class UpdateVendorInput
         $this->is_verified = $is_verified;
         $this->is_featured = $is_featured;
         $this->preferred_locale = $preferred_locale !== null ? trim($preferred_locale) : null;
+        $emirate = $emirate !== null ? trim($emirate) : null;
+        $this->emirate = ($emirate === '' || $emirate === null) ? null : $emirate;
+        $country = $country !== null ? trim($country) : null;
+        $this->country = ($country === '' || $country === null) ? null : $country;
     }
 }

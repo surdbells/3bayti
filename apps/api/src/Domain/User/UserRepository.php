@@ -158,6 +158,129 @@ class UserRepository extends EntityRepository
         return ['items' => $items, 'total' => $total];
     }
 
+    /**
+     * Paginated customer listing for the admin Customers screen.
+     *
+     * Returns each matched customer paired with their lifetime orders_count,
+     * computed in ONE grouped query (LEFT JOIN orders + COUNT, GROUP BY user)
+     * so the listing never fires an N+1 Order count per row.
+     *
+     * Filters (all optional, applied only when present):
+     *   - search        : email / first name / last name LIKE
+     *   - status        : 'active' | 'inactive'  → is_active = true/false
+     *   - email_verified: bool → is_email_verified
+     *   - phone_verified: bool → is_phone_verified
+     *   - created_from  : DateTimeImmutable → created_at >= (inclusive)
+     *   - created_to    : DateTimeImmutable → created_at <= (inclusive end-of-day handled by caller)
+     *   - min_orders    : int → HAVING COUNT(orders) >= n
+     *
+     * @param array{
+     *   search?:string|null,
+     *   status?:string|null,
+     *   email_verified?:bool|null,
+     *   phone_verified?:bool|null,
+     *   created_from?:\DateTimeImmutable|null,
+     *   created_to?:\DateTimeImmutable|null,
+     *   min_orders?:int|null,
+     *   limit?:int,
+     *   offset?:int
+     * } $filters
+     * @return array{items: list<array{user: User, orders_count: int}>, total: int}
+     */
+    public function findCustomersPaginated(array $filters = []): array
+    {
+        $qb = $this->createQueryBuilder('u')
+            ->where('u.deletedAt IS NULL')
+            ->andWhere('u.isCustomer = true');
+
+        if (!empty($filters['search'])) {
+            $needle = '%' . $filters['search'] . '%';
+            $qb->andWhere(
+                $qb->expr()->orX(
+                    $qb->expr()->like('u.email', ':s'),
+                    $qb->expr()->like('u.firstName', ':s'),
+                    $qb->expr()->like('u.lastName', ':s'),
+                ),
+            )->setParameter('s', $needle);
+        }
+
+        if (isset($filters['status']) && $filters['status'] !== null && $filters['status'] !== '') {
+            if ($filters['status'] === 'active') {
+                $qb->andWhere('u.isActive = true');
+            } elseif ($filters['status'] === 'inactive') {
+                $qb->andWhere('u.isActive = false');
+            }
+        }
+
+        if (isset($filters['email_verified']) && $filters['email_verified'] !== null) {
+            $qb->andWhere('u.isEmailVerified = :emailVerified')
+               ->setParameter('emailVerified', (bool) $filters['email_verified']);
+        }
+
+        if (isset($filters['phone_verified']) && $filters['phone_verified'] !== null) {
+            $qb->andWhere('u.isPhoneVerified = :phoneVerified')
+               ->setParameter('phoneVerified', (bool) $filters['phone_verified']);
+        }
+
+        if (!empty($filters['created_from'])) {
+            $qb->andWhere('u.createdAt >= :createdFrom')
+               ->setParameter('createdFrom', $filters['created_from']);
+        }
+
+        if (!empty($filters['created_to'])) {
+            $qb->andWhere('u.createdAt <= :createdTo')
+               ->setParameter('createdTo', $filters['created_to']);
+        }
+
+        $minOrders = isset($filters['min_orders']) ? (int) $filters['min_orders'] : 0;
+
+        // Total count of matching customers. When min_orders is in play the
+        // count must respect the HAVING clause, so we count the grouped rows.
+        if ($minOrders > 0) {
+            $countQb = clone $qb;
+            $countQb->leftJoin(
+                \Bayti\Api\Domain\Order\Order::class,
+                'oc',
+                'WITH',
+                'oc.user = u',
+            )
+            ->select('u.id')
+            ->groupBy('u.id')
+            ->having('COUNT(oc.id) >= :minOrders')
+            ->setParameter('minOrders', $minOrders);
+            $total = count($countQb->getQuery()->getScalarResult());
+        } else {
+            $countQb = clone $qb;
+            $total = (int) $countQb->select('COUNT(u.id)')->getQuery()->getSingleScalarResult();
+        }
+
+        // Page query: pull the User entities plus their grouped orders_count.
+        $qb->leftJoin(\Bayti\Api\Domain\Order\Order::class, 'o', 'WITH', 'o.user = u')
+            ->select('u AS user', 'COUNT(o.id) AS orders_count')
+            ->groupBy('u.id')
+            ->orderBy('u.id', 'DESC')
+            ->setMaxResults($filters['limit'] ?? 20)
+            ->setFirstResult($filters['offset'] ?? 0);
+
+        if ($minOrders > 0) {
+            $qb->having('COUNT(o.id) >= :minOrders')
+               ->setParameter('minOrders', $minOrders);
+        }
+
+        /** @var list<array{user: User, orders_count: int|string}> $rows */
+        $rows = $qb->getQuery()->getResult();
+
+        $items = array_map(
+            static fn (array $row): array => [
+                'user' => $row['user'],
+                'orders_count' => (int) $row['orders_count'],
+            ],
+            $rows,
+        );
+
+        return ['items' => $items, 'total' => $total];
+    }
+
     public function save(User $user, bool $flush = true): void
     {
         $em = $this->getEntityManager();

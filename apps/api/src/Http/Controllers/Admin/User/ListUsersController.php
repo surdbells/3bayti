@@ -39,26 +39,102 @@ final class ListUsersController
         //    gets the customer() shape instead.
         $isCustomerListing = $role === 'customer';
 
-        $filters = [
+        /** @var UserRepository $repo */
+        $repo = $this->em->getRepository(User::class);
+
+        // Customers and staff use different repository paths + response shapes.
+        if ($isCustomerListing) {
+            $filters = [
+                'search'         => $q['search'] ?? null,
+                'status'         => $this->stringOrNull($q['status'] ?? null),
+                'email_verified' => $this->boolOrNull($q['email_verified'] ?? null),
+                'phone_verified' => $this->boolOrNull($q['phone_verified'] ?? null),
+                'created_from'   => $this->dateFrom($q['created_from'] ?? null),
+                'created_to'     => $this->dateTo($q['created_to'] ?? null),
+                'min_orders'     => $this->intOrNull($q['min_orders'] ?? null),
+                'limit'          => $limit,
+                'offset'         => $offset,
+            ];
+
+            $result = $repo->findCustomersPaginated($filters);
+
+            $data = array_map(
+                fn (array $row): array => $this->serializer->customer($row['user'], $row['orders_count']),
+                $result['items'],
+            );
+
+            return $this->ok([
+                'data' => $data,
+                'meta' => ['total' => $result['total'], 'limit' => $limit, 'offset' => $offset],
+            ]);
+        }
+
+        $result = $repo->findPaginated([
+            'staff'  => true,
             'search' => $q['search'] ?? null,
             'limit'  => $limit,
             'offset' => $offset,
-        ];
-        if ($isCustomerListing) {
-            $filters['role'] = 'customer';
-        } else {
-            $filters['staff'] = true;
-        }
-
-        /** @var UserRepository $repo */
-        $repo   = $this->em->getRepository(User::class);
-        $result = $repo->findPaginated($filters);
-
-        $shape = $isCustomerListing ? 'customer' : 'staff';
+        ]);
 
         return $this->ok([
-            'data' => array_map([$this->serializer, $shape], $result['items']),
+            'data' => array_map([$this->serializer, 'staff'], $result['items']),
             'meta' => ['total' => $result['total'], 'limit' => $limit, 'offset' => $offset],
         ]);
+    }
+
+    private function stringOrNull(mixed $v): ?string
+    {
+        return is_string($v) && $v !== '' ? $v : null;
+    }
+
+    private function intOrNull(mixed $v): ?int
+    {
+        if ($v === null || $v === '' || !is_numeric($v)) {
+            return null;
+        }
+        $n = (int) $v;
+        return $n > 0 ? $n : null;
+    }
+
+    /**
+     * Parse a truthy/falsy query param into a nullable bool. Returns null when
+     * the param is absent or empty so the filter is simply not applied.
+     */
+    private function boolOrNull(mixed $v): ?bool
+    {
+        if ($v === null || $v === '') {
+            return null;
+        }
+        if (is_bool($v)) {
+            return $v;
+        }
+        $s = strtolower((string) $v);
+        if (in_array($s, ['1', 'true', 'yes'], true)) {
+            return true;
+        }
+        if (in_array($s, ['0', 'false', 'no'], true)) {
+            return false;
+        }
+        return null;
+    }
+
+    /** Start of the given calendar day (YYYY-MM-DD), inclusive. */
+    private function dateFrom(mixed $v): ?\DateTimeImmutable
+    {
+        if (!is_string($v) || $v === '') {
+            return null;
+        }
+        $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $v);
+        return $d === false ? null : $d;
+    }
+
+    /** End of the given calendar day (YYYY-MM-DD), inclusive (23:59:59). */
+    private function dateTo(mixed $v): ?\DateTimeImmutable
+    {
+        if (!is_string($v) || $v === '') {
+            return null;
+        }
+        $d = \DateTimeImmutable::createFromFormat('!Y-m-d', $v);
+        return $d === false ? null : $d->setTime(23, 59, 59);
     }
 }

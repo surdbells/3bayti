@@ -191,19 +191,22 @@ class OrderRepository extends EntityRepository
     /**
      * Admin-scoped paginated order list. Supports cross-cutting
      * filters that the customer + vendor surfaces don't expose:
-     *   - status: any of Order::STATUS_* values, or null for all
+     *   - status: a single Order::STATUS_* value, a list of values
+     *     (matched with IN — used by the logistics board to scope to the
+     *     fulfilment set), or null for all
      *   - userId: filter to a single customer
      *   - vendorId: filter to orders containing at least one item
      *     from a specific vendor
      *
      * Used by M3.1.7-D admin orders surface.
      *
+     * @param string|list<string>|null $statusFilter
      * @return array{0: list<Order>, 1: int}
      */
     public function paginatedForAdmin(
         int $limit,
         int $offset,
-        ?string $statusFilter = null,
+        string|array|null $statusFilter = null,
         ?int $userIdFilter = null,
         ?int $vendorIdFilter = null,
         ?\DateTimeImmutable $since = null,
@@ -211,6 +214,12 @@ class OrderRepository extends EntityRepository
     ): array {
         $limit = max(1, min($limit, 100));
         $offset = max(0, $offset);
+
+        // Normalise the status filter into a clean list (drops empties).
+        // A single string stays a 1-element list; null/[] means "no filter".
+        $statusList = is_array($statusFilter)
+            ? array_values(array_filter($statusFilter, static fn ($s): bool => is_string($s) && $s !== ''))
+            : ($statusFilter !== null && $statusFilter !== '' ? [$statusFilter] : []);
 
         // Count query
         $totalQb = $this->createQueryBuilder('o');
@@ -222,8 +231,8 @@ class OrderRepository extends EntityRepository
         } else {
             $totalQb->select('COUNT(o.id)');
         }
-        if ($statusFilter !== null) {
-            $totalQb->andWhere('o.status = :status')->setParameter('status', $statusFilter);
+        if ($statusList !== []) {
+            $totalQb->andWhere('o.status IN (:statuses)')->setParameter('statuses', $statusList);
         }
         if ($userIdFilter !== null) {
             $totalQb->andWhere('o.user = :user')->setParameter('user', $userIdFilter);
@@ -250,8 +259,8 @@ class OrderRepository extends EntityRepository
         } else {
             $idQb->select('o.id');
         }
-        if ($statusFilter !== null) {
-            $idQb->andWhere('o.status = :status')->setParameter('status', $statusFilter);
+        if ($statusList !== []) {
+            $idQb->andWhere('o.status IN (:statuses)')->setParameter('statuses', $statusList);
         }
         if ($userIdFilter !== null) {
             $idQb->andWhere('o.user = :user')->setParameter('user', $userIdFilter);

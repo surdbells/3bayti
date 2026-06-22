@@ -101,6 +101,12 @@ final class UpdateVendorController
             // (which reads all entity fields).
             $vendor->setFeatured($input->is_featured);
         }
+        if ($input->emirate !== null) {
+            $vendor->setEmirate($input->emirate);
+        }
+        if ($input->country !== null) {
+            $vendor->setCountry($input->country);
+        }
         if ($input->preferred_locale !== null) {
             // M3.2.X.7-D: Vendor email locale preference. The entity
             // setter validates against Vendor::SUPPORTED_LOCALES;

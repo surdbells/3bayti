@@ -139,9 +139,25 @@ final class ListAdminOrdersController
         return max(0, (int) $raw);
     }
 
-    private function parseStatus(mixed $raw): ?string
+    /**
+     * Parse the status filter. Accepts either a single status value or a
+     * comma-separated list (CSV) of statuses — the logistics board sends the
+     * fulfilment set ("shipped,delivered") this way. Each value is validated
+     * against the canonical Order::STATUS_* set; unknown values are dropped.
+     *
+     * Return contract (kept backward-compatible):
+     *   - no/empty/all-invalid input → null (no status filter)
+     *   - exactly one valid value    → that value as a string
+     *   - multiple valid values      → a de-duplicated list<string>
+     *
+     * Returning a bare string for the single-value case preserves the prior
+     * generic /admin/orders behaviour for every existing caller.
+     *
+     * @return string|list<string>|null
+     */
+    private function parseStatus(mixed $raw): string|array|null
     {
-        if (!is_string($raw) || $raw === '') {
+        if (!is_string($raw) || trim($raw) === '') {
             return null;
         }
         $valid = [
@@ -154,7 +170,20 @@ final class ListAdminOrdersController
             Order::STATUS_REFUNDED,
             Order::STATUS_FAILED,
         ];
-        return in_array($raw, $valid, true) ? $raw : null;
+
+        $candidates = array_filter(
+            array_map('trim', explode(',', $raw)),
+            static fn (string $s): bool => $s !== '',
+        );
+        $accepted = array_values(array_unique(array_filter(
+            $candidates,
+            static fn (string $s): bool => in_array($s, $valid, true),
+        )));
+
+        if ($accepted === []) {
+            return null;
+        }
+        return count($accepted) === 1 ? $accepted[0] : $accepted;
     }
 
     private function parsePositiveInt(mixed $raw): ?int

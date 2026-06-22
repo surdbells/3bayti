@@ -236,6 +236,25 @@ class Vendor
     #[ORM\Column(name: 'store_address', type: 'string', length: 500, nullable: true)]
     private ?string $storeAddress = null;
 
+    /**
+     * Emirate the store operates from (UAE-only platform). One of the
+     * seven emirates as free text (Dubai, Abu Dhabi, Sharjah, Ajman,
+     * Umm Al Quwain, Ras Al Khaimah, Fujairah). Nullable — legacy
+     * vendors predate this column; the migration best-effort backfills
+     * it from store_address.
+     */
+    #[ORM\Column(name: 'emirate', type: 'string', length: 60, nullable: true)]
+    private ?string $emirate = null;
+
+    /**
+     * Country the store operates from. Conceptually always
+     * "United Arab Emirates" on this UAE-only platform, but stored
+     * explicitly (nullable) so the admin UI can surface/correct it and
+     * a future multi-country expansion has the column in place.
+     */
+    #[ORM\Column(name: 'country', type: 'string', length: 60, nullable: true)]
+    private ?string $country = null;
+
     // ---- bank / payout ----
 
     #[ORM\Column(name: 'store_bank_name', type: 'string', length: 255, nullable: true)]
@@ -592,6 +611,20 @@ class Vendor
 
     public function getStoreAddress(): ?string { return $this->storeAddress; }
     public function setStoreAddress(?string $address): void { $this->storeAddress = $address; }
+
+    public function getEmirate(): ?string { return $this->emirate; }
+    public function setEmirate(?string $emirate): void
+    {
+        $emirate = $emirate !== null ? trim($emirate) : null;
+        $this->emirate = ($emirate === '' || $emirate === null) ? null : $emirate;
+    }
+
+    public function getCountry(): ?string { return $this->country; }
+    public function setCountry(?string $country): void
+    {
+        $country = $country !== null ? trim($country) : null;
+        $this->country = ($country === '' || $country === null) ? null : $country;
+    }
 
     public function getStoreBankName(): ?string { return $this->storeBankName; }
     public function setStoreBankName(?string $name): void { $this->storeBankName = $name; }
