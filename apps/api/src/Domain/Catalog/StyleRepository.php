@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\Catalog;
 
+use Bayti\Api\Domain\User\User;
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\ORM\EntityRepository;
 
@@ -61,6 +62,45 @@ class StyleRepository extends EntityRepository
             ->where('s.styleType = :type')
             ->andWhere('s.isActive = true')
             ->setParameter('type', $styleType);
+
+        /** @var list<Style> $items */
+        $items = $qb->getQuery()->getResult();
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        return ['items' => $items, 'total' => $total];
+    }
+
+    /**
+     * Paginated active-styles listing owned by a specific user.
+     *
+     * Mirrors findActivePaginatedByType but filters on ownership
+     * (created_by_user) instead of style_type — this backs the "My
+     * Styles" tab (GET /v3/me/styles), which surfaces the styles the
+     * authenticated user submitted, regardless of their type.
+     *
+     * Same ordering (displayOrder NULLS LAST, then createdAt DESC) and
+     * same separate-load pattern for products (loadProductsForStyles).
+     *
+     * @return array{items: list<Style>, total: int}
+     */
+    public function findByOwnerPaginated(User $user, int $limit, int $offset): array
+    {
+        $qb = $this->createQueryBuilder('s')
+            ->where('s.createdByUser = :user')
+            ->andWhere('s.isActive = true')
+            ->setParameter('user', $user)
+            // Same NULLS LAST trick as findActivePaginatedByType.
+            ->addOrderBy('CASE WHEN s.displayOrder IS NULL THEN 1 ELSE 0 END', 'ASC')
+            ->addOrderBy('s.displayOrder', 'ASC')
+            ->addOrderBy('s.createdAt', 'DESC')
+            ->setFirstResult($offset)
+            ->setMaxResults($limit);
+
+        $countQb = $this->createQueryBuilder('s')
+            ->select('COUNT(s.id)')
+            ->where('s.createdByUser = :user')
+            ->andWhere('s.isActive = true')
+            ->setParameter('user', $user);
 
         /** @var list<Style> $items */
         $items = $qb->getQuery()->getResult();

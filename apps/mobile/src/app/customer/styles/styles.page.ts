@@ -143,8 +143,51 @@ export class StylesPage implements OnInit, OnDestroy {
       this.single_user = JSON.parse(ret.value);
       this.initial.id = this.single_user.id;
       this.initial.token = this.single_user.token;
-      this.get_styles('community');
+      this.get_styles(this.activeTab);
     }
+  }
+
+  // ========================================
+  // Tab -> backend mapping
+  // ========================================
+
+  /**
+   * Resolve the route-key + request opts for a given tab. The three tabs
+   * map to two backends:
+   *   community -> GET /v3/styles ?type=community  (anonymous)
+   *   abayti    -> GET /v3/styles ?type=editorial  (anonymous; "3bayti")
+   *   personal  -> GET /v3/me/styles               (authed, no ?type)
+   *
+   * The personal call MUST pass authToken (owner-scoped); the others must
+   * NOT. The user is guaranteed logged in here — getObject() redirects to
+   * /login when there's no user blob.
+   */
+  private buildRequest(tab: TabType, offset: number): {
+    routeKey: string;
+    opts: {
+      authToken?: string;
+      queryParams: { [key: string]: string | number };
+    };
+  } {
+    const paging = { limit: this.initial.limit, offset };
+
+    if (tab === 'personal') {
+      return {
+        routeKey: 'GET /mobile/my-styles',
+        opts: {
+          authToken: this.single_user.token,
+          queryParams: { ...paging },
+        },
+      };
+    }
+
+    const type = tab === 'abayti' ? 'editorial' : 'community';
+    return {
+      routeKey: 'GET /mobile/styles-list',
+      opts: {
+        queryParams: { type, ...paging },
+      },
+    };
   }
 
   // ========================================
@@ -183,26 +226,24 @@ export class StylesPage implements OnInit, OnDestroy {
   // API Calls
   // ========================================
 
-  get_styles(type: string) {
+  get_styles(tab: TabType) {
+    this.activeTab = tab;
     this.styles = [];
-    this.initial.type = type;
+    this.initial.type = tab;
     this.initial.offset = 0;
     this.ui_controls.is_loading = true;
     this.ui_controls.is_empty = false;
     this.cdr.markForCheck();
 
-    // Direct v3 (GET /v3/styles). Public catalog read — no authToken.
-    // transformStylesListRequest mapped type/limit/offset straight through
-    // as query params; we replicate that here. The registered response
-    // transform (transformStylesListResponse) still applies via get_v3, so
-    // response.data keeps the legacy Styles[] shape.
-    this.networkAdapter.get_v3('GET /mobile/styles-list', {
-      queryParams: {
-        type: this.initial.type,
-        limit: this.initial.limit,
-        offset: this.initial.offset,
-      },
-    })
+    // Resolve the route-key + opts for the active tab. Community/3bayti hit
+    // the anonymous /v3/styles (type=community/editorial, no authToken); My
+    // Styles hits owner-scoped /v3/me/styles WITH authToken and no ?type.
+    // The registered response transform (transformStylesListResponse) is
+    // wired for BOTH route-keys, so response.data keeps the legacy
+    // Styles[] shape either way.
+    const { routeKey, opts } = this.buildRequest(tab, this.initial.offset);
+
+    this.networkAdapter.get_v3(routeKey, opts)
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
@@ -228,16 +269,13 @@ export class StylesPage implements OnInit, OnDestroy {
     this.initial.token = this.single_user.token;
     this.initial.offset = this.initial.offset + this.initial.limit;
 
-    // Direct v3 (GET /v3/styles) — paginated read for infinite scroll,
-    // advancing offset. Public catalog read, no authToken. Shape unchanged
-    // (response transform still applies via get_v3).
-    this.networkAdapter.get_v3('GET /mobile/styles-list', {
-      queryParams: {
-        type: this.initial.type,
-        limit: this.initial.limit,
-        offset: this.initial.offset,
-      },
-    })
+    // Paginated read for infinite scroll, advancing offset against the
+    // SAME endpoint as the active tab (My Styles paginates /v3/me/styles
+    // with authToken; the others paginate /v3/styles anonymously). Shape
+    // unchanged — the response transform still applies via get_v3.
+    const { routeKey, opts } = this.buildRequest(this.activeTab, this.initial.offset);
+
+    this.networkAdapter.get_v3(routeKey, opts)
       .subscribe({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {

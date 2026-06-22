@@ -253,7 +253,10 @@ return function (App $app): void {
         $group->get('/reviews', \Bayti\Api\Http\Controllers\Review\ListMyReviewsController::class);
         $group->delete('/reviews/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Review\DeleteMyReviewController::class);
 
-        // v3 customer style submission (replaces legacy /customer/create_style).
+        // v3 customer styles — "My Styles" tab (owner-scoped listing) +
+        // submission (replaces legacy /customer/create_style). GET is
+        // registered before POST under the same /v3/me authed group.
+        $group->get('/styles', \Bayti\Api\Http\Controllers\Style\ListMyStylesController::class);
         $group->post('/styles', \Bayti\Api\Http\Controllers\Style\CreateStyleController::class);
     })->add(AuthMiddleware::class);
 

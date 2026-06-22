@@ -403,6 +403,17 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/styles',
     shape: 'v3-envelope',
   },
+  // "My Styles" tab of the Style Hub — owner-scoped listing of the
+  // authenticated user's own submitted styles. Same envelope shape as
+  // styles-list (so transformStylesListResponse reshapes it identically),
+  // but a distinct route-key because the path + auth differ: the call site
+  // passes { authToken } and NO ?type param.
+  'GET /mobile/my-styles': {
+    target: 'new',
+    oldPath: '/customer/styles_list',
+    newPath: '/v3/me/styles',
+    shape: 'v3-envelope',
+  },
 
   // ---- Auth (M1 shipped - all on v3) ----
   //

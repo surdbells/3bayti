@@ -737,4 +737,8 @@ export const CATALOG_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   'GET /mobile/products-by-labels': transformProductListResponse, // products list
   'GET /mobile/store-labels': transformVendorLabelsResponse,      // labels list
   'GET /mobile/styles-list': transformStylesListResponse,         // styles list
+  // "My Styles" tab — owner-scoped styles list (GET /v3/me/styles). Same
+  // v3 styles shape as styles-list, so it MUST use the same transform to
+  // produce the legacy {style_name, total_price, products[].image} shape.
+  'GET /mobile/my-styles': transformStylesListResponse,           // styles list (owner-scoped)
 };
