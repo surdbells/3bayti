@@ -126,50 +126,33 @@
         <!-- Size Selection -->
         @if(single.category_id !== '4' && single.category_id !== '5'){
           <div class="size-section">
-                <div class="section-label">
-                  <span class="label-text">{{ 'size' | translate }}</span>
-                  <button type="button" class="size-guide-link" (click)="isSizeGuideOpen = true">
-                    <ax-icon name="ruler"></ax-icon>
-                    {{ 'text_size_chart' | translate }}
-                  </button>
-                </div>
-
-                <app-size-chips [sizes]="apiSizes" (selected)="onSizeSelected($event)">
-                </app-size-chips>
-
             @if(single.size_custom){
-              <button  type="button" class="custom-measurement-btn" (click)="openMeasurement()" id="measurement">
+              <!-- CUSTOM-MEASUREMENT product: user enters her own measurements.
+                   Show ONLY the Custom Measurements affordance; hide size chips
+                   + the Size Chart link. -->
+              <button type="button" class="custom-measurement-btn" (click)="openMeasurement()" id="measurement">
                 <div class="btn-content">
                   <ax-icon name="pencil-ruler"></ax-icon>
                   <span>{{ 'custom_measurements' | translate }}</span>
                 </div>
                 <ax-icon name="chevron-right"></ax-icon>
               </button>
+            } @else {
+              <!-- READY-TO-WEAR product: show the ready size chips + the Size
+                   Chart link to help pick which ready size fits. Hide Custom
+                   Measurements. -->
+              <div class="section-label">
+                <span class="label-text">{{ 'size' | translate }}</span>
+                <button type="button" class="size-guide-link" (click)="isSizeGuideOpen = true">
+                  <ax-icon name="ruler"></ax-icon>
+                  {{ 'text_size_chart' | translate }}
+                </button>
+              </div>
+
+              <app-size-chips [sizes]="apiSizes" (selected)="onSizeSelected($event)">
+              </app-size-chips>
             }
           </div>
-          <!--
-          <div class="size-section">
-              @if(!single.size_custom){
-                <div class="section-label">
-                  <span class="label-text">Size</span>
-                  <button type="button" class="size-guide-link" id="size_guide">
-                    <ax-icon name="ruler"></ax-icon>
-                    Size Chart
-                  </button>
-                </div>
-                <app-size-chips [sizes]="apiSizes" (selected)="onSizeSelected($event)">
-                </app-size-chips>
-              } @else {
-                <button type="button" class="custom-measurement-btn" (click)="openMeasurement()" id="measurement">
-                  <div class="btn-content">
-                    <ax-icon name="pencil-ruler"></ax-icon>
-                    <span>Custom Measurements</span>
-                  </div>
-                  <ax-icon name="chevron-right"></ax-icon>
-                </button>
-              }
-          </div>
--->
           }
           <!--
           &lt;!&ndash; Store Sizes &ndash;&gt;
