@@ -32,9 +32,11 @@ export class I18nService {
       this._lang$.next(lang);
       localStorage.setItem(STORAGE_KEY, lang);
 
-      // Make Ionic components respect direction
+      // Set the document language (fonts/screen readers), but pin the layout
+      // direction to LTR for ALL languages including Arabic: the product shows
+      // Arabic copy without flipping the layout to RTL.
       document.documentElement.setAttribute('lang', lang);
-      document.documentElement.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+      document.documentElement.setAttribute('dir', 'ltr');
     } catch (e) {
       console.error('i18n load failed', e);
       if (lang !== 'en') await this.use('en');

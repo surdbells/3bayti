@@ -80,8 +80,9 @@ describe('LocaleService', () => {
       await service.initialize();
 
       expect(service.current()).toBe('ar');
-      expect(service.dir()).toBe('rtl');
-      expect(service.isRtl()).toBe(true);
+      // Direction is pinned to LTR even for Arabic (product decision).
+      expect(service.dir()).toBe('ltr');
+      expect(service.isRtl()).toBe(false);
     });
 
     it('falls back to navigator.language when no cookie is present', async () => {
@@ -127,7 +128,8 @@ describe('LocaleService', () => {
       await service.initialize();
 
       expect(doc.documentElement.getAttribute?.('lang')).toBe('ar');
-      expect(doc.documentElement.getAttribute?.('dir')).toBe('rtl');
+      // Arabic keeps lang="ar" for fonts/screen readers but dir stays LTR.
+      expect(doc.documentElement.getAttribute?.('dir')).toBe('ltr');
     });
   });
 
@@ -167,7 +169,7 @@ describe('LocaleService', () => {
       await service.setLocale('ar');
 
       expect(service.current()).toBe('ar');
-      expect(service.dir()).toBe('rtl');
+      expect(service.dir()).toBe('ltr');
       expect(doc.cookie).toContain(`${LOCALE_COOKIE}=ar`);
     });
 
@@ -196,14 +198,14 @@ describe('LocaleService', () => {
   });
 
   describe('Reactive signals', () => {
-    it('current, dir, and isRtl stay in sync', async () => {
+    it('keeps dir LTR and isRtl false for every locale', async () => {
       const doc = fakeDocument({ cookie: 'bayti_locale=ar' });
       const { service } = setupService({ document: doc });
 
       await service.initialize();
       expect(service.current()).toBe('ar');
-      expect(service.dir()).toBe('rtl');
-      expect(service.isRtl()).toBe(true);
+      expect(service.dir()).toBe('ltr');
+      expect(service.isRtl()).toBe(false);
 
       await service.setLocale('en');
       expect(service.current()).toBe('en');

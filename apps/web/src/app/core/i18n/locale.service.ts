@@ -9,7 +9,6 @@ import {
 import { TranslateService } from '@ngx-translate/core';
 import {
   DEFAULT_LOCALE,
-  IS_RTL,
   LOCALE_COOKIE,
   LOCALE_COOKIE_MAX_AGE_SECONDS,
   Locale,
@@ -49,8 +48,11 @@ export class LocaleService {
      attribute bindings. */
   private readonly _current = signal<Locale>(DEFAULT_LOCALE);
   readonly current: Signal<Locale> = this._current.asReadonly();
-  readonly dir = computed<'rtl' | 'ltr'>(() => (IS_RTL[this._current()] ? 'rtl' : 'ltr'));
-  readonly isRtl = computed(() => IS_RTL[this._current()]);
+  /* Direction is intentionally pinned to LTR for every locale, including
+     Arabic: the product shows Arabic copy WITHOUT flipping the layout to RTL.
+     (IS_RTL still describes the language truthfully; we just don't apply it.) */
+  readonly dir = computed<'rtl' | 'ltr'>(() => 'ltr');
+  readonly isRtl = computed(() => false);
   readonly supported: readonly Locale[] = LOCALES;
 
   /**
@@ -220,6 +222,7 @@ export class LocaleService {
     const html = this.document.documentElement;
     if (!html) return;
     html.setAttribute('lang', locale);
-    html.setAttribute('dir', IS_RTL[locale] ? 'rtl' : 'ltr');
+    /* Layout direction stays LTR for all locales (see `dir`/`isRtl`). */
+    html.setAttribute('dir', 'ltr');
   }
 }

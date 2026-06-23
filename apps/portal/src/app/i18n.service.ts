@@ -35,9 +35,10 @@ export class I18nService {
       this._lang$.next(lang);
       localStorage.setItem(STORAGE_KEY, lang);
 
-      // Update document language + direction
+      // Set the document language, but pin layout direction to LTR for all
+      // languages including Arabic: Arabic copy is shown without an RTL flip.
       document.documentElement.setAttribute('lang', lang);
-      document.documentElement.setAttribute('dir', lang === 'ar' ? 'ltr' : 'ltr');
+      document.documentElement.setAttribute('dir', 'ltr');
     } catch (err) {
       console.error('Failed to load language file:', err);
       // Optional: fallback to English if requested lang fails
