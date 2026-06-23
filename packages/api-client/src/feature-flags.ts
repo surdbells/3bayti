@@ -18,7 +18,7 @@
  *                     to route traffic to v3. Per-endpoint rollback
  *                     remains via target: 'old')
  *   Wishlist       -> 'old' (M3+)
- *   Chat / tickets -> 'old' (M4)
+ *   Chat           -> 'old' (M4)
  *   Admin          -> 'new' for catalog (M2.1.A), 'old' for users/orders/payments
  *
  * Response shape contract
@@ -633,42 +633,6 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new',
     oldPath: '/customer/unfollow',
     newPath: '/v3/me/following/:vendorId',
-    shape: 'v3-envelope',
-  },
-  // v3 customer support tickets (Group B / B2). Owner-scoped /v3/me/tickets.
-  // create_ticket body {subject, message, store} -> {subject, message,
-  // vendor_id}; the message endpoints move the ticket id into the path.
-  'POST /me/tickets': {
-    target: 'new',
-    oldPath: '/customer/create_ticket',
-    newPath: '/v3/me/tickets',
-    shape: 'v3-envelope',
-  },
-  'GET /me/tickets': {
-    target: 'new',
-    oldPath: '/customer/read_ticket',
-    newPath: '/v3/me/tickets',
-    shape: 'v3-envelope',
-  },
-  // Single ticket + full thread (GetMyTicketController). 404 if not the
-  // owner (no existence leak). Used by the web detail page to render the
-  // ticket header (subject/status/priority) alongside its messages.
-  'GET /me/tickets/:id': {
-    target: 'new',
-    oldPath: '/customer/read_ticket',
-    newPath: '/v3/me/tickets/:id',
-    shape: 'v3-envelope',
-  },
-  'GET /me/tickets/:id/messages': {
-    target: 'new',
-    oldPath: '/customer/read-ticket-messages',
-    newPath: '/v3/me/tickets/:id/messages',
-    shape: 'v3-envelope',
-  },
-  'POST /me/tickets/:id/messages': {
-    target: 'new',
-    oldPath: '/customer/send-ticket-message',
-    newPath: '/v3/me/tickets/:id/messages',
     shape: 'v3-envelope',
   },
   // v3 customer reviews (Group B / B1). add-review is store-scoped
@@ -1470,16 +1434,6 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/products': {
     target: 'new', oldPath: '/admin/common/products', newPath: '/v3/products', shape: 'v3-envelope',
   },
-  'GET /admin/tickets': {
-    target: 'new', oldPath: '/admin/common/tickets', newPath: '/v3/admin/tickets', shape: 'v3-envelope',
-  },
-  'GET /admin/tickets/:id': {
-    target: 'new', oldPath: '/admin/common/ticket-by-id', newPath: '/v3/admin/tickets/:id', shape: 'v3-envelope',
-  },
-
-  'GET /admin/tickets/:id/messages': {
-    target: 'new', oldPath: '/admin/common/ticket-messages', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
-  },
   'GET /admin/transactions': {
     target: 'new', oldPath: '/admin/common/transactions', newPath: '/v3/admin/transactions', shape: 'v3-envelope',
   },
@@ -1536,12 +1490,6 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'PATCH /admin/orders/:orderId/items/:itemId/status': {
     target: 'new', oldPath: '/admin/common/processing', newPath: '/v3/admin/orders/:orderId/items/:itemId/status', shape: 'v3-envelope',
   },
-  'PATCH /admin/tickets/:id/priority': {
-    target: 'new', oldPath: '/admin/common/ticket-priority', newPath: '/v3/admin/tickets/:id/priority', shape: 'v3-envelope',
-  },
-  'PATCH /admin/tickets/:id/status': {
-    target: 'new', oldPath: '/admin/common/ticket-status', newPath: '/v3/admin/tickets/:id/status', shape: 'v3-envelope',
-  },
   'POST /admin/collections': {
     target: 'new', oldPath: '/admin/collections/create-collection', newPath: '/v3/admin/collections', shape: 'v3-envelope',
   },
@@ -1553,9 +1501,6 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'POST /admin/products': {
     target: 'new', oldPath: '/vendors/products/create-product', newPath: '/v3/admin/products', shape: 'v3-envelope',
-  },
-  'POST /admin/tickets/:id/messages': {
-    target: 'new', oldPath: '/admin/common/send-ticket-message', newPath: '/v3/admin/tickets/:id/messages', shape: 'v3-envelope',
   },
   'POST /admin/users/:id/activate': {
     target: 'new', oldPath: '/admin/common/activate-customer', newPath: '/v3/admin/users/:id/activate', shape: 'v3-envelope',
@@ -1623,7 +1568,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/admin/message-vendor', newPath: '/v3/admin/vendors/:id/messages', shape: 'v3-envelope',
   },
 
-  // Chat, tickets, vendor self-service, admin orders/users/payments:
+  // Chat, vendor self-service, admin orders/users/payments:
   // all live on legacy. Entries added when M3 / M4 lands.
 };
 

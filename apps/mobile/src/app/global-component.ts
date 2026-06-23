@@ -68,11 +68,6 @@ export class GlobalComponent {
   public static readCustomerOrders = GlobalComponent.baseURL + 'customer/read-customer-orders';
   public static sendMessage = GlobalComponent.baseURL + 'customer/send-message';
 
-  public static createTicket = GlobalComponent.baseURL + 'customer/create_ticket';
-  public static readTicket = GlobalComponent.baseURL + 'customer/read_ticket';
-  public static readTicketMessages = GlobalComponent.baseURL + 'customer/read-ticket-messages';
-  public static sendTicketMessage = GlobalComponent.baseURL + 'customer/send-ticket-message';
-
   public static store_reviews = GlobalComponent.baseURL + 'customer/store-reviews';
   public static add_review = GlobalComponent.baseURL + 'customer/add-review';
   public static make_helpful = GlobalComponent.baseURL + 'customer/helpful';

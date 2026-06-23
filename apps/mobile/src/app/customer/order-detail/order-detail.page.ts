@@ -18,7 +18,7 @@ import {
   ActionSheetController,
   RefresherCustomEvent,
 } from '@ionic/angular/standalone';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '../../translate.pipe';
 import { Preferences } from '@capacitor/preferences';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
@@ -28,6 +28,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { cfImage } from '../../shared/cf-image';
+import { supportWhatsappLink } from '../../core/constants/support.constants';
 
 /**
  * Customer order-detail screen — M3.2.Z.1.
@@ -122,7 +123,6 @@ interface OrderDetail {
     AxIconComponent,
     AxLoaderComponent,
     AppTabBarComponent,
-    RouterLink,
   ],
 })
 export class OrderDetailPage implements OnInit {
@@ -328,5 +328,10 @@ export class OrderDetailPage implements OnInit {
 
   open_vendor(id: number, name: string) {
     this.router.navigate(['/', 'vendor-reviews'], { queryParams: { id, name } });
+  }
+
+  /** Open WhatsApp support — keeps a support affordance on the order screen. */
+  openSupport() {
+    window.open(supportWhatsappLink('Hello, I need assistance.'), '_system');
   }
 }

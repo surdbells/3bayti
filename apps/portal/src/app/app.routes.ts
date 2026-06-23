@@ -256,12 +256,6 @@ export const routes: Routes = [
     title: 'Store messages'
   },
   {
-    path: 'store_tickets',
-    loadComponent: () => import('./backend/stores/store-tickets/store-tickets.component').then(m => m.StoreTicketsComponent),
-    canActivate: [adminGuard, requirePermission('vendors.view_detail')],
-    title: 'Store tickets'
-  },
-  {
     path: 'store_products',
     loadComponent: () => import('./backend/stores/store-products/store-products.component').then(m => m.StoreProductsComponent),
     canActivate: [adminGuard, requirePermission('products.view')],
@@ -340,22 +334,10 @@ export const routes: Routes = [
     title: 'View delivery'
   },
   {
-    path: 'admintickets',
-    loadComponent: () => import('./backend/tickets/tickets.component').then(m => m.TicketsComponent),
-    canActivate: [adminGuard, requirePermission('tickets.view')],
-    title: 'View ticket'
-  },
-  {
     path: 'notification-logs',
     loadComponent: () => import('./backend/notification-logs/notification-logs.component').then(m => m.NotificationLogsComponent),
     canActivate: [adminGuard, requirePermission('notifications.view')],
     title: 'Notification Logs'
-  },
-  {
-    path: 'ticket_messages',
-    loadComponent: () => import('./backend/tickets/ticket-message/ticket-message.component').then(m => m.TicketMessageComponent),
-    canActivate: [adminGuard, requirePermission('tickets.view')],
-    title: 'Ticket messages'
   },
   {
     path: 'processing',

@@ -40,13 +40,13 @@ final class UserRbacTest extends TestCase
     public function effectivePermissionsAreTheUnionOfAllRolesDeduplicated(): void
     {
         $user = $this->user();
-        $user->addRole($this->role('support', ['tickets.view', 'orders.view']));
+        $user->addRole($this->role('support', ['chat.moderate', 'orders.view']));
         $user->addRole($this->role('finance', ['orders.view', 'payouts.process']));
 
         $keys = $user->effectivePermissionKeys();
         sort($keys);
 
-        self::assertSame(['orders.view', 'payouts.process', 'tickets.view'], $keys);
+        self::assertSame(['chat.moderate', 'orders.view', 'payouts.process'], $keys);
         self::assertTrue($user->isStaff());
         self::assertTrue($user->hasPermission('payouts.process'));
         self::assertFalse($user->hasPermission('orders.refund'));

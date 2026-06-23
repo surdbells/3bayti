@@ -28,6 +28,7 @@ import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from '../../translate.pipe';
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { supportWhatsappLink } from '../../core/constants/support.constants';
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 export interface StoreData {
@@ -377,7 +378,7 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
         {
           text: this.i18n.t('button_whatsapp'),
           handler: () => {
-            window.open('https://wa.me/971504559975', '_system');
+            window.open(supportWhatsappLink(), '_system');
           }
         },
         {

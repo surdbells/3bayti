@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 250 route keys.
+ * 254 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -49,9 +49,6 @@ export type V3RouteKey =
   | 'GET /admin/returns'
   | 'GET /admin/roles'
   | 'GET /admin/roles/:id'
-  | 'GET /admin/tickets'
-  | 'GET /admin/tickets/:id'
-  | 'GET /admin/tickets/:id/messages'
   | 'GET /admin/transactions'
   | 'GET /admin/users'
   | 'GET /admin/users/:id'
@@ -86,8 +83,6 @@ export type V3RouteKey =
   | 'GET /me/profile'
   | 'GET /me/recommendations'
   | 'GET /me/reviews'
-  | 'GET /me/tickets'
-  | 'GET /me/tickets/:id/messages'
   | 'GET /me/wishlist'
   | 'GET /me/wishlist/labels'
   | 'GET /mobile/best-sellers'
@@ -95,6 +90,7 @@ export type V3RouteKey =
   | 'GET /mobile/category-listing'
   | 'GET /mobile/explore-listing'
   | 'GET /mobile/featured'
+  | 'GET /mobile/my-styles'
   | 'GET /mobile/new-arrivals'
   | 'GET /mobile/new-arrivals-listing'
   | 'GET /mobile/products-by-labels'
@@ -104,6 +100,8 @@ export type V3RouteKey =
   | 'GET /mobile/single-product-utility'
   | 'GET /mobile/store-labels'
   | 'GET /mobile/store-latest'
+  | 'GET /mobile/stores'
+  | 'GET /mobile/style-detail'
   | 'GET /mobile/styles-list'
   | 'GET /mobile/vendors-products'
   | 'GET /orders'
@@ -151,18 +149,18 @@ export type V3RouteKey =
   | 'GET /vendors/:slug'
   | 'GET /vendors/:slug/products'
   | 'GET /vendors/:vendorId/reviews'
+  | 'GET /vendors/:vendorId/size-chart'
   | 'GET /vendors/by-legacy-id/:id'
   | 'GET /vendors/by-legacy-id/:id/products'
   | 'GET /wishlist'
   | 'PATCH /admin/orders/:id/status'
   | 'PATCH /admin/orders/:orderId/items/:itemId/status'
-  | 'PATCH /admin/tickets/:id/priority'
-  | 'PATCH /admin/tickets/:id/status'
   | 'PATCH /admin/users/:id/password'
   | 'PATCH /cart/items/:id'
   | 'PATCH /me/addresses/:id/default'
   | 'PATCH /me/billing-address'
   | 'PATCH /me/location'
+  | 'PATCH /me/notification-preferences'
   | 'PATCH /me/password'
   | 'PATCH /me/profile'
   | 'PATCH /me/wishlist/:productId'
@@ -187,7 +185,6 @@ export type V3RouteKey =
   | 'POST /admin/orders/:id/refund'
   | 'POST /admin/products'
   | 'POST /admin/roles'
-  | 'POST /admin/tickets/:id/messages'
   | 'POST /admin/users'
   | 'POST /admin/users/:id/activate'
   | 'POST /admin/users/:id/deactivate'
@@ -203,15 +200,23 @@ export type V3RouteKey =
   | 'POST /auth/login'
   | 'POST /auth/logout'
   | 'POST /auth/logout-all'
+  | 'POST /auth/otp-login/send'
+  | 'POST /auth/otp-login/verify'
   | 'POST /auth/refresh'
   | 'POST /auth/register'
+  | 'POST /auth/register/confirm-email'
+  | 'POST /auth/register/initiate'
+  | 'POST /auth/register/submit'
+  | 'POST /auth/register/verify-phone'
   | 'POST /auth/reset'
   | 'POST /auth/reset/confirm'
   | 'POST /auth/send-otp'
   | 'POST /auth/validate-email'
   | 'POST /auth/validate-phone'
+  | 'POST /cart/gift-card'
   | 'POST /cart/items'
   | 'POST /cart/merge'
+  | 'POST /cart/quote'
   | 'POST /chat/conversations/:uuid/messages'
   | 'POST /chat/conversations/:uuid/read'
   | 'POST /checkout/initiate'
@@ -224,8 +229,6 @@ export type V3RouteKey =
   | 'POST /me/device-tokens'
   | 'POST /me/measurements'
   | 'POST /me/styles'
-  | 'POST /me/tickets'
-  | 'POST /me/tickets/:id/messages'
   | 'POST /me/wishlist'
   | 'POST /me/wishlist/labels'
   | 'POST /orders/:id/cancel'
@@ -303,9 +306,6 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/returns',
   'GET /admin/roles',
   'GET /admin/roles/:id',
-  'GET /admin/tickets',
-  'GET /admin/tickets/:id',
-  'GET /admin/tickets/:id/messages',
   'GET /admin/transactions',
   'GET /admin/users',
   'GET /admin/users/:id',
@@ -340,8 +340,6 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /me/profile',
   'GET /me/recommendations',
   'GET /me/reviews',
-  'GET /me/tickets',
-  'GET /me/tickets/:id/messages',
   'GET /me/wishlist',
   'GET /me/wishlist/labels',
   'GET /mobile/best-sellers',
@@ -349,6 +347,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /mobile/category-listing',
   'GET /mobile/explore-listing',
   'GET /mobile/featured',
+  'GET /mobile/my-styles',
   'GET /mobile/new-arrivals',
   'GET /mobile/new-arrivals-listing',
   'GET /mobile/products-by-labels',
@@ -358,6 +357,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /mobile/single-product-utility',
   'GET /mobile/store-labels',
   'GET /mobile/store-latest',
+  'GET /mobile/stores',
+  'GET /mobile/style-detail',
   'GET /mobile/styles-list',
   'GET /mobile/vendors-products',
   'GET /orders',
@@ -405,18 +406,18 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendors/:slug',
   'GET /vendors/:slug/products',
   'GET /vendors/:vendorId/reviews',
+  'GET /vendors/:vendorId/size-chart',
   'GET /vendors/by-legacy-id/:id',
   'GET /vendors/by-legacy-id/:id/products',
   'GET /wishlist',
   'PATCH /admin/orders/:id/status',
   'PATCH /admin/orders/:orderId/items/:itemId/status',
-  'PATCH /admin/tickets/:id/priority',
-  'PATCH /admin/tickets/:id/status',
   'PATCH /admin/users/:id/password',
   'PATCH /cart/items/:id',
   'PATCH /me/addresses/:id/default',
   'PATCH /me/billing-address',
   'PATCH /me/location',
+  'PATCH /me/notification-preferences',
   'PATCH /me/password',
   'PATCH /me/profile',
   'PATCH /me/wishlist/:productId',
@@ -441,7 +442,6 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/orders/:id/refund',
   'POST /admin/products',
   'POST /admin/roles',
-  'POST /admin/tickets/:id/messages',
   'POST /admin/users',
   'POST /admin/users/:id/activate',
   'POST /admin/users/:id/deactivate',
@@ -457,15 +457,23 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /auth/login',
   'POST /auth/logout',
   'POST /auth/logout-all',
+  'POST /auth/otp-login/send',
+  'POST /auth/otp-login/verify',
   'POST /auth/refresh',
   'POST /auth/register',
+  'POST /auth/register/confirm-email',
+  'POST /auth/register/initiate',
+  'POST /auth/register/submit',
+  'POST /auth/register/verify-phone',
   'POST /auth/reset',
   'POST /auth/reset/confirm',
   'POST /auth/send-otp',
   'POST /auth/validate-email',
   'POST /auth/validate-phone',
+  'POST /cart/gift-card',
   'POST /cart/items',
   'POST /cart/merge',
+  'POST /cart/quote',
   'POST /chat/conversations/:uuid/messages',
   'POST /chat/conversations/:uuid/read',
   'POST /checkout/initiate',
@@ -478,8 +486,6 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /me/device-tokens',
   'POST /me/measurements',
   'POST /me/styles',
-  'POST /me/tickets',
-  'POST /me/tickets/:id/messages',
   'POST /me/wishlist',
   'POST /me/wishlist/labels',
   'POST /orders/:id/cancel',

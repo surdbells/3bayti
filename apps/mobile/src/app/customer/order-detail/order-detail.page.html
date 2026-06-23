@@ -7,7 +7,7 @@
     </ion-buttons>
     <ion-title class="m7-title">{{ 'title_order_detail' | translate }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button [routerLink]="['/ticketlist']" fill="clear" class="m7-header-action">
+      <ion-button (click)="openSupport()" fill="clear" class="m7-header-action">
         <ion-chip class="abayti_primary_background abayti_white">
           <ion-avatar>
             <ax-icon name="headset" />

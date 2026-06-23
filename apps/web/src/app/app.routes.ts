@@ -257,28 +257,6 @@ export const routes: Routes = [
     title: 'routeTitles.accountDelete',
   },
   {
-    /* Customer support tickets — list / create / detail+reply. */
-    path: 'account/support',
-    canActivate: [authActivateGuard],
-    loadComponent: () =>
-      import('./features/account/support-tickets-page').then(m => m.SupportTicketsPageComponent),
-    title: 'routeTitles.accountSupport',
-  },
-  {
-    path: 'account/support/new',
-    canActivate: [authActivateGuard],
-    loadComponent: () =>
-      import('./features/account/support-create-page').then(m => m.SupportCreatePageComponent),
-    title: 'routeTitles.accountSupportNew',
-  },
-  {
-    path: 'account/support/:id',
-    canActivate: [authActivateGuard],
-    loadComponent: () =>
-      import('./features/account/support-detail-page').then(m => m.SupportDetailPageComponent),
-    title: 'routeTitles.accountSupportDetail',
-  },
-  {
     /* Order chat inbox — the customer's conversations with vendors. */
     path: 'account/messages',
     canActivate: [authActivateGuard],

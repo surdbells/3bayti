@@ -12,6 +12,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { NavIconComponent } from '../../layout/header/nav-icon';
 import { MessagesService } from '../messages/messages.service';
+import { SUPPORT_WHATSAPP_URL } from '../../core/config/support.constants';
 
 /**
  * /account — account hub / dashboard.
@@ -143,11 +144,17 @@ import { MessagesService } from '../messages/messages.service';
               <span class="account-tile__desc">{{ 'account.hub.password.desc' | translate }}</span>
             </span>
           </a>
-          <a routerLink="/account/support" class="account-tile" data-testid="account-tile-support">
+          <a
+            [href]="supportWhatsappUrl"
+            target="_blank"
+            rel="noopener"
+            class="account-tile"
+            data-testid="account-tile-support"
+          >
             <span class="account-tile__icon" aria-hidden="true"><app-nav-icon icon="lifeBuoy" /></span>
             <span class="account-tile__body">
-              <span class="account-tile__title">{{ 'account.hub.support.title' | translate }}</span>
-              <span class="account-tile__desc">{{ 'account.hub.support.desc' | translate }}</span>
+              <span class="account-tile__title">{{ 'account.hub.whatsapp.title' | translate }}</span>
+              <span class="account-tile__desc">{{ 'account.hub.whatsapp.desc' | translate }}</span>
             </span>
           </a>
         </nav>
@@ -162,6 +169,9 @@ export class AccountHubPageComponent implements OnInit {
 
   /** Unread order-chat total — drives the Messages tile badge. */
   protected readonly unreadMessages = this.messages.unreadTotal;
+
+  /** WhatsApp support deep link — opened in a new tab from the support tile. */
+  protected readonly supportWhatsappUrl = SUPPORT_WHATSAPP_URL;
 
   /** Banner dismissed for this view (resets on navigation/reload). */
   private readonly bannerDismissed = signal(false);

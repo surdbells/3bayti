@@ -567,9 +567,9 @@
         "title": "Password",
         "desc": "Change your account password."
       },
-      "support": {
-        "title": "Support",
-        "desc": "Get help — open and track support tickets."
+      "whatsapp": {
+        "title": "WhatsApp support",
+        "desc": "Chat with our team on WhatsApp — we’re here to help."
       },
       "verify": {
         "title": "Verify your phone number",
@@ -693,62 +693,6 @@
       },
       "errors": {
         "loadFailed": "We couldn’t load your messages. Please try again."
-      }
-    },
-    "support": {
-      "title": "Support",
-      "intro": "Need a hand? Open a ticket and our team will get back to you.",
-      "status": {
-        "open": "Open",
-        "pending": "Pending",
-        "resolved": "Resolved",
-        "closed": "Closed"
-      },
-      "priority": {
-        "low": "Low",
-        "medium": "Medium",
-        "high": "High",
-        "urgent": "Urgent"
-      },
-      "list": {
-        "new": "New ticket",
-        "empty": "You don’t have any support tickets yet.",
-        "emptyBody": "When you open a ticket, it’ll show up here so you can track our replies.",
-        "updated": "Updated",
-        "messages": "{{count}} message(s)"
-      },
-      "create": {
-        "title": "New ticket",
-        "intro": "Tell us what’s going on and we’ll help you out.",
-        "subject": "Subject",
-        "priority": "Priority",
-        "store": "Related store (optional)",
-        "storeHint": "Leave as General support if your question isn’t about a specific store.",
-        "general": "General support",
-        "message": "Message",
-        "messagePlaceholder": "Describe your issue in as much detail as you can.",
-        "submit": "Open ticket",
-        "created": "Your ticket has been opened.",
-        "errors": {
-          "createFailed": "We couldn’t open your ticket. Please try again."
-        }
-      },
-      "detail": {
-        "title": "Ticket",
-        "replyLabel": "Add a reply",
-        "replyPlaceholder": "Type your reply…",
-        "send": "Send reply",
-        "notFound": "We couldn’t find that ticket.",
-        "backToList": "Back to tickets",
-        "errors": {
-          "replyFailed": "We couldn’t send your reply. Please try again."
-        }
-      },
-      "errors": {
-        "required": "This field is required.",
-        "invalid": "Please check this field.",
-        "tooLong": "This is too long.",
-        "loadFailed": "We couldn’t load your tickets. Please try again."
       }
     },
     "delete": {
@@ -1287,9 +1231,6 @@
     "accountDelete": "Delete account · 3bayti",
     "accountMessages": "Messages · 3bayti",
     "accountMessagesThread": "Conversation · 3bayti",
-    "accountSupport": "Support · 3bayti",
-    "accountSupportNew": "New ticket · 3bayti",
-    "accountSupportDetail": "Ticket · 3bayti",
     "accountWishlist": "My wishlist · 3bayti",
     "accountGiftCards": "My Gift Cards · 3bayti",
     "accountGiftCardDetail": "Gift Card · 3bayti",

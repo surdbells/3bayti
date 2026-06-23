@@ -418,19 +418,6 @@ export function transformOrderDetailResponse(data: unknown): unknown {
  * ============================================================== */
 
 /**
- * v3 POST /v3/me/tickets/{id}/messages -> legacy created-message shape.
- * The mobile ticket-messages page reads `message.message`; v3 emits
- * `body`. Self-contained (no shared helpers) to avoid import coupling.
- */
-export function transformTicketMessageResponse(data: unknown): unknown {
-  if (data === null || typeof data !== 'object' || Array.isArray(data)) {
-    return data;
-  }
-  const m = data as Record<string, unknown>;
-  return { ...m, message: typeof m['body'] === 'string' ? m['body'] : String(m['body'] ?? '') };
-}
-
-/**
  * Map of routeKey -> response transform.
  *
  * The adapter's envelopeAndTransform consults this registry. Absence
@@ -451,9 +438,6 @@ export const MUTATION_RESPONSE_TRANSFORMS: Record<string, ResponseTransform> = {
   // Orders
   'GET /orders': transformOrderListResponse,
   'GET /orders/:id': transformOrderDetailResponse,
-
-  // Support tickets (Group B / B2)
-  'POST /me/tickets/:id/messages': transformTicketMessageResponse,
 };
 
 /**

@@ -567,9 +567,9 @@
         "title": "كلمة المرور",
         "desc": "غيّري كلمة مرور حسابك."
       },
-      "support": {
-        "title": "الدعم",
-        "desc": "احصلي على المساعدة — افتحي تذاكر الدعم وتابعيها."
+      "whatsapp": {
+        "title": "الدعم عبر واتساب",
+        "desc": "تواصلي مع فريقنا عبر واتساب — نحن هنا لمساعدتك."
       },
       "verify": {
         "title": "أكِّدي رقم هاتفك",
@@ -693,62 +693,6 @@
       },
       "errors": {
         "loadFailed": "تعذّر تحميل رسائلك. حاولي مرة أخرى."
-      }
-    },
-    "support": {
-      "title": "الدعم",
-      "intro": "بحاجة إلى مساعدة؟ افتحي تذكرة وسيتواصل معك فريقنا.",
-      "status": {
-        "open": "مفتوحة",
-        "pending": "قيد الانتظار",
-        "resolved": "تم الحل",
-        "closed": "مغلقة"
-      },
-      "priority": {
-        "low": "منخفضة",
-        "medium": "متوسطة",
-        "high": "عالية",
-        "urgent": "عاجلة"
-      },
-      "list": {
-        "new": "تذكرة جديدة",
-        "empty": "ليس لديك أي تذاكر دعم بعد.",
-        "emptyBody": "عند فتح تذكرة ستظهر هنا لتتمكني من متابعة ردودنا.",
-        "updated": "آخر تحديث",
-        "messages": "{{count}} رسالة"
-      },
-      "create": {
-        "title": "تذكرة جديدة",
-        "intro": "أخبرينا بما يحدث وسنساعدك.",
-        "subject": "الموضوع",
-        "priority": "الأولوية",
-        "store": "المتجر المرتبط (اختياري)",
-        "storeHint": "اتركيها على الدعم العام إذا لم يكن استفسارك متعلقاً بمتجر محدد.",
-        "general": "الدعم العام",
-        "message": "الرسالة",
-        "messagePlaceholder": "صفي مشكلتك بأكبر قدر ممكن من التفاصيل.",
-        "submit": "فتح التذكرة",
-        "created": "تم فتح تذكرتك.",
-        "errors": {
-          "createFailed": "تعذّر فتح تذكرتك. حاولي مرة أخرى."
-        }
-      },
-      "detail": {
-        "title": "التذكرة",
-        "replyLabel": "أضيفي رداً",
-        "replyPlaceholder": "اكتبي ردك…",
-        "send": "إرسال الرد",
-        "notFound": "تعذّر العثور على هذه التذكرة.",
-        "backToList": "العودة إلى التذاكر",
-        "errors": {
-          "replyFailed": "تعذّر إرسال ردك. حاولي مرة أخرى."
-        }
-      },
-      "errors": {
-        "required": "هذا الحقل مطلوب.",
-        "invalid": "يرجى التحقق من هذا الحقل.",
-        "tooLong": "هذا طويل جداً.",
-        "loadFailed": "تعذّر تحميل تذاكرك. حاولي مرة أخرى."
       }
     },
     "delete": {
@@ -1287,9 +1231,6 @@
     "accountDelete": "حذف الحساب · 3bayti",
     "accountMessages": "الرسائل · 3bayti",
     "accountMessagesThread": "المحادثة · 3bayti",
-    "accountSupport": "الدعم · 3bayti",
-    "accountSupportNew": "تذكرة جديدة · 3bayti",
-    "accountSupportDetail": "التذكرة · 3bayti",
     "accountWishlist": "قائمة أمنياتي · 3bayti",
     "accountGiftCards": "بطاقات الهدايا الخاصة بي · 3bayti",
     "accountGiftCardDetail": "بطاقة هدية · 3bayti",

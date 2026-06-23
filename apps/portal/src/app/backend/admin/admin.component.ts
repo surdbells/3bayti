@@ -53,7 +53,6 @@ const ICON_MAP: Record<string, string> = {
   'people': 'group',
   'box-seam': 'inventory_2',
   'cart-check': 'shopping_cart',
-  'ticket-detailed': 'confirmation_number',
   'cash-coin': 'payments',
   'truck': 'local_shipping',
   'folder': 'folder',
@@ -343,7 +342,6 @@ export class AdminComponent implements OnInit {
     { id: 'products', title: 'Products', desc: 'Track and manage products', icon: 'box-seam', route: '/admin_products' },
     { id: 'orders', title: 'Orders', desc: 'Monitor orders activities', icon: 'cart-check', route: '/processing' },
     { id: 'sales', title: 'Sales', desc: 'Monitor sales activities', icon: 'cart-check', route: '/adminsales' },
-    { id: 'tickets', title: 'Tickets', desc: 'Support and issue tracking', icon: 'ticket-detailed', route: '/admintickets' },
     { id: 'commissions', title: 'Commissions', desc: 'Track vendor commissions', icon: 'cash-coin', route: '/admincommissions' },
     { id: 'logistics', title: 'Logistics', desc: 'Manage deliveries & shipping', icon: 'truck', route: '/adminlogistics' },
     { id: 'collections', title: 'Collections', desc: 'Collections management', icon: 'folder', route: '/collections' },
@@ -355,7 +353,6 @@ export class AdminComponent implements OnInit {
     { id: 'customers', title: 'Customers', desc: 'View and manage customers', icon: 'people', route: '/customers' },
     { id: 'products', title: 'Products', desc: 'Track and manage products', icon: 'box-seam', route: '/admin_products' },
     { id: 'orders', title: 'Orders', desc: 'Monitor orders activities', icon: 'cart-check', route: '/processing' },
-    { id: 'tickets', title: 'Tickets', desc: 'Support and issue tracking', icon: 'ticket-detailed', route: '/admintickets' },
     { id: 'commissions', title: 'Commissions', desc: 'Track vendor commissions', icon: 'cash-coin', route: '/admincommissions' },
     { id: 'logistics', title: 'Logistics', desc: 'Manage deliveries & shipping', icon: 'truck', route: '/adminlogistics' },
     { id: 'collections', title: 'Collections', desc: 'Collections management', icon: 'folder', route: '/collections' }
@@ -363,8 +360,7 @@ export class AdminComponent implements OnInit {
 
   support: Action[] = [
     { id: 'vendors', title: 'Vendors', desc: 'Manage and onboard vendors', icon: 'shop', route: '/stores' },
-    { id: 'products', title: 'Products', desc: 'Track and manage products', icon: 'box-seam', route: '/admin_products' },
-    { id: 'tickets', title: 'Tickets', desc: 'Support and issue tracking', icon: 'ticket-detailed', route: '/admintickets' }
+    { id: 'products', title: 'Products', desc: 'Track and manage products', icon: 'box-seam', route: '/admin_products' }
   ];
 
   finance: Action[] = [

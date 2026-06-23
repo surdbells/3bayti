@@ -28,6 +28,7 @@ import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxPlaceAutocompleteComponent, PlaceDetails } from '../../shared/ax-mobile/place-autocomplete';
 import { AuthSessionService } from '../../core/services/auth-session.service';
+import { supportWhatsappLink } from '../../core/constants/support.constants';
 
 @Component({
   selector: 'app-settings',
@@ -284,10 +285,6 @@ export class SettingsPage implements OnInit, OnDestroy {
     this.router.navigate(['/styles']);
   }
 
-  openTickets(): void {
-    this.router.navigate(['/ticketlist']);
-  }
-
   openGiftCards(): void {
     // Open the gift-card WALLET (manage / see-all-by-status / pay pending);
     // the wallet has Buy + Redeem buttons, so buying stays reachable.
@@ -295,9 +292,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   }
 
   openHelp(): void {
-    const phone = '971507967776';
-    const msg = encodeURIComponent('Hello, I need assistance.');
-    window.open(`https://wa.me/${phone}?text=${msg}`, '_system');
+    window.open(supportWhatsappLink('Hello, I need assistance.'), '_system');
   }
 
   OpenEmail(): void {

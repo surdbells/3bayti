@@ -141,13 +141,10 @@ final class PermissionCatalog
                     'disputes.resolve' => 'Resolve disputes',
                 ],
             ],
-            'tickets' => [
-                'label' => 'Support tickets',
+            'chat' => [
+                'label' => 'Chat',
                 'permissions' => [
-                    'tickets.view' => 'View tickets',
-                    'tickets.reply' => 'Reply to tickets',
-                    'tickets.update_status' => 'Update ticket status / priority',
-                    'tickets.close' => 'Close tickets',
+                    'chat.moderate' => 'Chat moderation',
                 ],
             ],
             'notifications' => [
@@ -271,10 +268,10 @@ final class PermissionCatalog
             ],
             'support' => [
                 'name' => 'Support',
-                'description' => 'Customer support: tickets, returns and read access to orders.',
+                'description' => 'Customer support: chat moderation, returns and read access to orders.',
                 'permissions' => [
                     'dashboard.view',
-                    'tickets.view', 'tickets.reply', 'tickets.update_status', 'tickets.close',
+                    'chat.moderate',
                     'orders.view', 'orders.view_detail',
                     'returns.view', 'returns.approve', 'returns.deny',
                     'vendors.view',

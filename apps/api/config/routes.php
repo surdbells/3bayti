@@ -255,16 +255,6 @@ return function (App $app): void {
         $group->post('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\FollowVendorController::class);
         $group->delete('/following/{vendorId:[0-9]+}', \Bayti\Api\Http\Controllers\Following\UnfollowVendorController::class);
 
-        // v3 customer support tickets (owner-scoped). Replaces legacy
-        // /customer/create_ticket, read_ticket, read-ticket-messages,
-        // send-ticket-message. /tickets is registered before the
-        // /tickets/{id} variants by virtue of exact-vs-pattern matching.
-        $group->get('/tickets', \Bayti\Api\Http\Controllers\Ticket\ListMyTicketsController::class);
-        $group->post('/tickets', \Bayti\Api\Http\Controllers\Ticket\CreateMyTicketController::class);
-        $group->get('/tickets/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Ticket\GetMyTicketController::class);
-        $group->get('/tickets/{id:[0-9]+}/messages', \Bayti\Api\Http\Controllers\Ticket\ListMyTicketMessagesController::class);
-        $group->post('/tickets/{id:[0-9]+}/messages', \Bayti\Api\Http\Controllers\Ticket\CreateMyTicketMessageController::class);
-
         // v3 customer reviews — own reviews (replaces legacy
         // /customer/settings/read-reviews + /settings/delete-review).
         $group->get('/reviews', \Bayti\Api\Http\Controllers\Review\ListMyReviewsController::class);
@@ -567,11 +557,11 @@ return function (App $app): void {
         $group->get(
             '/chat/flagged',
             \Bayti\Api\Http\Controllers\Admin\Chat\ListFlaggedMessagesController::class,
-        )->add($perm->for('tickets.view'));
+        )->add($perm->for('chat.moderate'));
         $group->get(
             '/chat/conversations/{uuid}',
             \Bayti\Api\Http\Controllers\Admin\Chat\GetConversationController::class,
-        )->add($perm->for('tickets.view'));
+        )->add($perm->for('chat.moderate'));
 
         // Brand admin
         $group->get('/brands', \Bayti\Api\Http\Controllers\Admin\Brand\ListBrandsAdminController::class)->add($perm->for('catalog.brands_view'));
@@ -698,20 +688,6 @@ return function (App $app): void {
             [\Bayti\Api\Http\Controllers\Admin\Catalog\CampaignCrudController::class, 'update'])->add($perm->for('catalog.campaigns_manage'));
         $group->delete('/campaigns/{id:[0-9]+}',
             [\Bayti\Api\Http\Controllers\Admin\Catalog\CampaignCrudController::class, 'delete'])->add($perm->for('catalog.campaigns_manage'));
-
-        // M3.4-G — Support ticket CRUD + messaging.
-        $group->get('/tickets',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketsController::class)->add($perm->for('tickets.view'));
-        $group->get('/tickets/{id:[0-9]+}',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\GetTicketController::class)->add($perm->for('tickets.view'));
-        $group->patch('/tickets/{id:[0-9]+}/status',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\UpdateTicketStatusController::class)->add($perm->for('tickets.update_status'));
-        $group->patch('/tickets/{id:[0-9]+}/priority',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\UpdateTicketPriorityController::class)->add($perm->for('tickets.update_status'));
-        $group->get('/tickets/{id:[0-9]+}/messages',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\ListTicketMessagesController::class)->add($perm->for('tickets.view'));
-        $group->post('/tickets/{id:[0-9]+}/messages',
-            \Bayti\Api\Http\Controllers\Admin\Ticket\CreateTicketMessageController::class)->add($perm->for('tickets.reply'));
 
         // M3.3.2-D — Admin finance (transactions + commissions read).
         $group->get('/transactions',
