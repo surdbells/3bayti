@@ -1053,6 +1053,10 @@ ion-header.md ion-toolbar {
     inset: 0;
     background: var(--ax-color-bg-placeholder);
     z-index: 2;
+    // Decorative overlay — must NEVER absorb taps. Before the image loads it
+    // sits over the <img>'s (click)=open_product, so without this the first
+    // tap lands here and is swallowed, forcing a second tap to open the PDP.
+    pointer-events: none;
     overflow: hidden;
     transition: opacity 0.3s ease;
 

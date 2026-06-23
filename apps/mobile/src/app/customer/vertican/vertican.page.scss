@@ -57,6 +57,8 @@ ion-content {
   bottom: 0;
   background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
   z-index: 2;
+  // Decorative overlay must not swallow the first tap (see global.scss).
+  pointer-events: none;
   overflow: hidden;
   transition: opacity 0.3s ease;
 
