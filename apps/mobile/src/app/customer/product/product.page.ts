@@ -3,6 +3,7 @@ import {
   CUSTOM_ELEMENTS_SCHEMA,
   ElementRef,
   OnInit,
+  AfterViewInit,
   OnDestroy,
   signal,
   ViewChild,
@@ -86,12 +87,12 @@ export interface ColorOption {
     AxBottomSheetComponent,
   ]
 })
-export class ProductPage implements OnInit, OnDestroy {
+export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   /** Expose cfImage for template usage. */
   readonly cfImage = cfImage;
   store_measurement: StoreMeasurement[] = [];
   product: Products[] = [];
-  @ViewChild('swiper', { static: true }) swiperEl!: ElementRef<HTMLElement>;
+  @ViewChild('swiper') swiperEl?: ElementRef<HTMLElement>;
   index = signal(0);
   isOnline = true;
   isMeasureOpen = false;
@@ -174,6 +175,13 @@ export class ProductPage implements OnInit, OnDestroy {
     this.rqst_param.product = Number(this.route.snapshot.queryParamMap.get('id'));
     this.rqst_param.product_name = this.route.snapshot.queryParamMap.get('name') || '';
     this.getObject();
+  }
+
+  ngAfterViewInit() {
+    // The swiper lives inside @if(!product_missing) (a structural directive),
+    // so its ViewChild only resolves AFTER the view renders. Init it here, not
+    // in ngOnInit — a static ref there is undefined and throws, which used to
+    // abort the rest of ngOnInit (including the product load + footer).
     this.initSwiper();
   }
 
@@ -182,7 +190,10 @@ export class ProductPage implements OnInit, OnDestroy {
   }
 
   private initSwiper() {
-    const el = this.swiperEl.nativeElement as any;
+    const el = this.swiperEl?.nativeElement as any;
+    if (!el) {
+      return;
+    }
     const attach = () => {
       const sw: any = el.swiper;
       if (!sw) {
