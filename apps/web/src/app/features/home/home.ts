@@ -161,8 +161,11 @@ export class HomeComponent {
      Sourced from environment.appStores. Placeholder '#' until the operator
      fills in the live listings; the template degrades each badge to a
      non-navigating button while its URL is still '#'. ------------------- */
-  readonly appStoreUrl = environment.appStores.appStore;
-  readonly playStoreUrl = environment.appStores.playStore;
+  // Widen to `string` so the template's `!== '#'` coming-soon check stays valid
+  // even when the env literal is a real URL (`as const` would otherwise narrow
+  // these to literal types and TS flags the comparison as non-overlapping).
+  readonly appStoreUrl: string = environment.appStores.appStore;
+  readonly playStoreUrl: string = environment.appStores.playStore;
 
   /* ----- Helpers (used in template) ------------------------------------- */
 

@@ -31,7 +31,7 @@ export const environment = {
      APP_STORE_URL / PLAY_STORE_URL at build time; '#' renders a
      non-navigating "coming soon" badge. */
   appStores: {
-    appStore: "#",
-    playStore: "#",
+    appStore: "https://apps.apple.com/ar/app/3bayti/id6752422907",
+    playStore: "https://play.google.com/store/apps/details?id=com.bayti.app",
   },
 } as const;
