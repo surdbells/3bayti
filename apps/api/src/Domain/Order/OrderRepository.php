@@ -188,6 +188,93 @@ class OrderRepository extends EntityRepository
     }
 
     /**
+     * Find delivered orders eligible for a post-delivery review-prompt
+     * PUSH (marketing follow-up).
+     *
+     * Eligibility:
+     *   - status = 'delivered'
+     *   - delivered_at IS NOT NULL AND delivered_at <= (now - 2 days)
+     *     (give the customer time to actually receive + use the item
+     *     before asking for a review)
+     *   - NO prior notification_logs row with template='order.review_prompt'
+     *     AND channel='push' for this order (channel-scoped idempotency —
+     *     exactly one review prompt per order)
+     *
+     * The opt-out check (users.marketing_push_opt_out) is enforced at
+     * dispatch time inside PushNotificationService::orderReviewPrompt,
+     * NOT here — same split as the cart-abandonment finder: the finder
+     * answers "is this order eligible to consider?", dispatch answers
+     * "will this user receive it?".
+     *
+     * Ordered oldest-delivered first so the longest-waiting customers
+     * are prompted first. LIMIT bounds the cron batch.
+     *
+     * NOTE: the prior-prompt guard is a RAW SQL NOT EXISTS against
+     * notification_logs because the NotificationLog *entity* is not
+     * mapped for the channel column (the foundation generalized the
+     * table but not the entity). A DQL reference to nl.channel would
+     * fail metadata validation, so we resolve eligible ids with a
+     * native query, then hydrate via DQL.
+     *
+     * @return list<Order>
+     */
+    public function findDeliveredForFollowUp(
+        \DateTimeImmutable $deliveredBefore,
+        int $batchLimit,
+    ): array {
+        $batchLimit = max(1, min($batchLimit, 500));
+
+        $sql = <<<'SQL'
+            SELECT o.id
+            FROM orders o
+            WHERE o.status = :status
+              AND o.delivered_at IS NOT NULL
+              AND o.delivered_at <= :before
+              AND NOT EXISTS (
+                  SELECT 1 FROM notification_logs nl
+                  WHERE nl.order_id = o.id
+                    AND nl.template = :tpl
+                    AND nl.channel = :ch
+              )
+            ORDER BY o.delivered_at ASC
+            LIMIT :lim
+        SQL;
+
+        $rows = $this->getEntityManager()->getConnection()->executeQuery(
+            $sql,
+            [
+                'status' => Order::STATUS_DELIVERED,
+                'before' => $deliveredBefore->format('Y-m-d H:i:sP'),
+                'tpl' => 'order.review_prompt',
+                'ch' => 'push',
+                'lim' => $batchLimit,
+            ],
+            [
+                'status' => \Doctrine\DBAL\ParameterType::STRING,
+                'before' => \Doctrine\DBAL\ParameterType::STRING,
+                'tpl' => \Doctrine\DBAL\ParameterType::STRING,
+                'ch' => \Doctrine\DBAL\ParameterType::STRING,
+                'lim' => \Doctrine\DBAL\ParameterType::INTEGER,
+            ],
+        )->fetchAllAssociative();
+
+        $ids = array_map(static fn (array $r): int => (int) $r['id'], $rows);
+        if ($ids === []) {
+            return [];
+        }
+
+        $orders = $this->createQueryBuilder('o')
+            ->where('o.id IN (:ids)')
+            ->setParameter('ids', $ids)
+            ->orderBy('o.deliveredAt', 'ASC')
+            ->getQuery()
+            ->getResult();
+
+        /** @var list<Order> $orders */
+        return $orders;
+    }
+
+    /**
      * Persist an order with its items and addresses as one unit.
      */
     public function saveWithEverything(Order $order): void

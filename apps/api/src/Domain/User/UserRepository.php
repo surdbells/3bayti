@@ -294,6 +294,86 @@ class UserRepository extends EntityRepository
         return ['items' => $items, 'total' => $total];
     }
 
+    /**
+     * Find lapsed users eligible for a re-engagement PUSH nudge
+     * (balanced cadence).
+     *
+     * Eligibility (all must hold):
+     *   1. last_login_at <= (now - 14 days)   — genuinely lapsed
+     *   2. has >= 1 active device token        — a push can land
+     *   3. marketing_push_opt_out = false      — consented to marketing
+     *   4. NOT soft-deleted
+     *   5. NOT nudged in the last 14 days: no notification_logs row with
+     *      user_id = u.id AND template='re_engagement.nudge' AND
+     *      channel='push' AND sent_at > (now - 14 days)
+     *
+     * The opt-out + the cadence guard are BOTH enforced here so the
+     * finder returns a tight candidate set; PushNotificationService
+     * ::reEngagementNudge re-checks the opt-out at dispatch (defence in
+     * depth — the flag could flip between this query and the send).
+     *
+     * Raw SQL (not DQL) because the cadence guard references the
+     * unmapped notification_logs.user_id / channel columns. Returns ids;
+     * the caller hydrates one user at a time to bound memory.
+     *
+     * @return list<int>
+     */
+    public function findLapsedForReengagement(
+        \DateTimeImmutable $now,
+        \DateInterval $lapsedThreshold,
+        \DateInterval $cadence,
+        int $batchLimit,
+    ): array {
+        $batchLimit = max(1, min($batchLimit, 500));
+
+        $lapsedBefore = $now->sub($lapsedThreshold);
+        $nudgedAfter = $now->sub($cadence);
+
+        $sql = <<<'SQL'
+            SELECT u.id
+            FROM users u
+            WHERE u.deleted_at IS NULL
+              AND u.marketing_push_opt_out = false
+              AND u.last_login_at IS NOT NULL
+              AND u.last_login_at <= :lapsedBefore
+              AND EXISTS (
+                  SELECT 1 FROM device_tokens dt
+                  WHERE dt.user_id = u.id AND dt.is_active = true
+              )
+              AND NOT EXISTS (
+                  SELECT 1 FROM notification_logs nl
+                  WHERE nl.user_id = u.id
+                    AND nl.template = :tpl
+                    AND nl.channel = :ch
+                    AND nl.sent_at > :nudgedAfter
+              )
+            ORDER BY u.last_login_at ASC
+            LIMIT :lim
+        SQL;
+
+        $rows = $this->getEntityManager()->getConnection()->executeQuery(
+            $sql,
+            [
+                'lapsedBefore' => $lapsedBefore->format('Y-m-d H:i:sP'),
+                'tpl' => 're_engagement.nudge',
+                'ch' => 'push',
+                'nudgedAfter' => $nudgedAfter->format('Y-m-d H:i:sP'),
+                'lim' => $batchLimit,
+            ],
+            [
+                'lapsedBefore' => \Doctrine\DBAL\ParameterType::STRING,
+                'tpl' => \Doctrine\DBAL\ParameterType::STRING,
+                'ch' => \Doctrine\DBAL\ParameterType::STRING,
+                'nudgedAfter' => \Doctrine\DBAL\ParameterType::STRING,
+                'lim' => \Doctrine\DBAL\ParameterType::INTEGER,
+            ],
+        )->fetchAllAssociative();
+
+        /** @var list<int> $ids */
+        $ids = array_map(static fn (array $r): int => (int) $r['id'], $rows);
+        return $ids;
+    }
+
     public function save(User $user, bool $flush = true): void
     {
         $em = $this->getEntityManager();

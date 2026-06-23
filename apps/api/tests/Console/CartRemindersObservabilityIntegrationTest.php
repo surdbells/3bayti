@@ -17,6 +17,8 @@ use Bayti\Api\Infrastructure\Auth\JwtSettings;
 use Bayti\Api\Notification\CartEmailTemplateRenderer;
 use Bayti\Api\Notification\CartNotificationService;
 use Bayti\Api\Notification\InMemoryMailer;
+use Bayti\Api\Notification\Push\PushNotificationLogger;
+use Bayti\Api\Notification\Push\PushNotificationService;
 use Bayti\Api\Notification\UnsubscribeTokenIssuer;
 use Bayti\Api\Tests\Support\InMemoryLogger;
 use Doctrine\DBAL\Connection;
@@ -61,12 +63,17 @@ final class CartRemindersObservabilityIntegrationTest extends TestCase
         $user = $this->makeUser(email: 'alice@example.com', optedOut: false);
         $cart = $this->makeCart(id: 42, user: $user);
 
-        // Connection returns one cart id (42) from the Finder's query
+        // Connection returns one cart id (42) for the EMAIL finder query
+        // and nothing for the PUSH finder query — this test asserts the
+        // email pass only (push has its own dedicated coverage). The two
+        // finders are told apart by their template parameter:
+        // 'cart.abandoned.customer' (email) vs 'cart.abandoned' (push).
         $connection = $this->createMock(Connection::class);
         $connection->method('executeQuery')->willReturnCallback(
-            function () use (&$callCount): Result {
+            function (string $sql, array $params = []): Result {
+                $isEmail = ($params['template'] ?? null) === 'cart.abandoned.customer';
                 $r = $this->createMock(Result::class);
-                $r->method('fetchAllAssociative')->willReturn([['id' => '42']]);
+                $r->method('fetchAllAssociative')->willReturn($isEmail ? [['id' => '42']] : []);
                 return $r;
             },
         );
@@ -117,6 +124,8 @@ final class CartRemindersObservabilityIntegrationTest extends TestCase
             finder: $finder,
             notifications: $service,
             logger: $logger,
+            push: $this->createMock(PushNotificationService::class),
+            pushLog: $this->createMock(PushNotificationLogger::class),
         );
 
         $app = new Application();
@@ -149,10 +158,12 @@ final class CartRemindersObservabilityIntegrationTest extends TestCase
         self::assertNull($log->getOrderId());
 
         // Observability fired through the full stack:
-        //   - Finder emits cart_abandonment_finder.computed
+        //   - Finder emits cart_abandonment_finder.computed TWICE (once
+        //     for the email-eligible query, once for the push-eligible
+        //     query — both run every cron pass)
         //   - Service emits cart_notification.sent
         //   - Command emits cart_reminders.batch_complete
-        self::assertCount(1, $logger->findByMessage('cart_abandonment_finder.computed'));
+        self::assertCount(2, $logger->findByMessage('cart_abandonment_finder.computed'));
         self::assertCount(1, $logger->findByMessage('cart_notification.sent'));
 
         $batchLogs = $logger->findByMessage('cart_reminders.batch_complete');
@@ -174,9 +185,10 @@ final class CartRemindersObservabilityIntegrationTest extends TestCase
 
         $connection = $this->createMock(Connection::class);
         $connection->method('executeQuery')->willReturnCallback(
-            function (): Result {
+            function (string $sql, array $params = []): Result {
+                $isEmail = ($params['template'] ?? null) === 'cart.abandoned.customer';
                 $r = $this->createMock(Result::class);
-                $r->method('fetchAllAssociative')->willReturn([['id' => '42']]);
+                $r->method('fetchAllAssociative')->willReturn($isEmail ? [['id' => '42']] : []);
                 return $r;
             },
         );
@@ -219,6 +231,8 @@ final class CartRemindersObservabilityIntegrationTest extends TestCase
             finder: new CartAbandonmentFinder($em, $logger),
             notifications: $service,
             logger: $logger,
+            push: $this->createMock(PushNotificationService::class),
+            pushLog: $this->createMock(PushNotificationLogger::class),
         );
 
         $app = new Application();

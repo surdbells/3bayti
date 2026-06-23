@@ -59,6 +59,11 @@ final class UserSerializer
             'locale' => $user->getLocale(),
             'timezone' => $user->getTimezone(),
 
+            // Marketing PUSH opt-out (toggled via
+            // PATCH /v3/me/notification-preferences). The three marketing
+            // pushes are skipped when this is true; lifecycle pushes ignore it.
+            'marketing_opt_out' => $user->isMarketingPushOptedOut(),
+
             'is_phone_verified' => $user->isPhoneVerified(),
             'is_email_verified' => $user->isEmailVerified(),
             'roles' => $this->extractActiveRoles($user),

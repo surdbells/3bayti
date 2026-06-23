@@ -270,6 +270,26 @@ class User
     #[ORM\Column(name: 'marketing_emails_opt_out', type: 'boolean', options: ['default' => false])]
     private bool $marketingEmailsOptOut = false;
 
+    /**
+     * Marketing PUSH opt-out flag. FALSE by default (opt-in posture),
+     * the push counterpart to marketing_emails_opt_out.
+     *
+     * Scope is *marketing* push only — the three marketing pushes:
+     *   - cart.abandoned
+     *   - order.review_prompt
+     *   - re_engagement.nudge
+     *
+     * Order-lifecycle pushes (placed, paid, shipped, delivered, etc.)
+     * IGNORE this flag — they are transactional and always send. The
+     * PushNotificationService checks this flag at the marketing-method
+     * layer (early-return) before fanning out to device tokens.
+     *
+     * Exposed to the app as `marketing_opt_out` (GET /me/profile) and
+     * toggled via PATCH /v3/me/notification-preferences.
+     */
+    #[ORM\Column(name: 'marketing_push_opt_out', type: 'boolean', options: ['default' => false])]
+    private bool $marketingPushOptOut = false;
+
     // -------------------------------------------------------------------
     // Vendor lifecycle (only meaningful when is_vendor = true)
     // -------------------------------------------------------------------
@@ -505,6 +525,12 @@ class User
     public function setMarketingEmailsOptOut(bool $optedOut): void
     {
         $this->marketingEmailsOptOut = $optedOut;
+    }
+    public function isMarketingPushOptedOut(): bool { return $this->marketingPushOptOut; }
+
+    public function setMarketingPushOptOut(bool $optedOut): void
+    {
+        $this->marketingPushOptOut = $optedOut;
     }
     public function isStoreApproved(): bool  { return $this->isStoreApproved; }
     public function isStoreActive(): bool    { return $this->isStoreActive; }

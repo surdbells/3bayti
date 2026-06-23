@@ -118,6 +118,18 @@ class Order
     private ?DateTimeImmutable $paidAt = null;
 
     /**
+     * When the order FIRST reached the DELIVERED status. Set once by
+     * recomputeStatusFromItems on the pending→delivered transition and
+     * never overwritten (a re-delivery transition keeps the original
+     * timestamp). Null for orders that have never been delivered.
+     *
+     * Consumed by the post-delivery review-prompt follow-up: the
+     * marketing push fires N hours/days after delivered_at.
+     */
+    #[ORM\Column(name: 'delivered_at', type: 'datetimetz_immutable', nullable: true)]
+    private ?DateTimeImmutable $deliveredAt = null;
+
+    /**
      * @var Collection<int, OrderItem>
      */
     #[ORM\OneToMany(targetEntity: OrderItem::class, mappedBy: 'order', cascade: ['persist', 'remove'], orphanRemoval: true)]
@@ -263,6 +275,11 @@ class Order
     public function getPaidAt(): ?DateTimeImmutable
     {
         return $this->paidAt;
+    }
+
+    public function getDeliveredAt(): ?DateTimeImmutable
+    {
+        return $this->deliveredAt;
     }
 
     /**
@@ -474,6 +491,12 @@ class Order
 
         if ($newStatus !== null && $newStatus !== $this->status) {
             $this->status = $newStatus;
+            // Stamp delivered_at the first time the order reaches
+            // DELIVERED. Set once — a later re-transition (e.g. an item
+            // returned then re-delivered) keeps the original timestamp.
+            if ($newStatus === self::STATUS_DELIVERED && $this->deliveredAt === null) {
+                $this->deliveredAt = new DateTimeImmutable();
+            }
             $this->touchUpdatedAt();
         }
     }

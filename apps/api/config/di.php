@@ -493,11 +493,25 @@ return [
     ): \Bayti\Api\Notification\Push\PushNotificationService {
         return new \Bayti\Api\Notification\Push\PushNotificationService(
             sender: $c->get(\Bayti\Api\Notification\Push\PushSenderInterface::class),
+            localeResolver: $c->get(\Bayti\Api\Notification\LocaleResolver::class),
             logger: $c->get(\Psr\Log\LoggerInterface::class),
             // EM passed directly so DeviceTokenRepository is resolved
             // LAZILY per fan-out rather than eagerly at construction
             // (same locked pattern as OrderNotificationService).
             em: $c->get(\Doctrine\ORM\EntityManagerInterface::class),
+        );
+    },
+
+    // Marketing-push scheduled jobs — push notification_log ledger.
+    // Resolves the DBAL Connection from the EntityManager so push log
+    // rows (channel='push', user_id, nullable recipient) can be written
+    // with raw SQL without remapping the NotificationLog entity.
+    \Bayti\Api\Notification\Push\PushNotificationLogger::class => static function (
+        \Psr\Container\ContainerInterface $c,
+    ): \Bayti\Api\Notification\Push\PushNotificationLogger {
+        return new \Bayti\Api\Notification\Push\PushNotificationLogger(
+            connection: $c->get(\Doctrine\ORM\EntityManagerInterface::class)->getConnection(),
+            logger: $c->get(\Psr\Log\LoggerInterface::class),
         );
     },
 

@@ -11,6 +11,7 @@ use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Payment\PaymentTransaction;
 use Bayti\Api\Domain\Payment\PaymentTransactionRepository;
 use Bayti\Api\Domain\User\User;
+use Bayti\Api\Notification\LocaleResolver;
 use Bayti\Api\Notification\MailerInterface;
 use Bayti\Api\Notification\OrderEmailTemplateRenderer;
 use Bayti\Api\Notification\OrderNotificationService;
@@ -171,6 +172,7 @@ final class CancelOrderServiceTest extends TestCase
         // Real service with no EM → activeTokensFor returns [] → no sends.
         return new PushNotificationService(
             sender: $this->createMock(PushSenderInterface::class),
+            localeResolver: new LocaleResolver(),
             logger: new NullLogger(),
             em: null,
         );
@@ -185,7 +187,7 @@ final class CancelOrderServiceTest extends TestCase
      */
     private function throwingPushService(): PushNotificationService
     {
-        return new class ($this->createMock(PushSenderInterface::class)) extends PushNotificationService {
+        return new class ($this->createMock(PushSenderInterface::class), new LocaleResolver()) extends PushNotificationService {
             public function orderCancelled(Order $order): void
             {
                 throw new \RuntimeException('push fan-out exploded');

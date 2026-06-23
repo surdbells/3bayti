@@ -191,6 +191,16 @@ return function (App $app): void {
         // Single row per user; PATCH creates if missing, updates otherwise.
         $group->patch('/location', UpdateLocationController::class);
 
+        // PUSH — marketing push opt-out toggle. Body { marketing_opt_out: bool }.
+        // Flips users.marketing_push_opt_out; returns the refreshed profile.
+        // The three marketing pushes (cart.abandoned, order.review_prompt,
+        // re_engagement.nudge) are suppressed when opted out; lifecycle
+        // pushes ignore the flag.
+        $group->patch(
+            '/notification-preferences',
+            \Bayti\Api\Http\Controllers\Profile\UpdateNotificationPreferencesController::class,
+        );
+
         // M3.1.1f — change password (authenticated, re-auth via current_password).
         // Mirrors /v3/auth/reset/confirm's session-handling pattern:
         // revokes all refresh tokens + issues a fresh pair on success.

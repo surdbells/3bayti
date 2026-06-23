@@ -24,8 +24,12 @@ use Bayti\Api\Bootstrap;
 use Bayti\Api\Console\DispatchScheduledGiftCardsCommand;
 use Bayti\Api\Console\ReconcilePendingOrdersCommand;
 use Bayti\Api\Console\SendAbandonedCartRemindersCommand;
+use Bayti\Api\Console\SendDeliveryFollowupsCommand;
+use Bayti\Api\Console\SendReengagementNudgesCommand;
 use Bayti\Api\Domain\Cart\CartAbandonmentFinder;
 use Bayti\Api\Notification\CartNotificationService;
+use Bayti\Api\Notification\Push\PushNotificationLogger;
+use Bayti\Api\Notification\Push\PushNotificationService;
 use Bayti\Api\Payment\PaymentGatewayInterface;
 use Doctrine\DBAL\Tools\Console\ConsoleRunner as DbalConsoleRunner;
 use Doctrine\DBAL\Tools\Console\Command\RunSqlCommand;
@@ -125,9 +129,37 @@ try {
     $finder = $container->get(CartAbandonmentFinder::class);
     /** @var CartNotificationService $cartNotifications */
     $cartNotifications = $container->get(CartNotificationService::class);
-    $cli->add(new SendAbandonedCartRemindersCommand($em, $finder, $cartNotifications, $logger));
+    /** @var PushNotificationService $pushService */
+    $pushService = $container->get(PushNotificationService::class);
+    /** @var PushNotificationLogger $pushLog */
+    $pushLog = $container->get(PushNotificationLogger::class);
+    $cli->add(new SendAbandonedCartRemindersCommand(
+        $em,
+        $finder,
+        $cartNotifications,
+        $logger,
+        $pushService,
+        $pushLog,
+    ));
 } catch (\Throwable $e) {
     $logger->info('cart reminders command not registered', [
+        'reason' => $e->getMessage(),
+    ]);
+}
+
+// Marketing-push scheduled jobs — post-delivery review prompt +
+// re-engagement nudge. Both resolve the push service + push log ledger
+// from the container; independent of payment-gateway availability so a
+// fresh sandbox can still run them.
+try {
+    /** @var PushNotificationService $pushService */
+    $pushService = $container->get(PushNotificationService::class);
+    /** @var PushNotificationLogger $pushLog */
+    $pushLog = $container->get(PushNotificationLogger::class);
+    $cli->add(new SendDeliveryFollowupsCommand($em, $pushService, $pushLog, $logger));
+    $cli->add(new SendReengagementNudgesCommand($em, $pushService, $pushLog, $logger));
+} catch (\Throwable $e) {
+    $logger->info('marketing-push commands not registered', [
         'reason' => $e->getMessage(),
     ]);
 }

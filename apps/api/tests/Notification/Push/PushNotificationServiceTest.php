@@ -12,6 +12,7 @@ use Bayti\Api\Notification\Push\InMemoryPushSender;
 use Bayti\Api\Notification\Push\PushException;
 use Bayti\Api\Notification\Push\PushNotificationService;
 use Bayti\Api\Notification\Push\PushSenderInterface;
+use Bayti\Api\Notification\LocaleResolver;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -69,6 +70,7 @@ final class PushNotificationServiceTest extends TestCase
 
         return new PushNotificationService(
             sender: $sender,
+            localeResolver: new LocaleResolver(),
             logger: new NullLogger(),
             em: $em,
         );
@@ -194,7 +196,7 @@ final class PushNotificationServiceTest extends TestCase
     {
         // No EM → cannot resolve tokens → no sends, no throw.
         $sender = new InMemoryPushSender();
-        $service = new PushNotificationService(sender: $sender, logger: new NullLogger(), em: null);
+        $service = new PushNotificationService(sender: $sender, localeResolver: new LocaleResolver(), logger: new NullLogger(), em: null);
 
         $service->orderPaid($this->makeOrder($this->makeUser()));
 

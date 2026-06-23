@@ -150,6 +150,96 @@ class CartAbandonmentFinder
         return $ids;
     }
 
+    /**
+     * Find up to $limit cart_ids eligible for an abandonment-recovery
+     * PUSH. Independent of the email finder above: the NOT EXISTS guard
+     * pins channel='push' so a cart that already received the EMAIL
+     * reminder is STILL eligible for a push (and vice-versa). This is
+     * what lets one abandoned cart get BOTH an email and a push, each
+     * idempotent on its own channel.
+     *
+     * Same structural eligibility as the email finder (active, has
+     * items, idle past threshold, owner has — here we do NOT require an
+     * email since push targets device tokens, not email; the dispatch
+     * layer skips carts whose owner has no active token or opted out of
+     * marketing push). The template/channel guard uses the PUSH
+     * data.type value 'cart.abandoned' (distinct from the email
+     * template 'cart.abandoned.customer').
+     *
+     * @return list<int>
+     */
+    public function findPushEligibleCartIds(
+        \DateTimeImmutable $now,
+        \DateInterval $threshold,
+        int $limit = self::DEFAULT_BATCH_SIZE,
+    ): array {
+        if ($limit < 1) {
+            $limit = self::DEFAULT_BATCH_SIZE;
+        }
+        $limit = min($limit, self::MAX_BATCH_SIZE);
+
+        $cutoff = $now->sub($threshold);
+        $startNs = hrtime(true);
+
+        $this->applyStatementTimeout();
+
+        $sql = <<<'SQL'
+            SELECT c.id
+            FROM carts c
+            WHERE c.status = 'active'
+              AND c.user_id IS NOT NULL
+              AND c.updated_at < :cutoff
+              AND EXISTS (
+                  SELECT 1 FROM cart_items ci WHERE ci.cart_id = c.id
+              )
+              AND EXISTS (
+                  SELECT 1 FROM device_tokens dt
+                  WHERE dt.user_id = c.user_id AND dt.is_active = true
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM notification_logs nl
+                  WHERE nl.cart_id = c.id
+                    AND nl.template = :template
+                    AND nl.channel = :channel
+              )
+            ORDER BY c.updated_at ASC
+            LIMIT :limit
+        SQL;
+
+        $rows = $this->em->getConnection()->executeQuery(
+            $sql,
+            [
+                'cutoff' => $cutoff->format('Y-m-d H:i:sP'),
+                'template' => 'cart.abandoned',
+                'channel' => 'push',
+                'limit' => $limit,
+            ],
+            [
+                'cutoff' => ParameterType::STRING,
+                'template' => ParameterType::STRING,
+                'channel' => ParameterType::STRING,
+                'limit' => ParameterType::INTEGER,
+            ],
+        )->fetchAllAssociative();
+
+        /** @var list<int> $ids */
+        $ids = [];
+        foreach ($rows as $row) {
+            $ids[] = (int) $row['id'];
+        }
+
+        $elapsedMs = (int) ((hrtime(true) - $startNs) / 1_000_000);
+        $this->emitTimingLogs($elapsedMs, [
+            'channel' => 'push',
+            'cutoff' => $cutoff->format(\DateTimeInterface::ATOM),
+            'limit' => $limit,
+            'matched' => count($ids),
+        ]);
+
+        return $ids;
+    }
+
     private function applyStatementTimeout(): void
     {
         try {

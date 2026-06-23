@@ -8,6 +8,8 @@ use Bayti\Api\Domain\Cart\Cart;
 use Bayti\Api\Domain\Cart\CartAbandonmentFinder;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Notification\CartNotificationService;
+use Bayti\Api\Notification\Push\PushNotificationLogger;
+use Bayti\Api\Notification\Push\PushNotificationService;
 use DateTimeImmutable;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
@@ -87,6 +89,8 @@ final class SendAbandonedCartRemindersCommand extends Command
         private readonly CartAbandonmentFinder $finder,
         private readonly CartNotificationService $notifications,
         private readonly LoggerInterface $logger,
+        private readonly PushNotificationService $push,
+        private readonly PushNotificationLogger $pushLog,
     ) {
         parent::__construct();
     }
@@ -136,49 +140,147 @@ final class SendAbandonedCartRemindersCommand extends Command
             $dryRun ? ' [DRY RUN]' : '',
         ));
 
+        // Email-eligible carts (idempotent on channel='email' via the
+        // email template log) and push-eligible carts (idempotent on
+        // channel='push') are found INDEPENDENTLY. A cart can appear in
+        // one set, both, or neither — an email log never suppresses a
+        // push and vice-versa (the new notification_logs.channel column
+        // is what keeps the two streams separate).
         $cartIds = $this->finder->findEligibleCartIds(
+            now: $now,
+            threshold: $threshold,
+            limit: $batchSize,
+        );
+        $pushCartIds = $this->finder->findPushEligibleCartIds(
             now: $now,
             threshold: $threshold,
             limit: $batchSize,
         );
 
         $totalFound = count($cartIds);
-        $io->writeln(sprintf('Found <info>%d</info> eligible cart(s).', $totalFound));
+        $totalPush = count($pushCartIds);
+        $io->writeln(sprintf(
+            'Found <info>%d</info> email-eligible and <info>%d</info> push-eligible cart(s).',
+            $totalFound,
+            $totalPush,
+        ));
 
-        if ($totalFound === 0) {
+        if ($totalFound === 0 && $totalPush === 0) {
             $io->success('Nothing to send.');
             return Command::SUCCESS;
         }
 
         if ($dryRun) {
             $io->writeln('');
-            $io->writeln('Eligible cart IDs (no emails sent):');
-            $io->writeln('  ' . implode(', ', array_map(strval(...), $cartIds)));
-            $io->success(sprintf('[DRY RUN] %d cart(s) would be processed.', $totalFound));
+            $io->writeln('Email-eligible cart IDs (nothing sent):');
+            $io->writeln('  ' . ($cartIds === [] ? '(none)' : implode(', ', array_map(strval(...), $cartIds))));
+            $io->writeln('Push-eligible cart IDs (nothing sent):');
+            $io->writeln('  ' . ($pushCartIds === [] ? '(none)' : implode(', ', array_map(strval(...), $pushCartIds))));
+            $io->success(sprintf(
+                '[DRY RUN] %d email + %d push cart(s) would be processed.',
+                $totalFound,
+                $totalPush,
+            ));
             return Command::SUCCESS;
         }
 
         $stats = $this->dispatch($cartIds, $io);
+        $pushStats = $this->dispatchPush($pushCartIds, $io);
 
         $io->section('Summary');
         $io->table(
-            ['Outcome', 'Count'],
+            ['Channel', 'Found', 'Processed', 'Errors'],
             [
-                ['Found', (string) $totalFound],
-                ['Processed', (string) $stats['processed']],
-                ['Errors', (string) $stats['errors']],
+                ['Email', (string) $totalFound, (string) $stats['processed'], (string) $stats['errors']],
+                ['Push', (string) $totalPush, (string) $pushStats['processed'], (string) $pushStats['errors']],
             ],
         );
+
+        $errors = $stats['errors'] + $pushStats['errors'];
 
         $this->logger->info('cart_reminders.batch_complete', [
             'found' => $totalFound,
             'processed' => $stats['processed'],
             'errors' => $stats['errors'],
+            'push_found' => $totalPush,
+            'push_processed' => $pushStats['processed'],
+            'push_errors' => $pushStats['errors'],
             'threshold_hours' => $hours,
             'batch_size' => $batchSize,
         ]);
 
-        return $stats['errors'] === 0 ? Command::SUCCESS : Command::FAILURE;
+        return $errors === 0 ? Command::SUCCESS : Command::FAILURE;
+    }
+
+    /**
+     * Dispatch abandoned-cart PUSH notifications for a list of cart ids.
+     * Each push is logged to notification_logs with channel='push' so
+     * the cart becomes ineligible on subsequent runs (independent of the
+     * email reminder's idempotency).
+     *
+     * @param list<int> $cartIds
+     * @return array{processed: int, errors: int}
+     */
+    private function dispatchPush(array $cartIds, SymfonyStyle $io): array
+    {
+        if ($cartIds === []) {
+            return ['processed' => 0, 'errors' => 0];
+        }
+
+        /** @var CartRepository $carts */
+        $carts = $this->em->getRepository(Cart::class);
+
+        $processed = 0;
+        $errors = 0;
+
+        foreach ($cartIds as $cartId) {
+            try {
+                $cart = $carts->find($cartId);
+                if (!$cart instanceof Cart) {
+                    $this->logger->info('cart_reminders.push.cart_disappeared', [
+                        'cart_id' => $cartId,
+                    ]);
+                    continue;
+                }
+
+                // Belt-and-braces re-check the per-cart push log in case
+                // the same cart id appeared twice in a very large batch.
+                if ($this->pushLog->pushSentForCart($cartId, 'cart.abandoned')) {
+                    continue;
+                }
+
+                // PushNotificationService::cartAbandoned is fire-and-forget
+                // (never throws) and internally honors marketing_push_opt_out.
+                $this->push->cartAbandoned($cart);
+
+                // Log the attempt with channel='push'. We write a 'sent'
+                // row even when the user opted out / had no token: the row
+                // is a 'we evaluated this cart for push' marker, mirroring
+                // the email side's persistent-suppression semantics, so we
+                // don't re-evaluate the same cart every cron run.
+                $this->pushLog->log(
+                    template: 'cart.abandoned',
+                    status: PushNotificationLogger::STATUS_SENT,
+                    cartId: $cartId,
+                    userId: $cart->getUser()?->getId(),
+                );
+                $processed++;
+            } catch (\Throwable $e) {
+                $errors++;
+                $io->writeln(sprintf(
+                    '<error>Cart #%d push failed: %s</error>',
+                    $cartId,
+                    $e->getMessage(),
+                ));
+                $this->logger->error('cart_reminders.push.cart_failed', [
+                    'cart_id' => $cartId,
+                    'error' => $e->getMessage(),
+                    'class' => $e::class,
+                ]);
+            }
+        }
+
+        return ['processed' => $processed, 'errors' => $errors];
     }
 
     /**

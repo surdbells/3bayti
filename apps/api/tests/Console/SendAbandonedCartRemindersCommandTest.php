@@ -10,6 +10,8 @@ use Bayti\Api\Domain\Cart\CartAbandonmentFinder;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Notification\CartNotificationService;
+use Bayti\Api\Notification\Push\PushNotificationLogger;
+use Bayti\Api\Notification\Push\PushNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -39,6 +41,8 @@ final class SendAbandonedCartRemindersCommandTest extends TestCase
     private CartAbandonmentFinder $finder;
     private CartNotificationService $notifications;
     private LoggerInterface $logger;
+    private PushNotificationService $push;
+    private PushNotificationLogger $pushLog;
 
     protected function setUp(): void
     {
@@ -51,6 +55,14 @@ final class SendAbandonedCartRemindersCommandTest extends TestCase
         $this->finder = $this->createMock(CartAbandonmentFinder::class);
         $this->notifications = $this->createMock(CartNotificationService::class);
         $this->logger = $this->createMock(LoggerInterface::class);
+        $this->push = $this->createMock(PushNotificationService::class);
+        $this->pushLog = $this->createMock(PushNotificationLogger::class);
+
+        // These tests focus on the EMAIL pass. Default the push pass to
+        // "no eligible carts" so the email assertions stay isolated; the
+        // push-specific behavior has its own coverage below.
+        $this->finder->method('findPushEligibleCartIds')->willReturn([]);
+        $this->pushLog->method('pushSentForCart')->willReturn(false);
 
         $this->em->method('getRepository')->willReturnCallback(
             fn (string $class): object => match ($class) {
@@ -115,7 +127,7 @@ final class SendAbandonedCartRemindersCommandTest extends TestCase
 
         self::assertSame(Command::SUCCESS, $exit);
         self::assertSame([101, 202], $invokedWith);
-        self::assertStringContainsString('Found 2 eligible cart(s)', $tester->getDisplay());
+        self::assertStringContainsString('Found 2 email-eligible', $tester->getDisplay());
     }
 
     // =================================================================
@@ -292,6 +304,8 @@ final class SendAbandonedCartRemindersCommandTest extends TestCase
             finder: $this->finder,
             notifications: $this->notifications,
             logger: $this->logger,
+            push: $this->push,
+            pushLog: $this->pushLog,
         );
         $app = new Application();
         $app->add($command);
