@@ -234,7 +234,7 @@ export class AccountPage implements OnInit, OnDestroy {
   activeGiftCards: any[] = [];
 
   // Gift-card advertorial promo — dismissible, persisted in Preferences.
-  giftPromoDismissed = false;
+  giftPromoExpanded = false;
 
   get totalGiftCardBalance(): string {
     const total = this.activeGiftCards.reduce((sum: number, c: any) => sum + Number(c.balance), 0);
@@ -256,9 +256,9 @@ export class AccountPage implements OnInit, OnDestroy {
     this.router.navigate(['/my-gift-cards']);
   }
 
-  async dismissGiftPromo() {
-    this.giftPromoDismissed = true;
-    await Preferences.set({ key: 'gift_promo_dismissed', value: '1' });
+  async toggleGiftPromo() {
+    this.giftPromoExpanded = !this.giftPromoExpanded;
+    await Preferences.set({ key: 'gift_promo_expanded', value: this.giftPromoExpanded ? '1' : '0' });
   }
 
   ngOnInit() {
@@ -267,10 +267,8 @@ export class AccountPage implements OnInit, OnDestroy {
   }
 
   async getObject() {
-    const dismissed = await Preferences.get({ key: 'gift_promo_dismissed' });
-    if (dismissed.value === '1') {
-      this.giftPromoDismissed = true;
-    }
+    const promoState = await Preferences.get({ key: 'gift_promo_expanded' });
+    this.giftPromoExpanded = promoState.value === '1';
     const ret: any = await Preferences.get({ key: 'user' });
     if (ret.value == null){
       this.router.navigate(['/', 'login']);

@@ -103,48 +103,43 @@
     </div>
   }
 
-  <!-- Gift-card advertorial promo -->
-  @if (!giftPromoDismissed) {
+  <!-- Gift-card promo — compact by default, tap the row to expand -->
   <section class="section ion-padding-horizontal">
-    <article class="gift-promo">
+    <article class="gift-promo" [class.gift-promo--expanded]="giftPromoExpanded">
+      <span class="gift-promo__glow" aria-hidden="true"></span>
+
       <button
         type="button"
-        class="gift-promo__close"
-        [attr.aria-label]="'gift_promo_dismiss' | translate"
-        (click)="dismissGiftPromo(); $event.stopPropagation()">
-        <ax-icon name="x" [size]="16" />
+        class="gift-promo__toggle"
+        [attr.aria-expanded]="giftPromoExpanded"
+        [attr.aria-label]="'gift_cards' | translate"
+        (click)="toggleGiftPromo()">
+        <span class="gift-promo__medallion" aria-hidden="true">
+          <ax-icon name="gift" [size]="20" />
+        </span>
+        <span class="gift-promo__compact">
+          <span class="gift-promo__eyebrow">{{ 'gift_cards' | translate }}</span>
+          <span class="gift-promo__heading">{{ 'gift_promo_heading' | translate }}</span>
+        </span>
+        <ax-icon class="gift-promo__chevron" name="chevron-down" [size]="18" />
       </button>
-      <!-- decorative gold sparkle + medallion motif -->
-      <span class="gift-promo__glow" aria-hidden="true"></span>
-      <span class="gift-promo__sparkle gift-promo__sparkle--1" aria-hidden="true">
-        <ax-icon name="sparkles" [size]="12" />
-      </span>
-      <span class="gift-promo__sparkle gift-promo__sparkle--2" aria-hidden="true">
-        <ax-icon name="sparkles" [size]="8" />
-      </span>
 
-      <div class="gift-promo__medallion" aria-hidden="true">
-        <ax-icon name="gift" [size]="26" />
-      </div>
-
-      <div class="gift-promo__body">
-        <span class="gift-promo__eyebrow">{{ 'gift_cards' | translate }}</span>
-        <h2 class="gift-promo__heading">{{ 'gift_promo_heading' | translate }}</h2>
-        <p class="gift-promo__subtitle">{{ 'gift_promo_subtitle' | translate }}</p>
-
-        <div class="gift-promo__actions">
-          <a class="gift-promo__cta" routerLink="/gift-cards">
-            <span>{{ 'gift_promo_cta_buy' | translate }}</span>
-          </a>
-          <a class="gift-promo__link" routerLink="/gift-card-redeem">
-            {{ 'gift_promo_cta_redeem' | translate }}
-            <ax-icon name="arrow-right" [size]="14" />
-          </a>
+      @if (giftPromoExpanded) {
+        <div class="gift-promo__body">
+          <p class="gift-promo__subtitle">{{ 'gift_promo_subtitle' | translate }}</p>
+          <div class="gift-promo__actions">
+            <a class="gift-promo__cta" routerLink="/gift-cards">
+              <span>{{ 'gift_promo_cta_buy' | translate }}</span>
+            </a>
+            <a class="gift-promo__link" routerLink="/gift-card-redeem">
+              {{ 'gift_promo_cta_redeem' | translate }}
+              <ax-icon name="arrow-right" [size]="14" />
+            </a>
+          </div>
         </div>
-      </div>
+      }
     </article>
   </section>
-  }
 
   <!-- Best Sellers Section -->
   @if (!ui_controls.is_loading){
