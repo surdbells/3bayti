@@ -27,7 +27,6 @@ import { AppTabBarComponent } from '../../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../../shared/ax-mobile/bottom-sheet';
 import { WishlistService } from '../../../core/services/wishlist.service';
-import { CartCountService } from '../../../core/services/cart-count.service';
 import { I18nService } from '../../../i18n.service';
 
 export interface StyleProduct {
@@ -116,8 +115,7 @@ export class StyleViewPage implements OnInit, OnDestroy {
   ui_controls = {
     is_loading: false,
     is_empty: false,
-    is_loading_category: false,
-    is_adding_all: false
+    is_loading_category: false
   }
 
   constructor(
@@ -129,7 +127,6 @@ export class StyleViewPage implements OnInit, OnDestroy {
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
     private wishlistService: WishlistService,
-    private cartCount: CartCountService,
     private i18n: I18nService,
     private toast: AxNotificationService,
     private cdr: ChangeDetectorRef
@@ -297,78 +294,6 @@ export class StyleViewPage implements OnInit, OnDestroy {
   // ========================================
   // Add all to cart
   // ========================================
-
-  /**
-   * Add every product in the style to the cart in one tap. Loops the
-   * style's products and POSTs each to /v3/cart/items (quantity 1). Cart
-   * adds require a signed-in user (the server derives price/store/snapshot),
-   * so guests are sent to login. Best-effort: failures per item are tallied
-   * and surfaced, the rest still go in. product_id is the LEGACY id (the
-   * server resolves it the same way the PDP add does).
-   */
-  async addAllToCart() {
-    const products = this.style?.products ?? [];
-    if (products.length === 0) {
-      return;
-    }
-
-    // Cart adds are authed — guests can't add. Mirror the PDP gate.
-    if (!this.single_user.token) {
-      this.error_notification(this.i18n.t('sign_in_to_add_to_cart'));
-      return;
-    }
-
-    this.ui_controls.is_adding_all = true;
-    this.cdr.markForCheck();
-
-    let added = 0;
-    let failed = 0;
-
-    for (const item of products) {
-      try {
-        const response: any = await new Promise((resolve, reject) => {
-          this.networkAdapter.post_v3(
-            'POST /cart/items',
-            {
-              product_id: item.product_id,
-              quantity: 1,
-              size: '',
-              color: '',
-              is_custom: false,
-              measurement: '',
-              extra_measurement: '',
-              note: '',
-            },
-            { authToken: this.single_user.token },
-          ).subscribe({ next: resolve, error: reject });
-        });
-
-        const ok =
-          response?.response_code === 200 &&
-          (response.status === 'success' ||
-            (response.data && typeof response.data === 'object' && response.data.success === true));
-        if (ok) {
-          added++;
-        } else {
-          failed++;
-        }
-      } catch {
-        failed++;
-      }
-    }
-
-    this.ui_controls.is_adding_all = false;
-    this.cdr.markForCheck();
-
-    if (added > 0) {
-      this.cartCount.bump(added);
-      void this.cartCount.refresh();
-      this.success_notification(this.i18n.t('text_style_added_to_cart'));
-    }
-    if (added === 0 && failed > 0) {
-      this.error_notification(this.i18n.t('text_style_add_failed'));
-    }
-  }
 
   triggerBack() {
     this.nav.back();

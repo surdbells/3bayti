@@ -536,6 +536,13 @@ export class ProductPage implements OnInit, OnDestroy {
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.single = response.data;
+            // Clear the loading / not-found gates IMMEDIATELY on a successful
+            // response — BEFORE the size/measurement processing below — so a
+            // throw anywhere in that processing can never leave the skeleton
+            // stuck on and hide the product card + footer (price / add-to-cart).
+            this.ui_controls.is_loading = false;
+            this.ui_controls.product_missing = false;
+            this.cdr.markForCheck();
             // Parse colors and normalize them
             this.colors = response.data.colors
               ? response.data.colors.split(',').map((c: string) => c.trim().toLowerCase())
