@@ -16,6 +16,8 @@ import {
   IonButton,
   IonButtons, IonCol,
   IonContent,
+  IonFab,
+  IonFabButton,
   IonFooter, IonGrid,
   IonHeader, IonIcon, IonInfiniteScroll, IonInfiniteScrollContent,
   IonLabel,
@@ -72,7 +74,7 @@ export interface Store {
   templateUrl: './account.page.html',
   styleUrls: ['./account.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonTabBar, IonTabButton, IonLabel, IonFooter, IonRow, IonCol, IonGrid, IonIcon, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent, RouterLink]
+  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonTabBar, IonTabButton, IonLabel, IonFooter, IonRow, IonCol, IonGrid, IonIcon, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent, RouterLink]
 })
 
 export class AccountPage implements OnInit, OnDestroy {

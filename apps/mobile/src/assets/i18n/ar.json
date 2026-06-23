@@ -934,5 +934,7 @@
   "text_style_add_failed": "تعذّرت إضافة هذه الإطلالة إلى سلتك",
   "text_product_not_found": "المنتج غير موجود",
   "text_product_unavailable": "هذا المنتج لم يعد متوفّراً.",
-  "button_back_to_shop": "العودة إلى المتجر"
+  "button_back_to_shop": "العودة إلى المتجر",
+  "fab_messages": "الرسائل",
+  "fab_vendor_dashboard": "لوحة تحكم المتجر"
 }

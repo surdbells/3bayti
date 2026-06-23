@@ -934,5 +934,7 @@
   "text_style_add_failed": "Couldn't add this style to your cart",
   "text_product_not_found": "Product not found",
   "text_product_unavailable": "This product is no longer available.",
-  "button_back_to_shop": "Back to shop"
+  "button_back_to_shop": "Back to shop",
+  "fab_messages": "Messages",
+  "fab_vendor_dashboard": "Store dashboard"
 }

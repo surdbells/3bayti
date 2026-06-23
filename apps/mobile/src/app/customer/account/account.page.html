@@ -14,11 +14,6 @@
       </div>
     </ion-buttons>
     <ion-buttons slot="end">
-      @if(single_user.is_vendor && single_user.is_store_active){
-        <ion-button (click)="user_store()" fill="clear">
-          <ax-icon name="store" [style.color]="'var(--text)'"/>
-        </ion-button>
-      }
       <ion-button (click)="user_wishlist()" fill="clear">
         <ax-icon name="heart" [style.color]="'var(--text)'"/>
       </ion-button>
@@ -342,6 +337,29 @@
       </div>
     }
   </ax-bottom-sheet>
+
+  <!-- Premium floating action buttons (stacked above the footer tab bar).
+       FAB 1 (Messages) is shown for any logged-in customer; FAB 2 (Vendor
+       Dashboard) only for approved vendors. -->
+  <ion-fab class="m6-fab-stack" vertical="bottom" horizontal="end" slot="fixed">
+    @if (single_user.is_vendor && single_user.is_store_approved) {
+      <ion-fab-button
+        class="m6-fab m6-fab--dashboard"
+        (click)="user_store()"
+        [attr.aria-label]="'fab_vendor_dashboard' | translate">
+        <ax-icon name="layout-dashboard" [style.color]="'var(--ax-color-text-on-brand)'" />
+      </ion-fab-button>
+    }
+    <ion-fab-button
+      class="m6-fab m6-fab--messages"
+      (click)="user_messages()"
+      [attr.aria-label]="'fab_messages' | translate">
+      <ax-icon name="message-square-more" [style.color]="'var(--ax-color-text-on-brand)'" />
+      @if (unreadMessages() > 0) {
+        <ion-badge class="m6-fab-badge" color="danger">{{ unreadMessages() > 99 ? '99+' : unreadMessages() }}</ion-badge>
+      }
+    </ion-fab-button>
+  </ion-fab>
 </ion-content>
 
 <ion-footer class="m6f-footer ion-no-border">
