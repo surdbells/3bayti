@@ -464,7 +464,20 @@ export class GiftCardsAdminComponent implements OnInit {
     this.adapter.get_v3('GET /gift-cards/themes').subscribe({
       next: (res: any) => {
         const giftData = res?.data ?? res;
-        this.themes = Array.isArray(giftData) ? giftData : (giftData?.themes ?? res?.themes ?? []);
+        // The API returns themes as a slug-keyed OBJECT
+        // ({ "birthday": {...}, "wedding": {...} }), not an array. Normalise
+        // both shapes to an array of `{ slug, ...meta }` rows for the table.
+        if (Array.isArray(giftData)) {
+          this.themes = giftData;
+        } else if (giftData && typeof giftData === 'object') {
+          const nested = (giftData as any).themes ?? (res as any)?.themes;
+          const source = nested && typeof nested === 'object' ? nested : giftData;
+          this.themes = Array.isArray(source)
+            ? source
+            : Object.entries(source).map(([slug, meta]) => ({ slug, ...(meta as any) }));
+        } else {
+          this.themes = [];
+        }
         this.themesLoaded = true;
         this.themesLoading = false;
       },

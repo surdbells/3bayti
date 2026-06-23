@@ -43,9 +43,10 @@ import type { RoleOption, RoleRef } from '../users.component';
             <div *ngIf="allRoles.length === 0" class="ax-text-sm ax-text-tertiary ax-py-4 ax-text-center">
               {{ 'users.no_roles_yet' | translate }}
             </div>
-            <label *ngFor="let role of allRoles" class="ax-check ax-card ax-p-3 ax-mb-2" style="cursor: pointer; display: flex; align-items: flex-start; gap: .625rem;">
-              <input type="checkbox" class="ax-check-box" [checked]="isRoleSelected(role.id)" (change)="toggleRole(role.id)" />
-              <span class="ax-check-label" style="flex:1;">
+            <label *ngFor="let role of allRoles" class="ax-switch ax-card ax-p-3 ax-mb-2" style="cursor: pointer; align-items: flex-start;">
+              <input type="checkbox" [checked]="isRoleSelected(role.id)" (change)="toggleRole(role.id)" />
+              <span class="ax-switch-track" style="margin-top:.125rem;"></span>
+              <span class="ax-switch-label" style="flex:1;">
                 <span class="ax-font-medium ax-text-primary">{{ role.name }}</span>
                 <span *ngIf="role.is_system" class="ax-badge ax-badge-neutral" style="margin-left:.5rem;">{{ 'users.system_badge' | translate }}</span>
                 <span class="ax-text-2xs ax-text-tertiary" style="display:block; margin-top:.125rem;">{{ role.description || ('users.no_description' | translate) }}</span>

@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -88,6 +88,7 @@ export class UsersComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
@@ -95,6 +96,11 @@ export class UsersComponent implements OnInit {
   ngOnInit() {
     this.perms.load();
     this.buildTable();
+    // Returning from the role editor (?view=roles) re-opens the roles view and
+    // re-fetches the list, so new/edited roles appear without a manual reload.
+    if (this.route.snapshot.queryParamMap.get('view') === 'roles') {
+      this.switchView('roles');
+    }
   }
 
   // ── Table ────────────────────────────────────────────────────────────

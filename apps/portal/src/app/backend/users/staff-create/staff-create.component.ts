@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -8,13 +8,18 @@ import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TranslatePipe } from '../../../translate.pipe';
+import type { RoleOption } from '../users.component';
 
 /**
  * /adminusers/new — create a staff member.
  *
- * Extracted from the users page's in-place "Add staff" drawer into a routed
- * sub-page (adminGuard). Reuses the existing POST /admin/users endpoint; on
- * success it returns to /adminusers (which re-fetches the staff list).
+ * Create → assign is reachable in one flow: the form includes a role picker
+ * (GET /admin/roles). On a successful POST /admin/users we read the created
+ * id from the response and chain POST /admin/users/:id/roles with the chosen
+ * role_ids, so the new user lands holding a role and visible in the list. If
+ * no role is picked we still create the account (it just starts with no
+ * access), and if the role-assign call fails we keep the user and route them
+ * to the manage-roles page to finish.
  */
 @Component({
   selector: 'app-staff-create',
@@ -60,6 +65,32 @@ import { TranslatePipe } from '../../../translate.pipe';
                 <input id="confirm_password" autocomplete="new-password" [(ngModel)]="register.confirm_password" name="confirm_password" class="ax-input ax-input-sm" type="password" />
               </div>
             </div>
+
+            <!-- Role picker ─ create → assign in one flow -->
+            <div class="ax-form-field ax-mb-3">
+              <label class="ax-label ax-text-2xs">{{ 'users.assign_roles_label' | translate }}</label>
+
+              <div *ngIf="ui.rolesLoading" class="ax-text-2xs ax-text-tertiary ax-py-2">
+                <span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> {{ 'users.loading_roles' | translate }}
+              </div>
+
+              <div *ngIf="!ui.rolesLoading && roles.length === 0" class="ax-text-2xs ax-text-tertiary ax-py-2">
+                {{ 'users.no_roles_to_assign' | translate }}
+              </div>
+
+              <div *ngIf="!ui.rolesLoading && roles.length > 0" class="ax-flex ax-flex-col ax-gap-1">
+                <label *ngFor="let role of roles" class="ax-switch ax-card ax-p-2" style="cursor:pointer;">
+                  <input type="checkbox" [checked]="isRoleSelected(role.id)" (change)="toggleRole(role.id)" />
+                  <span class="ax-switch-track"></span>
+                  <span class="ax-switch-label">
+                    <span class="ax-font-medium ax-text-primary">{{ role.name }}</span>
+                    <span *ngIf="role.is_system" class="ax-badge ax-badge-neutral" style="margin-left:.5rem;">{{ 'users.system_badge' | translate }}</span>
+                    <span class="ax-text-2xs ax-text-tertiary" style="display:block;">{{ role.description || ('users.no_description' | translate) }}</span>
+                  </span>
+                </label>
+              </div>
+            </div>
+
             <div class="ax-callout ax-callout-info ax-text-2xs ax-mb-4">
               <app-icon name="admin_panel_settings" aria-hidden="true"></app-icon>
               {{ 'users.new_staff_hint' | translate }}
@@ -78,7 +109,7 @@ import { TranslatePipe } from '../../../translate.pipe';
     </app-admin-shell>
   `,
 })
-export class StaffCreateComponent {
+export class StaffCreateComponent implements OnInit {
   private router = inject(Router);
   private adapter = inject(PortalCrudAdapter);
   private toast = inject(HotToastService);
@@ -91,7 +122,35 @@ export class StaffCreateComponent {
     confirm_password: '',
   };
 
-  ui = { registering: false };
+  roles: RoleOption[] = [];
+  selectedRoleIds: number[] = [];
+
+  ui = { registering: false, rolesLoading: false };
+
+  ngOnInit(): void {
+    this.loadRoles();
+  }
+
+  private loadRoles(): void {
+    this.ui.rolesLoading = true;
+    this.adapter.get_v3('GET /admin/roles').subscribe({
+      next: (res: any) => {
+        this.roles = (res?.data ?? []).map((r: any) => ({
+          id: r.id, slug: r.slug, name: r.name, description: r.description ?? null, is_system: !!r.is_system,
+        }));
+        this.ui.rolesLoading = false;
+      },
+      error: () => { this.toast.error('Unable to load roles at this time.'); this.ui.rolesLoading = false; },
+    });
+  }
+
+  isRoleSelected(id: number): boolean { return this.selectedRoleIds.includes(id); }
+
+  toggleRole(id: number): void {
+    this.selectedRoleIds = this.isRoleSelected(id)
+      ? this.selectedRoleIds.filter((x) => x !== id)
+      : [...this.selectedRoleIds, id];
+  }
 
   cancel(): void {
     this.router.navigate(['/adminusers']);
@@ -109,13 +168,41 @@ export class StaffCreateComponent {
     this.ui.registering = true;
     this.adapter.post_v3('POST /admin/users', this.register).subscribe({
       next: (response: any) => {
-        if (response) {
-          this.toast.success('Staff member created. Assign roles to grant access.');
+        const newId = Number(response?.data?.id ?? response?.id);
+        if (!newId) {
+          // Created but we can't resolve the id — fall back to the list.
+          this.toast.success('Staff member created.');
+          this.ui.registering = false;
           this.router.navigate(['/adminusers']);
+          return;
         }
-        this.ui.registering = false;
+        if (this.selectedRoleIds.length === 0) {
+          this.toast.success('Staff member created. Assign roles to grant access.');
+          this.ui.registering = false;
+          this.router.navigate(['/adminusers']);
+          return;
+        }
+        this.assignRoles(newId);
       },
       error: () => { this.toast.error('Unable to complete your request at this time.'); this.ui.registering = false; },
+    });
+  }
+
+  /** Chain the role assignment onto the freshly-created user id. */
+  private assignRoles(userId: number): void {
+    this.adapter.post_v3('POST /admin/users/:id/roles', { role_ids: this.selectedRoleIds }, { params: { id: String(userId) } }).subscribe({
+      next: () => {
+        this.toast.success('Staff member created and roles assigned.');
+        this.ui.registering = false;
+        this.router.navigate(['/adminusers']);
+      },
+      error: () => {
+        // The account exists; only the assignment failed. Send the admin to the
+        // manage-roles page to finish rather than losing the chosen roles.
+        this.toast.error('Account created, but assigning roles failed. Finish on the roles page.');
+        this.ui.registering = false;
+        this.router.navigate(['/adminusers', userId, 'roles']);
+      },
     });
   }
 }
