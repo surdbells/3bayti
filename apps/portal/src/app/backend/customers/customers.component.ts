@@ -89,7 +89,12 @@ export class CustomersComponent implements OnInit {
   }
 
   private buildTable() {
-    this.dataSource = new AxServerDataSource<CustomerRow>((q) => this.fetchCustomers(q));
+    this.dataSource = new AxServerDataSource<CustomerRow>(
+      (q) => this.fetchCustomers(q),
+      // Short debounce so filter selections apply (near-)instantly while
+      // still coalescing rapid search keystrokes.
+      120,
+    );
     this.config = {
       tableId: 'admin-customers',
       mode: 'server',

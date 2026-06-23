@@ -508,5 +508,9 @@
   "roles.create_role": "إنشاء الدور",
   "users.assign_roles_label": "تعيين الأدوار (اختياري)",
   "users.loading_roles": "جارٍ تحميل الأدوار…",
-  "users.no_roles_to_assign": "لا توجد أدوار متاحة بعد. يمكنك إنشاء الأدوار وتعيينها لاحقًا."
+  "users.no_roles_to_assign": "لا توجد أدوار متاحة بعد. يمكنك إنشاء الأدوار وتعيينها لاحقًا.",
+  "stores.filter_date_hint": "يوم / شهر / سنة",
+  "customers.filter_date_hint": "يوم / شهر / سنة",
+  "customers.filter_min_orders_hint": "مثال: ٥",
+  "customers.filter_status_all": "كل الحالات"
 }

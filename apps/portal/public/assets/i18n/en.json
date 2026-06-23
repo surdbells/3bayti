@@ -508,5 +508,9 @@
   "roles.create_role": "Create role",
   "users.assign_roles_label": "Assign roles (optional)",
   "users.loading_roles": "Loading roles…",
-  "users.no_roles_to_assign": "No roles available yet. You can create roles and assign them later."
+  "users.no_roles_to_assign": "No roles available yet. You can create roles and assign them later.",
+  "stores.filter_date_hint": "dd / mm / yyyy",
+  "customers.filter_date_hint": "dd / mm / yyyy",
+  "customers.filter_min_orders_hint": "e.g. 5",
+  "customers.filter_status_all": "All statuses"
 }

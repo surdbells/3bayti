@@ -15,8 +15,8 @@
       <div class="ax-filter-grid">
         <label class="ax-field">
           <span class="ax-field-label">{{ 'customers.filter_status' | translate }}</span>
-          <select class="ax-select ax-input-sm" [(ngModel)]="filters.status" (change)="applyFilters()">
-            <option value="">{{ 'customers.filter_all' | translate }}</option>
+          <select class="ax-select" [(ngModel)]="filters.status" (change)="applyFilters()">
+            <option value="">{{ 'customers.filter_status_all' | translate }}</option>
             <option value="active">{{ 'customers.status_active' | translate }}</option>
             <option value="inactive">{{ 'customers.status_inactive' | translate }}</option>
           </select>
@@ -24,7 +24,7 @@
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'customers.filter_email_verified' | translate }}</span>
-          <select class="ax-select ax-input-sm" [(ngModel)]="filters.email_verified" (change)="applyFilters()">
+          <select class="ax-select" [(ngModel)]="filters.email_verified" (change)="applyFilters()">
             <option value="">{{ 'customers.filter_all' | translate }}</option>
             <option value="true">{{ 'customers.verified_yes' | translate }}</option>
             <option value="false">{{ 'customers.verified_no' | translate }}</option>
@@ -33,7 +33,7 @@
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'customers.filter_phone_verified' | translate }}</span>
-          <select class="ax-select ax-input-sm" [(ngModel)]="filters.phone_verified" (change)="applyFilters()">
+          <select class="ax-select" [(ngModel)]="filters.phone_verified" (change)="applyFilters()">
             <option value="">{{ 'customers.filter_all' | translate }}</option>
             <option value="true">{{ 'customers.verified_yes' | translate }}</option>
             <option value="false">{{ 'customers.verified_no' | translate }}</option>
@@ -42,17 +42,17 @@
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'customers.filter_registered_from' | translate }}</span>
-          <input type="date" class="ax-input ax-input-sm" [(ngModel)]="filters.created_from" (change)="applyFilters()" />
+          <input type="date" class="ax-input" [attr.placeholder]="'customers.filter_date_hint' | translate" [(ngModel)]="filters.created_from" (change)="applyFilters()" />
         </label>
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'customers.filter_registered_to' | translate }}</span>
-          <input type="date" class="ax-input ax-input-sm" [(ngModel)]="filters.created_to" (change)="applyFilters()" />
+          <input type="date" class="ax-input" [attr.placeholder]="'customers.filter_date_hint' | translate" [(ngModel)]="filters.created_to" (change)="applyFilters()" />
         </label>
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'customers.filter_min_orders' | translate }}</span>
-          <input type="number" min="0" class="ax-input ax-input-sm" [(ngModel)]="filters.min_orders" (change)="applyFilters()" />
+          <input type="number" min="0" class="ax-input" [attr.placeholder]="'customers.filter_min_orders_hint' | translate" [(ngModel)]="filters.min_orders" (change)="applyFilters()" />
         </label>
 
         <div class="ax-field ax-filter-actions">

@@ -109,8 +109,11 @@ export class StoresComponent implements OnInit {
   }
 
   private buildTable() {
-    this.dataSource = new AxServerDataSource<VendorRow>((query: AxQueryState) =>
-      this.fetchVendors(query),
+    this.dataSource = new AxServerDataSource<VendorRow>(
+      (query: AxQueryState) => this.fetchVendors(query),
+      // Short debounce so filter selections apply (near-)instantly while
+      // still coalescing rapid search keystrokes.
+      120,
     );
 
     this.config = {

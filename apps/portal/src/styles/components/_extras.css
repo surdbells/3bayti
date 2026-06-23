@@ -395,3 +395,79 @@
   background-color: var(--ax-color-bg-danger);
   border: 2px solid var(--ax-color-bg-surface);
 }
+
+
+/* =========================================================================
+   FILTER BAR — admin list filters (shared by Stores + Customers)
+   A tidy, responsive grid of labelled native controls inside an .ax-card.
+   ========================================================================= */
+.ax-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: var(--ax-space-4) var(--ax-space-4);
+  align-items: end;
+  padding: var(--ax-space-1);
+}
+
+/* A single labelled control (label stacked above input/select). */
+.ax-filter-grid .ax-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ax-space-2);
+  min-width: 0;
+}
+
+.ax-filter-grid .ax-field-label {
+  font-family: var(--ax-font-body);
+  font-size: var(--ax-fs-2xs);
+  font-weight: var(--ax-fw-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--ax-ls-wider);
+  color: var(--ax-color-text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Consistent control sizing across every filter input + select. */
+.ax-filter-grid .ax-input,
+.ax-filter-grid .ax-select {
+  width: 100%;
+  min-height: 2.375rem;
+  padding: 0.5rem 0.75rem;
+  font-size: var(--ax-fs-sm);
+  border-radius: var(--ax-radius-md);
+  border: 1px solid var(--ax-color-border-default);
+}
+
+.ax-filter-grid .ax-select {
+  padding-right: 2.25rem;
+}
+
+.ax-filter-grid .ax-input[type='date'],
+.ax-filter-grid .ax-input[type='number'] {
+  /* Keep native date/number affordances visible and tidy. */
+  min-width: 0;
+}
+
+/* Clear-filters action: bottom-aligned with the control row, not the label. */
+.ax-filter-grid .ax-filter-actions {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: flex-start;
+}
+
+.ax-filter-grid .ax-filter-actions .ax-btn {
+  min-height: 2.375rem;
+}
+
+@media (max-width: 40rem) {
+  .ax-filter-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--ax-space-3);
+  }
+  .ax-filter-grid .ax-filter-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+}

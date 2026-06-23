@@ -15,7 +15,7 @@
       <div class="ax-filter-grid">
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_status' | translate }}</span>
-          <select class="ax-select ax-input-sm" [(ngModel)]="filters.status" (change)="applyFilters()">
+          <select class="ax-select" [(ngModel)]="filters.status" (change)="applyFilters()">
             <option value="">{{ 'stores.filter_status_any' | translate }}</option>
             <option value="pending">{{ 'stores.filter_status_pending' | translate }}</option>
             <option value="approved">{{ 'stores.filter_status_approved' | translate }}</option>
@@ -25,7 +25,7 @@
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_active' | translate }}</span>
-          <select class="ax-select ax-input-sm" [(ngModel)]="filters.is_active" (change)="applyFilters()">
+          <select class="ax-select" [(ngModel)]="filters.is_active" (change)="applyFilters()">
             <option value="">{{ 'stores.filter_any' | translate }}</option>
             <option value="true">{{ 'stores.filter_active_yes' | translate }}</option>
             <option value="false">{{ 'stores.filter_active_no' | translate }}</option>
@@ -34,7 +34,7 @@
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_verified' | translate }}</span>
-          <select class="ax-select ax-input-sm" [(ngModel)]="filters.is_verified" (change)="applyFilters()">
+          <select class="ax-select" [(ngModel)]="filters.is_verified" (change)="applyFilters()">
             <option value="">{{ 'stores.filter_any' | translate }}</option>
             <option value="true">{{ 'stores.filter_verified_yes' | translate }}</option>
             <option value="false">{{ 'stores.filter_verified_no' | translate }}</option>
@@ -43,7 +43,7 @@
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_featured' | translate }}</span>
-          <select class="ax-select ax-input-sm" [(ngModel)]="filters.is_featured" (change)="applyFilters()">
+          <select class="ax-select" [(ngModel)]="filters.is_featured" (change)="applyFilters()">
             <option value="">{{ 'stores.filter_any' | translate }}</option>
             <option value="true">{{ 'stores.filter_featured_yes' | translate }}</option>
             <option value="false">{{ 'stores.filter_featured_no' | translate }}</option>
@@ -52,7 +52,7 @@
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_emirate' | translate }}</span>
-          <select class="ax-select ax-input-sm" [(ngModel)]="filters.emirate" (change)="applyFilters()">
+          <select class="ax-select" [(ngModel)]="filters.emirate" (change)="applyFilters()">
             <option value="">{{ 'stores.filter_emirate_any' | translate }}</option>
             <option *ngFor="let e of emirateOptions" [value]="e.value">{{ e.key | translate }}</option>
           </select>
@@ -60,12 +60,12 @@
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_join_from' | translate }}</span>
-          <input type="date" class="ax-input ax-input-sm" [(ngModel)]="filters.created_from" (change)="applyFilters()" />
+          <input type="date" class="ax-input" [attr.placeholder]="'stores.filter_date_hint' | translate" [(ngModel)]="filters.created_from" (change)="applyFilters()" />
         </label>
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_join_to' | translate }}</span>
-          <input type="date" class="ax-input ax-input-sm" [(ngModel)]="filters.created_to" (change)="applyFilters()" />
+          <input type="date" class="ax-input" [attr.placeholder]="'stores.filter_date_hint' | translate" [(ngModel)]="filters.created_to" (change)="applyFilters()" />
         </label>
 
         <div class="ax-field ax-filter-actions">
