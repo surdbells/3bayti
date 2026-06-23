@@ -27,17 +27,11 @@ export const environment = {
     regions: ['AE'],
   },
 
-  /* Mobile-app store listings, surfaced by the "Get the 3bayti app" band on
-     the home page (apps/web/src/app/features/home).
-
-     PLACEHOLDER: these are '#' until the operator fills in the live store
-     URLs. Replace appStore with the App Store listing
-     (https://apps.apple.com/...) and playStore with the Play Store listing
-     (https://play.google.com/store/apps/details?id=...). When either is left
-     as '#', the corresponding badge degrades to a non-navigating button so it
-     never sends users to a dead link. */
+  /* Mobile app store listings for the home "Get the app" section. Set
+     APP_STORE_URL / PLAY_STORE_URL at build time; '#' renders a
+     non-navigating "coming soon" badge. */
   appStores: {
-    appStore: '#',
-    playStore: '#',
+    appStore: "#",
+    playStore: "#",
   },
 } as const;

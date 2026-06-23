@@ -41,6 +41,10 @@ const ENV_FILE = join(__dirname, '..', 'src', 'environments', 'environment.ts');
 const SITE_URL = (process.env.SITE_URL || 'https://staging.3bayti.ae').replace(/\/$/, '');
 const SENTRY_DSN = (process.env.SENTRY_DSN || 'https://822503d1eda33a1e983a6aa0a8f9dce7@o4511365625872384.ingest.us.sentry.io/4511365627772928').trim();
 const GA4_MEASUREMENT_ID = (process.env.GA4_MEASUREMENT_ID || 'G-W2YF72TS3F').trim();
+/* Mobile app store listing URLs for the home "Get the app" section.
+   Default '#' renders a non-navigating "coming soon" badge. */
+const APP_STORE_URL = (process.env.APP_STORE_URL || '#').trim();
+const PLAY_STORE_URL = (process.env.PLAY_STORE_URL || '#').trim();
 
 /* Validate: SITE_URL must be a real https:// URL with no path. */
 try {
@@ -92,6 +96,14 @@ export const environment = {
     apiKey: 'AIzaSyAHERMyCn9KfrhZF5zpKynzLp0SjXpQpKU',
     /* ISO 3166-1 alpha-2 country code(s) to restrict autocomplete to. */
     regions: ['AE'],
+  },
+
+  /* Mobile app store listings for the home "Get the app" section. Set
+     APP_STORE_URL / PLAY_STORE_URL at build time; '#' renders a
+     non-navigating "coming soon" badge. */
+  appStores: {
+    appStore: ${JSON.stringify(APP_STORE_URL)},
+    playStore: ${JSON.stringify(PLAY_STORE_URL)},
   },
 } as const;
 `;
