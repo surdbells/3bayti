@@ -838,6 +838,13 @@ ion-modal ion-content {
      and the device safe-area inset. */
   inset-block-end: calc(56px + 16px + env(safe-area-inset-bottom, 0px));
   inset-inline-end: 16px;
+  /* Flex column-reverse: the first DOM child (Messages, always shown) sits at
+     the bottom anchor; the conditional Dashboard FAB stacks above it. When the
+     Dashboard FAB is @if-removed there is no empty slot — Messages stays put. */
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: center;
+  gap: 12px;
 
   ion-fab-button.m6-fab {
     --background: var(--ax-color-bg-brand);          /* #906952 brand brown */
@@ -846,28 +853,24 @@ ion-modal ion-content {
     --color: var(--ax-color-text-on-brand);
     --box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
     --border-radius: 50%;
-    width: 56px;
-    height: 56px;
-    margin-block: 8px 0;
-
-    &:first-child {
-      margin-block-start: 0;
-    }
+    width: 40px;   /* 56 * 0.7 — reduced 30% */
+    height: 40px;
+    margin: 0;     /* the flex gap handles spacing */
   }
 
   .m6-fab-badge {
     position: absolute;
     top: 0;
     inset-inline-end: 0;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    border-radius: 9px;
-    font-size: 10px;
-    line-height: 18px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 8px;
+    font-size: 9px;
+    line-height: 16px;
     font-weight: 700;
     border: 2px solid var(--ax-color-bg-canvas);
-    --padding-start: 5px;
-    --padding-end: 5px;
+    --padding-start: 4px;
+    --padding-end: 4px;
   }
 }

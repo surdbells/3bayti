@@ -227,7 +227,9 @@ export class SettingsPage implements OnInit, OnDestroy {
   }
 
   openGiftCards(): void {
-    this.router.navigate(['/gift-cards']);
+    // Open the gift-card WALLET (manage / see-all-by-status / pay pending);
+    // the wallet has Buy + Redeem buttons, so buying stays reachable.
+    this.router.navigate(['/my-gift-cards']);
   }
 
   openHelp(): void {

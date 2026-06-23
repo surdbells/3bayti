@@ -276,6 +276,12 @@ export class AccountPage implements OnInit, OnDestroy {
       this.router.navigate(['/', 'login']);
     }else{
       this.single_user = JSON.parse(ret.value);
+      // Refresh the profile (avatar + vendor/store flags) now that the token
+      // is loaded. ionViewDidEnter's refreshProfile races ahead of this async
+      // Preferences read on first entry and early-returns on the empty token,
+      // so doing it here is what makes the vendor FAB appear for an approved
+      // store (it re-derives is_vendor from roles + is_store_approved).
+      this.refreshProfile();
       // Load gift-card balance only after the token is available — the call
       // is authed (GET /gift-cards/mine with single_user.token).
       this.loadGiftCardBalance();
