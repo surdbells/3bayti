@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { TestBed, ComponentFixture } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { HttpErrorResponse, provideHttpClient } from '@angular/common/http';
@@ -8,76 +8,101 @@ import { RegisterComponent } from './register';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../shared/forms';
 import { provideI18n } from '../../../core/i18n';
-import type { RegisterInput, RegisterResponse } from '../../../core/auth/auth.types';
+import type {
+  AuthUser,
+  RegisterInitiateInput,
+  RegisterVerifyPhoneInput,
+  RegisterSubmitInput,
+  RegisterConfirmEmailInput,
+} from '../../../core/auth/auth.types';
 
 /**
- * Tests for RegisterComponent.
+ * Tests for the phone-first 4-step RegisterComponent (#8).
  *
- * Coverage
- * --------
- *   - Form starts invalid; submit no-ops
- *   - Successful submit calls AuthService.register with the exact
- *     payload shape RegisterInput requires (including country_code
- *     derived from the phone)
- *   - Successful submit navigates to /verify-phone with vid + phone
- *     query params
- *   - Per-field errors for CONFLICT_EMAIL_TAKEN / CONFLICT_PHONE_TAKEN
- *   - Toasts for OTP_RATE_LIMITED / OTP_PROVIDER_ERROR
- *   - Network toast on fetch failure
- *   - Submit disabled while in flight
+ * Step 1 initiate → step 2 verify-phone → step 3 submit → step 4
+ * confirm-email (auto-login). AuthService + Router + Toast are stubbed;
+ * forms are real.
  */
 
+const USER: AuthUser = {
+  id: 1,
+  email: 'new@example.com',
+  phone: '+971501234567',
+  country_code: 'AE',
+  first_name: 'Jane',
+  last_name: 'Doe',
+  gender: null,
+  dob: null,
+  locale: null,
+  timezone: null,
+  is_phone_verified: true,
+  is_email_verified: true,
+  roles: ['customer'],
+  is_store_approved: false,
+  is_store_active: false,
+  last_login_at: null,
+  avatar_url: null,
+};
+
 class StubAuthService {
-  registerCalls: RegisterInput[] = [];
-  outcome:
-    | 'success'
-    | 'email-taken'
-    | 'phone-taken'
-    | 'rate-limited'
-    | 'provider-error'
-    | 'network' = 'success';
-  response: RegisterResponse = {
-    verification_id: 'mc-abc123',
-    user: {
-      email: 'new@example.com',
-      phone: '+971501234567',
-      country_code: 'AE',
-      is_phone_verified: false,
-    },
-  };
+  initiateCalls: RegisterInitiateInput[] = [];
+  verifyPhoneCalls: RegisterVerifyPhoneInput[] = [];
+  submitCalls: RegisterSubmitInput[] = [];
+  confirmEmailCalls: RegisterConfirmEmailInput[] = [];
 
-  async register(input: RegisterInput): Promise<RegisterResponse> {
-    this.registerCalls.push(input);
-    if (this.outcome === 'success') return this.response;
-    if (this.outcome === 'network') throw new TypeError('fetch failed');
+  initiateOutcome: 'success' | 'phone-taken' | 'network' = 'success';
+  submitOutcome: 'success' | 'email-taken' | 'expired-token' = 'success';
 
-    const codeMap = {
-      'email-taken': 'CONFLICT_EMAIL_TAKEN',
-      'phone-taken': 'CONFLICT_PHONE_TAKEN',
-      'rate-limited': 'OTP_RATE_LIMITED',
-      'provider-error': 'OTP_PROVIDER_ERROR',
-    };
-    const code = codeMap[this.outcome];
-    const status = this.outcome.includes('taken')
-      ? 409
-      : this.outcome === 'rate-limited'
-        ? 429
-        : 502;
-    throw new HttpErrorResponse({
-      status,
-      error: { error_code: code, message: code },
-    });
+  async validatePhone(): Promise<{ phone: string; available: boolean }> {
+    return { phone: '+971501234567', available: true };
+  }
+
+  async registerInitiate(input: RegisterInitiateInput): Promise<{ verification_id: string }> {
+    this.initiateCalls.push(input);
+    if (this.initiateOutcome === 'phone-taken') {
+      throw new HttpErrorResponse({
+        status: 409,
+        error: { error_code: 'CONFLICT_PHONE_TAKEN', message: 'Taken.' },
+      });
+    }
+    if (this.initiateOutcome === 'network') throw new TypeError('fetch failed');
+    return { verification_id: 'phone-vid' };
+  }
+
+  async registerVerifyPhone(input: RegisterVerifyPhoneInput): Promise<{ registration_token: string }> {
+    this.verifyPhoneCalls.push(input);
+    return { registration_token: 'reg-token' };
+  }
+
+  async registerSubmit(input: RegisterSubmitInput): Promise<{ verification_id: string }> {
+    this.submitCalls.push(input);
+    if (this.submitOutcome === 'email-taken') {
+      throw new HttpErrorResponse({
+        status: 409,
+        error: { error_code: 'CONFLICT_EMAIL_TAKEN', message: 'Taken.' },
+      });
+    }
+    if (this.submitOutcome === 'expired-token') {
+      throw new HttpErrorResponse({
+        status: 401,
+        error: { error_code: 'AUTH_INVALID_TOKEN', message: 'Expired.' },
+      });
+    }
+    return { verification_id: 'email-vid' };
+  }
+
+  async registerConfirmEmail(input: RegisterConfirmEmailInput): Promise<AuthUser> {
+    this.confirmEmailCalls.push(input);
+    return USER;
   }
 }
 
 class StubToastService {
   errors: string[] = [];
-  error(msg: string): string {
-    this.errors.push(msg);
-    return msg;
-  }
+  successes: string[] = [];
+  error(msg: string): string { this.errors.push(msg); return msg; }
+  success(msg: string): string { this.successes.push(msg); return msg; }
   show(input: { message: string }): string { return input.message; }
-  success(): string { return ''; }
   warning(): string { return ''; }
   info(): string { return ''; }
   dismiss(): void { /* no-op */ }
@@ -88,11 +113,11 @@ class StubToastService {
 
 function setup(): {
   fixture: ComponentFixture<RegisterComponent>;
-  component: RegisterComponent;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  component: any;
   auth: StubAuthService;
   toast: StubToastService;
-  router: Router;
-  navigateSpy: ReturnType<typeof vi.fn>;
+  navigateByUrlSpy: ReturnType<typeof vi.fn>;
 } {
   const auth = new StubAuthService();
   const toast = new StubToastService();
@@ -110,191 +135,148 @@ function setup(): {
   });
 
   const router = TestBed.inject(Router);
-  const navigateSpy = vi.spyOn(router, 'navigate').mockResolvedValue(true) as unknown as ReturnType<typeof vi.fn>;
+  const navigateByUrlSpy = vi.spyOn(router, 'navigateByUrl').mockResolvedValue(true) as unknown as ReturnType<typeof vi.fn>;
 
   const fixture = TestBed.createComponent(RegisterComponent);
   fixture.detectChanges();
 
-  return { fixture, component: fixture.componentInstance, auth, toast, router, navigateSpy };
+  return { fixture, component: fixture.componentInstance, auth, toast, navigateByUrlSpy };
 }
 
-/* Helper — fill the form to a valid state. */
-function fillValid(component: RegisterComponent): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const form = (component as any).form;
-  form.controls.email.setValue('new@example.com');
-  form.controls.phone.setValue('+971501234567');
-  form.controls.password.setValue('strongpass1234');
-  form.controls.first_name.setValue('Jane');
-  form.controls.last_name.setValue('Doe');
+/** Drive steps 1→2→3 so the form is parked on the details step. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function reachDetails(component: any): Promise<void> {
+  component.phoneForm.controls.phone.setValue('+971501234567');
+  await component.onInitiate();
+  component.otpForm.controls.code.setValue('123456');
+  await component.onVerifyPhone();
 }
 
-describe('RegisterComponent', () => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fillDetails(component: any): void {
+  component.detailsForm.controls.first_name.setValue('Jane');
+  component.detailsForm.controls.last_name.setValue('Doe');
+  component.detailsForm.controls.email.setValue('new@example.com');
+  component.detailsForm.controls.password.setValue('strongpass1234');
+  component.detailsForm.controls.confirm_password.setValue('strongpass1234');
+}
+
+describe('RegisterComponent (phone-first 4-step)', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.restoreAllMocks();
   });
 
-  it('renders the form with all expected fields', () => {
-    const { fixture } = setup();
-    const root: HTMLElement = fixture.nativeElement;
-    expect(root.querySelector('[data-testid="register-email"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="register-phone"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="register-password"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="register-first-name"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="register-last-name"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="register-submit"]')).not.toBeNull();
+  it('starts on step 1 with the phone field', () => {
+    const { component, fixture } = setup();
+    expect(component.step()).toBe(1);
+    expect(fixture.nativeElement.querySelector('[data-testid="register-phone"]')).not.toBeNull();
   });
 
-  it('does not call AuthService.register on empty submit', async () => {
-    const { component, auth, fixture } = setup();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (component as any).onSubmit();
-    fixture.detectChanges();
-    expect(auth.registerCalls).toHaveLength(0);
-  });
+  describe('step 1 → 2 (initiate)', () => {
+    it('calls registerInitiate with a derived country_code and advances', async () => {
+      const { component, auth } = setup();
+      component.phoneForm.controls.phone.setValue('+971501234567');
+      await component.onInitiate();
 
-  describe('successful registration', () => {
-    it('calls AuthService.register with the correct payload including derived country_code', async () => {
-      const { component, auth, fixture } = setup();
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (component as any).onSubmit();
-      fixture.detectChanges();
-
-      expect(auth.registerCalls).toHaveLength(1);
-      expect(auth.registerCalls[0]).toEqual({
-        email: 'new@example.com',
-        phone: '+971501234567',
-        password: 'strongpass1234',
-        country_code: 'AE',
-        first_name: 'Jane',
-        last_name: 'Doe',
-      });
+      expect(auth.initiateCalls).toEqual([{ phone: '+971501234567', country_code: 'AE' }]);
+      expect(component.step()).toBe(2);
     });
 
-    it('derives Saudi country_code from +966 phone', async () => {
-      const { component, auth, fixture } = setup();
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any).form.controls.phone.setValue('+966501234567');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (component as any).onSubmit();
-      fixture.detectChanges();
-
-      expect(auth.registerCalls[0].country_code).toBe('SA');
-    });
-
-    it('passes null for empty first_name and last_name', async () => {
-      const { component, auth, fixture } = setup();
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any).form.controls.first_name.setValue('');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (component as any).form.controls.last_name.setValue('');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (component as any).onSubmit();
-      fixture.detectChanges();
-
-      expect(auth.registerCalls[0].first_name).toBeNull();
-      expect(auth.registerCalls[0].last_name).toBeNull();
-    });
-
-    it('navigates to /verify-phone with verification_id, phone, and from=register query params', async () => {
-      const { component, navigateSpy, fixture } = setup();
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (component as any).onSubmit();
-      fixture.detectChanges();
-
-      expect(navigateSpy).toHaveBeenCalledWith(['/verify-phone'], {
-        queryParams: {
-          verification_id: 'mc-abc123',
-          phone: '+971501234567',
-          from: 'register',
-        },
-      });
-    });
-  });
-
-  describe('error paths', () => {
-    it('attaches emailTaken error on CONFLICT_EMAIL_TAKEN', async () => {
-      const { component, auth, fixture } = setup();
-      auth.outcome = 'email-taken';
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (component as any).onSubmit();
-      fixture.detectChanges();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const emailErrors = (component as any).form.controls.email.errors;
-      expect(emailErrors).toEqual({ emailTaken: true });
+    it('derives SA for +966', async () => {
+      const { component, auth } = setup();
+      component.phoneForm.controls.phone.setValue('+966512345678');
+      await component.onInitiate();
+      expect(auth.initiateCalls[0].country_code).toBe('SA');
     });
 
     it('attaches phoneTaken error on CONFLICT_PHONE_TAKEN', async () => {
-      const { component, auth, fixture } = setup();
-      auth.outcome = 'phone-taken';
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (component as any).onSubmit();
-      fixture.detectChanges();
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const phoneErrors = (component as any).form.controls.phone.errors;
-      expect(phoneErrors).toEqual({ phoneTaken: true });
+      const { component, auth } = setup();
+      auth.initiateOutcome = 'phone-taken';
+      component.phoneForm.controls.phone.setValue('+971501234567');
+      await component.onInitiate();
+      expect(component.phoneForm.controls.phone.errors).toEqual({ phoneTaken: true });
     });
 
-    it('shows rateLimited toast on OTP_RATE_LIMITED', async () => {
-      const { component, auth, toast, fixture } = setup();
-      auth.outcome = 'rate-limited';
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (component as any).onSubmit();
-      fixture.detectChanges();
-      expect(toast.errors).toContain('auth.register.errors.rateLimited');
-    });
-
-    it('shows providerError toast on OTP_PROVIDER_ERROR', async () => {
-      const { component, auth, toast, fixture } = setup();
-      auth.outcome = 'provider-error';
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (component as any).onSubmit();
-      fixture.detectChanges();
-      expect(toast.errors).toContain('auth.register.errors.providerError');
-    });
-
-    it('shows network toast on fetch failure', async () => {
-      const { component, auth, toast, fixture } = setup();
-      auth.outcome = 'network';
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (component as any).onSubmit();
-      fixture.detectChanges();
-      expect(toast.errors).toContain('auth.login.errors.network');
+    it('does not call initiate on empty phone', async () => {
+      const { component, auth } = setup();
+      await component.onInitiate();
+      expect(auth.initiateCalls).toHaveLength(0);
     });
   });
 
-  describe('submitting state', () => {
-    it('disables the submit button while register is in flight', async () => {
-      const { component, fixture, auth } = setup();
-      let resolveCall: (v: RegisterResponse) => void = () => undefined;
-      auth.register = (_input) => {
-        auth.registerCalls.push(_input);
-        return new Promise(resolve => { resolveCall = resolve; });
-      };
-      fillValid(component);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const submitPromise = (component as any).onSubmit();
-      fixture.detectChanges();
+  describe('step 2 → 3 (verify phone)', () => {
+    it('exchanges the OTP for a registration_token and advances', async () => {
+      const { component, auth } = setup();
+      component.phoneForm.controls.phone.setValue('+971501234567');
+      await component.onInitiate();
+      component.otpForm.controls.code.setValue('123456');
+      await component.onVerifyPhone();
 
-      const button: HTMLButtonElement = fixture.nativeElement.querySelector('[data-testid="register-submit"]');
-      expect(button.disabled).toBe(true);
+      expect(auth.verifyPhoneCalls).toEqual([{ verification_id: 'phone-vid', code: '123456' }]);
+      expect(component.step()).toBe(3);
+    });
+  });
 
-      resolveCall(auth.response);
-      await submitPromise;
-      fixture.detectChanges();
-      expect(button.disabled).toBe(false);
+  describe('step 3 → 4 (submit details)', () => {
+    it('submits the details and advances to email verification', async () => {
+      const { component, auth } = setup();
+      await reachDetails(component);
+      fillDetails(component);
+      await component.onSubmitDetails();
+
+      expect(auth.submitCalls).toEqual([
+        {
+          registration_token: 'reg-token',
+          email: 'new@example.com',
+          password: 'strongpass1234',
+          first_name: 'Jane',
+          last_name: 'Doe',
+        },
+      ]);
+      expect(component.step()).toBe(4);
+    });
+
+    it('attaches emailTaken error on CONFLICT_EMAIL_TAKEN', async () => {
+      const { component, auth } = setup();
+      auth.submitOutcome = 'email-taken';
+      await reachDetails(component);
+      fillDetails(component);
+      await component.onSubmitDetails();
+      expect(component.detailsForm.controls.email.errors).toEqual({ emailTaken: true });
+    });
+
+    it('restarts at step 1 when the registration_token is expired', async () => {
+      const { component, auth, toast } = setup();
+      auth.submitOutcome = 'expired-token';
+      await reachDetails(component);
+      fillDetails(component);
+      await component.onSubmitDetails();
+      expect(component.step()).toBe(1);
+      expect(toast.errors).toContain('auth.register.errors.sessionExpired');
+    });
+
+    it('blocks submit when passwords do not match', async () => {
+      const { component, auth } = setup();
+      await reachDetails(component);
+      fillDetails(component);
+      component.detailsForm.controls.confirm_password.setValue('different');
+      await component.onSubmitDetails();
+      expect(auth.submitCalls).toHaveLength(0);
+    });
+  });
+
+  describe('step 4 (confirm email → auto-login)', () => {
+    it('confirms the email OTP and navigates home', async () => {
+      const { component, auth, navigateByUrlSpy } = setup();
+      await reachDetails(component);
+      fillDetails(component);
+      await component.onSubmitDetails();
+      component.otpForm.controls.code.setValue('654321');
+      await component.onConfirmEmail();
+
+      expect(auth.confirmEmailCalls).toEqual([{ verification_id: 'email-vid', code: '654321' }]);
+      expect(navigateByUrlSpy).toHaveBeenCalledWith('/');
     });
   });
 });

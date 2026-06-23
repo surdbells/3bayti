@@ -76,6 +76,110 @@
   justify-content: flex-end;
   margin-top: -8px;
   margin-bottom: 18px;
+
+  &--center {
+    justify-content: center;
+    margin-top: 16px;
+  }
+}
+
+/* Passwordless login (#8) — Phone / Email choice cards. */
+.auth-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-choice__option {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  text-align: start;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.05s ease;
+
+  &:hover {
+    border-color: var(--color-brand-500, #b18f1f);
+    box-shadow: 0 2px 10px rgba(46, 36, 28, 0.06);
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500, #b18f1f);
+    outline-offset: 2px;
+  }
+}
+
+.auth-choice__label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.auth-choice__hint {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+}
+
+/* OTP code input — shared with verify-phone / reset (duplicated here so the
+   login page is self-contained; verify-phone.scss @imports this file). */
+.auth-input--code {
+  letter-spacing: 8px;
+  text-align: center;
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  padding-inline-start: 18px;
+}
+
+/* Resend block — shared with verify-phone. */
+.auth-resend {
+  margin-top: 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.auth-resend__prompt {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0;
+}
+
+.auth-resend__button {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 4px 8px;
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+/* A button styled as a link (back-to-choice, change-destination, etc.). */
+button.auth-link {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 0;
 }
 
 .auth-input {

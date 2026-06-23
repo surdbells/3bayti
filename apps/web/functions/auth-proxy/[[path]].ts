@@ -25,6 +25,15 @@
  *   POST /auth-proxy/register      → /v3/auth/register     (passthrough)
  *   POST /auth-proxy/send-otp      → /v3/auth/send-otp     (passthrough)
  *   POST /auth-proxy/reset         → /v3/auth/reset        (passthrough)
+ *
+ * Passwordless parity (#8) — mirrors the mobile v3 flows:
+ *   POST /auth-proxy/otp-login/send      → /v3/auth/otp-login/send      (passthrough → {verification_id})
+ *   POST /auth-proxy/otp-login/verify    → /v3/auth/otp-login/verify    (authSuccessMap → cookie)
+ *   POST /auth-proxy/register/initiate   → /v3/auth/register/initiate   (passthrough → {verification_id})
+ *   POST /auth-proxy/register/verify-phone → /v3/auth/register/verify-phone (passthrough → {registration_token})
+ *   POST /auth-proxy/register/submit     → /v3/auth/register/submit     (passthrough → {verification_id})
+ *   POST /auth-proxy/register/confirm-email → /v3/auth/register/confirm-email (authSuccessMap → cookie)
+ *   POST /auth-proxy/validate-phone      → /v3/auth/validate-phone      (passthrough → {available})
  */
 
 const UPSTREAM_BASE = 'https://api-v3.3bayti.ae';
@@ -171,6 +180,10 @@ async function handleAuthProxy(req: Request): Promise<Response> {
     login: '/v3/auth/login',
     confirm: '/v3/auth/confirm',
     'reset-confirm': '/v3/auth/reset/confirm',
+    /* Passwordless parity (#8): both of these return the same token-pair
+       envelope as /login, so they go through the cookie-setting path. */
+    'otp-login/verify': '/v3/auth/otp-login/verify',
+    'register/confirm-email': '/v3/auth/register/confirm-email',
   };
   if (req.method === 'POST' && authSuccessMap[seg]) {
     const body = await req.json().catch(() => ({}));
@@ -190,6 +203,14 @@ async function handleAuthProxy(req: Request): Promise<Response> {
     register: '/v3/auth/register',
     'send-otp': '/v3/auth/send-otp',
     reset: '/v3/auth/reset',
+    /* Passwordless parity (#8): no tokens issued at these steps — they
+       hand back an opaque verification_id / registration_token, or an
+       availability flag — so they pass straight through unchanged. */
+    'otp-login/send': '/v3/auth/otp-login/send',
+    'register/initiate': '/v3/auth/register/initiate',
+    'register/verify-phone': '/v3/auth/register/verify-phone',
+    'register/submit': '/v3/auth/register/submit',
+    'validate-phone': '/v3/auth/validate-phone',
   };
   if (req.method === 'POST' && passthroughMap[seg]) {
     const body = await req.json().catch(() => ({}));

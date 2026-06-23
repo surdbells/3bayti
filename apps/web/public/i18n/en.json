@@ -178,8 +178,34 @@
         "accountInactive": "This account has been disabled. Please contact support.",
         "phoneUnverified": "Your phone number is not verified yet. Please verify it to continue.",
         "network": "We couldn't reach the server. Please check your connection and try again.",
-        "unexpected": "Something went wrong. Please try again."
-      }
+        "unexpected": "Something went wrong. Please try again.",
+        "invalidCode": "That code isn't right. Check it and try again.",
+        "rateLimited": "Too many attempts. Please wait a moment and try again.",
+        "providerError": "We couldn't send the code right now. Please try again shortly."
+      },
+      "choiceSubtitle": "How would you like to log in?",
+      "choicePhone": "Phone number",
+      "choicePhoneHint": "Get a one-time code by SMS",
+      "choiceEmail": "Email",
+      "choiceEmailHint": "Get a one-time code by email",
+      "phoneTitle": "Log in with your phone",
+      "phoneSubtitle": "Enter your phone number and we'll send you a verification code.",
+      "phoneLabel": "Phone number",
+      "emailTitle": "Log in with your email",
+      "emailSubtitle": "Enter your email and we'll send you a verification code.",
+      "sendCode": "Send code",
+      "usePasswordInstead": "Log in with password instead",
+      "useOtpInstead": "Log in with a one-time code instead",
+      "otpTitle": "Enter your code",
+      "otpSubtitle": "We sent a 6-digit code to {{destination}}.",
+      "codeLabel": "Verification code",
+      "verify": "Verify",
+      "codeSent": "Verification code sent.",
+      "resendCta": "Didn't get a code?",
+      "resendButton": "Resend code",
+      "resendCooldown": "Resend in {{seconds}}s",
+      "changeDestination": "Use a different number or email",
+      "backToChoice": "Back"
     },
     "register": {
       "title": "Create your 3bayti account",
@@ -201,8 +227,28 @@
         "phoneTaken": "That phone number is already registered.",
         "rateLimited": "Too many verification attempts. Please wait an hour and try again.",
         "providerError": "We couldn't send the verification code. Please try again in a moment.",
-        "unexpected": "We couldn't create your account. Please try again."
-      }
+        "unexpected": "We couldn't create your account. Please try again.",
+        "invalidCode": "That code isn't right. Check it and try again.",
+        "phoneTakenHint": "This phone is already registered.",
+        "sessionExpired": "Your session expired. Please start again."
+      },
+      "phoneSubtitle": "Let's start with your phone number — we'll send a verification code.",
+      "continue": "Continue",
+      "verify": "Verify",
+      "codeLabel": "Verification code",
+      "codeSent": "Verification code sent.",
+      "verifyPhoneTitle": "Verify your phone",
+      "verifyPhoneSubtitle": "We sent a 6-digit code to {{phone}}.",
+      "changeNumber": "Change number",
+      "detailsTitle": "Your details",
+      "detailsSubtitle": "Almost done — tell us a bit about yourself.",
+      "confirmPasswordLabel": "Confirm password",
+      "verifyEmailTitle": "Verify your email",
+      "verifyEmailSubtitle": "We sent a 6-digit code to {{email}}.",
+      "backToDetails": "Back to details",
+      "resendCta": "Didn't get a code?",
+      "resendButton": "Resend code",
+      "resendCooldown": "Resend in {{seconds}}s"
     },
     "verifyPhone": {
       "title": "Verify your phone number",
@@ -232,12 +278,17 @@
       "backToLogin": "Back to sign in",
       "errors": {
         "rateLimited": "Too many reset attempts. Please wait an hour and try again.",
-        "unexpected": "We couldn't start the reset. Please try again."
-      }
+        "unexpected": "We couldn't start the reset. Please try again.",
+        "providerError": "We couldn't send the code right now. Please try again shortly."
+      },
+      "channelSubtitle": "Choose how you'd like to receive your reset code.",
+      "channelEmail": "Email",
+      "channelPhone": "Phone",
+      "phoneLabel": "Phone number"
     },
     "reset": {
       "title": "Set a new password",
-      "subtitle": "Enter the code we sent to your phone and choose a new password.",
+      "subtitle": "Enter the code we sent to {{destination}} and choose a new password.",
       "codeLabel": "Verification code",
       "newPasswordLabel": "New password",
       "confirmPasswordLabel": "Confirm new password",

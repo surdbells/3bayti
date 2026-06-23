@@ -8,13 +8,18 @@ import { ForgotPasswordComponent } from './forgot-password';
 import { AuthService } from '../../../core/auth/auth.service';
 import { ToastService } from '../../../shared/forms';
 import { provideI18n } from '../../../core/i18n';
+import type { ResetRequestInput } from '../../../core/auth/auth.types';
+
+/**
+ * Tests for the two-channel ForgotPasswordComponent (#8).
+ */
 
 class StubAuthService {
-  resetCalls: string[] = [];
+  resetCalls: ResetRequestInput[] = [];
   outcome: 'success' | 'success-fake' | 'rate-limited' | 'network' = 'success';
 
-  async requestPasswordReset(email: string): Promise<{ verification_id: string }> {
-    this.resetCalls.push(email);
+  async requestPasswordResetChannel(input: ResetRequestInput): Promise<{ verification_id: string }> {
+    this.resetCalls.push(input);
     if (this.outcome === 'success') return { verification_id: 'mc-real' };
     if (this.outcome === 'success-fake') return { verification_id: 'fake-aaa' };
     if (this.outcome === 'network') throw new TypeError('fetch failed');
@@ -40,7 +45,8 @@ class StubToastService {
 
 function setup(): {
   fixture: ComponentFixture<ForgotPasswordComponent>;
-  component: ForgotPasswordComponent;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  component: any;
   auth: StubAuthService;
   toast: StubToastService;
   navigateSpy: ReturnType<typeof vi.fn>;
@@ -65,75 +71,92 @@ function setup(): {
   return { fixture, component: fixture.componentInstance, auth, toast, navigateSpy };
 }
 
-describe('ForgotPasswordComponent', () => {
+describe('ForgotPasswordComponent (two-channel)', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
     vi.restoreAllMocks();
   });
 
-  it('renders the email field and submit button', () => {
+  it('renders the channel toggle and email field by default', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('[data-testid="forgot-channel"]')).not.toBeNull();
     expect(root.querySelector('[data-testid="forgot-email"]')).not.toBeNull();
-    expect(root.querySelector('[data-testid="forgot-submit"]')).not.toBeNull();
   });
 
-  it('does not call requestPasswordReset on empty submit', async () => {
-    const { component, auth, fixture } = setup();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (component as any).onSubmit();
+  it('switches to the phone field when the phone channel is selected', () => {
+    const { component, fixture } = setup();
+    component.setChannel('phone');
     fixture.detectChanges();
+    const root: HTMLElement = fixture.nativeElement;
+    expect(root.querySelector('[data-testid="forgot-phone"]')).not.toBeNull();
+    expect(root.querySelector('[data-testid="forgot-email"]')).toBeNull();
+  });
+
+  it('does not call the reset endpoint on empty submit', async () => {
+    const { component, auth } = setup();
+    await component.onSubmit();
     expect(auth.resetCalls).toHaveLength(0);
   });
 
-  it('navigates to /reset-password with vid + email on success', async () => {
-    const { component, navigateSpy, fixture } = setup();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (component as any).form.controls.email.setValue('jane@example.com');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (component as any).onSubmit();
-    fixture.detectChanges();
+  it('sends an email reset and navigates with channel + destination', async () => {
+    const { component, auth, navigateSpy } = setup();
+    component.form.controls.email.setValue('jane@example.com');
+    await component.onSubmit();
+
+    expect(auth.resetCalls).toEqual([{ channel: 'email', email: 'jane@example.com' }]);
     expect(navigateSpy).toHaveBeenCalledWith(['/reset-password'], {
-      queryParams: { verification_id: 'mc-real', email: 'jane@example.com' },
+      queryParams: {
+        verification_id: 'mc-real',
+        channel: 'email',
+        destination: 'jane@example.com',
+      },
     });
   });
 
-  it('navigates to /reset-password ALSO when the API returns a fake- prefix vid (anti-enumeration)', async () => {
-    /* Anti-enumeration: the frontend must NOT branch on the
-       verification_id shape. The reset-confirm endpoint will reject
-       the fake- prefixed vid with OTP_INVALID_CODE, but that's
-       indistinguishable from a wrong code attempt on a real vid. */
-    const { component, auth, navigateSpy, fixture } = setup();
-    auth.outcome = 'success-fake';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (component as any).form.controls.email.setValue('nobody@example.com');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (component as any).onSubmit();
-    fixture.detectChanges();
+  it('sends a phone reset on the phone channel', async () => {
+    const { component, auth, navigateSpy } = setup();
+    component.setChannel('phone');
+    component.form.controls.phone.setValue('+971501234567');
+    await component.onSubmit();
+
+    expect(auth.resetCalls).toEqual([{ channel: 'phone', phone: '+971501234567' }]);
     expect(navigateSpy).toHaveBeenCalledWith(['/reset-password'], {
-      queryParams: { verification_id: 'fake-aaa', email: 'nobody@example.com' },
+      queryParams: {
+        verification_id: 'mc-real',
+        channel: 'phone',
+        destination: '+971501234567',
+      },
+    });
+  });
+
+  it('navigates ALSO on a fake- prefix vid (anti-enumeration)', async () => {
+    const { component, auth, navigateSpy } = setup();
+    auth.outcome = 'success-fake';
+    component.form.controls.email.setValue('nobody@example.com');
+    await component.onSubmit();
+    expect(navigateSpy).toHaveBeenCalledWith(['/reset-password'], {
+      queryParams: {
+        verification_id: 'fake-aaa',
+        channel: 'email',
+        destination: 'nobody@example.com',
+      },
     });
   });
 
   it('shows rateLimited toast on OTP_RATE_LIMITED', async () => {
-    const { component, auth, toast, fixture } = setup();
+    const { component, auth, toast } = setup();
     auth.outcome = 'rate-limited';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (component as any).form.controls.email.setValue('jane@example.com');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (component as any).onSubmit();
-    fixture.detectChanges();
+    component.form.controls.email.setValue('jane@example.com');
+    await component.onSubmit();
     expect(toast.errors).toContain('auth.forgot.errors.rateLimited');
   });
 
   it('shows network toast on fetch failure', async () => {
-    const { component, auth, toast, fixture } = setup();
+    const { component, auth, toast } = setup();
     auth.outcome = 'network';
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (component as any).form.controls.email.setValue('jane@example.com');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (component as any).onSubmit();
-    fixture.detectChanges();
+    component.form.controls.email.setValue('jane@example.com');
+    await component.onSubmit();
     expect(toast.errors).toContain('auth.login.errors.network');
   });
 });

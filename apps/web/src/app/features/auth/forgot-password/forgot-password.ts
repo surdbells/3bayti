@@ -17,6 +17,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth/auth.service';
 import {
   FormFieldComponent,
+  PhoneInputComponent,
   mapApiErrors,
   ApiErrorMapping,
   ToastService,
@@ -24,32 +25,21 @@ import {
 import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
 
 /**
- * Forgot password page — /forgot-password.
+ * Forgot password page — /forgot-password. TWO-CHANNEL reset request (web
+ * parity with the mobile reset flow, issue #8).
  *
- * Asks for the user's email and triggers an OTP-based reset.
+ * A channel toggle (Email | Phone) drives which identifier the user enters:
+ *   Email mode → email field.
+ *   Phone mode → PhoneInputComponent.
+ * [Send code] → AuthService.requestPasswordResetChannel({ channel, ... }) →
+ *   verification_id → navigate to /reset-password.
  *
  * Anti-enumeration protocol
  * -------------------------
- * The API endpoint /v3/auth/reset ALWAYS returns 200 with a
- * verification_id — even when the email isn't registered. For
- * non-existent emails the verification_id is prefixed with 'fake-'.
- * The frontend MUST NOT distinguish: we show the same success state
- * for either case ('check your email/SMS for a code') and route the
- * user to /reset-password regardless. An attacker can't tell which
- * emails are registered by probing this endpoint.
- *
- * Submit flow
- * -----------
- *   1. AuthService.requestPasswordReset(email)
- *   2. Navigate to /reset-password?verification_id=...&email=...
- *      (The reset-password page reads both — it needs the
- *      verification_id for confirm, and shows the email for context.)
- *   3. On OTP_RATE_LIMITED → toast (rare, but possible if a user
- *      is hammering the endpoint).
- *   4. On network failure → toast.
- *
- * We do NOT show a 'no account exists' error here — that would
- * defeat the anti-enumeration design.
+ * /v3/auth/reset ALWAYS returns 200 with a verification_id — even when the
+ * identifier isn't registered (the API uses a 'fake-' prefix). The frontend
+ * MUST NOT distinguish: we route to /reset-password regardless, and the OTP
+ * confirm step fails the same way as a bad code.
  */
 @Component({
   selector: 'app-forgot-password',
@@ -60,13 +50,39 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
     RouterLink,
     TranslatePipe,
     FormFieldComponent,
+    PhoneInputComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="auth-page" data-testid="forgot-page">
       <div class="auth-card">
         <h1 class="auth-card__title">{{ 'auth.forgot.title' | translate }}</h1>
-        <p class="auth-card__subtitle">{{ 'auth.forgot.subtitle' | translate }}</p>
+        <p class="auth-card__subtitle">{{ 'auth.forgot.channelSubtitle' | translate }}</p>
+
+        <div class="auth-segment" role="tablist" data-testid="forgot-channel">
+          <button
+            type="button"
+            role="tab"
+            class="auth-segment__btn"
+            [class.auth-segment__btn--active]="channel() === 'email'"
+            [attr.aria-selected]="channel() === 'email'"
+            (click)="setChannel('email')"
+            data-testid="forgot-channel-email"
+          >
+            {{ 'auth.forgot.channelEmail' | translate }}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            class="auth-segment__btn"
+            [class.auth-segment__btn--active]="channel() === 'phone'"
+            [attr.aria-selected]="channel() === 'phone'"
+            (click)="setChannel('phone')"
+            data-testid="forgot-channel-phone"
+          >
+            {{ 'auth.forgot.channelPhone' | translate }}
+          </button>
+        </div>
 
         <form
           [formGroup]="form"
@@ -76,6 +92,7 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
           data-testid="forgot-form"
         >
           <ui-form-field
+            *ngIf="channel() === 'email'"
             [label]="'auth.forgot.emailLabel'"
             fieldId="forgot-email"
             [required]="true"
@@ -92,6 +109,21 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
               class="auth-input"
               data-testid="forgot-email"
             />
+          </ui-form-field>
+
+          <ui-form-field
+            *ngIf="channel() === 'phone'"
+            [label]="'auth.forgot.phoneLabel'"
+            fieldId="forgot-phone"
+            [required]="true"
+            [control]="form.controls.phone"
+            [errorMap]="phoneErrors"
+          >
+            <ui-phone-input
+              inputId="forgot-phone"
+              formControlName="phone"
+              data-testid="forgot-phone"
+            ></ui-phone-input>
           </ui-form-field>
 
           <button
@@ -112,15 +144,25 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
       </div>
     </main>
   `,
-  styleUrl: '../login/login.scss',
+  styleUrl: './forgot-password.scss',
 })
 export class ForgotPasswordComponent {
-  protected readonly form: FormGroup<{ email: FormControl<string> }>;
+  protected readonly channel = signal<'email' | 'phone'>('email');
   protected readonly submitting = signal(false);
+
+  protected readonly form: FormGroup<{
+    email: FormControl<string>;
+    phone: FormControl<string>;
+  }>;
 
   protected readonly emailErrors: Record<string, string> = {
     required: 'auth.fields.required',
     email: 'auth.fields.email_invalid',
+  };
+
+  protected readonly phoneErrors: Record<string, string> = {
+    required: 'auth.fields.required',
+    phoneInvalid: 'auth.fields.phone_invalid',
   };
 
   private readonly auth = inject(AuthService);
@@ -131,27 +173,59 @@ export class ForgotPasswordComponent {
     const fb = inject(FormBuilder).nonNullable;
     this.form = fb.group({
       email: fb.control('', [Validators.required, Validators.email]),
+      phone: fb.control(''),
     });
+    this.applyChannelValidators('email');
+  }
+
+  protected setChannel(channel: 'email' | 'phone'): void {
+    if (this.channel() === channel) return;
+    this.channel.set(channel);
+    this.applyChannelValidators(channel);
+  }
+
+  /**
+   * Only the ACTIVE channel's control is required/validated; the inactive
+   * one is cleared so a stale value can't block submit.
+   */
+  private applyChannelValidators(channel: 'email' | 'phone'): void {
+    const { email, phone } = this.form.controls;
+    if (channel === 'email') {
+      email.setValidators([Validators.required, Validators.email]);
+      phone.clearValidators();
+      phone.setValue('');
+    } else {
+      phone.setValidators([Validators.required]);
+      email.clearValidators();
+      email.setValue('');
+    }
+    email.updateValueAndValidity();
+    phone.updateValueAndValidity();
   }
 
   protected async onSubmit(): Promise<void> {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.submitting()) return;
 
+    const channel = this.channel();
+    const phone = this.form.controls.phone.value;
+    const email = this.form.controls.email.value;
+    const destination = channel === 'phone' ? phone : email;
+
     this.submitting.set(true);
     try {
-      const email = this.form.controls.email.value;
-      const response = await this.auth.requestPasswordReset(email);
+      const response = await this.auth.requestPasswordResetChannel(
+        channel === 'phone' ? { channel: 'phone', phone } : { channel: 'email', email },
+      );
 
-      /* Always navigate to /reset-password — even if the email
-         isn't registered (the API returns a 'fake-' prefixed
-         verification_id in that case, which the reset confirm
-         endpoint will reject as an invalid code). This is the
-         anti-enumeration design. */
+      /* Always navigate — even for unregistered identifiers (anti-enumeration;
+         the API returns a 'fake-' verification_id which the confirm step
+         rejects as an invalid code). */
       await this.router.navigate(['/reset-password'], {
         queryParams: {
           verification_id: response.verification_id,
-          email,
+          channel,
+          destination,
         },
       });
     } catch (err) {
@@ -162,6 +236,8 @@ export class ForgotPasswordComponent {
         for (const code of result.unmapped) {
           if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
             this.toast.error('auth.forgot.errors.rateLimited');
+          } else if (code === AUTH_ERROR_CODES.OTP_PROVIDER_ERROR) {
+            this.toast.error('auth.forgot.errors.providerError');
           } else {
             this.toast.error('auth.forgot.errors.unexpected');
           }
@@ -175,4 +251,5 @@ export class ForgotPasswordComponent {
 
 const FORGOT_ERROR_MAP: Record<string, ApiErrorMapping> = {
   [AUTH_ERROR_CODES.OTP_RATE_LIMITED]: { field: null, key: 'rateLimited' },
+  [AUTH_ERROR_CODES.OTP_PROVIDER_ERROR]: { field: null, key: 'providerError' },
 };

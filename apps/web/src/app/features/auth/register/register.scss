@@ -28,3 +28,15 @@
      intentionally separated. */
   margin-top: 12px;
 }
+
+/* Inline phone-availability hint (step 1). Best-effort UX — the
+   Continue-time 409 is the hard gate. */
+.auth-field-hint {
+  font-size: 13px;
+  margin: -8px 0 16px 0;
+  line-height: 1.45;
+
+  &--warn {
+    color: var(--color-danger-700, #8a1b14);
+  }
+}

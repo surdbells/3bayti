@@ -78,7 +78,7 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
       <div class="auth-card">
         <h1 class="auth-card__title">{{ 'auth.reset.title' | translate }}</h1>
         <p class="auth-card__subtitle">
-          {{ 'auth.reset.subtitle' | translate : { email: email() || '' } }}
+          {{ 'auth.reset.subtitle' | translate : { destination: destination() || '' } }}
         </p>
 
         <ng-container *ngIf="hasVerificationId(); else missingVerification">
@@ -180,7 +180,8 @@ export class ResetPasswordComponent implements OnInit {
   }>;
 
   protected readonly submitting = signal(false);
-  protected readonly email = signal<string | null>(null);
+  /** Email or phone the code was sent to — shown for context only. */
+  protected readonly destination = signal<string | null>(null);
   private readonly verificationId = signal<string | null>(null);
 
   protected readonly codeErrors: Record<string, string> = {
@@ -221,10 +222,13 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const vid = this.route.snapshot.queryParamMap.get('verification_id');
-    const em = this.route.snapshot.queryParamMap.get('email');
+    const params = this.route.snapshot.queryParamMap;
+    const vid = params.get('verification_id');
+    /* New two-channel flow (#8) passes `destination`; keep `email` as a
+       fallback for any old in-flight links. */
+    const dest = params.get('destination') ?? params.get('email');
     if (vid !== null) this.verificationId.set(vid);
-    if (em !== null) this.email.set(em);
+    if (dest !== null) this.destination.set(dest);
   }
 
   protected async onSubmit(): Promise<void> {

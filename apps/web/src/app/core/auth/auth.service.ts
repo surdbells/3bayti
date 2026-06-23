@@ -26,6 +26,19 @@ import type {
   ResetConfirmInput,
   ResetResponse,
   SendOtpResponse,
+  OtpLoginSendInput,
+  OtpLoginSendResponse,
+  OtpLoginVerifyInput,
+  RegisterInitiateInput,
+  RegisterInitiateResponse,
+  RegisterVerifyPhoneInput,
+  RegisterVerifyPhoneResponse,
+  RegisterSubmitInput,
+  RegisterSubmitResponse,
+  RegisterConfirmEmailInput,
+  ValidatePhoneInput,
+  ValidatePhoneResponse,
+  ResetRequestInput,
 } from './auth.types';
 
 /**
@@ -327,6 +340,147 @@ export class AuthService {
     );
     this.applyAuthState(response);
     return response.user;
+  }
+
+  /* =========================================================================
+     Passwordless parity (#8) — mirrors the mobile v3 passwordless flows.
+     All of these go through the BFF /auth-proxy so the cookie model is
+     preserved: the two *verify* steps that mint a token-pair
+     (otp-login/verify, register/confirm-email) route through the BFF's
+     authSuccessMap (cookie set + refresh_token stripped) and the response
+     is fed into applyAuthState(); every other step is a passthrough.
+     ========================================================================= */
+
+  /**
+   * Send a passwordless login OTP over phone or email.
+   *
+   * Anti-enumeration: always returns a verification_id (even for an
+   * unknown identifier). The page advances to the OTP screen regardless;
+   * a bad/unknown identifier only fails at verifyOtpLogin().
+   */
+  async sendOtpLogin(input: OtpLoginSendInput): Promise<OtpLoginSendResponse> {
+    return firstValueFrom(
+      this.http.post<OtpLoginSendResponse>(
+        `${this.proxyBase}/otp-login/send`,
+        input,
+        { withCredentials: true },
+      ),
+    );
+  }
+
+  /**
+   * Verify a passwordless login OTP. On success the BFF returns the same
+   * token-pair envelope as /login (refresh_token parked in the cookie),
+   * so we apply auth state and the user is signed in.
+   */
+  async verifyOtpLogin(input: OtpLoginVerifyInput): Promise<AuthUser> {
+    const response = await firstValueFrom(
+      this.http.post<BffLoginResponse>(
+        `${this.proxyBase}/otp-login/verify`,
+        input,
+        { withCredentials: true },
+      ),
+    );
+    this.applyAuthState(response);
+    return response.user;
+  }
+
+  /**
+   * Register step 1 (phone) — initiate. Sends a phone OTP and returns the
+   * verification_id consumed by registerVerifyPhone().
+   */
+  async registerInitiate(
+    input: RegisterInitiateInput,
+  ): Promise<RegisterInitiateResponse> {
+    return firstValueFrom(
+      this.http.post<RegisterInitiateResponse>(
+        `${this.proxyBase}/register/initiate`,
+        input,
+        { withCredentials: true },
+      ),
+    );
+  }
+
+  /**
+   * Register step 2 (verify phone) — exchanges the phone OTP for a
+   * short-lived registration_token used to authorise registerSubmit().
+   */
+  async registerVerifyPhone(
+    input: RegisterVerifyPhoneInput,
+  ): Promise<RegisterVerifyPhoneResponse> {
+    return firstValueFrom(
+      this.http.post<RegisterVerifyPhoneResponse>(
+        `${this.proxyBase}/register/verify-phone`,
+        input,
+        { withCredentials: true },
+      ),
+    );
+  }
+
+  /**
+   * Register step 3 (details) — submit. Sends a fresh email OTP and
+   * returns the verification_id consumed by registerConfirmEmail().
+   */
+  async registerSubmit(
+    input: RegisterSubmitInput,
+  ): Promise<RegisterSubmitResponse> {
+    return firstValueFrom(
+      this.http.post<RegisterSubmitResponse>(
+        `${this.proxyBase}/register/submit`,
+        input,
+        { withCredentials: true },
+      ),
+    );
+  }
+
+  /**
+   * Register step 4 (confirm email). On success the BFF returns a full
+   * token-pair + user (same envelope as /confirm), so we apply auth state
+   * and the new account is auto-logged-in.
+   */
+  async registerConfirmEmail(
+    input: RegisterConfirmEmailInput,
+  ): Promise<AuthUser> {
+    const response = await firstValueFrom(
+      this.http.post<BffLoginResponse>(
+        `${this.proxyBase}/register/confirm-email`,
+        input,
+        { withCredentials: true },
+      ),
+    );
+    this.applyAuthState(response);
+    return response.user;
+  }
+
+  /**
+   * Best-effort phone-availability probe for the register step-1 UX.
+   * Returns { phone, available }; available=false means already
+   * registered. Never a hard gate — the register/initiate 409 is.
+   */
+  async validatePhone(input: ValidatePhoneInput): Promise<ValidatePhoneResponse> {
+    return firstValueFrom(
+      this.http.post<ValidatePhoneResponse>(
+        `${this.proxyBase}/validate-phone`,
+        input,
+        { withCredentials: true },
+      ),
+    );
+  }
+
+  /**
+   * Two-channel password reset request (email | phone). Mirrors the
+   * mobile reset flow. Anti-enumeration: always 200 with a
+   * verification_id; the OTP confirm step (confirmPasswordReset) is where
+   * an unknown identifier fails the same way as a bad code.
+   */
+  async requestPasswordResetChannel(
+    input: ResetRequestInput,
+  ): Promise<ResetResponse> {
+    return firstValueFrom(
+      this.http.post<ResetResponse>(`${this.proxyBase}/reset`, input, {
+        withCredentials: true,
+      }),
+    );
   }
 
   /**
