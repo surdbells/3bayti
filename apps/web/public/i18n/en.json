@@ -977,6 +977,21 @@
       "subtitle": "Buy a 3bayti gift card, then share the code yourself or let us deliver it automatically by email or SMS — perfect for birthdays, Eid and weddings.",
       "ctaBuy": "Buy a gift card",
       "ctaRedeem": "Have a code? Redeem"
+    },
+    "getApp": {
+      "eyebrow": "Get the app",
+      "title": "Shop 3bayti on the go",
+      "subtitle": "Browse new arrivals, track your orders and check out faster — all from the 3bayti app on iPhone and Android.",
+      "point1": "Faster checkout",
+      "point2": "Order tracking & alerts",
+      "point3": "Exclusive app offers",
+      "downloadOn": "Download on the",
+      "androidGetItOn": "GET IT ON",
+      "appStoreAria": "Download 3bayti on the App Store",
+      "playStoreAria": "Get 3bayti on Google Play",
+      "appStoreSoon": "3bayti for iPhone — coming soon to the App Store",
+      "playStoreSoon": "3bayti for Android — coming soon to Google Play",
+      "comingSoon": "Coming soon"
     }
   },
   "product": {

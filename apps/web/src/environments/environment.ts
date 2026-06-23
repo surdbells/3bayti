@@ -26,4 +26,18 @@ export const environment = {
     /* ISO 3166-1 alpha-2 country code(s) to restrict autocomplete to. */
     regions: ['AE'],
   },
+
+  /* Mobile-app store listings, surfaced by the "Get the 3bayti app" band on
+     the home page (apps/web/src/app/features/home).
+
+     PLACEHOLDER: these are '#' until the operator fills in the live store
+     URLs. Replace appStore with the App Store listing
+     (https://apps.apple.com/...) and playStore with the Play Store listing
+     (https://play.google.com/store/apps/details?id=...). When either is left
+     as '#', the corresponding badge degrades to a non-navigating button so it
+     never sends users to a dead link. */
+  appStores: {
+    appStore: '#',
+    playStore: '#',
+  },
 } as const;

@@ -5,6 +5,7 @@ import {
   inject,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { catchError, from, map, of } from 'rxjs';
 
@@ -61,6 +62,7 @@ import { TranslatePipe } from '@ngx-translate/core';
     CampaignSectionComponent,
     TopSellersComponent,
     TranslatePipe,
+    NgTemplateOutlet,
     RouterLink,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -154,6 +156,13 @@ export class HomeComponent {
       }),
     ]);
   }
+
+  /* ----- Mobile-app store URLs (Get the app band) -----------------------
+     Sourced from environment.appStores. Placeholder '#' until the operator
+     fills in the live listings; the template degrades each badge to a
+     non-navigating button while its URL is still '#'. ------------------- */
+  readonly appStoreUrl = environment.appStores.appStore;
+  readonly playStoreUrl = environment.appStores.playStore;
 
   /* ----- Helpers (used in template) ------------------------------------- */
 

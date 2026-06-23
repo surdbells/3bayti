@@ -873,3 +873,255 @@
     justify-content: center;
   }
 }
+
+/* =====================================================================
+   GET THE APP — mobile-app promo band.
+   A warm, on-brand card pairing the heading + store badges with a
+   line-art phone mockup. Mirrors the .sell-band / .gift-promo layout
+   language (centred within page max-width, gilded surface) but on a
+   light cream field so it reads as a distinct surface from the dark
+   gift band above it. RTL-safe via logical properties + flex reorder.
+   ===================================================================== */
+.home-section--app {
+  margin-block: clamp(1.5rem, 4vw, 3rem);
+}
+
+.app-band {
+  position: relative;
+  overflow: hidden;
+  max-width: var(--page-max-width, 1280px);
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  padding: clamp(1.75rem, 4vw, 3rem);
+  border-radius: var(--radius-xl, 28px);
+  border: 1px solid rgba(201, 162, 39, 0.3);
+  background:
+    radial-gradient(120% 160% at 100% 0%, rgba(201, 162, 39, 0.18) 0%, transparent 55%),
+    radial-gradient(120% 160% at 0% 100%, rgba(90, 58, 44, 0.08) 0%, transparent 55%),
+    linear-gradient(155deg, #fbf4e6 0%, #f7ecd2 60%, #f3e6c9 100%);
+}
+
+.app-band__glow {
+  position: absolute;
+  inset-block-start: -45%;
+  inset-inline-end: -8%;
+  width: 20rem;
+  height: 20rem;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(201, 162, 39, 0.28), transparent 70%);
+  pointer-events: none;
+}
+
+.app-band__body {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 24rem;
+  min-width: 0;
+}
+
+.app-band__eyebrow {
+  margin: 0 0 0.4rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--color-brand-600, #b08642);
+}
+
+.app-band__title {
+  margin: 0 0 0.6rem;
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: clamp(1.6rem, 3.5vw, 2.25rem);
+  line-height: 1.1;
+  color: var(--color-brand-700, #2e241c);
+}
+
+.app-band__subtitle {
+  margin: 0 0 1rem;
+  max-width: 38rem;
+  color: var(--color-text-secondary, #6b5d4f);
+  line-height: 1.55;
+}
+
+.app-band__points {
+  list-style: none;
+  margin: 0 0 1.4rem;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-tertiary, #8a7868);
+}
+.app-band__points li {
+  position: relative;
+  padding-inline-start: 1.1rem;
+}
+.app-band__points li::before {
+  content: '✓';
+  position: absolute;
+  inset-inline-start: 0;
+  color: var(--color-brand-600, #b08642);
+  font-weight: 700;
+}
+
+.app-band__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.store-badge {
+  display: inline-flex;
+  padding: 0;
+  border: none;
+  background: none;
+  border-radius: 8px;
+  cursor: pointer;
+  line-height: 0;
+  transition:
+    transform var(--duration-base, 0.18s) var(--ease-out, ease),
+    box-shadow var(--duration-base, 0.18s) var(--ease-out, ease);
+}
+.store-badge:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(46, 36, 28, 0.22);
+}
+.store-badge:focus-visible {
+  outline: 2px solid var(--color-brand-600, #b08642);
+  outline-offset: 3px;
+}
+
+.store-badge__art {
+  display: block;
+  width: 148px;
+  height: auto;
+  border-radius: 8px;
+}
+
+/* Placeholder variant — store URL is still '#'. Slightly dimmed and
+   non-interactive-looking, but keeps a tooltip ("coming soon"). */
+.store-badge--disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+.store-badge--disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* ----- Phone mockup (decorative) ----- */
+.app-band__visual {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+}
+
+.app-phone {
+  position: relative;
+  width: 168px;
+  height: 340px;
+  padding: 10px;
+  border-radius: 30px;
+  background: linear-gradient(155deg, #3a281b, #2a1d14);
+  box-shadow:
+    0 18px 40px rgba(46, 36, 28, 0.28),
+    inset 0 0 0 2px rgba(201, 162, 39, 0.25);
+}
+
+.app-phone__notch {
+  position: absolute;
+  inset-block-start: 14px;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  width: 56px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(251, 244, 230, 0.35);
+}
+
+.app-phone__screen {
+  width: 100%;
+  height: 100%;
+  border-radius: 22px;
+  overflow: hidden;
+  background: linear-gradient(155deg, #fbf4e6, #f7ecd2);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 22px 12px 10px;
+}
+
+.app-phone__statusbar {
+  height: 8px;
+  width: 40%;
+  border-radius: 999px;
+  background: rgba(90, 58, 44, 0.18);
+}
+
+.app-phone__hero {
+  height: 84px;
+  border-radius: 12px;
+  background:
+    radial-gradient(120% 120% at 90% -10%, rgba(201, 162, 39, 0.4), transparent 60%),
+    linear-gradient(155deg, #c9a227, #b08642);
+}
+
+.app-phone__row {
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(90, 58, 44, 0.16);
+}
+.app-phone__row--wide {
+  width: 70%;
+}
+
+.app-phone__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-block-start: 2px;
+}
+.app-phone__grid span {
+  height: 56px;
+  border-radius: 10px;
+  background: linear-gradient(155deg, rgba(201, 162, 39, 0.18), rgba(90, 58, 44, 0.1));
+  border: 1px solid rgba(201, 162, 39, 0.22);
+}
+
+.app-phone__tabbar {
+  margin-block-start: auto;
+  height: 26px;
+  border-radius: 12px;
+  background: linear-gradient(155deg, #3a281b, #2a1d14);
+}
+
+/* Stack the phone below the copy on narrow viewports + centre. */
+@media (max-width: 720px) {
+  .app-band {
+    flex-direction: column;
+    text-align: center;
+  }
+  .app-band__points {
+    justify-content: center;
+  }
+  .app-band__badges {
+    justify-content: center;
+  }
+  .app-band__visual {
+    order: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-badge:hover {
+    transform: none;
+  }
+}

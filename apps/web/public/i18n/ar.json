@@ -977,6 +977,21 @@
       "subtitle": "اشترِ بطاقة هدية من 3bayti، ثم شاركي الرمز بنفسك أو دعينا نوصّلها تلقائيًا عبر البريد الإلكتروني أو الرسائل القصيرة — مثالية لأعياد الميلاد والعيد والأعراس.",
       "ctaBuy": "اشترِ بطاقة هدية",
       "ctaRedeem": "لديك رمز؟ استبدليه"
+    },
+    "getApp": {
+      "eyebrow": "حمّل التطبيق",
+      "title": "تسوّقي من 3bayti أينما كنتِ",
+      "subtitle": "تصفّحي أحدث القطع، وتتبّعي طلباتك، وأتمّي الشراء بشكل أسرع — كل ذلك من تطبيق 3bayti على iPhone وAndroid.",
+      "point1": "دفع أسرع",
+      "point2": "تتبّع الطلبات والتنبيهات",
+      "point3": "عروض حصرية على التطبيق",
+      "downloadOn": "حمّله من",
+      "androidGetItOn": "احصل عليه من",
+      "appStoreAria": "حمّل 3bayti من App Store",
+      "playStoreAria": "احصل على 3bayti من Google Play",
+      "appStoreSoon": "3bayti لـ iPhone — قريباً على App Store",
+      "playStoreSoon": "3bayti لـ Android — قريباً على Google Play",
+      "comingSoon": "قريباً"
     }
   },
   "product": {
