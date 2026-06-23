@@ -1001,6 +1001,13 @@ return [
     \Bayti\Api\Http\Controllers\Auth\ResetController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\ResetConfirmController::class => \DI\autowire(),
 
+    // Passwordless OTP login — autowire (constructor deps are all
+    // container-resolvable services: RequestValidator, EntityManager,
+    // OtpService, JwtService, UserSerializer). No object-default ctor
+    // params, so PHP-DI's prod compile is happy.
+    \Bayti\Api\Http\Controllers\Auth\OtpLoginSendController::class => \DI\autowire(),
+    \Bayti\Api\Http\Controllers\Auth\OtpLoginVerifyController::class => \DI\autowire(),
+
     // M1.4.5 — token lifecycle
     \Bayti\Api\Http\Controllers\Auth\RefreshController::class => \DI\autowire(),
     \Bayti\Api\Http\Controllers\Auth\LogoutController::class => \DI\autowire(),

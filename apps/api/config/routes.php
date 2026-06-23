@@ -117,6 +117,13 @@ return function (App $app): void {
         $group->post('/reset', ResetController::class);
         $group->post('/reset/confirm', ResetConfirmController::class);
 
+        // Passwordless OTP login (anonymous). Two-channel (phone SMS /
+        // email OTP), anti-enumeration on /send, returns the standard
+        // login envelope on /verify. ADDITIVE — the email+password
+        // /login endpoint above stays unchanged as the fallback.
+        $group->post('/otp-login/send', \Bayti\Api\Http\Controllers\Auth\OtpLoginSendController::class);
+        $group->post('/otp-login/verify', \Bayti\Api\Http\Controllers\Auth\OtpLoginVerifyController::class);
+
         // M1.4.5 — token lifecycle
         $group->post('/refresh', RefreshController::class); // anonymous (refresh token in body)
         $group->post('/logout', LogoutController::class)
