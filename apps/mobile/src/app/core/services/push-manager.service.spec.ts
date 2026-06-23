@@ -4,30 +4,97 @@ import { PushManager, resolvePushDeepLink, PushTapHandler } from './push-manager
 import { PushRegistrationService } from './push-registration.service';
 
 describe('resolvePushDeepLink', () => {
-  it('maps a string order_id to /orders/:id', () => {
-    expect(resolvePushDeepLink({ type: 'order.shipped', order_id: '123', order_reference: 'V3-1' }))
-      .toBe('/orders/123');
+  describe('order lifecycle -> /orders/:id', () => {
+    it('maps a string order_id to /orders/:id', () => {
+      expect(resolvePushDeepLink({ type: 'order.shipped', order_id: '123', order_reference: 'V3-1' }))
+        .toBe('/orders/123');
+    });
+
+    it('maps every order lifecycle type to /orders/:id', () => {
+      const types = [
+        'order.placed', 'order.paid', 'order.accepted', 'order.preparing',
+        'order.rejected', 'order.shipped', 'order.delivered', 'order.cancelled',
+        'order.refunded',
+      ];
+      for (const type of types) {
+        expect(resolvePushDeepLink({ type, order_id: '42' })).toBe('/orders/42');
+      }
+    });
+
+    it('maps order.review_prompt (post-delivery follow-up) to /orders/:id', () => {
+      expect(resolvePushDeepLink({ type: 'order.review_prompt', order_id: '77', order_reference: 'V3-7' }))
+        .toBe('/orders/77');
+    });
+
+    it('tolerates a numeric order_id', () => {
+      expect(resolvePushDeepLink({ order_id: 456 })).toBe('/orders/456');
+    });
+
+    it('trims a padded order_id', () => {
+      expect(resolvePushDeepLink({ order_id: '  789  ' })).toBe('/orders/789');
+    });
+
+    it('falls back to /orders/:id when type is absent but order_id present', () => {
+      expect(resolvePushDeepLink({ order_id: '5' })).toBe('/orders/5');
+    });
+
+    it('returns null when an order type is missing order_id', () => {
+      expect(resolvePushDeepLink({ type: 'order.paid' })).toBeNull();
+    });
+
+    it('returns null when order_id is blank', () => {
+      expect(resolvePushDeepLink({ order_id: '   ' })).toBeNull();
+    });
   });
 
-  it('tolerates a numeric order_id', () => {
-    expect(resolvePushDeepLink({ order_id: 456 })).toBe('/orders/456');
+  describe('chat.message -> /chat?uuid=', () => {
+    it('maps conversation_uuid to a query-param chat URL', () => {
+      expect(resolvePushDeepLink({ type: 'chat.message', conversation_uuid: 'abc-123', order_reference: 'V3-1' }))
+        .toBe('/chat?uuid=abc-123');
+    });
+
+    it('url-encodes the conversation uuid', () => {
+      expect(resolvePushDeepLink({ type: 'chat.message', conversation_uuid: 'a b/c' }))
+        .toBe('/chat?uuid=a%20b%2Fc');
+    });
+
+    it('returns null when conversation_uuid is missing', () => {
+      expect(resolvePushDeepLink({ type: 'chat.message' })).toBeNull();
+    });
   });
 
-  it('trims a padded order_id', () => {
-    expect(resolvePushDeepLink({ order_id: '  789  ' })).toBe('/orders/789');
+  describe('gift_card.expiry_nudge -> /my-gift-cards', () => {
+    it('routes to the wallet (detail page is state-driven, id alone insufficient)', () => {
+      expect(resolvePushDeepLink({ type: 'gift_card.expiry_nudge', card_id: '9', balance: '50' }))
+        .toBe('/my-gift-cards');
+    });
   });
 
-  it('returns null when order_id is missing', () => {
-    expect(resolvePushDeepLink({ type: 'order.paid' })).toBeNull();
+  describe('cart.abandoned -> /cart', () => {
+    it('routes to the cart', () => {
+      expect(resolvePushDeepLink({ type: 'cart.abandoned', cart_id: '12' })).toBe('/cart');
+    });
+
+    it('routes to the cart even without cart_id', () => {
+      expect(resolvePushDeepLink({ type: 'cart.abandoned' })).toBe('/cart');
+    });
   });
 
-  it('returns null when order_id is blank', () => {
-    expect(resolvePushDeepLink({ order_id: '   ' })).toBeNull();
+  describe('re_engagement.nudge -> /home', () => {
+    it('routes to the home/shop tab', () => {
+      expect(resolvePushDeepLink({ type: 're_engagement.nudge' })).toBe('/home');
+    });
   });
 
-  it('returns null for null/undefined payloads', () => {
-    expect(resolvePushDeepLink(null)).toBeNull();
-    expect(resolvePushDeepLink(undefined)).toBeNull();
+  describe('unknown / empty payloads', () => {
+    it('returns null for an unrecognised type', () => {
+      expect(resolvePushDeepLink({ type: 'something.unknown' })).toBeNull();
+    });
+
+    it('returns null for null/undefined payloads', () => {
+      expect(resolvePushDeepLink(null)).toBeNull();
+      expect(resolvePushDeepLink(undefined)).toBeNull();
+    });
   });
 });
 

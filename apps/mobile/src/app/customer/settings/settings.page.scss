@@ -201,6 +201,46 @@
   }
 }
 
+// Stacked row: icon + (label over subtitle) + trailing control. Used by the
+// marketing opt-out toggle, which needs a two-line explanatory subtitle.
+.settings-item--stacked {
+  align-items: flex-start;
+
+  .item-icon {
+    margin-top: 2px;
+  }
+
+  .toggle-switch {
+    margin-top: 2px;
+  }
+}
+
+.item-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.item-label--wrap {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.item-subtitle {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--ax-color-text-tertiary);
+}
+
+// While a preference save is in flight, dim the toggle to signal the
+// pending state (the input is also disabled in the template).
+.toggle-switch--saving {
+  opacity: 0.55;
+}
+
 .item-value {
   font-size: 13px;
   color: var(--ax-color-text-tertiary);

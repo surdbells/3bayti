@@ -818,6 +818,18 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'v3-envelope',
   },
 
+  // Marketing push opt-out. Body { marketing_opt_out: bool } -> 200.
+  // v3-native (no legacy counterpart). Toggles users.marketing_push_opt_out;
+  // the three marketing pushes (cart.abandoned, order.review_prompt,
+  // re_engagement.nudge) are skipped server-side when opted out. The current
+  // value is read from GET /me/profile (marketing_opt_out field).
+  'PATCH /me/notification-preferences': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/notification-preferences',
+    shape: 'v3-envelope',
+  },
+
   'GET /me/addresses': {
     target: 'new',
     oldPath: '/users/addresses',

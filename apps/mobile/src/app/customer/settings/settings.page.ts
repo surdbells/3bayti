@@ -60,6 +60,18 @@ export class SettingsPage implements OnInit, OnDestroy {
   private sub: Subscription;
   private backSub?: Subscription;
 
+  /**
+   * Marketing push opt-out toggle ("Promotions & reminders").
+   * The toggle is shown ON when the user is OPTED IN (i.e. NOT opted out),
+   * so marketingEnabled === !marketing_opt_out. Read from GET /me/profile
+   * (field marketing_opt_out) and written via
+   * PATCH /v3/me/notification-preferences { marketing_opt_out }.
+   */
+  marketingEnabled = true;
+  marketingSaving = false;
+  /** Hide the marketing row until we know the real value from the profile. */
+  marketingLoaded = false;
+
   ui_controls = {
     is_loading: false,
     updating_location: false
@@ -166,12 +178,62 @@ export class SettingsPage implements OnInit, OnDestroy {
         next: (response: any) => {
           if (response.response_code !== 200) return;
           const user = response?.data?.user;
-          if (!user || typeof user.avatar_url !== 'string') return;
+          if (!user) return;
+          // Hydrate the marketing opt-out toggle from the same profile fetch
+          // (no extra request). The toggle is ON when the user is opted IN,
+          // i.e. marketingEnabled === !marketing_opt_out. Defaults to opted-in
+          // (true) when the field is absent.
+          this.marketingEnabled = user.marketing_opt_out !== true;
+          this.marketingLoaded = true;
+          if (typeof user.avatar_url !== 'string') return;
           if (user.avatar_url === this.single_user.avatar) return;
           this.single_user.avatar = user.avatar_url;
           Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
         },
         error: () => { /* silent — fallback avatar applies */ },
+      });
+  }
+
+  /**
+   * Persist the "Promotions & reminders" toggle. The UI binds
+   * `marketingEnabled` (ON = opted in); the API field is the inverse
+   * (`marketing_opt_out`). Shows a saving state and reverts the toggle on
+   * error so the UI never drifts from the server.
+   */
+  onMarketingToggle(): void {
+    if (this.marketingSaving) return;
+    // Capture the value the user just set; the API wants the opt-OUT flag.
+    const desiredEnabled = this.marketingEnabled;
+    const optOut = !desiredEnabled;
+
+    if (!this.isOnline) {
+      this.marketingEnabled = !desiredEnabled; // revert
+      this.showError(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+
+    this.marketingSaving = true;
+    this.networkAdapter
+      .patch_v3(
+        'PATCH /me/notification-preferences',
+        { marketing_opt_out: optOut },
+        { authToken: this.single_user.token },
+      )
+      .subscribe({
+        next: (response: any) => {
+          this.marketingSaving = false;
+          if (response?.response_code === 200) {
+            this.showSuccess(this.i18n.t('settings_marketing_saved'));
+          } else {
+            this.marketingEnabled = !desiredEnabled; // revert
+            this.showError(this.i18n.t('settings_marketing_error'));
+          }
+        },
+        error: () => {
+          this.marketingSaving = false;
+          this.marketingEnabled = !desiredEnabled; // revert
+          this.showError(this.i18n.t('settings_marketing_error'));
+        },
       });
   }
 
@@ -233,7 +295,7 @@ export class SettingsPage implements OnInit, OnDestroy {
   }
 
   openHelp(): void {
-    const phone = '971504559975';
+    const phone = '971507967776';
     const msg = encodeURIComponent('Hello, I need assistance.');
     window.open(`https://wa.me/${phone}?text=${msg}`, '_system');
   }

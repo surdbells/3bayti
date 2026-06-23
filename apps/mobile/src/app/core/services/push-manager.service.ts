@@ -19,29 +19,85 @@ interface StoredUser {
 export type PushTapHandler = (data: Record<string, unknown>) => void;
 
 /**
- * Map a push notification's `data` payload to a router path (Q-Z5.3).
+ * Coerce a push `data` value to a trimmed string. FCM delivers every data
+ * value as a string, but we tolerate numbers (and ignore anything else).
+ * Returns '' for missing/blank/non-scalar values.
+ */
+function pushStr(value: unknown): string {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+  if (typeof value === 'number') {
+    return String(value);
+  }
+  return '';
+}
+
+/**
+ * Map a push notification's `data` payload to a router URL (the shared
+ * push deep-link contract). Returns a full URL string suitable for
+ * Router.navigateByUrl — query-param routes (chat) bake the query string
+ * into the returned URL.
  *
- * All order lifecycle pushes carry { type, order_id, order_reference }
- * (see the backend PushNotificationService). Every order event
- * deep-links to the customer per-order detail page, `/orders/:id`.
+ * data.type -> target (per the backend PushNotificationService contract):
+ *   order.* (placed|paid|accepted|preparing|rejected|shipped|delivered|
+ *            cancelled|refunded|review_prompt)
+ *                              { order_id }          -> /orders/:order_id
+ *   chat.message              { conversation_uuid }  -> /chat?uuid=:uuid
+ *   gift_card.expiry_nudge    { card_id }            -> /my-gift-cards
+ *   cart.abandoned            { cart_id }            -> /cart
+ *   re_engagement.nudge       { }                    -> /home
  *
- * Pure + exported so it can be unit-tested without the plugin, Router,
- * or a native platform. Returns null when there's no usable target
- * (missing/blank order_id, or an unrecognised payload) — the caller
- * then does nothing rather than navigating somewhere wrong.
+ * Notes:
+ *  - order.review_prompt deep-links to the same /orders/:id as the rest of
+ *    the order lifecycle (it's a post-delivery follow-up on that order).
+ *  - gift_card.expiry_nudge routes to the wallet (/my-gift-cards) rather
+ *    than /gift-card-detail: the detail page is state-driven (it needs the
+ *    full card object passed via navigation state — see
+ *    gift-card-detail.page.ts), and a push only carries card_id. The wallet
+ *    lists the user's cards so they can open the nudged one.
+ *
+ * Pure + exported so it can be unit-tested without the plugin, Router, or
+ * a native platform. Returns null when there's no usable target (unknown
+ * type, or a known type missing its required id) — the caller then does
+ * nothing rather than navigating somewhere wrong.
+ *
+ * Backward-compatible fallback: a payload with no/blank `type` but a usable
+ * `order_id` still resolves to /orders/:id (matches the historical
+ * order-only behaviour).
  */
 export function resolvePushDeepLink(data: Record<string, unknown> | null | undefined): string | null {
   if (data === null || data === undefined) {
     return null;
   }
-  const rawId = data['order_id'];
-  // FCM delivers all data values as strings, but be tolerant of numbers.
-  const orderId =
-    typeof rawId === 'string' ? rawId.trim() : typeof rawId === 'number' ? String(rawId) : '';
-  if (orderId === '') {
-    return null;
+
+  const type = pushStr(data['type']);
+
+  // Order lifecycle + post-delivery review prompt -> /orders/:id.
+  if (type === '' || type.startsWith('order.')) {
+    const orderId = pushStr(data['order_id']);
+    return orderId === '' ? null : `/orders/${orderId}`;
   }
-  return `/orders/${orderId}`;
+
+  switch (type) {
+    case 'chat.message': {
+      const uuid = pushStr(data['conversation_uuid']);
+      return uuid === '' ? null : `/chat?uuid=${encodeURIComponent(uuid)}`;
+    }
+    case 'gift_card.expiry_nudge': {
+      // Wallet listing; the detail view is navigation-state-driven and
+      // can't be reached from an id alone.
+      return '/my-gift-cards';
+    }
+    case 'cart.abandoned': {
+      return '/cart';
+    }
+    case 're_engagement.nudge': {
+      return '/home';
+    }
+    default:
+      return null;
+  }
 }
 
 /**
