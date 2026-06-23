@@ -961,5 +961,22 @@
   "channel_email_desc": "إرسال الرمز إلى بريدك الإلكتروني",
   "channel_phone_desc": "إرسال الرمز عبر رسالة نصية إلى هاتفك",
   "reset_step_verify_heading": "أدخل الرمز وكلمة المرور الجديدة",
-  "login_password_title": "مرحبًا بعودتك"
+  "login_password_title": "مرحبًا بعودتك",
+  "mgc_filter_all": "الكل",
+  "mgc_filter_active": "نشطة",
+  "mgc_filter_pending": "بانتظار الدفع",
+  "mgc_filter_used": "مستخدمة",
+  "mgc_filter_expired": "منتهية الصلاحية",
+  "mgc_filter_voided": "ملغاة",
+  "mgc_filter_empty_active": "لا توجد لديك بطاقات هدايا نشطة.",
+  "mgc_filter_empty_pending": "لا توجد بطاقات هدايا بانتظار الدفع.",
+  "mgc_filter_empty_used": "لا توجد لديك بطاقات هدايا مستخدمة بالكامل.",
+  "mgc_filter_empty_expired": "لا توجد لديك بطاقات هدايا منتهية الصلاحية.",
+  "mgc_filter_empty_voided": "لا توجد لديك بطاقات هدايا ملغاة.",
+  "gift_card_auto_delivery_required_hint": "أدخل بريد المستلم ورقم هاتفه حتى نتمكن من تسليم بطاقة الهدية.",
+  "gift_card_recipient_email_required": "بريد المستلم الإلكتروني مطلوب.",
+  "gift_card_recipient_phone_required": "رقم هاتف المستلم مطلوب.",
+  "gc_pick_from_contacts": "اختر من جهات الاتصال",
+  "gc_contacts_permission_denied": "تم رفض إذن جهات الاتصال. أدخل الرقم يدويًا.",
+  "gc_contacts_pick_failed": "تعذّر فتح جهات الاتصال. أدخل الرقم يدويًا."
 }

@@ -506,6 +506,40 @@
   min-width: 0;
 }
 
+// "Pick from contacts" button beside the phone field. Aligns with the input
+// row (label above the field adds height, so push it down to match).
+.gc-contacts-btn {
+  flex: 0 0 auto;
+  margin-top: 28px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ax-radius-md, 12px);
+  border: 1.5px solid var(--ax-color-brand-primary, #2E241C);
+  background: transparent;
+  color: var(--ax-color-brand-primary, #2E241C);
+  cursor: pointer;
+  transition: opacity 0.15s;
+  &:active { opacity: 0.7; }
+  &[disabled] { opacity: 0.5; cursor: default; }
+  ion-spinner { width: 20px; height: 20px; }
+}
+
+// Required asterisk on compulsory recipient labels.
+.gc-required {
+  color: var(--ax-color-danger, #C0392B);
+  margin-inline-start: 2px;
+}
+
+// Inline error under the phone row (email error is rendered by ax-text-field).
+.gc-field-error {
+  font-size: 12px;
+  color: var(--ax-color-danger, #C0392B);
+  margin: 4px 0 0;
+}
+
 // Picker list inside the bottom sheet
 .gc-cc-list {
   list-style: none;

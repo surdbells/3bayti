@@ -38,8 +38,28 @@
         <button type="button" class="mgc-cta" (click)="buyNew()">{{ 'gift_promo_cta_buy' | translate }}</button>
       </div>
     } @else {
+      <!-- Status filter chips -->
+      <div class="mgc-filters" role="tablist">
+        @for (f of filters; track f.key) {
+          <button
+            type="button"
+            class="mgc-filter-chip"
+            [class.mgc-filter-chip--active]="filter === f.key"
+            role="tab"
+            [attr.aria-selected]="filter === f.key"
+            (click)="setFilter(f.key)"
+          >{{ f.labelKey | translate }}</button>
+        }
+      </div>
+
+      @if (filteredCards.length === 0) {
+        <div class="mgc-empty mgc-empty--filter">
+          <ax-icon name="gift" [size]="40" />
+          <p>{{ emptyFilterKey | translate }}</p>
+        </div>
+      } @else {
       <div class="mgc-list ion-padding-horizontal">
-        @for (card of cards; track card.id) {
+        @for (card of filteredCards; track card.id) {
           <button
             type="button"
             class="mgc-card"
@@ -107,6 +127,7 @@
           </button>
         }
       </div>
+      }
     }
   }
 </ion-content>

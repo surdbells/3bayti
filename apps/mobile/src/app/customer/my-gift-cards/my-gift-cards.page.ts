@@ -16,6 +16,9 @@ import { cfImage } from '../../shared/cf-image';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
 
+/** UI buckets for the wallet status filter row. */
+type GiftCardFilter = 'all' | 'active' | 'pending_payment' | 'used' | 'expired' | 'voided';
+
 @Component({
   selector: 'app-my-gift-cards',
   templateUrl: './my-gift-cards.page.html',
@@ -31,6 +34,54 @@ export class MyGiftCardsPage implements OnInit {
 
   cards: any[] = [];
   ui = { loading: true };
+
+  /**
+   * Active wallet status filter. Each key maps a UI bucket to one or more raw
+   * backend statuses (see statusMeta). 'all' shows everything.
+   */
+  filter: GiftCardFilter = 'all';
+
+  // Filter buckets -> the raw card.status values they include.
+  private readonly filterBuckets: Record<string, string[]> = {
+    active:          ['active', 'partially_used'],
+    pending_payment: ['pending_payment'],
+    used:            ['exhausted'],
+    expired:         ['expired'],
+    voided:          ['voided'],
+  };
+
+  // Order + i18n keys for the segment/chip row.
+  readonly filters: { key: GiftCardFilter; labelKey: string }[] = [
+    { key: 'all',             labelKey: 'mgc_filter_all' },
+    { key: 'active',          labelKey: 'mgc_filter_active' },
+    { key: 'pending_payment', labelKey: 'mgc_filter_pending' },
+    { key: 'used',            labelKey: 'mgc_filter_used' },
+    { key: 'expired',         labelKey: 'mgc_filter_expired' },
+    { key: 'voided',          labelKey: 'mgc_filter_voided' },
+  ];
+
+  /** Cards matching the active filter. */
+  get filteredCards(): any[] {
+    if (this.filter === 'all') return this.cards;
+    const allowed = this.filterBuckets[this.filter] ?? [];
+    return this.cards.filter(c => allowed.includes(c?.status));
+  }
+
+  setFilter(key: GiftCardFilter) {
+    this.filter = key;
+  }
+
+  /** Empty-state subtitle key for the current filter (per-filter message). */
+  get emptyFilterKey(): string {
+    switch (this.filter) {
+      case 'active':          return 'mgc_filter_empty_active';
+      case 'pending_payment': return 'mgc_filter_empty_pending';
+      case 'used':            return 'mgc_filter_empty_used';
+      case 'expired':         return 'mgc_filter_empty_expired';
+      case 'voided':          return 'mgc_filter_empty_voided';
+      default:                return 'mgc_empty_subtitle';
+    }
+  }
 
   // Gift card id currently resuming payment (disables its button + shows label).
   payingCardId: number | null = null;

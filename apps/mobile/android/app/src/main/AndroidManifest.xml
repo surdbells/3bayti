@@ -32,4 +32,6 @@
     <!-- Permissions -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Gift-card recipient "pick from contacts" (Capacitor Contacts plugin). -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" />
 </manifest>

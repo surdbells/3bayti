@@ -961,5 +961,22 @@
   "channel_email_desc": "Send the code to your email address",
   "channel_phone_desc": "Send the code by SMS to your phone",
   "reset_step_verify_heading": "Enter the code and your new password",
-  "login_password_title": "Welcome back"
+  "login_password_title": "Welcome back",
+  "mgc_filter_all": "All",
+  "mgc_filter_active": "Active",
+  "mgc_filter_pending": "Pending payment",
+  "mgc_filter_used": "Used",
+  "mgc_filter_expired": "Expired",
+  "mgc_filter_voided": "Voided",
+  "mgc_filter_empty_active": "You have no active gift cards.",
+  "mgc_filter_empty_pending": "No gift cards are awaiting payment.",
+  "mgc_filter_empty_used": "You have no fully used gift cards.",
+  "mgc_filter_empty_expired": "You have no expired gift cards.",
+  "mgc_filter_empty_voided": "You have no voided gift cards.",
+  "gift_card_auto_delivery_required_hint": "Enter the recipient email and phone number so we can deliver the gift card.",
+  "gift_card_recipient_email_required": "Recipient email is required.",
+  "gift_card_recipient_phone_required": "Recipient phone number is required.",
+  "gc_pick_from_contacts": "Pick from contacts",
+  "gc_contacts_permission_denied": "Contacts permission denied. Enter the number manually.",
+  "gc_contacts_pick_failed": "Could not open contacts. Enter the number manually."
 }

@@ -76,6 +76,16 @@ export class GiftCardsPage implements OnInit {
   dialCode = '+971';
   dialSearch = '';
 
+  // Inline validation errors for the compulsory recipient fields (step 2).
+  // Empty string = no error. Shown under the field + block "Continue".
+  errors = {
+    recipient_email: '',
+    recipient_phone: '',
+  };
+
+  // True while the native contacts picker is open (disables the button).
+  pickingContact = false;
+
   get selectedDial(): DialCode | undefined {
     return this.dialCodes.find(c => c.code === this.dialCode);
   }
@@ -205,16 +215,10 @@ export class GiftCardsPage implements OnInit {
     if ((this.form.recipient_message || '').length > 200) {
       this.notify.error(this.i18n.t('gc_error_message_too_long')); return;
     }
-    // Recipient email/phone are OPTIONAL: empty = valid (buyer shares the code
-    // manually). When provided, validate format so auto-delivery succeeds.
-    const recipientEmail = (this.form.recipient_email || '').trim();
-    if (recipientEmail && !GlobalComponent.validateEmail(recipientEmail)) {
-      this.notify.error(this.i18n.t('gift_card_recipient_email_invalid')); return;
-    }
-    const recipientPhoneDigits = (this.form.recipient_phone || '').replace(/\D/g, '');
-    if (recipientPhoneDigits.length > 0 && (recipientPhoneDigits.length < 6 || recipientPhoneDigits.length > 15)) {
-      this.notify.error(this.i18n.t('gift_card_recipient_phone_invalid')); return;
-    }
+    // Recipient email AND phone are now COMPULSORY: both are required so the
+    // gift card is always auto-delivered. Validate format + show inline errors
+    // that block submit.
+    if (!this.validateRecipient()) { return; }
     // Scheduled delivery, if set, must be in the future.
     if (this.form.scheduled_delivery_at) {
       const when = new Date(this.form.scheduled_delivery_at).getTime();
@@ -228,6 +232,120 @@ export class GiftCardsPage implements OnInit {
   goBack() {
     if (this.ui.step > 1) { this.ui.step = (this.ui.step - 1) as 1 | 2 | 3; }
     else { this.navCtrl.back(); }
+  }
+
+  // ── Recipient validation (email + phone compulsory) ────────────────
+
+  /**
+   * Validate the now-compulsory recipient email + phone. Sets inline
+   * `errors.*` strings and returns true only when BOTH are valid. Called by
+   * nextToConfirm() to block advancing to confirm.
+   */
+  validateRecipient(): boolean {
+    this.errors.recipient_email = '';
+    this.errors.recipient_phone = '';
+
+    const email = (this.form.recipient_email || '').trim();
+    if (!email) {
+      this.errors.recipient_email = this.i18n.t('gift_card_recipient_email_required');
+    } else if (!GlobalComponent.validateEmail(email)) {
+      this.errors.recipient_email = this.i18n.t('gift_card_recipient_email_invalid');
+    }
+
+    const digits = (this.form.recipient_phone || '').replace(/\D/g, '');
+    if (digits.length === 0) {
+      this.errors.recipient_phone = this.i18n.t('gift_card_recipient_phone_required');
+    } else if (digits.length < 6 || digits.length > 15) {
+      this.errors.recipient_phone = this.i18n.t('gift_card_recipient_phone_invalid');
+    }
+
+    return !this.errors.recipient_email && !this.errors.recipient_phone;
+  }
+
+  /** Clear the email inline error as the user edits (re-validated on submit). */
+  onRecipientEmailInput() { this.errors.recipient_email = ''; }
+  /** Clear the phone inline error as the user edits. */
+  onRecipientPhoneInput() { this.errors.recipient_phone = ''; }
+
+  // ── Contacts picker ────────────────────────────────────────────────
+
+  /**
+   * Open the native contacts picker (Capacitor Contacts plugin) and fill the
+   * recipient phone — plus name/email when the picked contact has them.
+   *
+   * Build-safe: the plugin is imported lazily and the whole call is wrapped in
+   * try/catch so a missing native implementation (e.g. web preview, or before
+   * `npx cap sync`) degrades gracefully instead of crashing the page.
+   */
+  async pickContact() {
+    if (this.pickingContact) return;
+    this.pickingContact = true;
+    try {
+      const { Contacts } = await import('@capacitor-community/contacts');
+
+      // Request read permission first; bail with a toast if denied.
+      const perm = await Contacts.requestPermissions();
+      if (perm?.contacts !== 'granted') {
+        this.notify.error(this.i18n.t('gc_contacts_permission_denied'));
+        return;
+      }
+
+      const result: any = await Contacts.pickContact({
+        projection: { name: true, phones: true, emails: true },
+      });
+      const contact = result?.contact;
+      if (!contact) return; // user cancelled
+
+      // Name (fill only when our field is empty so we don't clobber input).
+      const display = contact.name?.display
+        ?? [contact.name?.given, contact.name?.family].filter(Boolean).join(' ');
+      if (display && !this.form.recipient_name) {
+        this.form.recipient_name = display.slice(0, 60);
+      }
+
+      // Email (first available) — only when empty.
+      const email = contact.emails?.find((e: any) => e?.address)?.address;
+      if (email && !this.form.recipient_email) {
+        this.form.recipient_email = email;
+        this.errors.recipient_email = '';
+      }
+
+      // Phone: take the first number, split dial code from national digits.
+      const rawPhone = contact.phones?.find((p: any) => p?.number)?.number;
+      if (rawPhone) {
+        this.applyPickedPhone(rawPhone);
+        this.errors.recipient_phone = '';
+      }
+    } catch (err) {
+      // Plugin missing / native error / user dismissed abnormally.
+      this.notify.error(this.i18n.t('gc_contacts_pick_failed'));
+    } finally {
+      this.pickingContact = false;
+    }
+  }
+
+  /**
+   * Map a raw contact phone string onto our dial-code selector + national
+   * digit field. If it starts with a '+' and matches a known dial code, we set
+   * that code and keep the remaining digits; otherwise we keep the current
+   * dial code and just fill the digits.
+   */
+  private applyPickedPhone(raw: string) {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith('+')) {
+      const digits = trimmed.replace(/[^\d]/g, '');
+      // Longest matching dial code wins (e.g. +971 over +9).
+      const match = this.dialCodes
+        .filter(c => digits.startsWith(c.code.replace('+', '')))
+        .sort((a, b) => b.code.length - a.code.length)[0];
+      if (match) {
+        this.dialCode = match.code;
+        this.form.recipient_phone = digits.slice(match.code.replace('+', '').length);
+        return;
+      }
+    }
+    // Fallback: keep current dial code, strip non-digits.
+    this.form.recipient_phone = trimmed.replace(/\D/g, '');
   }
 
   // ── Photo upload (luxury theme only) ──────────────────────────────

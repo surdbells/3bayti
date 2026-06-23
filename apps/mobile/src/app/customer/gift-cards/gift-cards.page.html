@@ -143,22 +143,27 @@
         <span class="gc-char-count">{{ (form.recipient_message || '').length }}/200</span>
       </div>
 
-      <!-- Auto-delivery: recipient email + phone (both optional) -->
-      <p class="gc-hint gc-hint--deliver">{{ 'gift_card_auto_delivery_hint' | translate }}</p>
+      <!-- Auto-delivery: recipient email + phone (both REQUIRED) -->
+      <p class="gc-hint gc-hint--deliver">{{ 'gift_card_auto_delivery_required_hint' | translate }}</p>
 
       <ax-text-field
         [label]="'gift_card_recipient_email' | translate"
         type="email"
         inputmode="email"
         autocomplete="off"
+        [required]="true"
         [(ngModel)]="form.recipient_email"
+        (ngModelChange)="onRecipientEmailInput()"
         name="recipient_email"
         [placeholder]="'gc_recipient_email_placeholder' | translate"
+        [error]="errors.recipient_email || undefined"
       />
 
       <div class="gc-phone-row">
         <div class="gc-cc-field">
-          <label class="gc-label gc-label--sm">{{ 'gift_card_recipient_phone' | translate }}</label>
+          <label class="gc-label gc-label--sm">
+            {{ 'gift_card_recipient_phone' | translate }}<span class="gc-required">*</span>
+          </label>
           <button type="button" class="gc-cc-button" (click)="dialCodeOpen = true" [attr.aria-label]="'gc_select_country_code' | translate">
             <span class="gc-cc-flag">{{ selectedDial?.flag }}</span>
             <span class="gc-cc-code">{{ dialCode }}</span>
@@ -172,11 +177,28 @@
             inputmode="tel"
             [maxlength]="15"
             [(ngModel)]="form.recipient_phone"
+            (ngModelChange)="onRecipientPhoneInput()"
             name="recipient_phone"
             [placeholder]="'gc_recipient_phone_placeholder' | translate"
           />
         </div>
+        <button
+          type="button"
+          class="gc-contacts-btn"
+          (click)="pickContact()"
+          [disabled]="pickingContact"
+          [attr.aria-label]="'gc_pick_from_contacts' | translate"
+        >
+          @if (pickingContact) {
+            <ion-spinner name="crescent"></ion-spinner>
+          } @else {
+            <ax-icon name="contact" [size]="20" />
+          }
+        </button>
       </div>
+      @if (errors.recipient_phone) {
+        <p class="gc-field-error">{{ errors.recipient_phone }}</p>
+      }
 
       <!-- Schedule delivery -->
       <div class="gc-row">

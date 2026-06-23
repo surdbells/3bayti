@@ -42,6 +42,39 @@
 
   h3 { font-size: 18px; font-weight: 700; color: var(--ax-color-text-primary); margin: 0; }
   p  { font-size: 14px; margin: 0; }
+
+  &--filter { padding: 36px 32px; }
+}
+
+/* Status filter chips */
+.mgc-filters {
+  display: flex;
+  gap: 8px;
+  padding: 4px 16px 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+.mgc-filter-chip {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  border-radius: 100px;
+  border: 1.5px solid var(--ax-color-border, #E5DED6);
+  background: transparent;
+  color: var(--ax-color-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+
+  &--active {
+    background: var(--ax-color-brand-primary, #2E241C);
+    border-color: var(--ax-color-brand-primary, #2E241C);
+    color: #fff;
+  }
 }
 
 .mgc-cta {
