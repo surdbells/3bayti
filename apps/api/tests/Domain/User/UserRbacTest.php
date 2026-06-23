@@ -64,6 +64,30 @@ final class UserRbacTest extends TestCase
     }
 
     #[Test]
+    public function backOfficeFlagMarkersCountAsStaffEvenWithoutAnyRole(): void
+    {
+        // A freshly created back-office account (finance/support/sub_admin)
+        // must be reachable on the admin surface BEFORE any RBAC role is
+        // attached, otherwise it can never be assigned a role. Per-route
+        // PermissionMiddleware still gates each endpoint.
+        foreach (['finance', 'support', 'sub_admin'] as $marker) {
+            $user = $this->user();
+            $user->setRoles(
+                finance: $marker === 'finance',
+                support: $marker === 'support',
+                subAdmin: $marker === 'sub_admin',
+            );
+
+            self::assertTrue(
+                $user->isStaff(),
+                "marker '{$marker}' should make the account staff",
+            );
+            // But it confers no granular permissions on its own.
+            self::assertSame([], $user->effectivePermissionKeys());
+        }
+    }
+
+    #[Test]
     public function removingARoleRevokesItsPermissions(): void
     {
         $user = $this->user();

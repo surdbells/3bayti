@@ -130,8 +130,21 @@ class UserRepository extends EntityRepository
         }
 
         if (!empty($filters['staff'])) {
-            // Staff = full admins OR anyone holding at least one RBAC role.
-            $qb->andWhere('u.isAdmin = true OR SIZE(u.roles) > 0');
+            // Staff = anyone with back-office access. This must catch a freshly
+            // created back-office account BEFORE it holds any RBAC role, otherwise
+            // the account is invisible on the Staff screen and can never be
+            // assigned a role (chicken-and-egg). We therefore admit:
+            //   - full admins (is_admin), the super-admin bypass;
+            //   - holders of at least one RBAC role;
+            //   - back-office flag markers (finance / support / sub_admin) which
+            //     CreateUserController stamps at creation time.
+            $qb->andWhere(
+                'u.isAdmin = true '
+                . 'OR u.isFinance = true '
+                . 'OR u.isSupport = true '
+                . 'OR u.isSubAdmin = true '
+                . 'OR SIZE(u.roles) > 0',
+            );
         }
 
         if (!empty($filters['search'])) {

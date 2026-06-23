@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Admin\User;
 
+use Bayti\Api\Domain\Authz\Role;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
+use Bayti\Api\Http\Controllers\Admin\Role\GuardsPrivilegeEscalation;
 use Bayti\Api\Http\Controllers\Admin\User\Dto\CreateUserInput;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
-use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\PaginatedEnvelope;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\UserSerializer;
@@ -41,6 +42,7 @@ use Psr\Log\LoggerInterface;
 final class CreateUserController
 {
     use Responder;
+    use GuardsPrivilegeEscalation;
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
@@ -57,10 +59,30 @@ final class CreateUserController
 
     public function __invoke(ServerRequestInterface $request): ResponseInterface
     {
+        $actor = $this->actingAdmin($request);
         $input = $this->validator->parse($request, CreateUserInput::class);
 
         /** @var UserRepository $users */
         $users = $this->em->getRepository(User::class);
+
+        // Resolve any requested initial roles up-front so a bad role id fails
+        // before we create the account. Assigning a role at creation makes the
+        // new staff account "born" with a role and therefore immediately visible
+        // + assignable on the Staff screen.
+        $roles = [];
+        if ($input->role_ids !== []) {
+            $roles = $this->em->getRepository(Role::class)->findBy(['id' => $input->role_ids]);
+            if (count($roles) !== count($input->role_ids)) {
+                throw HttpException::validation([
+                    'role_ids' => ['One or more roles were not found.'],
+                ]);
+            }
+            // Privilege-escalation guard: a non-super-admin can only grant roles
+            // whose permission set is a subset of their own.
+            foreach ($roles as $role) {
+                $this->assertNoPermissionEscalation($actor, $role->getPermissionKeys());
+            }
+        }
 
         // Friendly pre-flight; the DB UNIQUE constraint is the real guard.
         if (!$users->isEmailAvailable($input->email)) {
@@ -91,6 +113,11 @@ final class CreateUserController
             subAdmin: $input->is_sub_admin,
         );
 
+        // Attach the requested RBAC roles (resolved + escalation-checked above).
+        foreach ($roles as $role) {
+            $user->addRole($role);
+        }
+
         try {
             $users->save($user);
         } catch (UniqueConstraintViolationException) {
@@ -101,7 +128,6 @@ final class CreateUserController
             );
         }
 
-        $actingAdmin = $request->getAttribute(AuthMiddleware::ATTR_USER);
         $this->logger->info('admin.user.created', [
             'created_user_id' => $user->getId(),
             'created_email'   => $user->getEmail(),
@@ -110,7 +136,8 @@ final class CreateUserController
                 'support'   => $input->is_support,
                 'sub_admin' => $input->is_sub_admin,
             ],
-            'by_admin_id'     => $actingAdmin instanceof User ? $actingAdmin->getId() : null,
+            'role_ids'        => $input->role_ids,
+            'by_admin_id'     => $actor->getId(),
         ]);
 
         return $this->created(

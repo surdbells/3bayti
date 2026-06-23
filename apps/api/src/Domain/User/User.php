@@ -457,10 +457,23 @@ class User
         return $this->isAdmin || in_array($key, $this->effectivePermissionKeys(), true);
     }
 
-    /** Whether the user may access the admin area at all (full admin or any assigned role). */
+    /**
+     * Whether the user may access the admin area at all.
+     *
+     * Back-office access is held by full admins, by anyone carrying at least
+     * one RBAC role, OR by the legacy back-office flag markers (finance /
+     * support / sub_admin). The flag markers matter because an admin can mint a
+     * back-office account (CreateUserController) before any role is attached;
+     * such an account must still be able to reach the admin surface (where
+     * PermissionMiddleware then gates each route on its specific permission).
+     */
     public function isStaff(): bool
     {
-        return $this->isAdmin || !$this->roles->isEmpty();
+        return $this->isAdmin
+            || $this->isFinance
+            || $this->isSupport
+            || $this->isSubAdmin
+            || !$this->roles->isEmpty();
     }
     public function getLegacyUserId(): ?int        { return $this->legacyUserId; }
     public function getEmail(): string             { return $this->email; }

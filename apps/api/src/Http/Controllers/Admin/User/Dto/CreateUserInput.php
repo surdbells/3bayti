@@ -49,6 +49,19 @@ final class CreateUserInput
     public readonly bool $is_support;
     public readonly bool $is_sub_admin;
 
+    /**
+     * Optional initial RBAC role ids assigned at creation. Letting an admin
+     * stamp a role on the new account means the user is "born" with a role and
+     * is therefore immediately visible + manageable on the Staff screen, rather
+     * than appearing only after a separate role-assignment round-trip.
+     *
+     * @var list<int>
+     */
+    public readonly array $role_ids;
+
+    /**
+     * @param array<int|string, mixed> $role_ids
+     */
     public function __construct(
         string $first_name = '',
         string $last_name = '',
@@ -57,6 +70,7 @@ final class CreateUserInput
         bool $is_finance = false,
         bool $is_support = false,
         bool $is_sub_admin = false,
+        array $role_ids = [],
         // The portal form sends the sub-admin flag under '_sub_admin'.
         ?bool $_sub_admin = null,
     ) {
@@ -67,5 +81,9 @@ final class CreateUserInput
         $this->is_finance = $is_finance;
         $this->is_support = $is_support;
         $this->is_sub_admin = $_sub_admin ?? $is_sub_admin;
+        $this->role_ids = array_values(array_unique(array_filter(
+            array_map(static fn ($i): int => (int) $i, $role_ids),
+            static fn (int $i): bool => $i > 0,
+        )));
     }
 }

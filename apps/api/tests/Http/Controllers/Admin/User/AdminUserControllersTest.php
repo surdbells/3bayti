@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Controllers\Admin\User;
 
+use Bayti\Api\Domain\Authz\Permission;
+use Bayti\Api\Domain\Authz\Role;
 use Bayti\Api\Domain\User\RefreshToken;
 use Bayti\Api\Domain\User\RefreshTokenRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
+use Doctrine\ORM\EntityRepository;
 use Bayti\Api\Http\Controllers\Admin\User\AdminResetPasswordController;
 use Bayti\Api\Http\Controllers\Admin\User\CreateUserController;
 use Bayti\Api\Http\Controllers\Admin\User\Dto\AdminResetPasswordInput;
@@ -92,6 +95,80 @@ final class AdminUserControllersTest extends HttpTestCase
             password_verify('str0ngPass!', $created->getPasswordHash()),
             'password hashed correctly',
         );
+    }
+
+    #[Test]
+    public function createAssignsInitialRolesSoStaffIsBornVisible(): void
+    {
+        // #2: a new back-office account created with an explicit role_ids list
+        // is "born" holding a role, so it appears on the Staff screen and is
+        // immediately manageable (no separate assignment round-trip needed).
+        $admin = $this->makeAdmin();
+        $opsRole = $this->role(5, 'operations', ['orders.view']);
+        $this->bindEmForCreate($admin, emailTaken: false, roles: [$opsRole]);
+
+        $response = $this->makePost($admin, '/v3/admin/users', [
+            'first_name' => 'Nour',
+            'last_name' => 'Saleh',
+            'email' => 'nour@bayti.example',
+            'password' => 'str0ngPass!',
+            'role_ids' => [5],
+        ]);
+
+        self::assertSame(201, $response->getStatusCode());
+        self::assertCount(1, $this->persistedUsers);
+
+        $created = $this->persistedUsers[0];
+        $assignedSlugs = array_map(
+            static fn (Role $r): string => $r->getSlug(),
+            $created->getAssignedRoles()->toArray(),
+        );
+        self::assertSame(['operations'], $assignedSlugs, 'born with the operations role');
+        self::assertTrue($created->isStaff(), 'role-holder is staff');
+        self::assertContains('orders.view', $created->effectivePermissionKeys());
+    }
+
+    #[Test]
+    public function createWithUnknownRoleIdReturns422AndPersistsNothing(): void
+    {
+        $admin = $this->makeAdmin();
+        // findBy resolves to empty — none of the requested ids exist.
+        $this->bindEmForCreate($admin, emailTaken: false, roles: []);
+
+        $response = $this->makePost($admin, '/v3/admin/users', [
+            'first_name' => 'Nour',
+            'last_name' => 'Saleh',
+            'email' => 'nour@bayti.example',
+            'password' => 'str0ngPass!',
+            'role_ids' => [999],
+        ]);
+
+        self::assertSame(422, $response->getStatusCode());
+        self::assertCount(0, $this->persistedUsers);
+    }
+
+    #[Test]
+    public function createCannotAssignRoleBeyondActingAdminPermissions(): void
+    {
+        // #5: a non-super-admin with users.create cannot mint a staff account
+        // carrying a role that grants more than the actor holds.
+        $actor = $this->makeUser(id: 33, email: 'scoped@bayti.example');
+        $scopedRole = $this->role(1, 'creator', ['users.create', 'orders.view']);
+        $actor->addRole($scopedRole);
+
+        $powerfulRole = $this->role(7, 'refunds', ['orders.refund']);
+        $this->bindEmForCreate($actor, emailTaken: false, roles: [$powerfulRole]);
+
+        $response = $this->makePost($actor, '/v3/admin/users', [
+            'first_name' => 'Nour',
+            'last_name' => 'Saleh',
+            'email' => 'nour@bayti.example',
+            'password' => 'str0ngPass!',
+            'role_ids' => [7],
+        ]);
+
+        self::assertSame(403, $response->getStatusCode());
+        self::assertCount(0, $this->persistedUsers);
     }
 
     #[Test]
@@ -247,7 +324,10 @@ final class AdminUserControllersTest extends HttpTestCase
     // Binding helpers
     // ----------------------------------------------------------------
 
-    private function bindEmForCreate(User $caller, bool $emailTaken): void
+    /**
+     * @param list<Role> $roles roles findBy([id=>...]) should resolve to
+     */
+    private function bindEmForCreate(User $caller, bool $emailTaken, array $roles = []): void
     {
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->willReturn($caller);
@@ -265,12 +345,29 @@ final class AdminUserControllersTest extends HttpTestCase
             },
         );
 
-        $em = $this->stubEm(function ($em) use ($userRepo): void {
+        $roleRepo = $this->createMock(EntityRepository::class);
+        $roleRepo->method('findBy')->willReturn($roles);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $roleRepo): void {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
+                [Role::class, $roleRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
+    }
+
+    /** @param list<string> $keys */
+    private function role(int $id, string $slug, array $keys): Role
+    {
+        $role = new Role($slug, ucfirst($slug));
+        foreach ($keys as $k) {
+            $role->addPermission(new Permission($k, explode('.', $k)[0], $k));
+        }
+        $ref = new \ReflectionProperty(Role::class, 'id');
+        $ref->setAccessible(true);
+        $ref->setValue($role, $id);
+        return $role;
     }
 
     private function bindEmForReset(User $caller, ?User $target): void
