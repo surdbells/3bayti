@@ -293,7 +293,9 @@ export class ProductFormComponent implements OnInit {
         this.model.description = p.description ?? '';
         this.model.price = Number(p.price?.amount ?? p.price ?? 0);
         this.model.cost_per_item = Number(p.cost_per_item ?? 0);
-        this.model.category = p.category?.id ?? p.category_id ?? p.category ?? 0;
+        // Coerce to Number so the category radio (bound via [value]="c.id",
+        // a number) pre-selects even when the serializer emits a string id.
+        this.model.category = Number(p.category?.id ?? p.category_id ?? p.category ?? 0) || 0;
         this.model.quantity = p.stock_quantity ?? p.quantity ?? 0;
         this.model.stock_status = p.stock_status ?? 'in_stock';
         this.model.allow_checkout_when_out_of_stock = !!(p.allow_oversell ?? p.allow_checkout_when_out_of_stock);

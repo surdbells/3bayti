@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
@@ -10,6 +11,7 @@ import { GlobalComponent } from '../../global-component';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { TranslatePipe } from '../../translate.pipe';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -17,19 +19,7 @@ import {
   type AxDataTableConfig,
   type AxQueryState,
   type AxServerFetchResult,
-  type AxDateRange,
 } from '../../shared/data/enterprise';
-
-/** The seven UAE emirates (label === value; matched case-insensitively server-side). */
-const UAE_EMIRATES = [
-  'Dubai',
-  'Abu Dhabi',
-  'Sharjah',
-  'Ajman',
-  'Umm Al Quwain',
-  'Ras Al Khaimah',
-  'Fujairah',
-] as const;
 
 /** Row shape surfaced to the enterprise table (mapped from v3 vendor). */
 interface VendorRow extends Record<string, unknown> {
@@ -44,14 +34,26 @@ interface VendorRow extends Record<string, unknown> {
   approved: boolean;
 }
 
+/** Filter-panel state, sent to GET /admin/vendors when present. */
+interface StoreFilters {
+  status: '' | 'pending' | 'approved' | 'suspended';
+  is_active: '' | 'true' | 'false';
+  is_verified: '' | 'true' | 'false';
+  is_featured: '' | 'true' | 'false';
+  emirate: string;
+  created_from: string;
+  created_to: string;
+}
+
 @Component({
   selector: 'app-stores',
   standalone: true,
   imports: [
     AdminShellComponent,
     CommonModule,
+    FormsModule,
     AxDataTableComponent,
-    AxCellDirective, IconComponent],
+    AxCellDirective, IconComponent, TranslatePipe],
   templateUrl: './stores.component.html',
   styleUrl: './stores.component.css',
 })
@@ -59,6 +61,28 @@ export class StoresComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
 
   ui_controls = { is_loading: false, no_data: false, nav_open: false };
+
+  /** Emirate filter options: value sent to the API + i18n key for the label. */
+  readonly emirateOptions: ReadonlyArray<{ value: string; key: string }> = [
+    { value: 'Dubai', key: 'emirate.dubai' },
+    { value: 'Abu Dhabi', key: 'emirate.abu_dhabi' },
+    { value: 'Sharjah', key: 'emirate.sharjah' },
+    { value: 'Ajman', key: 'emirate.ajman' },
+    { value: 'Umm Al Quwain', key: 'emirate.umm_al_quwain' },
+    { value: 'Ras Al Khaimah', key: 'emirate.ras_al_khaimah' },
+    { value: 'Fujairah', key: 'emirate.fujairah' },
+  ];
+
+  /** Status/active/verified/featured/emirate + join-date-range filters. */
+  filters: StoreFilters = {
+    status: '',
+    is_active: '',
+    is_verified: '',
+    is_featured: '',
+    emirate: '',
+    created_from: '',
+    created_to: '',
+  };
 
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
@@ -103,42 +127,6 @@ export class StoresComponent implements OnInit {
       emptyTitle: 'No stores found',
       emptyDescription: 'No vendor stores match your current filters.',
       export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'stores' },
-      filters: [
-        {
-          key: 'status', label: 'Status', type: 'select', placeholder: 'Any status',
-          options: [
-            { label: 'Pending', value: 'pending' },
-            { label: 'Approved', value: 'approved' },
-            { label: 'Suspended', value: 'suspended' },
-          ],
-        },
-        {
-          key: 'is_active', label: 'Active', type: 'select', placeholder: 'Any',
-          options: [
-            { label: 'Active', value: 'true' },
-            { label: 'Inactive', value: 'false' },
-          ],
-        },
-        {
-          key: 'is_verified', label: 'Verified', type: 'select', placeholder: 'Any',
-          options: [
-            { label: 'Verified', value: 'true' },
-            { label: 'Unverified', value: 'false' },
-          ],
-        },
-        {
-          key: 'is_featured', label: 'Featured', type: 'select', placeholder: 'Any',
-          options: [
-            { label: 'Featured', value: 'true' },
-            { label: 'Not featured', value: 'false' },
-          ],
-        },
-        {
-          key: 'emirate', label: 'Emirate', type: 'select', placeholder: 'Any emirate',
-          options: UAE_EMIRATES.map((e) => ({ label: e, value: e })),
-        },
-        { key: 'created', label: 'Join date', type: 'date-range' },
-      ],
       columns: [
         { key: 'store_name', label: 'Store', sortable: true, sticky: 'left', width: '16rem' },
         { key: 'store_email', label: 'Email', hideOnMobile: true },
@@ -196,15 +184,14 @@ export class StoresComponent implements OnInit {
     }
 
     // Filters → query params (only applied when set).
-    const f = query.filters;
-    if (f['status']) q.status = f['status'];
-    if (f['is_active'] != null && f['is_active'] !== '') q.is_active = f['is_active'];
-    if (f['is_verified'] != null && f['is_verified'] !== '') q.is_verified = f['is_verified'];
-    if (f['is_featured'] != null && f['is_featured'] !== '') q.is_featured = f['is_featured'];
-    if (f['emirate']) q.emirate = f['emirate'];
-    const range = f['created'] as AxDateRange | undefined;
-    if (range?.from) q.created_from = range.from;
-    if (range?.to) q.created_to = range.to;
+    const f = this.filters;
+    if (f.status) q.status = f.status;
+    if (f.is_active) q.is_active = f.is_active;
+    if (f.is_verified) q.is_verified = f.is_verified;
+    if (f.is_featured) q.is_featured = f.is_featured;
+    if (f.emirate) q.emirate = f.emirate;
+    if (f.created_from) q.created_from = f.created_from;
+    if (f.created_to) q.created_to = f.created_to;
 
     return this.adapter.get_v3('GET /admin/vendors', { query: q }).pipe(
       map((response: any): AxServerFetchResult<VendorRow> => {
@@ -227,6 +214,26 @@ export class StoresComponent implements OnInit {
         return of({ rows: [], total: 0 } as AxServerFetchResult<VendorRow>);
       }),
     );
+  }
+
+  // ── Filter panel ─────────────────────────────────────────────────────
+  /** Re-run the listing with the current filter panel. */
+  applyFilters() {
+    this.dataSource.retry();
+  }
+
+  /** Clear all filters and reload. */
+  clearFilters() {
+    this.filters = {
+      status: '',
+      is_active: '',
+      is_verified: '',
+      is_featured: '',
+      emirate: '',
+      created_from: '',
+      created_to: '',
+    };
+    this.dataSource.retry();
   }
 
   // ── Table event handlers ─────────────────────────────────────────────

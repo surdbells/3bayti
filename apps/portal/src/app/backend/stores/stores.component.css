@@ -1,0 +1,22 @@
+.ax-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem 1rem;
+  align-items: end;
+}
+
+.ax-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.ax-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ax-text-secondary, #64748b);
+}
+
+.ax-filter-actions {
+  justify-content: flex-end;
+}

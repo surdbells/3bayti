@@ -466,5 +466,17 @@
   "gift_cards_admin.adjust_debit": "خصم رصيد",
   "gift_cards_admin.adjust_amount": "المبلغ",
   "gift_cards_admin.adjust_reason": "السبب",
-  "gift_cards_admin.adjust_submit": "تطبيق التعديل"
+  "gift_cards_admin.adjust_submit": "تطبيق التعديل",
+  "stores.filter_status_pending": "قيد الانتظار",
+  "stores.filter_status_approved": "معتمد",
+  "stores.filter_status_suspended": "موقوف",
+  "stores.filter_active_yes": "نشط",
+  "stores.filter_active_no": "غير نشط",
+  "stores.filter_verified_yes": "موثّق",
+  "stores.filter_verified_no": "غير موثّق",
+  "stores.filter_featured_yes": "مميّز",
+  "stores.filter_featured_no": "غير مميّز",
+  "stores.filter_join_from": "الانضمام من",
+  "stores.filter_join_to": "الانضمام إلى",
+  "stores.filter_clear": "مسح عوامل التصفية"
 }

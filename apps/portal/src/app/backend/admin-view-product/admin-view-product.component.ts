@@ -344,6 +344,11 @@ export class AdminViewProductComponent implements OnInit {
         if (response) {
           this.update = response.data;
 
+          // The storefront detail shape exposes the category as `category_id`
+          // (number); the radio binds [value]="c.id" / [(ngModel)]="update.category",
+          // so map it back onto `update.category` (Number-coerced) to pre-select.
+          this.update.category = Number(response.data.category_id ?? response.data.category?.id ?? response.data.category ?? 0) || 0;
+
           // Seed multiselect from server shape [{id, collection}]
           const serverCollection = response.data.collection ?? [];
           this.selectedCollectionIds = Array.isArray(serverCollection)

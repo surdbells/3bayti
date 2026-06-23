@@ -14,6 +14,43 @@ import { AxConfirmService } from '../../shared/overlays';
   selector: 'app-gift-card-detail',
   standalone: true,
   imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, TranslatePipe],
+  styles: [`
+    /* Consistent inner padding for the summary / delivery / ledger cards. */
+    .gc-summary,
+    .gc-delivery {
+      padding: 1.5rem;
+    }
+    /* Responsive 2-col grid with even gutters; collapses to 1 col when narrow. */
+    .gc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+      gap: 1.25rem 2rem;
+    }
+    /* Each label/value pair: label on top, readable spacing to the value. */
+    .gc-grid > .gc-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      min-width: 0;
+    }
+    .gc-grid > .gc-cell .ax-field-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--ax-text-secondary, #64748b);
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .gc-grid > .gc-cell > div {
+      word-break: break-word;
+    }
+    .gc-delivery-title {
+      margin: 0 0 1.25rem;
+    }
+    /* Ledger header lines up with the table edge padding. */
+    .gc-ledger-header {
+      padding: 1.25rem 1.5rem;
+    }
+  `],
   template: `
 <app-admin-shell>
   <div class="ax-container">
@@ -41,49 +78,49 @@ import { AxConfirmService } from '../../shared/overlays';
 
     <ng-container *ngIf="!loading && card">
       <!-- Summary -->
-      <section class="ax-card ax-mb-4">
-        <div class="ax-grid ax-grid-cols-2 ax-gap-4">
-          <div>
+      <section class="ax-card ax-p-0 ax-mb-4 gc-summary">
+        <div class="gc-grid">
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_status' | translate }}</span>
             <div><span class="ax-badge" [ngClass]="statusBadgeClass(card.status)">{{ statusLabel(card.status) }}</span></div>
           </div>
-          <div>
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_balance' | translate }}</span>
             <div class="ax-h4 ax-m-0">{{ card.balance }} {{ card.currency }}</div>
             <span class="ax-text-sm ax-text-secondary">{{ 'gift_cards_admin.detail_denomination' | translate }}: {{ card.denomination }} {{ card.currency }}</span>
           </div>
-          <div>
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_theme' | translate }}</span>
             <div>{{ card.theme || '—' }}</div>
           </div>
-          <div>
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_spendable' | translate }}</span>
             <div>{{ (card.is_spendable ? 'gift_cards_admin.delivered_yes' : 'gift_cards_admin.delivered_no') | translate }}</div>
           </div>
-          <div>
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_purchaser' | translate }}</span>
             <div>{{ card.purchaser?.name || '—' }}</div>
             <span class="ax-text-sm ax-text-secondary">{{ card.purchaser?.email }}</span>
           </div>
-          <div>
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_recipient' | translate }}</span>
             <div>{{ card.recipient_name || card.recipient_user?.name || '—' }}</div>
             <span class="ax-text-sm ax-text-secondary">{{ card.recipient_email || card.recipient_user?.email }}</span>
             <span *ngIf="card.recipient_phone" class="ax-block ax-text-sm ax-text-secondary">{{ card.recipient_phone }}</span>
           </div>
-          <div *ngIf="card.recipient_message">
+          <div class="gc-cell" *ngIf="card.recipient_message">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_message' | translate }}</span>
             <div class="ax-text-sm">{{ card.recipient_message }}</div>
           </div>
-          <div *ngIf="card.purchase_order_reference">
+          <div class="gc-cell" *ngIf="card.purchase_order_reference">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_order_ref' | translate }}</span>
             <div>{{ card.purchase_order_reference }}</div>
           </div>
-          <div>
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_created' | translate }}</span>
             <div>{{ fmtDate(card.created_at) }}</div>
           </div>
-          <div *ngIf="card.expires_at">
+          <div class="gc-cell" *ngIf="card.expires_at">
             <span class="ax-field-label">{{ 'gift_cards_admin.detail_expires' | translate }}</span>
             <div>{{ fmtDate(card.expires_at) }}</div>
           </div>
@@ -91,14 +128,14 @@ import { AxConfirmService } from '../../shared/overlays';
       </section>
 
       <!-- Delivery -->
-      <section class="ax-card ax-mb-4" *ngIf="card.delivery">
-        <h3 class="ax-h5 ax-mt-0">{{ 'gift_cards_admin.delivery' | translate }}</h3>
-        <div class="ax-grid ax-grid-cols-2 ax-gap-4">
-          <div>
+      <section class="ax-card ax-p-0 ax-mb-4 gc-delivery" *ngIf="card.delivery">
+        <h3 class="ax-h5 gc-delivery-title">{{ 'gift_cards_admin.delivery' | translate }}</h3>
+        <div class="gc-grid">
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.delivery_channel' | translate }}</span>
             <div>{{ card.delivery.channel || '—' }}</div>
           </div>
-          <div>
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.delivery_delivered' | translate }}</span>
             <div>
               <span class="ax-badge" [class.ax-badge-success]="card.delivery.delivered" [class.ax-badge-neutral]="!card.delivery.delivered">
@@ -106,17 +143,17 @@ import { AxConfirmService } from '../../shared/overlays';
               </span>
             </div>
           </div>
-          <div>
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.delivery_email' | translate }}</span>
             <div>{{ card.delivery.recipient_email || '—' }}</div>
             <span *ngIf="card.delivery.email_delivered_at" class="ax-text-sm ax-text-secondary">{{ fmtDate(card.delivery.email_delivered_at) }}</span>
           </div>
-          <div>
+          <div class="gc-cell">
             <span class="ax-field-label">{{ 'gift_cards_admin.delivery_phone' | translate }}</span>
             <div>{{ card.delivery.recipient_phone || '—' }}</div>
             <span *ngIf="card.delivery.sms_delivered_at" class="ax-text-sm ax-text-secondary">{{ fmtDate(card.delivery.sms_delivered_at) }}</span>
           </div>
-          <div *ngIf="card.delivery.scheduled_at">
+          <div class="gc-cell" *ngIf="card.delivery.scheduled_at">
             <span class="ax-field-label">{{ 'gift_cards_admin.delivery_scheduled' | translate }}</span>
             <div>{{ fmtDate(card.delivery.scheduled_at) }}</div>
           </div>
@@ -125,7 +162,7 @@ import { AxConfirmService } from '../../shared/overlays';
 
       <!-- Ledger -->
       <section class="ax-card ax-p-0">
-        <header class="ax-p-4">
+        <header class="gc-ledger-header">
           <h3 class="ax-h5 ax-m-0">{{ 'gift_cards_admin.ledger' | translate }}</h3>
         </header>
         <div class="ax-table-wrapper">

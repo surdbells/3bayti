@@ -466,5 +466,17 @@
   "gift_cards_admin.adjust_debit": "Debit (remove funds)",
   "gift_cards_admin.adjust_amount": "Amount",
   "gift_cards_admin.adjust_reason": "Reason",
-  "gift_cards_admin.adjust_submit": "Apply adjustment"
+  "gift_cards_admin.adjust_submit": "Apply adjustment",
+  "stores.filter_status_pending": "Pending",
+  "stores.filter_status_approved": "Approved",
+  "stores.filter_status_suspended": "Suspended",
+  "stores.filter_active_yes": "Active",
+  "stores.filter_active_no": "Inactive",
+  "stores.filter_verified_yes": "Verified",
+  "stores.filter_verified_no": "Unverified",
+  "stores.filter_featured_yes": "Featured",
+  "stores.filter_featured_no": "Not featured",
+  "stores.filter_join_from": "Joined from",
+  "stores.filter_join_to": "Joined to",
+  "stores.filter_clear": "Clear filters"
 }
