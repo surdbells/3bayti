@@ -31,6 +31,16 @@ final class ListCommissionsController
             ->select('o')
             ->from(Order::class, 'o')
             ->where("o.status IN ('delivered','refunded')")
+            // Defence in depth: keep synthetic gift-card purchase orders
+            // (linked via gift_cards.purchase_order_reference) out of the
+            // commission report. The delivered/refunded scope already
+            // excludes them in practice, but the predicate makes it explicit.
+            ->andWhere(
+                'NOT EXISTS ('
+                . 'SELECT 1 FROM \\Bayti\\Api\\Domain\\GiftCard\\GiftCard gc '
+                . 'WHERE gc.purchaseOrderReference = o.orderReference'
+                . ')'
+            )
             ->orderBy('o.createdAt', 'DESC')
             ->setMaxResults($limit)
             ->setFirstResult($offset);

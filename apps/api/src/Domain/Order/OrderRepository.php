@@ -204,6 +204,35 @@ class OrderRepository extends EntityRepository
     }
 
     /**
+     * Exclude synthetic gift-card *purchase* orders from an admin-scoped
+     * order query.
+     *
+     * Gift-card purchases create a synthetic Order with no line items
+     * (InitiateCheckoutController::initiateGiftCardPurchase), linked back to
+     * the funded card via gift_cards.purchase_order_reference =
+     * orders.order_reference. Those orders are an internal payment vehicle —
+     * they must never appear on the admin Orders list, the logistics board,
+     * or analytics recent-sales.
+     *
+     * We exclude them via the INVERSE relation (a NOT EXISTS against
+     * GiftCard.purchaseOrderReference) rather than a zero-items heuristic:
+     * a real order could legitimately be emptied, and a zero-items check
+     * would also swallow those. Matching on the gift-card back-reference is
+     * exact.
+     *
+     * @param string $alias the Order alias used in the query builder ('o').
+     */
+    private function excludeGiftCardPurchases(QueryBuilder $qb, string $alias = 'o'): void
+    {
+        $qb->andWhere(
+            'NOT EXISTS ('
+            . 'SELECT 1 FROM \\Bayti\\Api\\Domain\\GiftCard\\GiftCard gc '
+            . "WHERE gc.purchaseOrderReference = {$alias}.orderReference"
+            . ')'
+        );
+    }
+
+    /**
      * Admin-scoped paginated order list. Supports cross-cutting
      * filters that the customer + vendor surfaces don't expose:
      *   - status: a single Order::STATUS_* value, a list of values
@@ -212,6 +241,10 @@ class OrderRepository extends EntityRepository
      *   - userId: filter to a single customer
      *   - vendorId: filter to orders containing at least one item
      *     from a specific vendor
+     *
+     * Synthetic gift-card purchase orders are always excluded (see
+     * excludeGiftCardPurchases) so they never pollute the orders list or
+     * the logistics board.
      *
      * Used by M3.1.7-D admin orders surface.
      *
@@ -246,6 +279,7 @@ class OrderRepository extends EntityRepository
         } else {
             $totalQb->select('COUNT(o.id)');
         }
+        $this->excludeGiftCardPurchases($totalQb);
         if ($statusList !== []) {
             $totalQb->andWhere('o.status IN (:statuses)')->setParameter('statuses', $statusList);
         }
@@ -274,6 +308,7 @@ class OrderRepository extends EntityRepository
         } else {
             $idQb->select('o.id');
         }
+        $this->excludeGiftCardPurchases($idQb);
         if ($statusList !== []) {
             $idQb->andWhere('o.status IN (:statuses)')->setParameter('statuses', $statusList);
         }

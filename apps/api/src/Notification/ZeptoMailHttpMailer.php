@@ -52,6 +52,15 @@ final class ZeptoMailHttpMailer implements MailerInterface
     private const ENDPOINT = 'https://api.zeptomail.com/v1.1/email';
     private const TIMEOUT_SECONDS = 15;
 
+    /**
+     * The raw ZeptoMail key, AFTER normalization (trim + prefix strip).
+     * We don't reuse the promoted $apiToken parameter for the outgoing
+     * header because operators sometimes paste the value WITH the
+     * "Zoho-enczapikey " scheme already attached; sending that verbatim
+     * after we prepend our own scheme yields a double prefix and a 401.
+     */
+    private readonly string $normalizedToken;
+
     public function __construct(
         private readonly string $apiToken,
         private readonly string $fromEmail,
@@ -59,7 +68,8 @@ final class ZeptoMailHttpMailer implements MailerInterface
         private readonly ?Client $httpClient = null,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
-        if ($apiToken === '') {
+        $this->normalizedToken = self::normalizeToken($apiToken);
+        if ($this->normalizedToken === '') {
             throw new \InvalidArgumentException(
                 'ZeptoMailHttpMailer requires a non-empty API token. '
                 . 'Set ZEPTOMAIL_API_TOKEN or bind NullMailer in dev.',
@@ -116,7 +126,7 @@ final class ZeptoMailHttpMailer implements MailerInterface
         try {
             $response = $client->request('POST', self::ENDPOINT, [
                 'headers' => [
-                    'Authorization' => 'Zoho-enczapikey ' . $this->apiToken,
+                    'Authorization' => 'Zoho-enczapikey ' . $this->normalizedToken,
                     'Content-Type' => 'application/json',
                     'Accept' => 'application/json',
                 ],
@@ -196,5 +206,38 @@ final class ZeptoMailHttpMailer implements MailerInterface
     private function truncate(string $s, int $max): string
     {
         return strlen($s) > $max ? substr($s, 0, $max) . '…(truncated)' : $s;
+    }
+
+    /**
+     * Normalize an operator-supplied ZeptoMail token into the bare key.
+     *
+     * ZeptoMail's Authorization header is "Zoho-enczapikey <key>". This
+     * class always prepends that scheme itself (see send()). A common
+     * operator mistake is to paste the value WITH the scheme already on
+     * it (copied straight out of the ZeptoMail console / a curl example),
+     * which then double-prefixes to "Zoho-enczapikey Zoho-enczapikey <key>"
+     * and Zoho rejects it with a 401.
+     *
+     * This guards against that by:
+     *   1. trimming surrounding whitespace (stray newline on a pasted env
+     *      value is also a frequent 401 cause), and
+     *   2. stripping a single leading, case-insensitive "Zoho-enczapikey "
+     *      scheme if present.
+     *
+     * For a correctly-stored RAW key (no scheme, no whitespace) this is a
+     * no-op — behavior is identical. Only one leading scheme is removed;
+     * a key that legitimately contained the literal substring elsewhere is
+     * untouched.
+     */
+    public static function normalizeToken(string $token): string
+    {
+        $token = trim($token);
+        // Case-insensitive single leading-scheme strip. The scheme is
+        // followed by at least one space in the real header; we tolerate
+        // any run of trailing whitespace after it.
+        if (preg_match('/^Zoho-enczapikey\s+(.*)$/is', $token, $m) === 1) {
+            $token = trim($m[1]);
+        }
+        return $token;
     }
 }

@@ -108,6 +108,64 @@ final class ZeptoMailHttpMailerTest extends TestCase
     }
 
     #[Test]
+    public function constructorRejectsWhitespaceOnlyApiToken(): void
+    {
+        // A token that is only whitespace normalizes to empty and must
+        // be rejected exactly like an empty token.
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('ZEPTOMAIL_API_TOKEN');
+        new ZeptoMailHttpMailer(apiToken: "  \n\t ", fromEmail: 'a@b.com', fromName: '3bayti');
+    }
+
+    #[Test]
+    public function stripsAccidentallyPrefixedAuthSchemeFromToken(): void
+    {
+        // Operator pasted the value WITH the "Zoho-enczapikey " scheme
+        // already attached. We must strip the single leading scheme so the
+        // outgoing header is NOT double-prefixed.
+        $mailer = new ZeptoMailHttpMailer(
+            apiToken: 'Zoho-enczapikey my-token',
+            fromEmail: 'noreply@3bayti.ae',
+            fromName: '3bayti',
+            httpClient: $this->client(new Response(201)),
+        );
+
+        $mailer->send(to: 'c@example.com', subject: 's', textBody: 't', htmlBody: 'h');
+
+        $req = $this->capturedRequests[0];
+        self::assertSame('Zoho-enczapikey my-token', $req['headers']['Authorization'][0]);
+    }
+
+    #[Test]
+    public function trimsAndStripsCaseInsensitivePrefixedToken(): void
+    {
+        // Surrounding whitespace (e.g. a trailing newline on a pasted env
+        // value) plus a mixed-case scheme must both be normalized away.
+        $mailer = new ZeptoMailHttpMailer(
+            apiToken: "  zOhO-EnCzApIkEy   my-token\n",
+            fromEmail: 'noreply@3bayti.ae',
+            fromName: '3bayti',
+            httpClient: $this->client(new Response(201)),
+        );
+
+        $mailer->send(to: 'c@example.com', subject: 's', textBody: 't', htmlBody: 'h');
+
+        $req = $this->capturedRequests[0];
+        self::assertSame('Zoho-enczapikey my-token', $req['headers']['Authorization'][0]);
+    }
+
+    #[Test]
+    public function rawTokenIsUnchangedByNormalization(): void
+    {
+        // A correctly-stored RAW key (no scheme) must pass through
+        // untouched — normalization is a no-op for the common case.
+        self::assertSame('abc123XYZ', ZeptoMailHttpMailer::normalizeToken('abc123XYZ'));
+        // Only ONE leading scheme is stripped; a key is otherwise verbatim.
+        self::assertSame('my-token', ZeptoMailHttpMailer::normalizeToken('Zoho-enczapikey my-token'));
+        self::assertSame('raw-key', ZeptoMailHttpMailer::normalizeToken("  raw-key  "));
+    }
+
+    #[Test]
     public function http401ReturnsAuthKind(): void
     {
         $mailer = new ZeptoMailHttpMailer(

@@ -288,7 +288,18 @@ final class NoonWebhookController
                 $this->activateGiftCardForOrder($order);
             } catch (\Throwable) { /* silent — logged inside activateGiftCardForOrder */ }
 
+            // Single order-confirmation for the gateway flow. This is the
+            // authoritative paid transition (gated above on $transition ===
+            // 'paid', which only happens on the FIRST markPaid() — idempotent
+            // re-deliveries find $transition='' and skip). The pre-payment
+            // orderPlaced() dispatch was removed from InitiateCheckoutController,
+            // so this is the ONE place a gateway order is confirmed:
+            //   - orderPaid(): customer "payment confirmed" email/push.
+            //   - orderPaidVendors(): vendor "new order to prepare" email
+            //     (moved here from the old pre-payment orderPlaced() so vendors
+            //     are only asked to prepare a PAID order).
             $this->notifications->orderPaid($order);
+            $this->notifications->orderPaidVendors($order);
             $this->pushNotifications->orderPaid($order);
 
             // Auto-create the per-item customer<->vendor chat threads.

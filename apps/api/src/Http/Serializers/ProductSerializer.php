@@ -208,6 +208,7 @@ final class ProductSerializer
             // multiple images per product. imagesArray reads the already-hydrated
             // in-memory images collection — no extra query / no N+1.
             'images' => $this->imagesArray($p),
+            'category_id' => $p->getCategory()?->getId(),
             'category_slug' => $p->getCategory()?->getSlug(),
             'vendor' => $p->getVendor()->getSlug() !== ''
                 ? ['slug' => $p->getVendor()->getSlug(), 'name' => $p->getVendor()->getName()]

@@ -434,8 +434,25 @@ final class InitiateCheckoutController
             }
             $orderRepo->save($order);
 
-            $this->notifications->orderPlaced($order);
-            $this->pushNotifications->orderPlaced($order);
+            // Confirmed-at-creation path (no online payment step): the
+            // gift-card credit fully covered the total, so the order is
+            // PAID the instant it's created — there is no gateway round-
+            // trip and no webhook will ever arrive for it. This is the
+            // ONLY order-creation path that legitimately confirms without
+            // a payment gateway (the moral equivalent of a COD / zero-
+            // amount order). The single payment confirmation therefore
+            // fires HERE, at creation, and nowhere else for this order.
+            // markPaid() above returned true exactly once, so this block
+            // runs once per order:
+            //   - orderPaid(): the customer's payment-confirmed email/push.
+            //   - orderPaidVendors(): the vendor "new order to prepare"
+            //     email (vendors are notified only once payment is real).
+            // We deliberately do NOT call orderPlaced() here — its
+            // customer copy says "await payment confirmation", which is
+            // wrong for an order that is already paid.
+            $this->notifications->orderPaid($order);
+            $this->notifications->orderPaidVendors($order);
+            $this->pushNotifications->orderPaid($order);
 
             // Order is paid (no gateway) — provision the per-item chats now.
             // Fire-and-forget: must not abort the response.
@@ -518,11 +535,16 @@ final class InitiateCheckoutController
             'provider_order_ref' => $initiation->providerOrderRef,
         ]);
 
-        // M3.1.7-H — notify customer + vendors that the order is in flight.
-        // Fire-and-forget: notification failure must not abort checkout.
-        $this->notifications->orderPlaced($order);
-        $this->pushNotifications->orderPlaced($order);
-
+        // NO order-confirmation notification fires here. This is the
+        // PRE-payment path: we have only just handed the customer a Noon
+        // checkout URL — they have not paid yet. Firing orderPlaced()/
+        // orderPaid() here would confirm an order the customer might
+        // abandon. The single confirmation fires later, on the PAID
+        // transition, in NoonWebhookController::__invoke() (gated on the
+        // order actually transitioning into 'paid' via markPaid()), which
+        // sends orderPaid() to the customer AND the vendor "new order to
+        // prepare" email. The status-poll endpoint is read-only and never
+        // sends, so there is exactly one confirmation per order.
         $response = $this->ok([
             'checkout_url' => $initiation->checkoutUrl,
             'order_reference' => $orderReference,

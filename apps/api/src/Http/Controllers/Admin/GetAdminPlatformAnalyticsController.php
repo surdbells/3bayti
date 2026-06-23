@@ -108,7 +108,11 @@ final class GetAdminPlatformAnalyticsController
         $totalOrders = (int) $conn->fetchOne(
             "SELECT COUNT(*) FROM orders
              WHERE created_at >= ?
-               AND status IN ($salePlaceholders)",
+               AND status IN ($salePlaceholders)
+               AND NOT EXISTS (
+                 SELECT 1 FROM gift_cards gc
+                 WHERE gc.purchase_order_reference = orders.order_reference
+               )",
             [$since, ...$saleStatuses]
         );
 
@@ -141,6 +145,10 @@ final class GetAdminPlatformAnalyticsController
                COALESCE(SUM(CASE WHEN status IN ('refunded','cancelled') THEN 1 ELSE 0 END), 0) AS returns
              FROM orders
              WHERE EXTRACT(YEAR FROM created_at) = ?
+               AND NOT EXISTS (
+                 SELECT 1 FROM gift_cards gc
+                 WHERE gc.purchase_order_reference = orders.order_reference
+               )
              GROUP BY m
              ORDER BY m",
             [$year]
@@ -202,10 +210,19 @@ final class GetAdminPlatformAnalyticsController
         $statusFilter = $this->parseStatusFilter($query['status'] ?? null);
 
         // Build WHERE clause + bound params shared by count + page queries.
-        $where  = '';
+        // Gift-card *purchase* orders (synthetic, no line items, linked via
+        // gift_cards.purchase_order_reference) must never appear as recent
+        // sales, so the exclusion is ALWAYS present — the optional status
+        // filter is ANDed on top.
+        $giftCardExclusion =
+            'NOT EXISTS ('
+            . 'SELECT 1 FROM gift_cards gc '
+            . 'WHERE gc.purchase_order_reference = o.order_reference'
+            . ')';
+        $where  = "WHERE {$giftCardExclusion}";
         $params = [];
         if ($statusFilter !== null) {
-            $where    = 'WHERE o.status = ?';
+            $where   .= ' AND o.status = ?';
             $params[] = $statusFilter;
         }
 

@@ -124,6 +124,24 @@ final class OrderNotificationService
     }
 
     /**
+     * Notify each vendor in the order that they have a new, PAID order to
+     * prepare. Vendor-only — the customer is notified separately by
+     * orderPaid().
+     *
+     * This is the vendor half of the order-confirmation that used to be
+     * carried by orderPlaced() (which fired pre-payment). Vendors must
+     * only be told to prepare an order once its payment is confirmed, so
+     * the "new order to prepare" email now fires on the paid transition,
+     * not when the customer merely reaches the gateway. Reuses the
+     * existing ORDER_PLACED_VENDOR template (its copy is payment-agnostic
+     * — "you have a new order").
+     */
+    public function orderPaidVendors(Order $order): void
+    {
+        $this->sendToVendors($order, EmailTemplate::ORDER_PLACED_VENDOR);
+    }
+
+    /**
      * Payment failed (webhook). Customer-only.
      */
     public function orderPaymentFailed(Order $order): void
