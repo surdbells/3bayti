@@ -12,7 +12,6 @@ import {
   IonSegment,
   IonSegmentButton,
   IonLabel,
-  IonSearchbar,
 } from '@ionic/angular/standalone';
 import { ConnectionService } from '../../service/connection.service';
 import { Subscription } from 'rxjs';
@@ -95,7 +94,6 @@ import {DIAL_CODES, DialCode, mapDialToIso} from "../shared/dial-codes";
     IonSegment,
     IonSegmentButton,
     IonLabel,
-    IonSearchbar,
     TranslatePipe,
     AxLoaderComponent,
     AxTextFieldComponent,
@@ -112,6 +110,16 @@ export class RegisterPage implements OnInit, OnDestroy {
   // Dial-code picker state (reuses the profile page pattern).
   readonly dialCodes: DialCode[] = DIAL_CODES;
   codeSearch = '';
+
+  /**
+   * Inline phone-availability hint (Step 1). `taken` drives the inline
+   * "already registered" message shown BEFORE the user taps Continue.
+   * `checkedPhone` records the last full phone we validated so we don't
+   * re-hit the endpoint for an unchanged value. The hard gate is still
+   * the Continue-time 409 in initiate_phone().
+   */
+  phoneCheck = { taken: false, checkedPhone: '' };
+  private phoneCheckTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     private net: ConnectionService,
@@ -130,6 +138,9 @@ export class RegisterPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    if (this.phoneCheckTimer) {
+      clearTimeout(this.phoneCheckTimer);
+    }
     this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
   }
 
@@ -191,6 +202,57 @@ export class RegisterPage implements OnInit, OnDestroy {
 
   selectCode(c: DialCode) {
     this.register.countryCode = c.code;
+    // Re-check availability for the new dial-code + existing national digits.
+    this.onPhoneChanged();
+  }
+
+  // --- Inline phone availability check (Step 1 UX) -----------------------
+
+  /**
+   * Clear the inline "already registered" hint as soon as the number
+   * changes, and schedule a debounced availability check so the hint can
+   * appear without waiting for blur on fast typists.
+   */
+  onPhoneChanged() {
+    this.phoneCheck.taken = false;
+    this.phoneCheck.checkedPhone = '';
+    if (this.phoneCheckTimer) {
+      clearTimeout(this.phoneCheckTimer);
+    }
+    this.phoneCheckTimer = setTimeout(() => this.checkPhoneAvailability(), 600);
+  }
+
+  /**
+   * Ask the backend whether this phone is already registered and surface
+   * an inline hint. Best-effort UX only: never blocks, never toasts —
+   * the Continue-time 409 in initiate_phone() remains the hard gate.
+   * POST /auth/validate-phone -> data { phone, available }.
+   */
+  checkPhoneAvailability() {
+    if (this.phoneCheckTimer) {
+      clearTimeout(this.phoneCheckTimer);
+      this.phoneCheckTimer = null;
+    }
+    if (!this.isOnline) return;
+    const national = this.register.phone.replace(/\D/g, '');
+    if (national.length < 6) return;
+
+    const full = this.fullPhone;
+    if (full === this.phoneCheck.checkedPhone) return;
+
+    this.networkAdapter.post_v3('POST /auth/validate-phone', { phone: full }).subscribe({
+      next: (response: any) => {
+        // Ignore stale responses if the number changed mid-flight.
+        if (this.fullPhone !== full) return;
+        if (response?.response_code === 200 && response?.status === 'success') {
+          this.phoneCheck.checkedPhone = full;
+          this.phoneCheck.taken = response.data?.available === false;
+        }
+      },
+      error: () => {
+        // Best-effort hint: swallow errors, the Continue 409 still gates.
+      },
+    });
   }
 
   // --- Step 1: phone -> initiate -----------------------------------------

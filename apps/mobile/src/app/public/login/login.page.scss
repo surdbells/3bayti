@@ -1,65 +1,195 @@
 .h-100 { height: 100%; }
 
 ion-content.app-bg {
-  /* M2 beige canvas */
-  --background: var(--ax-color-bg-canvas);
+  /* Clean surface canvas so dark mode still flips (token, not hardcoded white) */
+  --background: var(--ax-color-bg-surface);
 }
 
 @media (prefers-color-scheme: dark) {
-  ion-content.app-bg { --background: var(--ax-color-bg-canvas); }
+  ion-content.app-bg { --background: var(--ax-color-bg-surface); }
 }
 @media (orientation: landscape) {
-  ion-content.app-bg { --background: var(--ax-color-bg-canvas); }
+  ion-content.app-bg { --background: var(--ax-color-bg-surface); }
 }
 
-/* ----- Auth container — centered single column (matches register/reset) ----- */
+/* ----- Auth container — LEFT-aligned single column, footer pinned bottom ----- */
 .auth-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   min-height: 100%;
-  max-width: 420px;
+  max-width: 480px;
   margin: 0 auto;
   padding: 1.5rem 0;
 }
 
-/* ----- Header stack (logo + title + subtitle) ----- */
-.stack {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
+/* ----- Heading block — bold left heading + helper text ----- */
+.auth-head {
+  margin: 0.5rem 0 1.75rem;
+  text-align: start;
 }
 
-.auth-logo {
-  max-width: 160px;
-  height: auto;
-  margin-bottom: 0.5rem;
-}
-
-/* Title — Poltawski display, sentence case */
 .title {
   font-family: var(--ax-font-display);
-  font-weight: 400;
-  font-size: 26px;
-  letter-spacing: -0.005em;
+  font-weight: 600;
+  font-size: 28px;
+  letter-spacing: -0.01em;
   margin: 0;
   color: var(--ax-color-text-primary);
   line-height: 1.2;
+  text-align: start;
 }
 
 .subtitle {
   font-family: inherit;
   font-weight: 400;
-  margin: 0.4rem 0 .2rem;
+  margin: 0.6rem 0 0;
   color: var(--ax-color-text-secondary);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
+  text-align: start;
+
+  strong { color: var(--ax-color-text-primary); font-weight: 600; }
 }
+
+/* ----- Back link (icon + text), left-aligned ----- */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  margin-bottom: 0.5rem;
+  color: var(--ax-color-text-secondary);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  ax-icon { font-size: 18px; }
+  &:active { opacity: 0.7; }
+}
+
+/* RTL: flip the back arrow */
+:host-context([dir="rtl"]) .back-link ax-icon { transform: scaleX(-1); }
+
+/* ----- Option cards (icon + label/hint + chevron) ----- */
+.option-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--ax-color-border-default);
+  border-radius: 16px;
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-primary);
+  font-family: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+
+  &:active {
+    background: var(--ax-color-bg-canvas);
+    border-color: var(--ax-color-text-brand);
+  }
+}
+
+.option-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--ax-color-bg-canvas);
+  color: var(--ax-color-text-brand);
+
+  ax-icon { font-size: 22px; }
+}
+
+.option-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.option-card__label {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary);
+}
+
+.option-card__hint {
+  font-size: 13px;
+  color: var(--ax-color-text-secondary);
+}
+
+.option-card__chevron {
+  flex: 0 0 auto;
+  color: var(--ax-color-text-tertiary);
+  font-size: 20px;
+}
+
+:host-context([dir="rtl"]) .option-card__chevron { transform: scaleX(-1); }
 
 /* ----- Inputs ----- */
 .block-mb { display: block; margin-bottom: 1rem; }
+
+.otp-field {
+  /* roomy, evenly-spaced numeric entry */
+  ::ng-deep input {
+    letter-spacing: 0.4em;
+    font-size: 20px;
+    text-align: center;
+  }
+}
+
+.field-label {
+  display: block;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary);
+  margin-bottom: 6px;
+}
+
+/* ----- Phone row: dial-code button + phone field ----- */
+.phone-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.cc-field { flex: 0 0 116px; }
+.phone-field { flex: 1 1 auto; }
+
+.cc-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 48px;
+  padding: 0 10px;
+  border: 1px solid var(--ax-color-border-default);
+  border-radius: 12px;
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-primary);
+  font-family: inherit;
+  font-size: 15px;
+  cursor: pointer;
+
+  .cc-flag { font-size: 18px; }
+  .cc-code { font-weight: 500; }
+  ax-icon { margin-inline-start: auto; }
+
+  &:active { opacity: 0.7; }
+}
 
 /* ----- Forgot-password link — right-aligned, subtle ----- */
 .forgot-password-row {
@@ -68,58 +198,54 @@ ion-content.app-bg {
   margin: 0 0 0.5rem;
 }
 
-/* ----- Primary button ----- */
-.primary-btn { margin: 0.5rem 0; }
+/* ----- Secondary links row (resend / change) ----- */
+.secondary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 1rem 0 0;
+}
 
-/* ----- Secondary (outline) button ----- */
-.secondary-btn { margin: 0.5rem 0; }
+/* ----- Auth footer — pinned to bottom, full-width primary button ----- */
+.auth-footer {
+  margin-top: auto;
+  padding-top: 1.5rem;
+}
 
-/* ----- Secondary links (brand-colored, e.g. forgot password) ----- */
+/* ----- Primary button (full width) ----- */
+.primary-btn { margin: 0.5rem 0 0; }
+
+/* ----- Ghost / clear button (continue as guest) ----- */
+.ghost-btn {
+  margin: 0;
+  --color: var(--ax-color-text-secondary);
+}
+
+/* ----- Secondary links (brand-colored) ----- */
 .secondary-link {
+  display: inline-block;
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;
-  color: var(--ax-color-text-brand);   /* M2 brown */
+  color: var(--ax-color-text-brand);
   cursor: pointer;
 
   &:active { opacity: 0.7; }
 }
 
-/* ----- "or" divider — line · text · line ----- */
-.login-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 1rem 0;
-  color: var(--ax-color-text-tertiary);
-  font-family: inherit;
-  font-size: 12px;
-  font-style: italic;
-
-  &::before,
-  &::after {
-    content: "";
-    flex: 1;
-    height: 0.5px;
-    background: var(--ax-color-border-default);
-  }
-
-  span { flex-shrink: 0; }
-}
-
-/* ----- Sign-up link line ("Don't have an account? Sign up") ----- */
+/* ----- Sign-up link line ----- */
 .signup-link {
   font-family: inherit;
   font-size: 14px;
   color: var(--ax-color-text-secondary);
   text-align: center;
-  margin: 1.5rem 0 0;
+  margin: 0.75rem 0 0;
   line-height: 1.5;
 }
 
 .signup-link-action {
   color: var(--ax-color-text-brand);
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   margin-inline-start: 4px;
 
@@ -132,4 +258,30 @@ ion-content.app-bg {
   justify-content: center;
   align-items: center;
   padding: 1rem 0;
+  min-height: 60vh;
+}
+
+/* ----- Country-code picker sheet ----- */
+.cc-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cc-list__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  border-bottom: 0.5px solid var(--ax-color-border-default);
+  cursor: pointer;
+
+  &:active { background: var(--ax-color-bg-canvas); }
+}
+.cc-list__flag { font-size: 20px; }
+.cc-list__name { flex: 1; color: var(--ax-color-text-primary); font-size: 15px; }
+.cc-list__code { color: var(--ax-color-text-secondary); font-size: 14px; }
+.cc-list__empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--ax-color-text-tertiary);
 }

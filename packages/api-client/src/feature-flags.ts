@@ -561,6 +561,22 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/auth/confirm',
     shape: 'v3-envelope',
   },
+  // Passwordless OTP login (phone SMS / email OTP). v3-only; no legacy
+  // 1:1, so oldPath is '' and routing is by routeKey (post_v3). /send
+  // returns { verification_id } (anti-enumeration); /verify returns the
+  // standard login envelope (access_token, refresh_token, user).
+  'POST /auth/otp-login/send': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/otp-login/send',
+    shape: 'v3-envelope',
+  },
+  'POST /auth/otp-login/verify': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/otp-login/verify',
+    shape: 'v3-envelope',
+  },
   'POST /auth/refresh': {
     target: 'new',
     oldPath: '',

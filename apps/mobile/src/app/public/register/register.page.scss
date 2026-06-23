@@ -12,40 +12,43 @@ ion-content.app-bg {
   ion-content.app-bg { --background: var(--ax-color-bg-canvas); }
 }
 
-/* ----- Auth container — centered single column (matches login) ----- */
+/* Chipper-style white surface canvas (local override — dark mode still
+   flips this token, so we do NOT touch the global .app-bg class). */
+ion-content.register-bg {
+  --background: var(--ax-color-bg-surface);
+}
+
+/* ----- Auth container — left-aligned single column ----- */
 .auth-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: 100%;
-  max-width: 420px;
+  max-width: 480px;
   margin: 0 auto;
-  padding: 1.5rem 0;
+  /* room at the bottom so content clears the sticky action bar */
+  padding: 1.5rem 0 7rem;
 }
 
-/* ----- Header stack (logo + title + subtitle) ----- */
+/* ----- Header stack (title + subtitle), left-aligned ----- */
 .stack {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
+  text-align: left;
   gap: 0.5rem;
   margin-bottom: 1.25rem;
 }
 
-.auth-logo {
-  max-width: 160px;
-  height: auto;
-  margin-bottom: 0.5rem;
-}
-
 .title {
   font-family: var(--ax-font-display);
-  font-weight: 400;
-  font-size: 26px;
-  letter-spacing: -0.005em;
+  font-weight: 700;
+  font-size: 28px;
+  letter-spacing: -0.01em;
   margin: 0;
   color: var(--ax-color-text-primary);
-  line-height: 1.2;
+  line-height: 1.15;
+  text-align: left;
 }
 
 .subtitle {
@@ -55,14 +58,41 @@ ion-content.app-bg {
   color: var(--ax-color-text-secondary);
   font-size: 14px;
   line-height: 1.5;
+  text-align: left;
 }
 
-/* ----- Step indicator (segmented dots) ----- */
+/* ----- Per-step heading + helper text (left-aligned, bold) ----- */
+.step-head {
+  margin: 0 0 1.25rem;
+  text-align: left;
+}
+
+.step-heading {
+  font-family: var(--ax-font-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.005em;
+  margin: 0 0 0.35rem;
+  color: var(--ax-color-text-primary);
+  line-height: 1.25;
+}
+
+.step-help {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ax-color-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+
+  strong { color: var(--ax-color-text-primary); font-weight: 600; }
+}
+
+/* ----- Step indicator (segmented dots), left-aligned ----- */
 .step-indicator {
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 8px;
-  margin: 0.5rem 0 1.25rem;
+  margin: 0.5rem 0 1.5rem;
 }
 
 .step-dot {
@@ -74,16 +104,6 @@ ion-content.app-bg {
 
   &.is-active { background: var(--ax-color-text-brand); }
   &.is-done   { background: var(--ax-color-text-brand); opacity: 0.55; }
-}
-
-.step-caption {
-  font-family: inherit;
-  font-size: 14px;
-  color: var(--ax-color-text-secondary);
-  margin: 0 0 1.25rem;
-  line-height: 1.5;
-
-  strong { color: var(--ax-color-text-primary); font-weight: 600; }
 }
 
 .field-label {
@@ -128,6 +148,23 @@ ion-content.app-bg {
   &:active { opacity: 0.7; }
 }
 
+/* ----- Inline phone-availability hint ----- */
+.phone-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -0.5rem 0 0.75rem;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+
+  ax-icon { flex: 0 0 auto; }
+
+  &--error {
+    color: var(--ax-color-text-danger, #c0392b);
+  }
+}
+
 /* ----- Two-column input row ----- */
 .two-col {
   display: grid;
@@ -140,8 +177,28 @@ ion-content.app-bg {
 /* ----- Terms checkbox row ----- */
 .terms-row { margin: 0.25rem 0 1.25rem; }
 
-/* ----- Primary button ----- */
-.primary-btn { margin: 0.5rem 0; }
+/* ----- Sticky bottom action bar (full-width primary) ----- */
+.action-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  padding: 0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom));
+  background: var(--ax-color-bg-surface);
+  border-top: 0.5px solid var(--ax-color-border-default);
+}
+
+.primary-btn {
+  margin: 0;
+  width: 100%;
+}
+
+/* The action bar is constrained to match the centered content column. */
+.action-bar .primary-btn {
+  max-width: 480px;
+  margin: 0 auto;
+}
 
 /* ----- Secondary links row (resend / change) ----- */
 .secondary-row {
@@ -167,7 +224,7 @@ ion-content.app-bg {
   font-family: inherit;
   font-size: 14px;
   color: var(--ax-color-text-secondary);
-  text-align: center;
+  text-align: left;
   margin: 1.5rem 0 0;
   line-height: 1.5;
 }
@@ -189,27 +246,7 @@ ion-content.app-bg {
   padding: 1rem 0;
 }
 
-/* ----- Country-code picker sheet (mirrors profile page) ----- */
-.cc-sheet__header { padding: 0 4px 8px; }
-.cc-sheet__title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.cc-sheet__title {
-  font-family: var(--ax-font-display);
-  font-size: 18px;
-  margin: 0;
-  color: var(--ax-color-text-primary);
-}
-.cc-sheet__close {
-  background: none;
-  border: none;
-  color: var(--ax-color-text-brand);
-  font-family: inherit;
-  font-size: 14px;
-  cursor: pointer;
-}
+/* ----- Country-code picker list (sheet uses built-in title + search) ----- */
 .cc-list {
   list-style: none;
   margin: 0;

@@ -1,11 +1,5 @@
 <ion-content [fullscreen]="true" class="app-bg ion-padding">
   <div class="auth-container">
-    <!-- Header: logo + title + subtitle -->
-    <div class="stack app-fade-in">
-      <img class="auth-logo" src="assets/images/logo.png" alt="">
-      <h1 class="title ion-text-center">{{ 'welcome_back' | translate }}</h1>
-      <p class="subtitle ion-text-center">{{ 'sub_title' | translate }}</p>
-    </div>
 
     @if (ui_controls.login_loading) {
       <div class="loader-row">
@@ -14,51 +8,236 @@
     }
 
     @if (!ui_controls.login_loading) {
-      <ax-text-field
-        class="block-mb"
-        [label]="'email_Address' | translate"
-        type="email"
-        [required]="true"
-        [placeholder]="'e_email_Address' | translate"
-        autocomplete="email"
-        [(ngModel)]="login.email"
-        name="email">
-      </ax-text-field>
 
-      <ax-text-field
-        class="block-mb"
-        [label]="'password' | translate"
-        type="password"
-        [required]="true"
-        autocomplete="current-password"
-        [(ngModel)]="login.password"
-        name="password">
-      </ax-text-field>
+      <!-- ===================== CHOICE ===================== -->
+      @if (view === 'choice') {
+        <div class="auth-head app-fade-in">
+          <h1 class="title">{{ 'login_choice_title' | translate }}</h1>
+          <p class="subtitle">{{ 'login_choice_subtitle' | translate }}</p>
+        </div>
 
-      <div class="forgot-password-row">
-        <ion-text class="secondary-link" (click)="forgot_password()">
-          {{ 'forgot_password' | translate }}
+        <button type="button" class="option-card" (click)="goPhone()">
+          <span class="option-card__icon"><ax-icon name="phone"></ax-icon></span>
+          <span class="option-card__body">
+            <span class="option-card__label">{{ 'login_option_phone' | translate }}</span>
+            <span class="option-card__hint">{{ 'login_option_phone_hint' | translate }}</span>
+          </span>
+          <ax-icon name="chevron-right" class="option-card__chevron"></ax-icon>
+        </button>
+
+        <button type="button" class="option-card" (click)="goEmail()">
+          <span class="option-card__icon"><ax-icon name="mail"></ax-icon></span>
+          <span class="option-card__body">
+            <span class="option-card__label">{{ 'login_option_email' | translate }}</span>
+            <span class="option-card__hint">{{ 'login_option_email_hint' | translate }}</span>
+          </span>
+          <ax-icon name="chevron-right" class="option-card__chevron"></ax-icon>
+        </button>
+
+        <div class="auth-footer">
+          <ion-button (click)="goHome()" expand="block" fill="clear" class="ghost-btn" type="button">
+            {{ 'continue_as_guest' | translate }}
+          </ion-button>
+          <p class="signup-link">
+            {{ 'dont_have_an_account' | translate }}
+            <ion-text class="signup-link-action" (click)="user_register()">
+              {{ 'sign_up' | translate }}
+            </ion-text>
+          </p>
+        </div>
+      }
+
+      <!-- ===================== PHONE ===================== -->
+      @if (view === 'phone') {
+        <button type="button" class="back-link" (click)="goChoice()">
+          <ax-icon name="arrow-left"></ax-icon>
+          <span>{{ 'button_back' | translate }}</span>
+        </button>
+
+        <div class="auth-head">
+          <h1 class="title">{{ 'login_phone_title' | translate }}</h1>
+          <p class="subtitle">{{ 'login_phone_subtitle' | translate }}</p>
+        </div>
+
+        <div class="phone-row">
+          <div class="cc-field">
+            <label class="field-label">{{ 'label_dial_code' | translate }}</label>
+            <button type="button" class="cc-button" (click)="isCountryCodeOpen = true">
+              <span class="cc-flag">{{ selectedDial?.flag }}</span>
+              <span class="cc-code">{{ countryCode }}</span>
+              <ax-icon name="chevron-down"></ax-icon>
+            </button>
+          </div>
+          <div class="phone-field">
+            <ax-text-field
+              [label]="'phone_number' | translate"
+              type="tel"
+              inputmode="numeric"
+              [required]="true"
+              [maxlength]="15"
+              [placeholder]="'enter_phone' | translate"
+              autocomplete="tel-national"
+              [(ngModel)]="phone"
+              name="phone">
+            </ax-text-field>
+          </div>
+        </div>
+
+        <div class="auth-footer">
+          <ion-button (click)="sendPhoneOtp()" expand="block" class="primary-btn" type="button">
+            {{ 'button_next' | translate }}
+          </ion-button>
+        </div>
+      }
+
+      <!-- ===================== EMAIL ===================== -->
+      @if (view === 'email') {
+        <button type="button" class="back-link" (click)="goChoice()">
+          <ax-icon name="arrow-left"></ax-icon>
+          <span>{{ 'button_back' | translate }}</span>
+        </button>
+
+        <div class="auth-head">
+          <h1 class="title">{{ 'login_email_title' | translate }}</h1>
+          <p class="subtitle">{{ 'login_email_subtitle' | translate }}</p>
+        </div>
+
+        <ax-text-field
+          class="block-mb"
+          [label]="'email_Address' | translate"
+          type="email"
+          [required]="true"
+          [placeholder]="'e_email_Address' | translate"
+          autocomplete="email"
+          [(ngModel)]="otpEmail"
+          name="otp_email">
+        </ax-text-field>
+
+        <ion-text class="secondary-link" (click)="goPassword()">
+          {{ 'login_with_password_instead' | translate }}
         </ion-text>
-      </div>
 
-      <ion-button (click)="signIn()" expand="block" class="primary-btn" type="button">
-        {{ 'sign_in' | translate }}
-      </ion-button>
+        <div class="auth-footer">
+          <ion-button (click)="sendEmailOtp()" expand="block" class="primary-btn" type="button">
+            {{ 'button_next' | translate }}
+          </ion-button>
+        </div>
+      }
 
-      <div class="login-divider">
-        <span>{{ 'or' | translate }}</span>
-      </div>
+      <!-- ===================== OTP ENTRY ===================== -->
+      @if (view === 'otp') {
+        <button type="button" class="back-link" (click)="changeDestination()">
+          <ax-icon name="arrow-left"></ax-icon>
+          <span>{{ 'button_back' | translate }}</span>
+        </button>
 
-      <ion-button (click)="goHome()" expand="block" fill="outline" class="secondary-btn" type="button">
-        {{ 'continue_as_guest' | translate }}
-      </ion-button>
+        <div class="auth-head">
+          <h1 class="title">{{ 'login_otp_title' | translate }}</h1>
+          <p class="subtitle">
+            {{ 'otp_sent_to' | translate }} <strong>{{ otpDestination }}</strong>
+          </p>
+        </div>
 
-      <p class="signup-link">
-        {{ 'dont_have_an_account' | translate }}
-        <ion-text class="signup-link-action" (click)="user_register()">
-          {{ 'sign_up' | translate }}
-        </ion-text>
-      </p>
+        <ax-text-field
+          class="block-mb otp-field"
+          [label]="'otp' | translate"
+          type="text"
+          inputmode="numeric"
+          [maxlength]="6"
+          [required]="true"
+          [placeholder]="'login_otp_placeholder' | translate"
+          autocomplete="one-time-code"
+          [(ngModel)]="otp.code"
+          name="login_otp">
+        </ax-text-field>
+
+        <div class="secondary-row">
+          <ion-text class="secondary-link" (click)="changeDestination()">
+            {{ otpChannel === 'phone' ? ('change_phone_number' | translate) : ('login_change_email' | translate) }}
+          </ion-text>
+          <ion-text class="secondary-link" (click)="resendOtp()">
+            {{ 'resend_otp' | translate }}
+          </ion-text>
+        </div>
+
+        <div class="auth-footer">
+          <ion-button (click)="verifyOtp()" expand="block" class="primary-btn" type="button">
+            {{ 'sign_in' | translate }}
+          </ion-button>
+        </div>
+      }
+
+      <!-- ===================== PASSWORD (legacy) ===================== -->
+      @if (view === 'password') {
+        <button type="button" class="back-link" (click)="goEmail()">
+          <ax-icon name="arrow-left"></ax-icon>
+          <span>{{ 'button_back' | translate }}</span>
+        </button>
+
+        <div class="auth-head">
+          <h1 class="title">{{ 'welcome_back' | translate }}</h1>
+          <p class="subtitle">{{ 'sub_title' | translate }}</p>
+        </div>
+
+        <ax-text-field
+          class="block-mb"
+          [label]="'email_Address' | translate"
+          type="email"
+          [required]="true"
+          [placeholder]="'e_email_Address' | translate"
+          autocomplete="email"
+          [(ngModel)]="login.email"
+          name="email">
+        </ax-text-field>
+
+        <ax-text-field
+          class="block-mb"
+          [label]="'password' | translate"
+          type="password"
+          [required]="true"
+          autocomplete="current-password"
+          [(ngModel)]="login.password"
+          name="password">
+        </ax-text-field>
+
+        <div class="forgot-password-row">
+          <ion-text class="secondary-link" (click)="forgot_password()">
+            {{ 'forgot_password' | translate }}
+          </ion-text>
+        </div>
+
+        <div class="auth-footer">
+          <ion-button (click)="signIn()" expand="block" class="primary-btn" type="button">
+            {{ 'sign_in' | translate }}
+          </ion-button>
+        </div>
+      }
     }
   </div>
+
+  <!-- Country-code picker sheet (searchable floating sheet) -->
+  <ax-bottom-sheet
+    [isOpen]="isCountryCodeOpen"
+    (didDismiss)="isCountryCodeOpen = false"
+    [snapPoints]="[0.8, 0.95]"
+    [initialSnap]="0"
+    [title]="'title_select_country_code' | translate"
+    [searchable]="true"
+    [searchPlaceholder]="'placeholder_search_country_or_code' | translate"
+    [(searchQuery)]="codeSearch">
+
+    <ul class="cc-list">
+      @for (c of filteredDialCodes(); track c.code) {
+        <li class="cc-list__item" (click)="selectCode(c); isCountryCodeOpen = false" role="button" tabindex="0">
+          <span class="cc-list__flag">{{ c.flag }}</span>
+          <span class="cc-list__name">{{ c.name }}</span>
+          <span class="cc-list__code">{{ c.code }}</span>
+        </li>
+      }
+    </ul>
+
+    @if (filteredDialCodes().length === 0) {
+      <div class="cc-list__empty">{{ 'label_no_results' | translate }}</div>
+    }
+  </ax-bottom-sheet>
 </ion-content>

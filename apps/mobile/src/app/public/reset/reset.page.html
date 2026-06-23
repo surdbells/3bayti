@@ -1,10 +1,9 @@
-<ion-content [fullscreen]="true" class="app-bg ion-padding">
+<ion-content [fullscreen]="true" class="app-bg reset-bg ion-padding">
   <div class="auth-container">
-    <!-- Header -->
+    <!-- Header (left-aligned, no logo) -->
     <div class="stack app-fade-in">
-      <img class="auth-logo" src="assets/images/logo.png" alt="">
-      <h1 class="title ion-text-center">{{ 'title' | translate }}</h1>
-      <p class="subtitle ion-text-center">{{ 'reset_subtitle' | translate }}</p>
+      <h1 class="title">{{ 'title' | translate }}</h1>
+      <p class="subtitle">{{ 'reset_subtitle' | translate }}</p>
     </div>
 
     <!-- Step indicator (2 steps) -->
@@ -24,14 +23,47 @@
 
     <!-- ================= STEP 1: CHANNEL + IDENTIFIER ================= -->
     @if (!ui_controls.loading && ui_controls.step === 1) {
-      <ion-segment [value]="ui_controls.channel" class="channel-segment">
-        <ion-segment-button value="email" (click)="setChannel('email')">
-          <ion-label>{{ 'channel_email' | translate }}</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="phone" (click)="setChannel('phone')">
-          <ion-label>{{ 'channel_phone' | translate }}</ion-label>
-        </ion-segment-button>
-      </ion-segment>
+      <div class="step-head">
+        <h2 class="step-heading">{{ 'reset_step_channel_heading' | translate }}</h2>
+        <p class="step-help">{{ 'reset_step_channel_help' | translate }}</p>
+      </div>
+
+      <!-- Channel option cards (Chipper-style) -->
+      <div class="channel-cards" role="radiogroup" [attr.aria-label]="'reset_step_channel_heading' | translate">
+        <button
+          type="button"
+          class="channel-card"
+          [class.is-selected]="ui_controls.channel === 'email'"
+          role="radio"
+          [attr.aria-checked]="ui_controls.channel === 'email'"
+          (click)="setChannel('email')">
+          <span class="channel-card__icon"><ax-icon name="mail" size="lg"></ax-icon></span>
+          <span class="channel-card__text">
+            <span class="channel-card__label">{{ 'channel_email' | translate }}</span>
+            <span class="channel-card__desc">{{ 'channel_email_desc' | translate }}</span>
+          </span>
+          <span class="channel-card__radio" aria-hidden="true">
+            @if (ui_controls.channel === 'email') { <ax-icon name="check" size="sm"></ax-icon> }
+          </span>
+        </button>
+
+        <button
+          type="button"
+          class="channel-card"
+          [class.is-selected]="ui_controls.channel === 'phone'"
+          role="radio"
+          [attr.aria-checked]="ui_controls.channel === 'phone'"
+          (click)="setChannel('phone')">
+          <span class="channel-card__icon"><ax-icon name="message-circle" size="lg"></ax-icon></span>
+          <span class="channel-card__text">
+            <span class="channel-card__label">{{ 'channel_phone' | translate }}</span>
+            <span class="channel-card__desc">{{ 'channel_phone_desc' | translate }}</span>
+          </span>
+          <span class="channel-card__radio" aria-hidden="true">
+            @if (ui_controls.channel === 'phone') { <ax-icon name="check" size="sm"></ax-icon> }
+          </span>
+        </button>
+      </div>
 
       @if (ui_controls.channel === 'email') {
         <ax-text-field
@@ -72,16 +104,16 @@
         </div>
       }
 
-      <ion-button (click)="send_reset_otp()" expand="block" class="primary-btn" type="button">
-        {{ 'send_code_button' | translate }}
-      </ion-button>
     }
 
     <!-- ================= STEP 2: CODE + NEW PASSWORD ================= -->
     @if (!ui_controls.loading && ui_controls.step === 2) {
-      <p class="step-caption ion-text-center">
-        {{ 'otp_sent_to' | translate }} <strong>{{ sentTo }}</strong>
-      </p>
+      <div class="step-head">
+        <h2 class="step-heading">{{ 'reset_step_verify_heading' | translate }}</h2>
+        <p class="step-help">
+          {{ 'otp_sent_to' | translate }} <strong>{{ sentTo }}</strong>
+        </p>
+      </div>
 
       <ax-text-field
         class="block-mb"
@@ -115,10 +147,6 @@
         name="confirm_password">
       </ax-text-field>
 
-      <ion-button (click)="reset_password()" expand="block" class="primary-btn" type="button">
-        {{ 'reset_button' | translate }}
-      </ion-button>
-
       <div class="secondary-row">
         <ion-text class="secondary-link" (click)="back_to_identifier()">
           {{ 'button_back' | translate }}
@@ -139,26 +167,31 @@
     }
   </div>
 
-  <!-- Country-code picker sheet -->
+  <!-- Sticky bottom primary action (per-step) -->
+  @if (!ui_controls.loading) {
+    <div class="action-bar">
+      @if (ui_controls.step === 1) {
+        <ion-button (click)="send_reset_otp()" expand="block" class="primary-btn" type="button">
+          {{ 'send_code_button' | translate }}
+        </ion-button>
+      }
+      @if (ui_controls.step === 2) {
+        <ion-button (click)="reset_password()" expand="block" class="primary-btn" type="button">
+          {{ 'reset_button' | translate }}
+        </ion-button>
+      }
+    </div>
+  }
+
+  <!-- Country-code picker sheet (floating + built-in native search) -->
   <ax-bottom-sheet
     [isOpen]="isCountryCodeOpen"
-    (didDismiss)="isCountryCodeOpen = false"
-    [snapPoints]="[0.8, 0.95]"
-    [initialSnap]="0">
-
-    <div ax-sheet-header class="cc-sheet__header">
-      <div class="cc-sheet__title-row">
-        <h2 class="cc-sheet__title">{{ 'title_select_country_code' | translate }}</h2>
-        <button type="button" class="cc-sheet__close" (click)="isCountryCodeOpen = false">
-          {{ 'close' | translate }}
-        </button>
-      </div>
-      <ion-searchbar
-        [(ngModel)]="codeSearch"
-        debounce="100"
-        placeholder="{{ 'placeholder_search_country_or_code' | translate }}">
-      </ion-searchbar>
-    </div>
+    (didDismiss)="isCountryCodeOpen = false; codeSearch = ''"
+    [title]="'title_select_country_code' | translate"
+    [searchable]="true"
+    [searchPlaceholder]="'placeholder_search_country_or_code' | translate"
+    [searchQuery]="codeSearch"
+    (searchChange)="codeSearch = $event">
 
     <ul class="cc-list">
       @for (c of filteredDialCodes(); track c.code) {

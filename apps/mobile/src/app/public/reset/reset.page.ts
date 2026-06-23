@@ -4,10 +4,6 @@ import {
   Platform,
   IonButton,
   IonText,
-  IonSegment,
-  IonSegmentButton,
-  IonLabel,
-  IonSearchbar,
 } from '@ionic/angular/standalone';
 import { ConnectionService } from '../../service/connection.service';
 import { Subscription } from 'rxjs';
@@ -60,10 +56,6 @@ import {DIAL_CODES, DialCode} from "../shared/dial-codes";
     FormsModule,
     IonText,
     IonButton,
-    IonSegment,
-    IonSegmentButton,
-    IonLabel,
-    IonSearchbar,
     TranslatePipe,
     AxLoaderComponent,
     AxTextFieldComponent,
