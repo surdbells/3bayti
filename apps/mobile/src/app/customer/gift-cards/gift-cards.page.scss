@@ -526,4 +526,11 @@
   &__flag { font-size: 22px; line-height: 1; }
   &__name { flex: 1 1 auto; font-size: 14px; color: var(--ax-color-text-primary, #2e241c); }
   &__code { font-size: 14px; font-weight: 600; color: var(--ax-color-text-secondary, #8B6F47); }
+
+  &__empty {
+    padding: 28px 16px;
+    text-align: center;
+    font-size: 14px;
+    color: var(--ax-color-text-secondary, #8B6F47);
+  }
 }

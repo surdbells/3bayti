@@ -74,13 +74,23 @@ export class GiftCardsPage implements OnInit {
   readonly dialCodes: DialCode[] = DIAL_CODES;
   dialCodeOpen = false;
   dialCode = '+971';
+  dialSearch = '';
 
   get selectedDial(): DialCode | undefined {
     return this.dialCodes.find(c => c.code === this.dialCode);
   }
 
+  filteredDialCodes(): DialCode[] {
+    const q = this.dialSearch.trim().toLowerCase();
+    if (!q) return this.dialCodes;
+    return this.dialCodes.filter(c =>
+      c.name.toLowerCase().includes(q) || c.code.includes(q)
+    );
+  }
+
   selectDial(c: DialCode) {
     this.dialCode = c.code;
+    this.dialSearch = '';
     this.dialCodeOpen = false;
   }
 

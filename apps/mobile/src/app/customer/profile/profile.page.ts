@@ -8,7 +8,7 @@ import {
     IonCard,
     IonCardContent, IonCardHeader, IonCardSubtitle, IonCardTitle, IonCol,
     IonContent,
-    IonHeader, IonRow, IonSearchbar,
+    IonHeader, IonRow,
     IonSelect, IonSelectOption,
     IonTitle,
     IonToolbar, NavController, Platform
@@ -52,7 +52,6 @@ const V3_BASE = 'https://api-v3.3bayti.ae';
     IonCol,
     IonRow,
     IonButton,
-    IonSearchbar,
     IonCardHeader,
     IonCardSubtitle,
     IonCardTitle,

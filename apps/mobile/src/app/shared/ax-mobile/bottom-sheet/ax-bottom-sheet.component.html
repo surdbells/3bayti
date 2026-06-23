@@ -1,6 +1,8 @@
 <ng-template #sheetTemplate>
   <div
     class="ax-sheet"
+    [class.ax-sheet--inset]="inset"
+    [class.ax-sheet--fullscreen]="!inset"
     role="dialog"
     aria-modal="true"
     [attr.aria-labelledby]="title ? sheetId + '-title' : null"
@@ -37,6 +39,36 @@
         </div>
       }
     </div>
+
+    <!-- Built-in NATIVE search input (never ion-searchbar/ion-select: see
+         the component docstring re: the CDK-overlay z-index trap). -->
+    @if (searchable) {
+      <div class="ax-sheet__search">
+        <ax-icon name="search" class="ax-sheet__search-icon" aria-hidden="true" />
+        <input
+          #searchInput
+          class="ax-sheet__search-input"
+          type="text"
+          inputmode="search"
+          autocomplete="off"
+          autocapitalize="off"
+          autocorrect="off"
+          spellcheck="false"
+          [attr.placeholder]="searchPlaceholder"
+          [attr.aria-label]="searchPlaceholder || 'Search'"
+          [value]="searchQuery"
+          (input)="onSearchInput($event)" />
+        @if (searchQuery) {
+          <button
+            type="button"
+            class="ax-sheet__search-clear"
+            (click)="clearSearch(); searchInput.focus()"
+            aria-label="Clear search">
+            <ax-icon name="x" />
+          </button>
+        }
+      </div>
+    }
 
     <!-- Body content -->
     <div class="ax-sheet__body">

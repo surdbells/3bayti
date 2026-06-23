@@ -158,26 +158,15 @@
       </ion-card-content>
     </ion-card>
   </div>
-  <!-- Searchable country code sheet -->
+  <!-- Searchable country code sheet (floating + built-in native search) -->
   <ax-bottom-sheet
     [isOpen]="isCountryCodeOpen"
-    (didDismiss)="isCountryCodeOpen = false"
-    [snapPoints]="[0.8, 0.95]"
-    [initialSnap]="0">
-
-    <div ax-sheet-header class="cc-sheet__header">
-      <div class="cc-sheet__title-row">
-        <h2 class="cc-sheet__title">{{ 'title_select_country_code' | translate }}</h2>
-        <button type="button" class="cc-sheet__close" (click)="isCountryCodeOpen = false">
-          {{ 'close' | translate }}
-        </button>
-      </div>
-      <ion-searchbar
-        [(ngModel)]="codeSearch"
-        debounce="100"
-        placeholder="{{ 'placeholder_search_country_or_code' | translate }}">
-      </ion-searchbar>
-    </div>
+    (didDismiss)="isCountryCodeOpen = false; codeSearch = ''"
+    [title]="'title_select_country_code' | translate"
+    [searchable]="true"
+    [searchPlaceholder]="'placeholder_search_country_or_code' | translate"
+    [searchQuery]="codeSearch"
+    (searchChange)="codeSearch = $event">
 
     <ul class="cc-list">
       @for (c of filteredDialCodes(); track c) {

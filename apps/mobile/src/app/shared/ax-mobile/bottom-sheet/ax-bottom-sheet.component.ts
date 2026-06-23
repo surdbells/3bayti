@@ -1,21 +1,35 @@
 /**
- * AxBottomSheet — premium rounded bottom-sheet primitive.
+ * AxBottomSheet — premium FLOATING + SEARCHABLE bottom-sheet primitive.
  *
  * Replaces <ion-modal> usage for bottom-sheet patterns across the app.
  * Renders into a CDK Overlay so the sheet is not constrained by the
  * parent's overflow context. M2 token-driven styling.
  *
- * USAGE:
+ * By default the sheet is a PREMIUM FLOATING card: inset from the screen
+ * edges (horizontal + bottom margin), all four corners rounded, centered
+ * with a max-width, and a content-ish default height (NOT full-screen).
+ * For sheets that genuinely need full height (e.g. the styles/create
+ * product picker), opt out with [fullscreen]="true" (alias [inset]="false")
+ * to restore the edge-to-edge, top-rounded, full-height behaviour.
+ *
+ * USAGE (floating list picker with built-in search):
  *
  *   <ax-bottom-sheet
- *     [isOpen]="isWishOpen"
- *     (didDismiss)="isWishOpen = false"
- *     [snapPoints]="[0.5, 0.9]"
- *     [initialSnap]="0"
- *     title="Save to closet">
+ *     [isOpen]="isOpen"
+ *     (didDismiss)="isOpen = false"
+ *     title="Select country"
+ *     [searchable]="true"
+ *     [searchPlaceholder]="'Search…'"
+ *     (searchChange)="query = $event">
  *
- *     <ng-content>... body content ...</ng-content>
+ *     <ul>
+ *       @for (item of filtered(query); track item) { <li>…</li> }
+ *     </ul>
  *   </ax-bottom-sheet>
+ *
+ * USAGE (full-screen opt-out):
+ *
+ *   <ax-bottom-sheet [isOpen]="isOpen" [fullscreen]="true" …>
  *
  * SLOTS:
  *   - default: body content
@@ -23,21 +37,39 @@
  *   - [ax-sheet-footer]: optional sticky footer (e.g. for a primary CTA)
  *
  * INPUTS:
- *   - isOpen          two-way-able boolean to show/hide
- *   - snapPoints      number[] of fractions (0-1) of viewport height
- *                     defaults to [1] (single full-height snap)
- *   - initialSnap     index into snapPoints, defaults to 0
- *   - backdropDismiss boolean, default true
- *   - swipeToClose    boolean, default true
- *   - showHandle      boolean, default true (show the drag handle pill)
- *   - title           string (optional inline title)
- *   - showCloseButton boolean, default true when title is set
+ *   - isOpen            two-way-able boolean to show/hide
+ *   - inset             boolean, default true — premium floating mode
+ *                       (inset margins, all-corners rounded, max-width)
+ *   - fullscreen        boolean, default false — convenience alias for
+ *                       [inset]="false" (edge-to-edge full-height sheet)
+ *   - snapPoints        number[] of fractions (0-1) of viewport height.
+ *                       Defaults to [0.6, 0.85] in floating mode and [1]
+ *                       in fullscreen mode (a content-height default that
+ *                       is intentionally NOT full-screen).
+ *   - initialSnap       index into snapPoints, defaults to 0
+ *   - backdropDismiss   boolean, default true
+ *   - swipeToClose      boolean, default true
+ *   - showHandle        boolean, default true (show the drag handle pill)
+ *   - title             string (optional inline title)
+ *   - showCloseButton   boolean, default true when title is set
+ *   - searchable        boolean, default false — render a built-in native
+ *                       search input below the header
+ *   - searchPlaceholder string placeholder for the search input
+ *   - searchQuery       two-way-able current query string
  *
  * OUTPUTS:
  *   - didDismiss      emits when sheet is closed (any reason)
  *   - didPresent      emits when open animation completes
+ *   - searchChange    emits the search query on every keystroke (also
+ *                     supports [(searchQuery)] two-way binding)
  *
  * NOTES:
+ *   - SEARCH INPUT CONSTRAINT: the built-in search MUST be a plain NATIVE
+ *     <input type="text"> styled to match the design system. Do NOT use
+ *     <ion-searchbar> / <ion-select> (or any Ionic overlay-backed control)
+ *     inside this sheet — Ionic overlay components render their popovers in
+ *     a separate overlay layer that lands BEHIND this CDK overlay, producing
+ *     the documented z-index trap. Native inputs render inline and are safe.
  *   - Drag-to-close uses pointer events for cross-input support.
  *   - Below-first-snap drag dismisses the sheet.
  *   - Backdrop tap, ESC, and swipe-down all dismiss (when allowed).
@@ -89,7 +121,12 @@ export class AxBottomSheetComponent implements OnChanges, OnDestroy, AfterViewIn
   /** ===== Inputs ===== */
   @Input() isOpen = false;
 
-  @Input() snapPoints: number[] = [1];
+  /**
+   * Caller-supplied snap points. When left null the component picks a
+   * sensible default per mode (see `effectiveSnapPoints`): a content-ish
+   * [0.6, 0.85] in floating mode, or [1] in fullscreen mode.
+   */
+  @Input() snapPoints: number[] | null = null;
 
   @Input() initialSnap = 0;
 
@@ -103,12 +140,40 @@ export class AxBottomSheetComponent implements OnChanges, OnDestroy, AfterViewIn
 
   @Input() showCloseButton: boolean | null = null;
 
+  /**
+   * Premium floating mode (default). When true the sheet is inset from the
+   * screen edges, rounded on all four corners and centered with a max-width.
+   * Set false (or use [fullscreen]="true") to render a full-height,
+   * edge-to-edge sheet rounded only on the top corners.
+   */
+  @Input() inset = true;
+
+  /** Convenience alias for [inset]="false". */
+  @Input()
+  set fullscreen(value: boolean) {
+    this.inset = !value;
+  }
+  get fullscreen(): boolean {
+    return !this.inset;
+  }
+
+  /** Render a built-in native search input below the header. */
+  @Input() searchable = false;
+
+  /** Placeholder for the built-in search input. */
+  @Input() searchPlaceholder = '';
+
+  /** Current search query (supports [(searchQuery)] two-way binding). */
+  @Input() searchQuery = '';
+
   /** Optional aria-label (used when no title is set). */
   @Input() ariaLabel = 'Bottom sheet';
 
   /** ===== Outputs ===== */
   @Output() didDismiss = new EventEmitter<void>();
   @Output() didPresent = new EventEmitter<void>();
+  @Output() searchChange = new EventEmitter<string>();
+  @Output() searchQueryChange = new EventEmitter<string>();
 
   /** ===== Refs ===== */
   @ViewChild('sheetTemplate', { static: true }) private sheetTemplate!: TemplateRef<unknown>;
@@ -199,7 +264,7 @@ export class AxBottomSheetComponent implements OnChanges, OnDestroy, AfterViewIn
 
     // Configure snap state BEFORE attaching the portal so the first render
     // already reflects the correct height.
-    this.activeSnap = Math.max(0, Math.min(this.initialSnap, this.snapPoints.length - 1));
+    this.activeSnap = Math.max(0, Math.min(this.initialSnap, this.effectiveSnapPoints.length - 1));
     this.dragOffsetPx = 0;
 
     const portal = new TemplatePortal(this.sheetTemplate, this.viewContainerRef);
@@ -254,11 +319,40 @@ export class AxBottomSheetComponent implements OnChanges, OnDestroy, AfterViewIn
     this.pointerId = null;
   }
 
+  /**
+   * Resolved snap points. Honours a caller-supplied [snapPoints]; otherwise
+   * falls back to a sensible per-mode default — a content-ish [0.6, 0.85] in
+   * floating mode (intentionally NOT full-screen) or [1] in fullscreen mode.
+   */
+  get effectiveSnapPoints(): number[] {
+    if (this.snapPoints && this.snapPoints.length > 0) {
+      return this.snapPoints;
+    }
+    return this.inset ? [0.6, 0.85] : [1];
+  }
+
   /** Sheet height as a vh number, derived from the active snap point.
    *  Snap point of 0.5 -> 50vh, 0.9 -> 90vh, 1 -> 100vh. */
   get sheetHeightVh(): number {
-    const snapFrac = this.snapPoints[this.activeSnap] ?? 1;
+    const points = this.effectiveSnapPoints;
+    const snapFrac = points[this.activeSnap] ?? points[points.length - 1] ?? 1;
     return Math.max(10, Math.min(100, snapFrac * 100));
+  }
+
+  /** ===== Search ===== */
+  onSearchInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.searchQuery = value;
+    this.searchChange.emit(value);
+    this.searchQueryChange.emit(value);
+    this.cdr.markForCheck();
+  }
+
+  clearSearch(): void {
+    this.searchQuery = '';
+    this.searchChange.emit('');
+    this.searchQueryChange.emit('');
+    this.cdr.markForCheck();
   }
 
   /** ===== Drag handling ===== */

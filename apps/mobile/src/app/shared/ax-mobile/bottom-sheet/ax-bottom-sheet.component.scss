@@ -50,6 +50,41 @@
   -webkit-user-select: none;
 }
 
+/* ----- Premium FLOATING mode (default) ------------------ */
+/* Inset from the screen edges, rounded on all four corners, centered with
+   a max width. The CDK pane spans full width (bottom:0/left:0/width:100%),
+   so we center the sheet inside it and apply the inset margins here. */
+
+.ax-sheet--inset {
+  width: auto;
+  max-width: 480px;
+  margin: 0 auto;
+  /* Horizontal + bottom inset; combine the safe-area inset with the visual
+     margin so notched devices keep clearance. */
+  margin-left: 11px;
+  margin-right: 11px;
+  margin-bottom: calc(11px + env(safe-area-inset-bottom, 0px));
+  /* Inline [style.height] still drives the snap height; cap it so the inset
+     bottom margin is always visible even at the tallest snap. */
+  max-height: calc(100vh - 22px - env(safe-area-inset-bottom, 0px));
+  border-radius: 24px;
+  padding-bottom: 0;             /* safe area handled via the bottom margin */
+  box-shadow:
+    0 2px 6px rgba(46, 36, 28, 0.08),
+    0 12px 32px rgba(46, 36, 28, 0.18),
+    0 24px 64px rgba(46, 36, 28, 0.12);
+}
+
+/* ----- Full-height opt-out mode ------------------------- */
+/* Edge-to-edge, top-corners-only rounded — the legacy behaviour, used by
+   sheets that genuinely need full height (styles/create product picker). */
+
+.ax-sheet--fullscreen {
+  border-radius: 0;
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+}
+
 /* While the user is actively dragging, disable the smooth transition so
    the sheet tracks the finger 1:1. Toggled implicitly by the inline
    transform style override during drag (transition still applies but
@@ -127,6 +162,81 @@
 
   &:active {
     background: rgba(46, 36, 28, 0.10);
+  }
+}
+
+/* ----- Built-in search (native input) ------------------- */
+/* IMPORTANT: this is a plain native <input>, NOT an ion-searchbar. Ionic
+   overlay-backed controls render behind the CDK overlay (z-index trap). */
+
+.ax-sheet__search {
+  flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin: 0 20px 12px;
+}
+
+.ax-sheet__search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 18px;
+  color: var(--ax-color-text-secondary);
+  pointer-events: none;
+}
+
+.ax-sheet__search-input {
+  width: 100%;
+  height: 44px;
+  box-sizing: border-box;
+  padding: 0 40px 0 38px;
+  font-family: var(--ax-font-body, inherit);
+  font-size: 15px;
+  color: var(--ax-color-text-primary);
+  background: var(--ax-color-bg-subtle, rgba(46, 36, 28, 0.04));
+  border: 1px solid var(--ax-color-border, rgba(46, 36, 28, 0.12));
+  border-radius: 12px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+  transition: border-color 120ms ease, background 120ms ease;
+
+  &::placeholder {
+    color: var(--ax-color-text-secondary);
+    opacity: 0.8;
+  }
+
+  &:focus {
+    border-color: var(--ax-color-primary, #2e241c);
+    background: var(--ax-color-bg-surface);
+  }
+}
+
+.ax-sheet__search-clear {
+  position: absolute;
+  right: 8px;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--ax-color-text-secondary);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  ax-icon {
+    font-size: 16px;
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(46, 36, 28, 0.06);
+    color: var(--ax-color-text-primary);
+    outline: none;
   }
 }
 

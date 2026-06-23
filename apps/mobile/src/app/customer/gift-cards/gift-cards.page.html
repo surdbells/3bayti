@@ -300,16 +300,18 @@
     </div>
   }
 
-  <!-- Recipient dial-code picker sheet -->
+  <!-- Recipient dial-code picker sheet (floating + built-in native search) -->
   <ax-bottom-sheet
     [isOpen]="dialCodeOpen"
-    (didDismiss)="dialCodeOpen = false"
-    [snapPoints]="[0.6, 0.85]"
-    [initialSnap]="0"
-    [title]="'gift_card_recipient_phone' | translate">
+    (didDismiss)="dialCodeOpen = false; dialSearch = ''"
+    [title]="'gc_select_country_code' | translate"
+    [searchable]="true"
+    [searchPlaceholder]="'placeholder_search_country_or_code' | translate"
+    [searchQuery]="dialSearch"
+    (searchChange)="dialSearch = $event">
 
     <ul class="gc-cc-list">
-      @for (c of dialCodes; track c.code) {
+      @for (c of filteredDialCodes(); track c.code) {
         <li class="gc-cc-list__item" (click)="selectDial(c)" role="button" tabindex="0">
           <span class="gc-cc-list__flag">{{ c.flag }}</span>
           <span class="gc-cc-list__name">{{ c.name }}</span>
@@ -317,6 +319,10 @@
         </li>
       }
     </ul>
+
+    @if (filteredDialCodes().length === 0) {
+      <div class="gc-cc-list__empty">{{ 'label_no_results' | translate }}</div>
+    }
   </ax-bottom-sheet>
 
 </ion-content>
