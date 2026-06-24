@@ -12,7 +12,7 @@ function makeCard(o: Partial<GiftCard> = {}): GiftCard {
   return {
     id: 9, code: 'GIFT-ZZZZ-9999', theme: 'wedding',
     theme_meta: {
-      label: 'Wedding Anniversary', arabic_label: 'ذكرى الزفاف',
+      label: 'Anniversary', arabic_label: 'ذكرى سنوية',
       primary_color: '#260014', accent_color: '#D4AF37', text_color: '#F5E060',
       border_color: '#D4AF37', pattern: 'rings', supports_photo: false,
     },
@@ -91,7 +91,7 @@ describe('GiftCardVisualComponent', () => {
   it('the card setter hydrates every display field at once', () => {
     set({ card: makeCard() });
     expect(el('.gc')?.getAttribute('data-pattern')).toBe('rings');
-    expect(el('.gc__label')?.textContent?.trim()).toBe('Wedding Anniversary');
+    expect(el('.gc__label')?.textContent?.trim()).toBe('Anniversary');
     expect(el('.gc__amount')?.textContent?.trim()).toBe('AED 1,000');
     expect(el('.gc__recipient')?.textContent?.trim()).toBe('To Mona');
     expect(el('.gc__balance')?.textContent?.trim()).toBe('AED 750 left');

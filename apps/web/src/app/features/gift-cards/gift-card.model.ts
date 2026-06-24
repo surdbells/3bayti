@@ -162,8 +162,8 @@ export const GIFT_CARD_THEMES: Record<GiftCardTheme, GiftCardThemeMeta> = {
     supports_photo: false,
   },
   wedding: {
-    label: 'Wedding Anniversary',
-    arabic_label: 'ذكرى الزفاف',
+    label: 'Anniversary',
+    arabic_label: 'ذكرى سنوية',
     primary_color: '#260014',
     accent_color: '#D4AF37',
     text_color: '#F5E060',

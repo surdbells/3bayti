@@ -28,8 +28,8 @@ final class GiftCardSerializer
             'supports_photo' => false,
         ],
         GiftCard::THEME_WEDDING => [
-            'label'          => 'Wedding Anniversary',
-            'arabic_label'   => 'ذكرى الزفاف',
+            'label'          => 'Anniversary',
+            'arabic_label'   => 'ذكرى سنوية',
             // Deep burgundy-black card with layered sinusoidal vine waves,
             // interlocking gold rings (wedding band motif), and a dot-column divider.
             'primary_color'  => '#260014',   // deep burgundy-black card base
