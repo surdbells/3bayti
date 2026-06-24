@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "494436103163",
-    "project_id": "bayti-8bd58",
-    "storage_bucket": "bayti-8bd58.firebasestorage.app"
+    "project_number": "932559657027",
+    "project_id": "bayti-bcc5e",
+    "storage_bucket": "bayti-bcc5e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:494436103163:android:ac2730a9ab331313d5915e",
+        "mobilesdk_app_id": "1:932559657027:android:c9e6e9e8b720301efe9cf6",
         "android_client_info": {
           "package_name": "ae.threebayti.app"
         }
@@ -15,7 +15,26 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAX2RJ_nBjX_z9NxqdFKw4evw0xuytQVbA"
+          "current_key": "AIzaSyCocpDjBbA2HPSU0aDq8xiUqC9X7y0UY1Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:932559657027:android:8fbeb7fb1e6fa513fe9cf6",
+        "android_client_info": {
+          "package_name": "com.threebayti.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCocpDjBbA2HPSU0aDq8xiUqC9X7y0UY1Q"
         }
       ],
       "services": {

@@ -3,17 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>API_KEY</key>
-	<string>AIzaSyBRGMP8MrRoQxtfi5N-9R6LtnzV5eY0Mfo</string>
+	<string>AIzaSyB9exD0peqYpAYkMCu6TtI825oJC18zx7Q</string>
 	<key>GCM_SENDER_ID</key>
-	<string>494436103163</string>
+	<string>932559657027</string>
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
 	<string>ae.threebayti.app</string>
 	<key>PROJECT_ID</key>
-	<string>bayti-8bd58</string>
+	<string>bayti-bcc5e</string>
 	<key>STORAGE_BUCKET</key>
-	<string>bayti-8bd58.firebasestorage.app</string>
+	<string>bayti-bcc5e.firebasestorage.app</string>
 	<key>IS_ADS_ENABLED</key>
 	<false></false>
 	<key>IS_ANALYTICS_ENABLED</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:494436103163:ios:dc88f92345b6cf5ed5915e</string>
+	<string>1:932559657027:ios:1681d65379cc5254fe9cf6</string>
 </dict>
 </plist>
