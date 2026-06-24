@@ -44,7 +44,7 @@ const GA4_MEASUREMENT_ID = (process.env.GA4_MEASUREMENT_ID || 'G-W2YF72TS3F').tr
 /* Mobile app store listing URLs for the home "Get the app" section.
    Default '#' renders a non-navigating "coming soon" badge. */
 const APP_STORE_URL = (process.env.APP_STORE_URL || 'https://apps.apple.com/ar/app/3bayti/id6752422907').trim();
-const PLAY_STORE_URL = (process.env.PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=com.bayti.app').trim();
+const PLAY_STORE_URL = (process.env.PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=ae.threebayti.app').trim();
 
 /* Validate: SITE_URL must be a real https:// URL with no path. */
 try {

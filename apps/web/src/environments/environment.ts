@@ -32,6 +32,6 @@ export const environment = {
      non-navigating "coming soon" badge. */
   appStores: {
     appStore: "https://apps.apple.com/ar/app/3bayti/id6752422907",
-    playStore: "https://play.google.com/store/apps/details?id=com.bayti.app",
+    playStore: "https://play.google.com/store/apps/details?id=ae.threebayti.app",
   },
 } as const;
