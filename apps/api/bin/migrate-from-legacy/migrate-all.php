@@ -116,6 +116,24 @@ try {
     echo "----- step {$stepNum}: styles -----\n";
     $results['styles'] = $steps->migrateStyles();
 
+    // vendor_size_charts — needs vendors (resolves vendor_id via
+    // vendors.legacy_vendor_id = legacy store_id). Independent of
+    // products/styles, but placed here after the catalog steps.
+    $stepNum++;
+    echo "----- step {$stepNum}: vendor_size_charts -----\n";
+    $results['vendor_size_charts'] = $steps->migrateVendorSizeCharts();
+
+    // wishlist_labels -> wishlist — labels need users; items need users
+    // AND products AND (optionally) the just-migrated labels for label_id
+    // resolution. Order matters: labels before items.
+    $stepNum++;
+    echo "----- step {$stepNum}: wishlist_labels -----\n";
+    $results['wishlist_labels'] = $steps->migrateWishlistLabels();
+
+    $stepNum++;
+    echo "----- step {$stepNum}: wishlist -----\n";
+    $results['wishlist'] = $steps->migrateWishlist();
+
     // ---------- M3.1.6h: order migration (opt-in) ----------
     // Off by default because the legacy schema isn't fully verified;
     // operator must explicitly opt in with --include-orders after
@@ -161,7 +179,11 @@ try {
     printf("  %-15s  %-9s  %-9s  %-9s\n", 'Phase', 'Processed', 'Skipped', 'Errors');
     printf("  %-15s  %-9s  %-9s  %-9s\n",
         '---------------', '---------', '---------', '---------');
-    foreach (['categories', 'users', 'vendors', 'products', 'reviews'] as $phase) {
+    foreach (['categories', 'users', 'vendors', 'products', 'reviews',
+              'vendor_size_charts', 'wishlist_labels', 'wishlist'] as $phase) {
+        if (!isset($results[$phase])) {
+            continue;
+        }
         $r = $results[$phase];
         printf("  %-15s  %9d  %9d  %9d\n", $phase, $r['migrated'], $r['skipped'], $r['errors']);
     }
@@ -192,6 +214,9 @@ try {
     $rev  = (int) $conn->fetchOne("SELECT COUNT(*) FROM product_reviews WHERE legacy_review_id IS NOT NULL");
     $lbl  = (int) $conn->fetchOne("SELECT COUNT(*) FROM vendor_labels WHERE legacy_label_id IS NOT NULL");
     $sty  = (int) $conn->fetchOne("SELECT COUNT(*) FROM styles WHERE legacy_style_id IS NOT NULL");
+    $vsc  = (int) $conn->fetchOne("SELECT COUNT(*) FROM vendor_size_charts");
+    $wll  = (int) $conn->fetchOne("SELECT COUNT(*) FROM wishlist_labels WHERE legacy_wishlist_label_id IS NOT NULL");
+    $wsh  = (int) $conn->fetchOne("SELECT COUNT(*) FROM wishlist");
     echo "    categories:        {$cats}\n";
     echo "    users (legacy):    {$usr}\n";
     echo "    vendors (legacy):  {$vnd}\n";
@@ -199,6 +224,9 @@ try {
     echo "    reviews:           {$rev}\n";
     echo "    vendor_labels:     {$lbl}\n";
     echo "    styles:            {$sty}\n";
+    echo "    vendor_size_charts: {$vsc}\n";
+    echo "    wishlist_labels:   {$wll}\n";
+    echo "    wishlist:          {$wsh}\n";
 
     exit(0);
 } catch (\Throwable $e) {

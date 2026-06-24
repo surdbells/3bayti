@@ -37,12 +37,26 @@ use Doctrine\DBAL\Connection;
  */
 final class MigrationSteps
 {
+    /**
+     * When true, the steps that support it (the size-charts / wishlist
+     * backfills) roll their transaction back instead of committing —
+     * mirrors the `--dry-run` flag of the standalone CLI scripts. The
+     * migrate-all orchestrator leaves this false (commit). The older
+     * steps (categories/users/vendors/products/...) ignore this flag.
+     */
+    private bool $dryRun = false;
+
     public function __construct(
         private readonly Connection $conn,
         private readonly LegacyDb $legacy,
         private readonly MigrationLog $log,
         private readonly Slugger $slugger,
     ) {
+    }
+
+    public function setDryRun(bool $dryRun): void
+    {
+        $this->dryRun = $dryRun;
     }
 
     /**
@@ -2271,5 +2285,408 @@ final class MigrationSteps
             'failed', '7' => 'failed',
             default => 'paid', // Migrated rows assumed paid unless told otherwise
         };
+    }
+
+    // ===================================================================
+    // Vendor size charts, wishlist labels, wishlist items
+    // ===================================================================
+
+    /**
+     * Migrate vendor published size charts.
+     *
+     * Legacy: store_sizes_measure
+     *   (ssm_id PK, store_id = vendor owner user id, size enum,
+     *    m_bust, m_waist, m_hip, m_length, m_neck, m_arm, armhole, shoulder
+     *    doubles, is_deleted, last_updated, delete_date, created)
+     *
+     * v3: vendor_size_charts (vendor_id, size, values jsonb, created_at,
+     *     updated_at) UNIQUE (vendor_id, size). The 8 legacy measurement
+     *     doubles map into the `values` JSONB map under fixed keys:
+     *       m_bust   -> bust       m_neck   -> neck
+     *       m_waist  -> waist      m_arm    -> arm
+     *       m_hip    -> hip        armhole  -> armhole
+     *       m_length -> length     shoulder -> shoulder
+     *     NULLs pass through (key omitted).
+     *
+     * Only is_deleted=0 rows. Vendor resolved via vendors.legacy_vendor_id
+     * = legacy store_id (skip+log if missing). Multiple LIVE rows per
+     * (store_id, size) are deduped by feeding them oldest-first (ORDER BY
+     * COALESCE(last_updated, created) ASC) into an idempotent UPSERT, so
+     * the NEWEST row wins.
+     *
+     * @return array{migrated: int, skipped: int, errors: int}
+     */
+    public function migrateVendorSizeCharts(): array
+    {
+        echo "===== migrate-vendor-size-charts =====\n";
+
+        $vendorMap = [];
+        foreach ($this->conn->fetchAllAssociative('SELECT id, legacy_vendor_id FROM vendors WHERE legacy_vendor_id IS NOT NULL') as $r) {
+            $vendorMap[(int) $r['legacy_vendor_id']] = (int) $r['id'];
+        }
+
+        // Oldest-first so the latest live row per (store_id, size) UPSERTs last.
+        $rows = $this->legacy->fetchAll(
+            'SELECT ssm_id, store_id, size,
+                    m_bust, m_waist, m_hip, m_length, m_neck, m_arm, armhole, shoulder,
+                    last_updated, created
+             FROM store_sizes_measure
+             WHERE is_deleted = 0
+             ORDER BY COALESCE(last_updated, created) ASC, ssm_id ASC'
+        );
+        echo "  Found " . count($rows) . " live legacy size rows.\n\n";
+
+        $measureMap = [
+            'm_bust' => 'bust',
+            'm_waist' => 'waist',
+            'm_hip' => 'hip',
+            'm_length' => 'length',
+            'm_neck' => 'neck',
+            'm_arm' => 'arm',
+            'armhole' => 'armhole',
+            'shoulder' => 'shoulder',
+        ];
+
+        $migrated = 0;
+        $skipped = 0;
+        $errors = 0;
+
+        $this->conn->beginTransaction();
+        try {
+            foreach ($rows as $row) {
+                $legacyId = (int) $row['ssm_id'];
+
+                $legacyStoreId = (int) ($row['store_id'] ?? 0);
+                $vendorId = $vendorMap[$legacyStoreId] ?? null;
+                if ($vendorId === null) {
+                    $this->log->skip('vendor_size_charts', $legacyId, "Vendor not migrated for store_id={$legacyStoreId}");
+                    $skipped++;
+                    continue;
+                }
+
+                // Normalize size: trim; upper-case letter sizes; keep numeric strings.
+                $size = trim((string) ($row['size'] ?? ''));
+                if ($size === '') {
+                    $this->log->skip('vendor_size_charts', $legacyId, 'Empty size — skipping');
+                    $skipped++;
+                    continue;
+                }
+                if (!ctype_digit($size)) {
+                    $size = strtoupper($size);
+                }
+
+                $values = [];
+                foreach ($measureMap as $legacyCol => $key) {
+                    $raw = $row[$legacyCol] ?? null;
+                    if ($raw === null || $raw === '') {
+                        continue; // NULLs pass through (key omitted)
+                    }
+                    $values[$key] = (float) $raw;
+                }
+
+                try {
+                    $this->conn->executeStatement(
+                        "INSERT INTO vendor_size_charts
+                            (vendor_id, size, \"values\", created_at, updated_at)
+                         VALUES
+                            (:vendor_id, :size, :values::jsonb,
+                             date_trunc('second', NOW()), date_trunc('second', NOW()))
+                         ON CONFLICT (vendor_id, size) DO UPDATE SET
+                             \"values\" = EXCLUDED.\"values\",
+                             updated_at = date_trunc('second', NOW())",
+                        [
+                            'vendor_id' => $vendorId,
+                            'size' => $size,
+                            'values' => json_encode((object) $values, JSON_UNESCAPED_UNICODE),
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    $this->log->error('vendor_size_charts', $legacyId, "UPSERT failed: " . $e->getMessage());
+                    $errors++;
+                    continue;
+                }
+                $migrated++;
+            }
+
+            $this->conn->executeStatement(
+                "SELECT setval('vendor_size_charts_id_seq', COALESCE((SELECT MAX(id) FROM vendor_size_charts), 0) + 1, false)"
+            );
+
+            if ($this->dryRun) {
+                $this->conn->rollBack();
+            } else {
+                $this->conn->commit();
+            }
+        } catch (\Throwable $e) {
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
+            throw $e;
+        }
+
+        echo "  migrated={$migrated} skipped={$skipped} errors={$errors}"
+            . ($this->dryRun ? " (DRY RUN — rolled back)" : "") . "\n\n";
+        return ['migrated' => $migrated, 'skipped' => $skipped, 'errors' => $errors];
+    }
+
+    /**
+     * Migrate customer wishlist labels (folders/closets).
+     *
+     * Legacy: customer_wishlist_label
+     *   (wishll_id PK, user_id = CUSTOMER, label_name varchar, created)
+     *
+     * v3: wishlist_labels (user_id, name varchar(80), created_at,
+     *     legacy_wishlist_label_id). TWO unique keys:
+     *       UNIQUE (user_id, name)
+     *       UNIQUE legacy_wishlist_label_id (partial)
+     *
+     * Idempotency uses a check-then-branch over BOTH keys:
+     *   1. SELECT by legacy_wishlist_label_id -> found ? UPDATE name.
+     *   2. else SELECT by (user_id, name) -> found ? ADOPT it (stamp its
+     *      legacy_wishlist_label_id = wishll_id).
+     *   3. else INSERT with legacy_wishlist_label_id = wishll_id,
+     *      preserving created_at from legacy.
+     *
+     * User resolved via users.legacy_user_id = legacy user_id
+     * (skip+log if missing). name defaults to 'Saved' if empty.
+     * name is truncated to 80 chars to fit the column.
+     *
+     * @return array{migrated: int, skipped: int, errors: int}
+     */
+    public function migrateWishlistLabels(): array
+    {
+        echo "===== migrate-wishlist-labels =====\n";
+
+        $userMap = [];
+        foreach ($this->conn->fetchAllAssociative('SELECT id, legacy_user_id FROM users WHERE legacy_user_id IS NOT NULL') as $r) {
+            $userMap[(int) $r['legacy_user_id']] = (int) $r['id'];
+        }
+
+        $rows = $this->legacy->fetchAll(
+            'SELECT wishll_id, user_id, label_name, created
+             FROM customer_wishlist_label ORDER BY wishll_id'
+        );
+        echo "  Found " . count($rows) . " legacy wishlist labels.\n\n";
+
+        $migrated = 0;
+        $skipped = 0;
+        $errors = 0;
+
+        $this->conn->beginTransaction();
+        try {
+            foreach ($rows as $row) {
+                $legacyId = (int) $row['wishll_id'];
+
+                $legacyUserId = (int) ($row['user_id'] ?? 0);
+                $userId = $userMap[$legacyUserId] ?? null;
+                if ($userId === null) {
+                    $this->log->skip('wishlist_labels', $legacyId, "User not migrated for user_id={$legacyUserId}");
+                    $skipped++;
+                    continue;
+                }
+
+                $name = trim((string) ($row['label_name'] ?? ''));
+                if ($name === '') {
+                    $name = 'Saved';
+                }
+                if (mb_strlen($name) > 80) {
+                    $name = mb_substr($name, 0, 80);
+                }
+
+                $createdAt = $this->parseLegacyTimestamp((string) ($row['created'] ?? '')) ?? date('Y-m-d H:i:sP');
+
+                try {
+                    // (1) Already migrated by legacy id -> UPDATE name.
+                    $byLegacy = $this->conn->fetchAssociative(
+                        'SELECT id FROM wishlist_labels WHERE legacy_wishlist_label_id = ?',
+                        [$legacyId]
+                    );
+                    if ($byLegacy !== false) {
+                        $this->conn->executeStatement(
+                            'UPDATE wishlist_labels SET name = :name WHERE id = :id',
+                            ['name' => $name, 'id' => (int) $byLegacy['id']]
+                        );
+                        $migrated++;
+                        continue;
+                    }
+
+                    // (2) A v3 row already exists for (user_id, name) -> ADOPT it.
+                    $byUserName = $this->conn->fetchAssociative(
+                        'SELECT id FROM wishlist_labels WHERE user_id = ? AND name = ?',
+                        [$userId, $name]
+                    );
+                    if ($byUserName !== false) {
+                        $this->conn->executeStatement(
+                            'UPDATE wishlist_labels SET legacy_wishlist_label_id = :legacy_id WHERE id = :id',
+                            ['legacy_id' => $legacyId, 'id' => (int) $byUserName['id']]
+                        );
+                        $migrated++;
+                        continue;
+                    }
+
+                    // (3) INSERT new, preserving created_at.
+                    $this->conn->executeStatement(
+                        "INSERT INTO wishlist_labels
+                            (legacy_wishlist_label_id, user_id, name, created_at)
+                         VALUES
+                            (:legacy_id, :user_id, :name, :created)",
+                        [
+                            'legacy_id' => $legacyId,
+                            'user_id' => $userId,
+                            'name' => $name,
+                            'created' => $createdAt,
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    $this->log->error('wishlist_labels', $legacyId, "migrate failed: " . $e->getMessage());
+                    $errors++;
+                    continue;
+                }
+                $migrated++;
+            }
+
+            $this->conn->executeStatement(
+                "SELECT setval('wishlist_labels_id_seq', COALESCE((SELECT MAX(id) FROM wishlist_labels), 0) + 1, false)"
+            );
+
+            if ($this->dryRun) {
+                $this->conn->rollBack();
+            } else {
+                $this->conn->commit();
+            }
+        } catch (\Throwable $e) {
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
+            throw $e;
+        }
+
+        echo "  migrated={$migrated} skipped={$skipped} errors={$errors}"
+            . ($this->dryRun ? " (DRY RUN — rolled back)" : "") . "\n\n";
+        return ['migrated' => $migrated, 'skipped' => $skipped, 'errors' => $errors];
+    }
+
+    /**
+     * Migrate wishlist items (saved products).
+     *
+     * Legacy: wishlist
+     *   (wishlist_id PK, user_id, wishll_id = label fk, product_id, created)
+     *
+     * v3: wishlist (user_id, product_id, label_id, created_at)
+     *     UNIQUE (user_id, product_id). No updated_at.
+     *
+     * Resolves BOTH user (users.legacy_user_id) AND product
+     * (products.legacy_product_id); skip+log if EITHER missing. Optional
+     * label resolved via wishlist_labels.legacy_wishlist_label_id =
+     * legacy wishll_id (NULL if not found).
+     *
+     * Legacy has duplicate (user, product) across folders; v3 keeps one
+     * row per (user_id, product_id). Idempotent UPSERT:
+     *   ON CONFLICT (user_id, product_id) DO UPDATE SET label_id (last
+     *   folder seen wins), created_at preserved on first insert.
+     *
+     * @return array{migrated: int, skipped: int, errors: int}
+     */
+    public function migrateWishlist(): array
+    {
+        echo "===== migrate-wishlist =====\n";
+
+        $userMap = [];
+        foreach ($this->conn->fetchAllAssociative('SELECT id, legacy_user_id FROM users WHERE legacy_user_id IS NOT NULL') as $r) {
+            $userMap[(int) $r['legacy_user_id']] = (int) $r['id'];
+        }
+        $productMap = [];
+        foreach ($this->conn->fetchAllAssociative('SELECT id, legacy_product_id FROM products WHERE legacy_product_id IS NOT NULL') as $r) {
+            $productMap[(int) $r['legacy_product_id']] = (int) $r['id'];
+        }
+        $labelMap = [];
+        foreach ($this->conn->fetchAllAssociative('SELECT id, legacy_wishlist_label_id FROM wishlist_labels WHERE legacy_wishlist_label_id IS NOT NULL') as $r) {
+            $labelMap[(int) $r['legacy_wishlist_label_id']] = (int) $r['id'];
+        }
+
+        $rows = $this->legacy->fetchAll(
+            'SELECT wishlist_id, user_id, wishll_id, product_id, created
+             FROM wishlist ORDER BY wishlist_id'
+        );
+        echo "  Found " . count($rows) . " legacy wishlist items.\n\n";
+
+        $migrated = 0;
+        $skipped = 0;
+        $errors = 0;
+
+        $this->conn->beginTransaction();
+        try {
+            foreach ($rows as $row) {
+                $legacyId = (int) $row['wishlist_id'];
+
+                $legacyUserId = (int) ($row['user_id'] ?? 0);
+                $userId = $userMap[$legacyUserId] ?? null;
+                if ($userId === null) {
+                    $this->log->skip('wishlist', $legacyId, "User not migrated for user_id={$legacyUserId}");
+                    $skipped++;
+                    continue;
+                }
+
+                $legacyProductId = (int) ($row['product_id'] ?? 0);
+                $productId = $productMap[$legacyProductId] ?? null;
+                if ($productId === null) {
+                    $this->log->skip('wishlist', $legacyId, "Product not migrated for product_id={$legacyProductId}");
+                    $skipped++;
+                    continue;
+                }
+
+                $legacyLabelId = (int) ($row['wishll_id'] ?? 0);
+                $labelId = $labelMap[$legacyLabelId] ?? null;
+
+                $createdAt = $this->parseLegacyTimestamp((string) ($row['created'] ?? '')) ?? date('Y-m-d H:i:sP');
+
+                try {
+                    $this->conn->executeStatement(
+                        "INSERT INTO wishlist
+                            (user_id, product_id, label_id, created_at)
+                         VALUES
+                            (:user_id, :product_id, :label_id, :created)
+                         ON CONFLICT (user_id, product_id) DO UPDATE SET
+                             label_id = EXCLUDED.label_id",
+                        [
+                            'user_id' => $userId,
+                            'product_id' => $productId,
+                            'label_id' => $labelId,
+                            'created' => $createdAt,
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    $this->log->error('wishlist', $legacyId, "UPSERT failed: " . $e->getMessage());
+                    $errors++;
+                    continue;
+                }
+                $migrated++;
+            }
+
+            $this->conn->executeStatement(
+                "SELECT setval('wishlist_id_seq', COALESCE((SELECT MAX(id) FROM wishlist), 0) + 1, false)"
+            );
+
+            if ($this->dryRun) {
+                $this->conn->rollBack();
+            } else {
+                $this->conn->commit();
+            }
+        } catch (\Throwable $e) {
+            try {
+                if ($this->conn->isTransactionActive()) {
+                    $this->conn->rollBack();
+                }
+            } catch (\Throwable) {}
+            throw $e;
+        }
+
+        echo "  migrated={$migrated} skipped={$skipped} errors={$errors}"
+            . ($this->dryRun ? " (DRY RUN — rolled back)" : "") . "\n\n";
+        return ['migrated' => $migrated, 'skipped' => $skipped, 'errors' => $errors];
     }
 }
