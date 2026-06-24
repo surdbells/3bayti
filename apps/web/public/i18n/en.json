@@ -535,6 +535,19 @@
       "notFoundBody": "We couldn't find that store. They may have moved or are no longer with us.",
       "backToDirectory": "Browse all stores",
       "loadError": "We couldn't load this store. Please try again."
+    },
+    "reviews": {
+      "title": "Reviews",
+      "readReviews": "Read reviews",
+      "countOne": "1 review",
+      "countMany": "{{count}} reviews",
+      "starsAria": "{{star}} out of 5 stars",
+      "anonymous": "Anonymous",
+      "verified": "Verified buyer",
+      "vendorReply": "Store response",
+      "loadMore": "Load more",
+      "emptyTitle": "No reviews yet",
+      "emptyBody": "This store hasn't received any reviews yet. Check back soon."
     }
   },
   "account": {
@@ -1042,6 +1055,25 @@
       "emptyTitle": "No reviews yet",
       "emptyHint": "Verified buyer reviews will appear here once this product has been reviewed."
     },
+    "sizeGuide": {
+      "trigger": "Size guide",
+      "title": "Size guide",
+      "note": "All measurements are in centimetres (cm). Use this as a guide — fit may vary by style.",
+      "sizeColumn": "Size",
+      "close": "Close size guide",
+      "empty": "This store hasn't published a size guide yet.",
+      "error": "We couldn't load the size guide. Please try again.",
+      "dimensions": {
+        "bust": "Bust",
+        "waist": "Waist",
+        "hip": "Hip",
+        "length": "Length",
+        "neck": "Neck",
+        "arm": "Arm",
+        "armhole": "Armhole",
+        "shoulder": "Shoulder"
+      }
+    },
     "savePercent": "Save {{pct}}%",
     "inStock": "In stock",
     "outOfStock": "Out of stock",
@@ -1220,6 +1252,7 @@
     "product": "Product · 3bayti",
     "stores": "Stores · 3bayti",
     "storeDetail": "Store · 3bayti",
+    "storeReviews": "Store Reviews · 3bayti",
     "bestSellers": "Best Sellers · 3bayti",
     "newArrivals": "New Arrivals · 3bayti",
     "giftCards": "Gift Cards · 3bayti",

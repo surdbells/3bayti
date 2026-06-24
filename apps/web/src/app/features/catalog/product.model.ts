@@ -91,6 +91,25 @@ export interface ProductColor {
   in_stock: boolean;
 }
 
+/**
+ * A single store size-chart row, as returned by
+ * GET /v3/vendors/{slug}/size-chart. Shape mirrors the mobile/portal
+ * VendorSizeChartController::shapeRow:
+ *   { id, size, values:{...}, created_at, updated_at }
+ *
+ * `values` is an open map of garment dimensions (bust/waist/hip/length/
+ * neck/arm/armhole/shoulder + any extra numeric keys the vendor added).
+ * Each value is a number (cm); the size-guide modal flattens this map
+ * across a fixed column order.
+ */
+export interface StoreSizeChartRow {
+  id: number;
+  size: string;
+  values: Record<string, number>;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
 /** A single review entry as returned in product detail. */
 export interface ProductReview {
   id: number;

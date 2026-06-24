@@ -32,8 +32,16 @@ import {
   ShareButtonsComponent,
 } from '../../shared/ui';
 import { ProductCardComponent } from './product-card';
-import type { Money, Product, ProductDetail, ProductSize, ProductColor } from './product.model';
+import type {
+  Money,
+  Product,
+  ProductDetail,
+  ProductSize,
+  ProductColor,
+  StoreSizeChartRow,
+} from './product.model';
 import { RecommendationsService } from './recommendations.service';
+import { StoreService } from './store.service';
 import { CartService } from '../../core/cart/cart.service';
 import { CartDrawerService } from '../../core/cart/cart-drawer.service';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
@@ -102,6 +110,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   private routed = inject(RoutedHttpClient);
   private seo = inject(SeoService);
   private recsService = inject(RecommendationsService);
+  private stores = inject(StoreService);
   private cart = inject(CartService);
   private cartDrawer = inject(CartDrawerService);
   private i18n = inject(TranslateService);
@@ -370,6 +379,155 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
   /** Optional on-PDP guidance shown beside the extra-measurement field. */
   readonly measurementInstructions = computed(() => this.product()?.measurement_instructions ?? null);
 
+  /* ----- Size guide (store size chart) -----------------------------------
+   * A "Size guide" link sits beside the Sizes fieldset legend and opens a
+   * modal table of the STORE's published size chart (GET /vendors/:slug/
+   * size-chart). Mirrors the mobile size-chart sheet.
+   *
+   * Shown only when the product offers sizes AND is not a made-to-measure
+   * product (web equivalent of mobile's `!size_custom`): a custom-measurement
+   * product is cut to the shopper's own body, so a generic store size chart
+   * is meaningless there. requiresExtraMeasurement() is the product-level
+   * made-to-measure flag.
+   *
+   * Columns mirror mobile: `size` plus a fixed dimension order, each row
+   * flattening its values{} map. Dimensions with no data in ANY row are
+   * dropped so the table never shows an all-empty column. */
+  private static readonly SIZE_GUIDE_DIMENSIONS = [
+    'bust', 'waist', 'hip', 'length', 'neck', 'arm', 'armhole', 'shoulder',
+  ] as const;
+
+  /** Whether to show the "Size guide" trigger beside the Sizes legend. */
+  readonly showSizeGuide = computed(
+    () => this.hasSizes() && !this.requiresExtraMeasurement(),
+  );
+
+  /** Modal open/close. */
+  readonly sizeGuideOpen = signal(false);
+  /** True while the chart request is in flight. */
+  readonly sizeGuideLoading = signal(false);
+  /** Set when the fetch fails outright (vs. an empty-but-successful chart). */
+  readonly sizeGuideError = signal(false);
+  /** The fetched chart rows (empty array = no chart published). */
+  readonly sizeGuideRows = signal<StoreSizeChartRow[]>([]);
+  /** Guards re-fetching the chart once it's loaded for this product. */
+  private sizeGuideLoadedFor: string | null = null;
+  /** Restores focus to the trigger when the modal closes. */
+  private sizeGuideTrigger: HTMLElement | null = null;
+
+  @ViewChild('sizeGuideDialog') private sizeGuideDialogEl?: ElementRef<HTMLElement>;
+  @ViewChild('sizeGuideClose') private sizeGuideCloseBtn?: ElementRef<HTMLButtonElement>;
+
+  /**
+   * Dimension columns to render — the fixed order above, filtered to those
+   * with at least one numeric value across the loaded rows. Keeps the table
+   * compact: a store that only fills bust/waist/length shows three columns,
+   * not eight mostly-empty ones.
+   */
+  readonly sizeGuideColumns = computed<string[]>(() => {
+    const rows = this.sizeGuideRows();
+    if (rows.length === 0) return [];
+    return ProductDetailComponent.SIZE_GUIDE_DIMENSIONS.filter((dim) =>
+      rows.some((r) => {
+        const v = r.values?.[dim];
+        return typeof v === 'number' && Number.isFinite(v);
+      }),
+    );
+  });
+
+  /** True once a successful fetch returned zero rows (empty-state in modal). */
+  readonly sizeGuideEmpty = computed(
+    () =>
+      !this.sizeGuideLoading() &&
+      !this.sizeGuideError() &&
+      this.sizeGuideRows().length === 0,
+  );
+
+  /** Read a single cell value for the template (formatted, or an em-dash). */
+  sizeGuideCell(row: StoreSizeChartRow, dim: string): string {
+    const v = row.values?.[dim];
+    if (typeof v !== 'number' || !Number.isFinite(v)) return '—';
+    /* Trim a trailing .0 so whole numbers read "92" not "92.0". */
+    return Number.isInteger(v) ? String(v) : String(v);
+  }
+
+  /** Localised label for a dimension column header. */
+  sizeGuideColumnLabel(dim: string): string {
+    return this.i18n.instant(`product.sizeGuide.dimensions.${dim}`);
+  }
+
+  /** Open the size-guide modal, lazily fetching the chart on first open. */
+  openSizeGuide(): void {
+    const slug = this.product()?.vendor?.slug;
+    if (!slug) return;
+
+    this.sizeGuideTrigger =
+      typeof document !== 'undefined'
+        ? (document.activeElement as HTMLElement | null)
+        : null;
+    this.sizeGuideOpen.set(true);
+    setTimeout(() => this.sizeGuideCloseBtn?.nativeElement.focus(), 0);
+
+    if (this.sizeGuideLoadedFor === slug) return;
+    void this.loadSizeGuide(slug);
+  }
+
+  /** Close the modal and restore focus to the trigger. */
+  closeSizeGuide(): void {
+    if (!this.sizeGuideOpen()) return;
+    this.sizeGuideOpen.set(false);
+    this.sizeGuideTrigger?.focus();
+    this.sizeGuideTrigger = null;
+  }
+
+  /** Close only when the backdrop itself (not the dialog) is clicked. */
+  onSizeGuideBackdrop(event: MouseEvent): void {
+    if (event.target === event.currentTarget) this.closeSizeGuide();
+  }
+
+  /** Esc closes; Tab is trapped within the dialog. */
+  onSizeGuideKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.closeSizeGuide();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const root = this.sizeGuideDialogEl?.nativeElement;
+    if (!root) return;
+    const focusables = Array.from(
+      root.querySelectorAll<HTMLElement>('button:not([disabled])'),
+    );
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  private async loadSizeGuide(slug: string): Promise<void> {
+    this.sizeGuideLoading.set(true);
+    this.sizeGuideError.set(false);
+    try {
+      const rows = await this.stores.getSizeChart(slug);
+      this.sizeGuideRows.set(rows);
+      this.sizeGuideLoadedFor = slug;
+    } catch {
+      /* 404 (unknown slug) or transient failure → error state; the modal
+         offers a retry by reopening (loadedFor stays null so it re-fetches). */
+      this.sizeGuideRows.set([]);
+      this.sizeGuideError.set(true);
+    } finally {
+      this.sizeGuideLoading.set(false);
+    }
+  }
+
   /** Whether the chosen size is the made-to-order "CUSTOM" option. */
   readonly isCustomSize = computed(() => (this.selectedSize() ?? '').toUpperCase() === 'CUSTOM');
   /** True when the product's category makes size selection optional. */
@@ -562,6 +720,12 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       this.customPrefilled.set(false);
       this.quantity.set(1);
       this.addError.set(null);
+      /* Reset the size-guide modal so a previous store's chart never leaks
+         into the next product. */
+      this.sizeGuideOpen.set(false);
+      this.sizeGuideRows.set([]);
+      this.sizeGuideError.set(false);
+      this.sizeGuideLoadedFor = null;
     });
 
     /* Prefill the custom-size form from the saved account default the first

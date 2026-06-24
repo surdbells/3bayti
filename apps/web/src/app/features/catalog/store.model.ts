@@ -53,3 +53,34 @@ export interface StoreListParams {
   limit?: number;
   offset?: number;
 }
+
+/**
+ * A public store review — what GET /v3/vendors/{slug}/reviews returns
+ * (ReviewSerializer::publicShape). Covers both product reviews and the
+ * migrated store-level reviews (product_id null). Never exposes status
+ * or the reviewer's email.
+ */
+export interface StoreReview {
+  id: number;
+  /** Null for store-level (migrated) reviews. */
+  product_id: number | null;
+  product_name?: string | null;
+  /** Reviewer display name. */
+  reviewer: string;
+  /** Star rating 1–5. */
+  star: number;
+  title?: string | null;
+  comment?: string | null;
+  /** Optional vendor reply to the review. */
+  vendor_reply?: string | null;
+  is_verified?: boolean;
+  helpful_count?: number;
+  created_at?: string | null;
+}
+
+/** Result of a paginated store-reviews fetch. */
+export interface StoreReviewsPage {
+  items: StoreReview[];
+  total: number;
+  hasMore: boolean;
+}

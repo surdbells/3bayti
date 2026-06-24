@@ -1,8 +1,14 @@
 import { Injectable, signal, computed, Signal, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { RoutedHttpClient } from '../../core/http/routed-http-client';
-import type { Store, DirectoryStore, StoreListParams } from './store.model';
-import type { Product } from './product.model';
+import type {
+  Store,
+  DirectoryStore,
+  StoreListParams,
+  StoreReview,
+  StoreReviewsPage,
+} from './store.model';
+import type { Product, StoreSizeChartRow } from './product.model';
 import type { FeaturedVendor } from './store-card';
 
 /** Default page size for the directory + per-store product grids.
@@ -130,6 +136,51 @@ export class StoreService {
     return {
       items: Array.isArray(env.data) ? env.data : [],
       hasMore: env.meta?.has_more ?? false,
+    };
+  }
+
+  /**
+   * A store's published size guide (public, by slug). Stateless — the PDP's
+   * size-guide modal owns the result. Returns the rows as-is; an empty array
+   * means the store has no chart (the modal shows its empty state). A 404
+   * (unknown slug) propagates so the caller can degrade to the empty state.
+   *
+   * Mirrors the mobile size-chart sheet, which hits the by-legacy-id variant
+   * of the same v3 endpoint.
+   */
+  async getSizeChart(slug: string): Promise<StoreSizeChartRow[]> {
+    const env = await firstValueFrom(
+      this.http.get<StoreSizeChartRow[]>('GET /vendors/:slug/size-chart', {
+        params: { slug },
+      }),
+    );
+    return Array.isArray(env.data) ? env.data : [];
+  }
+
+  /**
+   * A page of a store's public (approved) reviews, by slug. Stateless — the
+   * store-reviews page owns the accumulator. Mirrors the mobile store-reviews
+   * list. `total` (from meta) drives hasMore so the page can load more until
+   * everything is shown.
+   */
+  async listReviews(
+    slug: string,
+    params: StoreListParams = {},
+  ): Promise<StoreReviewsPage> {
+    const limit = params.limit ?? DESIGNER_PAGE_SIZE;
+    const offset = params.offset ?? 0;
+    const env = await firstValueFrom(
+      this.http.get<StoreReview[]>('GET /vendors/:slug/reviews', {
+        params: { slug },
+        query: { limit, offset },
+      }),
+    );
+    const items = Array.isArray(env.data) ? env.data : [];
+    const total = env.meta?.total ?? offset + items.length;
+    return {
+      items,
+      total,
+      hasMore: offset + items.length < total,
     };
   }
 }

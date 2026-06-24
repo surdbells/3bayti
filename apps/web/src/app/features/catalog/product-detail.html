@@ -185,7 +185,22 @@
           <!-- Sizes -->
           @if (p.sizes && p.sizes.length > 0) {
             <fieldset class="pdp-options">
-              <legend>{{ 'product.size' | translate }}</legend>
+              <div class="pdp-options__legend-row">
+                <legend>{{ 'product.size' | translate }}</legend>
+                @if (showSizeGuide()) {
+                  <button
+                    type="button"
+                    class="pdp-size-guide-trigger"
+                    (click)="openSizeGuide()"
+                    data-testid="pdp-size-guide-trigger"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M3 7h18v10H3zM7 7v3M11 7v5M15 7v3M19 7v5"/>
+                    </svg>
+                    {{ 'product.sizeGuide.trigger' | translate }}
+                  </button>
+                }
+              </div>
               <div class="pdp-chips">
                 @for (s of p.sizes; track s.label) {
                   <button
@@ -660,6 +675,81 @@
                 {{ activeImageIndex() + 1 }} / {{ imageCount() }}
               </span>
             }
+          </div>
+        </div>
+      }
+
+      <!-- Size-guide modal — the store's published size chart. Mounted only
+           while open; Esc closes, Tab is trapped, backdrop click closes.
+           Mirrors the mobile size-chart sheet. -->
+      @if (sizeGuideOpen()) {
+        <div class="pdp-size-guide" (click)="onSizeGuideBackdrop($event)">
+          <div
+            #sizeGuideDialog
+            class="pdp-size-guide__dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="size-guide-title"
+            (keydown)="onSizeGuideKeydown($event)"
+          >
+            <header class="pdp-size-guide__head">
+              <h2 id="size-guide-title" class="pdp-size-guide__title">
+                {{ 'product.sizeGuide.title' | translate }}
+              </h2>
+              <button
+                #sizeGuideClose
+                type="button"
+                class="pdp-size-guide__close"
+                (click)="closeSizeGuide()"
+                [attr.aria-label]="'product.sizeGuide.close' | translate"
+              >
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6L6 18"/>
+                </svg>
+              </button>
+            </header>
+
+            <div class="pdp-size-guide__body">
+              @if (sizeGuideLoading()) {
+                <p class="pdp-size-guide__status" data-testid="size-guide-loading">
+                  {{ 'common.loading' | translate }}
+                </p>
+              } @else if (sizeGuideError()) {
+                <p class="pdp-size-guide__status" data-testid="size-guide-error">
+                  {{ 'product.sizeGuide.error' | translate }}
+                </p>
+              } @else if (sizeGuideEmpty()) {
+                <p class="pdp-size-guide__status" data-testid="size-guide-empty">
+                  {{ 'product.sizeGuide.empty' | translate }}
+                </p>
+              } @else {
+                <p class="pdp-size-guide__note">
+                  {{ 'product.sizeGuide.note' | translate }}
+                </p>
+                <div class="pdp-size-guide__table-wrap">
+                  <table class="pdp-size-guide__table" data-testid="size-guide-table">
+                    <thead>
+                      <tr>
+                        <th scope="col">{{ 'product.sizeGuide.sizeColumn' | translate }}</th>
+                        @for (col of sizeGuideColumns(); track col) {
+                          <th scope="col">{{ sizeGuideColumnLabel(col) }}</th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (row of sizeGuideRows(); track row.id) {
+                        <tr>
+                          <th scope="row">{{ row.size }}</th>
+                          @for (col of sizeGuideColumns(); track col) {
+                            <td>{{ sizeGuideCell(row, col) }}</td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+            </div>
           </div>
         </div>
       }

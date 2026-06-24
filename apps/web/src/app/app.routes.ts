@@ -86,6 +86,15 @@ export const routes: Routes = [
     title: 'routeTitles.stores',
   },
   {
+    /* Store reviews — `/stores/:slug/reviews`. The store's public
+       (approved) reviews list. Target of store-card.ts's vendorReviewsUrl().
+       Registered before `stores/:slug` so the more specific path wins. */
+    path: 'stores/:slug/reviews',
+    loadComponent: () =>
+      import('./features/stores/store-reviews-page').then(m => m.StoreReviewsPageComponent),
+    title: 'routeTitles.storeReviews',
+  },
+  {
     /* Store detail — `/stores/:slug`. Store header + their product grid.
        (Formerly /designer/:slug.) */
     path: 'stores/:slug',

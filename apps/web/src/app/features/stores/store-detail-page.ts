@@ -86,6 +86,14 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
                   [innerHTML]="store()!.description"
                   data-testid="store-description"
                 ></p>
+                <a
+                  [routerLink]="['/stores', store()!.slug, 'reviews']"
+                  class="store-detail__reviews-link"
+                  data-testid="store-reviews-link"
+                >
+                  {{ 'stores.reviews.readReviews' | translate }}
+                  <span aria-hidden="true">›</span>
+                </a>
               </div>
             </header>
 

@@ -101,6 +101,28 @@
   max-width: 640px;
 }
 
+.store-detail__reviews-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-brand-700, #5a3a2c);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+    outline: none;
+  }
+}
+
+/* Flip the trailing chevron in RTL. */
+:host-context([dir='rtl']) .store-detail__reviews-link span {
+  transform: scaleX(-1);
+}
+
 /* --- Collection ----------------------------------------------------- */
 
 .store-detail__section-title {

@@ -260,6 +260,29 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/vendors/:slug/products',
     shape: 'v3-envelope',
   },
+  // PUBLIC store size guide by SLUG (web PDP size-guide modal). Slug-native
+  // sibling of the mobile 'GET /vendors/:vendorId/size-chart' (legacy-id)
+  // entry. Both return the canonical
+  // { data:[{id,size,values,...}], meta:{total} } shape via
+  // VendorSizeChartController::shapeRow. v3-only; no legacy path.
+  'GET /vendors/:slug/size-chart': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/vendors/:slug/size-chart',
+    shape: 'v3-envelope',
+  },
+  // PUBLIC store reviews by SLUG (web store-reviews page). Same v3 controller
+  // (ListVendorPublicReviewsController) as the numeric
+  // 'GET /vendors/:vendorId/reviews' entry — that controller now resolves the
+  // path arg flexibly (numeric -> v3 PK / legacy id, non-numeric -> slug).
+  // Distinct routeKey so the web client substitutes the slug into :slug.
+  // v3-only; no legacy path.
+  'GET /vendors/:slug/reviews': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/vendors/:slug/reviews',
+    shape: 'v3-envelope',
+  },
   // Designer Spotlight strip on the home page. M3.2.X.2 shipped
   // the v3 endpoint (POST /v3/featured-vendors with the embedded-
   // products + rating aggregate shape that matches apps/web's
