@@ -89,6 +89,9 @@ importers:
       '@capawesome/capacitor-app-update':
         specifier: ^8.0.3
         version: 8.0.3(@capacitor/core@8.3.3)
+      '@capgo/capacitor-updater':
+        specifier: ^8
+        version: 8.49.7(@capacitor/core@8.3.3)
       '@capgo/inappbrowser':
         specifier: 8.0.6
         version: 8.0.6(@capacitor/core@8.3.3)
@@ -1812,6 +1815,11 @@ packages:
     resolution: {integrity: sha512-5pS9I+i2TuUl8b6L3h2WsWF/PE68exzoc9CciXK/I2SdB2fIkdxObrYBeYS2Z09ndCGqJgx4iwZJmhXwVcMh4w==}
     peerDependencies:
       '@capacitor/core': '>=8.0.0'
+
+  '@capgo/capacitor-updater@8.49.7':
+    resolution: {integrity: sha512-zewMYUiiSMxn4CB3yF0y7gB/I8fks06vXdhq3bRwmFFW/nwtgi37uGYgfn5x5PmURWbLfI43ds6wKE/D/4SFAg==}
+    peerDependencies:
+      '@capacitor/core': ^8.0.0
 
   '@capgo/inappbrowser@8.0.6':
     resolution: {integrity: sha512-OTVM9p+zvhtPbjUjMJQNx3gLRigTLUBqvfQqYy4yOKFCRJvTVd/jdYbr9Xhe9GDO9JJzbCsVOPOAQloUvEcsUA==}
@@ -13462,6 +13470,10 @@ snapshots:
       '@capacitor/core': 8.3.3
 
   '@capawesome/capacitor-app-update@8.0.3(@capacitor/core@8.3.3)':
+    dependencies:
+      '@capacitor/core': 8.3.3
+
+  '@capgo/capacitor-updater@8.49.7(@capacitor/core@8.3.3)':
     dependencies:
       '@capacitor/core': 8.3.3
 

@@ -7,6 +7,29 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],
     },
+    // OTA web-bundle updates via Capgo Cloud (@capgo/capacitor-updater).
+    // Division of responsibility (see app.component.ts + AppUpdateService):
+    //   - CapacitorUpdater (this) = WEB/JS bundle OTA. Ships new Angular
+    //     builds into the SAME installed native shell, instantly, without
+    //     going through the app store. CANNOT change native code/plugins.
+    //   - AppUpdateService / AxUpdatePromptComponent = mandatory NATIVE
+    //     updates (new shell version) via the store gate. Unchanged.
+    // autoUpdate=true: on every resume the plugin checks Capgo Cloud,
+    //   downloads any new bundle in the background, and applies it on the
+    //   NEXT cold start. directUpdate=false: never swap the running bundle
+    //   mid-session (avoids a jarring in-place reload). resetWhenUpdate=true:
+    //   when the NATIVE shell is updated via the store, drop stale OTA
+    //   bundles so the fresh builtin wins. appReadyTimeout=10000: if
+    //   notifyAppReady() (called in app.component.ts) does not fire within
+    //   10s of a new bundle booting, AUTO-ROLLBACK to the last good bundle.
+    // Capgo CLOUD: leave updateUrl/statsUrl/channelUrl unset so the plugin
+    //   uses Capgo's hosted endpoints. Do NOT set custom URLs.
+    CapacitorUpdater: {
+      autoUpdate: true,
+      directUpdate: false,
+      resetWhenUpdate: true,
+      appReadyTimeout: 10000,
+    },
     // M32: native splash. Logo centered on canvas-color background.
     // Programmatically dismissed from app.component.ts after Angular
     // bootstrap completes (see SplashScreen.hide() call there), so

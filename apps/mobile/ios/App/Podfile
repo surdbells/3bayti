@@ -21,6 +21,7 @@ def capacitor_pods
   pod 'CapacitorSplashScreen', :path => '../../../../node_modules/.pnpm/@capacitor+splash-screen@8.0.1_@capacitor+core@8.3.3/node_modules/@capacitor/splash-screen'
   pod 'CapacitorStatusBar', :path => '../../../../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@8.3.3/node_modules/@capacitor/status-bar'
   pod 'CapawesomeCapacitorAppUpdate', :path => '../../../../node_modules/.pnpm/@capawesome+capacitor-app-update@8.0.3_@capacitor+core@8.3.3/node_modules/@capawesome/capacitor-app-update'
+  pod 'CapgoCapacitorUpdater', :path => '../../../../node_modules/.pnpm/@capgo+capacitor-updater@8.49.7_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-updater'
   pod 'CapgoInappbrowser', :path => '../../../../node_modules/.pnpm/@capgo+inappbrowser@8.0.6_@capacitor+core@8.3.3/node_modules/@capgo/inappbrowser'
 end
 
