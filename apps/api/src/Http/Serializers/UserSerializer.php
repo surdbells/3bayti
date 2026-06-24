@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Serializers;
 
+use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\User\User;
 
 /**
@@ -34,6 +35,11 @@ use Bayti\Api\Domain\User\User;
  */
 final class UserSerializer
 {
+    public function __construct(
+        private readonly VendorRepository $vendorRepository,
+    ) {
+    }
+
     /**
      * Public self-view — what the user sees about themselves on
      * /v3/auth/login and /v3/auth/me.
@@ -42,6 +48,22 @@ final class UserSerializer
      */
     public function publicProfile(User $user): array
     {
+        // Store state is owned by the Vendor record, NOT the legacy
+        // users.is_store_* columns. The approve/suspend flow updates the
+        // vendor but never synced those user columns (User::setStoreState
+        // was dead code), so /me/profile reported is_store_approved=false
+        // for genuinely-approved stores — hiding the mobile store FAB.
+        // Derive store flags + the 'vendor' role from the user's vendor(s),
+        // the same source of truth VendorAuthMiddleware already uses.
+        $vendors = $this->vendorRepository->findByOwnerUser($user);
+        $hasVendor = $vendors !== [];
+        $storeApproved = false;
+        $storeActive = false;
+        foreach ($vendors as $vendor) {
+            if ($vendor->isStoreApproved()) { $storeApproved = true; }
+            if ($vendor->isActive()) { $storeActive = true; }
+        }
+
         return [
             'id' => $user->getId(),
             'email' => $user->getEmail(),
@@ -66,14 +88,14 @@ final class UserSerializer
 
             'is_phone_verified' => $user->isPhoneVerified(),
             'is_email_verified' => $user->isEmailVerified(),
-            'roles' => $this->extractActiveRoles($user),
+            'roles' => $this->extractActiveRoles($user, $hasVendor),
             // RBAC: the granular permission keys the user effectively holds
             // (union of assigned roles; empty for plain customers/vendors) and
             // the assigned roles themselves — used by the portal to gate the UI.
             'permissions' => $user->effectivePermissionKeys(),
             'assigned_roles' => $this->assignedRoles($user),
-            'is_store_approved' => $user->isStoreApproved(),
-            'is_store_active' => $user->isStoreActive(),
+            'is_store_approved' => $storeApproved,
+            'is_store_active' => $storeActive,
             'last_login_at' => $user->getLastLoginAt()?->format(\DateTimeInterface::ATOM),
         ];
     }
@@ -89,11 +111,11 @@ final class UserSerializer
      *
      * @return string[]
      */
-    private function extractActiveRoles(User $user): array
+    private function extractActiveRoles(User $user, bool $hasVendor = false): array
     {
         return array_values(array_filter([
             $user->isCustomer() ? 'customer' : null,
-            $user->isVendor() ? 'vendor' : null,
+            ($user->isVendor() || $hasVendor) ? 'vendor' : null,
             $user->isAdmin() ? 'admin' : null,
             $user->isFinance() ? 'finance' : null,
             $user->isSupport() ? 'support' : null,
