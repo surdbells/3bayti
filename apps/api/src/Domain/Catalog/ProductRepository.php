@@ -266,14 +266,24 @@ class ProductRepository extends EntityRepository
             // some builder states). A string predicate is always appended.
             // ESCAPE '\' so the wildcards we escaped in $term are treated
             // literally.
+            // DISTINCT parameter names per column (bound to the same value).
+            // Re-using ONE named param across multiple placeholders breaks the
+            // cloned COUNT query — Doctrine mis-maps the expanded placeholders
+            // and Postgres throws HY093 "parameter was not defined". Binding a
+            // separate name per placeholder keeps the 1:1 mapping intact.
+            $like = '%' . $term . '%';
             $qb->andWhere(
                 "("
-                . "LOWER(p.name) LIKE :searchTerm ESCAPE '\\' OR "
-                . "LOWER(p.description) LIKE :searchTerm ESCAPE '\\' OR "
-                . "LOWER(v.name) LIKE :searchTerm ESCAPE '\\' OR "
-                . "LOWER(sc.name) LIKE :searchTerm ESCAPE '\\'"
+                . "LOWER(p.name) LIKE :stName ESCAPE '\\' OR "
+                . "LOWER(p.description) LIKE :stDesc ESCAPE '\\' OR "
+                . "LOWER(v.name) LIKE :stVendor ESCAPE '\\' OR "
+                . "LOWER(sc.name) LIKE :stCat ESCAPE '\\'"
                 . ")"
-            )->setParameter('searchTerm', '%' . $term . '%');
+            )
+            ->setParameter('stName', $like)
+            ->setParameter('stDesc', $like)
+            ->setParameter('stVendor', $like)
+            ->setParameter('stCat', $like);
         }
 
         // Total count for pagination (before limit/offset).
@@ -347,9 +357,11 @@ class ProductRepository extends EntityRepository
             // bound, escaped, lower-cased '%term%' used by the WHERE
             // clause above (guaranteed present — relevance only survives
             // when $hasSearch is true).
+            // Own param (:stRel) so no named parameter is ever used twice —
+            // keeps every placeholder a single bound value (see HY093 note above).
             $qb->addSelect(
-                "CASE WHEN LOWER(p.name) LIKE :searchTerm ESCAPE '\\' THEN 0 ELSE 1 END AS HIDDEN relevanceRank"
-            );
+                "CASE WHEN LOWER(p.name) LIKE :stRel ESCAPE '\\' THEN 0 ELSE 1 END AS HIDDEN relevanceRank"
+            )->setParameter('stRel', $like);
             $qb->orderBy('relevanceRank', 'ASC');
             $qb->addOrderBy('p.createdAt', 'DESC');
         } else {

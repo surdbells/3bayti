@@ -360,7 +360,7 @@ class OrderTimelineBuilder
         $sql = "
             SELECT
                 nl.id, nl.order_id, nl.template, nl.recipient, nl.status,
-                nl.sent_at, nl.last_failure_reason, nl.context, nl.created_at
+                nl.sent_at, nl.error_message AS last_failure_reason, nl.created_at
             FROM notification_logs nl
             WHERE nl.order_id = :orderId
         ";
