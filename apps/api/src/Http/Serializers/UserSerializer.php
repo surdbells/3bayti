@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Serializers;
 
-use Bayti\Api\Domain\Catalog\VendorRepository;
+use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\User\User;
+use Doctrine\ORM\EntityManagerInterface;
 
 /**
  * Convert User entities into public response shapes.
@@ -36,7 +37,7 @@ use Bayti\Api\Domain\User\User;
 final class UserSerializer
 {
     public function __construct(
-        private readonly VendorRepository $vendorRepository,
+        private readonly EntityManagerInterface $em,
     ) {
     }
 
@@ -55,7 +56,10 @@ final class UserSerializer
         // for genuinely-approved stores — hiding the mobile store FAB.
         // Derive store flags + the 'vendor' role from the user's vendor(s),
         // the same source of truth VendorAuthMiddleware already uses.
-        $vendors = $this->vendorRepository->findByOwnerUser($user);
+        // EntityManager (not the concrete VendorRepository) — Doctrine repos
+        // aren't PHP-DI-autowirable (their ClassMetadata ctor arg isn't
+        // guessable), which would break the compiled container.
+        $vendors = $this->em->getRepository(Vendor::class)->findBy(['ownerUser' => $user]);
         $hasVendor = $vendors !== [];
         $storeApproved = false;
         $storeActive = false;
