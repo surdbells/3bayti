@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Errors;
 
+use Bayti\Api\Domain\User\OtpRateLimitException;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -54,6 +55,14 @@ final class ApiErrorMiddleware implements MiddlewareInterface
     {
         try {
             return $handler->handle($request);
+        } catch (OtpRateLimitException $e) {
+            // Shared OTP 429 contract. Mapped HERE (not per-controller)
+            // so EVERY OTP path — otp-login, register/initiate, register
+            // email-OTP, send-otp resend, password reset, validate-phone
+            // — inherits it, including the verify-side per-code cap which
+            // no controller catches. Body is the flat shape the clients
+            // read:  { "error_code": "OTP_RATE_LIMITED", "retry_after": N }
+            return $this->renderOtpRateLimited($e);
         } catch (HttpException $e) {
             // Sentry policy (M1.6.2.A, Q2 = A):
             //   - 4xx HttpException = expected client errors (bad input,
@@ -111,6 +120,31 @@ final class ApiErrorMiddleware implements MiddlewareInterface
                 // Truly unrecoverable — give up silently.
             }
         }
+    }
+
+    /**
+     * Render the shared OTP rate-limit envelope: HTTP 429 with the FLAT
+     * body the mobile + web clients read:
+     *
+     *   { "error_code": "OTP_RATE_LIMITED", "retry_after": <int seconds> }
+     *
+     * `retry_after` is the seconds the client should lock out Resend AND
+     * Verify for (falling back to ~60s client-side if absent). We also
+     * set the standard Retry-After HTTP header for good measure.
+     *
+     * This is an EXPECTED 4xx (abuse throttle, not our bug) so it is NOT
+     * sent to Sentry — same policy as 4xx HttpExceptions.
+     */
+    private function renderOtpRateLimited(OtpRateLimitException $e): ResponseInterface
+    {
+        $retryAfter = $e->retryAfter;
+        $response = $this->responseFactory->createResponse(429)
+            ->withHeader('Retry-After', (string) $retryAfter);
+
+        return $this->writeJson($response, [
+            'error_code' => ErrorCodes::OTP_RATE_LIMITED,
+            'retry_after' => $retryAfter,
+        ]);
     }
 
     private function renderHttpException(HttpException $e): ResponseInterface

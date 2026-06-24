@@ -19,132 +19,112 @@ use Psr\Log\NullLogger;
  * OTP orchestrator — the seam between auth endpoints and the CPaaS.
  *
  * Responsibilities:
- *   1. Rate-limit OTP sends per phone (Redis-backed atomic INCR; M1.6.1.A)
- *   2. Call the CPaaS provider to send / verify
- *   3. Persist OtpAttempt rows for audit + later lookup
- *   4. Translate provider-level errors into domain-meaningful errors
+ *   1. Abuse-harden OTP sends + verifies at ONE chokepoint so every
+ *      auth path (otp-login, register/initiate, register email-OTP,
+ *      send-otp resend, password reset, validate-phone) inherits it.
+ *   2. Call the CPaaS / email provider to send + verify.
+ *   3. Persist OtpAttempt rows for audit + later lookup.
+ *   4. Translate provider-level errors into domain-meaningful errors.
  *
- * What this class does NOT do:
- *   - Generate OTP codes (CPaaS does that)
- *   - Verify codes locally (CPaaS does that)
- *   - Send the SMS itself (CPaaS does that)
- *   - Manage user lifecycle (caller's job — register/login/reset
- *     handlers know what user state to update on successful verify)
+ * Abuse-hardening model (the M-hardening rework)
+ * ----------------------------------------------
+ * send() enforces, IN ORDER:
  *
- * Usage from auth endpoints (M1.4):
+ *   (a) Per-destination cooldown + code reuse. If a send to this
+ *       destination+purpose happened < cooldown ago, we DO NOT dispatch
+ *       a new SMS/email — we re-use the latest usable (unexpired,
+ *       unconsumed) OtpAttempt and return its verification_id (true
+ *       resend-dedup). Last-send is tracked via a Redis cooldown key
+ *       AND the OtpAttempt.created_at, so it works even without Redis.
  *
- *   // /v3/auth/send-otp
- *   $vid = $otp->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
- *   return ['verification_id' => $vid];
+ *   (b) Per-destination hourly + daily caps (Redis INCR, two keys).
  *
- *   // /v3/auth/confirm
- *   $ok = $otp->verify($verificationId, $code);
- *   if ($ok) { ... activate user ... }
+ *   (c) Per-IP hourly + daily caps (Redis INCR). Skipped entirely when
+ *       the client IP can't be resolved — never block a legit user just
+ *       because we couldn't read their IP.
  *
- * Rate limiting evolution
- * -----------------------
- * M1.3 (original): SELECT COUNT FROM user_otp_attempts then INSERT.
- *                  Worked across workers (DB is shared) but had a
- *                  race window — two concurrent calls could both
- *                  pass the threshold check before either inserted.
- *                  Bounded race; not exploitable in practice.
+ * Each cap is ENV-CONFIGURABLE via OtpRateLimitConfig; a threshold of 0
+ * disables that specific check.
  *
- * M1.6.1.A (now):  Redis INCR (atomic) for the rate-limit counter,
- *                  Postgres INSERT for the audit row. The race
- *                  window is gone — INCR returns sequential values
- *                  to concurrent callers, so only the right number
- *                  of requests can pass the threshold.
- *
- * Why keep the DB row insert
+ * Fail-CLOSED on Redis error
  * --------------------------
- * The Redis counter is for rate-limit decisions. The DB row is for
- * audit / forensics ("who tried to register with this phone in the
- * last week, in what order?"). Each layer optimizes for its own
- * concern.
+ * The ORIGINAL design failed OPEN on a Redis error (unlimited sends).
+ * That is dangerous for the EMAIL channel, where ZeptoMail has no
+ * provider-side cap. We now fail CLOSED: on a Redis error we fall back
+ * to a DB COUNT of recent sends to this destination within the window,
+ * so the per-destination cap still holds. The per-IP check is skipped
+ * on Redis error (no DB column to fall back on, and it's the generous
+ * outer guard), but the per-destination cap — the one that actually
+ * bounds cost + abuse to a single target — is preserved.
  *
- * Fail-open on Redis failure
- * --------------------------
- * If Redis throws (down, network error, auth failed), we log the
- * error and proceed without the rate limit. Reasoning:
+ * Verify hardening
+ * ----------------
+ * verify() now mirrors the email attempt-cap for SMS: every failed
+ * provider verify increments OtpAttempt.attempts and BURNS the row at
+ * maxVerifyAttempts, instead of relying solely on MessageCentral. A
+ * per-verification-id Redis counter additionally caps total guesses per
+ * code so a single code can't be sprayed across processes. Hitting
+ * either cap raises OtpRateLimitException (429 + retry_after).
  *
- *   - A rate limit is defense in depth, not the only defense
- *   - MessageCentral itself rate-limits per phone on their side
- *   - Refusing all OTP sends because Redis is restarting is worse
- *     for users than briefly relaxed limits
- *   - Outages get logged + Sentry-alerted (when M1.6.2 ships) so
- *     ops can fix Redis fast
+ * 429 contract
+ * ------------
+ * Every limit raises OtpRateLimitException carrying a retry_after
+ * (seconds). ApiErrorMiddleware maps it to:
+ *   HTTP 429 { "error_code": "OTP_RATE_LIMITED", "retry_after": <int> }
  *
- * Bounded blast radius: rate-limit bypass during a Redis outage is
- * limited by the outage duration AND by MessageCentral's per-phone
- * caps on their end.
- *
- * Counter semantics
+ * Redis key formats
  * -----------------
- * Redis key format: "otp:rl:<phone>"
- * Value: count of sends in the rolling window
- * TTL: 3600s, set on first INCR (count == 1)
- *
- * The TTL refresh on first hit gives us a sliding window of sorts —
- * an attacker hitting at t=0, t=600, t=1200 will see the counter
- * grow 1, 2, 3 with each call (TTL doesn't reset on subsequent hits).
- * After t=3600 the key auto-expires and the next call resets to 1.
- *
- * Note: this is NOT a true sliding window. A true sliding window
- * would use a Redis sorted set with timestamps and ZRANGEBYSCORE.
- * The bucket-with-TTL approach has at most a 2x window edge case
- * (3 sends at t=3599, then 3 more at t=3601 — 6 sends in 2 sec).
- * Acceptable for a soft cap on SMS cost; if we ever need true
- * sliding window for a security-critical limit, swap implementations.
+ *   otp:cooldown:<purpose>:<dest> short-TTL last-send marker (dedup),
+ *                                 scoped per destination+purpose so a
+ *                                 registration send doesn't block a
+ *                                 password-reset send to the same target
+ *   otp:rl:<dest>                 per-destination hourly counter
+ *   otp:rl:day:<dest>             per-destination daily counter
+ *   otp:rl:ip:<ip>                per-IP hourly counter
+ *   otp:rl:ip:day:<ip>            per-IP daily counter
+ *   otp:vrl:<verificationId>      per-code verify-attempt counter
  */
 final class OtpService
 {
-    /**
-     * How long an OTP stays valid. Mirrors MessageCentral's TTL
-     * (configurable on their side per account; typically 5 min).
-     * If they extend it, we should bump this too so our findLatestUsable
-     * doesn't return rows MessageCentral would still accept.
-     */
+    /** OTP validity window. Mirrors MessageCentral's TTL (~5 min). */
     private const DEFAULT_TTL_SECONDS = 300;
 
-    /**
-     * Max sends per phone per rolling hour. Enforced via Redis INCR
-     * with a 3600s TTL. Soft cap against:
-     *   - Accidental UI loops (user clicks "resend OTP" 50 times)
-     *   - Bots scraping the registration endpoint
-     *   - Cost protection for our SMS bill
-     */
-    private const SENDS_PER_HOUR = 3;
+    private const HOUR_SECONDS = 3600;
+    private const DAY_SECONDS = 86400;
 
-    /** Rolling window length for the rate limit (seconds). */
-    private const RATE_LIMIT_WINDOW_SECONDS = 3600;
-
-    /** Redis key prefix for OTP rate-limit counters. */
-    private const RATE_LIMIT_KEY_PREFIX = 'otp:rl:';
+    // Redis key prefixes.
+    private const COOLDOWN_KEY_PREFIX = 'otp:cooldown:';
+    private const DEST_HOUR_KEY_PREFIX = 'otp:rl:';
+    private const DEST_DAY_KEY_PREFIX = 'otp:rl:day:';
+    private const IP_HOUR_KEY_PREFIX = 'otp:rl:ip:';
+    private const IP_DAY_KEY_PREFIX = 'otp:rl:ip:day:';
+    private const VERIFY_KEY_PREFIX = 'otp:vrl:';
 
     private readonly LoggerInterface $logger;
+    private readonly OtpRateLimitConfig $config;
 
     public function __construct(
         private readonly OtpProvider $provider,
         private readonly EntityManagerInterface $em,
         private readonly KeyValueStore $cache,
         private readonly LocalEmailOtpProvider $emailProvider,
+        ?OtpRateLimitConfig $config = null,
         ?LoggerInterface $logger = null,
     ) {
-        // Logger defaults to NullLogger so callers (including tests)
-        // don't have to wire one explicitly. M1.6.2 introduces a
-        // proper Monolog binding via DI; until then, this lets us
-        // emit warnings without forcing the dependency.
+        // Both default to safe no-arg objects so existing test call
+        // sites (which pass neither) keep working; the DI factory wires
+        // the env-driven config + the Monolog logger explicitly.
+        $this->config = $config ?? new OtpRateLimitConfig();
         $this->logger = $logger ?? new NullLogger();
     }
 
     /**
-     * Issue an OTP — ask the CPaaS to send, persist a tracking row.
+     * Issue an OTP — enforce the abuse limits, ask the provider to
+     * send (unless dedup reuses a still-valid code), persist a tracking
+     * row, and return the verificationId.
      *
-     * @return string the verificationId returned by the CPaaS
-     *
-     * @throws OtpRateLimitException When the per-phone rate limit
-     *                                is exceeded.
-     * @throws OtpProviderException  When the CPaaS rejects the send.
+     * @throws OtpRateLimitException When any send-side limit is exceeded.
+     * @throws OtpProviderException  When the provider rejects the send.
      */
     public function send(
         string $to,
@@ -160,33 +140,53 @@ final class OtpService
             throw new \InvalidArgumentException("Unknown OTP channel: {$channel}");
         }
 
-        // Rate limit check via Redis. Atomic INCR returns the new
-        // count after this hit. If it exceeds the cap, refuse.
-        // On Redis failure, we log and fail open — see class
-        // docblock for the rationale. We key on the destination (phone
-        // for SMS, email for the email channel) so each target gets the
-        // same hourly cap.
-        $this->enforceRateLimit($to);
-
-        if ($channel === OtpAttempt::CHANNEL_EMAIL) {
-            return $this->sendEmail($to, $purpose, $user, $requestedIp);
+        // (a) Resend-dedup: inside the cooldown, re-use the latest usable
+        //     code instead of dispatching again. Returns early when a
+        //     usable row exists; otherwise throws if we're still inside
+        //     the cooldown with nothing to reuse (so we never dispatch
+        //     within the cooldown).
+        $reused = $this->dedupWithinCooldown($to, $purpose, $channel);
+        if ($reused !== null) {
+            return $reused;
         }
 
-        // ---- SMS channel (MessageCentral) ----
-        // Ask CPaaS to send. If this throws, we don't insert any
-        // local record — provider failures don't pollute our audit
-        // trail with sends that didn't happen.
-        //
-        // Note: the Redis counter has already been incremented at this
-        // point. A failed CPaaS send still consumes a "send slot" from
-        // the rate limit. That's a deliberate trade-off: it makes the
-        // limit a "send attempts" cap rather than "successful sends",
-        // which is the right semantic for cost / abuse protection
-        // (each attempt costs us a CPaaS call regardless of outcome).
+        // Remember the destination+purpose for the post-dispatch cooldown
+        // stamp (keyed per destination+purpose to match the dedup lookup —
+        // a registration send must not block a password-reset send to the
+        // same phone).
+        $cooldownKey = self::COOLDOWN_KEY_PREFIX . $purpose . ':' . $to;
+
+        // (b) Per-destination hourly + daily caps.
+        $this->enforceDestinationCaps($to, $channel);
+
+        // (c) Per-IP hourly + daily caps (skipped when IP unresolved).
+        $this->enforceIpCaps($requestedIp);
+
+        $verificationId = $channel === OtpAttempt::CHANNEL_EMAIL
+            ? $this->sendEmail($to, $purpose, $user, $requestedIp)
+            : $this->sendSms($to, $purpose, $user, $requestedIp);
+
+        // Stamp the cooldown marker AFTER a successful dispatch so the
+        // next call inside the window dedups. Best-effort: a Redis error
+        // here is harmless (the DB created_at check still gates dedup).
+        $this->stampCooldown($cooldownKey);
+
+        return $verificationId;
+    }
+
+    /**
+     * SMS dispatch via MessageCentral + persist the audit row.
+     */
+    private function sendSms(
+        string $to,
+        string $purpose,
+        ?User $user,
+        ?string $requestedIp,
+    ): string {
+        // Ask CPaaS to send. If this throws, we don't insert any local
+        // record — provider failures don't pollute the audit trail.
         $verificationId = $this->provider->send($to);
 
-        // Persist the local audit row. Single transaction — flush
-        // after both the row and the provider call have succeeded.
         $expiresAt = (new DateTimeImmutable())->modify('+' . self::DEFAULT_TTL_SECONDS . ' seconds');
         /** @var OtpAttemptRepository $repo */
         $repo = $this->em->getRepository(OtpAttempt::class);
@@ -205,16 +205,10 @@ final class OtpService
     }
 
     /**
-     * Email-channel send — delegate to LocalEmailOtpProvider, which
-     * generates the code, persists the OtpAttempt (with code_hash),
-     * and emails the plaintext. Translate a transport failure into the
-     * same OtpProviderException the SMS path raises so controllers have
-     * one error model.
-     *
-     * The audit row records the recipient as `email`; we pass the
-     * user's phone (when available) into the NOT-NULL `phone` column so
-     * the row shape is consistent — but rate-limiting + lookup for this
-     * row key off the email/verification_id.
+     * Email-channel send — delegate to LocalEmailOtpProvider (which
+     * generates the code, persists the row with code_hash, and emails
+     * the plaintext). Translate a transport failure into the same
+     * OtpProviderException the SMS path raises.
      */
     private function sendEmail(
         string $email,
@@ -237,68 +231,257 @@ final class OtpService
         }
     }
 
+    // -------------------------------------------------------------------
+    // (a) Resend cooldown + code reuse
+    // -------------------------------------------------------------------
+
     /**
-     * Atomically increment the rate-limit counter for $phone and
-     * throw OtpRateLimitException if the cap is exceeded.
+     * If a dispatch to this destination+purpose happened within the
+     * cooldown, return the verification_id of the latest usable row
+     * (true resend-dedup) rather than sending again.
      *
-     * On any Redis failure, log a warning and return without
-     * throwing — fail-open behaviour. See class docblock.
+     * Returns:
+     *   - the reusable verification_id when inside the cooldown AND a
+     *     usable row exists (no new dispatch),
+     *   - null when past the cooldown (caller proceeds to dispatch).
+     *
+     * Throws OtpRateLimitException only if we're inside the cooldown but
+     * there's NO usable row to reuse — the contract says "never dispatch
+     * within the cooldown", so the right answer there is "wait", not
+     * "send a fresh code".
+     *
+     * Last-send detection uses the Redis cooldown key first (cheap,
+     * cross-worker). On a Redis miss/error we fall back to the latest
+     * row's created_at, so dedup still works without Redis.
      */
-    private function enforceRateLimit(string $phone): void
+    private function dedupWithinCooldown(string $to, string $purpose, string $channel): ?string
     {
-        $key = self::RATE_LIMIT_KEY_PREFIX . $phone;
-
-        try {
-            $count = $this->cache->incr($key);
-
-            // First hit in this window — set the TTL. Subsequent
-            // INCRs in the same window don't refresh the TTL, which
-            // is what we want (rolling window, not session reset).
-            if ($count === 1) {
-                $this->cache->expire($key, self::RATE_LIMIT_WINDOW_SECONDS);
-            }
-
-            if ($count > self::SENDS_PER_HOUR) {
-                throw new OtpRateLimitException(
-                    sprintf(
-                        'Too many OTP requests for %s in the last hour (%d of %d allowed).',
-                        $phone,
-                        $count,
-                        self::SENDS_PER_HOUR,
-                    ),
-                );
-            }
-        } catch (KeyValueStoreException $e) {
-            // Redis is down or unreachable. Fail open — log and
-            // allow the request. The OtpRateLimitException is
-            // re-raised above; only Redis-infrastructure errors
-            // hit this branch.
-            $this->logger->warning(
-                'OTP rate-limit cache failure — failing open',
-                [
-                    'phone' => $phone,
-                    'error' => $e->getMessage(),
-                ],
-            );
-            // Fall through to the CPaaS send.
+        $cooldown = $this->config->resendCooldownSeconds;
+        if ($cooldown <= 0) {
+            return null; // cooldown disabled
         }
+
+        /** @var OtpAttemptRepository $repo */
+        $repo = $this->em->getRepository(OtpAttempt::class);
+        $latest = $repo->findLatestUsableForDestination($to, $purpose, $channel);
+
+        $cooldownKey = self::COOLDOWN_KEY_PREFIX . $purpose . ':' . $to;
+        $secondsSinceLastSend = $this->secondsSinceLastSend($cooldownKey, $latest);
+        if ($secondsSinceLastSend === null || $secondsSinceLastSend >= $cooldown) {
+            return null; // past cooldown (or never sent) — allow dispatch
+        }
+
+        // Inside the cooldown. Re-use the existing usable code if we
+        // have one; otherwise force the client to wait out the window.
+        if ($latest !== null) {
+            return $latest->getVerificationId();
+        }
+
+        throw new OtpRateLimitException(
+            'OTP resend requested within the cooldown window.',
+            $this->retryAfter($cooldown - $secondsSinceLastSend),
+        );
     }
 
     /**
-     * Verify a user-supplied code against a previously-sent OTP.
+     * Seconds since the last dispatch for $cooldownKey, or null if
+     * unknown. Prefers the Redis cooldown marker (records the dispatch
+     * time as a unix timestamp); falls back to the latest usable row's
+     * created_at, so dedup still works without Redis.
+     */
+    private function secondsSinceLastSend(string $cooldownKey, ?OtpAttempt $latest): ?int
+    {
+        try {
+            $marker = $this->cache->get($cooldownKey);
+            if ($marker !== null && ctype_digit($marker)) {
+                $elapsed = time() - (int) $marker;
+                return $elapsed < 0 ? 0 : $elapsed;
+            }
+        } catch (KeyValueStoreException $e) {
+            $this->logger->warning('OTP cooldown cache read failed — falling back to DB created_at', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        if ($latest !== null) {
+            $elapsed = time() - $latest->getCreatedAt()->getTimestamp();
+            return $elapsed < 0 ? 0 : $elapsed;
+        }
+
+        return null;
+    }
+
+    /**
+     * Record the dispatch time so subsequent calls within the cooldown
+     * dedup. Best-effort — a Redis error is swallowed (the DB
+     * created_at path covers the no-Redis case).
+     */
+    private function stampCooldown(string $cooldownKey): void
+    {
+        $cooldown = $this->config->resendCooldownSeconds;
+        if ($cooldown <= 0) {
+            return;
+        }
+        try {
+            $this->cache->set($cooldownKey, (string) time(), $cooldown);
+        } catch (KeyValueStoreException $e) {
+            $this->logger->warning('OTP cooldown cache write failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // (b) Per-destination caps
+    // -------------------------------------------------------------------
+
+    /**
+     * Enforce the per-destination hourly + daily send caps. On a Redis
+     * error we fail CLOSED via a DB count within the window.
+     */
+    private function enforceDestinationCaps(string $to, string $channel): void
+    {
+        $this->enforceCap(
+            key: self::DEST_HOUR_KEY_PREFIX . $to,
+            limit: $this->config->sendsPerHour,
+            windowSeconds: self::HOUR_SECONDS,
+            destination: $to,
+            channel: $channel,
+            label: 'destination_hour',
+        );
+        $this->enforceCap(
+            key: self::DEST_DAY_KEY_PREFIX . $to,
+            limit: $this->config->sendsPerDay,
+            windowSeconds: self::DAY_SECONDS,
+            destination: $to,
+            channel: $channel,
+            label: 'destination_day',
+        );
+    }
+
+    /**
+     * Generic per-destination counter cap with fail-CLOSED DB fallback.
      *
-     * Returns:
-     *   - VerifyResult::Success if MessageCentral confirms the code
-     *   - VerifyResult::WrongCode if MessageCentral rejects it
-     *   - VerifyResult::Expired if our local row is past its TTL
-     *   - VerifyResult::Consumed if our local row is already used
-     *   - VerifyResult::NotFound if the verificationId isn't ours
+     * Primary path: atomic Redis INCR with a window TTL set on first
+     * hit. Over the limit → OtpRateLimitException with retry_after =
+     * remaining window TTL.
      *
-     * Caller should treat all non-Success results as 401 Unauthorized
-     * with a uniform "code didn't match" user message — distinguishing
-     * "wrong" from "expired" is a UX nicety, not security.
+     * Fallback (Redis error): DB COUNT of recent sends to this
+     * destination within the window. At/over the limit → throw. This is
+     * the fail-CLOSED behaviour — the per-destination cap survives a
+     * Redis outage, which matters most for the email channel.
+     */
+    private function enforceCap(
+        string $key,
+        int $limit,
+        int $windowSeconds,
+        string $destination,
+        string $channel,
+        string $label,
+    ): void {
+        if ($limit <= 0) {
+            return; // this cap disabled
+        }
+
+        try {
+            $count = $this->cache->incr($key);
+            if ($count === 1) {
+                $this->cache->expire($key, $windowSeconds);
+            }
+            if ($count > $limit) {
+                $retryAfter = $this->windowRetryAfter($windowSeconds);
+                throw new OtpRateLimitException(
+                    sprintf('OTP send cap exceeded (%s).', $label),
+                    $this->retryAfter($retryAfter),
+                );
+            }
+        } catch (KeyValueStoreException $e) {
+            // Fail CLOSED: count from the DB within the window.
+            $this->logger->warning('OTP rate-limit cache failure — DB fallback (fail-closed)', [
+                'cap' => $label,
+                'error' => $e->getMessage(),
+            ]);
+
+            /** @var OtpAttemptRepository $repo */
+            $repo = $this->em->getRepository(OtpAttempt::class);
+            $recent = $repo->countRecentSendsForDestination($destination, $channel, $windowSeconds);
+
+            // The current request is not yet persisted, so >= limit means
+            // this send would be the (limit+1)-th — refuse it.
+            if ($recent >= $limit) {
+                throw new OtpRateLimitException(
+                    sprintf('OTP send cap exceeded (%s, db-fallback).', $label),
+                    $this->retryAfter($windowSeconds),
+                );
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // (c) Per-IP caps
+    // -------------------------------------------------------------------
+
+    /**
+     * Enforce the per-IP hourly + daily caps. Skipped entirely when the
+     * IP can't be resolved (don't block legit users) or on a Redis error
+     * (no DB column to fall back on; the per-destination cap is the
+     * load-bearing guard and already fails closed).
+     */
+    private function enforceIpCaps(?string $ip): void
+    {
+        if ($ip === null || $ip === '') {
+            return;
+        }
+
+        $this->enforceIpCap(
+            key: self::IP_HOUR_KEY_PREFIX . $ip,
+            limit: $this->config->sendsPerIpHour,
+            windowSeconds: self::HOUR_SECONDS,
+            label: 'ip_hour',
+        );
+        $this->enforceIpCap(
+            key: self::IP_DAY_KEY_PREFIX . $ip,
+            limit: $this->config->sendsPerIpDay,
+            windowSeconds: self::DAY_SECONDS,
+            label: 'ip_day',
+        );
+    }
+
+    private function enforceIpCap(string $key, int $limit, int $windowSeconds, string $label): void
+    {
+        if ($limit <= 0) {
+            return;
+        }
+
+        try {
+            $count = $this->cache->incr($key);
+            if ($count === 1) {
+                $this->cache->expire($key, $windowSeconds);
+            }
+            if ($count > $limit) {
+                throw new OtpRateLimitException(
+                    sprintf('OTP send cap exceeded (%s).', $label),
+                    $this->retryAfter($this->windowRetryAfter($windowSeconds)),
+                );
+            }
+        } catch (KeyValueStoreException $e) {
+            // Per-IP has no DB fallback column — skip on Redis error
+            // rather than block. The per-destination cap (fail-closed)
+            // still bounds abuse against any single target.
+            $this->logger->warning('OTP per-IP rate-limit cache failure — skipping IP cap', [
+                'cap' => $label,
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    // -------------------------------------------------------------------
+    // verify()
+    // -------------------------------------------------------------------
+
+    /**
+     * Verify a user-supplied code.
      *
-     * @throws OtpProviderException When CPaaS itself fails
+     * @throws OtpProviderException  When the CPaaS itself fails.
+     * @throws OtpRateLimitException When the per-code verify cap is hit.
      */
     public function verify(string $verificationId, string $code): VerifyResult
     {
@@ -316,65 +499,41 @@ final class OtpService
             return VerifyResult::Expired;
         }
 
+        // Per-verification-id verify cap (cross-worker, Redis). A single
+        // code cannot be sprayed beyond maxVerifyAttempts total guesses.
+        // Raised BEFORE we burn anything else so the client gets a clear
+        // 429 + retry_after.
+        $this->enforceVerifyAttemptCap($verificationId);
+
         if ($attempt->isEmailChannel()) {
             return $this->verifyEmail($attempt, $code);
         }
 
-        // ---- SMS channel: delegate the code comparison to the CPaaS. ----
-        $ok = $this->provider->verify($verificationId, $code);
-        if (!$ok) {
-            return VerifyResult::WrongCode;
-        }
-
-        // Mark consumed and persist. Caller can do further user-state
-        // updates (mark phone verified, etc.) in their own transaction.
-        $attempt->markConsumed();
-        $this->em->flush();
-
-        return VerifyResult::Success;
+        return $this->verifySms($attempt, $code);
     }
 
     /**
-     * LOCAL verification for the email channel.
-     *
-     * Security invariants:
-     *   - attempt cap: once attempts >= MAX_EMAIL_ATTEMPTS the row is
-     *     burned (returns WrongCode without comparing) so online
-     *     brute-force is bounded.
-     *   - constant-time compare: password_verify() against code_hash.
-     *     We never compare plaintext, never load the code (we don't
-     *     have it — only its hash).
-     *   - increment-before-decide: every wrong guess increments the
-     *     counter and persists, so concurrent guesses still consume
-     *     attempts.
-     *   - on success: mark consumed (single-use) and persist.
-     *
-     * Expiry + consumed-at were already checked by the caller.
+     * SMS verify — delegate the code comparison to the CPaaS, but ALSO
+     * track failed attempts locally and burn the row at the cap (mirrors
+     * the email path). Previously we relied solely on MessageCentral's
+     * own retry cap; now a wrong guess increments attempts and the row
+     * becomes unusable once exhausted.
      */
-    private function verifyEmail(OtpAttempt $attempt, string $code): VerifyResult
+    private function verifySms(OtpAttempt $attempt, string $code): VerifyResult
     {
-        // Burn-on-exhaustion: refuse further guesses once the cap is
-        // reached. The row stays unusable until it expires / is purged.
-        if ($attempt->hasExhaustedAttempts()) {
+        // Burn-on-exhaustion: refuse further guesses once the local cap
+        // is reached, without calling the CPaaS again.
+        if ($this->attemptsExhausted($attempt)) {
             return VerifyResult::WrongCode;
         }
 
-        $hash = $attempt->getCodeHash();
-        if ($hash === null) {
-            // Defensive: an email-channel row with no hash can never
-            // match. Treat as a generic failure.
-            return VerifyResult::WrongCode;
-        }
-
-        if (!password_verify($code, $hash)) {
-            // Count the failed attempt and persist so the cap is
-            // enforced across requests.
+        $ok = $this->provider->verify($attempt->getVerificationId(), $code);
+        if (!$ok) {
             $attempt->incrementAttempts();
             $this->em->flush();
             return VerifyResult::WrongCode;
         }
 
-        // Correct code — consume (single-use) and persist.
         $attempt->markConsumed();
         $this->em->flush();
 
@@ -382,15 +541,115 @@ final class OtpService
     }
 
     /**
-     * Find the OtpAttempt row for a verificationId — useful for
-     * controllers that need to bind a user to an OTP after
-     * successful verification (e.g. linking the OTP to the User
-     * row that was just created during /v3/auth/confirm).
+     * LOCAL verification for the email channel. Unchanged semantics:
+     * attempt-cap burn, constant-time compare, increment-before-decide,
+     * mark-consumed on success.
+     */
+    private function verifyEmail(OtpAttempt $attempt, string $code): VerifyResult
+    {
+        if ($this->attemptsExhausted($attempt)) {
+            return VerifyResult::WrongCode;
+        }
+
+        $hash = $attempt->getCodeHash();
+        if ($hash === null) {
+            return VerifyResult::WrongCode;
+        }
+
+        if (!password_verify($code, $hash)) {
+            $attempt->incrementAttempts();
+            $this->em->flush();
+            return VerifyResult::WrongCode;
+        }
+
+        $attempt->markConsumed();
+        $this->em->flush();
+
+        return VerifyResult::Success;
+    }
+
+    /**
+     * True once the row's local attempt counter reaches the configured
+     * cap. Honours OtpAttempt::MAX_EMAIL_ATTEMPTS as the floor for the
+     * email channel (keeps the entity's published invariant) while the
+     * env-tunable maxVerifyAttempts governs both channels.
+     */
+    private function attemptsExhausted(OtpAttempt $attempt): bool
+    {
+        $cap = $this->config->maxVerifyAttempts;
+        if ($cap <= 0) {
+            // Verify cap disabled — defer entirely to the provider /
+            // expiry. Email rows still honour the entity-level cap so a
+            // disabled env knob can't make email codes brute-forceable.
+            return $attempt->isEmailChannel() && $attempt->hasExhaustedAttempts();
+        }
+        return $attempt->getAttempts() >= $cap;
+    }
+
+    /**
+     * Per-verification-id verify-attempt counter (Redis). Increments on
+     * every verify call for this code; over the cap raises a 429. On a
+     * Redis error we skip this counter — the per-row attempts column
+     * (incremented in verifySms/verifyEmail) still bounds guessing.
+     */
+    private function enforceVerifyAttemptCap(string $verificationId): void
+    {
+        $cap = $this->config->maxVerifyAttempts;
+        if ($cap <= 0) {
+            return;
+        }
+
+        $key = self::VERIFY_KEY_PREFIX . $verificationId;
+        try {
+            $count = $this->cache->incr($key);
+            if ($count === 1) {
+                // A verify counter only needs to outlive the OTP itself.
+                $this->cache->expire($key, self::DEFAULT_TTL_SECONDS);
+            }
+            if ($count > $cap) {
+                throw new OtpRateLimitException(
+                    'Too many verification attempts for this code.',
+                    $this->retryAfter($this->windowRetryAfter(self::DEFAULT_TTL_SECONDS)),
+                );
+            }
+        } catch (KeyValueStoreException $e) {
+            $this->logger->warning('OTP verify-cap cache failure — relying on per-row attempts', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Find the OtpAttempt row for a verificationId — used by controllers
+     * that bind a user to an OTP after a successful verify.
      */
     public function findAttempt(string $verificationId): ?OtpAttempt
     {
         /** @var OtpAttemptRepository $repo */
         $repo = $this->em->getRepository(OtpAttempt::class);
         return $repo->findByVerificationId($verificationId);
+    }
+
+    // -------------------------------------------------------------------
+    // helpers
+    // -------------------------------------------------------------------
+
+    /**
+     * Retry-after to report when a counter cap trips. KeyValueStore
+     * exposes no ttl() read, so we conservatively return the FULL window
+     * length — this never under-reports (the client may wait slightly
+     * longer than strictly necessary, which is the safe direction). A
+     * single seam so a future KeyValueStore::ttl() can refine it without
+     * touching every call site.
+     */
+    private function windowRetryAfter(int $windowSeconds): int
+    {
+        return $windowSeconds;
+    }
+
+    /** Clamp a retry-after to at least 1 second so clients never busy-loop. */
+    private function retryAfter(int $seconds): int
+    {
+        return $seconds < 1 ? 1 : $seconds;
     }
 }

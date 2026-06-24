@@ -70,6 +70,75 @@ class OtpAttemptRepository extends EntityRepository
     }
 
     /**
+     * Count sends to a destination in the last N seconds, channel-aware.
+     *
+     * The "destination" is the phone for SMS rows and the email for
+     * email rows — email rows store '' in the NOT-NULL `phone` column
+     * and the real recipient in `email`, so a plain phone match would
+     * miss them. This is the DB fallback the rate-limiter uses when
+     * Redis is unavailable (fail-CLOSED): the per-destination cap still
+     * holds, which matters most for the email channel (ZeptoMail has no
+     * provider-side cap).
+     */
+    public function countRecentSendsForDestination(
+        string $destination,
+        string $channel,
+        int $withinSeconds,
+    ): int {
+        $cutoff = (new DateTimeImmutable())->modify("-{$withinSeconds} seconds");
+        $qb = $this->createQueryBuilder('o')
+            ->select('COUNT(o.id)')
+            ->andWhere('o.channel = :channel')
+            ->andWhere('o.createdAt > :cutoff')
+            ->setParameter('channel', $channel)
+            ->setParameter('cutoff', $cutoff);
+
+        if ($channel === OtpAttempt::CHANNEL_EMAIL) {
+            $qb->andWhere('o.email = :dest');
+        } else {
+            $qb->andWhere('o.phone = :dest');
+        }
+
+        return (int) $qb->setParameter('dest', $destination)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
+    /**
+     * Most recent usable (unconsumed, unexpired) attempt for a
+     * destination+purpose, channel-aware. Used by the resend-cooldown
+     * dedup: within the cooldown window we re-use this row's
+     * verification_id instead of dispatching a fresh SMS/email.
+     */
+    public function findLatestUsableForDestination(
+        string $destination,
+        string $purpose,
+        string $channel,
+    ): ?OtpAttempt {
+        $now = new DateTimeImmutable();
+        $qb = $this->createQueryBuilder('o')
+            ->andWhere('o.purpose = :purpose')
+            ->andWhere('o.channel = :channel')
+            ->andWhere('o.consumedAt IS NULL')
+            ->andWhere('o.expiresAt > :now')
+            ->setParameter('purpose', $purpose)
+            ->setParameter('channel', $channel)
+            ->setParameter('now', $now)
+            ->orderBy('o.createdAt', 'DESC')
+            ->setMaxResults(1);
+
+        if ($channel === OtpAttempt::CHANNEL_EMAIL) {
+            $qb->andWhere('o.email = :dest');
+        } else {
+            $qb->andWhere('o.phone = :dest');
+        }
+
+        return $qb->setParameter('dest', $destination)
+            ->getQuery()
+            ->getOneOrNullResult();
+    }
+
+    /**
      * Cleanup job — delete OTP rows that expired more than `daysOld`
      * days ago. The audit value of these rows decays after ~30 days;
      * we don't need to keep them forever.

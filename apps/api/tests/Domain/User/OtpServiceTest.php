@@ -6,16 +6,17 @@ namespace Bayti\Api\Tests\Domain\User;
 
 use Bayti\Api\Domain\User\OtpAttempt;
 use Bayti\Api\Domain\User\OtpAttemptRepository;
+use Bayti\Api\Domain\User\OtpRateLimitConfig;
 use Bayti\Api\Domain\User\OtpRateLimitException;
 use Bayti\Api\Domain\User\OtpService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\VerifyResult;
 use Bayti\Api\Infrastructure\Cache\InMemoryKeyValueStore;
 use Bayti\Api\Infrastructure\Cache\KeyValueStore;
+use Bayti\Api\Infrastructure\Cache\KeyValueStoreException;
 use Bayti\Api\Infrastructure\Otp\InMemoryOtpProvider;
 use Bayti\Api\Infrastructure\Otp\OtpProvider;
 use DateTimeImmutable;
-use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -23,13 +24,14 @@ use PHPUnit\Framework\TestCase;
 #[CoversClass(OtpService::class)]
 #[CoversClass(VerifyResult::class)]
 #[CoversClass(OtpRateLimitException::class)]
+#[CoversClass(OtpRateLimitConfig::class)]
 #[CoversClass(InMemoryKeyValueStore::class)]
 final class OtpServiceTest extends TestCase
 {
     private InMemoryOtpProvider $provider;
     /** @var OtpAttemptRepository&\PHPUnit\Framework\MockObject\MockObject */
     private $repo;
-    /** @var EntityManagerInterface&\PHPUnit\Framework\MockObject\MockObject */
+    /** @var \Doctrine\ORM\EntityManagerInterface&\PHPUnit\Framework\MockObject\MockObject */
     private $em;
     private InMemoryKeyValueStore $cache;
 
@@ -41,19 +43,16 @@ final class OtpServiceTest extends TestCase
         $this->provider = new InMemoryOtpProvider();
         $this->repo = $this->createMock(OtpAttemptRepository::class);
 
-        // save() captures the row into our in-memory store
         $this->repo->method('save')->willReturnCallback(
             function (OtpAttempt $a): void {
                 $this->persisted[$a->getVerificationId()] = $a;
             }
         );
 
-        // findByVerificationId returns from the in-memory store
         $this->repo->method('findByVerificationId')->willReturnCallback(
             fn (string $vid): ?OtpAttempt => $this->persisted[$vid] ?? null
         );
 
-        // countRecentSendsForPhone tallies our in-memory store
         $this->repo->method('countRecentSendsForPhone')->willReturnCallback(
             function (string $phone, int $secs): int {
                 $cutoff = (new DateTimeImmutable())->modify("-{$secs} seconds");
@@ -64,32 +63,85 @@ final class OtpServiceTest extends TestCase
             }
         );
 
-        $this->em = $this->createMock(EntityManagerInterface::class);
+        // Channel-aware destination count (DB fail-closed fallback).
+        $this->repo->method('countRecentSendsForDestination')->willReturnCallback(
+            function (string $dest, string $channel, int $secs): int {
+                $cutoff = (new DateTimeImmutable())->modify("-{$secs} seconds");
+                return count(array_filter(
+                    $this->persisted,
+                    function (OtpAttempt $a) use ($dest, $channel, $cutoff): bool {
+                        if ($a->getChannel() !== $channel || $a->getCreatedAt() <= $cutoff) {
+                            return false;
+                        }
+                        return $channel === OtpAttempt::CHANNEL_EMAIL
+                            ? $a->getEmail() === $dest
+                            : $a->getPhone() === $dest;
+                    },
+                ));
+            }
+        );
+
+        // Channel-aware "latest usable" lookup (cooldown dedup).
+        $this->repo->method('findLatestUsableForDestination')->willReturnCallback(
+            function (string $dest, string $purpose, string $channel): ?OtpAttempt {
+                $matches = array_filter(
+                    $this->persisted,
+                    function (OtpAttempt $a) use ($dest, $purpose, $channel): bool {
+                        if ($a->getPurpose() !== $purpose || $a->getChannel() !== $channel) {
+                            return false;
+                        }
+                        if (!$a->isUsable()) {
+                            return false;
+                        }
+                        return $channel === OtpAttempt::CHANNEL_EMAIL
+                            ? $a->getEmail() === $dest
+                            : $a->getPhone() === $dest;
+                    },
+                );
+                if ($matches === []) {
+                    return null;
+                }
+                usort($matches, fn (OtpAttempt $a, OtpAttempt $b) => $b->getCreatedAt() <=> $a->getCreatedAt());
+                return $matches[0];
+            }
+        );
+
+        $this->em = $this->createMock(\Doctrine\ORM\EntityManagerInterface::class);
         $this->em->method('getRepository')->with(OtpAttempt::class)->willReturn($this->repo);
 
-        // M1.6.1.A: OtpService now takes a KeyValueStore for atomic
-        // rate limiting. Tests use the in-memory implementation —
-        // it gives the same atomic semantics within a single process,
-        // which is what tests need.
         $this->cache = new InMemoryKeyValueStore();
     }
 
     /**
-     * Build an OtpService with the test's standard collaborators.
-     * Helper exists because every test needs the same construction
-     * — keeping it in one place keeps the diff minimal when the
-     * constructor signature evolves.
+     * Build an OtpService. Defaults to a config that DISABLES the resend
+     * cooldown so each send mints a fresh verification_id — the dedup
+     * behaviour gets its own dedicated tests. Per-test overrides flow
+     * through the $config param.
      */
-    private function makeService(): OtpService
+    private function makeService(?OtpRateLimitConfig $config = null): OtpService
     {
-        return new OtpService($this->provider, $this->em, $this->cache, $this->makeEmailProvider());
+        return new OtpService(
+            $this->provider,
+            $this->em,
+            $this->cache,
+            $this->makeEmailProvider(),
+            $config ?? $this->noCooldownConfig(),
+        );
     }
 
-    /**
-     * Build a LocalEmailOtpProvider over the shared mock EM + an
-     * in-memory mailer. The SMS-channel tests in this class never hit
-     * the email path, but the constructor requires the dependency.
-     */
+    /** Cooldown disabled; generous caps — the everyday test baseline. */
+    private function noCooldownConfig(): OtpRateLimitConfig
+    {
+        return new OtpRateLimitConfig(
+            resendCooldownSeconds: 0,
+            sendsPerHour: 5,
+            sendsPerDay: 10,
+            sendsPerIpHour: 20,
+            sendsPerIpDay: 40,
+            maxVerifyAttempts: 5,
+        );
+    }
+
     private function makeEmailProvider(): \Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider
     {
         return new \Bayti\Api\Infrastructure\Otp\LocalEmailOtpProvider(
@@ -144,9 +196,10 @@ final class OtpServiceTest extends TestCase
     }
 
     #[Test]
-    public function sendEnforcesRateLimit(): void
+    public function sendEnforcesHourlyCap(): void
     {
-        $service = $this->makeService();
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, sendsPerHour: 3, sendsPerDay: 100);
+        $service = $this->makeService($config);
 
         // Three sends within the hour — all succeed.
         $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
@@ -159,6 +212,51 @@ final class OtpServiceTest extends TestCase
     }
 
     #[Test]
+    public function rateLimitExceptionCarriesRetryAfter(): void
+    {
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, sendsPerHour: 1, sendsPerDay: 100);
+        $service = $this->makeService($config);
+
+        $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+
+        try {
+            $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+            self::fail('Expected OtpRateLimitException');
+        } catch (OtpRateLimitException $e) {
+            // hourly window → retry_after is the (full) window in seconds.
+            self::assertGreaterThanOrEqual(1, $e->retryAfter);
+            self::assertLessThanOrEqual(3600, $e->retryAfter);
+        }
+    }
+
+    #[Test]
+    public function sendEnforcesDailyCap(): void
+    {
+        // Hourly generous, daily tight — the daily cap should trip first.
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, sendsPerHour: 100, sendsPerDay: 2);
+        $service = $this->makeService($config);
+
+        $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+        $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+
+        $this->expectException(OtpRateLimitException::class);
+        $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+    }
+
+    #[Test]
+    public function zeroCapDisablesThatCheck(): void
+    {
+        // Hourly disabled (0); daily disabled (0). No per-destination cap.
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, sendsPerHour: 0, sendsPerDay: 0);
+        $service = $this->makeService($config);
+
+        for ($i = 0; $i < 20; $i++) {
+            $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+        }
+        self::assertCount(20, $this->persisted);
+    }
+
+    #[Test]
     public function sendDoesNotPersistOnProviderFailure(): void
     {
         $failingProvider = $this->createMock(OtpProvider::class);
@@ -166,7 +264,13 @@ final class OtpServiceTest extends TestCase
             new \Bayti\Api\Infrastructure\Otp\OtpProviderException('network', 'simulated')
         );
 
-        $service = new OtpService($failingProvider, $this->em, $this->cache, $this->makeEmailProvider());
+        $service = new OtpService(
+            $failingProvider,
+            $this->em,
+            $this->cache,
+            $this->makeEmailProvider(),
+            $this->noCooldownConfig(),
+        );
 
         $threw = false;
         try {
@@ -180,6 +284,168 @@ final class OtpServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
+    // Resend cooldown + code reuse (dedup)
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function resendWithinCooldownReusesCodeAndDoesNotDispatch(): void
+    {
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 5, sendsPerDay: 10);
+        $service = $this->makeService($config);
+
+        $first = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+        $second = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+
+        // Same verification_id returned — true resend-dedup.
+        self::assertSame($first, $second);
+        // Only ONE provider send actually happened.
+        self::assertCount(1, $this->provider->allIssued());
+        self::assertCount(1, $this->persisted);
+    }
+
+    #[Test]
+    public function resendWithinCooldownReusesViaDbWhenCacheEmpty(): void
+    {
+        // Stage a usable row directly (no cooldown marker in cache), so
+        // the dedup must fall back to the row's created_at.
+        $attempt = new OtpAttempt(
+            verificationId: 'inmem-existing',
+            phone: '+971501234567',
+            purpose: OtpAttempt::PURPOSE_REGISTRATION,
+            expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+            channel: OtpAttempt::CHANNEL_SMS,
+        );
+        $this->persisted['inmem-existing'] = $attempt;
+
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 60);
+        $service = $this->makeService($config);
+
+        $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+        self::assertSame('inmem-existing', $vid, 'Should reuse the existing usable row via DB created_at.');
+        self::assertCount(0, $this->provider->allIssued(), 'No fresh dispatch within cooldown.');
+    }
+
+    #[Test]
+    public function cooldownDedupIsPerPurpose(): void
+    {
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 5, sendsPerDay: 10);
+        $service = $this->makeService($config);
+
+        $reg = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+        $reset = $service->send('+971501234567', OtpAttempt::PURPOSE_PASSWORD_RESET);
+
+        // Different purpose → not deduped → distinct vids.
+        self::assertNotSame($reg, $reset);
+        self::assertCount(2, $this->provider->allIssued());
+    }
+
+    // -------------------------------------------------------------------
+    // Per-IP caps
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function perIpCapTripsAcrossDestinations(): void
+    {
+        // IP cap of 2; destination caps generous. Two different phones
+        // from the same IP — the third send (any phone) trips the IP cap.
+        $config = new OtpRateLimitConfig(
+            resendCooldownSeconds: 0,
+            sendsPerHour: 100,
+            sendsPerDay: 100,
+            sendsPerIpHour: 2,
+            sendsPerIpDay: 100,
+        );
+        $service = $this->makeService($config);
+
+        $service->send('+971501111111', OtpAttempt::PURPOSE_REGISTRATION, requestedIp: '203.0.113.7');
+        $service->send('+971502222222', OtpAttempt::PURPOSE_REGISTRATION, requestedIp: '203.0.113.7');
+
+        $this->expectException(OtpRateLimitException::class);
+        $service->send('+971503333333', OtpAttempt::PURPOSE_REGISTRATION, requestedIp: '203.0.113.7');
+    }
+
+    #[Test]
+    public function perIpCapSkippedWhenIpNull(): void
+    {
+        $config = new OtpRateLimitConfig(
+            resendCooldownSeconds: 0,
+            sendsPerHour: 100,
+            sendsPerDay: 100,
+            sendsPerIpHour: 1,
+            sendsPerIpDay: 1,
+        );
+        $service = $this->makeService($config);
+
+        // No IP supplied — the per-IP cap must be skipped entirely.
+        $service->send('+971501111111', OtpAttempt::PURPOSE_REGISTRATION, requestedIp: null);
+        $service->send('+971502222222', OtpAttempt::PURPOSE_REGISTRATION, requestedIp: null);
+        $service->send('+971503333333', OtpAttempt::PURPOSE_REGISTRATION, requestedIp: null);
+
+        self::assertCount(3, $this->persisted);
+    }
+
+    // -------------------------------------------------------------------
+    // Fail-CLOSED on Redis error (DB fallback for destination cap)
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function failsClosedViaDbWhenCacheThrows(): void
+    {
+        // Pre-load the DB with sends at the hourly cap for this phone.
+        for ($i = 0; $i < 3; $i++) {
+            $attempt = new OtpAttempt(
+                verificationId: "inmem-pre-{$i}",
+                phone: '+971501234567',
+                purpose: OtpAttempt::PURPOSE_REGISTRATION,
+                expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+                channel: OtpAttempt::CHANNEL_SMS,
+            );
+            $this->persisted["inmem-pre-{$i}"] = $attempt;
+        }
+
+        $brokenCache = $this->brokenCache();
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, sendsPerHour: 3, sendsPerDay: 100);
+        $service = new OtpService(
+            $this->provider,
+            $this->em,
+            $brokenCache,
+            $this->makeEmailProvider(),
+            $config,
+        );
+
+        // Redis down → DB COUNT shows 3 already (== cap) → refuse.
+        $this->expectException(OtpRateLimitException::class);
+        $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+    }
+
+    #[Test]
+    public function failsClosedAllowsUnderCapWhenCacheThrows(): void
+    {
+        // One prior send in DB, cap of 3 → under cap → allowed.
+        $attempt = new OtpAttempt(
+            verificationId: 'inmem-pre',
+            phone: '+971501234567',
+            purpose: OtpAttempt::PURPOSE_REGISTRATION,
+            expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+            channel: OtpAttempt::CHANNEL_SMS,
+        );
+        $this->persisted['inmem-pre'] = $attempt;
+
+        $brokenCache = $this->brokenCache();
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, sendsPerHour: 3, sendsPerDay: 100);
+        $service = new OtpService(
+            $this->provider,
+            $this->em,
+            $brokenCache,
+            $this->makeEmailProvider(),
+            $config,
+        );
+
+        $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+        self::assertNotEmpty($vid);
+    }
+
+    // -------------------------------------------------------------------
     // verify()
     // -------------------------------------------------------------------
 
@@ -189,14 +455,14 @@ final class OtpServiceTest extends TestCase
         $service = $this->makeService();
         $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
 
-        $result = $service->verify($vid, '000000'); // default in-memory accept
+        $result = $service->verify($vid, '000000');
 
         self::assertSame(VerifyResult::Success, $result);
         self::assertTrue($this->persisted[$vid]->isConsumed());
     }
 
     #[Test]
-    public function verifyWrongCodeForIncorrectCode(): void
+    public function verifyWrongCodeIncrementsSmsAttempts(): void
     {
         $service = $this->makeService();
         $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
@@ -205,6 +471,27 @@ final class OtpServiceTest extends TestCase
 
         self::assertSame(VerifyResult::WrongCode, $result);
         self::assertFalse($this->persisted[$vid]->isConsumed());
+        // SMS path now mirrors the email attempt-cap: a wrong guess
+        // increments the row's local attempts counter.
+        self::assertSame(1, $this->persisted[$vid]->getAttempts());
+    }
+
+    #[Test]
+    public function smsRowBurnsAfterAttemptCap(): void
+    {
+        // maxVerifyAttempts default 5. Use a smaller cap to keep it tight.
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, maxVerifyAttempts: 3);
+        $service = $this->makeService($config);
+        $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+
+        // 3 wrong guesses fill the per-code Redis counter to the cap.
+        $service->verify($vid, '111111');
+        $service->verify($vid, '222222');
+        $service->verify($vid, '333333');
+
+        // 4th verify (even the CORRECT code) trips the per-code 429.
+        $this->expectException(OtpRateLimitException::class);
+        $service->verify($vid, '000000');
     }
 
     #[Test]
@@ -222,10 +509,7 @@ final class OtpServiceTest extends TestCase
         $service = $this->makeService();
         $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
 
-        // First verify — success.
         self::assertSame(VerifyResult::Success, $service->verify($vid, '000000'));
-
-        // Second verify — same vid is already consumed.
         self::assertSame(VerifyResult::Consumed, $service->verify($vid, '000000'));
     }
 
@@ -235,7 +519,6 @@ final class OtpServiceTest extends TestCase
         $service = $this->makeService();
         $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
 
-        // Force the row's expiresAt into the past via reflection.
         $row = $this->persisted[$vid];
         $ref = new \ReflectionProperty(OtpAttempt::class, 'expiresAt');
         $ref->setAccessible(true);
@@ -257,7 +540,13 @@ final class OtpServiceTest extends TestCase
             em: $this->em,
             mailer: $mailer,
         );
-        $service = new OtpService($this->provider, $this->em, $this->cache, $emailProvider);
+        $service = new OtpService(
+            $this->provider,
+            $this->em,
+            $this->cache,
+            $emailProvider,
+            $this->noCooldownConfig(),
+        );
 
         $vid = $service->send(
             'user@example.com',
@@ -269,16 +558,13 @@ final class OtpServiceTest extends TestCase
         $row = $this->persisted[$vid];
         self::assertTrue($row->isEmailChannel());
         self::assertSame('user@example.com', $row->getEmail());
-        // The plaintext code is NEVER persisted — only a hash.
         self::assertNotNull($row->getCodeHash());
-        // An email was actually dispatched.
         self::assertCount(1, $mailer->sent());
     }
 
     #[Test]
     public function emailVerifyHappyPathConsumesRow(): void
     {
-        // Stage an email-channel row directly with a known code.
         $attempt = new OtpAttempt(
             verificationId: 'em-known',
             phone: '',
@@ -327,14 +613,17 @@ final class OtpServiceTest extends TestCase
             codeHash: password_hash('424242', PASSWORD_BCRYPT),
             email: 'user@example.com',
         );
-        // Pre-load to the cap.
         for ($i = 0; $i < OtpAttempt::MAX_EMAIL_ATTEMPTS; $i++) {
             $attempt->incrementAttempts();
         }
         $this->persisted['em-known'] = $attempt;
 
-        $service = $this->makeService();
-        // Even the CORRECT code is refused once the cap is hit.
+        // Disable the per-code Redis verify cap so this exercises the
+        // ROW-level burn (attempts >= cap) rather than the Redis counter.
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 0, maxVerifyAttempts: 0);
+        $service = $this->makeService($config);
+
+        // Even the CORRECT code is refused once the row cap is hit.
         self::assertSame(VerifyResult::WrongCode, $service->verify('em-known', '424242'));
         self::assertFalse($attempt->isConsumed());
     }
@@ -362,19 +651,15 @@ final class OtpServiceTest extends TestCase
     }
 
     // -------------------------------------------------------------------
-    // M1.6.1.A — Redis-backed rate limit
+    // Redis-backed counters
     // -------------------------------------------------------------------
 
     #[Test]
     public function rateLimitCounterUsesCache(): void
     {
-        // Verifies the rate limit reads/writes Redis (via the
-        // InMemoryKeyValueStore here), not the DB.
         $service = $this->makeService();
 
         $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
-
-        // After one send, the cache key should hold "1".
         self::assertSame('1', $this->cache->get('otp:rl:+971501234567'));
 
         $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
@@ -382,10 +667,8 @@ final class OtpServiceTest extends TestCase
     }
 
     #[Test]
-    public function rateLimitIsPerPhone(): void
+    public function rateLimitIsPerDestination(): void
     {
-        // Two phones, three sends each — all succeed because the
-        // counter is keyed by phone.
         $service = $this->makeService();
 
         for ($i = 0; $i < 3; $i++) {
@@ -393,45 +676,34 @@ final class OtpServiceTest extends TestCase
             $service->send('+971502222222', OtpAttempt::PURPOSE_REGISTRATION);
         }
 
-        // Each phone's counter is at 3 — at the cap but not over.
         self::assertSame('3', $this->cache->get('otp:rl:+971501111111'));
         self::assertSame('3', $this->cache->get('otp:rl:+971502222222'));
-    }
-
-    #[Test]
-    public function failsOpenWhenCacheThrows(): void
-    {
-        // When Redis is down (the cache throws), OtpService should
-        // log + proceed without rate limiting. Nothing user-visible
-        // changes — the OTP send still succeeds.
-        $brokenCache = new class implements KeyValueStore {
-            public function get(string $key): ?string
-            {
-                throw new \Bayti\Api\Infrastructure\Cache\KeyValueStoreException('simulated');
-            }
-            public function set(string $key, string $value, int $ttlSeconds = 0): void
-            {
-                throw new \Bayti\Api\Infrastructure\Cache\KeyValueStoreException('simulated');
-            }
-            public function incr(string $key): int
-            {
-                throw new \Bayti\Api\Infrastructure\Cache\KeyValueStoreException('simulated');
-            }
-            public function expire(string $key, int $ttlSeconds): void {}
-            public function delete(string $key): void {}
-            public function ping(): bool { return false; }
-        };
-
-        $service = new OtpService($this->provider, $this->em, $brokenCache, $this->makeEmailProvider());
-
-        // Send should succeed despite Redis throwing.
-        $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
-        self::assertNotEmpty($vid);
     }
 
     // -------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------
+
+    private function brokenCache(): KeyValueStore
+    {
+        return new class implements KeyValueStore {
+            public function get(string $key): ?string
+            {
+                throw new KeyValueStoreException('simulated');
+            }
+            public function set(string $key, string $value, int $ttlSeconds = 0): void
+            {
+                throw new KeyValueStoreException('simulated');
+            }
+            public function incr(string $key): int
+            {
+                throw new KeyValueStoreException('simulated');
+            }
+            public function expire(string $key, int $ttlSeconds): void {}
+            public function delete(string $key): void {}
+            public function ping(): bool { return false; }
+        };
+    }
 
     private function makeUser(): User
     {

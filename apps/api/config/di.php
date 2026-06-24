@@ -717,7 +717,27 @@ return [
         // override the param to a container reference so it compiles.
         ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
 
-    OtpService::class => \DI\autowire(),
+    /**
+     * OTP abuse-hardening thresholds, read from env with documented
+     * defaults (0 disables a given check). Plain scalar value object —
+     * the factory returns OtpRateLimitConfig::fromEnv() with no use()
+     * capture, so it compiles cleanly under PHP-DI's compiled container.
+     */
+    \Bayti\Api\Domain\User\OtpRateLimitConfig::class => static function (): \Bayti\Api\Domain\User\OtpRateLimitConfig {
+        return \Bayti\Api\Domain\User\OtpRateLimitConfig::fromEnv();
+    },
+
+    /**
+     * OtpService — autowired, but with config + logger bound explicitly.
+     * The constructor declares `?OtpRateLimitConfig = null` and
+     * `?LoggerInterface = null` (null defaults keep the compiled
+     * container happy AND let tests construct without them). Autowiring
+     * a nullable param injects the null default, so we override both to
+     * container references here to get the env-driven config + Monolog.
+     */
+    OtpService::class => \DI\autowire()
+        ->constructorParameter('config', \DI\get(\Bayti\Api\Domain\User\OtpRateLimitConfig::class))
+        ->constructorParameter('logger', \DI\get(\Psr\Log\LoggerInterface::class)),
 
     // -------------------------------------------------------------------
     // M1.6.1.C — audit log

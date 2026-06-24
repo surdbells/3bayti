@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Errors;
 
+use Bayti\Api\Domain\User\OtpRateLimitException;
 use Bayti\Api\Http\Errors\ApiErrorMiddleware;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
@@ -109,6 +110,39 @@ final class ApiErrorMiddlewareTest extends TestCase
 
         $response = $this->middleware->process($this->makeRequest(), $handler);
         self::assertSame(429, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function rendersOtpRateLimitContractEnvelope(): void
+    {
+        // The shared OTP 429 contract: flat body with error_code +
+        // retry_after, plus a Retry-After header. Mapped centrally in the
+        // middleware so every OTP path (send + verify) inherits it.
+        $handler = $this->throwingHandler(new OtpRateLimitException('slow down', 47));
+
+        $response = $this->middleware->process($this->makeRequest(), $handler);
+
+        self::assertSame(429, $response->getStatusCode());
+        self::assertSame('47', $response->getHeaderLine('Retry-After'));
+
+        $body = json_decode((string) $response->getBody(), true);
+        self::assertIsArray($body);
+        self::assertSame(ErrorCodes::OTP_RATE_LIMITED, $body['error_code']);
+        self::assertSame(47, $body['retry_after']);
+        // Generic message must not leak which limit tripped.
+        self::assertStringNotContainsString('slow down', (string) $response->getBody());
+    }
+
+    #[Test]
+    public function otpRateLimitFallsBackToDefaultRetryAfter(): void
+    {
+        // No explicit retry_after → the exception's default applies.
+        $handler = $this->throwingHandler(new OtpRateLimitException('nope'));
+
+        $response = $this->middleware->process($this->makeRequest(), $handler);
+        $body = json_decode((string) $response->getBody(), true);
+
+        self::assertSame(OtpRateLimitException::DEFAULT_RETRY_AFTER, $body['retry_after']);
     }
 
     // -------------------------------------------------------------------

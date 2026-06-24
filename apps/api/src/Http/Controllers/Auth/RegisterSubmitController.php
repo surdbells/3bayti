@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Auth;
 
 use Bayti\Api\Domain\User\OtpAttempt;
-use Bayti\Api\Domain\User\OtpRateLimitException;
 use Bayti\Api\Domain\User\OtpService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
@@ -133,11 +132,6 @@ final class RegisterSubmitController
                 channel: OtpAttempt::CHANNEL_EMAIL,
                 user: $user,
                 requestedIp: $this->extractIp($request),
-            );
-        } catch (OtpRateLimitException) {
-            throw HttpException::rateLimited(
-                ErrorCodes::OTP_RATE_LIMITED,
-                'Too many verification emails. Please wait an hour and try again.',
             );
         } catch (OtpProviderException) {
             throw HttpException::upstreamFailure(
