@@ -492,6 +492,11 @@ return function (App $app): void {
     // Public reads expose APPROVED reviews only.
     $app->get('/v3/products/{productId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\ListProductReviewsController::class);
     $app->get('/v3/vendors/{vendorId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\ListVendorPublicReviewsController::class);
+    // Slug variant (web): same controller, which resolves {vendorId}
+    // flexibly (numeric -> v3 PK / legacy id, non-numeric -> slug). The
+    // 3-segment shape + literal /reviews suffix means no collision with
+    // the 2-segment /v3/vendors/{slug} catalog route.
+    $app->get('/v3/vendors/{vendorId}/reviews', \Bayti\Api\Http\Controllers\Review\ListVendorPublicReviewsController::class);
     // Authed customer review actions.
     $app->post('/v3/products/{productId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\CreateReviewController::class)->add(AuthMiddleware::class);
     $app->post('/v3/vendors/{vendorId:[0-9]+}/reviews', \Bayti\Api\Http\Controllers\Review\CreateVendorReviewController::class)->add(AuthMiddleware::class);
@@ -512,6 +517,11 @@ return function (App $app): void {
     // mobile PDP. Resolves the vendor by legacy id and returns the same row
     // shape as the vendor-self-scoped GET /v3/vendor/measurements.
     $app->get('/v3/vendors/by-legacy-id/{id}/size-chart', \Bayti\Api\Http\Controllers\Catalog\StoreSizeChartByLegacyIdController::class);
+    // PUBLIC store size guide by SLUG (web PDP). Same row shape + the same
+    // VendorSizeChartController::shapeRow as the by-legacy-id variant; just
+    // resolves the vendor via slug instead of legacy id. The 3-segment shape
+    // + literal /size-chart suffix means no collision with /v3/vendors/{slug}.
+    $app->get('/v3/vendors/{slug}/size-chart', \Bayti\Api\Http\Controllers\Catalog\StoreSizeChartBySlugController::class);
 
     // M3.1.5.5e — Vendor labels (per-vendor merchandising collections).
     // Slug variant for web/canonical use; by-legacy-id variant for
