@@ -155,13 +155,22 @@
           <ion-text class="secondary-link" (click)="changeDestination()">
             {{ otpChannel === 'phone' ? ('change_phone_number' | translate) : ('login_change_email' | translate) }}
           </ion-text>
-          <ion-text class="secondary-link" (click)="resendOtp()">
-            {{ 'resend_otp' | translate }}
+          <ion-text
+            class="secondary-link"
+            [class.is-disabled]="otpCooldown > 0"
+            (click)="resendOtp()">
+            @if (otpLocked && otpCooldown > 0) {
+              {{ 'otp_locked_countdown' | translate:{ seconds: otpCooldown } }}
+            } @else if (otpCooldown > 0) {
+              {{ 'resend_otp_countdown' | translate:{ seconds: otpCooldown } }}
+            } @else {
+              {{ 'resend_otp' | translate }}
+            }
           </ion-text>
         </div>
 
         <div class="auth-footer">
-          <ion-button (click)="verifyOtp()" expand="block" class="primary-btn" type="button">
+          <ion-button (click)="verifyOtp()" [disabled]="otpLocked && otpCooldown > 0" expand="block" class="primary-btn" type="button">
             {{ 'sign_in' | translate }}
           </ion-button>
         </div>

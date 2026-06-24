@@ -22,6 +22,7 @@ import {
   PhoneInputComponent,
   PHONE_COUNTRIES,
   mapApiErrors,
+  readRetryAfterSeconds,
   ApiErrorMapping,
   ToastService,
 } from '../../../shared/forms';
@@ -238,12 +239,21 @@ const RESEND_COOLDOWN_SECONDS = 30;
             <button
               type="submit"
               class="auth-submit"
-              [disabled]="submitting()"
+              [disabled]="submitting() || lockedOut()"
               data-testid="login-otp-submit"
             >
               {{ (submitting() ? 'common.loading' : 'auth.login.verify') | translate }}
             </button>
           </form>
+
+          <p
+            *ngIf="lockedOut()"
+            class="auth-field-hint auth-field-hint--warn"
+            role="alert"
+            data-testid="login-otp-lockout"
+          >
+            {{ 'auth.lockout.countdown' | translate : { seconds: resendCooldown() } }}
+          </p>
 
           <div class="auth-resend">
             <p class="auth-resend__prompt">{{ 'auth.login.resendCta' | translate }}</p>
@@ -357,6 +367,12 @@ export class LoginComponent implements OnDestroy {
   protected readonly sending = signal(false);
   protected readonly submitting = signal(false);
   protected readonly resendCooldown = signal(0);
+  /**
+   * True while a server-reflected OTP lockout (429 OTP_RATE_LIMITED) is in
+   * effect. Reuses resendCooldown for the countdown number but ALSO disables
+   * Verify (not just Resend) for the retry_after window.
+   */
+  protected readonly lockedOut = signal(false);
 
   /** Channel of the in-flight OTP, and a human-readable destination label. */
   private readonly otpChannel = signal<'phone' | 'email'>('phone');
@@ -534,6 +550,7 @@ export class LoginComponent implements OnDestroy {
       for (const code of result.unmapped) {
         if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
           this.toast.error('auth.login.errors.rateLimited');
+          this.startLockout(err);
         } else if (code === AUTH_ERROR_CODES.OTP_PROVIDER_ERROR) {
           this.toast.error('auth.login.errors.providerError');
         } else {
@@ -564,6 +581,7 @@ export class LoginComponent implements OnDestroy {
         for (const code of result.unmapped) {
           if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
             this.toast.error('auth.login.errors.rateLimited');
+            this.startLockout(err);
           } else {
             this.toast.error('auth.login.errors.unexpected');
           }
@@ -601,18 +619,30 @@ export class LoginComponent implements OnDestroy {
 
   /* ---------- Cooldown ---------- */
 
-  private startCooldown(): void {
-    this.resendCooldown.set(RESEND_COOLDOWN_SECONDS);
+  private startCooldown(seconds: number = RESEND_COOLDOWN_SECONDS): void {
+    this.resendCooldown.set(seconds);
     this.clearCooldown();
     this.cooldownTimer = setInterval(() => {
       const next = this.resendCooldown() - 1;
       if (next <= 0) {
         this.resendCooldown.set(0);
+        this.lockedOut.set(false);
         this.clearCooldown();
       } else {
         this.resendCooldown.set(next);
       }
     }, 1000);
+  }
+
+  /**
+   * Reflect a server OTP lockout (429 OTP_RATE_LIMITED): disable Resend AND
+   * Verify for `seconds` (from the 429 body's retry_after; ~60s fallback),
+   * reusing the resend countdown. Never shortens an in-flight longer lockout.
+   */
+  private startLockout(err: unknown): void {
+    const seconds = Math.max(readRetryAfterSeconds(err), this.resendCooldown());
+    this.lockedOut.set(true);
+    this.startCooldown(seconds);
   }
 
   private clearCooldown(): void {

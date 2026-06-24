@@ -21,6 +21,7 @@ import { AuthService } from '../../../core/auth/auth.service';
 import {
   FormFieldComponent,
   mapApiErrors,
+  readRetryAfterSeconds,
   ApiErrorMapping,
   ToastService,
 } from '../../../shared/forms';
@@ -134,12 +135,21 @@ const RESEND_COOLDOWN_SECONDS = 30;
             <button
               type="submit"
               class="auth-submit"
-              [disabled]="submitting()"
+              [disabled]="submitting() || lockedOut()"
               data-testid="verify-submit"
             >
               {{ (submitting() ? 'common.loading' : 'auth.verifyPhone.submit') | translate }}
             </button>
           </form>
+
+          <p
+            *ngIf="lockedOut()"
+            class="auth-field-hint auth-field-hint--warn"
+            role="alert"
+            data-testid="verify-lockout"
+          >
+            {{ 'auth.lockout.countdown' | translate : { seconds: resendCooldown() } }}
+          </p>
 
           <div class="auth-resend">
             <p class="auth-resend__prompt">
@@ -171,7 +181,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
             <button
               type="button"
               class="auth-submit"
-              [disabled]="sending()"
+              [disabled]="sending() || resendCooldown() > 0"
               (click)="onSendCode()"
               data-testid="verify-send-code"
             >
@@ -200,6 +210,12 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
   protected readonly resending = signal(false);
   protected readonly sending = signal(false);
   protected readonly resendCooldown = signal(0);
+  /**
+   * True while a server-reflected OTP lockout (429 OTP_RATE_LIMITED) is in
+   * effect. Reuses resendCooldown for the countdown but ALSO disables Verify
+   * (and Send) for the retry_after window.
+   */
+  protected readonly lockedOut = signal(false);
 
   private readonly verificationId = signal<string | null>(null);
   private readonly phone = signal<string | null>(null);
@@ -335,6 +351,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
         for (const code of result.unmapped) {
           if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
             this.toast.error('auth.verifyPhone.errors.rateLimited');
+            this.startLockout(err);
           } else {
             this.toast.error('auth.verifyPhone.errors.unexpected');
           }
@@ -412,6 +429,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
         this.toast.error('auth.login.errors.network');
       } else if (result.unmapped.includes(AUTH_ERROR_CODES.OTP_RATE_LIMITED)) {
         this.toast.error('auth.verifyPhone.errors.rateLimited');
+        this.startLockout(err);
       } else {
         this.toast.error('auth.verifyPhone.errors.unexpected');
       }
@@ -423,13 +441,14 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
      Cooldown
      ---------------------------------------------------------------- */
 
-  private startCooldown(): void {
-    this.resendCooldown.set(RESEND_COOLDOWN_SECONDS);
+  private startCooldown(seconds: number = RESEND_COOLDOWN_SECONDS): void {
+    this.resendCooldown.set(seconds);
     if (this.cooldownTimer !== null) clearInterval(this.cooldownTimer);
     this.cooldownTimer = setInterval(() => {
       const next = this.resendCooldown() - 1;
       if (next <= 0) {
         this.resendCooldown.set(0);
+        this.lockedOut.set(false);
         if (this.cooldownTimer !== null) {
           clearInterval(this.cooldownTimer);
           this.cooldownTimer = null;
@@ -438,6 +457,17 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
         this.resendCooldown.set(next);
       }
     }, 1000);
+  }
+
+  /**
+   * Reflect a server OTP lockout (429 OTP_RATE_LIMITED): disable Resend/Send
+   * AND Verify for `retry_after` seconds (from the 429 body; ~60s fallback),
+   * reusing the resend countdown. Never shortens an in-flight longer lockout.
+   */
+  private startLockout(err: unknown): void {
+    const seconds = Math.max(readRetryAfterSeconds(err), this.resendCooldown());
+    this.lockedOut.set(true);
+    this.startCooldown(seconds);
   }
 
   /* ----------------------------------------------------------------

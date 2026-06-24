@@ -98,6 +98,21 @@ export class LoginPage implements OnInit, OnDestroy {
     /** verification_id issued by send, consumed by verify. */
     verificationId = '';
 
+    /**
+     * Resend cooldown / rate-limit lockout state.
+     *
+     * `otpCooldown` is the remaining seconds the Resend control is disabled.
+     * A short cooldown (DEFAULT_RESEND_COOLDOWN) starts after each successful
+     * send; a LONGER lockout (server retry_after) starts on an OTP_RATE_LIMITED
+     * 429. `otpLocked` distinguishes the hard server lockout (also disables
+     * Verify) from the soft post-send cooldown.
+     */
+    otpCooldown = 0;
+    otpLocked = false;
+    private readonly DEFAULT_RESEND_COOLDOWN = 30;
+    private readonly DEFAULT_LOCKOUT = 60;
+    private otpTimer: ReturnType<typeof setInterval> | null = null;
+
     constructor(
       private net: ConnectionService,
       private platform: Platform,
@@ -119,6 +134,7 @@ export class LoginPage implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.blocker.unblock(); // ✅ restore when leaving
     this.sub?.unsubscribe();
+    this.clearOtpTimer();
   }
   single_user = {
     id: 0,
@@ -248,14 +264,16 @@ export class LoginPage implements OnInit, OnDestroy {
       this.otpDestination = destination;
       this.otp.code = '';
       this.view = 'otp';
+      this.startResendCooldown();
       this.success_notification(this.i18n.t('text_otp_sent'));
     } else {
-      this.show_error(this.mapErrorMessage(response));
+      this.handleOtpError(response);
     }
   }
 
   /** Re-issue the OTP (re-call send for the active channel). */
   resendOtp() {
+    if (this.otpCooldown > 0) return; // cooldown / lockout active
     if (this.otpChannel === 'phone') {
       this.sendPhoneOtp();
     } else {
@@ -267,6 +285,9 @@ export class LoginPage implements OnInit, OnDestroy {
   changeDestination() {
     this.view = this.otpChannel === 'phone' ? 'phone' : 'email';
     this.otp.code = '';
+    this.clearOtpTimer();
+    this.otpCooldown = 0;
+    this.otpLocked = false;
   }
 
   // ===== Step: verify OTP -> login envelope -> success ====================
@@ -286,7 +307,7 @@ export class LoginPage implements OnInit, OnDestroy {
           this.onLoginSuccess(response.data);
         } else {
           this.ui_controls.login_loading = false;
-          this.show_error(this.mapErrorMessage(response));
+          this.handleOtpError(response);
         }
       },
       error: (e) => this.handleHttpError(e),
@@ -422,13 +443,86 @@ export class LoginPage implements OnInit, OnDestroy {
 
   private handleHttpError(e: any) {
     this.ui_controls.login_loading = false;
-    const code = e?.error?.error?.code;
+    const code = e?.error?.error?.code ?? e?.error?.error_code;
     if (typeof code === 'string') {
+      if (code === 'OTP_RATE_LIMITED') {
+        this.startLockout(this.readRetryAfter(e));
+      }
       this.show_error(this.mapErrorMessage({ error_code: code }));
       return;
     }
     console.error(e);
     this.show_error(this.i18n.t('text_request_failed'));
+  }
+
+  // ===== Resend cooldown + rate-limit lockout =============================
+
+  /**
+   * Centralised OTP-error handler for the success-channel envelope.
+   * On OTP_RATE_LIMITED it starts a lockout for `retry_after` seconds
+   * (disabling Resend + Verify); all errors surface the mapped message.
+   */
+  private handleOtpError(response: any) {
+    if (response?.error_code === 'OTP_RATE_LIMITED') {
+      this.startLockout(this.readRetryAfter(response));
+    }
+    this.show_error(this.mapErrorMessage(response));
+  }
+
+  /**
+   * Read retry_after (seconds) from either envelope: the success-channel
+   * error envelope (top-level or under error_details) or the rxjs error
+   * body (e.error / e.error.error). Falls back to the default lockout.
+   */
+  private readRetryAfter(src: any): number {
+    const candidates = [
+      src?.retry_after,
+      src?.error_details?.retry_after,
+      src?.error?.retry_after,
+      src?.error?.error?.retry_after,
+      src?.error?.error?.details?.retry_after,
+    ];
+    for (const c of candidates) {
+      const n = Number(c);
+      if (Number.isFinite(n) && n > 0) return Math.ceil(n);
+    }
+    return this.DEFAULT_LOCKOUT;
+  }
+
+  /** Short cooldown after a successful send: disables Resend only. */
+  private startResendCooldown() {
+    this.otpLocked = false;
+    this.startCountdown(this.DEFAULT_RESEND_COOLDOWN);
+  }
+
+  /** Longer server lockout: disables Resend AND Verify for `seconds`. */
+  private startLockout(seconds: number) {
+    this.otpLocked = true;
+    this.startCountdown(seconds > 0 ? seconds : this.DEFAULT_LOCKOUT);
+  }
+
+  private startCountdown(seconds: number) {
+    this.clearOtpTimer();
+    this.otpCooldown = Math.max(0, Math.ceil(seconds));
+    if (this.otpCooldown === 0) {
+      this.otpLocked = false;
+      return;
+    }
+    this.otpTimer = setInterval(() => {
+      this.otpCooldown -= 1;
+      if (this.otpCooldown <= 0) {
+        this.clearOtpTimer();
+        this.otpCooldown = 0;
+        this.otpLocked = false;
+      }
+    }, 1000);
+  }
+
+  private clearOtpTimer() {
+    if (this.otpTimer) {
+      clearInterval(this.otpTimer);
+      this.otpTimer = null;
+    }
   }
 
   show_error(message: string) {

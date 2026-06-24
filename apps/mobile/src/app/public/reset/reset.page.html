@@ -151,8 +151,17 @@
         <ion-text class="secondary-link" (click)="back_to_identifier()">
           {{ 'button_back' | translate }}
         </ion-text>
-        <ion-text class="secondary-link" (click)="resend_otp()">
-          {{ 'resend_otp' | translate }}
+        <ion-text
+          class="secondary-link"
+          [class.is-disabled]="otpCooldown > 0"
+          (click)="resend_otp()">
+          @if (otpLocked && otpCooldown > 0) {
+            {{ 'otp_locked_countdown' | translate:{ seconds: otpCooldown } }}
+          } @else if (otpCooldown > 0) {
+            {{ 'resend_otp_countdown' | translate:{ seconds: otpCooldown } }}
+          } @else {
+            {{ 'resend_otp' | translate }}
+          }
         </ion-text>
       </div>
     }
@@ -176,7 +185,7 @@
         </ion-button>
       }
       @if (ui_controls.step === 2) {
-        <ion-button (click)="reset_password()" expand="block" class="primary-btn" type="button">
+        <ion-button (click)="reset_password()" [disabled]="otpLocked && otpCooldown > 0" expand="block" class="primary-btn" type="button">
           {{ 'reset_button' | translate }}
         </ion-button>
       }

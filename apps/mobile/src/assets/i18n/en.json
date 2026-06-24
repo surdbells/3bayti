@@ -165,6 +165,8 @@
   "error_dnd_more": "If the phone number you entered is incorrect, click the button below to update and try again.",
   "change_phone_number": "Change phone number",
   "resend_otp": "Resend OTP",
+  "resend_otp_countdown": "Resend in {{seconds}}s",
+  "otp_locked_countdown": "Too many attempts. Try again in {{seconds}}s",
   "enter_phone": "Enter your phone number",
   "first_name": "First name",
   "e_first_name": "Enter your first name",

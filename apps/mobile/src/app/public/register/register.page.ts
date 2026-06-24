@@ -141,6 +141,7 @@ export class RegisterPage implements OnInit, OnDestroy {
     if (this.phoneCheckTimer) {
       clearTimeout(this.phoneCheckTimer);
     }
+    this.clearOtpTimer();
     this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
   }
 
@@ -181,6 +182,20 @@ export class RegisterPage implements OnInit, OnDestroy {
   emailVerificationId = "";
 
   otp = { code: "" };
+
+  /**
+   * Resend cooldown / rate-limit lockout state (shared by the phone-OTP
+   * step 2 and the email-OTP step 4). `otpCooldown` is the remaining
+   * seconds the Resend control is disabled; a short cooldown starts after
+   * each successful send, a longer lockout (server retry_after) starts on
+   * an OTP_RATE_LIMITED 429. `otpLocked` marks the hard server lockout
+   * (also disables Verify).
+   */
+  otpCooldown = 0;
+  otpLocked = false;
+  private readonly DEFAULT_RESEND_COOLDOWN = 30;
+  private readonly DEFAULT_LOCKOUT = 60;
+  private otpTimer: ReturnType<typeof setInterval> | null = null;
 
   /** Selected dial-code metadata (flag) for the picker button. */
   get selectedDial(): DialCode | undefined {
@@ -283,9 +298,10 @@ export class RegisterPage implements OnInit, OnDestroy {
           this.phoneVerificationId = vid;
           this.otp.code = '';
           this.ui_controls.step = 2;
+          this.startResendCooldown();
           this.success_notification(this.i18n.t('text_otp_sent'));
         } else {
-          this.error_notification(this.mapErrorMessage(response));
+          this.handleOtpError(response);
         }
       },
       error: (e) => this.handleHttpError(e),
@@ -315,8 +331,11 @@ export class RegisterPage implements OnInit, OnDestroy {
           }
           this.registrationToken = token;
           this.ui_controls.step = 3;
+          this.clearOtpTimer();
+          this.otpCooldown = 0;
+          this.otpLocked = false;
         } else {
-          this.error_notification(this.mapErrorMessage(response));
+          this.handleOtpError(response);
         }
       },
       error: (e) => this.handleHttpError(e),
@@ -324,6 +343,7 @@ export class RegisterPage implements OnInit, OnDestroy {
   }
 
   resend_phone_otp() {
+    if (this.otpCooldown > 0) return; // cooldown / lockout active
     // Re-issue the phone OTP by re-calling initiate. Keeps us on Step 2.
     if (!this.isOnline) {
       this.error_notification(this.i18n.t('text_offline_check_connection'));
@@ -342,9 +362,10 @@ export class RegisterPage implements OnInit, OnDestroy {
             this.phoneVerificationId = vid;
             this.otp.code = '';
           }
+          this.startResendCooldown();
           this.success_notification(this.i18n.t('text_otp_sent'));
         } else {
-          this.error_notification(this.mapErrorMessage(response));
+          this.handleOtpError(response);
         }
       },
       error: (e) => this.handleHttpError(e),
@@ -354,6 +375,9 @@ export class RegisterPage implements OnInit, OnDestroy {
   change_phone() {
     this.ui_controls.step = 1;
     this.otp.code = '';
+    this.clearOtpTimer();
+    this.otpCooldown = 0;
+    this.otpLocked = false;
   }
 
   // --- Step 3: details -> submit -> email verification_id ----------------
@@ -411,13 +435,14 @@ export class RegisterPage implements OnInit, OnDestroy {
           this.emailVerificationId = vid;
           this.otp.code = '';
           this.ui_controls.step = 4;
+          this.startResendCooldown();
           this.success_notification(this.i18n.t('text_otp_sent'));
         } else {
           this.handleSubmitError(response);
         }
       },
       error: (e) => {
-        const code = e?.error?.error?.code;
+        const code = e?.error?.error?.code ?? e?.error?.error_code;
         if (code === 'AUTH_INVALID_TOKEN') {
           this.restartExpired();
           return;
@@ -434,6 +459,9 @@ export class RegisterPage implements OnInit, OnDestroy {
       this.restartExpired();
       return;
     }
+    if (code === 'OTP_RATE_LIMITED') {
+      this.startLockout(this.readRetryAfter(response));
+    }
     this.error_notification(this.mapErrorMessage(response));
   }
 
@@ -444,6 +472,9 @@ export class RegisterPage implements OnInit, OnDestroy {
     this.phoneVerificationId = '';
     this.emailVerificationId = '';
     this.otp.code = '';
+    this.clearOtpTimer();
+    this.otpCooldown = 0;
+    this.otpLocked = false;
     this.error_notification(this.i18n.t('text_session_expired_restart'));
   }
 
@@ -475,10 +506,11 @@ export class RegisterPage implements OnInit, OnDestroy {
 
           void this.pushManager.onSignedIn();
 
+          this.clearOtpTimer();
           this.router.navigate(['/account'], { replaceUrl: true });
           this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
         } else {
-          this.error_notification(this.mapErrorMessage(response));
+          this.handleOtpError(response);
         }
       },
       error: (e) => this.handleHttpError(e),
@@ -487,6 +519,7 @@ export class RegisterPage implements OnInit, OnDestroy {
 
   resend_email_otp() {
     // Re-issue the email OTP by re-calling submit with the same data.
+    if (this.otpCooldown > 0) return; // cooldown / lockout active
     if (!this.isOnline) {
       this.error_notification(this.i18n.t('text_offline_check_connection'));
       return;
@@ -507,13 +540,14 @@ export class RegisterPage implements OnInit, OnDestroy {
             this.emailVerificationId = vid;
             this.otp.code = '';
           }
+          this.startResendCooldown();
           this.success_notification(this.i18n.t('text_otp_sent'));
         } else {
           this.handleSubmitError(response);
         }
       },
       error: (e) => {
-        const code = e?.error?.error?.code;
+        const code = e?.error?.error?.code ?? e?.error?.error_code;
         if (code === 'AUTH_INVALID_TOKEN') {
           this.restartExpired();
           return;
@@ -526,6 +560,9 @@ export class RegisterPage implements OnInit, OnDestroy {
   back_to_details() {
     this.ui_controls.step = 3;
     this.otp.code = '';
+    this.clearOtpTimer();
+    this.otpCooldown = 0;
+    this.otpLocked = false;
   }
 
   // --- Error mapping ------------------------------------------------------
@@ -560,13 +597,86 @@ export class RegisterPage implements OnInit, OnDestroy {
   /** Defensive rxjs-error-channel mapping (err?.error?.error?.code). */
   private handleHttpError(e: any) {
     this.ui_controls.loading = false;
-    const code = e?.error?.error?.code;
+    const code = e?.error?.error?.code ?? e?.error?.error_code;
     if (typeof code === 'string') {
+      if (code === 'OTP_RATE_LIMITED') {
+        this.startLockout(this.readRetryAfter(e));
+      }
       this.error_notification(this.mapErrorMessage({ error_code: code }));
       return;
     }
     console.error(e);
     this.error_notification(this.i18n.t('text_request_failed'));
+  }
+
+  // --- Resend cooldown + rate-limit lockout ------------------------------
+
+  /**
+   * Centralised OTP-error handler for the success-channel envelope.
+   * On OTP_RATE_LIMITED it starts a lockout for `retry_after` seconds
+   * (disabling Resend + Verify); all errors surface the mapped message.
+   */
+  private handleOtpError(response: any) {
+    if (response?.error_code === 'OTP_RATE_LIMITED') {
+      this.startLockout(this.readRetryAfter(response));
+    }
+    this.error_notification(this.mapErrorMessage(response));
+  }
+
+  /**
+   * Read retry_after (seconds) from either envelope: the success-channel
+   * error envelope (top-level or under error_details) or the rxjs error
+   * body (e.error / e.error.error). Falls back to the default lockout.
+   */
+  private readRetryAfter(src: any): number {
+    const candidates = [
+      src?.retry_after,
+      src?.error_details?.retry_after,
+      src?.error?.retry_after,
+      src?.error?.error?.retry_after,
+      src?.error?.error?.details?.retry_after,
+    ];
+    for (const c of candidates) {
+      const n = Number(c);
+      if (Number.isFinite(n) && n > 0) return Math.ceil(n);
+    }
+    return this.DEFAULT_LOCKOUT;
+  }
+
+  /** Short cooldown after a successful send: disables Resend only. */
+  private startResendCooldown() {
+    this.otpLocked = false;
+    this.startCountdown(this.DEFAULT_RESEND_COOLDOWN);
+  }
+
+  /** Longer server lockout: disables Resend AND Verify for `seconds`. */
+  private startLockout(seconds: number) {
+    this.otpLocked = true;
+    this.startCountdown(seconds > 0 ? seconds : this.DEFAULT_LOCKOUT);
+  }
+
+  private startCountdown(seconds: number) {
+    this.clearOtpTimer();
+    this.otpCooldown = Math.max(0, Math.ceil(seconds));
+    if (this.otpCooldown === 0) {
+      this.otpLocked = false;
+      return;
+    }
+    this.otpTimer = setInterval(() => {
+      this.otpCooldown -= 1;
+      if (this.otpCooldown <= 0) {
+        this.clearOtpTimer();
+        this.otpCooldown = 0;
+        this.otpLocked = false;
+      }
+    }, 1000);
+  }
+
+  private clearOtpTimer() {
+    if (this.otpTimer) {
+      clearInterval(this.otpTimer);
+      this.otpTimer = null;
+    }
   }
 
   error_notification(message: string) {

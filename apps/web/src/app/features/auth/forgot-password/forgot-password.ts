@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   inject,
   signal,
+  OnDestroy,
 } from '@angular/core';
 import { NgIf } from '@angular/common';
 import {
@@ -19,10 +20,17 @@ import {
   FormFieldComponent,
   PhoneInputComponent,
   mapApiErrors,
+  readRetryAfterSeconds,
   ApiErrorMapping,
   ToastService,
 } from '../../../shared/forms';
 import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
+
+/**
+ * UX submit cooldown — blocks back-to-back reset requests. Matches the 30s
+ * resend cooldown used across the other OTP surfaces (login/register/verify).
+ */
+const RESEND_COOLDOWN_SECONDS = 30;
 
 /**
  * Forgot password page — /forgot-password. TWO-CHANNEL reset request (web
@@ -129,12 +137,29 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
           <button
             type="submit"
             class="auth-submit"
-            [disabled]="submitting()"
+            [disabled]="submitting() || cooldown() > 0"
             data-testid="forgot-submit"
           >
-            {{ (submitting() ? 'common.loading' : 'auth.forgot.submit') | translate }}
+            <ng-container *ngIf="submitting(); else notSubmitting">
+              {{ 'common.loading' | translate }}
+            </ng-container>
+            <ng-template #notSubmitting>
+              <ng-container *ngIf="cooldown() > 0; else readySubmit">
+                {{ 'auth.forgot.resendCooldown' | translate : { seconds: cooldown() } }}
+              </ng-container>
+              <ng-template #readySubmit>{{ 'auth.forgot.submit' | translate }}</ng-template>
+            </ng-template>
           </button>
         </form>
+
+        <p
+          *ngIf="lockedOut()"
+          class="auth-field-hint auth-field-hint--warn"
+          role="alert"
+          data-testid="forgot-lockout"
+        >
+          {{ 'auth.lockout.countdown' | translate : { seconds: cooldown() } }}
+        </p>
 
         <p class="auth-card__footer">
           <a routerLink="/login" class="auth-link auth-link--strong">
@@ -146,9 +171,18 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
   `,
   styleUrl: './forgot-password.scss',
 })
-export class ForgotPasswordComponent {
+export class ForgotPasswordComponent implements OnDestroy {
   protected readonly channel = signal<'email' | 'phone'>('email');
   protected readonly submitting = signal(false);
+  /** Submit cooldown countdown (seconds). Blocks back-to-back reset sends. */
+  protected readonly cooldown = signal(0);
+  /**
+   * True while a server-reflected OTP lockout (429 OTP_RATE_LIMITED) is in
+   * effect — drives the rate-limit banner. Shares the `cooldown` countdown.
+   */
+  protected readonly lockedOut = signal(false);
+
+  private cooldownTimer: ReturnType<typeof setInterval> | null = null;
 
   protected readonly form: FormGroup<{
     email: FormControl<string>;
@@ -203,9 +237,13 @@ export class ForgotPasswordComponent {
     phone.updateValueAndValidity();
   }
 
+  ngOnDestroy(): void {
+    this.clearCooldown();
+  }
+
   protected async onSubmit(): Promise<void> {
     this.form.markAllAsTouched();
-    if (this.form.invalid || this.submitting()) return;
+    if (this.form.invalid || this.submitting() || this.cooldown() > 0) return;
 
     const channel = this.channel();
     const phone = this.form.controls.phone.value;
@@ -217,6 +255,10 @@ export class ForgotPasswordComponent {
       const response = await this.auth.requestPasswordResetChannel(
         channel === 'phone' ? { channel: 'phone', phone } : { channel: 'email', email },
       );
+
+      /* Block an immediate re-send if the user navigates back to this page
+         (e.g. browser back from /reset-password). */
+      this.startCooldown();
 
       /* Always navigate — even for unregistered identifiers (anti-enumeration;
          the API returns a 'fake-' verification_id which the confirm step
@@ -236,6 +278,7 @@ export class ForgotPasswordComponent {
         for (const code of result.unmapped) {
           if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
             this.toast.error('auth.forgot.errors.rateLimited');
+            this.startLockout(err);
           } else if (code === AUTH_ERROR_CODES.OTP_PROVIDER_ERROR) {
             this.toast.error('auth.forgot.errors.providerError');
           } else {
@@ -245,6 +288,41 @@ export class ForgotPasswordComponent {
       }
     } finally {
       this.submitting.set(false);
+    }
+  }
+
+  /* ---------- Cooldown ---------- */
+
+  private startCooldown(seconds: number = RESEND_COOLDOWN_SECONDS): void {
+    this.cooldown.set(seconds);
+    this.clearCooldown();
+    this.cooldownTimer = setInterval(() => {
+      const next = this.cooldown() - 1;
+      if (next <= 0) {
+        this.cooldown.set(0);
+        this.lockedOut.set(false);
+        this.clearCooldown();
+      } else {
+        this.cooldown.set(next);
+      }
+    }, 1000);
+  }
+
+  /**
+   * Reflect a server OTP lockout (429 OTP_RATE_LIMITED): disable submit for
+   * `retry_after` seconds (from the 429 body; ~60s fallback) and show the
+   * rate-limit banner. Never shortens an in-flight longer cooldown.
+   */
+  private startLockout(err: unknown): void {
+    const seconds = Math.max(readRetryAfterSeconds(err), this.cooldown());
+    this.lockedOut.set(true);
+    this.startCooldown(seconds);
+  }
+
+  private clearCooldown(): void {
+    if (this.cooldownTimer !== null) {
+      clearInterval(this.cooldownTimer);
+      this.cooldownTimer = null;
     }
   }
 }

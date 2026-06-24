@@ -4,6 +4,7 @@ import {
   inject,
   signal,
   OnInit,
+  OnDestroy,
 } from '@angular/core';
 import { NgIf } from '@angular/common';
 import {
@@ -22,10 +23,14 @@ import {
   FormFieldComponent,
   PasswordStrengthComponent,
   mapApiErrors,
+  readRetryAfterSeconds,
   ApiErrorMapping,
   ToastService,
 } from '../../../shared/forms';
 import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
+
+/** Resend cooldown — matches the other OTP surfaces. */
+const RESEND_COOLDOWN_SECONDS = 30;
 
 /**
  * Reset password page — /reset-password.
@@ -151,12 +156,38 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
             <button
               type="submit"
               class="auth-submit"
-              [disabled]="submitting()"
+              [disabled]="submitting() || lockedOut()"
               data-testid="reset-submit"
             >
               {{ (submitting() ? 'common.loading' : 'auth.reset.submit') | translate }}
             </button>
           </form>
+
+          <p
+            *ngIf="lockedOut()"
+            class="auth-field-hint auth-field-hint--warn"
+            role="alert"
+            data-testid="reset-lockout"
+          >
+            {{ 'auth.lockout.countdown' | translate : { seconds: resendCooldown() } }}
+          </p>
+
+          <div class="auth-resend" *ngIf="canResend()">
+            <p class="auth-resend__prompt">{{ 'auth.reset.resendCta' | translate }}</p>
+            <button
+              type="button"
+              class="auth-link auth-resend__button"
+              [disabled]="resendCooldown() > 0 || resending()"
+              [attr.aria-disabled]="resendCooldown() > 0 || resending()"
+              (click)="onResend()"
+              data-testid="reset-resend"
+            >
+              <ng-container *ngIf="resendCooldown() > 0; else readyResend">
+                {{ 'auth.reset.resendCooldown' | translate : { seconds: resendCooldown() } }}
+              </ng-container>
+              <ng-template #readyResend>{{ 'auth.reset.resendButton' | translate }}</ng-template>
+            </button>
+          </div>
         </ng-container>
 
         <ng-template #missingVerification>
@@ -172,7 +203,7 @@ import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
   `,
   styleUrl: '../verify-phone/verify-phone.scss',
 })
-export class ResetPasswordComponent implements OnInit {
+export class ResetPasswordComponent implements OnInit, OnDestroy {
   protected readonly form: FormGroup<{
     code: FormControl<string>;
     new_password: FormControl<string>;
@@ -180,9 +211,21 @@ export class ResetPasswordComponent implements OnInit {
   }>;
 
   protected readonly submitting = signal(false);
+  protected readonly resending = signal(false);
+  protected readonly resendCooldown = signal(0);
+  /**
+   * True while a server-reflected OTP lockout (429 OTP_RATE_LIMITED) is in
+   * effect. Reuses resendCooldown for the countdown but ALSO disables Submit
+   * (and Resend) for the retry_after window.
+   */
+  protected readonly lockedOut = signal(false);
   /** Email or phone the code was sent to — shown for context only. */
   protected readonly destination = signal<string | null>(null);
+  /** Channel + destination let us re-issue the reset code (resend). */
+  private readonly channel = signal<'email' | 'phone' | null>(null);
   private readonly verificationId = signal<string | null>(null);
+
+  private cooldownTimer: ReturnType<typeof setInterval> | null = null;
 
   protected readonly codeErrors: Record<string, string> = {
     required: 'auth.fields.required',
@@ -227,8 +270,54 @@ export class ResetPasswordComponent implements OnInit {
     /* New two-channel flow (#8) passes `destination`; keep `email` as a
        fallback for any old in-flight links. */
     const dest = params.get('destination') ?? params.get('email');
+    const channel = params.get('channel');
     if (vid !== null) this.verificationId.set(vid);
     if (dest !== null) this.destination.set(dest);
+    if (channel === 'email' || channel === 'phone') this.channel.set(channel);
+  }
+
+  ngOnDestroy(): void {
+    this.clearCooldown();
+  }
+
+  /**
+   * Resend is only possible when we know both the channel and destination
+   * (carried as query params from /forgot-password). Old links that lack
+   * them simply hide the resend affordance.
+   */
+  protected canResend(): boolean {
+    return this.channel() !== null && (this.destination() ?? '').length > 0;
+  }
+
+  /** Re-issue the reset code via the same channel + destination. */
+  protected async onResend(): Promise<void> {
+    if (this.resendCooldown() > 0 || this.resending()) return;
+    const channel = this.channel();
+    const dest = this.destination();
+    if (channel === null || dest === null || dest.length === 0) return;
+
+    this.resending.set(true);
+    try {
+      const res = await this.auth.requestPasswordResetChannel(
+        channel === 'phone' ? { channel: 'phone', phone: dest } : { channel: 'email', email: dest },
+      );
+      this.verificationId.set(res.verification_id);
+      this.startCooldown();
+      this.toast.success('auth.reset.codeSent');
+    } catch (err) {
+      const result = mapApiErrors(err, this.form, RESET_ERROR_MAP);
+      if (result.isNetworkError) {
+        this.toast.error('auth.login.errors.network');
+      } else if (result.unmapped.includes(AUTH_ERROR_CODES.OTP_RATE_LIMITED)) {
+        this.toast.error('auth.reset.errors.rateLimited');
+        this.startLockout(err);
+      } else {
+        this.toast.error('auth.reset.errors.unexpected');
+        this.startCooldown();
+      }
+    } finally {
+      this.resending.set(false);
+    }
   }
 
   protected async onSubmit(): Promise<void> {
@@ -256,6 +345,7 @@ export class ResetPasswordComponent implements OnInit {
         for (const code of result.unmapped) {
           if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
             this.toast.error('auth.reset.errors.rateLimited');
+            this.startLockout(err);
           } else {
             this.toast.error('auth.reset.errors.unexpected');
           }
@@ -263,6 +353,41 @@ export class ResetPasswordComponent implements OnInit {
       }
     } finally {
       this.submitting.set(false);
+    }
+  }
+
+  /* ---------- Cooldown ---------- */
+
+  private startCooldown(seconds: number = RESEND_COOLDOWN_SECONDS): void {
+    this.resendCooldown.set(seconds);
+    this.clearCooldown();
+    this.cooldownTimer = setInterval(() => {
+      const next = this.resendCooldown() - 1;
+      if (next <= 0) {
+        this.resendCooldown.set(0);
+        this.lockedOut.set(false);
+        this.clearCooldown();
+      } else {
+        this.resendCooldown.set(next);
+      }
+    }, 1000);
+  }
+
+  /**
+   * Reflect a server OTP lockout (429 OTP_RATE_LIMITED): disable Resend AND
+   * Submit for `retry_after` seconds (from the 429 body; ~60s fallback),
+   * reusing the resend countdown. Never shortens an in-flight longer lockout.
+   */
+  private startLockout(err: unknown): void {
+    const seconds = Math.max(readRetryAfterSeconds(err), this.resendCooldown());
+    this.lockedOut.set(true);
+    this.startCooldown(seconds);
+  }
+
+  private clearCooldown(): void {
+    if (this.cooldownTimer !== null) {
+      clearInterval(this.cooldownTimer);
+      this.cooldownTimer = null;
     }
   }
 }

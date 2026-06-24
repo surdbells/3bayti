@@ -278,3 +278,16 @@ button.auth-link {
 .auth-card__brand .brand-logo--wordmark {
   height: 2rem;
 }
+
+/* Inline warning hint — used by the OTP rate-limit lockout banner
+   (and the forgot-password submit cooldown). Mirrors register.scss so the
+   countdown copy reads consistently across the shared auth surface. */
+.auth-field-hint {
+  font-size: 13px;
+  margin: -8px 0 16px 0;
+  line-height: 1.45;
+
+  &--warn {
+    color: var(--color-danger-700, #8a1b14);
+  }
+}

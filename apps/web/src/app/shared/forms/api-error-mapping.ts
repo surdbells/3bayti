@@ -64,13 +64,49 @@ interface ApiErrorBody {
   code?: string;
   message?: string;
   errors?: Record<string, string[]>;
+  /* Seconds until the client may retry — present on OTP_RATE_LIMITED (429).
+     Clients enter a lockout for this many seconds. */
+  retry_after?: number;
   /* The API's native envelope nests the code under `error`; the BFF
      proxy passes some responses through in that shape. Read both. */
   error?: {
     code?: string;
     message?: string;
     errors?: Record<string, string[]>;
+    retry_after?: number;
   };
+}
+
+/** Fallback lockout window when the 429 body omits `retry_after`. */
+export const DEFAULT_OTP_LOCKOUT_SECONDS = 60;
+
+/**
+ * Read `retry_after` (seconds) from a rate-limit (429) error body.
+ *
+ * The OTP rate-limit contract is HTTP 429 with body
+ *   { error_code: 'OTP_RATE_LIMITED', retry_after: <integer seconds> }
+ * where retry_after is the number of seconds until the client may retry.
+ * On OTP_RATE_LIMITED the client should lock out Resend (and Verify) for
+ * this window. When the field is absent / non-positive we fall back to
+ * DEFAULT_OTP_LOCKOUT_SECONDS (~60s) so the UI still degrades safely.
+ *
+ * Reads both the flat shape and the nested `error` envelope (the BFF proxy
+ * passes some responses through in the native nested form).
+ */
+export function readRetryAfterSeconds(
+  err: unknown,
+  fallback: number = DEFAULT_OTP_LOCKOUT_SECONDS,
+): number {
+  if (err instanceof HttpErrorResponse) {
+    const body = err.error as ApiErrorBody | string | null;
+    if (body !== null && typeof body === 'object') {
+      const raw = body.retry_after ?? body.error?.retry_after;
+      if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
+        return Math.ceil(raw);
+      }
+    }
+  }
+  return fallback;
 }
 
 export function mapApiErrors(

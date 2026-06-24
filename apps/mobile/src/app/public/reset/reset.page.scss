@@ -263,6 +263,13 @@ ion-content.reset-bg {
   cursor: pointer;
 
   &:active { opacity: 0.7; }
+
+  &.is-disabled {
+    color: var(--ax-color-text-secondary);
+    opacity: 0.6;
+    pointer-events: none;
+    cursor: default;
+  }
 }
 
 /* ----- Back-to-login link line ----- */

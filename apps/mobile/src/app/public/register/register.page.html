@@ -93,8 +93,17 @@
         <ion-text class="secondary-link" (click)="change_phone()">
           {{ 'change_phone_number' | translate }}
         </ion-text>
-        <ion-text class="secondary-link" (click)="resend_phone_otp()">
-          {{ 'resend_otp' | translate }}
+        <ion-text
+          class="secondary-link"
+          [class.is-disabled]="otpCooldown > 0"
+          (click)="resend_phone_otp()">
+          @if (otpLocked && otpCooldown > 0) {
+            {{ 'otp_locked_countdown' | translate:{ seconds: otpCooldown } }}
+          } @else if (otpCooldown > 0) {
+            {{ 'resend_otp_countdown' | translate:{ seconds: otpCooldown } }}
+          } @else {
+            {{ 'resend_otp' | translate }}
+          }
         </ion-text>
       </div>
     }
@@ -207,8 +216,17 @@
         <ion-text class="secondary-link" (click)="back_to_details()">
           {{ 'button_back' | translate }}
         </ion-text>
-        <ion-text class="secondary-link" (click)="resend_email_otp()">
-          {{ 'resend_otp' | translate }}
+        <ion-text
+          class="secondary-link"
+          [class.is-disabled]="otpCooldown > 0"
+          (click)="resend_email_otp()">
+          @if (otpLocked && otpCooldown > 0) {
+            {{ 'otp_locked_countdown' | translate:{ seconds: otpCooldown } }}
+          } @else if (otpCooldown > 0) {
+            {{ 'resend_otp_countdown' | translate:{ seconds: otpCooldown } }}
+          } @else {
+            {{ 'resend_otp' | translate }}
+          }
         </ion-text>
       </div>
     }
@@ -234,7 +252,7 @@
           </ion-button>
         }
         @case (2) {
-          <ion-button (click)="verify_phone()" expand="block" class="primary-btn" type="button">
+          <ion-button (click)="verify_phone()" [disabled]="otpLocked && otpCooldown > 0" expand="block" class="primary-btn" type="button">
             {{ 'validate' | translate }}
           </ion-button>
         }
@@ -244,7 +262,7 @@
           </ion-button>
         }
         @case (4) {
-          <ion-button (click)="confirm_email()" expand="block" class="primary-btn" type="button">
+          <ion-button (click)="confirm_email()" [disabled]="otpLocked && otpCooldown > 0" expand="block" class="primary-btn" type="button">
             {{ 'validate' | translate }}
           </ion-button>
         }

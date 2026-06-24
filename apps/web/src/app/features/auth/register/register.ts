@@ -24,6 +24,7 @@ import {
   PasswordStrengthComponent,
   PHONE_COUNTRIES,
   mapApiErrors,
+  readRetryAfterSeconds,
   ApiErrorMapping,
   ToastService,
 } from '../../../shared/forms';
@@ -166,12 +167,21 @@ const RESEND_COOLDOWN_SECONDS = 30;
             <button
               type="submit"
               class="auth-submit"
-              [disabled]="submitting()"
+              [disabled]="submitting() || lockedOut()"
               data-testid="register-verify-phone-submit"
             >
               {{ (submitting() ? 'common.loading' : 'auth.register.verify') | translate }}
             </button>
           </form>
+
+          <p
+            *ngIf="lockedOut()"
+            class="auth-field-hint auth-field-hint--warn"
+            role="alert"
+            data-testid="register-verify-phone-lockout"
+          >
+            {{ 'auth.lockout.countdown' | translate : { seconds: resendCooldown() } }}
+          </p>
 
           <div class="auth-resend">
             <p class="auth-resend__prompt">{{ 'auth.register.resendCta' | translate }}</p>
@@ -367,12 +377,21 @@ const RESEND_COOLDOWN_SECONDS = 30;
             <button
               type="submit"
               class="auth-submit"
-              [disabled]="submitting()"
+              [disabled]="submitting() || lockedOut()"
               data-testid="register-verify-email-submit"
             >
               {{ (submitting() ? 'common.loading' : 'auth.register.verify') | translate }}
             </button>
           </form>
+
+          <p
+            *ngIf="lockedOut()"
+            class="auth-field-hint auth-field-hint--warn"
+            role="alert"
+            data-testid="register-verify-email-lockout"
+          >
+            {{ 'auth.lockout.countdown' | translate : { seconds: resendCooldown() } }}
+          </p>
 
           <div class="auth-resend">
             <p class="auth-resend__prompt">{{ 'auth.register.resendCta' | translate }}</p>
@@ -408,6 +427,12 @@ export class RegisterComponent implements OnDestroy {
 
   protected readonly submitting = signal(false);
   protected readonly resendCooldown = signal(0);
+  /**
+   * True while a server-reflected OTP lockout (429 OTP_RATE_LIMITED) is in
+   * effect. Reuses resendCooldown for the countdown but ALSO disables the
+   * Verify buttons for the retry_after window.
+   */
+  protected readonly lockedOut = signal(false);
   /** Inline "already registered" hint for step 1 (best-effort). */
   protected readonly phoneTaken = signal(false);
 
@@ -723,6 +748,7 @@ export class RegisterComponent implements OnDestroy {
     for (const code of result.unmapped) {
       if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
         this.toast.error('auth.register.errors.rateLimited');
+        this.startLockout(err);
       } else if (code === AUTH_ERROR_CODES.OTP_PROVIDER_ERROR) {
         this.toast.error('auth.register.errors.providerError');
       } else if (code === AUTH_ERROR_CODES.INVALID_TOKEN) {
@@ -733,18 +759,30 @@ export class RegisterComponent implements OnDestroy {
     }
   }
 
-  private startCooldown(): void {
-    this.resendCooldown.set(RESEND_COOLDOWN_SECONDS);
+  private startCooldown(seconds: number = RESEND_COOLDOWN_SECONDS): void {
+    this.resendCooldown.set(seconds);
     this.clearCooldown();
     this.cooldownTimer = setInterval(() => {
       const next = this.resendCooldown() - 1;
       if (next <= 0) {
         this.resendCooldown.set(0);
+        this.lockedOut.set(false);
         this.clearCooldown();
       } else {
         this.resendCooldown.set(next);
       }
     }, 1000);
+  }
+
+  /**
+   * Reflect a server OTP lockout (429 OTP_RATE_LIMITED): disable Resend AND
+   * Verify for `retry_after` seconds (from the 429 body; ~60s fallback),
+   * reusing the resend countdown. Never shortens an in-flight longer lockout.
+   */
+  private startLockout(err: unknown): void {
+    const seconds = Math.max(readRetryAfterSeconds(err), this.resendCooldown());
+    this.lockedOut.set(true);
+    this.startCooldown(seconds);
   }
 
   private clearCooldown(): void {

@@ -164,6 +164,9 @@
     "validation": {
       "code6Digits": "Code must be 4–6 digits."
     },
+    "lockout": {
+      "countdown": "Too many attempts. Try again in {{seconds}}s."
+    },
     "login": {
       "title": "Sign in to your account",
       "subtitle": "Welcome back. Enter your email and password to continue.",
@@ -284,7 +287,8 @@
       "channelSubtitle": "Choose how you'd like to receive your reset code.",
       "channelEmail": "Email",
       "channelPhone": "Phone",
-      "phoneLabel": "Phone number"
+      "phoneLabel": "Phone number",
+      "resendCooldown": "Resend in {{seconds}}s"
     },
     "reset": {
       "title": "Set a new password",
@@ -293,6 +297,10 @@
       "newPasswordLabel": "New password",
       "confirmPasswordLabel": "Confirm new password",
       "submit": "Reset password",
+      "codeSent": "We've sent a new code.",
+      "resendCta": "Didn't get a code?",
+      "resendButton": "Resend code",
+      "resendCooldown": "Resend in {{seconds}}s",
       "errors": {
         "invalidCode": "That code is invalid or has expired. Please try again or request a new code.",
         "passwordsMismatch": "Passwords don't match.",

@@ -17,5 +17,5 @@ export { PasswordStrengthComponent, loadPasswordScorer } from './password-streng
 export { ToastService } from './toast/toast.service';
 export type { Toast, ToastInput } from './toast/toast.service';
 export { ToastContainerComponent } from './toast/toast.component';
-export { mapApiErrors } from './api-error-mapping';
+export { mapApiErrors, readRetryAfterSeconds, DEFAULT_OTP_LOCKOUT_SECONDS } from './api-error-mapping';
 export type { ApiErrorMapping, MapApiErrorsResult } from './api-error-mapping';

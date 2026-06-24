@@ -85,6 +85,7 @@ export class ResetPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.clearOtpTimer();
   }
 
   ngOnInit() {
@@ -113,6 +114,19 @@ export class ResetPage implements OnInit, OnDestroy {
 
   /** Set by /auth/reset; consumed by /auth/reset/confirm. */
   verification_id = "";
+
+  /**
+   * Resend cooldown / rate-limit lockout state. `otpCooldown` is the
+   * remaining seconds the Resend control is disabled; a short cooldown
+   * starts after each successful send, a longer lockout (server
+   * retry_after) starts on an OTP_RATE_LIMITED 429. `otpLocked` marks the
+   * hard server lockout (also disables the Reset/verify action).
+   */
+  otpCooldown = 0;
+  otpLocked = false;
+  private readonly DEFAULT_RESEND_COOLDOWN = 30;
+  private readonly DEFAULT_LOCKOUT = 60;
+  private otpTimer: ReturnType<typeof setInterval> | null = null;
 
   get selectedDial(): DialCode | undefined {
     return this.dialCodes.find(c => c.code === this.reset_p.countryCode);
@@ -189,9 +203,10 @@ export class ResetPage implements OnInit, OnDestroy {
           this.reset_p.new_password = '';
           this.reset_p.confirm_password = '';
           this.ui_controls.step = 2;
+          this.startResendCooldown();
           this.success_notification(this.i18n.t('text_otp_sent'));
         } else {
-          this.error_notification(this.mapErrorMessage(response));
+          this.handleOtpError(response);
         }
       },
       error: (e) => this.handleHttpError(e),
@@ -229,10 +244,11 @@ export class ResetPage implements OnInit, OnDestroy {
         if (response.response_code === 200 && response.status === 'success') {
           // Product requirement: DO NOT auto-login. Discard the returned
           // tokens; send the user to log in fresh.
+          this.clearOtpTimer();
           this.success_notification(this.i18n.t('text_password_reset_success'));
           this.router.navigate(['/login'], { replaceUrl: true });
         } else {
-          this.error_notification(this.mapErrorMessage(response));
+          this.handleOtpError(response);
         }
       },
       error: (e) => this.handleHttpError(e),
@@ -242,6 +258,7 @@ export class ResetPage implements OnInit, OnDestroy {
   // --- Resend / change ---------------------------------------------------
 
   resend_otp() {
+    if (this.otpCooldown > 0) return; // cooldown / lockout active
     if (!this.isOnline) {
       this.error_notification(this.i18n.t('text_offline_check_connection'));
       return;
@@ -256,9 +273,10 @@ export class ResetPage implements OnInit, OnDestroy {
             this.verification_id = vid;
             this.reset_p.code = '';
           }
+          this.startResendCooldown();
           this.success_notification(this.i18n.t('text_otp_sent'));
         } else {
-          this.error_notification(this.mapErrorMessage(response));
+          this.handleOtpError(response);
         }
       },
       error: (e) => this.handleHttpError(e),
@@ -270,6 +288,9 @@ export class ResetPage implements OnInit, OnDestroy {
     this.reset_p.code = '';
     this.reset_p.new_password = '';
     this.reset_p.confirm_password = '';
+    this.clearOtpTimer();
+    this.otpCooldown = 0;
+    this.otpLocked = false;
   }
 
   // --- Error mapping -----------------------------------------------------
@@ -293,13 +314,87 @@ export class ResetPage implements OnInit, OnDestroy {
 
   private handleHttpError(e: any) {
     this.ui_controls.loading = false;
-    const code = e?.error?.error?.code;
+    const code = e?.error?.error?.code ?? e?.error?.error_code;
     if (typeof code === 'string') {
+      if (code === 'OTP_RATE_LIMITED') {
+        this.startLockout(this.readRetryAfter(e));
+      }
       this.error_notification(this.mapErrorMessage({ error_code: code }));
       return;
     }
     console.error(e);
     this.error_notification(this.i18n.t('text_request_failed'));
+  }
+
+  // --- Resend cooldown + rate-limit lockout ------------------------------
+
+  /**
+   * Centralised OTP-error handler for the success-channel envelope.
+   * On OTP_RATE_LIMITED it starts a lockout for `retry_after` seconds
+   * (disabling Resend + the Reset action); all errors surface the
+   * mapped message.
+   */
+  private handleOtpError(response: any) {
+    if (response?.error_code === 'OTP_RATE_LIMITED') {
+      this.startLockout(this.readRetryAfter(response));
+    }
+    this.error_notification(this.mapErrorMessage(response));
+  }
+
+  /**
+   * Read retry_after (seconds) from either envelope: the success-channel
+   * error envelope (top-level or under error_details) or the rxjs error
+   * body (e.error / e.error.error). Falls back to the default lockout.
+   */
+  private readRetryAfter(src: any): number {
+    const candidates = [
+      src?.retry_after,
+      src?.error_details?.retry_after,
+      src?.error?.retry_after,
+      src?.error?.error?.retry_after,
+      src?.error?.error?.details?.retry_after,
+    ];
+    for (const c of candidates) {
+      const n = Number(c);
+      if (Number.isFinite(n) && n > 0) return Math.ceil(n);
+    }
+    return this.DEFAULT_LOCKOUT;
+  }
+
+  /** Short cooldown after a successful send: disables Resend only. */
+  private startResendCooldown() {
+    this.otpLocked = false;
+    this.startCountdown(this.DEFAULT_RESEND_COOLDOWN);
+  }
+
+  /** Longer server lockout: disables Resend AND the Reset action. */
+  private startLockout(seconds: number) {
+    this.otpLocked = true;
+    this.startCountdown(seconds > 0 ? seconds : this.DEFAULT_LOCKOUT);
+  }
+
+  private startCountdown(seconds: number) {
+    this.clearOtpTimer();
+    this.otpCooldown = Math.max(0, Math.ceil(seconds));
+    if (this.otpCooldown === 0) {
+      this.otpLocked = false;
+      return;
+    }
+    this.otpTimer = setInterval(() => {
+      this.otpCooldown -= 1;
+      if (this.otpCooldown <= 0) {
+        this.clearOtpTimer();
+        this.otpCooldown = 0;
+        this.otpLocked = false;
+      }
+    }, 1000);
+  }
+
+  private clearOtpTimer() {
+    if (this.otpTimer) {
+      clearInterval(this.otpTimer);
+      this.otpTimer = null;
+    }
   }
 
   error_notification(message: string) {
