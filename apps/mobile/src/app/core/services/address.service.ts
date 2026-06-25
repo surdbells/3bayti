@@ -33,8 +33,16 @@ export interface NewAddress {
   building_details?: string | null;
   postal_code?: string | null;
   country?: string;
-  is_default_shipping?: boolean;
-  is_default_billing?: boolean;
+  /**
+   * When true, make this the user's default (shipping + billing) address.
+   *
+   * IMPORTANT: the v3 CreateAddressInput DTO accepts a SINGLE `is_default`
+   * field — it has NO is_default_shipping/is_default_billing params, and
+   * RequestValidator silently drops unknown keys. Sending the split flags
+   * (the old shape) meant the create dropped them and the address was
+   * never promoted. Keep this as the single `is_default` the API expects.
+   */
+  is_default?: boolean;
 }
 
 /**
@@ -113,10 +121,21 @@ export class AddressService {
       || res?.status === 'success';
   }
 
-  /** Mark an address as the default (shipping + billing). */
+  /**
+   * Mark an address as the default for BOTH shipping and billing.
+   *
+   * IMPORTANT: the v3 PATCH /me/addresses/:id/default endpoint REQUIRES a
+   * body of `{ shipping?: bool, billing?: bool }` and has an Assert\Callback
+   * that REJECTS an empty/all-null body with 422. Sending `{}` (the old
+   * shape) made this call a guaranteed no-op/422 — the standalone addresses
+   * page could never change which address was the default, and a user whose
+   * default address was incomplete had no way to promote a good one, so
+   * checkout (incl. gift-card payment) kept reading the bad/no default and
+   * failing. Send both role flags so the promotion actually takes effect.
+   */
   async setDefault(token: string, id: number): Promise<boolean> {
     const res: any = await firstValueFrom(
-      this.adapter.patch_v3('PATCH /me/addresses/:id/default', {}, {
+      this.adapter.patch_v3('PATCH /me/addresses/:id/default', { shipping: true, billing: true }, {
         authToken: token,
         pathParams: { id: String(id) },
       }),

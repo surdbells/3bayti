@@ -1115,8 +1115,11 @@ export class CheckoutPage implements OnInit, OnDestroy {
       label: optionalOrNull(this.newAddress.label),
       building_details: optionalOrNull(this.newAddress.building_details),
       postal_code: optionalOrNull(this.newAddress.postal_code),
-      is_default_shipping: this.newAddress.is_default,
-      is_default_billing: this.newAddress.is_default,
+      // v3 CreateAddressInput accepts a single `is_default` flag; the split
+      // is_default_shipping/is_default_billing keys were silently dropped by
+      // RequestValidator, so a "default"-checked new address was never
+      // promoted (left checkout reading a stale/incomplete default).
+      is_default: this.newAddress.is_default,
     };
 
     this.isSavingAddress = true;

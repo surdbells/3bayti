@@ -94,8 +94,44 @@
           </div>
         </div>
 
-        <!-- Description -->
-        <div class="product-description" [innerHTML]="single.description"></div>
+        <!-- Description / Reviews — premium pill toggle -->
+        <div class="info-tabs" role="tablist">
+          <button
+            type="button"
+            class="info-tab"
+            role="tab"
+            [class.is-active]="activeTab === 'description'"
+            [attr.aria-selected]="activeTab === 'description'"
+            (click)="setTab('description')">
+            {{ 'tab_description' | translate }}
+          </button>
+          <button
+            type="button"
+            class="info-tab"
+            role="tab"
+            [class.is-active]="activeTab === 'reviews'"
+            [attr.aria-selected]="activeTab === 'reviews'"
+            (click)="setTab('reviews')">
+            {{ 'tab_reviews' | translate }}
+          </button>
+        </div>
+
+        <!-- Description panel -->
+        @if(activeTab === 'description'){
+          <div class="info-panel" role="tabpanel">
+            <div class="product-description" [innerHTML]="single.description"></div>
+          </div>
+        }
+
+        <!-- Reviews panel -->
+        @if(activeTab === 'reviews'){
+          <div class="info-panel info-panel--reviews" role="tabpanel">
+            <div class="reviews-empty">
+              <ax-icon name="message-square"></ax-icon>
+              <p>{{ 'heading_no_reviews_yet' | translate }}</p>
+            </div>
+          </div>
+        }
 
         <!-- Delivery Info -->
         <div class="delivery-badge">

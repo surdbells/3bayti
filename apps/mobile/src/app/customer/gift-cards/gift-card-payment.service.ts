@@ -51,6 +51,21 @@ export class GiftCardPaymentService {
 
     this.network.post_v3('POST /checkout/initiate', initPayload, { authToken }).subscribe({
       next: (res: any) => {
+        // The MobileNetworkAdapter surfaces HTTP-level errors (422/4xx/5xx)
+        // through the SUCCESS channel as { response_code, status: 'error',
+        // message, data: null }. So an actionable failure — e.g. "No billing
+        // address on file. Please add one before checking out." or "Your
+        // billing address is incomplete (missing: …)" from
+        // InitiateCheckoutController — arrives HERE, not in `error`. The old
+        // code only looked at res.data.url (null on error) and showed the
+        // generic "could not start payment" toast, masking the real reason.
+        // Detect the error envelope and surface the server message instead.
+        if (res?.status === 'error' || (res?.response_code && res.response_code !== 200 && res.response_code !== 201)) {
+          this.notify.error(res?.message || this.i18n.t('gc_error_start_payment_add_address'));
+          handlers.onFailed?.();
+          return;
+        }
+
         // Gateway skipped (denomination = 0 — shouldn't happen but handle it).
         if (res?.data?.gateway_skipped === true) {
           this.notify.success(this.i18n.t('gc_activated'));
@@ -70,7 +85,14 @@ export class GiftCardPaymentService {
         this.openPaymentWebview(checkoutUrl, orderReference, giftCardId, authToken, handlers);
       },
       error: (err: any) => {
-        this.notify.error(err?.error?.message ?? this.i18n.t('gc_error_start_payment'));
+        // Only transport-level errors (status 0) reach this channel. Still
+        // try the structured error paths before falling back to the generic
+        // "add a delivery address" hint, since that's the most common cause.
+        const msg = err?.error?.error?.message
+          ?? err?.error?.message
+          ?? err?.message;
+        this.notify.error(msg || this.i18n.t('gc_error_start_payment_add_address'));
+        handlers.onFailed?.();
       },
     });
   }

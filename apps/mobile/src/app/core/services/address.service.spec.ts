@@ -148,6 +148,22 @@ describe('AddressService', () => {
     const ok = await service.setDefault('tok', 7);
     expect(adapter.lastPatch.routeKey).toBe('PATCH /me/addresses/:id/default');
     expect(adapter.lastPatch.opts.pathParams).toEqual({ id: '7' });
+    // The API rejects an empty/all-null body with 422 — the PATCH must
+    // carry both role flags so the promotion actually takes effect.
+    expect(adapter.lastPatch.body).toEqual({ shipping: true, billing: true });
     expect(ok).toBeTrue();
+  });
+
+  it('sends is_default (not the split shipping/billing flags) on create', async () => {
+    await service.create('tok', {
+      recipient_name: 'Jane', recipient_phone: '+971500000000',
+      emirate: 'Dubai', area: 'Al Marmoom', street_address: '1 St',
+      is_default: true,
+    });
+    // The v3 CreateAddressInput only accepts `is_default`; the old split
+    // flags were silently dropped, so the address was never promoted.
+    expect(adapter.lastPost.body.is_default).toBeTrue();
+    expect(adapter.lastPost.body.is_default_shipping).toBeUndefined();
+    expect(adapter.lastPost.body.is_default_billing).toBeUndefined();
   });
 });

@@ -270,8 +270,10 @@ export class AddressesPage implements OnInit, OnDestroy {
       label: optionalOrNull(this.form.label),
       building_details: optionalOrNull(this.form.building_details),
       postal_code: optionalOrNull(this.form.postal_code),
-      is_default_shipping: this.form.is_default,
-      is_default_billing: this.form.is_default,
+      // The v3 CreateAddressInput accepts a single `is_default` flag (NOT
+      // is_default_shipping/is_default_billing — those were silently dropped
+      // by RequestValidator, so a new "default" address was never promoted).
+      is_default: this.form.is_default,
     };
 
     this.ui_controls.is_saving = true;

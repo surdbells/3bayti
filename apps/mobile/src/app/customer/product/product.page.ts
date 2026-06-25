@@ -214,6 +214,14 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   apiSizes = {};
   chosenSize: string | null = null;
 
+  /** PDP info tabs — 'description' (default) vs 'reviews'. */
+  activeTab: 'description' | 'reviews' = 'description';
+
+  /** Switch the active PDP info tab (Description / Reviews). */
+  setTab(tab: 'description' | 'reviews'): void {
+    this.activeTab = tab;
+  }
+
   single = {
     id: 0,
     token: "",

@@ -286,6 +286,82 @@ swiper-slide,
   }
 }
 
+/* ========================================
+   INFO TABS — premium pill toggle
+   ========================================
+   Rounded pill container with two segments. The ACTIVE segment is a
+   solid filled brand/olive pill; the inactive one is transparent.
+   Matches the gift-card "Send now / Schedule" toggle look.
+   RTL-safe (flex order follows document direction; no left/right
+   hardcoding) and accessible (role=tab / aria-selected on buttons). */
+.info-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 16px;
+  background: var(--ax-color-bg-muted);
+  border-radius: 999px;
+}
+
+.info-tab {
+  flex: 1;
+  min-width: 0;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+
+  &.is-active {
+    background: var(--brand-dark);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(124, 33, 8, 0.22);
+  }
+
+  &:not(.is-active):active {
+    background: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.info-panel {
+  animation: infoPanelFade 0.2s ease;
+}
+
+@keyframes infoPanelFade {
+  from { opacity: 0; transform: translateY(2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Reviews empty state inside the Reviews panel */
+.reviews-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text-secondary);
+
+  ax-icon {
+    font-size: 28px;
+    color: var(--ax-color-border-default);
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
 /* Description */
 .product-description {
   font-size: 14px;
@@ -860,8 +936,13 @@ swiper-slide,
   .color-pill,
   .dial-btn,
   .add-cart-btn,
-  .back-btn {
+  .back-btn,
+  .info-tab {
     transition: none;
+  }
+
+  .info-panel {
+    animation: none;
   }
 
   @keyframes gradientShift {
