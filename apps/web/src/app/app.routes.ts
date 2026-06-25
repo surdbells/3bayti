@@ -118,6 +118,16 @@ export const routes: Routes = [
     title: 'routeTitles.styles',
   },
   {
+    /* Create a style — `/styles/create`. Name + product picker → POST
+       /me/styles. Auth-gated (the create endpoint is Bearer-bound).
+       MUST precede `styles/:slug` so the literal segment wins. */
+    path: 'styles/create',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/styles/style-create-page').then(m => m.StyleCreatePageComponent),
+    title: 'routeTitles.styleCreate',
+  },
+  {
     /* Style detail — `/styles/:slug`. Cover + the bundled products with
        View product + Add to wishlist, plus a display-only total. */
     path: 'styles/:slug',

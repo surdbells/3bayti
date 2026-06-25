@@ -1,0 +1,328 @@
+/* Create-a-style page. Mirrors the Style Hub "Gilded Boutique" language:
+   cream canvas, Playfair headings, pill controls, gold accents.
+   RTL-safe — logical properties / flex, no hard-coded left/right. */
+
+.style-create {
+  min-height: calc(100vh - 200px);
+  padding: 32px 0 64px;
+  background: var(--color-bg-default, #faf7f1);
+}
+
+.style-create__container {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.style-create__header {
+  margin-bottom: 28px;
+  text-align: center;
+}
+
+.style-create__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.01em;
+}
+
+.style-create__subtitle {
+  font-size: 15px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0 auto;
+  max-width: 480px;
+  line-height: 1.5;
+}
+
+/* --- Fields --------------------------------------------------------- */
+
+.style-create__field {
+  margin-bottom: 24px;
+}
+
+.style-create__label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin-bottom: 8px;
+}
+
+.style-create__input {
+  width: 100%;
+  box-sizing: border-box;
+  appearance: none;
+  background: #fff;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--color-text-primary, #2e241c);
+  transition: border-color 0.15s ease;
+
+  &::placeholder {
+    color: var(--color-text-muted, #9a8f82);
+  }
+
+  &:focus-visible {
+    border-color: var(--color-brand-500, #b18f1f);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+/* --- Selected products tray ----------------------------------------- */
+
+.style-tray {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.style-tray__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface-card, #fdfaf3);
+  border: 1px solid var(--color-border-default, #e3d7c2);
+  border-radius: 14px;
+  padding: 8px 12px;
+}
+
+.style-tray__thumb {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--color-bg-muted, #efe7d8);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.style-tray__blank {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #efe7d8 0%, #e3d7c2 100%);
+}
+
+.style-tray__name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--color-text-primary, #2e241c);
+  /* Clamp to one line. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.style-tray__remove {
+  flex: none;
+  appearance: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  color: var(--color-text-muted, #6b6056);
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: #b3261e;
+    background: rgba(179, 38, 30, 0.08);
+    outline: none;
+  }
+}
+
+.style-create__tray-empty {
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0;
+}
+
+/* --- Product picker -------------------------------------------------- */
+
+.style-picker {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border-default, #e3d7c2);
+  border-radius: 14px;
+  background: #fff;
+}
+
+.style-picker__item {
+  margin: 0;
+}
+
+.style-picker__btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  appearance: none;
+  background: transparent;
+  border: none;
+  text-align: start;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--color-text-primary, #2e241c);
+  transition: background-color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: rgba(177, 143, 31, 0.06);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.style-picker__thumb {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-bg-muted, #efe7d8);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.style-picker__name {
+  flex: 1;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.style-picker__added {
+  flex: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-brand-700, #5a3a2c);
+}
+
+.style-create__no-results,
+.style-create__full-note {
+  font-size: 14px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 10px 0 0;
+}
+
+/* --- Actions -------------------------------------------------------- */
+
+.style-create__actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 32px;
+}
+
+.style-create__submit {
+  appearance: none;
+  background: var(--color-brand-700, #5a3a2c);
+  border: 1px solid var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  padding: 13px 32px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: var(--color-brand-800, #44291f);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.style-create__cancel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-muted, #6b6056);
+  text-decoration: none;
+  transition: color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    color: var(--color-text-primary, #2e241c);
+    outline: none;
+  }
+}
+
+/* --- Sign-in prompt (guests) ---------------------------------------- */
+
+.style-create__sign-in {
+  text-align: center;
+  padding: 56px 20px;
+}
+
+.style-create__sign-in-text {
+  font-size: 15px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0 0 18px 0;
+}
+
+.style-create__sign-in-cta {
+  display: inline-block;
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-brand-800, #44291f);
+    outline: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .style-create__title { font-size: 26px; }
+}

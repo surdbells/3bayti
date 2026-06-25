@@ -77,6 +77,20 @@ import type { Style } from './style.model';
         </section>
 
         <ng-template #tabContent>
+          <!-- Create-a-style entry point (My styles tab, authed only) -->
+          <div
+            *ngIf="activeTab() === 'mine' && isAuthenticated()"
+            class="styles-hub__create"
+          >
+            <a
+              routerLink="/styles/create"
+              class="styles-hub__create-btn"
+              data-testid="styles-create-cta"
+            >
+              {{ 'styles.create.cta' | translate }}
+            </a>
+          </div>
+
           <ng-container *ngIf="styles().length > 0; else emptyOrLoading">
             <ul class="styles-grid" role="list" data-testid="styles-grid">
               <li

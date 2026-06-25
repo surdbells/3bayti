@@ -1285,6 +1285,7 @@
     "categories": "Browse categories"
   },
   "routeTitles": {
+    "styleCreate": "Create a style · 3bayti",
     "home": "3bayti — Premium Abayas, Kaftans & Modest Wear",
     "categories": "Shop by Category · 3bayti",
     "product": "Product · 3bayti",
@@ -1374,6 +1375,29 @@
     }
   },
   "styles": {
+    "create": {
+      "cta": "Create a style",
+      "title": "Create a style",
+      "subtitle": "Bundle up to four pieces into one curated outfit and share it with the community.",
+      "signInToCreate": "Sign in to create your own style.",
+      "nameLabel": "Style name",
+      "namePlaceholder": "e.g. Evening elegance",
+      "productsLabel": "Products",
+      "trayEmpty": "No products added yet. Search below to add up to four.",
+      "searchLabel": "Add products",
+      "searchPlaceholder": "Search products by name",
+      "added": "Added",
+      "remove": "Remove",
+      "noResults": "No products match your search.",
+      "maxReached": "You can add up to {{max}} products.",
+      "alreadyAdded": "That product is already in your style.",
+      "submit": "Publish style",
+      "success": "Your style has been created.",
+      "errors": {
+        "failed": "Could not create the style. Please try again.",
+        "unauthenticated": "Please sign in to create a style."
+      }
+    },
     "title": "Styles",
     "subtitle": "Shop the look — curated outfits that bundle pieces our community and editors love.",
     "tabs": {

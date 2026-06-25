@@ -230,6 +230,32 @@
   .style-card { transition: none; }
 }
 
+/* --- Create-a-style entry point ------------------------------------- */
+
+.styles-hub__create {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 20px 0;
+}
+
+.styles-hub__create-btn {
+  display: inline-block;
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  text-decoration: none;
+  padding: 11px 24px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-brand-800, #44291f);
+    outline: none;
+  }
+}
+
 /* --- Load more / empty / sign-in ------------------------------------ */
 
 .styles-hub__load-more {
