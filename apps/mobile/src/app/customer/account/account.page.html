@@ -128,12 +128,23 @@
         <div class="gift-promo__body">
           <p class="gift-promo__subtitle">{{ 'gift_promo_subtitle' | translate }}</p>
           <div class="gift-promo__actions">
-            <a class="gift-promo__cta" routerLink="/gift-cards">
-              <span>{{ 'gift_promo_cta_buy' | translate }}</span>
+            <a class="gift-promo__tile" routerLink="/gift-cards">
+              <span class="gift-promo__tile-icon" aria-hidden="true">
+                <ax-icon name="gift" [size]="20" />
+              </span>
+              <span class="gift-promo__tile-label">{{ 'gift_promo_cta_buy' | translate }}</span>
             </a>
-            <a class="gift-promo__link" routerLink="/gift-card-redeem">
-              {{ 'gift_promo_cta_redeem' | translate }}
-              <ax-icon name="arrow-right" [size]="14" />
+            <a class="gift-promo__tile" routerLink="/gift-card-redeem">
+              <span class="gift-promo__tile-icon" aria-hidden="true">
+                <ax-icon name="ticket" [size]="20" />
+              </span>
+              <span class="gift-promo__tile-label">{{ 'gift_promo_cta_redeem' | translate }}</span>
+            </a>
+            <a class="gift-promo__tile" routerLink="/my-gift-cards">
+              <span class="gift-promo__tile-icon" aria-hidden="true">
+                <ax-icon name="wallet" [size]="20" />
+              </span>
+              <span class="gift-promo__tile-label">{{ 'gift_promo_cta_mycards' | translate }}</span>
             </a>
           </div>
         </div>

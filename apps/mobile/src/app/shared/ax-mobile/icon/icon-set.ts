@@ -77,12 +77,14 @@ import {
   Sparkles,
   Star,
   Store,
+  Ticket,
   Trash2,
   Truck,
   User,
   UserCheck,
   UserMinus,
   UserPen,
+  Wallet,
   X
 } from 'lucide-angular';
 
@@ -153,11 +155,13 @@ export const AX_ICON_SET: Record<string, LucideIconData> = {
   'sparkles': Sparkles,
   'star': Star,
   'store': Store,
+  'ticket': Ticket,
   'trash-2': Trash2,
   'truck': Truck,
   'user': User,
   'user-check': UserCheck,
   'user-minus': UserMinus,
   'user-pen': UserPen,
+  'wallet': Wallet,
   'x': X
 };
