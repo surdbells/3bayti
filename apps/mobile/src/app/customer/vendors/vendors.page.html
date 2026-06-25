@@ -14,7 +14,7 @@
       <ax-icon name="arrow-left" [size]="20" />
     </button>
 
-    <!-- Logo + name + tagline overlay -->
+    <!-- Logo + name + tagline + inline actions overlay -->
     <div class="vendor-overlay">
       <div class="vendor-logo">
         @if (view_vendor.logo) {
@@ -26,49 +26,66 @@
       <div class="vendor-meta">
         <h2>{{ view_vendor.name }}</h2>
         <p [innerHTML]="view_vendor.tagline || ('text_vendor_tagline_fallback' | translate)"></p>
+        <!-- Inline reviews link (compact, replaces the full-width Reviews button) -->
+        <button type="button"
+                class="vendor-reviews-link"
+                (click)="goToReviews(read_vendor.store_id, view_vendor.name)">
+          <ax-icon name="star" [size]="13" />
+          <span>{{ 'button_reviews' | translate }}</span>
+        </button>
       </div>
+
+      <!-- Compact Follow pill (overlay, near the name) -->
+      <button type="button"
+              class="vendor-follow-pill"
+              [class.is-following]="view_vendor.following"
+              (click)="toggleFollow()">
+        @if (view_vendor.following) {
+          <ax-icon name="user-check" [size]="15" />
+        } @else {
+          <ax-icon name="user-minus" [size]="15" />
+        }
+        <span>{{ (view_vendor.following ? 'button_followed' : 'button_follow') | translate }}</span>
+      </button>
     </div>
   </div>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="page-bg">
-  <!-- Action buttons: follow + reviews -->
-  <div class="vendor-actions ion-padding">
-    <ion-button expand="block"
-                shape="round"
-                [fill]="view_vendor.following ? 'outline' : 'solid'"
-                (click)="toggleFollow()"
-                class="vendor-action-btn">
-      @if (view_vendor.following) {
-        <ax-icon name="user-check" slot="start" />
-      } @else {
-        <ax-icon name="user-minus" slot="start" />
+  <!-- Filter chip row: "All" first + one chip per vendor label -->
+  @if (!ui_controls.is_loading) {
+    <div class="filter-chip-row">
+      <button type="button"
+              class="filter-chip"
+              [class.active]="selectedLabelId === null"
+              (click)="selectLabel(null)">
+        {{ 'chip_all_collections' | translate }}
+      </button>
+      @for (category of categories; track category.id) {
+        <button type="button"
+                class="filter-chip"
+                [class.active]="selectedLabelId === category.id"
+                (click)="selectLabel(category.id)">
+          {{ category.name }}
+          @if (category.count) {
+            <span class="chip-count">{{ category.count }}</span>
+          }
+        </button>
       }
-      {{ (view_vendor.following ? 'button_followed' : 'button_follow') | translate }}
-    </ion-button>
-    <ion-button expand="block"
-                shape="round"
-                fill="outline"
-                (click)="goToReviews(read_vendor.store_id, view_vendor.name)"
-                class="vendor-action-btn">
-      <ax-icon name="star" slot="start" />
-      {{ 'button_reviews' | translate }}
-    </ion-button>
-  </div>
+    </div>
+  }
 
-  <!-- Latest section -->
-  @if (!ui_controls.is_loading && latest.length > 0) {
-    <section class="section ion-padding-horizontal">
+  <!-- Latest strip (only on the "All" view, when present) -->
+  @if (!ui_controls.is_loading && selectedLabelId === null && latest.length > 0) {
+    <section class="section section--latest">
       <h2 class="section-title">{{ 'heading_latest' | translate }}</h2>
       <app-h-scroll-progress>
-        @for(latest_product of latest; track latest_product.product_id){
+        @for (latest_product of latest; track latest_product.product_id) {
           <article class="m6d-product-card">
             <div class="m6d-img-wrap">
-              <!-- Image skeleton -->
               <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['latest-' + latest_product.product_id]">
                 <div class="skeleton-shimmer"></div>
               </div>
-              <!-- Actual image -->
               <img
                 (click)="open_product(latest_product.product_id, latest_product.product_name)"
                 [class.loaded]="imageLoaded['latest-' + latest_product.product_id]"
@@ -92,43 +109,42 @@
     </section>
   }
 
-  <!-- Per-category sections -->
+  <!-- Dense 2-column product grid for the selected filter -->
   @if (!ui_controls.is_loading) {
-    @for(category of categories; track category.id){
-      <section class="section ion-padding-horizontal">
-        <h2 class="section-title">{{ category.name }}</h2>
-        <app-h-scroll-progress>
-          @for(product of products; track product.product_id){
-            @if(category.id === product.collection){
-              <article class="m6d-product-card">
-                <div class="m6d-img-wrap">
-                  <!-- Image skeleton -->
-                  <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['cat-' + product.product_id]">
-                    <div class="skeleton-shimmer"></div>
-                  </div>
-                  <!-- Actual image -->
-                  <img
-                    (click)="open_product(product.product_id, product.product_name)"
-                    [class.loaded]="imageLoaded['cat-' + product.product_id]"
-                    (load)="onImageLoad('cat-' + product.product_id)"
-                    (error)="onImageError('cat-' + product.product_id)"
-                    [src]="cfImage(product.image_1, 'card')"
-                    alt="{{product.product_name}}" />
-                </div>
-                <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
-                  <p class="m6d-name">{{product.product_name}}</p>
-                  <div class="m6d-price-row">
-                    <span class="m6d-price">Ð{{product.price}}</span>
-                    <button (click)="open_product(product.product_id, product.product_name); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
-                      <ax-icon name="plus" />
-                    </button>
-                  </div>
-                </div>
-              </article>
-            }
-          }
-        </app-h-scroll-progress>
-      </section>
+    @if (products.length > 0) {
+      <div class="product-grid">
+        @for (product of products; track product.product_id) {
+          <article class="m6d-product-card">
+            <div class="m6d-img-wrap">
+              <div class="m6d-img-skeleton" [class.hidden]="imageLoaded['grid-' + product.product_id]">
+                <div class="skeleton-shimmer"></div>
+              </div>
+              <img
+                (click)="open_product(product.product_id, product.product_name)"
+                [class.loaded]="imageLoaded['grid-' + product.product_id]"
+                (load)="onImageLoad('grid-' + product.product_id)"
+                (error)="onImageError('grid-' + product.product_id)"
+                [src]="cfImage(product.image_1, 'card')"
+                alt="{{product.product_name}}" />
+            </div>
+            <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
+              <p class="m6d-name">{{product.product_name}}</p>
+              <div class="m6d-price-row">
+                <span class="m6d-price">Ð{{product.price}}</span>
+                <button (click)="open_product(product.product_id, product.product_name); $event.stopPropagation()" class="m6d-add-to-cart" type="button" aria-label="Add to cart">
+                  <ax-icon name="plus" />
+                </button>
+              </div>
+            </div>
+          </article>
+        }
+      </div>
+    } @else {
+      <!-- Per-filter empty state -->
+      <div class="grid-empty">
+        <ax-icon name="package" [size]="40" />
+        <p>{{ 'text_no_products_in_collection' | translate }}</p>
+      </div>
     }
   }
 

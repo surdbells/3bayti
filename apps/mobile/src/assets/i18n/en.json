@@ -287,6 +287,8 @@
   "button_reviews": "Reviews",
   "button_go_to_store": "Go to Store",
   "text_vendor_tagline_fallback": "A trusted vendor on our platform",
+  "chip_all_collections": "All",
+  "text_no_products_in_collection": "No products in this collection yet",
   "text_no_products_available": "No products available",
   "button_refresh": "Refresh",
   "placeholder_min": "Min",

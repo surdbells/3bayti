@@ -287,6 +287,8 @@
   "button_reviews": "التقييمات",
   "button_go_to_store": "زيارة المتجر",
   "text_vendor_tagline_fallback": "بائع موثوق على منصتنا",
+  "chip_all_collections": "الكل",
+  "text_no_products_in_collection": "لا توجد منتجات في هذه المجموعة بعد",
   "text_no_products_available": "لا توجد منتجات متاحة",
   "button_refresh": "تحديث",
   "placeholder_min": "الحد الأدنى",

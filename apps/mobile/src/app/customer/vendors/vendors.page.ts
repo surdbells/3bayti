@@ -2,7 +2,6 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
-  IonButton,
   IonContent,
   IonHeader,
   NavController,
@@ -32,7 +31,6 @@ import { cfImage } from '../../shared/cf-image';
   imports: [
     IonContent,
     IonHeader,
-    IonButton,
     CommonModule,
     FormsModule,
     TranslatePipe,
@@ -48,9 +46,12 @@ export class VendorsPage implements OnInit {
   latest: Products[] = [];
   products: Products[] = [];
   categories: Labels[] = [];
+  /** Currently selected filter chip. null === the "All" chip (default),
+      which shows the full vendor catalog. A numeric value is a label id. */
+  selectedLabelId: number | null = null;
   /** Per-product image-loaded tracking for the m6d card skeleton overlay.
-      Keys are prefixed ('latest-' or 'cat-') to distinguish products
-      shared across the latest and per-category sections. */
+      Keys are prefixed ('latest-' or 'grid-') to distinguish products
+      shared across the latest strip and the filtered product grid. */
   imageLoaded: { [key: string]: boolean } = {};
   constructor(
     private nav: NavController,
@@ -73,7 +74,11 @@ export class VendorsPage implements OnInit {
   rqst_param = {
     id: 0,
     token: "",
-    label: 4,
+    // Active label filter. 0 === "no label filter" (the "All" view); a
+    // positive value is the tapped chip's label id. Previously hard-coded
+    // to 4, which made ONLY label-4 products ever load — the empty-labels
+    // client bug this redesign fixes.
+    label: 0,
     store_id: 0,
     store_name: ""
   }
@@ -247,13 +252,60 @@ goToReviews(id: number, name: string) {
         }
       }))
   }
+  /**
+   * Handle a filter-chip tap.
+   *
+   * @param labelId  null === the "All" chip → full vendor catalog
+   *                 (incl. products with no label). A positive number is a
+   *                 label id → only that collection's products.
+   */
+  selectLabel(labelId: number | null) {
+    this.selectedLabelId = labelId;
+    if (labelId === null) {
+      this.rqst_param.label = 0;
+      this.get_all_products();
+    } else {
+      this.rqst_param.label = labelId;
+      this.get_product_by_label();
+    }
+  }
+
+  /**
+   * "All" view — load the FULL vendor catalog (every label + label-null
+   * products). Uses GET /mobile/vendors-products → /v3/vendors/by-legacy-id/
+   * {id}/products, which takes the vendor by path param and applies NO label
+   * filter (unlike products-by-labels, which needs a label_id). This replaces
+   * the old hard-coded label=4 fetch that only ever surfaced one collection.
+   */
+  get_all_products() {
+    this.ui_controls.is_empty = false;
+    this.ui_controls.is_loading = true;
+    this.networkAdapter.get_v3('GET /mobile/vendors-products', {
+      pathParams: { id: String(this.rqst_param.store_id) },
+    })
+      .subscribe(({
+        next: (response: any) => {
+          if (response.response_code === 200 && response.status === "success") {
+            this.products = response.data;
+            this.ui_controls.is_empty = this.products.length === 0;
+            this.ui_controls.is_loading = false;
+          }else{
+            this.products = [];
+            this.ui_controls.is_empty = true;
+            this.ui_controls.is_loading = false;
+          }
+        }
+      }))
+  }
+
   get_product_by_label() {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
     // Direct v3 (GET /v3/products). Public catalog read — no authToken.
     // transformProductsByLabelsRequest maps the legacy label → label_id and
     // store_id → vendor_id query params, omitting each when it's 0 (the
-    // "no filter" signal). Replicate that exactly here.
+    // "no filter" signal). The label is now the TAPPED chip's id (not the old
+    // hard-coded 4), so each collection chip surfaces its own products.
     const labelQuery: Record<string, string | number | boolean> = {};
     if (this.rqst_param.label !== 0) {
       labelQuery['label_id'] = this.rqst_param.label;
@@ -268,8 +320,10 @@ goToReviews(id: number, name: string) {
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.products = response.data;
+            this.ui_controls.is_empty = this.products.length === 0;
             this.ui_controls.is_loading = false;
           }else{
+            this.products = [];
             this.ui_controls.is_empty = true;
             this.ui_controls.is_loading = false;
           }
@@ -291,10 +345,15 @@ goToReviews(id: number, name: string) {
           if (response.response_code === 200 && response.status === "success") {
             this.categories = response.data;
             this.ui_controls.is_loading = false;
-            this.get_product_by_label();
+            // Default to the "All" chip → full vendor catalog. This replaces
+            // the old get_product_by_label() call that fetched only label 4.
+            this.selectLabel(null);
           }else{
-            this.ui_controls.is_empty = true;
+            // No labels is NOT an error — the vendor may simply have no
+            // collections. Still load the full catalog under "All".
+            this.categories = [];
             this.ui_controls.is_loading = false;
+            this.selectLabel(null);
           }
         }
       }))
