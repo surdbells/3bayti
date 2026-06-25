@@ -861,6 +861,41 @@
     }
   },
   "sell": {
+    "apply": {
+      "eyebrow": "Apply to sell",
+      "title": "Apply to open your store",
+      "subtitle": "Tell us about your business. We review every application and email you with the next steps.",
+      "fields": {
+        "firstName": "First name",
+        "lastName": "Last name",
+        "email": "Email",
+        "phone": "Phone number",
+        "phoneHint": "Pick your country code, then enter your number.",
+        "businessName": "Business name",
+        "licenseNumber": "Trade licence number (optional)",
+        "licenseHint": "If you have one, it helps us approve you faster.",
+        "message": "Anything else? (optional)",
+        "messageHint": "Tell us what you sell or anything we should know."
+      },
+      "submit": "Submit application",
+      "submitting": "Submitting…",
+      "alreadyVendor": "Already a 3bayti vendor?",
+      "success": {
+        "title": "Application received",
+        "text": "Thanks for applying. We'll review your application and email you with the next steps.",
+        "alreadyTitle": "We already have your application",
+        "alreadyText": "Your application is already with our team for review. We'll email you as soon as there's an update."
+      },
+      "errors": {
+        "required": "This field is required.",
+        "invalid": "Please check this field.",
+        "emailInvalid": "Enter a valid email address.",
+        "phoneInvalid": "Enter a valid phone number.",
+        "rateLimited": "You've submitted a few applications already. Please wait a little before trying again.",
+        "network": "Couldn't reach the server. Check your connection and try again.",
+        "unexpected": "Something went wrong. Please try again."
+      }
+    },
     "hero": {
       "eyebrow": "Sell on 3bayti",
       "title": "Sell locally. Ship globally.",

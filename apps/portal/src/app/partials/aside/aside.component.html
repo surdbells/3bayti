@@ -97,6 +97,12 @@
             <span class="ax-sidenav-link-label">Vendors</span>
           </a>
         </li>
+        <li *axCan="'vendors.view'">
+          <a routerLink="/vendor-applications" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="task_alt" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Applications</span>
+          </a>
+        </li>
         <li *axCan="'orders.view'">
           <a routerLink="/customers" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="group" aria-hidden="true"></app-icon>

@@ -979,6 +979,37 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/admin/vendors/:id',
     shape: 'raw',
   },
+  // ---- Seller applications ("apply -> admin approves" intake) ----
+  // PUBLIC submit (storefront "Become a seller" form) + admin review
+  // surface. Net-new v3-only; replaces self-serve vendor creation.
+  // The public submit returns { application: { id, status } } (or an
+  // idempotent already_submitted=true echo for a still-pending email);
+  // the admin list returns the standard { data, meta } envelope; approve/
+  // reject return { application: {...} }.
+  'POST /vendor-applications': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/vendor-applications',
+    shape: 'raw',
+  },
+  'GET /admin/vendor-applications': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/vendor-applications',
+    shape: 'v3-envelope',
+  },
+  'POST /admin/vendor-applications/:id/approve': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/vendor-applications/:id/approve',
+    shape: 'raw',
+  },
+  'POST /admin/vendor-applications/:id/reject': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/vendor-applications/:id/reject',
+    shape: 'raw',
+  },
   'GET /admin/categories': {
     target: 'new',
     oldPath: '',

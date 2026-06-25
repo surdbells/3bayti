@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 254 route keys.
+ * 263 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -52,6 +52,7 @@ export type V3RouteKey =
   | 'GET /admin/transactions'
   | 'GET /admin/users'
   | 'GET /admin/users/:id'
+  | 'GET /admin/vendor-applications'
   | 'GET /admin/vendor-metrics'
   | 'GET /admin/vendors'
   | 'GET /admin/vendors/:id'
@@ -83,6 +84,7 @@ export type V3RouteKey =
   | 'GET /me/profile'
   | 'GET /me/recommendations'
   | 'GET /me/reviews'
+  | 'GET /me/styles'
   | 'GET /me/wishlist'
   | 'GET /me/wishlist/labels'
   | 'GET /mobile/best-sellers'
@@ -112,6 +114,8 @@ export type V3RouteKey =
   | 'GET /products/by-legacy-id/:id'
   | 'GET /products/facets'
   | 'GET /sitemap-data'
+  | 'GET /styles'
+  | 'GET /styles/:slug'
   | 'GET /utility/categories'
   | 'GET /utility/collections'
   | 'GET /utility/stores'
@@ -148,6 +152,8 @@ export type V3RouteKey =
   | 'GET /vendors'
   | 'GET /vendors/:slug'
   | 'GET /vendors/:slug/products'
+  | 'GET /vendors/:slug/reviews'
+  | 'GET /vendors/:slug/size-chart'
   | 'GET /vendors/:vendorId/reviews'
   | 'GET /vendors/:vendorId/size-chart'
   | 'GET /vendors/by-legacy-id/:id'
@@ -189,6 +195,8 @@ export type V3RouteKey =
   | 'POST /admin/users/:id/activate'
   | 'POST /admin/users/:id/deactivate'
   | 'POST /admin/users/:id/roles'
+  | 'POST /admin/vendor-applications/:id/approve'
+  | 'POST /admin/vendor-applications/:id/reject'
   | 'POST /admin/vendors'
   | 'POST /admin/vendors/:id/approve'
   | 'POST /admin/vendors/:id/compliance/approve'
@@ -234,6 +242,7 @@ export type V3RouteKey =
   | 'POST /orders/:id/cancel'
   | 'POST /payment/webhook/noon'
   | 'POST /reviews/:id/helpful'
+  | 'POST /vendor-applications'
   | 'POST /vendor/chat/conversations/:uuid/messages'
   | 'POST /vendor/chat/conversations/:uuid/read'
   | 'POST /vendor/coupons'
@@ -309,6 +318,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/transactions',
   'GET /admin/users',
   'GET /admin/users/:id',
+  'GET /admin/vendor-applications',
   'GET /admin/vendor-metrics',
   'GET /admin/vendors',
   'GET /admin/vendors/:id',
@@ -340,6 +350,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /me/profile',
   'GET /me/recommendations',
   'GET /me/reviews',
+  'GET /me/styles',
   'GET /me/wishlist',
   'GET /me/wishlist/labels',
   'GET /mobile/best-sellers',
@@ -369,6 +380,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /products/by-legacy-id/:id',
   'GET /products/facets',
   'GET /sitemap-data',
+  'GET /styles',
+  'GET /styles/:slug',
   'GET /utility/categories',
   'GET /utility/collections',
   'GET /utility/stores',
@@ -405,6 +418,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendors',
   'GET /vendors/:slug',
   'GET /vendors/:slug/products',
+  'GET /vendors/:slug/reviews',
+  'GET /vendors/:slug/size-chart',
   'GET /vendors/:vendorId/reviews',
   'GET /vendors/:vendorId/size-chart',
   'GET /vendors/by-legacy-id/:id',
@@ -446,6 +461,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/users/:id/activate',
   'POST /admin/users/:id/deactivate',
   'POST /admin/users/:id/roles',
+  'POST /admin/vendor-applications/:id/approve',
+  'POST /admin/vendor-applications/:id/reject',
   'POST /admin/vendors',
   'POST /admin/vendors/:id/approve',
   'POST /admin/vendors/:id/compliance/approve',
@@ -491,6 +508,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /orders/:id/cancel',
   'POST /payment/webhook/noon',
   'POST /reviews/:id/helpful',
+  'POST /vendor-applications',
   'POST /vendor/chat/conversations/:uuid/messages',
   'POST /vendor/chat/conversations/:uuid/read',
   'POST /vendor/coupons',

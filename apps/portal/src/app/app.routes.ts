@@ -10,10 +10,6 @@ export const routes: Routes = [
     path: 'login',
     loadComponent: () => import('./public/login/login.component').then(m => m.LoginComponent),
     title: 'Login'
-  },{
-    path: 'register',
-    loadComponent: () => import('./public/register/register.component').then(m => m.RegisterComponent),
-    title: 'Register'
   },
   {
     path: 'account',
@@ -204,6 +200,12 @@ export const routes: Routes = [
     loadComponent: () => import('./backend/stores/stores.component').then(m => m.StoresComponent),
     canActivate: [adminGuard, requirePermission('vendors.view')],
     title: 'Stores'
+  },
+  {
+    path: 'vendor-applications',
+    loadComponent: () => import('./backend/vendor-applications/vendor-applications.component').then(m => m.VendorApplicationsComponent),
+    canActivate: [adminGuard, requirePermission('vendors.view')],
+    title: 'Vendor Applications'
   },
   {
     path: 'customers',

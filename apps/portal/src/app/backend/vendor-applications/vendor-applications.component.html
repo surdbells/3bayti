@@ -1,0 +1,79 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> {{ 'vendor_applications.back' | translate }}
+        </button>
+        <span class="ax-page-header-eyebrow">{{ 'vendor_applications.eyebrow' | translate }}</span>
+        <h1 class="ax-page-title">{{ 'vendor_applications.title' | translate }}</h1>
+        <p class="ax-page-subtitle">{{ 'vendor_applications.subtitle' | translate }}</p>
+      </div>
+      <div class="ax-flex ax-gap-2 ax-items-center">
+        <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="load()" [disabled]="loading">
+          <app-icon name="refresh" aria-hidden="true"></app-icon> {{ 'vendor_applications.refresh' | translate }}
+        </button>
+      </div>
+    </header>
+
+    <div *ngIf="loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" [attr.aria-label]="'vendor_applications.loading' | translate"></span>
+    </div>
+
+    <div *ngIf="!loading && rows.length === 0" class="ax-card ax-p-6 ax-text-center">
+      <app-icon name="storefront" aria-hidden="true"></app-icon>
+      <p class="ax-text-secondary ax-mt-2 ax-mb-0">{{ 'vendor_applications.empty' | translate }}</p>
+    </div>
+
+    <section *ngIf="!loading && rows.length > 0" class="ax-card ax-p-0">
+      <div class="ax-table-wrapper">
+        <table class="ax-table">
+          <thead>
+            <tr>
+              <th>{{ 'vendor_applications.col_name' | translate }}</th>
+              <th>{{ 'vendor_applications.col_business' | translate }}</th>
+              <th>{{ 'vendor_applications.col_email' | translate }}</th>
+              <th>{{ 'vendor_applications.col_phone' | translate }}</th>
+              <th style="text-align:center;">{{ 'vendor_applications.col_status' | translate }}</th>
+              <th style="text-align:center;">{{ 'vendor_applications.col_submitted' | translate }}</th>
+              <th style="text-align:right;">{{ 'vendor_applications.col_actions' | translate }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of rows">
+              <td><span class="ax-font-medium ax-text-primary">{{ row.name }}</span></td>
+              <td>{{ row.business }}</td>
+              <td>{{ row.email }}</td>
+              <td>{{ row.phone }}</td>
+              <td style="text-align:center;">
+                <span class="ax-badge" [ngClass]="statusBadgeClass(row.status)">{{ ('vendor_applications.status_' + (row.status || 'pending')) | translate }}</span>
+              </td>
+              <td style="text-align:center;">{{ formatDate(row.submitted_at) }}</td>
+              <td style="text-align:right;">
+                <div class="ax-flex ax-gap-2 ax-justify-end">
+                  <button
+                    *ngIf="isPending(row)"
+                    type="button"
+                    class="ax-btn ax-btn-primary ax-btn-sm"
+                    (click)="approve(row)"
+                    [disabled]="busyId !== null">
+                    <app-icon name="check" aria-hidden="true"></app-icon> {{ 'vendor_applications.approve' | translate }}
+                  </button>
+                  <button
+                    *ngIf="isPending(row)"
+                    type="button"
+                    class="ax-btn ax-btn-danger ax-btn-sm"
+                    (click)="reject(row)"
+                    [disabled]="busyId !== null">
+                    <app-icon name="close" aria-hidden="true"></app-icon> {{ 'vendor_applications.reject' | translate }}
+                  </button>
+                  <span *ngIf="!isPending(row)" class="ax-text-tertiary ax-text-sm">—</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</app-admin-shell>

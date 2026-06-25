@@ -43,15 +43,60 @@ describe('SellPageComponent', () => {
     expect(root.querySelectorAll('.sell-step')).toHaveLength(3);
   });
 
-  it('points seller CTAs at the external seller-app register URL', () => {
+  it('points the primary CTAs at the inline apply form', () => {
     const { fixture } = setup();
     const root: HTMLElement = fixture.nativeElement;
-    const hero = root.querySelector('[data-testid="sell-hero-register"]') as HTMLAnchorElement;
-    const cta = root.querySelector('[data-testid="sell-cta-register"]') as HTMLAnchorElement;
-    expect(hero.getAttribute('href')).toBe('https://seller.test/register');
-    expect(cta.getAttribute('href')).toBe('https://seller.test/register');
-    // External link hygiene.
-    expect(hero.getAttribute('target')).toBe('_blank');
-    expect(hero.getAttribute('rel')).toContain('noopener');
+    const hero = root.querySelector('[data-testid="sell-hero-apply"]') as HTMLAnchorElement;
+    const cta = root.querySelector('[data-testid="sell-cta-apply"]') as HTMLAnchorElement;
+    expect(hero.getAttribute('href')).toBe('#sell-apply');
+    expect(cta.getAttribute('href')).toBe('#sell-apply');
+    // The application form is rendered inline on the page.
+    expect(root.querySelector('[data-testid="sell-apply-form"]')).not.toBeNull();
+  });
+
+  it('keeps the Sign in CTA pointing at the external portal for approved vendors', () => {
+    const { fixture } = setup();
+    const root: HTMLElement = fixture.nativeElement;
+    const signin = root.querySelector('[data-testid="sell-hero-signin"]') as HTMLAnchorElement;
+    expect(signin.getAttribute('href')).toBe('https://seller.test');
+    expect(signin.getAttribute('target')).toBe('_blank');
+    expect(signin.getAttribute('rel')).toContain('noopener');
+  });
+
+  it('submits an application to the public vendor-applications endpoint and shows success', async () => {
+    const { fixture } = setup();
+    const root: HTMLElement = fixture.nativeElement;
+    const controller = TestBed.inject(HttpTestingController);
+
+    const set = (testid: string, value: string): void => {
+      const el = root.querySelector(`[data-testid="${testid}"]`) as HTMLInputElement;
+      el.value = value;
+      el.dispatchEvent(new Event('input'));
+    };
+    set('sell-first-name', 'Aïsha');
+    set('sell-last-name', 'Khan');
+    set('sell-email', 'aisha@example.com');
+    set('sell-business-name', 'Khan Couture');
+    // Phone national digits (UAE default dial code in the phone-input).
+    const phoneNational = root.querySelector('[data-testid="phone-input-national"]') as HTMLInputElement;
+    phoneNational.value = '501234567';
+    phoneNational.dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+
+    (root.querySelector('[data-testid="sell-apply-form"]') as HTMLFormElement)
+      .dispatchEvent(new Event('submit'));
+    await fixture.whenStable();
+
+    const req = controller.expectOne((r) => r.url.endsWith('/v3/vendor-applications'));
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body.email).toBe('aisha@example.com');
+    expect(req.request.body.phone).toBe('+971501234567');
+    expect(req.request.body.country_code).toBe('AE');
+    req.flush({ application: { id: 7, status: 'pending' } });
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(root.querySelector('[data-testid="sell-apply-success"]')).not.toBeNull();
+    expect(root.querySelector('[data-testid="sell-apply-form"]')).toBeNull();
   });
 });

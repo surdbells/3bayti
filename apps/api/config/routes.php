@@ -474,6 +474,26 @@ return function (App $app): void {
     // this single read-only endpoint is the guest-facing exception.
     $app->post('/v3/cart/resolve', \Bayti\Api\Http\Controllers\Cart\ResolveCartController::class);
 
+    // -------------------------------------------------------------------
+    // Vendor applications — PUBLIC seller intake ("Become a seller").
+    //
+    // POST /v3/vendor-applications  (NO auth)
+    //
+    // This is the ONLY door into the marketplace: self-serve vendor
+    // creation (POST /v3/vendor/onboarding/submit) is disabled (returns
+    // 410 below) and the portal /auth/register vendor sign-up is removed.
+    // A prospective seller submits an application; an admin approves it
+    // (which provisions the User + Vendor) or rejects it.
+    //
+    // Anti-spam: throttled per-IP (CF-Connecting-IP) + per-email inside
+    // the controller via the KeyValueStore. Idempotent for a still-
+    // pending email (returns the existing application instead of dupes).
+    // -------------------------------------------------------------------
+    $app->post(
+        '/v3/vendor-applications',
+        \Bayti\Api\Http\Controllers\VendorApplication\SubmitVendorApplicationController::class,
+    );
+
     // M2.2 — Products (Day 2 of 10-day rollout)
     $app->get('/v3/products', \Bayti\Api\Http\Controllers\Catalog\ListProductsController::class);
     // M3.2.X.10 — Faceted search. Registered BEFORE /v3/products/{slug}
@@ -599,6 +619,18 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Vendor\SuspendVendorController::class)->add($perm->for('vendors.suspend'));
         $group->post('/vendors/{id:[0-9]+}/reactivate',
             \Bayti\Api\Http\Controllers\Admin\Vendor\ReactivateVendorController::class)->add($perm->for('vendors.approve'));
+
+        // Seller applications ("apply -> admin approves" intake). List is
+        // gated by vendors.view; approve/reject by vendors.approve (REUSING
+        // the existing vendor permission keys — no new keys minted).
+        // Approve provisions a User + Vendor and emails the applicant to
+        // set their password; reject records a reason + optionally emails.
+        $group->get('/vendor-applications',
+            \Bayti\Api\Http\Controllers\Admin\VendorApplication\ListVendorApplicationsController::class)->add($perm->for('vendors.view'));
+        $group->post('/vendor-applications/{id:[0-9]+}/approve',
+            \Bayti\Api\Http\Controllers\Admin\VendorApplication\ApproveVendorApplicationController::class)->add($perm->for('vendors.approve'));
+        $group->post('/vendor-applications/{id:[0-9]+}/reject',
+            \Bayti\Api\Http\Controllers\Admin\VendorApplication\RejectVendorApplicationController::class)->add($perm->for('vendors.approve'));
 
         // M3.2.X.14-D — Cross-vendor metrics list (admin dashboard).
         // Registered BEFORE /vendors/{id:[0-9]+}/metrics so the
@@ -1034,8 +1066,13 @@ return function (App $app): void {
     // non-vendor users while leaving pending+suspended users
     // through.
     $app->group('/v3/vendor/onboarding', function (RouteCollectorProxy $group): void {
+        // Self-serve vendor creation is CLOSED — sellers now apply via the
+        // public POST /v3/vendor-applications and an admin approves. This
+        // route returns 410 Gone pointing at the application flow (was
+        // SubmitOnboardingController, which created a pending vendor).
         $group->post('/submit',
-            \Bayti\Api\Http\Controllers\Vendor\Onboarding\SubmitOnboardingController::class);
+            \Bayti\Api\Http\Controllers\Vendor\Onboarding\SubmitOnboardingDisabledController::class);
+        // GET status stays working for vendors who already have a store.
         $group->get('/status',
             \Bayti\Api\Http\Controllers\Vendor\Onboarding\GetOnboardingStatusController::class);
     })
