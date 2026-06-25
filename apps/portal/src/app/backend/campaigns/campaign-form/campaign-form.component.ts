@@ -135,7 +135,7 @@ export class CampaignFormComponent implements OnInit, OnDestroy {
     return {
       product_id: p.id ?? it.product_id,
       name: p.name ?? '—',
-      image: p.primary_image ?? p.primary_image_url ?? p.image ?? null,
+      image: this.imageOf(p),
       price: this.priceOf(p),
       discount_percent: it.discount_percent ?? null,
       stock_total: it.stock_total ?? null,
@@ -161,7 +161,7 @@ export class CampaignFormComponent implements OnInit, OnDestroy {
         this.searchResults = raw.map((p) => ({
           id: p.id,
           name: p.name ?? '—',
-          image: p.primary_image ?? p.primary_image_url ?? p.image ?? null,
+          image: this.imageOf(p),
           price: this.priceOf(p),
         }));
         this.ui.searching = false;
@@ -253,6 +253,30 @@ export class CampaignFormComponent implements OnInit, OnDestroy {
   }
 
   // ── helpers ──────────────────────────────────────────────────────
+  /**
+   * Resolve a product's thumbnail URL across the shapes the API emits.
+   * GET /v3/products (listShape) returns `primary_image` as an OBJECT
+   * ({ url, alt, width, height }), NOT a string — binding that object
+   * straight to [src] yields "[object Object]" and a broken image. The
+   * vendor-manage shape uses a flat `image` string, and detail/list
+   * shapes also carry an `images[]` gallery. Dig out a plain URL from
+   * whichever is present.
+   */
+  private imageOf(p: any): string | null {
+    const pi = p?.primary_image;
+    if (typeof pi === 'string' && pi) return pi;
+    if (pi && typeof pi === 'object' && pi.url) return pi.url;
+    if (typeof p?.primary_image_url === 'string' && p.primary_image_url) return p.primary_image_url;
+    if (typeof p?.image === 'string' && p.image) return p.image;
+    const imgs = p?.images;
+    if (Array.isArray(imgs) && imgs.length) {
+      const first = imgs[0];
+      if (typeof first === 'string') return first || null;
+      if (first && typeof first === 'object' && first.url) return first.url;
+    }
+    return null;
+  }
+
   private priceOf(p: any): number | null {
     const amt = p?.price?.amount ?? p?.price;
     return typeof amt === 'number' ? amt : (amt != null && !isNaN(Number(amt)) ? Number(amt) : null);
