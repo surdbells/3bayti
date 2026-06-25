@@ -306,7 +306,7 @@ export class GiftCardsPage implements OnInit {
     if (this.pickingContact) return;
     this.pickingContact = true;
     try {
-      const { Contacts } = await import('@capacitor-community/contacts');
+      const { CapacitorContacts: Contacts } = await import('@capgo/capacitor-contacts');
 
       // Ensure read permission. Check first, only prompt when not yet granted,
       // and treat the iOS 'limited' state as usable.
@@ -319,12 +319,12 @@ export class GiftCardsPage implements OnInit {
       // Strategy 1: native single-contact picker.
       try {
         const result: any = await Contacts.pickContact({
-          projection: { name: true, phones: true, emails: true },
+          fields: ['fullName', 'givenName', 'familyName', 'phoneNumbers', 'emailAddresses'],
         });
         const contact = result?.contact;
         // Some platforms resolve with no contact on cancel — just bail quietly.
         if (!contact) return;
-        this.applyPickedContact(contact);
+        this.applyPickedContact(this.fromCapgoContact(contact));
         return;
       } catch {
         // Native picker bridge unavailable/failed — fall back to the in-app list.
@@ -352,9 +352,9 @@ export class GiftCardsPage implements OnInit {
     } catch {
       status = null;
     }
-    if (usable(status?.contacts)) return true;
+    if (usable(status?.readContacts)) return true;
     const req = await Contacts.requestPermissions();
-    return usable(req?.contacts);
+    return usable(req?.readContacts);
   }
 
   /**
@@ -364,12 +364,12 @@ export class GiftCardsPage implements OnInit {
    */
   private async openInAppContactsPicker(Contacts: any) {
     const res: any = await Contacts.getContacts({
-      projection: { name: true, phones: true, emails: true },
+      fields: ['fullName', 'givenName', 'familyName', 'phoneNumbers', 'emailAddresses'],
     });
     const raw: any[] = res?.contacts ?? [];
 
     this.contactsList = raw
-      .map((c) => this.normaliseContact(c))
+      .map((c) => this.normaliseContact(this.fromCapgoContact(c)))
       .filter((c) => !!c.phone || !!c.email)
       .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -380,6 +380,24 @@ export class GiftCardsPage implements OnInit {
 
     this.contactsSearch = '';
     this.contactsSheetOpen = true;
+  }
+
+  /**
+   * Map a @capgo/capacitor-contacts Contact onto the shape the rest of this
+   * page already consumes ({ name:{display}, phones:[{number}], emails:[{address}] }).
+   * Capgo's plugin (Capacitor-8 compatible — it replaces the Cap-7-only
+   * @capacitor-community/contacts) exposes fullName + phoneNumbers[].value +
+   * emailAddresses[].value instead.
+   */
+  private fromCapgoContact(contact: any): any {
+    if (!contact) return contact;
+    const display = contact.fullName
+      ?? [contact.givenName, contact.familyName].filter(Boolean).join(' ');
+    return {
+      name: { display },
+      phones: (contact.phoneNumbers ?? []).map((p: any) => ({ number: p?.value })),
+      emails: (contact.emailAddresses ?? []).map((e: any) => ({ address: e?.value })),
+    };
   }
 
   /** Normalise a raw plugin contact payload to a simple pickable row. */
