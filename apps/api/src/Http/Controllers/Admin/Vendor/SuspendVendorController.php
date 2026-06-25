@@ -111,6 +111,15 @@ final class SuspendVendorController
             ]);
         }
 
+        // Keep the legacy users.is_store_active column in sync. Suspension
+        // does NOT change is_store_approved (the vendor was historically
+        // approved; suspension is the more-recent operational state).
+        // Guard for a null owner (old/admin-created vendors).
+        $owner = $vendor->getOwnerUser();
+        if ($owner !== null) {
+            $owner->setStoreState(active: false);
+        }
+
         $this->em->flush();
 
         $this->audit->recordUpdate(

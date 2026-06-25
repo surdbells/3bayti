@@ -119,6 +119,15 @@ final class ReactivateVendorController
             ]);
         }
 
+        // Keep the legacy users.is_store_approved/is_store_active columns in
+        // sync with the Vendor record (belt-and-suspenders). Guard for a null
+        // owner (old/admin-created vendors).
+        $owner = $vendor->getOwnerUser();
+        if ($owner !== null) {
+            $owner->setRoles(vendor: true);
+            $owner->setStoreState(approved: true, active: true);
+        }
+
         $this->em->flush();
 
         $this->audit->recordUpdate(

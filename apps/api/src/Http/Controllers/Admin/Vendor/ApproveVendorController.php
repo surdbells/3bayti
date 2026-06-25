@@ -111,6 +111,16 @@ final class ApproveVendorController
             ]);
         }
 
+        // Keep the legacy users.is_store_approved/is_store_active columns in
+        // sync with the Vendor record (belt-and-suspenders; the profile
+        // serializer reads the Vendor, but operator wants the user columns
+        // self-correcting). Guard for a null owner (old/admin-created vendors).
+        $owner = $vendor->getOwnerUser();
+        if ($owner !== null) {
+            $owner->setRoles(vendor: true);
+            $owner->setStoreState(approved: true, active: true);
+        }
+
         $this->em->flush();
 
         $this->audit->recordUpdate(
