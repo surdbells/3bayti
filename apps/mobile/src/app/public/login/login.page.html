@@ -84,7 +84,7 @@
         </div>
 
         <div class="auth-footer">
-          <ion-button (click)="sendPhoneOtp()" expand="block" class="primary-btn" type="button">
+          <ion-button (click)="sendPhoneOtp()" [disabled]="ui_controls.login_loading" expand="block" class="primary-btn" type="button">
             {{ 'button_next' | translate }}
           </ion-button>
         </div>
@@ -118,7 +118,7 @@
         </ion-text>
 
         <div class="auth-footer">
-          <ion-button (click)="sendEmailOtp()" expand="block" class="primary-btn" type="button">
+          <ion-button (click)="sendEmailOtp()" [disabled]="ui_controls.login_loading" expand="block" class="primary-btn" type="button">
             {{ 'button_next' | translate }}
           </ion-button>
         </div>

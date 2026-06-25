@@ -215,6 +215,7 @@ export class LoginPage implements OnInit, OnDestroy {
   // ===== Step: send OTP (phone or email) ==================================
 
   sendPhoneOtp() {
+    if (this.ui_controls.login_loading) return;
     if (!this.guardOnline()) return;
     if (this.phone.replace(/\D/g, '').length === 0) {
       this.show_error(this.i18n.t('text_phone_required'));
@@ -232,6 +233,7 @@ export class LoginPage implements OnInit, OnDestroy {
   }
 
   sendEmailOtp() {
+    if (this.ui_controls.login_loading) return;
     if (!this.guardOnline()) return;
     if (this.otpEmail.length === 0) {
       this.show_error(this.i18n.t('text_email_required'));
