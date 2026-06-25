@@ -470,17 +470,18 @@
   line-height: 1.45;
 }
 
-.gc-phone-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.gc-cc-field {
+// Phone block: a single label on top, then one aligned row of
+// [country code | phone input | contacts button], all 48px tall.
+.gc-phone-block {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 0 0 auto;
+}
+
+.gc-phone-row {
+  display: flex;
+  align-items: center; // all three controls share one baseline now
+  gap: 8px;
 }
 
 .gc-cc-button {
@@ -489,6 +490,7 @@
   gap: 6px;
   height: 48px;
   padding: 0 12px;
+  flex: 0 0 auto;
   border: 1.5px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.15));
   border-radius: 12px;
   background: var(--ax-color-bg-surface, #fff);
@@ -496,21 +498,36 @@
   font-size: 14px;
   color: var(--ax-color-text-primary, #2e241c);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .gc-cc-flag { font-size: 18px; line-height: 1; }
 .gc-cc-code { font-weight: 600; }
 
-.gc-phone-field {
+// Native phone input — matches the height/border of the country button and
+// the contacts button so the whole row aligns cleanly on narrow widths.
+.gc-phone-input {
   flex: 1 1 auto;
-  min-width: 0;
+  min-width: 0; // allow the input to shrink instead of overflowing the row
+  height: 48px;
+  padding: 0 14px;
+  border: 1.5px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.15));
+  border-radius: 12px;
+  background: var(--ax-color-bg-surface, #fff);
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ax-color-text-primary, #2e241c);
+  box-sizing: border-box;
+  direction: ltr;        // phone digits read LTR even in RTL layout
+  text-align: start;
+
+  &::placeholder { color: var(--ax-color-text-tertiary, #B8A898); }
+  &:focus { outline: none; border-color: var(--ax-color-brand-primary); }
 }
 
-// "Pick from contacts" button beside the phone field. Aligns with the input
-// row (label above the field adds height, so push it down to match).
+// "Pick from contacts" button — same 48px square, aligned with the row.
 .gc-contacts-btn {
   flex: 0 0 auto;
-  margin-top: 28px;
   width: 48px;
   height: 48px;
   display: flex;
@@ -525,6 +542,31 @@
   &:active { opacity: 0.7; }
   &[disabled] { opacity: 0.5; cursor: default; }
   ion-spinner { width: 20px; height: 20px; }
+}
+
+// In-app contacts picker rows
+.gc-contact-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.08));
+
+  &:active { background: var(--ax-color-bg-muted, #f5f0eb); }
+
+  &__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ax-color-text-primary, #2e241c);
+  }
+
+  &__detail {
+    font-size: 13px;
+    color: var(--ax-color-text-secondary, #8B6F47);
+    direction: ltr; // phone numbers / emails stay LTR even in RTL layout
+    text-align: start;
+  }
 }
 
 // Required asterisk on compulsory recipient labels.

@@ -17,6 +17,7 @@ import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Labels} from "../../class/labels";
 import {Products} from "../../class/products";
 import {TranslatePipe} from "../../translate.pipe";
+import {I18nService} from "../../i18n.service";
 import {HScrollProgressComponent} from "../../h-scroll-progress/h-scroll-progress.component";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -63,6 +64,7 @@ export class VendorsPage implements OnInit {
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
+    private i18n: I18nService,
   ) {}
   ui_controls = {
     best_seller_empty: false,
@@ -88,6 +90,11 @@ export class VendorsPage implements OnInit {
     store_id: 0
   }
   view_vendor = {
+    // v3 numeric vendor id — populated by transformVendorResponse from the
+    // by-legacy-id read. This is the id the Follow/Unfollow routes expect
+    // (NOT store_id, which is the legacy WP/CI id used only for the
+    // by-legacy-id catalog shims). 0 until the vendor read returns.
+    id: 0,
     name: "",
     logo: "assets/images/placeholder.png",
     cover: "assets/images/placeholder.png",
@@ -214,18 +221,30 @@ goToReviews(id: number, name: string) {
   }
   user_follow_vendor() {
     // Direct v3 (POST /v3/me/following/{vendorId}). Authenticated write.
-    // transformFollowVendorRequest moves legacy body.store_id into the
-    // {vendorId} path param and sends an empty body (the controller reads
-    // the vendor from the path and the user from the token).
+    // The {vendorId} path param MUST be the v3 numeric primary key, which
+    // the controller resolves via em->find(Vendor::class). It is NOT the
+    // legacy store_id the rest of this page is keyed off (that is the
+    // WP/CI id used only by the by-legacy-id catalog shims). view_vendor.id
+    // is the v3 id surfaced by transformVendorResponse from get_vendor().
+    // Guard: if the vendor read hasn't resolved an id yet, bail rather than
+    // sending a bad id that 404s as "vendor not found".
+    if (!this.view_vendor.id) {
+      this.error_notification(this.i18n.t('error_vendor_not_loaded'));
+      return;
+    }
     this.networkAdapter.post_v3('POST /following/:vendorId', {}, {
       authToken: this.follow_vendor.token,
-      pathParams: { vendorId: String(this.follow_vendor.store_id) },
+      pathParams: { vendorId: String(this.view_vendor.id) },
     })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
-            this.get_vendor();
+            // Reflect the new state locally. We do NOT re-read via
+            // get_vendor() because the v3 public vendor read is anonymous
+            // and always reports following:false (transformVendorResponse),
+            // which would immediately flip the pill back to "Follow".
+            this.view_vendor.following = true;
           }else {
             this.error_notification(response.message);
           }
@@ -234,18 +253,25 @@ goToReviews(id: number, name: string) {
   }
   user_unfollow_vendor() {
     // Direct v3 (DELETE /v3/me/following/{vendorId}). Authenticated write.
-    // transformUnfollowVendorRequest moves legacy body.store_id into the
-    // {vendorId} path param; DELETE carries no body. 204 → still passes the
-    // response_code === 200 envelope check via the adapter's wrap.
+    // The {vendorId} path param MUST be the v3 numeric primary key (same as
+    // follow above) — view_vendor.id, NOT the legacy store_id. DELETE
+    // carries no body. 204 → still passes the response_code === 200 envelope
+    // check via the adapter's wrap.
+    if (!this.view_vendor.id) {
+      this.error_notification(this.i18n.t('error_vendor_not_loaded'));
+      return;
+    }
     this.networkAdapter.delete_v3('DELETE /following/:vendorId', {
       authToken: this.unfollow_vendor.token,
-      pathParams: { vendorId: String(this.unfollow_vendor.store_id) },
+      pathParams: { vendorId: String(this.view_vendor.id) },
     })
       .subscribe(({
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             this.success_notification(response.message);
-            this.get_vendor();
+            // Reflect locally instead of re-reading (anonymous vendor read
+            // always reports following:false — see follow handler above).
+            this.view_vendor.following = false;
           }else {
             this.error_notification(response.message);
           }

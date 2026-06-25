@@ -82,6 +82,37 @@ export class AddressService {
     return null;
   }
 
+  /**
+   * Update an existing saved address (PUT /me/addresses/:id). Partial
+   * payloads are accepted; only the fields present are applied server-side.
+   * Returns the updated row (or null on failure).
+   */
+  async update(token: string, id: number, address: Partial<NewAddress>): Promise<SavedAddress | null> {
+    const res: any = await firstValueFrom(
+      this.adapter.put_v3('PUT /me/addresses/:id', address, {
+        authToken: token,
+        pathParams: { id: String(id) },
+      }),
+    );
+    if (res?.response_code === 200 && res?.status === 'success') {
+      return (res.data?.address ?? res.data) as SavedAddress;
+    }
+    return null;
+  }
+
+  /** Delete a saved address (DELETE /me/addresses/:id). */
+  async remove(token: string, id: number): Promise<boolean> {
+    const res: any = await firstValueFrom(
+      this.adapter.delete_v3('DELETE /me/addresses/:id', {
+        authToken: token,
+        pathParams: { id: String(id) },
+      }),
+    );
+    // v3 delete may return 200 (with envelope) or 204 (no content).
+    return res?.response_code === 200 || res?.response_code === 204
+      || res?.status === 'success';
+  }
+
   /** Mark an address as the default (shipping + billing). */
   async setDefault(token: string, id: number): Promise<boolean> {
     const res: any = await firstValueFrom(

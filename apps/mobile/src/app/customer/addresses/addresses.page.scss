@@ -65,3 +65,106 @@
   font-weight: 500;
   color: var(--ax-color-text-primary);
 }
+
+/* ============================================================================
+   Address book — saved-address cards (CRUD)
+   ============================================================================ */
+
+.address-empty {
+  margin: 2rem 0;
+  text-align: center;
+  font-size: 14px;
+  color: var(--ax-color-text-secondary);
+}
+
+.address-book {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  padding-block-start: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.address-card {
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.1));
+  border-radius: var(--ax-radius-md, 12px);
+  padding: 14px 16px;
+  background: var(--ax-color-surface, #fff);
+
+  &--default {
+    border-color: var(--ax-color-primary, #5a3a2c);
+    box-shadow: 0 0 0 1px var(--ax-color-primary, #5a3a2c) inset;
+  }
+}
+
+.address-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-block-end: 6px;
+}
+
+.address-card__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary);
+}
+
+.address-card__badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  color: var(--ax-color-primary, #5a3a2c);
+  background: rgba(90, 58, 44, 0.08);
+}
+
+.address-card__line {
+  margin: 2px 0;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ax-color-text-primary);
+
+  &--muted {
+    color: var(--ax-color-text-secondary);
+  }
+}
+
+.address-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin-block-start: 8px;
+  border-block-start: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  padding-block-start: 6px;
+}
+
+.address-card__action {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  text-transform: none;
+  margin: 0;
+
+  &--danger {
+    --color: var(--ion-color-danger, #c0362c);
+  }
+}
+
+/* Add/Edit sheet form wrapper (mirrors checkout's .add-address-form). */
+.add-address-form {
+  display: flex;
+  flex-direction: column;
+}

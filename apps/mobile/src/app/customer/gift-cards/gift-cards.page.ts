@@ -19,6 +19,13 @@ import { I18nService } from '../../i18n.service';
 import { GlobalComponent } from '../../global-component';
 import { DIAL_CODES, DialCode } from '../../public/shared/dial-codes';
 
+/** A normalised contact row for the in-app fallback picker. */
+export interface PickableContact {
+  name: string;
+  phone: string | null;
+  email: string | null;
+}
+
 export interface GiftCardTheme {
   label: string;
   primary_color: string;
@@ -83,8 +90,14 @@ export class GiftCardsPage implements OnInit {
     recipient_phone: '',
   };
 
-  // True while the native contacts picker is open (disables the button).
+  // True while the contacts picker is busy (disables the button).
   pickingContact = false;
+
+  // In-app contacts picker (fallback when the native ACTION_PICK activity
+  // result flow is unavailable/unreliable). Populated from Contacts.getContacts.
+  contactsSheetOpen = false;
+  contactsSearch = '';
+  contactsList: PickableContact[] = [];
 
   get selectedDial(): DialCode | undefined {
     return this.dialCodes.find(c => c.code === this.dialCode);
@@ -270,12 +283,24 @@ export class GiftCardsPage implements OnInit {
   // ── Contacts picker ────────────────────────────────────────────────
 
   /**
-   * Open the native contacts picker (Capacitor Contacts plugin) and fill the
-   * recipient phone — plus name/email when the picked contact has them.
+   * Open the contacts picker and fill the recipient phone (+ name/email when
+   * available).
    *
-   * Build-safe: the plugin is imported lazily and the whole call is wrapped in
-   * try/catch so a missing native implementation (e.g. web preview, or before
-   * `npx cap sync`) degrades gracefully instead of crashing the page.
+   * Two strategies, in order:
+   *  1. Native ACTION_PICK picker (`Contacts.pickContact`). Fast + privacy
+   *     friendly (only the chosen contact is read), but it relies on the
+   *     Android/iOS startActivityForResult bridge which can fail/hang on some
+   *     devices/OS combos. We treat any rejection here as "fall through".
+   *  2. In-app picker — `Contacts.getContacts` reads the address book once and
+   *     we render it inside our own ax-bottom-sheet (no activity-result bridge
+   *     involved, so it works wherever the plugin loads).
+   *
+   * Manual entry remains the true last resort: if the plugin itself is missing
+   * (web preview / before `npx cap sync`) or permission is denied, we show the
+   * existing toast and the user types the number.
+   *
+   * Build-safe: the plugin is imported lazily and every native call is guarded
+   * so failures degrade gracefully instead of crashing the page.
    */
   async pickContact() {
     if (this.pickingContact) return;
@@ -283,44 +308,133 @@ export class GiftCardsPage implements OnInit {
     try {
       const { Contacts } = await import('@capacitor-community/contacts');
 
-      // Request read permission first; bail with a toast if denied.
-      const perm = await Contacts.requestPermissions();
-      if (perm?.contacts !== 'granted') {
+      // Ensure read permission. Check first, only prompt when not yet granted,
+      // and treat the iOS 'limited' state as usable.
+      const granted = await this.ensureContactsPermission(Contacts);
+      if (!granted) {
         this.notify.error(this.i18n.t('gc_contacts_permission_denied'));
         return;
       }
 
-      const result: any = await Contacts.pickContact({
-        projection: { name: true, phones: true, emails: true },
-      });
-      const contact = result?.contact;
-      if (!contact) return; // user cancelled
-
-      // Name (fill only when our field is empty so we don't clobber input).
-      const display = contact.name?.display
-        ?? [contact.name?.given, contact.name?.family].filter(Boolean).join(' ');
-      if (display && !this.form.recipient_name) {
-        this.form.recipient_name = display.slice(0, 60);
+      // Strategy 1: native single-contact picker.
+      try {
+        const result: any = await Contacts.pickContact({
+          projection: { name: true, phones: true, emails: true },
+        });
+        const contact = result?.contact;
+        // Some platforms resolve with no contact on cancel — just bail quietly.
+        if (!contact) return;
+        this.applyPickedContact(contact);
+        return;
+      } catch {
+        // Native picker bridge unavailable/failed — fall back to the in-app list.
       }
 
-      // Email (first available) — only when empty.
-      const email = contact.emails?.find((e: any) => e?.address)?.address;
-      if (email && !this.form.recipient_email) {
-        this.form.recipient_email = email;
-        this.errors.recipient_email = '';
-      }
-
-      // Phone: take the first number, split dial code from national digits.
-      const rawPhone = contact.phones?.find((p: any) => p?.number)?.number;
-      if (rawPhone) {
-        this.applyPickedPhone(rawPhone);
-        this.errors.recipient_phone = '';
-      }
-    } catch (err) {
-      // Plugin missing / native error / user dismissed abnormally.
+      // Strategy 2: read all contacts and present our own picker sheet.
+      await this.openInAppContactsPicker(Contacts);
+    } catch {
+      // Plugin missing / not synced — genuine manual-entry fallback.
       this.notify.error(this.i18n.t('gc_contacts_pick_failed'));
     } finally {
       this.pickingContact = false;
+    }
+  }
+
+  /**
+   * Resolve contacts read permission. Returns true when usable ('granted' or
+   * iOS 'limited'). Only prompts when the current state is not already granted.
+   */
+  private async ensureContactsPermission(Contacts: any): Promise<boolean> {
+    const usable = (s: any) => s === 'granted' || s === 'limited';
+    let status: any;
+    try {
+      status = await Contacts.checkPermissions();
+    } catch {
+      status = null;
+    }
+    if (usable(status?.contacts)) return true;
+    const req = await Contacts.requestPermissions();
+    return usable(req?.contacts);
+  }
+
+  /**
+   * Read the address book and open the in-app picker sheet. Contacts are
+   * normalised to {name, phone, email} rows (only those with a phone OR email
+   * are kept — the rest can't be used as delivery targets).
+   */
+  private async openInAppContactsPicker(Contacts: any) {
+    const res: any = await Contacts.getContacts({
+      projection: { name: true, phones: true, emails: true },
+    });
+    const raw: any[] = res?.contacts ?? [];
+
+    this.contactsList = raw
+      .map((c) => this.normaliseContact(c))
+      .filter((c) => !!c.phone || !!c.email)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    if (this.contactsList.length === 0) {
+      this.notify.error(this.i18n.t('gc_contacts_pick_failed'));
+      return;
+    }
+
+    this.contactsSearch = '';
+    this.contactsSheetOpen = true;
+  }
+
+  /** Normalise a raw plugin contact payload to a simple pickable row. */
+  private normaliseContact(contact: any): PickableContact {
+    const name = (contact?.name?.display
+      ?? [contact?.name?.given, contact?.name?.family].filter(Boolean).join(' ')
+      ?? '').trim();
+    const phone = contact?.phones?.find((p: any) => p?.number)?.number ?? null;
+    const email = contact?.emails?.find((e: any) => e?.address)?.address ?? null;
+    return { name: name || (phone || email || ''), phone, email };
+  }
+
+  /** Filtered contacts for the in-app picker search box. */
+  filteredContacts(): PickableContact[] {
+    const q = this.contactsSearch.trim().toLowerCase();
+    if (!q) return this.contactsList;
+    return this.contactsList.filter((c) =>
+      c.name.toLowerCase().includes(q)
+      || (c.phone || '').includes(q)
+      || (c.email || '').toLowerCase().includes(q)
+    );
+  }
+
+  /** Choose a contact from the in-app picker sheet, then close it. */
+  selectContact(c: PickableContact) {
+    this.applyPickedContact({
+      name: { display: c.name },
+      phones: c.phone ? [{ number: c.phone }] : [],
+      emails: c.email ? [{ address: c.email }] : [],
+    });
+    this.contactsSheetOpen = false;
+    this.contactsSearch = '';
+  }
+
+  /**
+   * Apply a picked contact (native or in-app shape) onto the form. Only fills
+   * fields the user has left empty so we never clobber manual input.
+   */
+  private applyPickedContact(contact: any) {
+    const display = contact?.name?.display
+      ?? [contact?.name?.given, contact?.name?.family].filter(Boolean).join(' ');
+    if (display && !this.form.recipient_name) {
+      this.form.recipient_name = display.slice(0, 60);
+    }
+
+    const email = contact?.emails?.find((e: any) => e?.address)?.address;
+    if (email && !this.form.recipient_email) {
+      this.form.recipient_email = email;
+      this.errors.recipient_email = '';
+    }
+
+    const rawPhone = contact?.phones?.find((p: any) => p?.number)?.number;
+    if (rawPhone) {
+      this.applyPickedPhone(rawPhone);
+      this.errors.recipient_phone = '';
     }
   }
 

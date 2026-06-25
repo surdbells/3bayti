@@ -436,6 +436,13 @@ export function transformProductDetailResponse(data: unknown): unknown {
 export function transformVendorResponse(data: unknown): unknown {
   if (!isRecord(data)) return {};
   return {
+    // v3 numeric primary key — REQUIRED by the Follow/Unfollow buttons.
+    // POST/DELETE /v3/me/following/{vendorId} resolves the vendor via a
+    // v3-PK lookup (em->find), NOT the legacy store id the page is keyed
+    // off. Surfacing it here lets the vendor page send the correct id and
+    // stops the spurious "vendor not found" 404. 0 when absent so the
+    // client's `id > 0` guard short-circuits cleanly.
+    id: typeof data['id'] === 'number' ? data['id'] : Number(data['id'] ?? 0),
     name: asString(data['name']),
     logo: asString(data['logo_url']),
     cover: asString(data['cover_image_url']),

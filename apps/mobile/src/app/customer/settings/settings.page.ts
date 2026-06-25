@@ -14,7 +14,10 @@ import {
   ActionSheetController
 } from '@ionic/angular/standalone';
 import { Preferences } from '@capacitor/preferences';
+import { App as CapacitorApp } from '@capacitor/app';
 import { Subscription } from 'rxjs';
+
+import { environment } from '../../../environments/environment';
 
 import { ConnectionService } from '../../service/connection.service';
 import { NetworkService } from '../../service/network.service';
@@ -72,6 +75,16 @@ export class SettingsPage implements OnInit, OnDestroy {
   marketingSaving = false;
   /** Hide the marketing row until we know the real value from the profile. */
   marketingLoaded = false;
+
+  /**
+   * Installed app version string shown in the Settings footer, e.g.
+   * "v0.0.1 (3)". Sourced at runtime from the native Capacitor App plugin
+   * (App.getInfo() -> version/build, i.e. CFBundleShortVersionString /
+   * versionName + build number). On web/dev getInfo() is unimplemented and
+   * throws, so we fall back to environment.appVersion. Seeded with the
+   * env fallback so the footer never flashes a wrong/placeholder value.
+   */
+  appVersion = `v${environment.appVersion}`;
 
   ui_controls = {
     is_loading: false,
@@ -133,6 +146,25 @@ export class SettingsPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.loadUser();
     this.loadNotificationPreference();
+    this.loadAppVersion();
+  }
+
+  /**
+   * Resolve the real installed app version for the Settings footer. Prefers
+   * the native Capacitor App plugin (App.getInfo() returns the user-facing
+   * semver in `version` and the build code in `build`). On the web/dev
+   * platform getInfo() is unimplemented and throws — we swallow that and keep
+   * the environment.appVersion fallback already seeded into appVersion.
+   */
+  private async loadAppVersion(): Promise<void> {
+    try {
+      const info = await CapacitorApp.getInfo();
+      this.appVersion = info.build
+        ? `v${info.version} (${info.build})`
+        : `v${info.version}`;
+    } catch {
+      /* web/dev: getInfo() unimplemented — keep env fallback */
+    }
   }
 
   ngOnDestroy(): void {

@@ -23,103 +23,221 @@
       <div class="loader-row">
         <ax-loader></ax-loader>
       </div>
-    }
-    @if (!ui_controls.is_loading){
-      <ion-row class="ion-padding-bottom">
-        <ion-col>
-          <ax-text-field
-            [label]="'label_name' | translate"
-            type="text"
-            [maxlength]="15"
-            autocomplete="name"
-            [(ngModel)]="update.name"
-            name="name">
-          </ax-text-field>
-        </ion-col>
-      </ion-row>
-      <ion-row class="ion-padding-bottom">
-        <ion-col>
-          <ax-text-field
-            [label]="'label_phone' | translate"
-            type="tel"
-            inputmode="numeric"
-            autocomplete="tel-national"
-            [(ngModel)]="update.phone"
-            name="phone">
-          </ax-text-field>
-        </ion-col>
-        <ion-col>
-          <ax-text-field
-            [label]="'label_email' | translate"
-            type="email"
-            autocomplete="email"
-            [(ngModel)]="update.email"
-            name="email">
-          </ax-text-field>
-        </ion-col>
-      </ion-row>
-      <ion-row class="ion-padding-bottom">
-        <ion-col>
-          <label class="address-field-label">{{ 'label_emirate' | translate }}</label>
-          <!-- Native <select> (NOT ion-select) so the picker is never trapped
-               behind a CDK-overlay sheet — see .ax-native-select in global.scss. -->
-          <select
-            class="ax-native-select"
-            [(ngModel)]="update.city"
-            name="emirate">
-            <option value="" disabled>{{ 'placeholder_select_emirate' | translate }}</option>
-            <option value="Abu Dhabi">Abu Dhabi</option>
-            <option value="Dubai">Dubai</option>
-            <option value="Sharjah">Sharjah</option>
-            <option value="Ajman">Ajman</option>
-            <option value="Umm Al-Quwain">Umm Al-Quwain</option>
-            <option value="Ras Al Khaimah">Ras Al Khaimah</option>
-            <option value="Fujairah">Fujairah</option>
-          </select>
-        </ion-col>
-        <ion-col>
-          <ax-text-field
-            [label]="'label_area' | translate"
-            type="text"
-            [(ngModel)]="update.area"
-            name="area">
-          </ax-text-field>
-        </ion-col>
-      </ion-row>
-      <ion-row class="ion-padding-bottom">
-        <ion-col>
-          <ax-text-field
-            [label]="'label_street_address' | translate"
-            type="text"
-            autocomplete="street-address"
-            [(ngModel)]="update.street"
-            name="street">
-          </ax-text-field>
-        </ion-col>
-      </ion-row>
-      <ion-row class="ion-padding-bottom">
-        <ion-col>
-          <ax-text-field
-            [label]="'label_villa_number' | translate"
-            type="text"
-            [(ngModel)]="update.villa_number"
-            name="villa_number">
-          </ax-text-field>
-        </ion-col>
-      </ion-row>
-      <ion-row>
-        <ion-col>
-          @if (!ui_controls.is_updating) {
-            <ion-button (click)="update_billing()" expand="block" class="ion-margin-vertical" type="button"> {{ 'button_update' | translate }}
-            </ion-button>
+    } @else {
+      @if (addresses.length === 0) {
+        <p class="address-empty">{{ 'text_no_saved_addresses' | translate }}</p>
+      } @else {
+        <ul class="address-book" data-testid="address-book">
+          @for (a of addresses; track a.id) {
+            <li
+              class="address-card"
+              [class.address-card--default]="isDefault(a)"
+              [attr.data-testid]="'address-card-' + a.id"
+            >
+              <div class="address-card__head">
+                <span class="address-card__label">
+                  <ax-icon name="map-pin" [size]="16" />
+                  {{ a.label || a.recipient_name || ('label_address_label' | translate) }}
+                </span>
+                @if (isDefault(a)) {
+                  <span class="address-card__badge">{{ 'address_default' | translate }}</span>
+                }
+              </div>
+
+              <p class="address-card__line">{{ addressSummary(a) }}</p>
+              @if (a.recipient_name) {
+                <p class="address-card__line address-card__line--muted">{{ a.recipient_name }}</p>
+              }
+              @if (a.recipient_phone) {
+                <p class="address-card__line address-card__line--muted">{{ a.recipient_phone }}</p>
+              }
+
+              <div class="address-card__actions">
+                @if (!isDefault(a)) {
+                  <ion-button
+                    fill="clear"
+                    size="small"
+                    class="address-card__action"
+                    [disabled]="ui_controls.busy_id === a.id"
+                    (click)="makeDefault(a)"
+                    [attr.data-testid]="'address-default-' + a.id"
+                  >
+                    <ax-icon name="star" [size]="16" slot="start" />
+                    {{ 'address_set_default_short' | translate }}
+                  </ion-button>
+                }
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  class="address-card__action"
+                  [disabled]="ui_controls.busy_id === a.id"
+                  (click)="openEdit(a)"
+                  [attr.data-testid]="'address-edit-' + a.id"
+                >
+                  <ax-icon name="pencil" [size]="16" slot="start" />
+                  {{ 'button_edit' | translate }}
+                </ion-button>
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  color="danger"
+                  class="address-card__action address-card__action--danger"
+                  [disabled]="ui_controls.busy_id === a.id"
+                  (click)="deleteAddress(a)"
+                  [attr.data-testid]="'address-delete-' + a.id"
+                >
+                  <ax-icon name="trash-2" [size]="16" slot="start" />
+                  {{ 'button_delete' | translate }}
+                </ion-button>
+              </div>
+            </li>
           }
-          @if (ui_controls.is_updating) {
-            <div class="loader-row">
-              <ax-loader></ax-loader>
-            </div>
-          }
-        </ion-col>
-      </ion-row>
+        </ul>
+      }
+
+      <ion-button
+        expand="block"
+        class="ion-margin-vertical"
+        (click)="openAdd()"
+        data-testid="add-address-btn"
+      >
+        <ax-icon name="plus" slot="start" />
+        {{ 'address_add_new' | translate }}
+      </ion-button>
     }
   </div>
 </ion-content>
+
+<!-- ══════════ ADD / EDIT ADDRESS BOTTOM SHEET ══════════ -->
+<ax-bottom-sheet
+  [isOpen]="isFormOpen"
+  (didDismiss)="isFormOpen = false"
+  [snapPoints]="[0.9, 0.98]"
+  [initialSnap]="0"
+  [title]="(editingId === 0 ? 'address_add_new' : 'title_edit_address') | translate">
+
+  <div class="add-address-form" data-testid="address-form">
+    <ion-row>
+      <ion-col>
+        <ax-text-field
+          [label]="'label_address_label' | translate"
+          type="text"
+          [(ngModel)]="form.label"
+          name="addr_label">
+        </ax-text-field>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col>
+        <ax-text-field
+          [label]="'label_name' | translate"
+          type="text"
+          [required]="true"
+          autocomplete="name"
+          [(ngModel)]="form.recipient_name"
+          name="addr_name">
+        </ax-text-field>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col>
+        <ax-text-field
+          [label]="'label_phone' | translate"
+          type="tel"
+          inputmode="numeric"
+          [required]="true"
+          autocomplete="tel-national"
+          [(ngModel)]="form.recipient_phone"
+          name="addr_phone">
+        </ax-text-field>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col>
+        <label class="address-field-label">{{ 'label_emirate' | translate }}</label>
+        <!-- Native <select> (NOT ion-select): this form lives inside a CDK
+             overlay bottom sheet; an ion-select action-sheet would teleport
+             behind the sheet (see .ax-native-select in global.scss). -->
+        <select
+          class="ax-native-select"
+          [(ngModel)]="form.emirate"
+          name="addr_emirate">
+          <option value="" disabled>{{ 'placeholder_select_emirate' | translate }}</option>
+          @for (e of emirates; track e) {
+            <option [value]="e">{{ e }}</option>
+          }
+        </select>
+      </ion-col>
+      <ion-col>
+        <ax-text-field
+          [label]="'label_area' | translate"
+          type="text"
+          [required]="true"
+          [(ngModel)]="form.area"
+          name="addr_area">
+        </ax-text-field>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col>
+        <ax-place-autocomplete
+          [label]="'label_street_address' | translate"
+          [placeholder]="'placeholder_search_address' | translate"
+          [required]="true"
+          autocomplete="street-address"
+          [(ngModel)]="form.street_address"
+          name="addr_street"
+          (placeSelected)="onPlaceSelected($event)">
+        </ax-place-autocomplete>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col>
+        <ax-text-field
+          [label]="'label_building_details' | translate"
+          type="text"
+          [(ngModel)]="form.building_details"
+          name="addr_building">
+        </ax-text-field>
+      </ion-col>
+      <ion-col>
+        <ax-text-field
+          [label]="'label_postal_code' | translate"
+          type="text"
+          [(ngModel)]="form.postal_code"
+          name="addr_postal">
+        </ax-text-field>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col>
+        <ion-checkbox
+          labelPlacement="end"
+          [(ngModel)]="form.is_default"
+          name="addr_is_default">
+          {{ 'address_set_default' | translate }}
+        </ion-checkbox>
+      </ion-col>
+    </ion-row>
+
+    <ion-row>
+      <ion-col>
+        @if (!ui_controls.is_saving) {
+          <ion-button (click)="saveForm()" expand="block" class="ion-margin-vertical" type="button" data-testid="save-address-btn">
+            {{ (editingId === 0 ? 'button_save_address' : 'button_save_changes') | translate }}
+          </ion-button>
+        } @else {
+          <div class="loader-row">
+            <ax-loader></ax-loader>
+          </div>
+        }
+      </ion-col>
+    </ion-row>
+  </div>
+</ax-bottom-sheet>

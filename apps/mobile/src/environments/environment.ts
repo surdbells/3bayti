@@ -5,6 +5,13 @@
 export const environment = {
   production: false,
 
+  /* Fallback app version shown in the UI (e.g. Settings footer) when the
+   * native Capacitor App.getInfo() is unavailable — e.g. on the web/dev
+   * platform where getInfo() is unimplemented and throws. On a real device
+   * the runtime native version (CFBundleShortVersionString / versionName)
+   * supersedes this. Keep in sync with apps/mobile/package.json "version". */
+  appVersion: '0.0.1',
+
   /* Google Places API (New) configuration.
    *
    * The key below is for development. It MUST be restricted in
