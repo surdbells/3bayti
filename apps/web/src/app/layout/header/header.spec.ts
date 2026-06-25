@@ -204,6 +204,7 @@ describe('HeaderComponent (auth-aware)', () => {
   describe('primary navigation + mobile drawer', () => {
     const NAV = [
       { id: 'nav-categories', re: /category/ },
+      { id: 'nav-styles', re: /styles/ },
       { id: 'nav-stores', re: /stores/ },
       { id: 'nav-bestSellers', re: /best-sellers/ },
       { id: 'nav-newArrivals', re: /new-arrivals/ },

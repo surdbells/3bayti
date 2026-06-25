@@ -52,6 +52,13 @@
   --page-max-width: 1280px;
   --page-padding-x: 24px;
 
+  /* Approximate resting height of the site header (padding-block 16px ×2 +
+     ~40px logo/action row). Used by the FLOATING-header overlap rule
+     (app.scss) to pull the home hero up under the transparent nav, and by
+     the home hero to pad its content clear of the floating bar. Kept as a
+     token so a header-height change ripples through both in one place. */
+  --header-height: 72px;
+
   /* Shadow tokens — "Soft & subtle" surface elevation language.
      Promoted from inline values to tokens so a future shadow change
      ripples through every surface in one place. Five surfaces use

@@ -1,0 +1,307 @@
+/* Style Hub page styles. Mirrors the store-directory "Gilded Boutique"
+   language: cream canvas, Playfair headings, pill controls, gold accents.
+   RTL-safe — uses logical properties / flex (no hard-coded left/right). */
+
+.styles-hub {
+  min-height: calc(100vh - 200px);
+  padding: 32px 0 64px;
+  background: var(--color-bg-default, #faf7f1);
+}
+
+.styles-hub__container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.styles-hub__header {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.styles-hub__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 8px 0;
+  letter-spacing: -0.01em;
+}
+
+.styles-hub__subtitle {
+  font-size: 15px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0 auto;
+  max-width: 560px;
+  line-height: 1.5;
+}
+
+/* --- Tabs ----------------------------------------------------------- */
+
+.styles-hub__tabs {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 32px 0;
+}
+
+.styles-hub__tab {
+  appearance: none;
+  background: #fff;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--color-text-primary, #2e241c);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    border-color: var(--color-brand-500, #b18f1f);
+    outline: none;
+  }
+
+  &.is-active {
+    background: var(--color-brand-700, #5a3a2c);
+    border-color: var(--color-brand-700, #5a3a2c);
+    color: #fff;
+  }
+}
+
+/* --- Grid ----------------------------------------------------------- */
+
+.styles-grid {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.styles-grid__item {
+  margin: 0;
+}
+
+/* --- Style card ----------------------------------------------------- */
+
+.style-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface-card, #fdfaf3);
+  border-radius: 20px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 8px 24px rgba(46, 36, 28, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 36px rgba(46, 36, 28, 0.14);
+    outline: none;
+  }
+}
+
+/* Collage: one large image + a stacked pair beside it. */
+.style-card__collage {
+  display: flex;
+  gap: 6px;
+  padding: 14px;
+  aspect-ratio: 4 / 3;
+}
+
+.style-card__collage-main {
+  flex: 2;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--color-bg-muted, #efe7d8);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.style-card__collage-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.style-card__collage-cell {
+  flex: 1;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--color-bg-muted, #efe7d8);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.style-card__blank {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #efe7d8 0%, #e3d7c2 100%);
+}
+
+.style-card__meta {
+  padding: 0 18px 18px;
+}
+
+.style-card__name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 8px 0;
+  line-height: 1.3;
+  /* Clamp to two lines so cards stay aligned. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.style-card__facts {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.style-card__count {
+  font-size: 13px;
+  color: var(--color-text-muted, #6b6056);
+}
+
+.style-card__price {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-brand-700, #5a3a2c);
+  white-space: nowrap;
+}
+
+/* --- Skeletons ------------------------------------------------------ */
+
+.style-card--skeleton {
+  pointer-events: none;
+}
+
+.style-card__skeleton-box {
+  background: linear-gradient(90deg, #efe7d8 25%, #e6dcc9 37%, #efe7d8 63%);
+  background-size: 400% 100%;
+  animation: styles-shimmer 1.4s ease infinite;
+}
+
+.style-card__skeleton-line {
+  height: 14px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #efe7d8 25%, #e6dcc9 37%, #efe7d8 63%);
+  background-size: 400% 100%;
+  animation: styles-shimmer 1.4s ease infinite;
+
+  &--short {
+    width: 50%;
+  }
+}
+
+@keyframes styles-shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .style-card__skeleton-box,
+  .style-card__skeleton-line { animation: none; }
+  .style-card { transition: none; }
+}
+
+/* --- Load more / empty / sign-in ------------------------------------ */
+
+.styles-hub__load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.styles-hub__load-more-btn {
+  appearance: none;
+  background: #fff;
+  border: 1px solid var(--color-border-default, #d8cfc1);
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #2e241c);
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s ease, color 0.15s ease, background-color 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    border-color: var(--color-brand-500, #b18f1f);
+    color: var(--color-brand-700, #5a3a2c);
+    background: rgba(177, 143, 31, 0.04);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.styles-hub__empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--color-text-muted, #6b6056);
+  font-size: 14px;
+}
+
+.styles-hub__sign-in {
+  text-align: center;
+  padding: 56px 20px;
+}
+
+.styles-hub__sign-in-text {
+  font-size: 15px;
+  color: var(--color-text-muted, #6b6056);
+  margin: 0 0 18px 0;
+}
+
+.styles-hub__sign-in-cta {
+  display: inline-block;
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  text-decoration: none;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    background: var(--color-brand-800, #44291f);
+    outline: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .styles-hub__title { font-size: 28px; }
+  .styles-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}

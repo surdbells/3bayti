@@ -106,15 +106,20 @@ export class HomeComponent {
   readonly flash       = computed(() => this.campaigns()?.flash ?? null);
   readonly serverNow   = computed(() => this.campaigns()?.server_now ?? new Date().toISOString());
 
-  /* ----- Personalized "For you" strip (X.12 / W.1).
-     Only loaded for signed-in users (the personalized endpoint is
-     auth-gated and not SEO content). Resolves to a Product[] (possibly
-     empty); the template hides the strip when the user is anonymous or
-     the engine returns nothing. Errors degrade to [] inside the
-     service. ----- */
+  /* ----- "For you" strip — personalized (signed-in) OR a guest fallback.
+     Signed-in users get the auth-gated recommendation engine (X.12 / W.1).
+     Anonymous visitors can't — so rather than leave the slot empty (the page
+     would go sparse below the fold for every signed-out visitor), guests get
+     a "Trending now" strip sourced from the editorial `featured` ranking
+     (HomeDataService.trending$ — deliberately distinct from Top Sellers'
+     `popular` and New Arrivals' `newest`). Both paths resolve to a Product[]
+     (possibly empty) and degrade to [] on error; the template still hides
+     the strip when the resolved list is empty. ----- */
+  readonly isGuestForYou = !this.auth.isAuthenticated();
+
   readonly forYou = toSignal(
-    !this.auth.isAuthenticated()
-      ? of([] as Product[])
+    this.isGuestForYou
+      ? this.homeData.trending$()
       : from(this.recsService.forMe()).pipe(
           map((recs) => recs.map((r) => r.product)),
           catchError(() => of([] as Product[])),

@@ -76,6 +76,32 @@ export class HomeDataService {
   }
 
   /**
+   * Trending now — the GUEST fallback for the personalized "For you" strip.
+   *
+   * Anonymous visitors don't get recommendations (the engine is auth-gated),
+   * which previously left the "For you" slot empty for everyone signed-out.
+   * To keep the page from going sparse, guests instead see a "Trending now"
+   * strip sourced from the editorial `sort=featured` ranking.
+   *
+   * This source is deliberately DISTINCT from the two nearby strips so the
+   * page doesn't repeat itself:
+   *   - Top Sellers uses `sort=popular` (cart-add popularity proxy)
+   *   - New Arrivals uses `sort=newest` (chronological)
+   *   - Trending uses `sort=featured` (curated: top-rated vendors + recency)
+   *
+   * Note: the hero carousel also draws from `featured`, but it only surfaces
+   * a small rotating subset visually, so a fuller trending strip still reads
+   * as new content rather than a duplicate of the hero.
+   */
+  trending$(): Observable<Product[]> {
+    return this.withFallback(
+      this.routed
+        .get<Product[]>('GET /products', { query: { sort: 'featured', limit: this.STRIP_LIMIT } })
+        .pipe(map(env => env.data)),
+    );
+  }
+
+  /**
    * Featured vendors — on /v3/featured-vendors per M3.2.X.2. Each vendor
    * comes with up to 4 embedded product thumbnails for the Store
    * Spotlight section. Backend computes rating aggregate + alphabetical-

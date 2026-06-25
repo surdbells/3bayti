@@ -308,6 +308,39 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     shape: 'raw',
   },
 
+  // ---- Styles (Style Hub) — CLEAN logical keys for apps/web ----
+  //
+  // Net-new v3-only catalog reads (no legacy 1:1). A "style" is a
+  // curated outfit bundling up to ~4 products. These mirror the
+  // /vendors/:slug convention (slug-native, v3-envelope) and are the
+  // web-facing siblings of the mobile-prefixed /mobile/styles-list +
+  // /mobile/my-styles + /mobile/style-detail entries, which carry the
+  // legacy URL→routeKey aliases the mobile adapter needs. Web calls
+  // these directly by routeKey via RoutedHttpClient, so oldPath is ''.
+  //
+  //   GET /styles?type={community|editorial}&limit&offset → { data: Style[], meta }
+  //   GET /styles/:slug                                    → { data: Style } (404)
+  //   GET /me/styles?limit&offset  (Bearer)                → { data: Style[], meta }
+  // (POST /me/styles already exists in the Account/Me section below.)
+  'GET /styles': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/styles',
+    shape: 'v3-envelope',
+  },
+  'GET /styles/:slug': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/styles/:slug',
+    shape: 'v3-envelope',
+  },
+  'GET /me/styles': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/styles',
+    shape: 'v3-envelope',
+  },
+
   // ---- Mobile catalog reads (M3.1.5 — held at 'old' until c/d ship) ----
   //
   // Mobile's catalog call sites are POST-with-body by legacy convention,

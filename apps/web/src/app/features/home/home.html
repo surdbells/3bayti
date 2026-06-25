@@ -245,8 +245,8 @@
        =========================================================== -->
   @if (forYou().length > 0) {
     <ui-product-strip
-      [heading]="'home.forYou.heading' | translate"
-      [eyebrow]="'home.forYou.eyebrow' | translate"
+      [heading]="(isGuestForYou ? 'home.forYou.trendingHeading' : 'home.forYou.heading') | translate"
+      [eyebrow]="(isGuestForYou ? 'home.forYou.trendingEyebrow' : 'home.forYou.eyebrow') | translate"
       [products]="forYou()"
       [loading]="false"
       [compact]="true"

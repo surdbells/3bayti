@@ -3,3 +3,25 @@
   flex-direction: column;
   min-height: 100vh;
 }
+
+/* ---------------------------------------------------------------------------
+   FLOATING header overlap (home route)
+   The site header is position:sticky, so by default it sits ABOVE the routed
+   content in flow and pushes the hero down. On the home route the header goes
+   transparent and should instead OVERLAY the hero so the nav truly floats.
+
+   We detect the home route via the header's stable `.is-home` class (which,
+   unlike `.is-transparent`, does NOT toggle on scroll — so the overlap
+   persists while scrolling and only the header's appearance changes) and pull
+   the routed outlet up under the sticky header by its own height, then let the
+   hero add matching top padding so its content still clears the bar.
+
+   Scoped to the home route only, so every other route keeps today's solid,
+   non-overlapping header. Logical-property safe (block-level offset,
+   direction-agnostic).
+   --------------------------------------------------------------------------- */
+:host:has(.site-header.is-home) router-outlet + * {
+  /* Sticky headers reserve their box in flow; this reclaims it so the hero
+     starts at the viewport top, beneath the floating nav. */
+  margin-block-start: calc(-1 * var(--header-height, 72px));
+}

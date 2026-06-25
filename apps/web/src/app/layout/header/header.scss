@@ -22,6 +22,31 @@
   background: color-mix(in srgb, var(--color-bg-surface) 88%, transparent);
 }
 
+/* ---------------------------------------------------------------------------
+   FLOATING transparent-over-hero variant
+   On the home route the header sits ON TOP of the hero band (see app.scss /
+   home hero stacking) and drops its own surface so the hero gradient shows
+   through — the nav "floats". The home hero is a LIGHT warm-cream field, so
+   text/logo stay dark (brand-700) here for AA contrast; we only strip the
+   background, border, and shadow. `.is-scrolled` wins over this (it comes
+   later + the template only applies .is-transparent while NOT scrolled), so
+   once the user scrolls the solid blurred floating bar returns.
+   Uses logical props throughout, so it's RTL-safe.
+   --------------------------------------------------------------------------- */
+.site-header.is-transparent {
+  background: transparent;
+  border-block-end-color: transparent;
+  box-shadow: none;
+  /* No blur over the hero — let the gradient read crisply behind the bar. */
+  backdrop-filter: none;
+}
+
+/* Slightly stronger weight on the floating nav so dark-on-light stays legible
+   without a surface behind it. */
+.site-header.is-transparent .nav-link {
+  font-weight: 600;
+}
+
 .container {
   display: flex;
   align-items: center;

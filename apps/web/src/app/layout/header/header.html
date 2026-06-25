@@ -1,4 +1,9 @@
-<header class="site-header" [class.is-scrolled]="scrolled()">
+<header
+  class="site-header"
+  [class.is-scrolled]="scrolled()"
+  [class.is-home]="transparentOverHero()"
+  [class.is-transparent]="transparentOverHero() && !scrolled()"
+>
   <div class="container">
     <button
       type="button"

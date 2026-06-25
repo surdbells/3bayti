@@ -85,6 +85,8 @@ import type { Product } from '../catalog/product.model';
       .ts-item { width: 216px; }
     }
 
+    /* GOLDEN HOUR: espresso rank numeral with a gold tick-rule so the
+       ranking reads as a confident, festive index. */
     .ts-rank {
       display: flex;
       align-items: baseline;
@@ -93,16 +95,20 @@ import type { Product } from '../catalog/product.model';
       font-weight: 700;
       font-size: 1.9rem;
       line-height: 1;
-      color: var(--color-brand-400);
+      color: var(--color-brand-700, #2e241c); /* espresso */
       margin-block-end: var(--space-xs);
       padding-inline-start: 2px;
     }
     .ts-rank::after {
       content: "";
       flex: 1;
-      height: 1px;
-      background: var(--color-border-subtle);
+      height: 2px;
+      background: linear-gradient(90deg, var(--color-brand-300, #d6a93b), transparent);
       transform: translateY(-6px);
+    }
+    /* RTL: fade the tick-rule from the leading (right) edge. */
+    :host-context([dir='rtl']) .ts-rank::after {
+      background: linear-gradient(270deg, var(--color-brand-300, #d6a93b), transparent);
     }
     .ts-rank--ghost {
       min-height: 1.9rem;

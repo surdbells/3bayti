@@ -91,16 +91,34 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
   styles: [`
     :host { display: block; }
 
+    /* GOLDEN HOUR campaign band — a deep, festive slab (was a light gold
+       wash). Anniversary = amber/terracotta; Flash = hotter terracotta-ember.
+       Cream + gold text rides on the dark field for AA contrast. The gold
+       glow in the trailing corner gives the "golden hour" warmth. */
     .cq {
       padding-block: var(--space-2xl);
       padding-inline: var(--page-padding-x);
       background:
-        linear-gradient(150deg, #f7edd7 0%, #faf3e6 55%, var(--color-bg-canvas) 100%);
-      border-block: 1px solid var(--color-border-subtle);
+        radial-gradient(130% 120% at 100% -10%, rgba(214, 169, 59, 0.30), transparent 56%),
+        linear-gradient(150deg, #8a3a16 0%, #7a1f12 60%, #5e1a10 100%);
+      color: var(--gh-cream, #fbf6ee);
+      border-block: 1px solid rgba(214, 169, 59, 0.28);
+    }
+    /* RTL: mirror the gold glow to the leading (right) corner. */
+    :host-context([dir='rtl']) .cq {
+      background:
+        radial-gradient(130% 120% at 0% -10%, rgba(214, 169, 59, 0.30), transparent 56%),
+        linear-gradient(210deg, #8a3a16 0%, #7a1f12 60%, #5e1a10 100%);
     }
     .cq--flash {
       background:
-        linear-gradient(150deg, var(--color-flash-bg) 0%, #fdf1e7 55%, var(--color-bg-canvas) 100%);
+        radial-gradient(130% 120% at 100% -10%, rgba(226, 98, 46, 0.34), transparent 56%),
+        linear-gradient(150deg, #9a3212 0%, #7a1f12 55%, #571208 100%);
+    }
+    :host-context([dir='rtl']) .cq--flash {
+      background:
+        radial-gradient(130% 120% at 0% -10%, rgba(226, 98, 46, 0.34), transparent 56%),
+        linear-gradient(210deg, #9a3212 0%, #7a1f12 55%, #571208 100%);
     }
 
     .cq__bounds {
@@ -117,27 +135,29 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
       margin-block-end: var(--space-lg);
     }
     .cq__head-text { min-width: 0; }
+    /* On the deep terracotta band the eyebrow + accents become gold; the
+       title + subtitle become cream so everything clears AA. */
     .cq__eyebrow {
       margin: 0 0 var(--space-2xs);
       font-size: var(--text-eyebrow);
       font-weight: 700;
       letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: var(--color-sale);
+      color: var(--gh-gold-soft, #e7c468);
     }
-    .cq--flash .cq__eyebrow { color: var(--color-flash); }
+    .cq--flash .cq__eyebrow { color: #ffd9a0; }
     .cq__title {
       margin: 0;
       font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
       font-weight: 600;
       font-size: var(--text-section-title);
       line-height: 1.1;
-      color: var(--color-brand-700);
+      color: var(--gh-cream, #fbf6ee);
     }
     .cq__subtitle {
       margin: var(--space-2xs) 0 0;
       font-size: 0.95rem;
-      color: var(--color-text-secondary);
+      color: rgba(251, 246, 238, 0.85);
     }
 
     .cq__timer {
@@ -145,13 +165,20 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
       flex-direction: column;
       gap: var(--space-2xs);
       align-items: flex-start;
+      /* ui-countdown is a shared component (not edited here). It reads these
+         tokens for its digits/labels/separators; on the deep band we remap
+         them to cream/gold via inheritance so the countdown stays legible
+         without touching the shared file. */
+      --color-brand-700: #fbf6ee;     /* digits → cream */
+      --color-text-secondary: #ffd9a0;/* separators → warm gold */
+      --color-text-tertiary: rgba(251, 246, 238, 0.78); /* unit labels */
     }
     .cq__timer-label {
       font-size: 0.7rem;
       font-weight: 600;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--color-text-tertiary);
+      color: rgba(251, 246, 238, 0.78);
     }
 
     /* Horizontal rail */
@@ -218,12 +245,13 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
       gap: 2px;
       padding-block-start: var(--space-sm);
     }
+    /* Card text sits directly on the deep band → cream/gold ink. */
     .cq-card__vendor {
       margin: 0;
       font-size: 0.72rem;
       letter-spacing: 0.04em;
       text-transform: uppercase;
-      color: var(--color-text-tertiary);
+      color: rgba(251, 246, 238, 0.65);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -233,16 +261,16 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
       font-weight: 600;
       font-size: 0.95rem;
       line-height: 1.25;
-      color: var(--color-brand-700);
+      color: var(--gh-cream, #fbf6ee);
       text-decoration: none;
       display: -webkit-box;
       -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
-    .cq-card__name:hover { color: var(--color-brand-500); }
+    .cq-card__name:hover { color: var(--gh-gold-soft, #e7c468); }
     .cq-card__name:focus-visible {
-      outline: 2px solid var(--color-brand-500);
+      outline: 2px solid var(--gh-gold-soft, #e7c468);
       outline-offset: 2px;
       border-radius: 2px;
     }
@@ -256,12 +284,12 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
     .cq-card__price-now {
       font-weight: 700;
       font-size: 0.95rem;
-      color: var(--color-sale);
+      color: var(--gh-gold-soft, #e7c468);
     }
-    .cq--flash .cq-card__price-now { color: var(--color-flash); }
+    .cq--flash .cq-card__price-now { color: #ffd9a0; }
     .cq-card__price-was {
       font-size: 0.82rem;
-      color: var(--color-text-tertiary);
+      color: rgba(251, 246, 238, 0.55);
       text-decoration: line-through;
     }
 
@@ -277,7 +305,7 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
       flex: 1;
       height: 5px;
       border-radius: var(--radius-pill);
-      background: rgba(46, 36, 28, 0.10);
+      background: rgba(251, 246, 238, 0.18);
       overflow: hidden;
     }
     .cq-stock__fill {
@@ -285,13 +313,13 @@ import type { Campaign, CampaignItem, CampaignType } from '../campaigns/campaign
       inset-block: 0;
       inset-inline-start: 0;
       border-radius: var(--radius-pill);
-      background: var(--color-flash);
+      background: var(--gh-gold, #d6a93b);
       transition: width var(--duration-slow) var(--ease-out);
     }
     .cq-stock__txt {
       font-size: 0.72rem;
       font-weight: 600;
-      color: var(--color-flash);
+      color: #ffd9a0;
       white-space: nowrap;
     }
 

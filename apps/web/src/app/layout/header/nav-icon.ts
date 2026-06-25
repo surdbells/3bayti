@@ -7,9 +7,9 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
  * line icons (24×24, 1.7 stroke, currentColor) rendered by key. Shared
  * by both the desktop nav and the mobile drawer so the two stay in sync.
  *
- * Keys: 'categories' | 'stores' | 'bestSellers' | 'newArrivals' | 'gift'
- *       | 'user' | 'shoppingBag' | 'mapPin' | 'ruler' | 'heart' | 'lock'
- *       | 'mail' | 'lifeBuoy'.
+ * Keys: 'categories' | 'styles' | 'stores' | 'bestSellers' | 'newArrivals'
+ *       | 'gift' | 'user' | 'shoppingBag' | 'mapPin' | 'ruler' | 'heart'
+ *       | 'lock' | 'mail' | 'lifeBuoy'.
  *
  * The account-hub tiles (Y.5) reuse this component for their leading
  * glyphs, which is why the set extends beyond the primary-nav keys.
@@ -27,6 +27,14 @@ import { Component, ChangeDetectionStrategy, Input } from '@angular/core';
           <rect x="13.5" y="3.5" width="7" height="7" rx="1.6" />
           <rect x="3.5" y="13.5" width="7" height="7" rx="1.6" />
           <rect x="13.5" y="13.5" width="7" height="7" rx="1.6" />
+        </svg>
+      }
+      @case ('styles') {
+        <!-- Garment on a hanger with a small sparkle — "Styles" / lookbook. -->
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
+             stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 4.5a1.6 1.6 0 1 0 1.4 2.4c.3.6.1 1.2-.5 1.6L4 14.4a1 1 0 0 0 .5 1.85h15a1 1 0 0 0 .5-1.85l-7.5-4.4" />
+          <path d="M18.5 4.2l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5z" />
         </svg>
       }
       @case ('stores') {

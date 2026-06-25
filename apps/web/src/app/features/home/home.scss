@@ -12,13 +12,92 @@
  *     centred within max-width container on desktop
  */
 
+/* =====================================================================
+   GOLDEN HOUR PALETTE — scoped token overrides (Option A)
+   ---------------------------------------------------------------------
+   The home page is re-themed to a warm, saturated, festive direction by
+   OVERRIDING the global design tokens *only* under .home-page. Because
+   every shared/sibling component on this page (ui-product-strip,
+   ui-store-card, ui-section-header, ui-hero-carousel, ui-product-card,
+   home-top-sellers, home-campaign-section) consumes these CSS custom
+   properties and CSS variables inherit down the DOM tree regardless of
+   Angular's emulated view encapsulation, redefining the tokens here
+   cascades the new palette into all of them WITHOUT touching a single
+   shared component file or the global styles.scss.
+
+   Golden Hour ramp:
+     amber    #B26A1B  primary brand          (was gold #b18f1f)
+     coral    #E2622E  accent / primary CTA
+     espresso #2E241C  dark tiles + headings
+     cream    #FBF6EE  page bg / inverse text
+     gold     #D6A93B  highlights
+     deep terracotta #7A1F12 campaign band
+   Warm tints: #EFE2CF, #E7D6BC, #F6E9CF.
+   Contrast: cream/amber text on espresso/amber bands; espresso on cream.
+   ===================================================================== */
 .home-page {
+  /* Brand ramp re-pointed to the amber → gold → espresso Golden Hour scale.
+     500 becomes amber (primary brand), 600 a deeper amber, 700 stays the
+     espresso used for headings + dark CTAs. */
+  --color-brand-50:  #fbf6ee;
+  --color-brand-100: #f6e9cf;
+  --color-brand-200: #e7d6bc;
+  --color-brand-300: #d6a93b;  /* gold */
+  --color-brand-400: #c98a2a;
+  --color-brand-500: #b26a1b;  /* amber — primary brand */
+  --color-brand-600: #9a5613;  /* deeper amber */
+  --color-brand-700: #2e241c;  /* espresso — headings + dark tiles */
+
+  /* Warm neutrals — cream page field, espresso ink. */
+  --color-bg-canvas:  #fbf6ee;  /* cream */
+  --color-bg-surface: #fffdf8;
+  --color-bg-muted:   #f3e9d6;
+
+  --color-text-primary:   #2e241c;  /* espresso */
+  --color-text-secondary: #6b4a2e;  /* warm brown */
+  --color-text-tertiary:  #9a7d5e;
+  --color-text-inverse:   #fbf6ee;  /* cream on dark/amber */
+
+  --color-border-subtle:  rgba(46, 36, 28, 0.10);
+  --color-border-default: rgba(46, 36, 28, 0.18);
+
+  /* Commerce accents leaned toward coral so sale/flash read festive. */
+  --color-sale:       #e2622e;  /* coral */
+  --color-sale-bg:    #fce7da;
+  --color-flash:      #d34a1a;  /* hot coral-ember */
+  --color-flash-bg:   #fbe3d3;
+
+  /* Local Golden-Hour-only aliases reused by the bespoke bands below so the
+     hex values live in exactly one place. */
+  --gh-amber:      #b26a1b;
+  --gh-amber-deep: #9a5613;
+  --gh-coral:      #e2622e;
+  --gh-coral-deep: #c9501f;
+  --gh-espresso:   #2e241c;
+  --gh-espresso-2: #3a2c20;
+  --gh-cream:      #fbf6ee;
+  --gh-gold:       #d6a93b;
+  --gh-gold-soft:  #e7c468;
+  --gh-tint:       #efe2cf;
+  --gh-tint-2:     #e7d6bc;
+  --gh-tint-3:     #f6e9cf;
+  --gh-terracotta: #7a1f12;
+
+  /* Warm-tinted shadows so elevation reads amber, not grey. */
+  --shadow-card-resting:
+    0 1px 2px rgba(122, 31, 18, 0.05),
+    0 4px 12px -2px rgba(178, 106, 27, 0.10);
+  --shadow-card-hover:
+    0 2px 4px rgba(122, 31, 18, 0.08),
+    0 10px 24px -4px rgba(178, 106, 27, 0.16);
+
   display: flex;
   flex-direction: column;
   /* Section gap — tightened (was 64/88/112) so more of the page reads
    * without scrolling. Each section's own padding adds to this. */
   gap: 44px;
   padding-bottom: 0; /* Footer mounts directly below; no padding here. */
+  background: var(--color-bg-canvas);
 }
 
 @media (min-width: 768px) {
@@ -50,22 +129,33 @@
 .hero {
   position: relative;
   width: 100%;
-  padding-block: clamp(2.5rem, 5vw, 4.5rem);
-  border-block-end: 1px solid var(--color-brand-100);
+  /* The FLOATING header overlays the hero on the home route (app.scss pulls
+     .home-page up under the transparent sticky nav by --header-height). Add
+     that height to the hero's TOP padding so the hero content still clears
+     the bar, while the gradient band itself bleeds up behind the nav. The
+     block-end padding keeps its original rhythm. */
+  padding-block-start: calc(clamp(2.5rem, 5vw, 4.5rem) + var(--header-height, 72px));
+  padding-block-end: clamp(2.5rem, 5vw, 4.5rem);
+  border-block-end: 1px solid rgba(46, 36, 28, 0.18);
+  /* GOLDEN HOUR HERO — a bold, saturated amber band. Cream text rides on
+     top, so the field stays dark/rich enough for AA contrast. Layered gold
+     + coral glows give the "golden hour" warmth without flattening. */
   background:
-    /* refined hairline dot-grid — finer + a touch more present than before */
-    radial-gradient(rgba(90, 58, 44, 0.05) 0.5px, transparent 1px) 0 0 / 18px 18px,
-    /* primary gold glow, trailing top corner — deepened */
-    radial-gradient(130% 110% at 90% -15%, rgba(201, 162, 39, 0.26), transparent 58%),
-    /* secondary espresso glow, leading bottom corner — adds depth */
-    radial-gradient(120% 120% at -10% 115%, rgba(90, 58, 44, 0.10), transparent 60%),
-    /* deeper warm-cream → gold base sweep */
-    linear-gradient(155deg, #f3e6c9 0%, #fbf4e6 45%, #f7ecd2 72%, #f0e0bf 100%);
+    /* fine cream dot-grid texture */
+    radial-gradient(rgba(251, 246, 238, 0.10) 0.5px, transparent 1px) 0 0 / 18px 18px,
+    /* gold glow, trailing top corner */
+    radial-gradient(130% 110% at 90% -15%, rgba(214, 169, 59, 0.55), transparent 58%),
+    /* coral glow, leading bottom corner — sunset warmth */
+    radial-gradient(120% 120% at -8% 118%, rgba(226, 98, 46, 0.45), transparent 60%),
+    /* amber → deep amber base sweep */
+    linear-gradient(150deg, #c1791f 0%, #b26a1b 46%, #9a5613 100%);
+  color: var(--gh-cream);
 }
 
 @media (min-width: 1280px) {
   .hero {
-    padding-block: clamp(3.5rem, 5vw, 5.5rem);
+    padding-block-start: calc(clamp(3.5rem, 5vw, 5.5rem) + var(--header-height, 72px));
+    padding-block-end: clamp(3.5rem, 5vw, 5.5rem);
   }
 }
 
@@ -73,10 +163,11 @@
    gradient sweep so the warmth still reads from the leading edge. */
 :host-context([dir='rtl']) .hero {
   background:
-    radial-gradient(rgba(90, 58, 44, 0.05) 0.5px, transparent 1px) 0 0 / 18px 18px,
-    radial-gradient(130% 110% at 10% -15%, rgba(201, 162, 39, 0.26), transparent 58%),
-    radial-gradient(120% 120% at 110% 115%, rgba(90, 58, 44, 0.10), transparent 60%),
-    linear-gradient(205deg, #f3e6c9 0%, #fbf4e6 45%, #f7ecd2 72%, #f0e0bf 100%);
+    radial-gradient(rgba(251, 246, 238, 0.10) 0.5px, transparent 1px) 0 0 / 18px 18px,
+    radial-gradient(130% 110% at 10% -15%, rgba(214, 169, 59, 0.55), transparent 58%),
+    radial-gradient(120% 120% at 108% 118%, rgba(226, 98, 46, 0.45), transparent 60%),
+    linear-gradient(210deg, #c1791f 0%, #b26a1b 46%, #9a5613 100%);
+  color: var(--gh-cream);
 }
 
 /* Two columns on desktop (editorial / carousel); single column stacked
@@ -107,14 +198,15 @@
   animation: hero-rise var(--duration-slow) var(--ease-out) both;
 }
 
+/* Hero text rides on the saturated amber band → cream/gold ink for AA. */
 .hero__eyebrow {
   margin: 0;
   font-family: 'Inter', system-ui, sans-serif;
   font-size: var(--text-eyebrow);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--color-brand-600);
+  color: var(--gh-gold-soft);
 }
 
 .hero__title {
@@ -124,7 +216,7 @@
   font-size: var(--text-hero-title);
   line-height: 1.04;
   letter-spacing: -0.02em;
-  color: var(--color-brand-700);
+  color: var(--gh-cream);
   text-wrap: balance;
 }
 
@@ -133,7 +225,7 @@
   max-width: 46ch;
   font-size: 1.0625rem;
   line-height: 1.6;
-  color: var(--color-text-secondary);
+  color: rgba(251, 246, 238, 0.92);
 }
 
 @media (min-width: 1280px) {
@@ -171,16 +263,17 @@
   outline-offset: 3px;
 }
 
+/* Primary CTA — coral, the festive accent. */
 .hero__cta--primary {
-  background: var(--color-brand-700);
-  color: var(--color-text-inverse);
-  box-shadow: var(--shadow-card-resting);
+  background: var(--gh-coral);
+  color: var(--gh-cream);
+  box-shadow: 0 6px 18px -4px rgba(122, 31, 18, 0.45);
 }
 
 .hero__cta--primary:hover {
-  background: #4a2f23;
+  background: var(--gh-coral-deep);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-card-hover);
+  box-shadow: 0 10px 24px -4px rgba(122, 31, 18, 0.55);
 }
 
 .hero__cta--primary svg {
@@ -192,15 +285,20 @@
   transform: scaleX(-1);
 }
 
+/* Ghost CTA — cream outline on the amber band. */
 .hero__cta--ghost {
-  background: transparent;
-  color: var(--color-brand-700);
-  border: 1.5px solid var(--color-border-default);
+  background: rgba(251, 246, 238, 0.06);
+  color: var(--gh-cream);
+  border: 1.5px solid rgba(251, 246, 238, 0.55);
 }
 
 .hero__cta--ghost:hover {
-  border-color: var(--color-brand-500);
-  background: var(--color-brand-50);
+  border-color: var(--gh-cream);
+  background: rgba(251, 246, 238, 0.16);
+}
+
+.hero__cta:focus-visible {
+  outline-color: var(--gh-cream);
 }
 
 .hero__trust {
@@ -217,13 +315,13 @@
   align-items: center;
   gap: var(--space-xs);
   font-size: 0.85rem;
-  color: var(--color-text-tertiary);
+  color: rgba(251, 246, 238, 0.85);
 }
 
 .hero__trust-item svg {
   width: 16px;
   height: 16px;
-  color: var(--color-brand-500);
+  color: var(--gh-gold-soft);
   flex-shrink: 0;
 }
 
@@ -384,11 +482,12 @@
   justify-content: flex-end;
   padding: var(--space-md);
   border-radius: var(--radius-lg);
-  background: linear-gradient(155deg, var(--color-brand-50), var(--color-bg-surface) 70%);
-  border: 1px solid var(--color-border-subtle);
+  /* Warm cream → tan tile. */
+  background: linear-gradient(155deg, var(--gh-tint-3) 0%, var(--gh-tint) 100%);
+  border: 1px solid var(--gh-tint-2);
   box-shadow: var(--shadow-card-resting);
   text-decoration: none;
-  color: var(--color-brand-700);
+  color: var(--gh-espresso);
   transition:
     transform var(--duration-base) var(--ease-out),
     box-shadow var(--duration-base) var(--ease-out);
@@ -447,7 +546,26 @@
   color: rgba(255, 255, 255, 0.85);
 }
 
-/* Marquee tile: full-width band on small layouts; 2x2 on desktop. */
+/* Marquee tile: full-width band on small layouts; 2x2 on desktop.
+   Golden Hour: the feature tile is an espresso slab with a gold glow so it
+   anchors the bento; cream label + gold count for AA on the dark field.
+   (When the marquee category has a live cover photo, .bento__tile--photo
+   wins and keeps its photographic scrim — the espresso skin only applies to
+   the icon/illustration variant.) */
+.bento__tile--feature:not(.bento__tile--photo) {
+  background:
+    radial-gradient(120% 120% at 100% 0%, rgba(214, 169, 59, 0.30), transparent 58%),
+    linear-gradient(155deg, var(--gh-espresso-2) 0%, var(--gh-espresso) 100%);
+  border-color: rgba(214, 169, 59, 0.28);
+  color: var(--gh-cream);
+}
+.bento__tile--feature:not(.bento__tile--photo) .bento__name {
+  color: var(--gh-cream);
+}
+.bento__tile--feature:not(.bento__tile--photo) .bento__count {
+  color: var(--gh-gold-soft);
+}
+
 .bento__tile--feature {
   grid-column: span 2;
 }
@@ -608,10 +726,11 @@
   gap: 1.5rem 2.5rem;
   padding: clamp(1.75rem, 4vw, 3rem);
   border-radius: var(--radius-xl, 28px);
-  border: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.1));
+  border: 1px solid rgba(178, 106, 27, 0.22);
+  /* Warm cream band with an amber wash in the leading corner. */
   background:
-    radial-gradient(120% 160% at 0% 0%, var(--color-brand-50, #f9f4ea) 0%, transparent 55%),
-    var(--bg-muted, #f7f3ec);
+    radial-gradient(120% 160% at 0% 0%, rgba(214, 169, 59, 0.22) 0%, transparent 55%),
+    linear-gradient(155deg, var(--gh-tint-3) 0%, var(--gh-tint) 100%);
 }
 
 .sell-band__text {
@@ -675,8 +794,8 @@
   gap: 0.5rem;
   padding: 0.85rem 1.6rem;
   border-radius: var(--radius-pill, 999px);
-  background: var(--text-primary, #2e241c);
-  color: #fff;
+  background: var(--gh-espresso); /* espresso CTA on the warm cream band */
+  color: var(--gh-cream);
   font-weight: 600;
   text-decoration: none;
   transition: opacity 0.15s ease;
@@ -706,6 +825,8 @@
   margin-block: clamp(1rem, 3vw, 2rem);
 }
 
+/* GOLDEN HOUR gift promo — a WARM CREAM card (was dark espresso) with a
+   gold medallion + amber/coral CTAs. Espresso ink for AA on the light field. */
 .gift-promo {
   position: relative;
   overflow: hidden;
@@ -716,12 +837,12 @@
   gap: clamp(1.25rem, 3vw, 2.5rem);
   padding: clamp(1.75rem, 4vw, 2.75rem);
   border-radius: var(--radius-xl, 28px);
-  border: 1px solid rgba(201, 162, 39, 0.35);
+  border: 1px solid rgba(178, 106, 27, 0.30);
   background:
-    radial-gradient(120% 160% at 100% 0%, rgba(201, 162, 39, 0.22) 0%, transparent 55%),
-    radial-gradient(120% 160% at 0% 100%, rgba(201, 162, 39, 0.12) 0%, transparent 55%),
-    linear-gradient(155deg, #2a1d14 0%, #3a281b 55%, #241811 100%);
-  color: #fbf4e6;
+    radial-gradient(120% 160% at 100% 0%, rgba(214, 169, 59, 0.32) 0%, transparent 55%),
+    radial-gradient(120% 160% at 0% 100%, rgba(226, 98, 46, 0.18) 0%, transparent 55%),
+    linear-gradient(155deg, #fdf3df 0%, #f6e9cf 55%, #efe2cf 100%);
+  color: var(--gh-espresso);
 }
 
 .gift-promo__glow {
@@ -731,13 +852,13 @@
   width: 18rem;
   height: 18rem;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(201, 162, 39, 0.35), transparent 70%);
+  background: radial-gradient(circle, rgba(214, 169, 59, 0.40), transparent 70%);
   pointer-events: none;
 }
 
 .gift-promo__sparkle {
   position: absolute;
-  color: rgba(232, 192, 64, 0.9);
+  color: var(--gh-coral);
   pointer-events: none;
 }
 .gift-promo__sparkle svg {
@@ -766,9 +887,9 @@
   width: clamp(3.5rem, 8vw, 4.75rem);
   height: clamp(3.5rem, 8vw, 4.75rem);
   border-radius: 50%;
-  color: #2a1d14;
-  background: linear-gradient(155deg, #f0d878, #c9a227 70%);
-  box-shadow: 0 8px 24px rgba(201, 162, 39, 0.35);
+  color: var(--gh-espresso);
+  background: linear-gradient(155deg, var(--gh-gold-soft), var(--gh-gold) 70%);
+  box-shadow: 0 8px 24px rgba(178, 106, 27, 0.35);
 }
 .gift-promo__medallion svg {
   width: 50%;
@@ -787,8 +908,8 @@
   font-size: 0.72rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-weight: 600;
-  color: #e8c040;
+  font-weight: 700;
+  color: var(--gh-coral);
 }
 
 .gift-promo__heading {
@@ -796,13 +917,13 @@
   font-family: 'Playfair Display', Georgia, serif;
   font-size: clamp(1.5rem, 3.5vw, 2.1rem);
   line-height: 1.1;
-  color: #fbf4e6;
+  color: var(--gh-espresso);
 }
 
 .gift-promo__subtitle {
   margin: 0 0 1.1rem;
   max-width: 38rem;
-  color: rgba(251, 244, 230, 0.82);
+  color: var(--color-text-secondary);
   line-height: 1.55;
 }
 
@@ -813,38 +934,42 @@
   gap: 0.75rem 1.5rem;
 }
 
+/* Primary buy CTA — coral on the cream card. */
 .gift-promo__cta {
   display: inline-flex;
   align-items: center;
   gap: 0.5rem;
   padding: 0.8rem 1.5rem;
   border-radius: var(--radius-pill, 999px);
-  background: linear-gradient(155deg, #f0d878, #c9a227 75%);
-  color: #2a1d14;
+  background: var(--gh-coral);
+  color: var(--gh-cream);
   font-weight: 600;
   text-decoration: none;
   transition:
     transform 0.15s ease,
-    box-shadow 0.15s ease;
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
 }
 .gift-promo__cta:hover {
+  background: var(--gh-coral-deep);
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(201, 162, 39, 0.3);
+  box-shadow: 0 8px 20px rgba(122, 31, 18, 0.30);
 }
 .gift-promo__cta svg {
   width: 18px;
   height: 18px;
 }
 .gift-promo__cta:focus-visible {
-  outline: 2px solid #f0d878;
+  outline: 2px solid var(--gh-coral);
   outline-offset: 2px;
 }
 
+/* Secondary redeem link — amber. */
 .gift-promo__link {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  color: #f0d878;
+  color: var(--gh-amber-deep);
   font-weight: 600;
   text-decoration: none;
 }
@@ -860,7 +985,7 @@
   transform: scaleX(-1);
 }
 .gift-promo__link:focus-visible {
-  outline: 2px solid #f0d878;
+  outline: 2px solid var(--gh-amber-deep);
   outline-offset: 2px;
 }
 
@@ -886,6 +1011,8 @@
   margin-block: clamp(1.5rem, 4vw, 3rem);
 }
 
+/* GOLDEN HOUR get-the-app band — an ESPRESSO slab (was light cream) so it
+   reads as a rich anchor near the page foot; gold heading + cream copy. */
 .app-band {
   position: relative;
   overflow: hidden;
@@ -898,11 +1025,12 @@
   gap: clamp(1.5rem, 4vw, 3rem);
   padding: clamp(1.75rem, 4vw, 3rem);
   border-radius: var(--radius-xl, 28px);
-  border: 1px solid rgba(201, 162, 39, 0.3);
+  border: 1px solid rgba(214, 169, 59, 0.30);
   background:
-    radial-gradient(120% 160% at 100% 0%, rgba(201, 162, 39, 0.18) 0%, transparent 55%),
-    radial-gradient(120% 160% at 0% 100%, rgba(90, 58, 44, 0.08) 0%, transparent 55%),
-    linear-gradient(155deg, #fbf4e6 0%, #f7ecd2 60%, #f3e6c9 100%);
+    radial-gradient(120% 160% at 100% 0%, rgba(214, 169, 59, 0.28) 0%, transparent 55%),
+    radial-gradient(120% 160% at 0% 100%, rgba(226, 98, 46, 0.18) 0%, transparent 55%),
+    linear-gradient(155deg, var(--gh-espresso-2) 0%, var(--gh-espresso) 60%, #241811 100%);
+  color: var(--gh-cream);
 }
 
 .app-band__glow {
@@ -912,7 +1040,7 @@
   width: 20rem;
   height: 20rem;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(201, 162, 39, 0.28), transparent 70%);
+  background: radial-gradient(circle, rgba(214, 169, 59, 0.32), transparent 70%);
   pointer-events: none;
 }
 
@@ -929,8 +1057,8 @@
   font-size: 0.72rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-weight: 600;
-  color: var(--color-brand-600, #b08642);
+  font-weight: 700;
+  color: var(--gh-coral);
 }
 
 .app-band__title {
@@ -938,13 +1066,13 @@
   font-family: 'Playfair Display', Georgia, serif;
   font-size: clamp(1.6rem, 3.5vw, 2.25rem);
   line-height: 1.1;
-  color: var(--color-brand-700, #2e241c);
+  color: var(--gh-gold-soft); /* gold heading on espresso */
 }
 
 .app-band__subtitle {
   margin: 0 0 1rem;
   max-width: 38rem;
-  color: var(--color-text-secondary, #6b5d4f);
+  color: rgba(251, 246, 238, 0.82);
   line-height: 1.55;
 }
 
@@ -956,7 +1084,7 @@
   flex-wrap: wrap;
   gap: 0.5rem 1.5rem;
   font-size: 0.85rem;
-  color: var(--color-text-tertiary, #8a7868);
+  color: rgba(251, 246, 238, 0.72);
 }
 .app-band__points li {
   position: relative;
@@ -966,7 +1094,7 @@
   content: '✓';
   position: absolute;
   inset-inline-start: 0;
-  color: var(--color-brand-600, #b08642);
+  color: var(--gh-gold);
   font-weight: 700;
 }
 

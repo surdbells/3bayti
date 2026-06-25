@@ -32,6 +32,7 @@
     "bestSellers": "Best Sellers",
     "newArrivals": "New In",
     "categories": "Categories",
+    "styles": "Styles",
     "giftCards": "Gift Cards",
     "menuToggle": "Open navigation menu"
   },
@@ -971,7 +972,9 @@
     },
     "forYou": {
       "heading": "For you",
-      "eyebrow": "Picked for you"
+      "eyebrow": "Picked for you",
+      "trendingHeading": "Trending now",
+      "trendingEyebrow": "Popular this week"
     },
     "stores": {
       "eyebrow": "Meet the Stores",
@@ -1284,7 +1287,9 @@
     "checkoutPayment": "Checkout — Payment · 3bayti",
     "checkoutReturn": "Confirming payment · 3bayti",
     "checkoutSuccess": "Order placed · 3bayti",
-    "notFound": "Page not found · 3bayti"
+    "notFound": "Page not found · 3bayti",
+    "styles": "Styles · 3bayti",
+    "styleDetail": "Style · 3bayti"
   },
   "devComponents": {
     "seo": {
@@ -1331,6 +1336,34 @@
     "productCards": {
       "title": "Product Cards",
       "note": "Reusable card for product grids on /category/:slug, PDP related-products, /designer/:slug, and search. Renders all branches: image present + missing, on sale + regular price, in stock + out of stock, with rating + without, and the defensive \"no slug\" fallback (renders as div, not anchor)."
+    }
+  },
+  "styles": {
+    "title": "Styles",
+    "subtitle": "Shop the look — curated outfits that bundle pieces our community and editors love.",
+    "tabs": {
+      "community": "Community",
+      "editorial": "3bayti",
+      "mine": "My styles"
+    },
+    "itemCount": "{{count}} items",
+    "total": "Total",
+    "loadMore": "Load more",
+    "signIn": "Sign in",
+    "signInToView": "Sign in to see the styles you've created.",
+    "addToWishlist": "Add to wishlist",
+    "savedToWishlist": "Saved",
+    "empty": {
+      "community": "No community styles yet. Be the first to create one!",
+      "editorial": "No 3bayti styles to show just yet. Check back soon.",
+      "mine": "You haven't created any styles yet."
+    },
+    "detail": {
+      "productsHeading": "Products in this style",
+      "viewProduct": "View product",
+      "notFoundTitle": "Style not found",
+      "notFoundBody": "We couldn't find that style. It may have moved or is no longer available.",
+      "backToHub": "Back to Styles"
     }
   }
 }

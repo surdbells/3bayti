@@ -107,6 +107,25 @@ export const routes: Routes = [
   { path: 'designer', pathMatch: 'full', redirectTo: 'stores' },
   { path: 'designer/:slug', redirectTo: 'stores/:slug' },
   {
+    /* Style Hub — `/styles`. Public storefront page: Community,
+       3bayti (editorial), and My styles (auth) tabs, each a grid of
+       curated-outfit cards. Backed by /v3/styles + /v3/me/styles.
+       Registered before `styles/:slug` so the index wins. */
+    path: 'styles',
+    pathMatch: 'full',
+    loadComponent: () =>
+      import('./features/styles/styles-hub-page').then(m => m.StylesHubPageComponent),
+    title: 'routeTitles.styles',
+  },
+  {
+    /* Style detail — `/styles/:slug`. Cover + the bundled products with
+       View product + Add to wishlist, plus a display-only total. */
+    path: 'styles/:slug',
+    loadComponent: () =>
+      import('./features/styles/style-detail-page').then(m => m.StyleDetailPageComponent),
+    title: 'routeTitles.styleDetail',
+  },
+  {
     /* Best Sellers — curated product listing sorted by sales. */
     path: 'best-sellers',
     loadComponent: () =>

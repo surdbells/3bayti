@@ -7,8 +7,16 @@ import {
   viewChild,
   ElementRef,
   HostListener,
+  DestroyRef,
 } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import {
+  NavigationEnd,
+  Router,
+  RouterLink,
+  RouterLinkActive,
+} from '@angular/router';
+import { filter, map, startWith } from 'rxjs/operators';
 import { DOCUMENT, NgIf } from '@angular/common';
 import { TranslateModule } from '@ngx-translate/core';
 import { LocaleSwitcherComponent } from './locale-switcher';
@@ -71,6 +79,7 @@ interface NavItem {
 export class HeaderComponent {
   private readonly auth = inject(AuthService);
   private readonly doc = inject(DOCUMENT);
+  private readonly router = inject(Router);
 
   /**
    * Primary navigation entries (H1.3). Order: Categories, Stores, New In,
@@ -80,6 +89,7 @@ export class HeaderComponent {
    */
   protected readonly navItems: readonly NavItem[] = [
     { path: '/category', labelKey: 'nav.categories', icon: 'categories' },
+    { path: '/styles', labelKey: 'nav.styles', icon: 'styles' },
     { path: '/stores', labelKey: 'nav.stores', icon: 'stores' },
     { path: '/new-arrivals', labelKey: 'nav.newArrivals', icon: 'newArrivals' },
     { path: '/best-sellers', labelKey: 'nav.bestSellers', icon: 'bestSellers' },
@@ -95,6 +105,36 @@ export class HeaderComponent {
   /** True once the page has scrolled past the top — drives the condensed,
    *  elevated header + the slightly smaller logo. */
   protected readonly scrolled = signal(false);
+
+  /**
+   * Current router URL, ignoring matrix/query params + fragments. Seeded
+   * with the router's current URL so the very first render (and SSR) gets
+   * the right value without waiting for the first NavigationEnd.
+   */
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+      map((e) => e.urlAfterRedirects),
+      startWith(this.router.url),
+    ),
+    { initialValue: this.router.url },
+  );
+
+  /**
+   * True only on the home route ("/") — drives the FLOATING transparent
+   * header that overlays the hero. On every other route the header stays
+   * solid as before. Strips query/fragment so "/?ref=x" still counts as
+   * home. When scrolled, `.is-scrolled` overrides back to the solid
+   * blurred floating bar regardless of this flag (see header.scss).
+   */
+  protected readonly transparentOverHero = computed(() => {
+    const url = this.currentUrl().split(/[?#]/)[0];
+    return url === '/' || url === '';
+  });
+
+  /** rAF handle for the scroll listener so we coalesce bursts of scroll
+   *  events into a single read-per-frame (passive + throttled). */
+  private scrollRaf = 0;
 
   /** Close button inside the drawer — focused when the drawer opens. */
   private readonly drawerCloseBtn = viewChild<ElementRef<HTMLButtonElement>>('drawerClose');
@@ -154,10 +194,32 @@ export class HeaderComponent {
     this.closeDrawer();
   }
 
-  /** Condense the header once the page scrolls a little. Reads the window
-   *  via DOCUMENT.defaultView so it stays inert during SSR. */
-  @HostListener('window:scroll')
-  protected onWindowScroll(): void {
-    this.scrolled.set((this.doc.defaultView?.scrollY ?? 0) > 12);
+  constructor() {
+    // Passive + rAF-throttled scroll listener. Registered manually (rather
+    // than via @HostListener) so we can mark it `{ passive: true }` — the
+    // handler never calls preventDefault, so this lets the browser keep
+    // scrolling on the compositor thread. Guarded behind DOCUMENT.defaultView
+    // so it stays inert during SSR. Torn down on destroy.
+    const win = this.doc.defaultView;
+    if (!win) return;
+
+    const onScroll = (): void => {
+      if (this.scrollRaf) return; // already a frame pending — coalesce.
+      this.scrollRaf = win.requestAnimationFrame(() => {
+        this.scrollRaf = 0;
+        // >12px keeps the floating bar from flickering on tiny scrolls /
+        // overscroll bounce while still condensing early.
+        this.scrolled.set((win.scrollY ?? 0) > 12);
+      });
+    };
+
+    win.addEventListener('scroll', onScroll, { passive: true });
+    // Seed the initial state (e.g. a deep-link that restores scroll position).
+    onScroll();
+
+    inject(DestroyRef).onDestroy(() => {
+      win.removeEventListener('scroll', onScroll);
+      if (this.scrollRaf) win.cancelAnimationFrame(this.scrollRaf);
+    });
   }
 }
