@@ -339,6 +339,159 @@ final class OtpServiceTest extends TestCase
         self::assertCount(2, $this->provider->allIssued());
     }
 
+    #[Test]
+    public function atomicClaimStampsCooldownMarkerOnFirstSend(): void
+    {
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 5, sendsPerDay: 10);
+        $service = $this->makeService($config);
+
+        $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+
+        // The claim writes the cooldown marker via setIfAbsent BEFORE
+        // dispatch — so the per-purpose key is present after one send.
+        self::assertNotNull(
+            $this->cache->get('otp:cooldown:' . OtpAttempt::PURPOSE_REGISTRATION . ':+971501234567'),
+            'First send must atomically claim (stamp) the cooldown marker.',
+        );
+    }
+
+    #[Test]
+    public function lostClaimReusesLatestCommittedCodeWithoutDispatching(): void
+    {
+        // Simulate the race-loser path: a usable row is already committed
+        // AND the cooldown marker is already owned by a concurrent send.
+        // claimCooldown() returns false → reuse the committed code.
+        $attempt = new OtpAttempt(
+            verificationId: 'inmem-committed',
+            phone: '+971501234567',
+            purpose: OtpAttempt::PURPOSE_REGISTRATION,
+            expiresAt: (new DateTimeImmutable())->modify('+5 minutes'),
+            channel: OtpAttempt::CHANNEL_SMS,
+        );
+        $this->persisted['inmem-committed'] = $attempt;
+
+        // Pre-own the marker so the next claim loses. Stamp it FAR in the
+        // future-ish (just-now) so dedupWithinCooldown lets us through to
+        // the claim — actually dedup reads the same marker, so to exercise
+        // the CLAIM path we delete any created_at advantage: use a fresh
+        // service and pre-claim directly.
+        $cooldownKey = 'otp:cooldown:' . OtpAttempt::PURPOSE_REGISTRATION . ':+971501234567';
+
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 5, sendsPerDay: 10);
+        $service = $this->makeService($config);
+
+        // Manually own the claim with a timestamp OLDER than the cooldown
+        // so dedupWithinCooldown (which reads the same marker) sees it as
+        // "past cooldown" and lets the request reach the atomic claim,
+        // which then loses because the key still exists.
+        // NOTE: dedup uses seconds-since; an old timestamp => past cooldown.
+        $this->cache->set($cooldownKey, (string) (time() - 120), 60);
+
+        $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+
+        self::assertSame('inmem-committed', $vid, 'Lost claim must reuse the committed code.');
+        self::assertCount(0, $this->provider->allIssued(), 'Lost claim must NOT dispatch.');
+    }
+
+    #[Test]
+    public function lostClaimThrows429WhenNoCommittedCodeYet(): void
+    {
+        // Marker owned (stamped older than cooldown so dedup passes), but
+        // NO committed usable row exists — the racing send hasn't flushed
+        // yet. The loser must 429 rather than dispatch.
+        $cooldownKey = 'otp:cooldown:' . OtpAttempt::PURPOSE_REGISTRATION . ':+971509999999';
+
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 5, sendsPerDay: 10);
+        $service = $this->makeService($config);
+
+        $this->cache->set($cooldownKey, (string) (time() - 120), 60);
+
+        $this->expectException(OtpRateLimitException::class);
+        $service->send('+971509999999', OtpAttempt::PURPOSE_REGISTRATION);
+    }
+
+    #[Test]
+    public function claimReleasedOnDispatchFailureSoRetryNotBlocked(): void
+    {
+        // Provider throws on dispatch → the claim we made must be RELEASED
+        // so a legit retry isn't blocked by an orphaned cooldown marker.
+        $failingProvider = $this->createMock(OtpProvider::class);
+        $failingProvider->method('send')->willThrowException(
+            new \Bayti\Api\Infrastructure\Otp\OtpProviderException('network', 'simulated')
+        );
+
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 5, sendsPerDay: 10);
+        $service = new OtpService(
+            $failingProvider,
+            $this->em,
+            $this->cache,
+            $this->makeEmailProvider(),
+            $config,
+        );
+
+        $cooldownKey = 'otp:cooldown:' . OtpAttempt::PURPOSE_REGISTRATION . ':+971501234567';
+
+        try {
+            $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+            self::fail('Expected provider failure to propagate.');
+        } catch (\Bayti\Api\Infrastructure\Otp\OtpProviderException) {
+            // expected
+        }
+
+        self::assertNull(
+            $this->cache->get($cooldownKey),
+            'A dispatch failure must release the cooldown claim so retries are not blocked.',
+        );
+    }
+
+    #[Test]
+    public function claimReleasedWhenCapTripsAfterClaim(): void
+    {
+        // Hourly cap of 1; cooldown ON. The 2nd distinct-purpose send to
+        // the same dest claims the cooldown, then trips the per-dest cap
+        // (shared across purposes) — the claim must be released.
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 1, sendsPerDay: 100);
+        $service = $this->makeService($config);
+
+        // First send (registration) consumes the single hourly slot.
+        $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+
+        // Second send, DIFFERENT purpose → dedup doesn't reuse → reaches
+        // the claim (new per-purpose key, claim succeeds) → cap trips.
+        $resetKey = 'otp:cooldown:' . OtpAttempt::PURPOSE_PASSWORD_RESET . ':+971501234567';
+        try {
+            $service->send('+971501234567', OtpAttempt::PURPOSE_PASSWORD_RESET);
+            self::fail('Expected the hourly cap to trip.');
+        } catch (OtpRateLimitException) {
+            // expected
+        }
+
+        self::assertNull(
+            $this->cache->get($resetKey),
+            'A cap tripping after the claim must release the claim.',
+        );
+    }
+
+    #[Test]
+    public function claimFallsBackToDispatchWhenCacheUnavailable(): void
+    {
+        // Redis down (setIfAbsent throws) must NOT hard-fail the send —
+        // we fall back to dispatching (DB created_at still gates dedup).
+        $brokenCache = $this->brokenCache();
+        $config = new OtpRateLimitConfig(resendCooldownSeconds: 60, sendsPerHour: 0, sendsPerDay: 0);
+        $service = new OtpService(
+            $this->provider,
+            $this->em,
+            $brokenCache,
+            $this->makeEmailProvider(),
+            $config,
+        );
+
+        $vid = $service->send('+971501234567', OtpAttempt::PURPOSE_REGISTRATION);
+        self::assertNotEmpty($vid, 'Redis unavailability must not block sends.');
+        self::assertCount(1, $this->provider->allIssued());
+    }
+
     // -------------------------------------------------------------------
     // Per-IP caps
     // -------------------------------------------------------------------
@@ -696,6 +849,10 @@ final class OtpServiceTest extends TestCase
                 throw new KeyValueStoreException('simulated');
             }
             public function incr(string $key): int
+            {
+                throw new KeyValueStoreException('simulated');
+            }
+            public function setIfAbsent(string $key, string $value, int $ttlSeconds): bool
             {
                 throw new KeyValueStoreException('simulated');
             }

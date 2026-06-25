@@ -109,6 +109,28 @@ final class RedisKeyValueStore implements KeyValueStore
         }
     }
 
+    public function setIfAbsent(string $key, string $value, int $ttlSeconds): bool
+    {
+        try {
+            // SET key value NX [EX ttl] — atomic set-if-not-exists.
+            // phpredis takes the options as an associative array; 'nx'
+            // makes it conditional, 'ex' attaches the expiry in the same
+            // atomic command (no SET-then-EXPIRE race / leaked-lock gap).
+            // On success Redis returns true; when the key already exists
+            // the NX condition fails and Redis returns false — that false
+            // is the "someone else owns it" signal, NOT an error.
+            $options = $ttlSeconds > 0
+                ? ['nx', 'ex' => $ttlSeconds]
+                : ['nx'];
+
+            $result = $this->client()->set($key, $value, $options);
+
+            return $result === true;
+        } catch (RedisException $e) {
+            throw new KeyValueStoreException("Redis SET NX failed: {$e->getMessage()}", $e);
+        }
+    }
+
     public function expire(string $key, int $ttlSeconds): void
     {
         try {

@@ -49,7 +49,11 @@ final class RegisterSubmitInput
         ?string $last_name = null,
     ) {
         $this->registration_token = trim($registration_token);
-        $this->email = trim($email);
+        // Canonicalise the email ONCE (lowercase + trim). User lookup is
+        // case-insensitive but the OTP dedup/cooldown/rate-limit keys are
+        // case-sensitive — normalising here keeps a case-variant from
+        // bypassing dedup and double-emailing the same registration code.
+        $this->email = strtolower(trim($email));
         $this->password = $password; // Do NOT trim — passwords with whitespace are valid.
         $this->first_name = $first_name !== null ? trim($first_name) : null;
         $this->last_name = $last_name !== null ? trim($last_name) : null;

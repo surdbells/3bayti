@@ -66,7 +66,11 @@ final class ResetInput
         ?string $phone = null,
         string $channel = 'sms',
     ) {
-        $email = trim($email);
+        // Canonicalise the email ONCE (lowercase + trim). User lookup is
+        // case-insensitive but the OTP dedup/cooldown/rate-limit keys are
+        // case-sensitive — normalising here keeps a case-variant from
+        // bypassing dedup and double-emailing the same reset code.
+        $email = strtolower(trim($email));
         $this->email = $email !== '' ? $email : null;
         $this->phone = $phone !== null && trim($phone) !== ''
             ? (preg_replace('/[\s\-()]/', '', $phone) ?? null)

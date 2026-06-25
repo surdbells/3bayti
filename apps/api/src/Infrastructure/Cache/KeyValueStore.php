@@ -83,6 +83,31 @@ interface KeyValueStore
     public function incr(string $key): int;
 
     /**
+     * Atomically set $key to $value ONLY if it does not already exist,
+     * with a TTL. Returns true if THIS call created the key (the caller
+     * "won" the claim), false if the key was already present (someone
+     * else owns it).
+     *
+     * This is Redis SET key val NX EX ttl — the canonical
+     * claim-a-lock / set-if-not-exists primitive. Use it to serialize
+     * a critical section across FPM workers:
+     *
+     *   if ($store->setIfAbsent("lock:$id", '1', 30)) {
+     *       // we hold the claim — do the work, release on failure
+     *   } else {
+     *       // someone else holds it — back off
+     *   }
+     *
+     * Unlike set(), the TTL is mandatory-by-convention here: a claim
+     * that never expires is a leaked lock. A non-positive $ttlSeconds
+     * is treated as "no expiry" by the backend, but callers SHOULD pass
+     * a positive TTL.
+     *
+     * @throws KeyValueStoreException on backend failure
+     */
+    public function setIfAbsent(string $key, string $value, int $ttlSeconds): bool;
+
+    /**
      * Set/refresh the TTL on an existing key. No-op if the key
      * doesn't exist (we don't error here — the typical use case is
      * "set TTL if first hit", and getting a key not found means

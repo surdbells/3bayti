@@ -97,6 +97,40 @@ final class InMemoryKeyValueStoreTest extends TestCase
     }
 
     #[Test]
+    public function setIfAbsentClaimsWhenKeyMissing(): void
+    {
+        $store = new InMemoryKeyValueStore();
+        self::assertTrue($store->setIfAbsent('lock', 'me', 60));
+        self::assertSame('me', $store->get('lock'));
+    }
+
+    #[Test]
+    public function setIfAbsentFailsWhenKeyPresent(): void
+    {
+        $store = new InMemoryKeyValueStore();
+        $store->set('lock', 'owner', 60);
+
+        // Second claim loses — and must NOT clobber the existing value.
+        self::assertFalse($store->setIfAbsent('lock', 'intruder', 60));
+        self::assertSame('owner', $store->get('lock'));
+    }
+
+    #[Test]
+    public function setIfAbsentClaimsWhenExistingEntryExpired(): void
+    {
+        $store = new InMemoryKeyValueStore();
+        // Stamp a key already in the past via expire() with a non-positive
+        // TTL? expire(0) clears expiry. Instead set then force-expire by
+        // setting a 1s TTL and rewinding is not possible; use delete to
+        // model an expired slot.
+        $store->set('lock', 'old', 0);
+        $store->delete('lock');
+
+        self::assertTrue($store->setIfAbsent('lock', 'new', 60));
+        self::assertSame('new', $store->get('lock'));
+    }
+
+    #[Test]
     public function pingAlwaysReturnsTrue(): void
     {
         $store = new InMemoryKeyValueStore();

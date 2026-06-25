@@ -84,6 +84,22 @@ final class InMemoryKeyValueStore implements KeyValueStore
         return $next;
     }
 
+    public function setIfAbsent(string $key, string $value, int $ttlSeconds): bool
+    {
+        // Mirror Redis SET NX EX: only set when the key is absent (or
+        // has lazily expired). A live entry means someone else owns the
+        // claim → return false without touching it.
+        if (isset($this->store[$key]) && !$this->isExpired($this->store[$key])) {
+            return false;
+        }
+
+        $this->store[$key] = [
+            'value' => $value,
+            'expiresAt' => $ttlSeconds > 0 ? time() + $ttlSeconds : null,
+        ];
+        return true;
+    }
+
     public function expire(string $key, int $ttlSeconds): void
     {
         if (!isset($this->store[$key])) {

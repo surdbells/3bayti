@@ -150,26 +150,52 @@ final class OtpService
             return $reused;
         }
 
-        // Remember the destination+purpose for the post-dispatch cooldown
-        // stamp (keyed per destination+purpose to match the dedup lookup —
-        // a registration send must not block a password-reset send to the
-        // same phone).
+        // Cooldown key scoped per destination+purpose to match the dedup
+        // lookup — a registration send must not block a password-reset
+        // send to the same destination.
         $cooldownKey = self::COOLDOWN_KEY_PREFIX . $purpose . ':' . $to;
 
+        // (a.2) ATOMIC COOLDOWN CLAIM — close the dedup race.
+        //
+        // dedupWithinCooldown() above is a READ; two near-simultaneous
+        // sends to the same destination can both pass it (neither sees
+        // the other's not-yet-committed row / not-yet-stamped marker) and
+        // BOTH dispatch. We collapse that window by ATOMICALLY claiming
+        // the cooldown key (Redis SET NX EX) BEFORE dispatching. Exactly
+        // one concurrent caller wins the claim; the loser behaves like the
+        // dedup-reuse branch (reuse the latest committed code, or 429 if
+        // none is committed yet).
+        $claimed = $this->claimCooldown($cooldownKey);
+        if ($claimed === false) {
+            // A concurrent / very-recent send already owns this window.
+            // Do NOT dispatch. Reuse the latest committed usable code if
+            // one exists; otherwise the racing send hasn't committed yet
+            // and the contract is "wait" — 429 with the cooldown window.
+            return $this->reuseOrThrowOnClaimContention($to, $purpose, $channel);
+        }
+
         // (b) Per-destination hourly + daily caps.
-        $this->enforceDestinationCaps($to, $channel);
-
         // (c) Per-IP hourly + daily caps (skipped when IP unresolved).
-        $this->enforceIpCaps($requestedIp);
+        //
+        // If a cap trips (or dispatch fails below) we must RELEASE the
+        // claim so a legit retry — after the cap window or a transient
+        // provider error — isn't blocked by an orphaned marker.
+        try {
+            $this->enforceDestinationCaps($to, $channel);
+            $this->enforceIpCaps($requestedIp);
 
-        $verificationId = $channel === OtpAttempt::CHANNEL_EMAIL
-            ? $this->sendEmail($to, $purpose, $user, $requestedIp)
-            : $this->sendSms($to, $purpose, $user, $requestedIp);
-
-        // Stamp the cooldown marker AFTER a successful dispatch so the
-        // next call inside the window dedups. Best-effort: a Redis error
-        // here is harmless (the DB created_at check still gates dedup).
-        $this->stampCooldown($cooldownKey);
+            $verificationId = $channel === OtpAttempt::CHANNEL_EMAIL
+                ? $this->sendEmail($to, $purpose, $user, $requestedIp)
+                : $this->sendSms($to, $purpose, $user, $requestedIp);
+        } catch (\Throwable $e) {
+            // Release only when WE actually claimed the marker (claim ===
+            // true; a null claim means Redis was unavailable and nothing
+            // was stamped, so there is nothing to release).
+            if ($claimed === true) {
+                $this->releaseCooldown($cooldownKey);
+            }
+            throw $e;
+        }
 
         return $verificationId;
     }
@@ -312,21 +338,75 @@ final class OtpService
     }
 
     /**
-     * Record the dispatch time so subsequent calls within the cooldown
-     * dedup. Best-effort — a Redis error is swallowed (the DB
-     * created_at path covers the no-Redis case).
+     * Atomically CLAIM the cooldown window before dispatching, closing
+     * the dedup race. Stamps otp:cooldown:<purpose>:<dest> = now via
+     * Redis SET NX EX so exactly one concurrent caller can proceed.
+     *
+     * Returns:
+     *   - true  : WE won the claim — proceed to dispatch (and release
+     *             the marker if dispatch / a cap subsequently fails).
+     *   - false : the key already existed — a concurrent/recent send owns
+     *             the window; the caller must NOT dispatch.
+     *   - null  : the cooldown is disabled, OR Redis was unavailable. In
+     *             both cases we fall back to the prior behaviour (allow
+     *             the dispatch; the DB created_at check still gates
+     *             dedup) and there is nothing to release on failure.
      */
-    private function stampCooldown(string $cooldownKey): void
+    private function claimCooldown(string $cooldownKey): ?bool
     {
         $cooldown = $this->config->resendCooldownSeconds;
         if ($cooldown <= 0) {
-            return;
+            return null; // cooldown disabled — nothing to claim
         }
+
         try {
-            $this->cache->set($cooldownKey, (string) time(), $cooldown);
+            return $this->cache->setIfAbsent($cooldownKey, (string) time(), $cooldown);
         } catch (KeyValueStoreException $e) {
-            $this->logger->warning('OTP cooldown cache write failed', ['error' => $e->getMessage()]);
+            // Redis unavailable — do NOT hard-fail sends. Fall back to the
+            // pre-existing behaviour: the DB created_at check in
+            // dedupWithinCooldown() still provides best-effort dedup.
+            $this->logger->warning('OTP cooldown claim failed — proceeding without atomic claim', [
+                'error' => $e->getMessage(),
+            ]);
+            return null;
         }
+    }
+
+    /**
+     * Release a cooldown claim we made but could not honour (a cap
+     * tripped, or the provider/mailer threw). Best-effort: a Redis error
+     * here just leaves the marker to expire on its own TTL.
+     */
+    private function releaseCooldown(string $cooldownKey): void
+    {
+        try {
+            $this->cache->delete($cooldownKey);
+        } catch (KeyValueStoreException $e) {
+            $this->logger->warning('OTP cooldown release failed', ['error' => $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Lost the atomic cooldown claim → a concurrent send owns the window.
+     * Behave exactly like the dedup-reuse branch: return the latest
+     * committed usable verification_id if one exists, else (the racing
+     * send hasn't committed its row yet) raise the standard 429 so the
+     * client retries after the cooldown.
+     */
+    private function reuseOrThrowOnClaimContention(string $to, string $purpose, string $channel): string
+    {
+        /** @var OtpAttemptRepository $repo */
+        $repo = $this->em->getRepository(OtpAttempt::class);
+        $latest = $repo->findLatestUsableForDestination($to, $purpose, $channel);
+
+        if ($latest !== null) {
+            return $latest->getVerificationId();
+        }
+
+        throw new OtpRateLimitException(
+            'OTP resend requested within the cooldown window.',
+            $this->retryAfter($this->config->resendCooldownSeconds),
+        );
     }
 
     // -------------------------------------------------------------------

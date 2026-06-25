@@ -78,7 +78,13 @@ final class OtpLoginSendInput
         $this->phone = $phone !== null && trim($phone) !== ''
             ? (preg_replace('/[\s\-()]/', '', $phone) ?? null)
             : null;
-        $email = trim($email);
+        // Canonicalise the email at the boundary: lowercase + trim, ONCE.
+        // User resolution is case-insensitive, but the OTP dedup / cooldown
+        // / rate-limit keys are case-SENSITIVE — without this, a case
+        // variant (User@x vs user@x) bypasses dedup and double-emails.
+        // Lowercasing here keeps user lookup, the dedup key, the stored
+        // OtpAttempt.email, and the counters all on one canonical address.
+        $email = strtolower(trim($email));
         $this->email = $email !== '' ? $email : null;
         $this->country_code = strtoupper(trim($country_code)) ?: 'AE';
     }
