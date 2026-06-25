@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Wishlist;
 
 use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\Wishlist\Wishlist;
 use Bayti\Api\Domain\Wishlist\WishlistRepository;
@@ -57,7 +58,11 @@ final class RemoveWishlistItemController
 
         // No product / not a real product → nothing to remove. Still
         // 204 (idempotent), so we don't leak product existence either.
-        $product = $productId > 0 ? $this->em->find(Product::class, $productId) : null;
+        // Resolve in the same legacy-id-first precedence the mobile cards
+        // use (see ProductRepository::findByIdOrLegacyId).
+        /** @var ProductRepository $productRepo */
+        $productRepo = $this->em->getRepository(Product::class);
+        $product = $productRepo->findByIdOrLegacyId($productId);
         if ($product instanceof Product) {
             /** @var WishlistRepository $wishlistRepo */
             $wishlistRepo = $this->em->getRepository(Wishlist::class);

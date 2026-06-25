@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Wishlist;
 
 use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\Wishlist\Wishlist;
 use Bayti\Api\Domain\Wishlist\WishlistLabel;
@@ -63,7 +64,12 @@ final class AddWishlistItemController
 
         $input = $this->validator->parse($request, AddWishlistItemInput::class);
 
-        $product = $this->em->find(Product::class, $input->product_id);
+        // Mobile cards carry the LEGACY product id (legacy_product_id ??
+        // v3 id), so resolve in that same precedence — a straight
+        // EntityManager::find by v3 PK 404s every migrated product.
+        /** @var ProductRepository $productRepo */
+        $productRepo = $this->em->getRepository(Product::class);
+        $product = $productRepo->findByIdOrLegacyId($input->product_id);
         if (!$product instanceof Product || !$product->isActive()) {
             throw HttpException::notFound('Product not found.');
         }

@@ -56,6 +56,20 @@ export class WishlistService {
     return res?.response_code >= 200 && res?.response_code < 300 && res?.status === 'success';
   }
 
+  /**
+   * Coerce an id to a positive integer, or null.
+   *
+   * v3 bigint ids can arrive as JSON strings (PHP serializes bigints as
+   * strings to dodge JS's 2^53 precision ceiling). A raw `typeof === 'number'`
+   * check would then silently drop a perfectly valid label/product id. We
+   * accept numeric strings too and normalise to a number so the body is
+   * always sent with the right type.
+   */
+  private toPositiveInt(value: unknown): number | null {
+    const n = typeof value === 'string' ? Number(value) : value;
+    return typeof n === 'number' && Number.isFinite(n) && n > 0 ? Math.trunc(n) : null;
+  }
+
   /** List saved products, optionally filtered by label. */
   async listProducts(
     token: string,
@@ -85,9 +99,16 @@ export class WishlistService {
   }
 
   /** Save a product, optionally into a label. Idempotent server-side. */
-  async add(token: string, productId: number, labelId?: number | null): Promise<boolean> {
-    const body: Record<string, number> = { product_id: productId };
-    if (typeof labelId === 'number' && labelId > 0) body['label_id'] = labelId;
+  async add(
+    token: string,
+    productId: number | string,
+    labelId?: number | string | null,
+  ): Promise<boolean> {
+    const pid = this.toPositiveInt(productId);
+    if (pid === null) return false;
+    const body: Record<string, number> = { product_id: pid };
+    const lid = this.toPositiveInt(labelId);
+    if (lid !== null) body['label_id'] = lid;
     const res: any = await firstValueFrom(
       this.adapter.post_v3('POST /me/wishlist', body, { authToken: token }),
     );
@@ -95,7 +116,7 @@ export class WishlistService {
   }
 
   /** Remove a product from the wishlist. Idempotent server-side. */
-  async remove(token: string, productId: number): Promise<boolean> {
+  async remove(token: string, productId: number | string): Promise<boolean> {
     const res: any = await firstValueFrom(
       this.adapter.delete_v3('DELETE /me/wishlist/:productId', {
         authToken: token,
@@ -106,9 +127,14 @@ export class WishlistService {
   }
 
   /** Move a saved product to a label (labelId null/0 = uncategorized). */
-  async move(token: string, productId: number, labelId: number | null): Promise<boolean> {
+  async move(
+    token: string,
+    productId: number | string,
+    labelId: number | string | null,
+  ): Promise<boolean> {
+    const lid = this.toPositiveInt(labelId) ?? 0;
     const res: any = await firstValueFrom(
-      this.adapter.patch_v3('PATCH /me/wishlist/:productId', { label_id: labelId ?? 0 }, {
+      this.adapter.patch_v3('PATCH /me/wishlist/:productId', { label_id: lid }, {
         authToken: token,
         pathParams: { productId: String(productId) },
       }),

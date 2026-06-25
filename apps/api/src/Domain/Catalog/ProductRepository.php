@@ -47,6 +47,31 @@ class ProductRepository extends EntityRepository
     }
 
     /**
+     * Resolve a product from the integer id mobile cards carry.
+     *
+     * Mobile catalog cards are built by `legacyProductCardFromV3List`
+     * (apps/mobile catalog-response.transforms.ts), which sets
+     * `product_id = legacy_product_id ?? v3 id` — i.e. the LEGACY id for
+     * any migrated product, falling back to the v3 primary key only for
+     * v3-native products with no legacy row. Endpoints that take that
+     * card id (wishlist add/move/remove) must therefore resolve in the
+     * SAME precedence, or migrated products 404 (or, worse, a legacy id
+     * collides with some other product's v3 PK and matches the wrong
+     * product).
+     *
+     * Resolution order mirrors the card exactly: legacy id first, then
+     * fall back to the v3 primary key. Returns null when neither matches.
+     */
+    public function findByIdOrLegacyId(int $id): ?Product
+    {
+        if ($id <= 0) {
+            return null;
+        }
+
+        return $this->findByLegacyId($id) ?? $this->find($id);
+    }
+
+    /**
      * Paginated active products with filters.
      *
      * @param array{

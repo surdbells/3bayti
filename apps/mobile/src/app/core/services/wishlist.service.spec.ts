@@ -66,6 +66,19 @@ describe('WishlistService', () => {
     expect(adapter.lastPost.body).toEqual({ product_id: 42, label_id: 9 });
   });
 
+  it('coerces string (bigint) ids and keeps the label', async () => {
+    // v3 bigints can arrive as JSON strings; they must not drop the label.
+    await service.add('tok', '42', '9');
+    expect(adapter.lastPost.body).toEqual({ product_id: 42, label_id: 9 });
+  });
+
+  it('omits label_id for null/0/invalid labels', async () => {
+    await service.add('tok', 42, 0);
+    expect(adapter.lastPost.body).toEqual({ product_id: 42 });
+    await service.add('tok', 42, null);
+    expect(adapter.lastPost.body).toEqual({ product_id: 42 });
+  });
+
   it('removes a product (204)', async () => {
     const ok = await service.remove('tok', 42);
     expect(adapter.lastDelete.routeKey).toBe('DELETE /me/wishlist/:productId');
