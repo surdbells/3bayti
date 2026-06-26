@@ -110,6 +110,9 @@ final class OrderEmailTemplateRenderer
             EmailTemplate::ORDER_REFUNDED_CUSTOMER => $isArabic
                 ? $this->orderRefundedCustomerAr($order, $extra)
                 : $this->orderRefundedCustomerEn($order, $extra),
+            EmailTemplate::ORDER_STATUS_CHANGED_CUSTOMER => $isArabic
+                ? $this->orderStatusChangedCustomerAr($order, $extra)
+                : $this->orderStatusChangedCustomerEn($order, $extra),
             EmailTemplate::ORDER_PLACED_VENDOR => $isArabic
                 ? $this->orderPlacedVendorAr($order, $extra)
                 : $this->orderPlacedVendorEn($order, $extra),
@@ -120,6 +123,7 @@ final class OrderEmailTemplateRenderer
             // (Q-VendorAdminLocale = A locked). The locale parameter
             // is intentionally ignored here.
             EmailTemplate::DISPUTE_OPENED_ADMIN => $this->disputeOpenedAdminEn($order, $extra),
+            EmailTemplate::ORDER_STATUS_CHANGED_ADMIN => $this->orderStatusChangedAdminEn($order, $extra),
 
             // M3.2.X.18-G — Return request flow. Customer templates
             // dispatch by locale; vendor template uses vendor's
@@ -580,6 +584,112 @@ HTML,
         );
     }
 
+    /**
+     * Generic order status-change notice. Used when an admin overrides
+     * the order-level status to a value that has no dedicated customer
+     * template (e.g. paid, fulfilling, shipped, delivered). The
+     * human-readable status label is passed via $extra['status_label'];
+     * we fall back to the raw status code if absent.
+     *
+     * @param array<string, mixed> $extra
+     */
+    private function orderStatusChangedCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $statusLabel = $this->statusLabelEn((string) ($extra['new_status'] ?? ''));
+
+        return new RenderedEmail(
+            subject: "Update on your order {$ref} — 3bayti",
+            textBody: <<<TXT
+There's an update on your order.
+
+Order reference: {$ref}
+Status: {$statusLabel}
+
+You can view the latest details any time in the 3bayti app.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'Order update',
+                body: <<<HTML
+<p>There's an update on your order.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Status:</strong> {$this->esc($statusLabel)}</p>
+<p>You can view the latest details any time in the 3bayti app.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function orderStatusChangedCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $statusLabel = $this->statusLabelAr((string) ($extra['new_status'] ?? ''));
+
+        return new RenderedEmail(
+            subject: "تحديث بخصوص طلبك {$ref} — 3bayti",
+            textBody: <<<TXT
+هناك تحديث بخصوص طلبك.
+
+رقم الطلب: {$ref}
+الحالة: {$statusLabel}
+
+يمكنك الاطلاع على آخر التفاصيل في أي وقت من تطبيق 3bayti.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'تحديث الطلب',
+                body: <<<HTML
+<p>هناك تحديث بخصوص طلبك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>الحالة:</strong> {$this->esc($statusLabel)}</p>
+<p>يمكنك الاطلاع على آخر التفاصيل في أي وقت من تطبيق 3bayti.</p>
+HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
+    }
+
+    /**
+     * Map an Order::STATUS_* code to a friendly English label. Unknown
+     * codes pass through verbatim (defensive — never render an empty
+     * status line).
+     */
+    private function statusLabelEn(string $status): string
+    {
+        return match ($status) {
+            Order::STATUS_PENDING_PAYMENT => 'Pending payment',
+            Order::STATUS_PAID => 'Paid',
+            Order::STATUS_FULFILLING => 'Being fulfilled',
+            Order::STATUS_SHIPPED => 'Shipped',
+            Order::STATUS_DELIVERED => 'Delivered',
+            Order::STATUS_CANCELLED => 'Cancelled',
+            Order::STATUS_REFUNDED => 'Refunded',
+            Order::STATUS_FAILED => 'Failed',
+            default => $status !== '' ? $status : 'Updated',
+        };
+    }
+
+    private function statusLabelAr(string $status): string
+    {
+        return match ($status) {
+            Order::STATUS_PENDING_PAYMENT => 'بانتظار الدفع',
+            Order::STATUS_PAID => 'مدفوع',
+            Order::STATUS_FULFILLING => 'قيد التجهيز',
+            Order::STATUS_SHIPPED => 'تم الشحن',
+            Order::STATUS_DELIVERED => 'تم التسليم',
+            Order::STATUS_CANCELLED => 'ملغي',
+            Order::STATUS_REFUNDED => 'تم الاسترداد',
+            Order::STATUS_FAILED => 'فشل',
+            default => $status !== '' ? $status : 'تم التحديث',
+        };
+    }
+
     // -----------------------------------------------------------------
     // Vendor templates
     // -----------------------------------------------------------------
@@ -703,6 +813,78 @@ TXT,
 <strong>Amount:</strong> {$this->esc($amount)} {$this->esc($currency)}</p>
 {$reasonHtml}
 <p>Review and respond in the <a href="https://3bayti.ae/admin/disputes">admin dashboard</a>.</p>
+HTML,
+            ),
+        );
+    }
+
+    /**
+     * Admin alert — an admin manually overrode an order or item status.
+     * Surfaces in the admin bell + ops email. Always English
+     * (Q-VendorAdminLocale = A locked).
+     *
+     * $extra:
+     *   new_status  — the status the order/item was forced into
+     *   old_status  — the previous status (optional)
+     *   scope       — 'order' | 'item' (optional, defaults 'order')
+     *   item_name   — name of the item when scope='item' (optional)
+     *   actor       — email/name of the admin who made the change (optional)
+     *   reason      — admin's reason for the override (optional)
+     *
+     * @param array<string, mixed> $extra
+     */
+    private function orderStatusChangedAdminEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $newStatus = (string) ($extra['new_status'] ?? '');
+        $oldStatus = (string) ($extra['old_status'] ?? '');
+        $scope = (string) ($extra['scope'] ?? 'order');
+        $itemName = (string) ($extra['item_name'] ?? '');
+        $actor = (string) ($extra['actor'] ?? '');
+        $reason = (string) ($extra['reason'] ?? '');
+
+        $scopeLine = $scope === 'item' && $itemName !== ''
+            ? "Item: {$itemName}\n"
+            : '';
+        $scopeHtml = $scope === 'item' && $itemName !== ''
+            ? "<strong>Item:</strong> {$this->esc($itemName)}<br>"
+            : '';
+        $transition = $oldStatus !== ''
+            ? "{$oldStatus} → {$newStatus}"
+            : $newStatus;
+        $actorLine = $actor !== '' ? "Changed by: {$actor}\n" : '';
+        $actorHtml = $actor !== ''
+            ? "<p><strong>Changed by:</strong> {$this->esc($actor)}</p>"
+            : '';
+        $reasonLine = $reason !== '' ? "Reason: {$reason}\n" : '';
+        $reasonHtml = $reason !== ''
+            ? "<p><strong>Reason:</strong> {$this->esc($reason)}</p>"
+            : '';
+
+        return new RenderedEmail(
+            subject: "[OVERRIDE] {$scope} status changed on order {$ref}",
+            textBody: <<<TXT
+An admin manually overrode a status.
+
+Order reference: {$ref}
+Scope: {$scope}
+{$scopeLine}Status: {$transition}
+{$actorLine}{$reasonLine}
+Review in the admin dashboard:
+https://3bayti.ae/admin/orders
+
+— 3bayti operations
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: 'Status override',
+                body: <<<HTML
+<p>An admin manually overrode a status.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Scope:</strong> {$this->esc($scope)}<br>
+{$scopeHtml}<strong>Status:</strong> {$this->esc($transition)}</p>
+{$actorHtml}
+{$reasonHtml}
+<p>Review in the <a href="https://3bayti.ae/admin/orders">admin dashboard</a>.</p>
 HTML,
             ),
         );

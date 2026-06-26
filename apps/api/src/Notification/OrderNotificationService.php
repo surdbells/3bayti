@@ -235,6 +235,75 @@ final class OrderNotificationService
     }
 
     /**
+     * Generic customer notification for an order-status change that has
+     * no dedicated lifecycle template (e.g. an admin override that forces
+     * the order to paid / fulfilling / shipped / delivered at the
+     * order level). Customer-only.
+     *
+     * Callers that already have a specific method (orderCancelled,
+     * orderRefunded, item* …) should prefer those — this is the
+     * catch-all for the admin override endpoint.
+     */
+    public function orderStatusChanged(Order $order, string $newStatus): void
+    {
+        $this->sendToCustomer($order, EmailTemplate::ORDER_STATUS_CHANGED_CUSTOMER, [
+            'new_status' => $newStatus,
+        ]);
+    }
+
+    /**
+     * Admin/staff notification that an admin manually overrode an order
+     * or item status. Modeled on disputeOpened: emails every configured
+     * ADMIN_NOTIFICATION_EMAILS recipient (each safeSend writes a
+     * status='sent' NotificationLog keyed to that recipient, which is
+     * what surfaces in the admin notification bell). Degrades cleanly —
+     * empty recipient list logs + persists a single skipped row.
+     *
+     * @param array{
+     *   new_status?: string,
+     *   old_status?: string,
+     *   scope?: string,
+     *   item_name?: string,
+     *   reason?: string
+     * } $details Extra context forwarded to the renderer.
+     * @param ?string $actor Email/identifier of the admin who made the
+     *        change, surfaced in the email + bell for accountability.
+     */
+    public function adminOrderStatusChanged(
+        Order $order,
+        string $newStatus,
+        ?string $actor = null,
+        array $details = [],
+    ): void {
+        $extra = array_merge($details, ['new_status' => $newStatus]);
+        if ($actor !== null && $actor !== '') {
+            $extra['actor'] = $actor;
+        }
+
+        if ($this->adminRecipients === []) {
+            $this->logger->info('notification.order_status_changed.no_admin_recipients_configured', [
+                'order_id' => $order->getId(),
+                'new_status' => $newStatus,
+            ]);
+            $this->persistSkipped(
+                $order,
+                EmailTemplate::ORDER_STATUS_CHANGED_ADMIN,
+                '',
+                self::SKIP_REASON_NO_ADMIN_RECIPIENTS,
+            );
+            return;
+        }
+        foreach ($this->adminRecipients as $adminEmail) {
+            $this->safeSend(
+                to: $adminEmail,
+                template: EmailTemplate::ORDER_STATUS_CHANGED_ADMIN,
+                order: $order,
+                extra: $extra,
+            );
+        }
+    }
+
+    /**
      * Dispute opened against an order (webhook event).
      * Notifies admins so they can triage. Order owner is intentionally
      * NOT notified here — disputes are operational concerns.

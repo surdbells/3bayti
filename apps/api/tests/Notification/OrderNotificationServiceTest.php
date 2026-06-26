@@ -187,6 +187,73 @@ final class OrderNotificationServiceTest extends TestCase
     }
 
     #[Test]
+    public function orderStatusChangedSendsGenericCustomerEmailOnly(): void
+    {
+        $order = $this->makeOrder('V3-110');
+        $vendor = $this->makeVendor(id: 5, email: 'v@shops.com');
+        $this->addItem($order, $vendor, 'Item');
+
+        $this->service->orderStatusChanged($order, Order::STATUS_SHIPPED);
+
+        $sent = $this->mailer->sent();
+        self::assertCount(1, $sent);
+        self::assertSame('customer@example.com', $sent[0]['to']);
+        self::assertSame(
+            1,
+            $this->mailer->countByTemplate(EmailTemplate::ORDER_STATUS_CHANGED_CUSTOMER->value),
+        );
+        // Friendly status label appears in the body.
+        self::assertStringContainsString('Shipped', $sent[0]['text_body']);
+    }
+
+    #[Test]
+    public function adminOrderStatusChangedSendsToAllAdminRecipients(): void
+    {
+        $service = new OrderNotificationService(
+            mailer: $this->mailer,
+            renderer: new OrderEmailTemplateRenderer(),
+            adminRecipients: ['ops@3bayti.ae', 'security@3bayti.ae'],
+            logger: new NullLogger(),
+        );
+        $order = $this->makeOrder('V3-111');
+
+        $service->adminOrderStatusChanged(
+            order: $order,
+            newStatus: Order::STATUS_REFUNDED,
+            actor: 'admin@3bayti.ae',
+            details: ['scope' => 'order', 'old_status' => Order::STATUS_PAID, 'reason' => 'manual fix'],
+        );
+
+        self::assertCount(2, $this->mailer->sent());
+        self::assertSame(1, $this->mailer->countFor('ops@3bayti.ae'));
+        self::assertSame(1, $this->mailer->countFor('security@3bayti.ae'));
+        self::assertSame(
+            2,
+            $this->mailer->countByTemplate(EmailTemplate::ORDER_STATUS_CHANGED_ADMIN->value),
+        );
+
+        // Actor + transition surface in the admin email body.
+        $first = $this->mailer->sent()[0];
+        self::assertStringContainsString('admin@3bayti.ae', $first['text_body']);
+        self::assertStringContainsString('manual fix', $first['text_body']);
+    }
+
+    #[Test]
+    public function adminOrderStatusChangedSendsNothingWhenAdminListEmpty(): void
+    {
+        $service = new OrderNotificationService(
+            mailer: $this->mailer,
+            renderer: new OrderEmailTemplateRenderer(),
+            adminRecipients: [],
+        );
+        $order = $this->makeOrder('V3-112');
+
+        $service->adminOrderStatusChanged($order, Order::STATUS_DELIVERED, 'admin@3bayti.ae');
+
+        self::assertCount(0, $this->mailer->sent());
+    }
+
+    #[Test]
     public function mailerExceptionIsCaughtSilently(): void
     {
         // Throwing mailer simulates ZeptoMail upstream rejection.

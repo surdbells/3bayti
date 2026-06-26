@@ -37,12 +37,22 @@ enum EmailTemplate: string
     case ORDER_CANCELLED_CUSTOMER = 'order.cancelled.customer';
     case ORDER_REFUNDED_CUSTOMER = 'order.refunded.customer';
 
+    // Generic order status-change (admin override to a status with no
+    // dedicated customer template — e.g. paid, fulfilling, shipped,
+    // delivered at the order level). EN + AR.
+    case ORDER_STATUS_CHANGED_CUSTOMER = 'order.status_changed.customer';
+
     // Vendor-facing (their items moving through lifecycle)
     case ORDER_PLACED_VENDOR = 'order.placed.vendor';
     case ORDER_CANCELLED_VENDOR = 'order.cancelled.vendor';
 
     // Admin-facing (critical events for ops monitoring)
     case DISPUTE_OPENED_ADMIN = 'dispute.opened.admin';
+
+    // Admin-facing — an admin manually overrode an order/item status.
+    // Surfaces in the admin notification bell + emails ops. English only
+    // (Q-VendorAdminLocale = A locked).
+    case ORDER_STATUS_CHANGED_ADMIN = 'order.status_changed.admin';
 
     // M3.2.X.18-G — Return request flow
     // Customer: 6 lifecycle events. Each has EN + AR variants

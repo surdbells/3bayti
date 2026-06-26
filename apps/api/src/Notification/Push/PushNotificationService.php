@@ -181,6 +181,22 @@ class PushNotificationService
         ]);
     }
 
+    /**
+     * Generic order status-change push — the counterpart to
+     * OrderNotificationService::orderStatusChanged. Fired by the admin
+     * order-status override endpoint when the new status has no
+     * dedicated lifecycle push. Deep-links to /orders/{order_id} via the
+     * order.status_changed type. Never throws.
+     */
+    public function orderStatusChanged(Order $order): void
+    {
+        $ref = $order->getOrderReference();
+        $this->pushToCustomer($order, 'order.status_changed', [
+            'en' => ['Order update', sprintf('There is an update on order %s.', $ref)],
+            'ar' => ['تحديث الطلب', sprintf('هناك تحديث بخصوص الطلب %s.', $ref)],
+        ]);
+    }
+
     // -----------------------------------------------------------------
     // Gift card + chat
     // -----------------------------------------------------------------

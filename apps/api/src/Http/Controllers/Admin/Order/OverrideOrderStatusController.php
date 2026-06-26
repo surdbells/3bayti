@@ -15,6 +15,8 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\OrderSerializer;
 use Bayti\Api\Http\Validator\RequestValidator;
+use Bayti\Api\Notification\OrderNotificationService;
+use Bayti\Api\Notification\Push\PushNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -42,6 +44,8 @@ final class OverrideOrderStatusController
         private readonly EntityManagerInterface $em,
         private readonly OrderSerializer $serializer,
         private readonly AuditEmitter $audit,
+        private readonly OrderNotificationService $notifications,
+        private readonly PushNotificationService $pushNotifications,
     ) {
     }
 
@@ -94,6 +98,40 @@ final class OverrideOrderStatusController
             changes: [
                 'before' => ['status' => $previousStatus],
                 'after' => ['status' => $newStatus],
+                'reason' => $reason,
+            ],
+        );
+
+        // Notify the customer of the order-status change (email + push).
+        // Reuse the dedicated lifecycle methods where one exists
+        // (cancelled / refunded); otherwise fall back to the generic
+        // status-changed notice. All sends are fire-and-forget — a
+        // notification failure must never break the override.
+        if ($newStatus === Order::STATUS_CANCELLED) {
+            $this->notifications->orderCancelled($order, ['reason' => $reason]);
+            $this->pushNotifications->orderCancelled($order);
+        } elseif ($newStatus === Order::STATUS_REFUNDED) {
+            $this->notifications->orderRefunded($order, [
+                'refund_amount' => $order->getTotal(),
+                'is_full_refund' => true,
+            ]);
+            $this->pushNotifications->orderRefunded($order);
+        } else {
+            $this->notifications->orderStatusChanged($order, $newStatus);
+            $this->pushNotifications->orderStatusChanged($order);
+        }
+
+        // Notify staff/admins that an admin overrode the order status.
+        // Each recipient gets an email + a NotificationLog row so the
+        // change surfaces in the admin notification bell. Degrades
+        // cleanly when ADMIN_NOTIFICATION_EMAILS is empty.
+        $this->notifications->adminOrderStatusChanged(
+            order: $order,
+            newStatus: $newStatus,
+            actor: $user->getEmail(),
+            details: [
+                'scope' => 'order',
+                'old_status' => $previousStatus,
                 'reason' => $reason,
             ],
         );

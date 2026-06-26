@@ -16,6 +16,8 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\OrderSerializer;
 use Bayti\Api\Http\Validator\RequestValidator;
+use Bayti\Api\Notification\OrderNotificationService;
+use Bayti\Api\Notification\Push\PushNotificationService;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -46,6 +48,8 @@ final class OverrideOrderItemStatusController
         private readonly EntityManagerInterface $em,
         private readonly OrderSerializer $serializer,
         private readonly AuditEmitter $audit,
+        private readonly OrderNotificationService $notifications,
+        private readonly PushNotificationService $pushNotifications,
     ) {
     }
 
@@ -123,6 +127,43 @@ final class OverrideOrderItemStatusController
                     'item_status' => $newStatus,
                     'order_status' => $order->getStatus(),
                 ],
+                'reason' => $reason,
+            ],
+        );
+
+        // Notify the customer of the per-item state change (email + push),
+        // mirroring TransitionVendorOrderItemController's dispatch. All
+        // sends are fire-and-forget — a notification failure must never
+        // break the override (the status change is already persisted).
+        if ($newStatus === OrderItem::ITEM_STATUS_ACCEPTED) {
+            $this->notifications->itemAccepted($order, $item);
+            $this->pushNotifications->itemAccepted($order);
+        } elseif ($newStatus === OrderItem::ITEM_STATUS_PREPARING) {
+            $this->notifications->itemPreparing($order, $item);
+            $this->pushNotifications->itemPreparing($order);
+        } elseif ($newStatus === OrderItem::ITEM_STATUS_REJECTED) {
+            $this->notifications->itemRejected($order, $item);
+            $this->pushNotifications->itemRejected($order);
+        } elseif ($newStatus === OrderItem::ITEM_STATUS_SHIPPED) {
+            $this->notifications->itemShipped($order, $item);
+            $this->pushNotifications->itemShipped($order);
+        } elseif ($newStatus === OrderItem::ITEM_STATUS_DELIVERED) {
+            $this->notifications->itemDelivered($order, $item);
+            $this->pushNotifications->itemDelivered($order);
+        }
+
+        // Notify staff/admins that an admin overrode an item status. Each
+        // recipient gets an email + a NotificationLog row so the change
+        // surfaces in the admin notification bell. Degrades cleanly when
+        // ADMIN_NOTIFICATION_EMAILS is empty.
+        $this->notifications->adminOrderStatusChanged(
+            order: $order,
+            newStatus: $newStatus,
+            actor: $user->getEmail(),
+            details: [
+                'scope' => 'item',
+                'item_name' => $item->getProductNameSnapshot(),
+                'old_status' => $previousItemStatus,
                 'reason' => $reason,
             ],
         );
