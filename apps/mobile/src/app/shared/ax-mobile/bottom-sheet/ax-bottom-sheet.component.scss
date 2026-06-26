@@ -56,13 +56,18 @@
    so we center the sheet inside it and apply the inset margins here. */
 
 .ax-sheet--inset {
-  width: auto;
+  /* Fill the viewport minus an ~11px gutter each side, but never exceed a
+     comfortable card width. `margin-inline: auto` is load-bearing: it
+     centers the sheet once max-width caps it. With fixed left/right margins
+     (the previous code) a capped sheet on a wide viewport — landscape, or
+     large/foldable phones whose CSS width exceeds ~500px — got shoved to
+     one side and read as "half the screen". The calc keeps the 11px gutter
+     on narrow phones where the cap doesn't apply. */
+  width: calc(100% - 22px);
   max-width: 480px;
-  margin: 0 auto;
-  /* Horizontal + bottom inset; combine the safe-area inset with the visual
-     margin so notched devices keep clearance. */
-  margin-left: 11px;
-  margin-right: 11px;
+  margin-inline: auto;
+  /* Bottom inset; combine the safe-area inset with the visual margin so
+     notched devices keep clearance. */
   margin-bottom: calc(11px + env(safe-area-inset-bottom, 0px));
   /* Inline [style.height] still drives the snap height; cap it so the inset
      bottom margin is always visible even at the tallest snap. */
