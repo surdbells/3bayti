@@ -149,6 +149,105 @@ final class Bootstrap
             // Server name useful in self-hosted infra — matches
             // hostname to event for "which box" forensics.
             'server_name' => gethostname() ?: 'unknown',
+            // Drop EXPECTED client errors before they leave the process.
+            // This is the single chokepoint that ALL capture paths flow
+            // through, so it filters noise regardless of where the
+            // captureException() call originated.
+            'before_send' => self::filterExpectedClientErrors(...),
         ]);
+    }
+
+    /**
+     * Sentry `before_send` hook — drop expected client errors, keep
+     * genuine server faults.
+     *
+     * Why this exists
+     * ---------------
+     * Scanner / bot traffic hitting unknown routes makes Slim's router
+     * throw {@see \Slim\Exception\HttpNotFoundException}. That exception
+     * is NOT our typed {@see \Bayti\Api\Http\Errors\HttpException}, so it
+     * falls through ApiErrorMiddleware's `\Throwable` catch-all and was
+     * being reported to Sentry as if it were a server fault — 8,549 of
+     * them, drowning real errors.
+     *
+     * What we drop (return null = don't send)
+     * ---------------------------------------
+     *   1. Slim's own HTTP exceptions (\Slim\Exception\HttpException and
+     *      subclasses like HttpNotFoundException / HttpMethodNotAllowed /
+     *      HttpUnauthorized / HttpForbidden / HttpBadRequest / HttpGone /
+     *      HttpTooManyRequests) whose status code is 4xx. These are
+     *      normal control flow — a client asked for something that
+     *      doesn't exist / isn't allowed. Slim stores the HTTP status in
+     *      the exception's code, so getCode() is 404/401/405/...
+     *   2. Our own typed HttpException whose `status` is 4xx (validation
+     *      422, not-found 404, unauthorized 401, conflict 409, etc.).
+     *   3. OtpRateLimitException — an expected 429 abuse throttle, never
+     *      our bug.
+     *
+     * What we KEEP (return the event = send to Sentry)
+     * ------------------------------------------------
+     *   - Any 5xx (Slim's HttpInternalServerErrorException, our
+     *     HttpException with status>=500 like upstreamFailure()'s 502).
+     *   - Every other unhandled \Throwable (TypeError, PDOException,
+     *     RuntimeException from business logic, ...). These are by
+     *     definition unexpected and worth a Sentry event.
+     *   - Events with no exception at all (e.g. captureMessage) — we
+     *     never suppress those; only exception events are filtered.
+     *
+     * Conservative by design: we suppress ONLY exception types we can
+     * positively identify as expected 4xx control flow. Anything we
+     * cannot classify is sent. We never drop a 500.
+     *
+     * HTTP responses are unaffected — this hook runs inside the Sentry
+     * SDK and only decides whether to transmit the event. The client
+     * still gets its correct 404/4xx from ApiErrorMiddleware.
+     */
+    public static function filterExpectedClientErrors(
+        \Sentry\Event $event,
+        ?\Sentry\EventHint $hint,
+    ): ?\Sentry\Event {
+        $exception = $hint?->exception;
+        if (!$exception instanceof \Throwable) {
+            // Non-exception event (message, transaction, ...) — never
+            // our concern here; let it through untouched.
+            return $event;
+        }
+
+        $status = self::expectedClientErrorStatus($exception);
+        if ($status !== null && $status >= 400 && $status < 500) {
+            // Expected 4xx client error — drop it.
+            return null;
+        }
+
+        // 5xx, unknown exception types, anything we couldn't positively
+        // classify as expected → keep it.
+        return $event;
+    }
+
+    /**
+     * If $e is a known "carries an HTTP status" exception, return that
+     * status; otherwise null (meaning: we can't classify it, so the
+     * caller must NOT suppress it).
+     */
+    private static function expectedClientErrorStatus(\Throwable $e): ?int
+    {
+        // Our typed controller/validator errors expose `status` directly.
+        if ($e instanceof \Bayti\Api\Http\Errors\HttpException) {
+            return $e->status;
+        }
+
+        // The OTP throttle is always an expected 429.
+        if ($e instanceof \Bayti\Api\Domain\User\OtpRateLimitException) {
+            return 429;
+        }
+
+        // Slim's router / HTTP exceptions store the HTTP status in the
+        // exception code (HttpNotFoundException => 404, etc.).
+        if ($e instanceof \Slim\Exception\HttpException) {
+            return $e->getCode();
+        }
+
+        // Anything else — unknown. Caller keeps it (sends to Sentry).
+        return null;
     }
 }
