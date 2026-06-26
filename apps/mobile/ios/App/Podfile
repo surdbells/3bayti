@@ -11,7 +11,6 @@ install! 'cocoapods', :disable_input_output_paths => true
 def capacitor_pods
   pod 'Capacitor', :path => '../../../../node_modules/.pnpm/@capacitor+ios@8.3.3_@capacitor+core@8.3.3/node_modules/@capacitor/ios'
   pod 'CapacitorCordova', :path => '../../../../node_modules/.pnpm/@capacitor+ios@8.3.3_@capacitor+core@8.3.3/node_modules/@capacitor/ios'
-  pod 'CapacitorCommunityContacts', :path => '../../../../node_modules/.pnpm/@capacitor-community+contacts@7.2.0_@capacitor+core@8.3.3/node_modules/@capacitor-community/contacts'
   pod 'CapacitorApp', :path => '../../../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.3.3/node_modules/@capacitor/app'
   pod 'CapacitorHaptics', :path => '../../../../node_modules/.pnpm/@capacitor+haptics@8.0.2_@capacitor+core@8.3.3/node_modules/@capacitor/haptics'
   pod 'CapacitorNetwork', :path => '../../../../node_modules/.pnpm/@capacitor+network@8.0.1_@capacitor+core@8.3.3/node_modules/@capacitor/network'
@@ -21,6 +20,7 @@ def capacitor_pods
   pod 'CapacitorSplashScreen', :path => '../../../../node_modules/.pnpm/@capacitor+splash-screen@8.0.1_@capacitor+core@8.3.3/node_modules/@capacitor/splash-screen'
   pod 'CapacitorStatusBar', :path => '../../../../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@8.3.3/node_modules/@capacitor/status-bar'
   pod 'CapawesomeCapacitorAppUpdate', :path => '../../../../node_modules/.pnpm/@capawesome+capacitor-app-update@8.0.3_@capacitor+core@8.3.3/node_modules/@capawesome/capacitor-app-update'
+  pod 'CapgoCapacitorContacts', :path => '../../../../node_modules/.pnpm/@capgo+capacitor-contacts@8.0.17_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-contacts'
   pod 'CapgoCapacitorUpdater', :path => '../../../../node_modules/.pnpm/@capgo+capacitor-updater@8.49.7_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-updater'
   pod 'CapgoInappbrowser', :path => '../../../../node_modules/.pnpm/@capgo+inappbrowser@8.0.6_@capacitor+core@8.3.3/node_modules/@capgo/inappbrowser'
 end
