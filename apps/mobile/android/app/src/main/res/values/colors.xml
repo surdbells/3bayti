@@ -4,4 +4,7 @@
          and the iOS LaunchScreen so there is no colour shift between the native
          launch screen, the Capacitor splash, and the web view. -->
     <color name="splashBackground">#FAF8F5</color>
+
+    <!-- Push-notification small-icon accent (status-bar tint). Brand amber. -->
+    <color name="ax_notification">#B26A1B</color>
 </resources>

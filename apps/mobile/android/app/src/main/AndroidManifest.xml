@@ -27,6 +27,16 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <!-- Push-notification small icon + accent. Without these, FCM falls
+             back to the full-colour @mipmap/ic_launcher, which Android masks
+             to a blank white square in the status bar / notification shade. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_stat_notify" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/ax_notification" />
     </application>
 
     <!-- Permissions -->

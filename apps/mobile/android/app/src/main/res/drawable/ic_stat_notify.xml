@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Monochrome notification small-icon (status bar). Android masks the small
+  icon to a flat white silhouette via its ALPHA channel, so this MUST be a
+  single solid shape on a transparent background — a full-colour launcher
+  icon (the previous fallback) renders as a blank white square, which is the
+  bug this fixes. Wired in AndroidManifest.xml via
+  com.google.firebase.messaging.default_notification_icon.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M18,6h-2c0,-2.21 -1.79,-4 -4,-4S8,3.79 8,6H6C4.9,6 4,6.9 4,7v13c0,1.1 0.9,2 2,2h12c1.1,0 2,-0.9 2,-2V7C20,6.9 19.1,6 18,6zM12,4c1.1,0 2,0.9 2,2h-4C10,4.9 10.9,4 12,4z" />
+</vector>
