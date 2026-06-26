@@ -428,8 +428,8 @@ class OrderTimelineBuilder
         // belongs to this vendor.
         $sql = "
             SELECT DISTINCT
-                rr.id, rr.status, rr.reason, rr.customer_id,
-                rr.requested_at, rr.decided_at, rr.decided_by_user_id,
+                rr.id, rr.status, rr.reason, rr.customer_user_id,
+                rr.requested_at, rr.decided_at, rr.decided_by_admin_user_id,
                 rr.picked_up_at, rr.delivered_to_vendor_at,
                 rr.refunded_at, rr.cancelled_at
             FROM order_return_requests rr
@@ -459,7 +459,7 @@ class OrderTimelineBuilder
                 'id' => 'return:' . $returnId . ':submitted',
                 'type' => 'return.submitted',
                 'occurred_at' => $this->formatTimestamp($row['requested_at']),
-                'actor' => ['type' => 'customer', 'id' => (int) $row['customer_id']],
+                'actor' => ['type' => 'customer', 'id' => (int) $row['customer_user_id']],
                 'summary' => "Return RET-{$returnId} submitted ({$reason})",
                 'details' => [
                     'return_id' => $returnId,
@@ -477,7 +477,7 @@ class OrderTimelineBuilder
                     'id' => 'return:' . $returnId . ':decided',
                     'type' => $type,
                     'occurred_at' => $this->formatTimestamp($row['decided_at']),
-                    'actor' => $this->buildActorBlock($row['decided_by_user_id'], null, 'admin'),
+                    'actor' => $this->buildActorBlock($row['decided_by_admin_user_id'], null, 'admin'),
                     'summary' => "Return RET-{$returnId} {$verb}",
                     'details' => ['return_id' => $returnId],
                 ];
@@ -521,7 +521,7 @@ class OrderTimelineBuilder
                     'id' => 'return:' . $returnId . ':cancelled',
                     'type' => 'return.cancelled',
                     'occurred_at' => $this->formatTimestamp($row['cancelled_at']),
-                    'actor' => ['type' => 'customer', 'id' => (int) $row['customer_id']],
+                    'actor' => ['type' => 'customer', 'id' => (int) $row['customer_user_id']],
                     'summary' => "Return RET-{$returnId} cancelled by customer",
                     'details' => ['return_id' => $returnId],
                 ];
