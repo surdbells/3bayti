@@ -1091,7 +1091,29 @@
       "heading": "Reviews",
       "verified": "Verified buyer",
       "emptyTitle": "No reviews yet",
-      "emptyHint": "Verified buyer reviews will appear here once this product has been reviewed."
+      "emptyHint": "Verified buyer reviews will appear here once this product has been reviewed.",
+      "seeAll": "See all reviews",
+      "loading": "Loading…",
+      "loadError": "Couldn't load more reviews. Please try again.",
+      "form": {
+        "writeCta": "Write a review",
+        "heading": "Write a review",
+        "ratingLabel": "Your rating",
+        "starAria": "Rate {{n}} out of 5 stars",
+        "titleLabel": "Title (optional)",
+        "titlePlaceholder": "Sum up your review",
+        "commentLabel": "Your review",
+        "commentPlaceholder": "Share what you liked — fit, fabric, quality…",
+        "submit": "Submit review",
+        "submitting": "Submitting…",
+        "thanksTitle": "Thanks for your review",
+        "pendingNote": "Your review has been submitted and will appear once it's approved by our team.",
+        "signInPrompt": "Bought this? Sign in to share your review.",
+        "signInLink": "Sign in",
+        "errorStar": "Please choose a star rating from 1 to 5.",
+        "errorValidation": "Please check your rating and review, then try again.",
+        "errorSubmit": "We couldn't submit your review. Please try again."
+      }
     },
     "sizeGuide": {
       "trigger": "Size guide",

@@ -1259,6 +1259,176 @@
   line-height: 1.5;
 }
 
+/* ----- Reviews: load-more + status ----------------------------------- */
+.pdp-reviews__more {
+  display: flex;
+  justify-content: center;
+  margin-block-start: 8px;
+}
+
+.pdp-reviews__status {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+}
+
+.pdp-reviews__status--error {
+  color: var(--color-danger-600, #b3261e);
+}
+
+/* ----- Write a review ------------------------------------------------- */
+.pdp-write-review {
+  margin-block-start: 24px;
+  padding-block-start: 24px;
+  border-block-start: 1px solid var(--color-border-subtle);
+}
+
+.pdp-write-review__signin {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+
+  a {
+    color: var(--color-brand-700);
+    font-weight: 600;
+    text-decoration: underline;
+  }
+}
+
+.pdp-write-review__cta {
+  display: flex;
+}
+
+.pdp-write-review__done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  padding: 24px 16px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 10px;
+  background: var(--color-brand-50);
+}
+
+.pdp-write-review__done-icon {
+  color: var(--color-brand-700);
+}
+
+.pdp-write-review__done-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-write-review__done-note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  max-width: 420px;
+  line-height: 1.5;
+}
+
+.pdp-review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 560px;
+}
+
+.pdp-review-form__heading {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-review-form__rating {
+  border: 0;
+  padding: 0;
+  margin: 0;
+
+  legend {
+    padding: 0;
+    margin-block-end: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
+}
+
+.pdp-review-form__stars {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.pdp-review-form__star {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-border-default, #d9cfc4);
+  transition: color 120ms ease;
+
+  &.is-active {
+    color: var(--color-brand-500, #c79a4b);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500, #c79a4b);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+.pdp-review-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pdp-review-form__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.pdp-review-form__input,
+.pdp-review-form__textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500, #c79a4b);
+    outline-offset: 1px;
+    border-color: var(--color-brand-500, #c79a4b);
+  }
+}
+
+.pdp-review-form__textarea {
+  resize: vertical;
+  min-height: 96px;
+  line-height: 1.5;
+}
+
+.pdp-review-form__error {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-danger-600, #b3261e);
+}
+
+.pdp-review-form__actions {
+  display: flex;
+}
+
 /* ----- Size guide (store size chart) -------------------------------- */
 .pdp-options__legend-row {
   display: flex;

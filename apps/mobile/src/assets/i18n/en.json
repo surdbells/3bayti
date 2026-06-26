@@ -993,5 +993,21 @@
   "text_unable_to_delete_address": "Unable to delete address. Please try again.",
   "text_default_address_updated": "Default address updated.",
   "text_unable_to_load_addresses": "Unable to load addresses. Please try again.",
-  "error_vendor_not_loaded": "Vendor is still loading. Please try again."
+  "error_vendor_not_loaded": "Vendor is still loading. Please try again.",
+  "review_write_a_review": "Write a review",
+  "review_your_rating": "Your rating",
+  "review_title": "Title",
+  "review_title_ph": "Sum up your review",
+  "review_comment": "Review",
+  "review_comment_ph": "Share your experience with this product",
+  "review_submit": "Submit review",
+  "review_moderation_hint": "Your review will be published after approval.",
+  "review_submitted_for_approval": "Thanks! Your review was submitted for approval.",
+  "review_submit_failed": "Couldn't submit your review. Please try again.",
+  "review_select_rating": "Please select a star rating.",
+  "review_sign_in_to_review": "Sign in to write a review.",
+  "review_count_label": "{{count}} reviews",
+  "review_load_more": "Load more reviews",
+  "review_verified": "Verified purchase",
+  "review_anonymous": "Anonymous"
 }

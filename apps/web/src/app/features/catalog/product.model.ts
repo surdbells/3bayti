@@ -122,6 +122,45 @@ export interface ProductReview {
 }
 
 /**
+ * A single review row as returned by the paginated public reviews
+ * endpoint (GET /products/:productId/reviews → ReviewSerializer::
+ * publicShape). Field names differ from the embedded `recent_reviews`
+ * shape (reviewer/star/comment/is_verified vs author/rating/body/
+ * verified); {@link mapPublicReview} normalises one into the other so
+ * the PDP renders both sources through a single template path.
+ */
+export interface PublicReview {
+  id: number;
+  product_id?: number | null;
+  product_name?: string | null;
+  reviewer?: string | null;
+  star: number;
+  title?: string | null;
+  comment?: string | null;
+  vendor_reply?: string | null;
+  is_verified?: boolean;
+  helpful_count?: number;
+  created_at?: string | null;
+}
+
+/**
+ * Normalise a publicShape review row into the embedded `recent_reviews`
+ * (ProductReview) shape, so the "load more" / paginated list renders
+ * through the exact same template markup as the first PDP render.
+ */
+export function mapPublicReview(r: PublicReview): ProductReview {
+  return {
+    id: r.id,
+    rating: Number(r.star) || 0,
+    title: r.title ?? null,
+    body: r.comment ?? '',
+    author: r.reviewer || 'Anonymous',
+    created_at: r.created_at ?? null,
+    verified: r.is_verified ?? false,
+  };
+}
+
+/**
  * Full product detail — what the PDP route receives.
  * Extends Product with the heavy fields not needed in card grids.
  */

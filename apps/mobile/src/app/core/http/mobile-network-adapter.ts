@@ -113,10 +113,12 @@ export function toLegacyEnvelope(v3Response: unknown): {
   status: 'success';
   message: '';
   data: unknown;
+  meta?: unknown;
 } {
   // Heuristic: if v3Response is an object with a `data` key, unwrap.
   // Otherwise pass the whole thing as `data`.
   let data: unknown;
+  let meta: unknown;
   if (
     v3Response !== null &&
     typeof v3Response === 'object' &&
@@ -124,6 +126,11 @@ export function toLegacyEnvelope(v3Response: unknown): {
     'data' in (v3Response as Record<string, unknown>)
   ) {
     data = (v3Response as Record<string, unknown>)['data'];
+    // Preserve the v3 pagination envelope (`{data, meta}`) so paginated
+    // direct call sites (e.g. product-reviews load-more) can read
+    // meta.total. Additive: present only when v3 sent it, so call sites
+    // that read just response_code/status/data are unaffected.
+    meta = (v3Response as Record<string, unknown>)['meta'];
   } else {
     data = v3Response;
   }
@@ -133,6 +140,7 @@ export function toLegacyEnvelope(v3Response: unknown): {
     status: 'success',
     message: '',
     data,
+    ...(meta !== undefined ? { meta } : {}),
   };
 }
 
@@ -702,7 +710,7 @@ export class MobileNetworkAdapter {
   private envelopeAndTransform(
     v3Response: unknown,
     routeKey: string | undefined,
-  ): { response_code: number; status: 'success'; message: ''; data: unknown } {
+  ): { response_code: number; status: 'success'; message: ''; data: unknown; meta?: unknown } {
     const envelope = toLegacyEnvelope(v3Response);
 
     if (routeKey === undefined) return envelope;

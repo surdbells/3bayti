@@ -362,6 +362,216 @@ swiper-slide,
   }
 }
 
+/* ===== Reviews ===== */
+.reviews-aggregate {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  background: var(--ax-color-bg-muted);
+  border-radius: var(--radius-md);
+}
+
+.reviews-aggregate__score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reviews-aggregate__avg {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--brand-dark);
+  line-height: 1;
+}
+
+.reviews-aggregate__count {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+/* Star rows (aggregate + per-review) */
+.reviews-stars,
+.review-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+
+  ax-icon {
+    font-size: 16px;
+    color: var(--ax-color-border-default);
+
+    &.is-filled { color: #f5a623; }
+    &.is-empty  { color: var(--ax-color-border-default); }
+  }
+}
+
+.review-stars--sm ax-icon {
+  font-size: 14px;
+}
+
+/* Write-a-review entry */
+.write-review-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  padding: 11px 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--brand-dark);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--brand-dark);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  ax-icon { font-size: 16px; }
+  &:active { background: rgba(124, 33, 8, 0.06); }
+}
+
+.reviews-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.review-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--ax-color-border-subtle, rgba(0, 0, 0, 0.06));
+
+  &:last-child { border-bottom: none; }
+}
+
+.review-item__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.review-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #1a7f37;
+
+  ax-icon { font-size: 14px; }
+}
+
+.review-item__title {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.review-item__body {
+  margin: 0 0 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.review-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.review-item__author { font-weight: 600; }
+.review-item__dot { opacity: 0.6; }
+
+.reviews-load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 10px 16px;
+  border: 1px solid var(--ax-color-border-default);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--brand-dark);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:disabled { opacity: 0.7; }
+}
+
+/* Write-review form (inside the bottom sheet) */
+.review-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-bottom: 12px;
+}
+
+.review-form__stars-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1a1a1a);
+}
+
+.review-rating-picker {
+  display: flex;
+  gap: 6px;
+}
+
+.review-rating-picker__star {
+  padding: 4px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 0;
+
+  ax-icon {
+    font-size: 30px;
+    color: var(--ax-color-border-default);
+    transition: color 0.15s ease;
+  }
+
+  &.is-on ax-icon { color: #f5a623; }
+}
+
+.review-form__hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.review-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--brand-dark);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:disabled { opacity: 0.55; }
+}
+
 /* Description */
 .product-description {
   font-size: 14px;

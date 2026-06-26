@@ -100,6 +100,31 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/products/:slug/recommendations',
     shape: 'v3-envelope',
   },
+  // Per-product reviews (web + mobile PDP). Keyed by the NUMERIC v3
+  // product id — the v3 routes are scoped to {productId:[0-9]+}
+  // (apps/api/config/routes.php). GET is PUBLIC (approved-only,
+  // paginated, ReviewSerializer::publicShape); POST is Bearer-auth
+  // (upsert, lands status=pending). Net-new v3-only catalog reads/writes
+  // (no legacy 1:1), so oldPath is '' — both web (RoutedHttpClient) and
+  // mobile (MobileNetworkAdapter via get_v3/post_v3) invoke these
+  // directly by routeKey with { productId } in pathParams.
+  //
+  // Note: detailShape (GET /products/:slug) already embeds up to 10
+  // approved reviews under recent_reviews + rating + review_count, so
+  // the GET list here backs the paginated "see all reviews" view, not
+  // the first PDP render.
+  'GET /products/:productId/reviews': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/products/:productId/reviews',
+    shape: 'v3-envelope',
+  },
+  'POST /products/:productId/reviews': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/products/:productId/reviews',
+    shape: 'v3-envelope',
+  },
   // HP-BE — storefront campaigns (homepage Anniversary Deals + Flash Sale).
   // Net-new v3-only. /active = the live anniversary + flash; /:slug = one
   // campaign's full product set (storefront "view all").

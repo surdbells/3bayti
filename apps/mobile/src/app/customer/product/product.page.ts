@@ -34,6 +34,8 @@ import { SizeChipsComponent } from "../../size-chips/size-chips.component";
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from "../../translate.pipe";
 import { CartCountService } from '../../core/services/cart-count.service';
+import { ProductReviewService } from '../../core/services/product-review.service';
+import { ProductReview } from '../../class/product-review';
 import { Products } from "../../class/products";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -164,6 +166,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private i18n: I18nService,
     private cartCount: CartCountService,
+    private reviewService: ProductReviewService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -220,6 +223,176 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   /** Switch the active PDP info tab (Description / Reviews). */
   setTab(tab: 'description' | 'reviews'): void {
     this.activeTab = tab;
+    // Lazy-load the review list the first time the Reviews tab is opened.
+    if (tab === 'reviews' && !this.reviewsLoadedOnce) {
+      this.loadReviews(true);
+    }
+  }
+
+  // ========================================
+  // Reviews — READ side
+  // ========================================
+
+  /** How many reviews to fetch per page (initial + each "load more"). */
+  private readonly reviewsPageSize = 10;
+
+  /** Loaded approved reviews (accumulated across "load more" pages). */
+  reviews: ProductReview[] = [];
+  reviewsTotal = 0;
+  reviewsHasMore = false;
+  reviewsLoading = false;
+  /** Becomes true after the first fetch so the empty state only shows post-load. */
+  reviewsLoadedOnce = false;
+
+  /** The v3 numeric product id used for the review endpoints. detailShape
+   *  surfaces the v3 PK as top-level `id`, which the response transform maps
+   *  onto `single.product`. Guarded so calls never fire with 0. */
+  private get reviewProductId(): number {
+    return Number(this.single.product) || 0;
+  }
+
+  /**
+   * Fetch a page of approved reviews. `reset` clears the accumulated list
+   * (initial load); otherwise it appends the next page ("load more").
+   */
+  async loadReviews(reset = false): Promise<void> {
+    const productId = this.reviewProductId;
+    if (!productId || this.reviewsLoading) {
+      this.reviewsLoadedOnce = true;
+      this.cdr.markForCheck();
+      return;
+    }
+    if (reset) {
+      this.reviews = [];
+      this.reviewsTotal = 0;
+      this.reviewsHasMore = false;
+    }
+    this.reviewsLoading = true;
+    this.cdr.markForCheck();
+
+    try {
+      const page = await this.reviewService.list(productId, {
+        limit: this.reviewsPageSize,
+        offset: this.reviews.length,
+      });
+      this.reviews = reset ? page.reviews : [...this.reviews, ...page.reviews];
+      this.reviewsTotal = page.total;
+      this.reviewsHasMore = page.hasMore;
+    } catch {
+      // Leave whatever is already loaded; show the empty state if nothing.
+    } finally {
+      this.reviewsLoading = false;
+      this.reviewsLoadedOnce = true;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /** Append the next page of reviews. */
+  loadMoreReviews(): void {
+    void this.loadReviews(false);
+  }
+
+  /** Average star rating across the loaded reviews (0 when none). */
+  get reviewsAverage(): number {
+    if (this.reviews.length === 0) return 0;
+    const sum = this.reviews.reduce((acc, r) => acc + (Number(r.star) || 0), 0);
+    return sum / this.reviews.length;
+  }
+
+  /** Star fill states for an aggregate or per-review rating (rounds to the
+   *  nearest whole star — the icon set has no half-star glyph). */
+  starStates(rating: number): Array<'full' | 'empty'> {
+    const filled = Math.round(rating);
+    const out: Array<'full' | 'empty'> = [];
+    for (let i = 1; i <= 5; i++) out.push(i <= filled ? 'full' : 'empty');
+    return out;
+  }
+
+  /** Localised, RTL-safe formatted review date. */
+  formatReviewDate(iso: string): string {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const locale = this.i18n.lang === 'ar' ? 'ar' : 'en';
+    try {
+      return new Intl.DateTimeFormat(locale, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }).format(d);
+    } catch {
+      return d.toISOString().slice(0, 10);
+    }
+  }
+
+  // ========================================
+  // Reviews — WRITE side
+  // ========================================
+
+  isReviewSheetOpen = false;
+  reviewSubmitting = false;
+  reviewForm = { star: 0, title: '', comment: '' };
+
+  /** Open the "Write a review" sheet — auth-gated (guests prompted to sign in). */
+  openReviewSheet(): void {
+    if (this.isGuest || !this.single_user.token) {
+      this.error_notification(this.i18n.t('review_sign_in_to_review'));
+      this.router.navigate(['/', 'login']);
+      return;
+    }
+    this.reviewForm = { star: 0, title: '', comment: '' };
+    this.isReviewSheetOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  /** Set the chosen star rating in the write-review form. */
+  setReviewStar(star: number): void {
+    this.reviewForm.star = star;
+    this.cdr.markForCheck();
+  }
+
+  /** Submit the review (upsert, lands PENDING moderation), then refresh. */
+  async submitReview(): Promise<void> {
+    if (this.reviewSubmitting) return;
+    if (this.isGuest || !this.single_user.token) {
+      this.error_notification(this.i18n.t('review_sign_in_to_review'));
+      this.router.navigate(['/', 'login']);
+      return;
+    }
+    if (this.reviewForm.star < 1 || this.reviewForm.star > 5) {
+      this.error_notification(this.i18n.t('review_select_rating'));
+      return;
+    }
+    const productId = this.reviewProductId;
+    if (!productId) {
+      this.error_notification(this.i18n.t('text_something_went_wrong'));
+      return;
+    }
+
+    this.reviewSubmitting = true;
+    this.cdr.markForCheck();
+    try {
+      const ok = await this.reviewService.submit(this.single_user.token, productId, {
+        star: this.reviewForm.star,
+        title: this.reviewForm.title,
+        comment: this.reviewForm.comment,
+      });
+      if (ok) {
+        this.success_notification(this.i18n.t('review_submitted_for_approval'));
+        this.isReviewSheetOpen = false;
+        this.reviewForm = { star: 0, title: '', comment: '' };
+        // Refresh the (approved-only) list; the new review stays hidden until
+        // moderated, but any concurrently-approved reviews show up.
+        void this.loadReviews(true);
+      } else {
+        this.error_notification(this.i18n.t('review_submit_failed'));
+      }
+    } catch {
+      this.error_notification(this.i18n.t('review_submit_failed'));
+    } finally {
+      this.reviewSubmitting = false;
+      this.cdr.markForCheck();
+    }
   }
 
   single = {

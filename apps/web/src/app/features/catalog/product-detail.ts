@@ -36,10 +36,13 @@ import type {
   Money,
   Product,
   ProductDetail,
+  ProductReview,
   ProductSize,
   ProductColor,
+  PublicReview,
   StoreSizeChartRow,
 } from './product.model';
+import { mapPublicReview } from './product.model';
 import { RecommendationsService } from './recommendations.service';
 import { StoreService } from './store.service';
 import { CartService } from '../../core/cart/cart.service';
@@ -690,6 +693,197 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
    */
   readonly starPositions = [1, 2, 3, 4, 5] as const;
 
+  /* ----- Reviews: read (embedded + paginated load-more) ------------------
+   * First PDP render uses the reviews already embedded in the detail
+   * response (p.recent_reviews — up to 10 approved, newest first). The
+   * "see all reviews" button pages the rest in via
+   * GET /products/:productId/reviews (approved-only, ReviewSerializer::
+   * publicShape) and appends, de-duped by id. `loadedReviews` holds the
+   * extra pages; `reviews()` merges embedded + loaded for the template. */
+  private readonly REVIEWS_PAGE_SIZE = 10;
+  /** Extra review pages fetched beyond the embedded first render. */
+  private readonly loadedReviews = signal<ProductReview[]>([]);
+  /** Offset for the next page fetch (starts past the embedded reviews). */
+  private readonly reviewsOffset = signal(0);
+  /** Total approved reviews on the server (from the list meta). */
+  private readonly reviewsTotal = signal<number | null>(null);
+  /** True while a "load more reviews" request is in flight. */
+  readonly reviewsLoading = signal(false);
+  /** Set when a reviews page fetch fails outright. */
+  readonly reviewsError = signal(false);
+
+  /** Embedded reviews from the PDP detail payload (first render). */
+  private readonly embeddedReviews = computed<ProductReview[]>(
+    () => this.product()?.recent_reviews ?? [],
+  );
+
+  /**
+   * All reviews to render: the embedded first page plus any paged-in
+   * extras, de-duplicated by id (a re-fetched first page can't double
+   * up). Newest-first ordering is preserved by the server.
+   */
+  readonly reviews = computed<ProductReview[]>(() => {
+    const seen = new Set<number>();
+    const out: ProductReview[] = [];
+    for (const r of [...this.embeddedReviews(), ...this.loadedReviews()]) {
+      if (seen.has(r.id)) continue;
+      seen.add(r.id);
+      out.push(r);
+    }
+    return out;
+  });
+
+  /**
+   * Whether there are more approved reviews on the server than we've
+   * loaded so far — gates the "see all / load more" button. Uses the
+   * review_count aggregate as the initial source of truth (before any
+   * page fetch), then the list meta total once a page has loaded.
+   */
+  readonly hasMoreReviews = computed<boolean>(() => {
+    const total = this.reviewsTotal() ?? this.product()?.review_count ?? 0;
+    return this.reviews().length < total;
+  });
+
+  /**
+   * Fetch the next page of approved reviews and append. Keyed by the
+   * product's numeric v3 id (product().id) per the reviews route
+   * contract. Idempotent-ish: guarded against concurrent loads.
+   */
+  loadMoreReviews(): void {
+    const p = this.product();
+    if (!p || this.reviewsLoading()) return;
+
+    this.reviewsLoading.set(true);
+    this.reviewsError.set(false);
+    /* First "see all" picks up right after the reviews embedded in the
+       PDP detail payload (offset = how many we already show); subsequent
+       pages advance the stored cursor. */
+    const offset =
+      this.loadedReviews().length === 0 ? this.embeddedReviews().length : this.reviewsOffset();
+
+    this.routed
+      .get<PublicReview[]>('GET /products/:productId/reviews', {
+        params: { productId: p.id },
+        query: { limit: this.REVIEWS_PAGE_SIZE, offset },
+      })
+      .subscribe({
+        next: (env) => {
+          const rows = (env.data ?? []).map(mapPublicReview);
+          this.loadedReviews.update((prev) => [...prev, ...rows]);
+          this.reviewsOffset.set(offset + this.REVIEWS_PAGE_SIZE);
+          const total = env.meta?.total;
+          if (typeof total === 'number') this.reviewsTotal.set(total);
+          this.reviewsLoading.set(false);
+        },
+        error: () => {
+          this.reviewsError.set(true);
+          this.reviewsLoading.set(false);
+        },
+      });
+  }
+
+  /* ----- Reviews: write (auth-gated submission) --------------------------
+   * Signed-in shoppers can leave a review: a 1–5 star rating (required),
+   * an optional title, and a comment. Submits to POST /products/:productId
+   * /reviews (Bearer; the auth interceptor attaches the token). The review
+   * lands status=pending, so on success we show a "submitted for
+   * moderation" confirmation rather than optimistically injecting it into
+   * the public list. Guests see a sign-in prompt instead of the form. */
+  /** Whether the write-a-review form is expanded. */
+  readonly reviewFormOpen = signal(false);
+  /** Selected star rating in the form (0 = none yet). */
+  readonly reviewStar = signal(0);
+  /** Hovered star (for the interactive rating preview); 0 = none. */
+  readonly reviewStarHover = signal(0);
+  /** Title input (optional). */
+  readonly reviewTitle = signal('');
+  /** Comment input. */
+  readonly reviewComment = signal('');
+  /** True while the submit request is in flight. */
+  readonly reviewSubmitting = signal(false);
+  /** Set true once a review has been accepted (pending moderation). */
+  readonly reviewSubmitted = signal(false);
+  /** Inline validation / submit error key (null = none). */
+  readonly reviewFormError = signal<string | null>(null);
+
+  /** The star fill to show in the form control (hover wins over click). */
+  reviewFormStarActive(position: number): boolean {
+    const active = this.reviewStarHover() || this.reviewStar();
+    return position <= active;
+  }
+
+  /** Open the form (no-op if already submitted). */
+  openReviewForm(): void {
+    if (this.reviewSubmitted()) return;
+    this.reviewFormOpen.set(true);
+  }
+
+  /** Pick a star rating in the form. */
+  setReviewStar(value: number): void {
+    this.reviewStar.set(value);
+    this.reviewFormError.set(null);
+  }
+
+  /** Hover preview for the star control. */
+  hoverReviewStar(value: number): void {
+    this.reviewStarHover.set(value);
+  }
+
+  /** Bind the title input. */
+  onReviewTitleInput(event: Event): void {
+    this.reviewTitle.set((event.target as HTMLInputElement).value);
+  }
+
+  /** Bind the comment textarea. */
+  onReviewCommentInput(event: Event): void {
+    this.reviewComment.set((event.target as HTMLTextAreaElement).value);
+  }
+
+  /**
+   * Submit the review. Validates the star rating client-side first, then
+   * POSTs. A 400/422 from the server surfaces inline; any other failure
+   * shows a generic submit error. On success the form collapses into a
+   * "submitted for moderation" confirmation.
+   */
+  submitReview(): void {
+    const p = this.product();
+    if (!p || this.reviewSubmitting()) return;
+
+    const star = this.reviewStar();
+    if (star < 1 || star > 5) {
+      this.reviewFormError.set('product.reviews.form.errorStar');
+      return;
+    }
+
+    this.reviewSubmitting.set(true);
+    this.reviewFormError.set(null);
+
+    this.routed
+      .post<unknown>('POST /products/:productId/reviews', {
+        params: { productId: p.id },
+        body: {
+          star,
+          title: this.reviewTitle().trim() || null,
+          comment: this.reviewComment().trim() || null,
+        },
+      })
+      .subscribe({
+        next: () => {
+          this.reviewSubmitting.set(false);
+          this.reviewSubmitted.set(true);
+          this.reviewFormOpen.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.reviewSubmitting.set(false);
+          this.reviewFormError.set(
+            err.status === 400 || err.status === 422
+              ? 'product.reviews.form.errorValidation'
+              : 'product.reviews.form.errorSubmit',
+          );
+        },
+      });
+  }
+
   /** Computed page title — fed to SeoService AND displayed in <title>. */
   readonly pageTitle = computed(() => {
     const p = this.product();
@@ -726,6 +920,22 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       this.sizeGuideRows.set([]);
       this.sizeGuideError.set(false);
       this.sizeGuideLoadedFor = null;
+      /* Reset the reviews read + write state so a previous product's
+         loaded pages, pagination cursor, or in-flight submission never
+         leak into the next product. */
+      this.loadedReviews.set([]);
+      this.reviewsOffset.set(0);
+      this.reviewsTotal.set(null);
+      this.reviewsLoading.set(false);
+      this.reviewsError.set(false);
+      this.reviewFormOpen.set(false);
+      this.reviewStar.set(0);
+      this.reviewStarHover.set(0);
+      this.reviewTitle.set('');
+      this.reviewComment.set('');
+      this.reviewSubmitting.set(false);
+      this.reviewSubmitted.set(false);
+      this.reviewFormError.set(null);
     });
 
     /* Prefill the custom-size form from the saved account default the first

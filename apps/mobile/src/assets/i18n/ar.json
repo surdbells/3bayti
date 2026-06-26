@@ -993,5 +993,21 @@
   "text_unable_to_delete_address": "تعذّر حذف العنوان. يرجى المحاولة مرة أخرى.",
   "text_default_address_updated": "تم تحديث العنوان الافتراضي.",
   "text_unable_to_load_addresses": "تعذّر تحميل العناوين. يرجى المحاولة مرة أخرى.",
-  "error_vendor_not_loaded": "يتم تحميل المتجر. يرجى المحاولة مرة أخرى."
+  "error_vendor_not_loaded": "يتم تحميل المتجر. يرجى المحاولة مرة أخرى.",
+  "review_write_a_review": "اكتب مراجعة",
+  "review_your_rating": "تقييمك",
+  "review_title": "العنوان",
+  "review_title_ph": "لخّص مراجعتك",
+  "review_comment": "المراجعة",
+  "review_comment_ph": "شاركنا تجربتك مع هذا المنتج",
+  "review_submit": "إرسال المراجعة",
+  "review_moderation_hint": "سيتم نشر مراجعتك بعد الموافقة عليها.",
+  "review_submitted_for_approval": "شكراً! تم إرسال مراجعتك للموافقة عليها.",
+  "review_submit_failed": "تعذّر إرسال مراجعتك. حاول مرة أخرى.",
+  "review_select_rating": "يرجى اختيار تقييم بالنجوم.",
+  "review_sign_in_to_review": "سجّل الدخول لكتابة مراجعة.",
+  "review_count_label": "{{count}} مراجعة",
+  "review_load_more": "عرض المزيد من المراجعات",
+  "review_verified": "عملية شراء موثّقة",
+  "review_anonymous": "مجهول"
 }

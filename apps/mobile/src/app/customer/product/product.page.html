@@ -126,10 +126,93 @@
         <!-- Reviews panel -->
         @if(activeTab === 'reviews'){
           <div class="info-panel info-panel--reviews" role="tabpanel">
-            <div class="reviews-empty">
-              <ax-icon name="message-square"></ax-icon>
-              <p>{{ 'heading_no_reviews_yet' | translate }}</p>
-            </div>
+            <!-- Aggregate: avg stars + count (only once we have reviews) -->
+            @if(reviews.length > 0){
+              <div class="reviews-aggregate">
+                <div class="reviews-aggregate__score">
+                  <span class="reviews-aggregate__avg">{{ reviewsAverage | number:'1.1-1' }}</span>
+                  <div class="reviews-stars" [attr.aria-label]="reviewsAverage + ' / 5'">
+                    @for(s of starStates(reviewsAverage); track $index){
+                      <ax-icon
+                        name="star"
+                        [class.is-filled]="s === 'full'"
+                        [class.is-empty]="s === 'empty'"></ax-icon>
+                    }
+                  </div>
+                </div>
+                <span class="reviews-aggregate__count">
+                  {{ 'review_count_label' | translate:{ count: reviewsTotal } }}
+                </span>
+              </div>
+            }
+
+            <!-- Write-a-review entry -->
+            <button type="button" class="write-review-btn" (click)="openReviewSheet()">
+              <ax-icon name="pencil"></ax-icon>
+              <span>{{ 'review_write_a_review' | translate }}</span>
+            </button>
+
+            <!-- Review list -->
+            @if(reviews.length > 0){
+              <ul class="reviews-list">
+                @for(r of reviews; track r.id){
+                  <li class="review-item">
+                    <div class="review-item__head">
+                      <div class="review-stars review-stars--sm" [attr.aria-label]="r.star + ' / 5'">
+                        @for(s of starStates(r.star); track $index){
+                          <ax-icon
+                            name="star"
+                            [class.is-filled]="s === 'full'"
+                            [class.is-empty]="s !== 'full'"></ax-icon>
+                        }
+                      </div>
+                      @if(r.is_verified){
+                        <span class="review-verified">
+                          <ax-icon name="check-check"></ax-icon>
+                          {{ 'review_verified' | translate }}
+                        </span>
+                      }
+                    </div>
+                    @if(r.title){
+                      <h3 class="review-item__title">{{ r.title }}</h3>
+                    }
+                    @if(r.comment){
+                      <p class="review-item__body">{{ r.comment }}</p>
+                    }
+                    <div class="review-item__meta">
+                      <span class="review-item__author">{{ r.reviewer || ('review_anonymous' | translate) }}</span>
+                      @if(formatReviewDate(r.created_at)){
+                        <span class="review-item__dot">·</span>
+                        <span class="review-item__date">{{ formatReviewDate(r.created_at) }}</span>
+                      }
+                    </div>
+                  </li>
+                }
+              </ul>
+
+              @if(reviewsHasMore){
+                <button
+                  type="button"
+                  class="reviews-load-more"
+                  [disabled]="reviewsLoading"
+                  (click)="loadMoreReviews()">
+                  @if(reviewsLoading){
+                    <ax-loader></ax-loader>
+                  } @else {
+                    {{ 'review_load_more' | translate }}
+                  }
+                </button>
+              }
+            } @else if(reviewsLoading && !reviewsLoadedOnce){
+              <div class="loading-center">
+                <ax-loader></ax-loader>
+              </div>
+            } @else if(reviewsLoadedOnce){
+              <div class="reviews-empty">
+                <ax-icon name="message-square"></ax-icon>
+                <p>{{ 'heading_no_reviews_yet' | translate }}</p>
+              </div>
+            }
           </div>
         }
 
@@ -384,6 +467,70 @@
           <ax-loader></ax-loader>
         </div>
       }
+    </ax-bottom-sheet>
+  }
+
+  <!-- Write-a-review sheet (auth-gated; guests are redirected to login) -->
+  @if(!ui_controls.is_loading){
+    <ax-bottom-sheet
+      [isOpen]="isReviewSheetOpen"
+      (didDismiss)="isReviewSheetOpen = false"
+      [snapPoints]="[0.7, 0.95]"
+      [initialSnap]="0"
+      [title]="'review_write_a_review' | translate">
+
+      <div class="review-form">
+        <!-- Star picker -->
+        <div class="review-form__stars-label">{{ 'review_your_rating' | translate }}</div>
+        <div class="review-rating-picker" role="radiogroup"
+             [attr.aria-label]="'review_your_rating' | translate">
+          @for(n of [1,2,3,4,5]; track n){
+            <button
+              type="button"
+              class="review-rating-picker__star"
+              role="radio"
+              [class.is-on]="reviewForm.star >= n"
+              [attr.aria-checked]="reviewForm.star === n"
+              [attr.aria-label]="n + ' / 5'"
+              (click)="setReviewStar(n)">
+              <ax-icon name="star"></ax-icon>
+            </button>
+          }
+        </div>
+
+        <ax-text-field
+          [label]="'review_title' | translate"
+          type="text"
+          [maxlength]="80"
+          [placeholder]="'review_title_ph' | translate"
+          [(ngModel)]="reviewForm.title"
+          name="review_title">
+        </ax-text-field>
+
+        <ax-text-field
+          [label]="'review_comment' | translate"
+          [multiline]="true"
+          [rows]="4"
+          [maxlength]="500"
+          [placeholder]="'review_comment_ph' | translate"
+          [(ngModel)]="reviewForm.comment"
+          name="review_comment">
+        </ax-text-field>
+
+        <p class="review-form__hint">{{ 'review_moderation_hint' | translate }}</p>
+
+        <button
+          type="button"
+          class="review-submit-btn"
+          [disabled]="reviewSubmitting || reviewForm.star < 1"
+          (click)="submitReview()">
+          @if(reviewSubmitting){
+            <ax-loader></ax-loader>
+          } @else {
+            {{ 'review_submit' | translate }}
+          }
+        </button>
+      </div>
     </ax-bottom-sheet>
   }
   }
