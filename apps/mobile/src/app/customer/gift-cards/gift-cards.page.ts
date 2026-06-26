@@ -286,18 +286,18 @@ export class GiftCardsPage implements OnInit {
    * Open the contacts picker and fill the recipient phone (+ name/email when
    * available).
    *
-   * Two strategies, in order:
-   *  1. Native ACTION_PICK picker (`Contacts.pickContact`). Fast + privacy
-   *     friendly (only the chosen contact is read), but it relies on the
-   *     Android/iOS startActivityForResult bridge which can fail/hang on some
-   *     devices/OS combos. We treat any rejection here as "fall through".
-   *  2. In-app picker — `Contacts.getContacts` reads the address book once and
-   *     we render it inside our own ax-bottom-sheet (no activity-result bridge
-   *     involved, so it works wherever the plugin loads).
+   * We render OUR OWN in-app picker: `Contacts.getContacts()` reads the address
+   * book once (a direct ContentResolver/CNContactStore read — no Intent) and we
+   * show it in a searchable ax-bottom-sheet; tapping a row fills the recipient
+   * fields. This deliberately AVOIDS the native `pickContact()` ACTION_PICK
+   * flow, which on Android pops a "Complete action with" app-chooser AND
+   * resolves with `{ contacts: [...] }` (NOT `{ contact }`) — that shape
+   * mismatch silently dropped the selection so the number never populated. The
+   * in-app list opens straight to the contacts and fills reliably via our code.
    *
-   * Manual entry remains the true last resort: if the plugin itself is missing
-   * (web preview / before `npx cap sync`) or permission is denied, we show the
-   * existing toast and the user types the number.
+   * Manual entry remains the true last resort: if the plugin is missing (web
+   * preview / before `npx cap sync`), unavailable, or permission is denied, we
+   * show the existing toast and the user types the number.
    *
    * Build-safe: the plugin is imported lazily and every native call is guarded
    * so failures degrade gracefully instead of crashing the page.
@@ -316,21 +316,7 @@ export class GiftCardsPage implements OnInit {
         return;
       }
 
-      // Strategy 1: native single-contact picker.
-      try {
-        const result: any = await Contacts.pickContact({
-          fields: ['fullName', 'givenName', 'familyName', 'phoneNumbers', 'emailAddresses'],
-        });
-        const contact = result?.contact;
-        // Some platforms resolve with no contact on cancel — just bail quietly.
-        if (!contact) return;
-        this.applyPickedContact(this.fromCapgoContact(contact));
-        return;
-      } catch {
-        // Native picker bridge unavailable/failed — fall back to the in-app list.
-      }
-
-      // Strategy 2: read all contacts and present our own picker sheet.
+      // Open our in-app contact list directly — no native chooser, reliable fill.
       await this.openInAppContactsPicker(Contacts);
     } catch {
       // Plugin missing / not synced — genuine manual-entry fallback.
