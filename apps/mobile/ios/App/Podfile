@@ -11,6 +11,7 @@ install! 'cocoapods', :disable_input_output_paths => true
 def capacitor_pods
   pod 'Capacitor', :path => '../../../../node_modules/.pnpm/@capacitor+ios@8.3.3_@capacitor+core@8.3.3/node_modules/@capacitor/ios'
   pod 'CapacitorCordova', :path => '../../../../node_modules/.pnpm/@capacitor+ios@8.3.3_@capacitor+core@8.3.3/node_modules/@capacitor/ios'
+  pod 'CapacitorFirebaseAuthentication', :path => '../../../../node_modules/.pnpm/@capacitor-firebase+authentication@8.3.0_@capacitor+core@8.3.3_firebase@12.15.0/node_modules/@capacitor-firebase/authentication'
   pod 'CapacitorApp', :path => '../../../../node_modules/.pnpm/@capacitor+app@8.1.0_@capacitor+core@8.3.3/node_modules/@capacitor/app'
   pod 'CapacitorHaptics', :path => '../../../../node_modules/.pnpm/@capacitor+haptics@8.0.2_@capacitor+core@8.3.3/node_modules/@capacitor/haptics'
   pod 'CapacitorNetwork', :path => '../../../../node_modules/.pnpm/@capacitor+network@8.0.1_@capacitor+core@8.3.3/node_modules/@capacitor/network'

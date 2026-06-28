@@ -5,6 +5,7 @@ import {
   Platform, IonText
 } from '@ionic/angular/standalone';
 import { Preferences } from '@capacitor/preferences';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { ConnectionService } from '../../service/connection.service';
 import { Subscription } from 'rxjs';
 
@@ -76,8 +77,29 @@ export class LoginPage implements OnInit, OnDestroy {
     isOnline = true;
     private sub: Subscription;
 
-    /** Active view state. */
-    view: 'choice' | 'phone' | 'email' | 'otp' | 'password' = 'choice';
+    /**
+     * Active view state.
+     *
+     * The two extra states 'social-phone' / 'social-otp' implement the
+     * phone-after-social gate: a freshly social-signed-in account whose
+     * is_phone_verified is false must capture + verify a phone before it
+     * can proceed to /account.
+     */
+    view: 'choice' | 'phone' | 'email' | 'otp' | 'password' | 'social-phone' | 'social-otp' = 'choice';
+
+    /** True while a native Google/Apple sign-in is in flight (button spinner). */
+    socialLoading = false;
+
+    /**
+     * Auth token of the freshly social-signed-in user, held while the
+     * phone-after-social gate runs (POST /me/phone + /me/phone/verify use it).
+     * The user blob is already persisted in Preferences before we enter the
+     * gate; we keep the token here to authenticate the phone calls without a
+     * Preferences round-trip on each tap.
+     */
+    private socialAuthToken = '';
+    /** Phone the social user is verifying (separate model from login `phone`). */
+    socialPhone = '';
 
     /** Dial-code picker state (reuses the register/profile pattern). */
     isCountryCodeOpen = false;
@@ -385,6 +407,25 @@ export class LoginPage implements OnInit, OnDestroy {
       value: JSON.stringify(userToStore)
     });
 
+    // Phone-after-social gate: a freshly social-signed-in account has
+    // is_phone_verified=false. Persist the session (above) but DON'T navigate
+    // home yet — route into the phone-capture step instead, authenticated with
+    // the just-issued token. Email/OTP/password logins always have a verified
+    // phone, so they fall through to the normal success path below.
+    if ((userToStore as any)?.is_phone_verified === false) {
+      this.socialAuthToken = typeof (userToStore as any)?.token === 'string'
+        ? (userToStore as any).token
+        : '';
+      // Best-effort: register push + merge cart now too (the account is
+      // already valid), then drop the user into the phone gate.
+      void this.pushManager.onSignedIn();
+      this.ui_controls.login_loading = false;
+      this.socialPhone = '';
+      this.otp.code = '';
+      this.view = 'social-phone';
+      return;
+    }
+
     // Request push permission + register this device's token. Fire-and-
     // forget: PushManager swallows errors and is a no-op on web.
     void this.pushManager.onSignedIn();
@@ -547,11 +588,195 @@ export class LoginPage implements OnInit, OnDestroy {
   forgot_password() {
     this.router.navigate(['/', 'reset']);
   }
+  // ===== Native social sign-in (Google / Apple via Firebase) ==============
+
+  /** Native Google sign-in -> Firebase ID token -> POST /auth/social. */
   google_signin(): void {
-    this.show_error(this.i18n.t('text_google_signin_unavailable'));
+    void this.socialSignIn('google');
   }
+
+  /** Native Apple sign-in -> Firebase ID token -> POST /auth/social. */
   apple_signin(): void {
-    this.show_error(this.i18n.t('text_apple_signin_unavailable'));
+    void this.socialSignIn('apple');
+  }
+
+  /**
+   * Shared native social sign-in path.
+   *
+   * Runs the native Firebase sign-in for the chosen provider, reads the
+   * Firebase ID token (NOT the provider token — our API verifies the
+   * Firebase token), exchanges it at POST /auth/social for the standard
+   * login envelope, then funnels into onLoginSuccess() — the SAME success
+   * block the email/password + OTP flows use (persist user, push register,
+   * cart merge, navigate / or the phone-after-social gate).
+   *
+   * User-cancelled sign-in is swallowed quietly (no error toast).
+   */
+  private async socialSignIn(provider: 'google' | 'apple'): Promise<void> {
+    if (this.socialLoading || this.ui_controls.login_loading) return;
+    if (!this.guardOnline()) return;
+
+    this.socialLoading = true;
+    try {
+      if (provider === 'google') {
+        await FirebaseAuthentication.signInWithGoogle();
+      } else {
+        await FirebaseAuthentication.signInWithApple();
+      }
+
+      // The Firebase ID token is what POST /auth/social verifies.
+      const { token } = await FirebaseAuthentication.getIdToken();
+      if (!token) {
+        this.socialLoading = false;
+        this.show_error(this.i18n.t('text_social_signin_failed'));
+        return;
+      }
+
+      this.ui_controls.login_loading = true;
+      this.networkAdapter.post_v3('POST /auth/social', { id_token: token }).subscribe({
+        next: (response: any) => {
+          this.socialLoading = false;
+          if (response.response_code === 200 && response.status === 'success') {
+            this.onLoginSuccess(response.data);
+          } else {
+            this.ui_controls.login_loading = false;
+            this.show_error(response.message || this.i18n.t('text_social_signin_failed'));
+          }
+        },
+        error: (e) => {
+          this.socialLoading = false;
+          this.handleHttpError(e);
+        },
+      });
+    } catch (err) {
+      this.socialLoading = false;
+      // User cancelled the native sheet — stay quiet (no error toast).
+      if (this.isCancelledSignIn(err)) return;
+      console.error('[Login] social sign-in failed', err);
+      this.show_error(this.i18n.t('text_social_signin_failed'));
+    }
+  }
+
+  /**
+   * Detect a user-cancelled native sign-in so we can swallow it silently.
+   * The Firebase Auth plugin surfaces cancellation differently per platform
+   * (a "canceled"/"cancelled" message, or Apple's 1001 / Google's 12501
+   * codes), so we match on the common substrings.
+   */
+  private isCancelledSignIn(err: unknown): boolean {
+    const msg = (err && typeof err === 'object' && 'message' in err
+      ? String((err as any).message)
+      : String(err)).toLowerCase();
+    return (
+      msg.includes('cancel') ||
+      msg.includes('canceled') ||
+      msg.includes('1001') ||
+      msg.includes('12501')
+    );
+  }
+
+  // ===== Phone-after-social gate (capture + verify phone) =================
+
+  /** Send the OTP for the social user's phone. POST /me/phone. */
+  sendSocialPhone(): void {
+    if (this.ui_controls.login_loading) return;
+    if (!this.guardOnline()) return;
+    if (this.socialPhone.replace(/\D/g, '').length === 0) {
+      this.show_error(this.i18n.t('text_phone_required'));
+      return;
+    }
+    this.ui_controls.login_loading = true;
+    this.networkAdapter.post_v3(
+      'POST /me/phone',
+      {
+        phone: this.fullSocialPhone,
+        country_code: mapDialToIso(this.countryCode),
+      },
+      { authToken: this.socialAuthToken },
+    ).subscribe({
+      next: (response: any) => {
+        this.ui_controls.login_loading = false;
+        if (response.response_code === 200 && response.status === 'success') {
+          this.otp.code = '';
+          this.view = 'social-otp';
+          this.startResendCooldown();
+          this.success_notification(this.i18n.t('text_otp_sent'));
+        } else {
+          this.handleOtpError(response);
+        }
+      },
+      error: (e) => this.handleHttpError(e),
+    });
+  }
+
+  /** Verify the social user's phone OTP. POST /me/phone/verify -> /account. */
+  verifySocialPhone(): void {
+    if (this.otp.code.length === 0) {
+      this.show_error(this.i18n.t('text_otp_required'));
+      return;
+    }
+    this.ui_controls.login_loading = true;
+    this.networkAdapter.post_v3(
+      'POST /me/phone/verify',
+      { code: this.otp.code },
+      { authToken: this.socialAuthToken },
+    ).subscribe({
+      next: (response: any) => {
+        this.ui_controls.login_loading = false;
+        if (response.response_code === 200 && response.status === 'success') {
+          // Phone now verified — flip the cached flag and continue home,
+          // reusing the shared post-auth navigation (cart merge already ran
+          // at social login; keep it idempotent + non-blocking).
+          this.finishSocialGate();
+        } else {
+          this.handleOtpError(response);
+        }
+      },
+      error: (e) => this.handleHttpError(e),
+    });
+  }
+
+  /** Re-send the social-gate OTP (re-call POST /me/phone). */
+  resendSocialPhoneOtp(): void {
+    if (this.otpCooldown > 0) return;
+    this.sendSocialPhone();
+  }
+
+  /** Back from the social OTP screen to the phone-entry screen. */
+  changeSocialPhone(): void {
+    this.view = 'social-phone';
+    this.otp.code = '';
+    this.clearOtpTimer();
+    this.otpCooldown = 0;
+    this.otpLocked = false;
+  }
+
+  /** Full E.164-ish social phone for the API ("+971" + national digits). */
+  get fullSocialPhone(): string {
+    const national = this.socialPhone.replace(/^0+/, '').replace(/\D/g, '');
+    return `${this.countryCode}${national}`;
+  }
+
+  /**
+   * Mark the cached user's phone as verified and navigate to /account.
+   * Updates the Preferences blob so a relaunch doesn't re-trigger the gate,
+   * then reuses the standard navigation tail.
+   */
+  private async finishSocialGate(): Promise<void> {
+    try {
+      const ret = await Preferences.get({ key: 'user' });
+      if (ret.value) {
+        const blob = JSON.parse(ret.value);
+        blob.is_phone_verified = true;
+        blob.phone = this.fullSocialPhone;
+        await Preferences.set({ key: 'user', value: JSON.stringify(blob) });
+      }
+    } catch {
+      /* non-fatal: navigation still proceeds */
+    }
+    this.clearOtpTimer();
+    this.router.navigate(['/account'], { replaceUrl: true });
+    this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
   }
 
   goHome() {

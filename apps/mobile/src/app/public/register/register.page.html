@@ -67,6 +67,34 @@
           {{ 'sign_in' | translate }}
         </ion-text>
       </p>
+
+      <!-- Social sign-in (native Google / Apple via Firebase) -->
+      <div class="social-divider"><span>{{ 'social_continue_with' | translate }}</span></div>
+      <div class="social-row">
+        <ion-button
+          (click)="google_signin()"
+          [disabled]="socialLoading || ui_controls.loading"
+          expand="block"
+          fill="outline"
+          class="social-btn social-btn--google"
+          type="button">
+          <span class="social-btn__glyph" aria-hidden="true">G</span>
+          {{ 'social_continue_google' | translate }}
+        </ion-button>
+        <ion-button
+          (click)="apple_signin()"
+          [disabled]="socialLoading || ui_controls.loading"
+          expand="block"
+          fill="outline"
+          class="social-btn social-btn--apple"
+          type="button">
+          <span class="social-btn__glyph" aria-hidden="true"></span>
+          {{ 'social_continue_apple' | translate }}
+        </ion-button>
+        @if (socialLoading) {
+          <p class="social-loading">{{ 'social_signing_in' | translate }}</p>
+        }
+      </div>
     }
 
     <!-- ===================== STEP 2: VERIFY PHONE ===================== -->
@@ -231,8 +259,79 @@
       </div>
     }
 
+    <!-- ============ STEP 5: PHONE-AFTER-SOCIAL (capture) ============ -->
+    @if (!ui_controls.loading && ui_controls.step === 5) {
+      <div class="step-head">
+        <h2 class="step-heading">{{ 'social_phone_title' | translate }}</h2>
+        <p class="step-help">{{ 'social_phone_subtitle' | translate }}</p>
+      </div>
+
+      <div class="phone-row">
+        <div class="cc-field">
+          <label class="field-label">{{ 'label_dial_code' | translate }}</label>
+          <button type="button" class="cc-button" (click)="isCountryCodeOpen = true">
+            <span class="cc-flag">{{ selectedDial?.flag }}</span>
+            <span class="cc-code">{{ register.countryCode }}</span>
+            <ax-icon name="chevron-down"></ax-icon>
+          </button>
+        </div>
+        <div class="phone-field">
+          <ax-text-field
+            [label]="'phone_number' | translate"
+            type="tel"
+            inputmode="numeric"
+            [required]="true"
+            [maxlength]="15"
+            [placeholder]="'enter_phone' | translate"
+            autocomplete="tel-national"
+            [(ngModel)]="socialPhone"
+            name="social_phone">
+          </ax-text-field>
+        </div>
+      </div>
+    }
+
+    <!-- ============ STEP 6: PHONE-AFTER-SOCIAL (verify) ============ -->
+    @if (!ui_controls.loading && ui_controls.step === 6) {
+      <div class="step-head">
+        <h2 class="step-heading">{{ 'register_step_verify_phone_heading' | translate }}</h2>
+        <p class="step-help">
+          {{ 'otp_sent_to' | translate }} <strong>{{ fullSocialPhone }}</strong>
+        </p>
+      </div>
+
+      <ax-text-field
+        class="block-mb"
+        [label]="'otp' | translate"
+        type="text"
+        inputmode="numeric"
+        [required]="true"
+        autocomplete="one-time-code"
+        [(ngModel)]="otp.code"
+        name="social_otp">
+      </ax-text-field>
+
+      <div class="secondary-row">
+        <ion-text class="secondary-link" (click)="change_social_phone()">
+          {{ 'change_phone_number' | translate }}
+        </ion-text>
+        <ion-text
+          class="secondary-link"
+          [class.is-disabled]="otpCooldown > 0"
+          (click)="resend_social_phone_otp()">
+          @if (otpLocked && otpCooldown > 0) {
+            {{ 'otp_locked_countdown' | translate:{ seconds: otpCooldown } }}
+          } @else if (otpCooldown > 0) {
+            {{ 'resend_otp_countdown' | translate:{ seconds: otpCooldown } }}
+          } @else {
+            {{ 'resend_otp' | translate }}
+          }
+        </ion-text>
+      </div>
+    }
+
     <!-- Footer: sign-in link (hidden on Step 1, which has its own) -->
-    @if (!ui_controls.loading && ui_controls.step !== 1) {
+    @if (!ui_controls.loading && ui_controls.step !== 1 && ui_controls.step < 5) {
       <p class="signup-link">
         {{ 'already_have_an_account' | translate }}
         <ion-text class="signup-link-action" (click)="sign_in()">
@@ -264,6 +363,16 @@
         @case (4) {
           <ion-button (click)="confirm_email()" [disabled]="otpLocked && otpCooldown > 0" expand="block" class="primary-btn" type="button">
             {{ 'validate' | translate }}
+          </ion-button>
+        }
+        @case (5) {
+          <ion-button (click)="send_social_phone()" expand="block" class="primary-btn" type="button">
+            {{ 'button_next' | translate }}
+          </ion-button>
+        }
+        @case (6) {
+          <ion-button (click)="verify_social_phone()" [disabled]="otpLocked && otpCooldown > 0" expand="block" class="primary-btn" type="button">
+            {{ 'button_continue' | translate }}
           </ion-button>
         }
       }

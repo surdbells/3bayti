@@ -24,6 +24,7 @@ import {GlobalComponent} from "../../global-component";
 import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
 import {Preferences} from "@capacitor/preferences";
+import {FirebaseAuthentication} from "@capacitor-firebase/authentication";
 import {BlockerService} from "../../blocker.service";
 
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
@@ -158,10 +159,20 @@ export class RegisterPage implements OnInit, OnDestroy {
    */
   ui_controls = {
     loading: false,
-    step: 1 as 1 | 2 | 3 | 4,
+    // Steps 1-4 are the email/password registration flow. Steps 5-6 are the
+    // phone-after-social gate reached only via Google/Apple sign-in:
+    //   5 = capture phone, 6 = verify phone OTP.
+    step: 1 as 1 | 2 | 3 | 4 | 5 | 6,
     termsArabic: true,
     termsEnglish: false,
   };
+
+  /** True while a native Google/Apple sign-in is in flight (button spinner). */
+  socialLoading = false;
+  /** Auth token of a freshly social-signed-in user (phone-gate calls). */
+  private socialAuthToken = '';
+  /** Phone the social user is verifying. */
+  socialPhone = '';
 
   register = {
     first_name: "",
@@ -685,6 +696,208 @@ export class RegisterPage implements OnInit, OnDestroy {
 
   success_notification(message: string) {
     this.toast.success(message, { position: 'top-center' });
+  }
+
+  // --- Native social sign-in (Google / Apple via Firebase) ---------------
+
+  /** Native Google sign-in -> Firebase ID token -> POST /auth/social. */
+  google_signin() {
+    void this.socialSignIn('google');
+  }
+
+  /** Native Apple sign-in -> Firebase ID token -> POST /auth/social. */
+  apple_signin() {
+    void this.socialSignIn('apple');
+  }
+
+  /**
+   * Shared native social sign-in path (mirrors the login page). Runs the
+   * native Firebase sign-in, reads the Firebase ID token (our API verifies
+   * THAT token), exchanges it at POST /auth/social for the standard login
+   * envelope, then either logs the user straight in (verified phone) or
+   * drops them into the phone-after-social gate (step 5). Cancelled sign-in
+   * is swallowed quietly.
+   */
+  private async socialSignIn(provider: 'google' | 'apple'): Promise<void> {
+    if (this.socialLoading || this.ui_controls.loading) return;
+    if (!this.isOnline) {
+      this.error_notification(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+
+    this.socialLoading = true;
+    try {
+      if (provider === 'google') {
+        await FirebaseAuthentication.signInWithGoogle();
+      } else {
+        await FirebaseAuthentication.signInWithApple();
+      }
+
+      const { token } = await FirebaseAuthentication.getIdToken();
+      if (!token) {
+        this.socialLoading = false;
+        this.error_notification(this.i18n.t('text_social_signin_failed'));
+        return;
+      }
+
+      this.ui_controls.loading = true;
+      this.networkAdapter.post_v3('POST /auth/social', { id_token: token }).subscribe({
+        next: (response: any) => {
+          this.socialLoading = false;
+          this.ui_controls.loading = false;
+          if (response.response_code === 200 && response.status === 'success') {
+            this.onSocialLoginSuccess(response.data);
+          } else {
+            this.error_notification(response.message || this.i18n.t('text_social_signin_failed'));
+          }
+        },
+        error: (e) => {
+          this.socialLoading = false;
+          this.handleHttpError(e);
+        },
+      });
+    } catch (err) {
+      this.socialLoading = false;
+      if (this.isCancelledSignIn(err)) return;
+      console.error('[Register] social sign-in failed', err);
+      this.error_notification(this.i18n.t('text_social_signin_failed'));
+    }
+  }
+
+  private isCancelledSignIn(err: unknown): boolean {
+    const msg = (err && typeof err === 'object' && 'message' in err
+      ? String((err as any).message)
+      : String(err)).toLowerCase();
+    return (
+      msg.includes('cancel') ||
+      msg.includes('canceled') ||
+      msg.includes('1001') ||
+      msg.includes('12501')
+    );
+  }
+
+  /**
+   * Post-social-login: persist the user blob, then either auto-login
+   * (verified phone) or enter the phone-after-social gate (step 5) for a
+   * fresh social account (is_phone_verified=false).
+   */
+  private onSocialLoginSuccess(data: any): void {
+    const userToStore = transformV3LoginResponse(data) ?? data;
+    Preferences.set({ key: 'user', value: JSON.stringify(userToStore) });
+    void this.pushManager.onSignedIn();
+
+    if ((userToStore as any)?.is_phone_verified === false) {
+      this.socialAuthToken = typeof (userToStore as any)?.token === 'string'
+        ? (userToStore as any).token
+        : '';
+      this.socialPhone = '';
+      this.otp.code = '';
+      this.ui_controls.step = 5;
+      return;
+    }
+
+    // Verified phone already (returning social user): merge cart + go home.
+    const authBody = {
+      id: typeof (userToStore as any)?.id === 'number' ? (userToStore as any).id : 0,
+      token: typeof (userToStore as any)?.token === 'string' ? (userToStore as any).token : '',
+    };
+    this.cartMerge.mergeIfAny(authBody)
+      .catch((e) => console.warn('[Register] cart merge failed (non-fatal)', e));
+    this.router.navigate(['/account'], { replaceUrl: true });
+  }
+
+  // --- Phone-after-social gate (steps 5 + 6) -----------------------------
+
+  /** Full E.164-ish social phone for the API ("+971" + national digits). */
+  get fullSocialPhone(): string {
+    const national = this.socialPhone.replace(/^0+/, '').replace(/\D/g, '');
+    return `${this.register.countryCode}${national}`;
+  }
+
+  /** Send the OTP for the social user's phone. POST /me/phone. */
+  send_social_phone() {
+    if (this.ui_controls.loading) return;
+    if (!this.isOnline) {
+      this.error_notification(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+    if (this.socialPhone.replace(/\D/g, '').length === 0) {
+      this.error_notification(this.i18n.t('text_phone_required'));
+      return;
+    }
+    this.ui_controls.loading = true;
+    this.networkAdapter.post_v3(
+      'POST /me/phone',
+      { phone: this.fullSocialPhone, country_code: mapDialToIso(this.register.countryCode) },
+      { authToken: this.socialAuthToken },
+    ).subscribe({
+      next: (response: any) => {
+        this.ui_controls.loading = false;
+        if (response.response_code === 200 && response.status === 'success') {
+          this.otp.code = '';
+          this.ui_controls.step = 6;
+          this.startResendCooldown();
+          this.success_notification(this.i18n.t('text_otp_sent'));
+        } else {
+          this.handleOtpError(response);
+        }
+      },
+      error: (e) => this.handleHttpError(e),
+    });
+  }
+
+  /** Verify the social user's phone OTP. POST /me/phone/verify -> /account. */
+  verify_social_phone() {
+    if (this.otp.code.length === 0) {
+      this.error_notification(this.i18n.t('text_otp_required'));
+      return;
+    }
+    this.ui_controls.loading = true;
+    this.networkAdapter.post_v3(
+      'POST /me/phone/verify',
+      { code: this.otp.code },
+      { authToken: this.socialAuthToken },
+    ).subscribe({
+      next: (response: any) => {
+        this.ui_controls.loading = false;
+        if (response.response_code === 200 && response.status === 'success') {
+          void this.finishSocialGate();
+        } else {
+          this.handleOtpError(response);
+        }
+      },
+      error: (e) => this.handleHttpError(e),
+    });
+  }
+
+  resend_social_phone_otp() {
+    if (this.otpCooldown > 0) return;
+    this.send_social_phone();
+  }
+
+  change_social_phone() {
+    this.ui_controls.step = 5;
+    this.otp.code = '';
+    this.clearOtpTimer();
+    this.otpCooldown = 0;
+    this.otpLocked = false;
+  }
+
+  /** Flip the cached phone-verified flag + navigate home. */
+  private async finishSocialGate(): Promise<void> {
+    try {
+      const ret = await Preferences.get({ key: 'user' });
+      if (ret.value) {
+        const blob = JSON.parse(ret.value);
+        blob.is_phone_verified = true;
+        blob.phone = this.fullSocialPhone;
+        await Preferences.set({ key: 'user', value: JSON.stringify(blob) });
+      }
+    } catch {
+      /* non-fatal */
+    }
+    this.clearOtpTimer();
+    this.router.navigate(['/account'], { replaceUrl: true });
   }
 
   sign_in() {

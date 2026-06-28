@@ -283,3 +283,57 @@ ion-content.register-bg {
   div[dir="ltr"],
   div[dir="rtl"] { font-size: 13px !important; }
 }
+
+/* ----- Social sign-in (Google / Apple) ----- */
+.social-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 12px;
+  color: var(--ax-color-text-tertiary);
+  font-size: 13px;
+
+  &::before,
+  &::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--ax-color-border-default);
+  }
+  span { white-space: nowrap; }
+}
+
+.social-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.social-btn {
+  --border-radius: 12px;
+  --border-color: var(--ax-color-border-default);
+  --color: var(--ax-color-text-primary);
+  text-transform: none;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+.social-btn__glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-inline-end: 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+.social-btn--google .social-btn__glyph { color: #4285f4; }
+.social-btn--apple .social-btn__glyph { font-size: 18px; }
+
+.social-loading {
+  text-align: center;
+  font-size: 13px;
+  color: var(--ax-color-text-secondary);
+  margin: 6px 0 0;
+}

@@ -7,6 +7,16 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ["badge", "sound", "alert"],
     },
+    // Native Google + Apple sign-in via Firebase Auth
+    // (@capacitor-firebase/authentication). skipNativeAuth:false means the
+    // plugin performs the full native Firebase sign-in and we read the
+    // resulting Firebase ID token via getIdToken() — that token is what our
+    // API verifies at POST /v3/auth/social. providers lists the only two
+    // social providers we enable on mobile.
+    FirebaseAuthentication: {
+      skipNativeAuth: false,
+      providers: ["google.com", "apple.com"],
+    },
     // OTA web-bundle updates via Capgo Cloud (@capgo/capacitor-updater).
     // Division of responsibility (see app.component.ts + AppUpdateService):
     //   - CapacitorUpdater (this) = WEB/JS bundle OTA. Ships new Angular

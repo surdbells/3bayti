@@ -34,6 +34,34 @@
           <ax-icon name="chevron-right" class="option-card__chevron"></ax-icon>
         </button>
 
+        <!-- Social sign-in (native Google / Apple via Firebase) -->
+        <div class="social-divider"><span>{{ 'social_continue_with' | translate }}</span></div>
+        <div class="social-row">
+          <ion-button
+            (click)="google_signin()"
+            [disabled]="socialLoading || ui_controls.login_loading"
+            expand="block"
+            fill="outline"
+            class="social-btn social-btn--google"
+            type="button">
+            <span class="social-btn__glyph" aria-hidden="true">G</span>
+            {{ 'social_continue_google' | translate }}
+          </ion-button>
+          <ion-button
+            (click)="apple_signin()"
+            [disabled]="socialLoading || ui_controls.login_loading"
+            expand="block"
+            fill="outline"
+            class="social-btn social-btn--apple"
+            type="button">
+            <span class="social-btn__glyph" aria-hidden="true"></span>
+            {{ 'social_continue_apple' | translate }}
+          </ion-button>
+          @if (socialLoading) {
+            <p class="social-loading">{{ 'social_signing_in' | translate }}</p>
+          }
+        </div>
+
         <div class="auth-footer">
           <ion-button (click)="goHome()" expand="block" fill="clear" class="ghost-btn" type="button">
             {{ 'continue_as_guest' | translate }}
@@ -218,6 +246,96 @@
         <div class="auth-footer">
           <ion-button (click)="signIn()" expand="block" class="primary-btn" type="button">
             {{ 'sign_in' | translate }}
+          </ion-button>
+        </div>
+      }
+
+      <!-- ============== PHONE-AFTER-SOCIAL: capture phone ============== -->
+      @if (view === 'social-phone') {
+        <div class="auth-head">
+          <h1 class="title">{{ 'social_phone_title' | translate }}</h1>
+          <p class="subtitle">{{ 'social_phone_subtitle' | translate }}</p>
+        </div>
+
+        <div class="phone-row">
+          <div class="cc-field">
+            <label class="field-label">{{ 'label_dial_code' | translate }}</label>
+            <button type="button" class="cc-button" (click)="isCountryCodeOpen = true">
+              <span class="cc-flag">{{ selectedDial?.flag }}</span>
+              <span class="cc-code">{{ countryCode }}</span>
+              <ax-icon name="chevron-down"></ax-icon>
+            </button>
+          </div>
+          <div class="phone-field">
+            <ax-text-field
+              [label]="'phone_number' | translate"
+              type="tel"
+              inputmode="numeric"
+              [required]="true"
+              [maxlength]="15"
+              [placeholder]="'enter_phone' | translate"
+              autocomplete="tel-national"
+              [(ngModel)]="socialPhone"
+              name="social_phone">
+            </ax-text-field>
+          </div>
+        </div>
+
+        <div class="auth-footer">
+          <ion-button (click)="sendSocialPhone()" [disabled]="ui_controls.login_loading" expand="block" class="primary-btn" type="button">
+            {{ 'button_next' | translate }}
+          </ion-button>
+        </div>
+      }
+
+      <!-- ============== PHONE-AFTER-SOCIAL: verify OTP ============== -->
+      @if (view === 'social-otp') {
+        <button type="button" class="back-link" (click)="changeSocialPhone()">
+          <ax-icon name="arrow-left"></ax-icon>
+          <span>{{ 'button_back' | translate }}</span>
+        </button>
+
+        <div class="auth-head">
+          <h1 class="title">{{ 'login_otp_title' | translate }}</h1>
+          <p class="subtitle">
+            {{ 'otp_sent_to' | translate }} <strong>{{ fullSocialPhone }}</strong>
+          </p>
+        </div>
+
+        <ax-text-field
+          class="block-mb otp-field"
+          [label]="'otp' | translate"
+          type="text"
+          inputmode="numeric"
+          [maxlength]="6"
+          [required]="true"
+          [placeholder]="'login_otp_placeholder' | translate"
+          autocomplete="one-time-code"
+          [(ngModel)]="otp.code"
+          name="social_otp">
+        </ax-text-field>
+
+        <div class="secondary-row">
+          <ion-text class="secondary-link" (click)="changeSocialPhone()">
+            {{ 'change_phone_number' | translate }}
+          </ion-text>
+          <ion-text
+            class="secondary-link"
+            [class.is-disabled]="otpCooldown > 0"
+            (click)="resendSocialPhoneOtp()">
+            @if (otpLocked && otpCooldown > 0) {
+              {{ 'otp_locked_countdown' | translate:{ seconds: otpCooldown } }}
+            } @else if (otpCooldown > 0) {
+              {{ 'resend_otp_countdown' | translate:{ seconds: otpCooldown } }}
+            } @else {
+              {{ 'resend_otp' | translate }}
+            }
+          </ion-text>
+        </div>
+
+        <div class="auth-footer">
+          <ion-button (click)="verifySocialPhone()" [disabled]="otpLocked && otpCooldown > 0" expand="block" class="primary-btn" type="button">
+            {{ 'button_continue' | translate }}
           </ion-button>
         </div>
       }

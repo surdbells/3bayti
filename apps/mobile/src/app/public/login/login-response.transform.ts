@@ -95,6 +95,11 @@ export interface LegacyUserShape {
   is_vendor: boolean;
   is_store_active: boolean;
   is_store_approved: boolean;
+  // Whether the account has a verified phone number. Social sign-in
+  // (Google/Apple) creates accounts with is_phone_verified=false; the
+  // login/social handler reads this to gate fresh social accounts behind
+  // the phone-capture step. Email/OTP/password logins surface true.
+  is_phone_verified?: boolean;
   // Allow arbitrary extra fields so a legacy passthrough preserves
   // everything the legacy backend returned (e.g. avatar, billing_*).
   // The defined fields above are the contract; extras are best-effort.
@@ -134,6 +139,7 @@ export function transformV3LoginResponse(data: unknown): LegacyUserShape | null 
       is_vendor: isVendor,
       is_store_active: u['is_store_active'] === true,
       is_store_approved: u['is_store_approved'] === true,
+      is_phone_verified: u['is_phone_verified'] === true,
       // Avatar: v3 emits `avatar_url` (UserSerializer::publicProfile); the
       // mobile single_user shape + /account + /settings templates bind
       // `avatar`. Persist it at login so the avatar shows from the cached

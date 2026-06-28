@@ -154,6 +154,47 @@
       </div>
     </div>
 
+    <!-- Connected Accounts Section -->
+    @if (socialLoaded) {
+      <div class="settings-section">
+        <h3 class="section-title">{{ 'connected_accounts' | translate }}</h3>
+        <div class="settings-card">
+          @for (p of supportedProviders; track p.key) {
+            <div class="settings-item">
+              <div class="item-icon">
+                <span class="social-provider-glyph" aria-hidden="true">{{ p.glyph || '' }}</span>
+              </div>
+              <div class="item-text">
+                <span class="item-label">{{ p.labelKey | translate }}</span>
+                <span class="item-subtitle">
+                  {{ (isProviderLinked(p.key) ? 'social_status_connected' : 'social_status_not_connected') | translate }}
+                </span>
+              </div>
+              @if (isProviderLinked(p.key)) {
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  class="social-action social-action--disconnect"
+                  [disabled]="socialBusy === p.key"
+                  (click)="disconnectProvider(p.key)">
+                  {{ 'social_disconnect' | translate }}
+                </ion-button>
+              } @else {
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  class="social-action"
+                  [disabled]="socialBusy === p.key"
+                  (click)="connectProvider(p.key)">
+                  {{ 'social_connect' | translate }}
+                </ion-button>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+
     <!-- Support Section -->
     <div class="settings-section">
       <h3 class="section-title">{{ 'support' | translate }}</h3>

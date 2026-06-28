@@ -15,6 +15,7 @@ import {
 } from '@ionic/angular/standalone';
 import { Preferences } from '@capacitor/preferences';
 import { App as CapacitorApp } from '@capacitor/app';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { Subscription } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
@@ -91,6 +92,24 @@ export class SettingsPage implements OnInit, OnDestroy {
     updating_location: false
   };
 
+  /**
+   * Connected accounts (linked social providers) state.
+   *
+   * `socialProviders` is the set of provider keys currently linked to the
+   * account (from GET /me/social-identities), e.g. ['google.com']. The UI
+   * renders one row per supported provider, showing Connect or Disconnect.
+   * `socialBusy` holds the provider whose Connect/Disconnect call is in
+   * flight (per-row spinner); `socialLoaded` hides the section until the
+   * first fetch resolves so it never flashes a wrong state.
+   */
+  readonly supportedProviders: Array<{ key: string; labelKey: string; glyph: string }> = [
+    { key: 'google.com', labelKey: 'social_provider_google', glyph: 'G' },
+    { key: 'apple.com', labelKey: 'social_provider_apple', glyph: '' },
+  ];
+  socialProviders: string[] = [];
+  socialBusy: string | null = null;
+  socialLoaded = false;
+
   single_user = {
     id: 0,
     token: '',
@@ -149,6 +168,147 @@ export class SettingsPage implements OnInit, OnDestroy {
     this.loadAppVersion();
   }
 
+  // ========================================
+  // Connected accounts (social identities)
+  // ========================================
+
+  /** Is the given provider currently linked to this account? */
+  isProviderLinked(key: string): boolean {
+    return this.socialProviders.includes(key);
+  }
+
+  /**
+   * Fetch the linked social providers. GET /me/social-identities returns
+   * data either as an array of identity objects ({ provider, ... }) or an
+   * object with an `identities` array; we read the `provider` field from
+   * each. Silent on failure (the section just shows everything unlinked).
+   */
+  loadSocialIdentities(): void {
+    const token = this.single_user.token;
+    if (!token) { this.socialLoaded = true; return; }
+    this.networkAdapter.get_v3('GET /me/social-identities', { authToken: token })
+      .subscribe({
+        next: (response: any) => {
+          this.socialLoaded = true;
+          if (response?.response_code !== 200) return;
+          this.socialProviders = this.extractProviders(response.data);
+        },
+        error: () => { this.socialLoaded = true; },
+      });
+  }
+
+  private extractProviders(data: any): string[] {
+    const list = Array.isArray(data)
+      ? data
+      : Array.isArray(data?.identities)
+        ? data.identities
+        : [];
+    return list
+      .map((x: any) => (typeof x === 'string' ? x : x?.provider))
+      .filter((p: any): p is string => typeof p === 'string' && p.length > 0);
+  }
+
+  /**
+   * Connect (link) a social provider to the current account: run the native
+   * Firebase sign-in for that provider, read the Firebase ID token, then
+   * POST /me/social-identities { id_token }. A 409 means the identity is
+   * already linked (to this or another account) — surfaced as a clear msg.
+   * Cancelled sign-in is swallowed quietly.
+   */
+  async connectProvider(key: string): Promise<void> {
+    if (this.socialBusy) return;
+    if (!this.isOnline) {
+      this.showError(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+    this.socialBusy = key;
+    try {
+      if (key === 'google.com') {
+        await FirebaseAuthentication.signInWithGoogle();
+      } else {
+        await FirebaseAuthentication.signInWithApple();
+      }
+      const { token } = await FirebaseAuthentication.getIdToken();
+      if (!token) {
+        this.socialBusy = null;
+        this.showError(this.i18n.t('text_social_signin_failed'));
+        return;
+      }
+      this.networkAdapter.post_v3(
+        'POST /me/social-identities',
+        { id_token: token },
+        { authToken: this.single_user.token },
+      ).subscribe({
+        next: (response: any) => {
+          this.socialBusy = null;
+          if (response?.response_code === 200 && response?.status === 'success') {
+            this.showSuccess(this.i18n.t('social_connected'));
+            this.loadSocialIdentities();
+          } else if (response?.response_code === 409) {
+            this.showError(this.i18n.t('social_connect_conflict'));
+          } else {
+            this.showError(response?.message || this.i18n.t('social_connect_failed'));
+          }
+        },
+        error: () => {
+          this.socialBusy = null;
+          this.showError(this.i18n.t('social_connect_failed'));
+        },
+      });
+    } catch (err) {
+      this.socialBusy = null;
+      if (this.isCancelledSignIn(err)) return;
+      console.error('[Settings] connect provider failed', err);
+      this.showError(this.i18n.t('text_social_signin_failed'));
+    }
+  }
+
+  /**
+   * Disconnect (unlink) a social provider. DELETE /me/social-identities/:provider.
+   * A 422 is the server's last-method guard (you can't remove your only
+   * remaining sign-in method) — surfaced with a clear explanation.
+   */
+  disconnectProvider(key: string): void {
+    if (this.socialBusy) return;
+    if (!this.isOnline) {
+      this.showError(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+    this.socialBusy = key;
+    this.networkAdapter.delete_v3('DELETE /me/social-identities/:provider', {
+      authToken: this.single_user.token,
+      pathParams: { provider: key },
+    }).subscribe({
+      next: (response: any) => {
+        this.socialBusy = null;
+        if (response?.response_code === 200 && response?.status === 'success') {
+          this.showSuccess(this.i18n.t('social_disconnected'));
+          this.socialProviders = this.socialProviders.filter((p) => p !== key);
+        } else if (response?.response_code === 422) {
+          this.showError(this.i18n.t('social_disconnect_last_method'));
+        } else {
+          this.showError(response?.message || this.i18n.t('social_disconnect_failed'));
+        }
+      },
+      error: () => {
+        this.socialBusy = null;
+        this.showError(this.i18n.t('social_disconnect_failed'));
+      },
+    });
+  }
+
+  private isCancelledSignIn(err: unknown): boolean {
+    const msg = (err && typeof err === 'object' && 'message' in err
+      ? String((err as any).message)
+      : String(err)).toLowerCase();
+    return (
+      msg.includes('cancel') ||
+      msg.includes('canceled') ||
+      msg.includes('1001') ||
+      msg.includes('12501')
+    );
+  }
+
   /**
    * Resolve the real installed app version for the Settings footer. Prefers
    * the native Capacitor App plugin (App.getInfo() returns the user-facing
@@ -194,6 +354,8 @@ export class SettingsPage implements OnInit, OnDestroy {
       // Sync the avatar from the server for sessions whose cached 'user'
       // blob predates login-time avatar persistence.
       this.refreshProfileAvatar();
+      // Now that we have the auth token, fetch linked social providers.
+      this.loadSocialIdentities();
     }
   }
 

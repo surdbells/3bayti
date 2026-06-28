@@ -406,3 +406,25 @@
     font-weight: 700;
   }
 }
+
+/* ----- Connected accounts (social identities) ----- */
+.social-provider-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.social-action {
+  --padding-start: 8px;
+  --padding-end: 8px;
+  text-transform: none;
+  font-weight: 600;
+  font-size: 14px;
+  margin-inline-start: auto;
+}
+.social-action--disconnect {
+  --color: var(--ax-color-text-secondary, #6b6b6b);
+}
