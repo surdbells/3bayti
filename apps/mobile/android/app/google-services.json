@@ -12,7 +12,12 @@
           "package_name": "ae.threebayti.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "932559657027-at2jj8nmj4mvi6ovkseg35q5p1qsqcmd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCocpDjBbA2HPSU0aDq8xiUqC9X7y0UY1Q"
@@ -20,7 +25,20 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "932559657027-at2jj8nmj4mvi6ovkseg35q5p1qsqcmd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "932559657027-rjhm9u67h4hn3mc1s9a5ajtcl1l5p1ka.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "ae.threebayti.app",
+                "app_store_id": "6752422907"
+              }
+            }
+          ]
         }
       }
     },
@@ -31,7 +49,12 @@
           "package_name": "com.threebayti.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "932559657027-at2jj8nmj4mvi6ovkseg35q5p1qsqcmd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCocpDjBbA2HPSU0aDq8xiUqC9X7y0UY1Q"
@@ -39,7 +62,20 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "932559657027-at2jj8nmj4mvi6ovkseg35q5p1qsqcmd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "932559657027-rjhm9u67h4hn3mc1s9a5ajtcl1l5p1ka.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "ae.threebayti.app",
+                "app_store_id": "6752422907"
+              }
+            }
+          ]
         }
       }
     }
