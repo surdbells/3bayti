@@ -242,6 +242,18 @@ export interface LoginInput {
 }
 
 /**
+ * Social sign-in input — the Firebase ID token plus the name fields the
+ * popup surfaced (used only when the API is creating a brand-new account;
+ * ignored for an existing linked identity). Sent to the BFF /auth-proxy/social,
+ * which forwards it to /v3/auth/social.
+ */
+export interface SocialLoginInput {
+  id_token: string;
+  first_name?: string | null;
+  last_name?: string | null;
+}
+
+/**
  * Register form inputs.
  *
  * Mirrors apps/api RegisterInput DTO. The Y.1-F register page submits

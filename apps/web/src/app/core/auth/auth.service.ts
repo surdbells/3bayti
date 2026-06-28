@@ -40,6 +40,17 @@ import type {
   ValidatePhoneResponse,
   ResetRequestInput,
 } from './auth.types';
+import { SocialAuthService, type SocialProvider } from './social-auth.service';
+
+/**
+ * Result of a social sign-in attempt surfaced to the UI. On success the
+ * session is already applied; `user` lets the caller decide whether to route
+ * to the phone gate (is_phone_verified === false). The failure reasons mirror
+ * SocialIdTokenResult so the page can stay silent on a cancelled popup.
+ */
+export type SocialLoginResult =
+  | { ok: true; user: AuthUser }
+  | { ok: false; reason: 'cancelled' | 'unavailable' | 'popup-blocked' | 'failed' };
 
 /**
  * AuthService — single source of truth for authentication state.
@@ -91,6 +102,7 @@ export class AuthService {
   private readonly destroyRef = inject(DestroyRef);
   private readonly proxyBase = inject(AUTH_PROXY_BASE);
   private readonly refreshLeadTimeMs = inject(AUTH_REFRESH_LEAD_TIME_MS);
+  private readonly social = inject(SocialAuthService);
 
   /* ---------- Reactive state ---------- */
 
@@ -270,6 +282,54 @@ export class AuthService {
     );
     this.applyAuthState(response);
     return response.user;
+  }
+
+  /**
+   * Sign in with a social provider (Google / Apple).
+   *
+   * Flow:
+   *   1. SocialAuthService drives the Firebase popup → Firebase ID token.
+   *   2. POST that id_token (+ name from the popup) to the BFF
+   *      /auth-proxy/social, which exchanges it at /v3/auth/social and parks
+   *      the refresh_token in the HttpOnly cookie (same model as /login).
+   *   3. Feed the response into the SAME applyAuthState() as password login —
+   *      token store + currentUser + scheduleRefresh + locale sync.
+   *
+   * Returns a typed result rather than throwing: a user-cancelled popup is a
+   * normal outcome the page should ignore, not an error. A non-cancel failure
+   * (BFF/network/unavailable) returns ok:false with a reason the page maps to
+   * a toast. The caller inspects `result.user.is_phone_verified` to decide
+   * whether to route to the phone-after-social gate.
+   */
+  async loginWithProvider(provider: SocialProvider): Promise<SocialLoginResult> {
+    const tokenResult =
+      provider === 'google'
+        ? await this.social.getGoogleIdToken()
+        : await this.social.getAppleIdToken();
+
+    if (!tokenResult.ok) {
+      return { ok: false, reason: tokenResult.reason };
+    }
+
+    try {
+      const response = await firstValueFrom(
+        this.http.post<BffLoginResponse>(
+          `${this.proxyBase}/social`,
+          {
+            id_token: tokenResult.idToken,
+            first_name: tokenResult.firstName,
+            last_name: tokenResult.lastName,
+          },
+          { withCredentials: true },
+        ),
+      );
+      this.applyAuthState(response);
+      return { ok: true, user: response.user };
+    } catch {
+      /* BFF / upstream / network failure — the popup itself succeeded, but
+         the token exchange didn't. Surface a generic failure for the page. */
+      return { ok: false, reason: 'failed' };
+    }
   }
 
   /**

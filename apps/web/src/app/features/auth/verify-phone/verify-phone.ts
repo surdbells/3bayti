@@ -18,8 +18,10 @@ import {
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../../core/auth/auth.service';
+import { PhoneService } from '../../../core/auth/phone.service';
 import {
   FormFieldComponent,
+  PhoneInputComponent,
   mapApiErrors,
   readRetryAfterSeconds,
   ApiErrorMapping,
@@ -95,12 +97,50 @@ const RESEND_COOLDOWN_SECONDS = 30;
     RouterLink,
     TranslatePipe,
     FormFieldComponent,
+    PhoneInputComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="auth-page" data-testid="verify-phone-page">
       <div class="auth-card">
         <h1 class="auth-card__title">{{ 'auth.verifyPhone.title' | translate }}</h1>
+
+        <!-- ===== Phone-after-social gate: collect a phone number first ===== -->
+        <ng-container *ngIf="socialPhoneEntry()">
+          <p class="auth-card__subtitle">{{ 'auth.verifyPhone.socialPrompt' | translate }}</p>
+          <form
+            [formGroup]="phoneForm"
+            (ngSubmit)="onSendSocialPhone()"
+            novalidate
+            class="auth-form"
+            data-testid="verify-social-phone-form"
+          >
+            <ui-form-field
+              [label]="'auth.verifyPhone.phoneLabel'"
+              fieldId="verify-social-phone"
+              [required]="true"
+              [control]="phoneForm.controls.phone"
+              [errorMap]="phoneErrors"
+            >
+              <ui-phone-input
+                inputId="verify-social-phone"
+                formControlName="phone"
+                data-testid="verify-social-phone"
+              ></ui-phone-input>
+            </ui-form-field>
+
+            <button
+              type="submit"
+              class="auth-submit"
+              [disabled]="sending()"
+              data-testid="verify-social-phone-submit"
+            >
+              {{ (sending() ? 'common.loading' : 'auth.verifyPhone.sendButton') | translate }}
+            </button>
+          </form>
+        </ng-container>
+
+        <ng-container *ngIf="!socialPhoneEntry()">
         <ng-container *ngIf="hasVerificationId(); else noVerification">
           <p class="auth-card__subtitle">
             {{ 'auth.verifyPhone.subtitle' | translate : { phone: maskedPhone() } }}
@@ -198,6 +238,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
             </a>
           </ng-template>
         </ng-template>
+        </ng-container>
       </div>
     </main>
   `,
@@ -205,6 +246,19 @@ const RESEND_COOLDOWN_SECONDS = 30;
 })
 export class VerifyPhoneComponent implements OnInit, OnDestroy {
   protected readonly form: FormGroup<{ code: FormControl<string> }>;
+  /** Phone-entry form for the phone-after-social gate (from=social). */
+  protected readonly phoneForm: FormGroup<{ phone: FormControl<string> }>;
+
+  /**
+   * True when this page is the phone-after-social gate (from=social) and we
+   * still need a phone number from the user (no verification_id minted yet).
+   * In this mode the OTP send/verify goes through PhoneService (POST /me/phone
+   * + /me/phone/verify, Bearer) rather than the BFF /confirm registration flow.
+   */
+  protected readonly isSocial = signal(false);
+  protected socialPhoneEntry(): boolean {
+    return this.isSocial() && this.verificationId() === null;
+  }
 
   protected readonly submitting = signal(false);
   protected readonly resending = signal(false);
@@ -224,6 +278,12 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     required: 'auth.fields.required',
     pattern: 'auth.validation.code6Digits',
     invalidCode: 'auth.verifyPhone.errors.invalidCode',
+  };
+
+  protected readonly phoneErrors: Record<string, string> = {
+    required: 'auth.fields.required',
+    phoneInvalid: 'auth.fields.phone_invalid',
+    phoneTaken: 'auth.verifyPhone.errors.phoneTaken',
   };
 
   /** Masked phone — '+971•••••4567' shape. */
@@ -257,6 +317,7 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
   private cooldownTimer: ReturnType<typeof setInterval> | null = null;
 
   private readonly auth = inject(AuthService);
+  private readonly phoneSvc = inject(PhoneService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
@@ -266,9 +327,17 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     this.form = fb.group({
       code: fb.control('', [Validators.required, Validators.pattern(/^\d{4,6}$/)]),
     });
+    this.phoneForm = fb.group({
+      phone: fb.control('', [Validators.required]),
+    });
   }
 
   ngOnInit(): void {
+    /* Phone-after-social gate: from=social. The user is authenticated (the
+       social login already set the session) but has no verified phone, so we
+       collect + verify one via PhoneService (POST /me/phone). */
+    this.isSocial.set(this.route.snapshot.queryParamMap.get('from') === 'social');
+
     /* Resolve verification_id from query params first, sessionStorage
        second. */
     const qpVid = this.route.snapshot.queryParamMap.get('verification_id');
@@ -322,12 +391,60 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Phone-after-social: submit the entered phone to POST /me/phone, which
+   * dispatches an OTP and returns a verification_id. On success we reveal the
+   * code-entry form (verificationId set). 409 CONFLICT_PHONE_TAKEN lands on
+   * the phone field.
+   */
+  protected async onSendSocialPhone(): Promise<void> {
+    this.phoneForm.markAllAsTouched();
+    if (this.phoneForm.invalid || this.sending()) return;
+
+    const phone = this.phoneForm.controls.phone.value;
+    this.sending.set(true);
+    try {
+      const res = await this.phoneSvc.sendOtp(phone);
+      this.verificationId.set(res.verification_id);
+      this.phone.set(phone);
+      this.form.reset({ code: '' });
+      this.startCooldown();
+      this.toast.success('auth.verifyPhone.codeSent');
+    } catch (err) {
+      const result = mapApiErrors(err, this.phoneForm, SOCIAL_PHONE_ERROR_MAP);
+      if (result.isNetworkError) {
+        this.toast.error('auth.login.errors.network');
+      } else if (result.unmapped.length > 0) {
+        for (const code of result.unmapped) {
+          if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
+            this.toast.error('auth.verifyPhone.errors.rateLimited');
+            this.startLockout(err);
+          } else if (code === AUTH_ERROR_CODES.OTP_PROVIDER_ERROR) {
+            this.toast.error('auth.verifyPhone.errors.unexpected');
+          } else {
+            this.toast.error('auth.verifyPhone.errors.unexpected');
+          }
+        }
+      }
+    } finally {
+      this.sending.set(false);
+    }
+  }
+
   protected async onSubmit(): Promise<void> {
     const vid = this.verificationId();
     if (vid === null) return;
 
     this.form.markAllAsTouched();
     if (this.form.invalid || this.submitting()) return;
+
+    /* Phone-after-social verifies through PhoneService (Bearer /me/phone/verify)
+       rather than the BFF registration /confirm. The user is already signed in;
+       there's no token pair to issue — just flip is_phone_verified. */
+    if (this.isSocial()) {
+      await this.submitSocialOtp(vid);
+      return;
+    }
 
     this.submitting.set(true);
     try {
@@ -342,6 +459,35 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
          gated there) if it's a safe in-app path; otherwise home. */
       this.removeFromSession(VERIFICATION_ID_STORAGE_KEY);
       this.removeFromSession(PHONE_STORAGE_KEY);
+      await this.navigateAfter();
+    } catch (err) {
+      const result = mapApiErrors(err, this.form, VERIFY_ERROR_MAP);
+      if (result.isNetworkError) {
+        this.toast.error('auth.login.errors.network');
+      } else if (result.unmapped.length > 0) {
+        for (const code of result.unmapped) {
+          if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
+            this.toast.error('auth.verifyPhone.errors.rateLimited');
+            this.startLockout(err);
+          } else {
+            this.toast.error('auth.verifyPhone.errors.unexpected');
+          }
+        }
+      }
+    } finally {
+      this.submitting.set(false);
+    }
+  }
+
+  /**
+   * Verify the OTP for the phone-after-social gate via POST /me/phone/verify.
+   * On success the user's phone is verified server-side (PhoneService mirrors
+   * it into the cached auth user); we continue to the returnUrl / home.
+   */
+  private async submitSocialOtp(vid: string): Promise<void> {
+    this.submitting.set(true);
+    try {
+      await this.phoneSvc.verify(vid, this.form.controls.code.value);
       await this.navigateAfter();
     } catch (err) {
       const result = mapApiErrors(err, this.form, VERIFY_ERROR_MAP);
@@ -389,6 +535,34 @@ export class VerifyPhoneComponent implements OnInit, OnDestroy {
    */
   protected async onResend(): Promise<void> {
     if (this.resending() || this.resendCooldown() > 0) return;
+
+    /* Phone-after-social resends through /me/phone (re-send to the same
+       number) rather than the registration /send-otp path. */
+    if (this.isSocial()) {
+      const phone = this.phone();
+      if (phone === null || phone.length === 0) return;
+      this.resending.set(true);
+      try {
+        const res = await this.phoneSvc.sendOtp(phone);
+        this.verificationId.set(res.verification_id);
+        this.toast.success('auth.verifyPhone.codeSent');
+      } catch (err) {
+        const result = mapApiErrors(err, this.form, VERIFY_ERROR_MAP);
+        if (result.isNetworkError) {
+          this.toast.error('auth.login.errors.network');
+        } else if (result.unmapped.includes(AUTH_ERROR_CODES.OTP_RATE_LIMITED)) {
+          this.toast.error('auth.verifyPhone.errors.rateLimited');
+          this.startLockout(err);
+        } else {
+          this.toast.error('auth.verifyPhone.errors.unexpected');
+        }
+      } finally {
+        this.resending.set(false);
+        this.startCooldown();
+      }
+      return;
+    }
+
     const email = this.auth.currentUser()?.email ?? null;
     if (email === null) {
       /* Register flow lands here pre-authentication; we deliberately never
@@ -530,4 +704,12 @@ const VERIFY_ERROR_MAP: Record<string, ApiErrorMapping> = {
   [AUTH_ERROR_CODES.OTP_INVALID_CODE]: { field: 'code', key: 'invalidCode' },
   [AUTH_ERROR_CODES.OTP_VERIFICATION_FAILED]: { field: 'code', key: 'invalidCode' },
   [AUTH_ERROR_CODES.OTP_RATE_LIMITED]: { field: null, key: 'rateLimited' },
+};
+
+/* Phone-after-social: POST /me/phone surfaces CONFLICT_PHONE_TAKEN when the
+   number is already on another account — land it on the phone field. */
+const SOCIAL_PHONE_ERROR_MAP: Record<string, ApiErrorMapping> = {
+  [AUTH_ERROR_CODES.CONFLICT_PHONE_TAKEN]: { field: 'phone', key: 'phoneTaken' },
+  [AUTH_ERROR_CODES.OTP_RATE_LIMITED]: { field: null, key: 'rateLimited' },
+  [AUTH_ERROR_CODES.OTP_PROVIDER_ERROR]: { field: null, key: 'providerError' },
 };

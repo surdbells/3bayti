@@ -29,6 +29,7 @@ import {
   ToastService,
 } from '../../../shared/forms';
 import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
+import { SocialAuthButtonsComponent } from '../social-auth-buttons/social-auth-buttons';
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
@@ -68,6 +69,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
     FormFieldComponent,
     PhoneInputComponent,
     PasswordStrengthComponent,
+    SocialAuthButtonsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -121,6 +123,8 @@ const RESEND_COOLDOWN_SECONDS = 30;
               {{ (submitting() ? 'common.loading' : 'auth.register.continue') | translate }}
             </button>
           </form>
+
+          <app-social-auth-buttons />
 
           <p class="auth-card__footer">
             {{ 'auth.register.haveAccount' | translate }}

@@ -26,6 +26,15 @@
  *                       Default: '' (unset → gtag.js is never loaded). Set
  *                       per-environment in Cloudflare Pages.
  *
+ *   FIREBASE_API_KEY            Firebase Web API key. Powers Google + Apple
+ *                               social sign-in (Firebase Auth popups). If
+ *                               EMPTY, the firebase init is skipped and the
+ *                               social buttons hide — the app never crashes.
+ *   FIREBASE_AUTH_DOMAIN        Firebase auth domain (e.g. bayti-bcc5e.firebaseapp.com).
+ *   FIREBASE_PROJECT_ID         Firebase project id. Default: bayti-bcc5e.
+ *   FIREBASE_APP_ID             Firebase web app id.
+ *   FIREBASE_MESSAGING_SENDER_ID  Firebase messaging sender id (project number).
+ *
  * If you add a new env var here, also document it in environment.ts so
  * editors can autocomplete it and reviewers can see what's in scope.
  */
@@ -45,6 +54,19 @@ const GA4_MEASUREMENT_ID = (process.env.GA4_MEASUREMENT_ID || 'G-W2YF72TS3F').tr
    Default '#' renders a non-navigating "coming soon" badge. */
 const APP_STORE_URL = (process.env.APP_STORE_URL || 'https://apps.apple.com/ar/app/3bayti/id6752422907').trim();
 const PLAY_STORE_URL = (process.env.PLAY_STORE_URL || 'https://play.google.com/store/apps/details?id=ae.threebayti.app').trim();
+
+/* Firebase Web config — powers Google + Apple social sign-in. Every value
+   defaults to '' EXCEPT projectId (bayti-bcc5e) so a missing config is a
+   no-op rather than a crash: firebase.init only initialises when apiKey is
+   non-empty (see core/firebase/firebase.init.ts). Set these per-environment
+   in Cloudflare Pages. The Web API key is a public client identifier — it is
+   safe to ship in the browser bundle (restrict it by HTTP referrer + enable
+   only the Identity Toolkit API in the Google Cloud console). */
+const FIREBASE_API_KEY = (process.env.FIREBASE_API_KEY || '').trim();
+const FIREBASE_AUTH_DOMAIN = (process.env.FIREBASE_AUTH_DOMAIN || '').trim();
+const FIREBASE_PROJECT_ID = (process.env.FIREBASE_PROJECT_ID || 'bayti-bcc5e').trim();
+const FIREBASE_APP_ID = (process.env.FIREBASE_APP_ID || '').trim();
+const FIREBASE_MESSAGING_SENDER_ID = (process.env.FIREBASE_MESSAGING_SENDER_ID || '').trim();
 
 /* Validate: SITE_URL must be a real https:// URL with no path. */
 try {
@@ -105,6 +127,18 @@ export const environment = {
     appStore: ${JSON.stringify(APP_STORE_URL)},
     playStore: ${JSON.stringify(PLAY_STORE_URL)},
   },
+
+  /* Firebase Web config — Google + Apple social sign-in. When apiKey is ''
+     the firebase init is skipped (core/firebase/firebase.init.ts guards on
+     it) and the social-login buttons hide. Set FIREBASE_* env vars at build
+     time in Cloudflare Pages to enable it. */
+  firebase: {
+    apiKey: ${JSON.stringify(FIREBASE_API_KEY)},
+    authDomain: ${JSON.stringify(FIREBASE_AUTH_DOMAIN)},
+    projectId: ${JSON.stringify(FIREBASE_PROJECT_ID)},
+    appId: ${JSON.stringify(FIREBASE_APP_ID)},
+    messagingSenderId: ${JSON.stringify(FIREBASE_MESSAGING_SENDER_ID)},
+  },
 } as const;
 `;
 
@@ -113,3 +147,4 @@ console.log(`[inject-environment] wrote ${ENV_FILE}`);
 console.log(`[inject-environment]   SITE_URL           = ${SITE_URL}`);
 console.log(`[inject-environment]   SENTRY_DSN         = ${SENTRY_DSN ? '(set)' : '(unset — Sentry disabled)'}`);
 console.log(`[inject-environment]   GA4_MEASUREMENT_ID = ${GA4_MEASUREMENT_ID || '(unset — GA4 disabled)'}`);
+console.log(`[inject-environment]   FIREBASE           = ${FIREBASE_API_KEY ? `(set, project ${FIREBASE_PROJECT_ID})` : '(unset — social sign-in disabled)'}`);

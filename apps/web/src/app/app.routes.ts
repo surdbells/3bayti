@@ -288,6 +288,14 @@ export const routes: Routes = [
     title: 'routeTitles.accountMeasurements',
   },
   {
+    /* Connected accounts — Google/Apple link management (social sign-in). */
+    path: 'account/connected',
+    canActivate: [authActivateGuard],
+    loadComponent: () =>
+      import('./features/account/account-connected-page').then(m => m.AccountConnectedPageComponent),
+    title: 'routeTitles.accountConnected',
+  },
+  {
     path: 'account/delete',
     canActivate: [authActivateGuard],
     loadComponent: () =>

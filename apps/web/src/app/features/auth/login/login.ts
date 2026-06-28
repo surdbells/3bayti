@@ -27,6 +27,7 @@ import {
   ToastService,
 } from '../../../shared/forms';
 import { AUTH_ERROR_CODES } from '../../../core/auth/auth.types';
+import { SocialAuthButtonsComponent } from '../social-auth-buttons/social-auth-buttons';
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
@@ -69,6 +70,7 @@ const RESEND_COOLDOWN_SECONDS = 30;
     TranslatePipe,
     FormFieldComponent,
     PhoneInputComponent,
+    SocialAuthButtonsComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -103,6 +105,8 @@ const RESEND_COOLDOWN_SECONDS = 30;
               <span class="auth-choice__hint">{{ 'auth.login.choiceEmailHint' | translate }}</span>
             </button>
           </div>
+
+          <app-social-auth-buttons [returnUrl]="returnUrl()" />
         </ng-container>
 
         <!-- ===== View: phone ===== -->
@@ -364,6 +368,9 @@ const RESEND_COOLDOWN_SECONDS = 30;
 export class LoginComponent implements OnDestroy {
   protected readonly view = signal<'choice' | 'phone' | 'email' | 'otp' | 'password'>('choice');
 
+  /** Raw returnUrl query param, forwarded to the social-auth buttons. */
+  protected readonly returnUrl = signal<string | null>(null);
+
   protected readonly sending = signal(false);
   protected readonly submitting = signal(false);
   protected readonly resendCooldown = signal(0);
@@ -442,6 +449,8 @@ export class LoginComponent implements OnDestroy {
       email: fb.control('', [Validators.required, Validators.email]),
       password: fb.control('', [Validators.required]),
     });
+
+    this.returnUrl.set(this.route.snapshot.queryParamMap.get('returnUrl'));
   }
 
   ngOnDestroy(): void {

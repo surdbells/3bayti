@@ -214,6 +214,12 @@ const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
             </div>
           </form>
 
+          <div class="account-profile__links" data-testid="prof-connected-link-row">
+            <a routerLink="/account/connected" class="account-profile__link" data-testid="prof-connected-link">
+              {{ 'account.connected.title' | translate }}
+            </a>
+          </div>
+
           <div class="account-profile__danger" data-testid="prof-danger-zone">
             <a routerLink="/account/delete" class="account-profile__danger-link" data-testid="prof-delete-link">
               {{ 'account.delete.title' | translate }}

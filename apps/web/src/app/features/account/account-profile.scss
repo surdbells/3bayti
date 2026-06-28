@@ -232,6 +232,27 @@
   font-size: 14px;
 }
 
+.account-profile__links {
+  margin-block-start: 24px;
+  padding-block-start: 20px;
+  border-block-start: 1px solid var(--color-border-subtle, #e2dccc);
+  display: flex;
+  justify-content: center;
+}
+
+.account-profile__link {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-brand-700, #5a3a2c);
+  text-decoration: none;
+
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+    outline: none;
+  }
+}
+
 .account-profile__danger {
   margin-top: 20px;
   display: flex;

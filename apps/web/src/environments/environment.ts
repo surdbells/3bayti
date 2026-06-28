@@ -34,4 +34,16 @@ export const environment = {
     appStore: "https://apps.apple.com/ar/app/3bayti/id6752422907",
     playStore: "https://play.google.com/store/apps/details?id=ae.threebayti.app",
   },
+
+  /* Firebase Web config — Google + Apple social sign-in. When apiKey is ''
+     the firebase init is skipped (core/firebase/firebase.init.ts guards on
+     it) and the social-login buttons hide. Set FIREBASE_* env vars at build
+     time in Cloudflare Pages to enable it. */
+  firebase: {
+    apiKey: "",
+    authDomain: "",
+    projectId: "bayti-bcc5e",
+    appId: "",
+    messagingSenderId: "",
+  },
 } as const;

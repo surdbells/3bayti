@@ -255,24 +255,27 @@
       "resendCooldown": "Resend in {{seconds}}s"
     },
     "verifyPhone": {
-      "title": "Verify your phone number",
-      "subtitle": "We sent a 6-digit code to {{phone}}. Enter it below.",
+      "title": "Verify your phone",
+      "subtitle": "Add a phone number to secure your account.",
       "codeLabel": "Verification code",
       "submit": "Verify",
       "resendCta": "Didn't get a code?",
       "resendButton": "Resend code",
-      "resendCooldown": "Resend available in {{seconds}}s",
-      "sendPrompt": "We'll text a 6-digit verification code to {{phone}}.",
+      "resendCooldown": "Resend in {{seconds}}s",
+      "sendPrompt": "We'll text you a verification code.",
       "sendButton": "Send code",
-      "codeSent": "We've sent a verification code to your phone.",
+      "codeSent": "We sent a code to {{phone}}.",
       "errors": {
-        "invalidCode": "That code is invalid or has expired. Please try again or request a new code.",
-        "rateLimited": "Too many attempts. Please wait an hour and try again.",
-        "missingVerification": "Verification session missing. Please start over.",
-        "resendUnavailable": "We couldn't resend the code from here. Please return to register and try again.",
-        "startOver": "Start over",
-        "unexpected": "We couldn't verify the code. Please try again."
-      }
+        "invalidCode": "That code isn't right. Check it and try again.",
+        "rateLimited": "Too many attempts. Please wait a moment and try again.",
+        "missingVerification": "Your session expired. Please start over.",
+        "resendUnavailable": "Couldn't resend the code right now. Please try again shortly.",
+        "startOver": "Something went wrong. Please start over.",
+        "unexpected": "Something went wrong. Please try again.",
+        "phoneTaken": "That phone number is already in use."
+      },
+      "socialPrompt": "Almost there — add your phone number to finish setting up your account.",
+      "phoneLabel": "Phone number"
     },
     "forgot": {
       "title": "Reset your password",
@@ -318,6 +321,16 @@
       "fair": "Fair",
       "strong": "Strong",
       "veryStrong": "Very strong"
+    },
+    "social": {
+      "dividerOr": "or",
+      "continueGoogle": "Continue with Google",
+      "continueApple": "Continue with Apple",
+      "errors": {
+        "failed": "Sign-in failed. Please try again.",
+        "popupBlocked": "The sign-in window was blocked. Please allow pop-ups and try again.",
+        "unavailable": "Social sign-in isn't available right now. Please try another way."
+      }
     }
   },
   "addresses": {
@@ -743,6 +756,27 @@
       "browse": "Browse the collection",
       "errors": {
         "loadFailed": "We couldn’t load your wishlist. Please try again."
+      }
+    },
+    "connected": {
+      "title": "Connected accounts",
+      "subtitle": "Link Google or Apple for faster sign-in.",
+      "link": "Link",
+      "unlink": "Unlink",
+      "linked": "Linked",
+      "notLinked": "Not linked",
+      "linkedAs": "Linked as {{email}}",
+      "unlinked": "Account disconnected.",
+      "unavailable": "Social sign-in isn't set up yet.",
+      "providers": {
+        "google": "Google",
+        "apple": "Apple"
+      },
+      "errors": {
+        "alreadyLinked": "This account is already linked to another 3bayti profile.",
+        "lastMethod": "You must keep at least one way to sign in. Set a password or link another account first.",
+        "linkFailed": "Couldn't update this connection. Please try again.",
+        "loadFailed": "Couldn't load your connected accounts."
       }
     }
   },
@@ -1347,7 +1381,8 @@
     "checkoutSuccess": "Order placed · 3bayti",
     "notFound": "Page not found · 3bayti",
     "styles": "Styles · 3bayti",
-    "styleDetail": "Style · 3bayti"
+    "styleDetail": "Style · 3bayti",
+    "accountConnected": "Connected accounts · 3bayti"
   },
   "devComponents": {
     "seo": {
