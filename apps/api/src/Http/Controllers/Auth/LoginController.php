@@ -100,13 +100,26 @@ final class LoginController
         // doesn't leak existence. password_verify is bcrypt-bound and
         // takes ~tens-of-ms; skipping it on user-not-found would make
         // that case much faster than user-found-wrong-password.
-        $hashToVerify = $user !== null
+        // Pre-computed dummy bcrypt hash. Doesn't match any real
+        // password. Generated once with password_hash('dummy', PASSWORD_BCRYPT).
+        $dummyHash = '$2y$10$abcdefghijklmnopqrstuuabcdefghijklmnopqrstuvwxyz123456789012';
+
+        // A social-only account (Google/Apple sign-in) has a NULL
+        // password_hash and CANNOT authenticate by password. We still
+        // run password_verify against the dummy hash so the timing
+        // matches the user-not-found case (no enumeration of which
+        // emails are social-only), then force the result to fail below.
+        $hashToVerify = ($user !== null && $user->hasPassword())
             ? $user->getPasswordHash()
-            // Pre-computed dummy bcrypt hash. Doesn't match any real
-            // password. Generated once with password_hash('dummy', PASSWORD_BCRYPT).
-            : '$2y$10$abcdefghijklmnopqrstuuabcdefghijklmnopqrstuvwxyz123456789012';
+            : $dummyHash;
 
         $passwordOk = password_verify($input->password, $hashToVerify);
+
+        // Belt-and-braces: a passwordless account must never authenticate
+        // by password, regardless of what password_verify returned.
+        if ($user !== null && !$user->hasPassword()) {
+            $passwordOk = false;
+        }
 
         if ($user === null || !$passwordOk) {
             // Same response for "no such user" and "wrong password".

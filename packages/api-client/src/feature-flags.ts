@@ -664,6 +664,47 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/auth/refresh',
     shape: 'v3-envelope',
   },
+  // Social sign-in (Google / Apple via Firebase ID token). v3-only;
+  // no legacy 1:1, so oldPath is '' and routing is by routeKey (post_v3).
+  // Returns the standard login envelope (access_token, refresh_token, user).
+  'POST /auth/social': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/auth/social',
+    shape: 'v3-envelope',
+  },
+  // Connected-accounts management for the current user (Bearer-auth).
+  'GET /me/social-identities': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/social-identities',
+    shape: 'v3-envelope',
+  },
+  'POST /me/social-identities': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/social-identities',
+    shape: 'v3-envelope',
+  },
+  'DELETE /me/social-identities/:provider': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/social-identities/:provider',
+    shape: 'v3-envelope',
+  },
+  // Phone-after-social — set + verify a phone on the current account.
+  'POST /me/phone': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/phone',
+    shape: 'v3-envelope',
+  },
+  'POST /me/phone/verify': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/me/phone/verify',
+    shape: 'v3-envelope',
+  },
   'POST /auth/logout': {
     target: 'new',
     oldPath: '',

@@ -199,8 +199,8 @@ class User
      * Never plaintext. Length 255 to accommodate future rehash to
      * argon2id without a schema change.
      */
-    #[ORM\Column(name: 'password_hash', type: 'string', length: 255)]
-    private string $passwordHash;
+    #[ORM\Column(name: 'password_hash', type: 'string', length: 255, nullable: true)]
+    private ?string $passwordHash = null;
 
     /**
      * Audit field — when did the user last change their password?
@@ -411,11 +411,14 @@ class User
     // Constructor
     // -------------------------------------------------------------------
 
-    public function __construct(string $email, ?string $phone, string $passwordHash, string $countryCode = 'AE')
+    public function __construct(string $email, ?string $phone, ?string $passwordHash, string $countryCode = 'AE')
     {
         $this->email = strtolower(trim($email));
         $this->phone = $phone !== null && $phone !== '' ? $phone : null;
-        $this->passwordHash = $passwordHash;
+        // Null for social-only accounts (Google/Apple sign-in). The
+        // empty string is normalised to null so an accidental '' can
+        // never be mistaken for "has a password".
+        $this->passwordHash = ($passwordHash === null || $passwordHash === '') ? null : $passwordHash;
         $this->countryCode = strtoupper($countryCode);
 
         $this->addresses = new ArrayCollection();
@@ -508,7 +511,18 @@ class User
     public function getTimezone(): string          { return $this->timezone; }
     public function getStoreLegalName(): ?string   { return $this->storeLegalName; }
     public function getTradeLicenseNumber(): ?string { return $this->tradeLicenseNumber; }
-    public function getPasswordHash(): string      { return $this->passwordHash; }
+    public function getPasswordHash(): ?string     { return $this->passwordHash; }
+
+    /**
+     * Whether this account can authenticate with a password.
+     *
+     * False for social-only accounts (created via Google/Apple sign-in,
+     * password_hash IS NULL). Every password_verify() call site MUST
+     * guard on this first: a null hash can NEVER authenticate (passing
+     * null to password_verify is a TypeError in PHP 8, and even if it
+     * weren't, no password should validate against "no password").
+     */
+    public function hasPassword(): bool { return $this->passwordHash !== null; }
     public function getPasswordChangedAt(): ?DateTimeImmutable { return $this->passwordChangedAt; }
     public function getLastLoginAt(): ?DateTimeImmutable       { return $this->lastLoginAt; }
     public function getLastLoginIp(): ?string                  { return $this->lastLoginIp; }
@@ -618,6 +632,20 @@ class User
     {
         $this->passwordHash = $hash;
         $this->passwordChangedAt = new DateTimeImmutable();
+    }
+
+    /**
+     * Set (or change) the phone number. A new number is always
+     * unverified until the user confirms an OTP — so this resets
+     * is_phone_verified to false. Empty string normalises to null.
+     *
+     * Used by the post-social-sign-in "add a phone" flow
+     * (POST /v3/me/phone) and any future phone-change feature.
+     */
+    public function setPhone(?string $phone): void
+    {
+        $this->phone = ($phone === null || $phone === '') ? null : $phone;
+        $this->isPhoneVerified = false;
     }
 
     public function markPhoneVerified(): void

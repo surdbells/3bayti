@@ -203,6 +203,73 @@ return [
     AuthMiddleware::class => \DI\autowire(),
     OptionalAuthMiddleware::class => \DI\autowire(),
 
+    // -------------------------------------------------------------------
+    // Social sign-in — Firebase ID-token verifier + SocialIdentity repo
+    // -------------------------------------------------------------------
+
+    /**
+     * SocialIdentityRepository — like every Doctrine repository, it has
+     * a required $entityName constructor arg PHP-DI can't guess, so we
+     * resolve it through $em->getRepository() at factory time (the
+     * established repo pattern in this file). NEVER inject this concrete
+     * repo into an autowired service — services take EntityManagerInterface
+     * and pull the repo lazily.
+     */
+    \Bayti\Api\Domain\User\SocialIdentityRepository::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Domain\User\SocialIdentityRepository {
+        /** @var EntityManagerInterface $em */
+        $em = $c->get(EntityManagerInterface::class);
+        /** @var \Bayti\Api\Domain\User\SocialIdentityRepository $repo */
+        $repo = $em->getRepository(\Bayti\Api\Domain\User\SocialIdentity::class);
+        return $repo;
+    },
+
+    /**
+     * FirebaseIdTokenVerifier — non-autowirable deps (a PSR-6 cache pool,
+     * a Guzzle client, and a scalar project id), so we build it by hand.
+     * Modelled on the FcmHttpV1Sender factory + loadFcmServiceAccount.
+     *
+     * Project id resolution (first non-empty wins):
+     *   1. FIREBASE_PROJECT_ID
+     *   2. FCM_PROJECT_ID
+     *   3. the FCM service-account JSON's project_id (loadFcmServiceAccount)
+     *
+     * Certs are cached on the local filesystem under var/cache/firebase
+     * (a PSR-6 FilesystemAdapter) so we don't re-fetch Google's x509 set
+     * on every social login.
+     */
+    \Bayti\Api\Infrastructure\Auth\FirebaseIdTokenVerifier::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Infrastructure\Auth\FirebaseIdTokenVerifier {
+        $projectId = (string) ($_ENV['FIREBASE_PROJECT_ID'] ?? '');
+        if ($projectId === '') {
+            $projectId = (string) ($_ENV['FCM_PROJECT_ID'] ?? '');
+        }
+        if ($projectId === '') {
+            [$fcmProject] = loadFcmServiceAccount();
+            $projectId = $fcmProject;
+        }
+
+        $cache = new \Symfony\Component\Cache\Adapter\FilesystemAdapter(
+            namespace: 'firebase_certs',
+            defaultLifetime: 0,
+            directory: $c->get('app.rootPath') . '/var/cache/firebase',
+        );
+
+        // Bounded timeouts — the cert fetch must never hang a login.
+        $http = new GuzzleClient([
+            'timeout' => 5,
+            'connect_timeout' => 3,
+        ]);
+
+        return new \Bayti\Api\Infrastructure\Auth\FirebaseIdTokenVerifier(
+            cache: $cache,
+            httpClient: $http,
+            projectId: $projectId,
+        );
+    },
+
     // M2.1 — AdminAuthMiddleware. Takes ResponseFactory + Logger;
     // both autowire-resolvable.
     \Bayti\Api\Http\Middleware\AdminAuthMiddleware::class => \DI\autowire(),

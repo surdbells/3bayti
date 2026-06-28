@@ -124,6 +124,12 @@ return function (App $app): void {
         $group->post('/otp-login/send', \Bayti\Api\Http\Controllers\Auth\OtpLoginSendController::class);
         $group->post('/otp-login/verify', \Bayti\Api\Http\Controllers\Auth\OtpLoginVerifyController::class);
 
+        // Social sign-in (Google / Apple via Firebase ID token; anonymous).
+        // Find-or-create on the verified provider identity; returns the
+        // standard login envelope. ADDITIVE — sits alongside password +
+        // OTP login.
+        $group->post('/social', \Bayti\Api\Http\Controllers\Auth\SocialLoginController::class);
+
         // M1.4.5 — token lifecycle
         $group->post('/refresh', RefreshController::class); // anonymous (refresh token in body)
         $group->post('/logout', LogoutController::class)
@@ -206,6 +212,22 @@ return function (App $app): void {
         // revokes all refresh tokens + issues a fresh pair on success.
         // See ChangePasswordController docblock for the full rationale.
         $group->patch('/password', ChangePasswordController::class);
+
+        // Social sign-in — connected Google/Apple accounts management.
+        //   GET    list the current user's linked identities
+        //   POST   link a fresh provider token to the current user (409
+        //          if that identity belongs to someone else)
+        //   DELETE unlink a provider (422 if it's the only sign-in method)
+        $group->get('/social-identities', \Bayti\Api\Http\Controllers\Me\ListSocialIdentitiesController::class);
+        $group->post('/social-identities', \Bayti\Api\Http\Controllers\Me\LinkSocialIdentityController::class);
+        $group->delete('/social-identities/{provider}', \Bayti\Api\Http\Controllers\Me\UnlinkSocialIdentityController::class);
+
+        // Phone-after-social — set/verify a phone on the current account.
+        //   POST /phone        send OTP to a new number (stores it unverified)
+        //   POST /phone/verify  confirm the OTP → is_phone_verified = true
+        // Primary use case: users who signed up via Google/Apple adding a phone.
+        $group->post('/phone', \Bayti\Api\Http\Controllers\Me\SetPhoneController::class);
+        $group->post('/phone/verify', \Bayti\Api\Http\Controllers\Me\VerifyPhoneController::class);
 
         // M3.2.Y.6-A — account deletion (authenticated, re-auth via
         // current_password). Deactivates + soft-deletes the user and

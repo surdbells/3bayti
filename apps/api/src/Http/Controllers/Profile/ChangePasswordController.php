@@ -176,9 +176,15 @@ final class ChangePasswordController
         // Verify current password BEFORE any DB writes. password_verify
         // is constant-time and bcrypt-slow (~tens of ms). Same call
         // pattern as LoginController.
-        $currentPasswordOk = password_verify(
+        //
+        // Social-only accounts (Google/Apple sign-in) have a NULL
+        // password_hash and no "current password" to verify against.
+        // Reject cleanly with the same 401 — they can't change a
+        // password they never set. (A future "set initial password"
+        // flow would be a separate endpoint that skips re-auth.)
+        $currentPasswordOk = $user->hasPassword() && password_verify(
             $input->current_password,
-            $user->getPasswordHash(),
+            (string) $user->getPasswordHash(),
         );
         if (!$currentPasswordOk) {
             // Same status (401) and code as login failure. Don't

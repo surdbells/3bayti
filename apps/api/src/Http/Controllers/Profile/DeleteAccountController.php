@@ -77,9 +77,15 @@ final class DeleteAccountController
         // constant-time + bcrypt-slow. Same posture as change-password:
         // a wrong current_password is 401 AUTH_INVALID_CREDENTIALS and
         // leaks nothing beyond "that credential is wrong".
-        $passwordOk = password_verify(
+        // Social-only accounts (Google/Apple sign-in) have a NULL
+        // password_hash. They cannot re-authenticate by password here;
+        // a null hash must never validate (passing null to
+        // password_verify is a TypeError in PHP 8). Reject with the same
+        // 401 so no information leaks. (A dedicated social re-auth path
+        // is out of scope for this foundation.)
+        $passwordOk = $user->hasPassword() && password_verify(
             $input->current_password,
-            $user->getPasswordHash(),
+            (string) $user->getPasswordHash(),
         );
         if (!$passwordOk) {
             throw HttpException::unauthorized(
