@@ -96,15 +96,15 @@ export class SettingsPage implements OnInit, OnDestroy {
    * Connected accounts (linked social providers) state.
    *
    * `socialProviders` is the set of provider keys currently linked to the
-   * account (from GET /me/social-identities), e.g. ['google.com']. The UI
+   * account (from GET /me/social-identities), e.g. ['google']. The UI
    * renders one row per supported provider, showing Connect or Disconnect.
    * `socialBusy` holds the provider whose Connect/Disconnect call is in
    * flight (per-row spinner); `socialLoaded` hides the section until the
    * first fetch resolves so it never flashes a wrong state.
    */
   readonly supportedProviders: Array<{ key: string; labelKey: string; glyph: string }> = [
-    { key: 'google.com', labelKey: 'social_provider_google', glyph: 'G' },
-    { key: 'apple.com', labelKey: 'social_provider_apple', glyph: '' },
+    { key: 'google', labelKey: 'social_provider_google', glyph: 'G' },
+    { key: 'apple', labelKey: 'social_provider_apple', glyph: '' },
   ];
   socialProviders: string[] = [];
   socialBusy: string | null = null;
@@ -223,7 +223,7 @@ export class SettingsPage implements OnInit, OnDestroy {
     }
     this.socialBusy = key;
     try {
-      if (key === 'google.com') {
+      if (key === 'google') {
         await FirebaseAuthentication.signInWithGoogle();
       } else {
         await FirebaseAuthentication.signInWithApple();
