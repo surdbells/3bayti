@@ -40,10 +40,10 @@ export const environment = {
      it) and the social-login buttons hide. Set FIREBASE_* env vars at build
      time in Cloudflare Pages to enable it. */
   firebase: {
-    apiKey: "",
-    authDomain: "",
+    apiKey: "AIzaSyDCzKF3_QIllnUbkxEgpZHJ6l_wU7JLZKo",
+    authDomain: "bayti-bcc5e.firebaseapp.com",
     projectId: "bayti-bcc5e",
-    appId: "",
-    messagingSenderId: "",
+    appId: "1:932559657027:web:85332d4e87957abcfe9cf6",
+    messagingSenderId: "932559657027",
   },
 } as const;

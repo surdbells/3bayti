@@ -62,11 +62,11 @@ const PLAY_STORE_URL = (process.env.PLAY_STORE_URL || 'https://play.google.com/s
    in Cloudflare Pages. The Web API key is a public client identifier — it is
    safe to ship in the browser bundle (restrict it by HTTP referrer + enable
    only the Identity Toolkit API in the Google Cloud console). */
-const FIREBASE_API_KEY = (process.env.FIREBASE_API_KEY || '').trim();
-const FIREBASE_AUTH_DOMAIN = (process.env.FIREBASE_AUTH_DOMAIN || '').trim();
+const FIREBASE_API_KEY = (process.env.FIREBASE_API_KEY || 'AIzaSyDCzKF3_QIllnUbkxEgpZHJ6l_wU7JLZKo').trim();
+const FIREBASE_AUTH_DOMAIN = (process.env.FIREBASE_AUTH_DOMAIN || 'bayti-bcc5e.firebaseapp.com').trim();
 const FIREBASE_PROJECT_ID = (process.env.FIREBASE_PROJECT_ID || 'bayti-bcc5e').trim();
-const FIREBASE_APP_ID = (process.env.FIREBASE_APP_ID || '').trim();
-const FIREBASE_MESSAGING_SENDER_ID = (process.env.FIREBASE_MESSAGING_SENDER_ID || '').trim();
+const FIREBASE_APP_ID = (process.env.FIREBASE_APP_ID || '1:932559657027:web:85332d4e87957abcfe9cf6').trim();
+const FIREBASE_MESSAGING_SENDER_ID = (process.env.FIREBASE_MESSAGING_SENDER_ID || '932559657027').trim();
 
 /* Validate: SITE_URL must be a real https:// URL with no path. */
 try {
