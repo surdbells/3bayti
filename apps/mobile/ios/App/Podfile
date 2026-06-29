@@ -29,7 +29,11 @@ end
 target 'App' do
   capacitor_pods
   # Add your Pods here
-  pod 'FirebaseMessaging' # Add this line
+  # FCM push. Pinned to the Firebase 12.x line so it shares FirebaseCore with
+  # @capacitor-firebase/authentication (FirebaseAuth ~> 12.7). Leaving it
+  # unversioned let the lock hold it at 11.15, which clashed with the auth
+  # plugin's FirebaseCore 12.7 (CocoaPods can't have two FirebaseCore majors).
+  pod 'FirebaseMessaging', '~> 12.7'
 end
 
 post_install do |installer|
