@@ -186,6 +186,21 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     return this.activeImageIndices.get(productId) || 0;
   }
 
+  /**
+   * iOS WKWebView memory guard. Only product images within WINDOW slides of
+   * the active one are mounted (see the @if in the template); far-offscreen
+   * <img> elements are removed so their decoded full-screen bitmaps are
+   * freed. Without this, a long explore scroll accumulates dozens of decoded
+   * full-screen images, exceeds the iOS WebView memory ceiling, and WKWebView
+   * silently reloads the page ("the page refreshes"). Android tolerates the
+   * growth; iOS does not. currentProductIndex is updated on every slide
+   * change, so the window follows the user as they scroll.
+   */
+  isInImageWindow(idx: number): boolean {
+    const WINDOW = 2;
+    return Math.abs(idx - this.currentProductIndex) <= WINDOW;
+  }
+
   getCurrentImage(product: any): string {
     if (!product) return '';
     const images = this.getProductImages(product);

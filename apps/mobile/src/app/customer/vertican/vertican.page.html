@@ -17,19 +17,24 @@
 
           <!-- Image Container -->
           <div class="image-container">
-            <!-- Loading skeleton -->
-            <div class="image-skeleton" [class.hidden]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]">
+            <!-- Loading skeleton (also shown for off-window slides whose image is unmounted) -->
+            <div class="image-skeleton" [class.hidden]="isInImageWindow(idx) && imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]">
               <div class="skeleton-shimmer"></div>
             </div>
 
-            <!-- Product Image -->
-            <img
-              [src]="getCurrentImage(product)"
-              alt="{{product.product_name}}"
-              class="model"
-              [class.loaded]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]"
-              (load)="onImageLoad(product.product_id, getActiveImageIndex(product.product_id))"
-              (error)="onImageError(product.product_id, getActiveImageIndex(product.product_id))">
+            <!-- Product Image — mounted ONLY for slides near the active one so the
+                 iOS WKWebView never holds more than a few decoded full-screen
+                 images. Off-window <img>s are removed and their bitmaps freed,
+                 which prevents the memory-pressure reload on long scrolls. -->
+            @if (isInImageWindow(idx)) {
+              <img
+                [src]="getCurrentImage(product)"
+                alt="{{product.product_name}}"
+                class="model"
+                [class.loaded]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]"
+                (load)="onImageLoad(product.product_id, getActiveImageIndex(product.product_id))"
+                (error)="onImageError(product.product_id, getActiveImageIndex(product.product_id))">
+            }
           </div>
 
           <!-- Image pagination dots - tap to change image -->
