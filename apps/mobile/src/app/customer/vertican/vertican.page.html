@@ -13,28 +13,23 @@
 
     @for(product of products; track product.product_id; let idx = $index){
       <swiper-slide class="product-slide">
-        <div #swipeArea class="hero">
+        <div class="hero">
 
           <!-- Image Container -->
           <div class="image-container">
-            <!-- Loading skeleton (also shown for off-window slides whose image is unmounted) -->
-            <div class="image-skeleton" [class.hidden]="isInImageWindow(idx) && imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]">
+            <!-- Loading skeleton -->
+            <div class="image-skeleton" [class.hidden]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]">
               <div class="skeleton-shimmer"></div>
             </div>
 
-            <!-- Product Image — mounted ONLY for slides near the active one so the
-                 iOS WKWebView never holds more than a few decoded full-screen
-                 images. Off-window <img>s are removed and their bitmaps freed,
-                 which prevents the memory-pressure reload on long scrolls. -->
-            @if (isInImageWindow(idx)) {
-              <img
-                [src]="getCurrentImage(product)"
-                alt="{{product.product_name}}"
-                class="model"
-                [class.loaded]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]"
-                (load)="onImageLoad(product.product_id, getActiveImageIndex(product.product_id))"
-                (error)="onImageError(product.product_id, getActiveImageIndex(product.product_id))">
-            }
+            <!-- Product Image -->
+            <img
+              [src]="getCurrentImage(product)"
+              alt="{{product.product_name}}"
+              class="model"
+              [class.loaded]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]"
+              (load)="onImageLoad(product.product_id, getActiveImageIndex(product.product_id))"
+              (error)="onImageError(product.product_id, getActiveImageIndex(product.product_id))">
           </div>
 
           <!-- Image pagination dots - tap to change image -->
@@ -50,9 +45,8 @@
             </div>
 
             <!-- Left/Right image navigation -->
-            <!--            <div class="image-nav">
+            <div class="image-nav">
               <button
-                #prevBtn
                 type="button"
                 class="image-nav-btn prev"
                 (click)="prevImage(product.product_id, $event)"
@@ -60,14 +54,13 @@
                 ‹
               </button>
               <button
-                #nextBtn
                 type="button"
                 class="image-nav-btn next"
                 (click)="nextImage(product.product_id, $event)"
                 [disabled]="getActiveImageIndex(product.product_id) >= getProductImages(product).length - 1">
                 ›
               </button>
-            </div>-->
+            </div>
           }
 
           <!-- Floating action buttons -->
@@ -158,6 +151,99 @@
       <ion-button type="button" (click)="explore_products()">{{ 'button_refresh' | translate }}</ion-button>
     </div>
   }
+
+  <!-- Filter Modal -->
+  <ion-modal
+    class="filter-modal"
+    swipeToClose="true"
+    (didDismiss)="closeFilter()"
+    #filter_modal
+    [isOpen]="isFilterOpen"
+    [initialBreakpoint]="0.9"
+    [backdropDismiss]="true"
+    [breakpoints]="[0, 0.5, 0.8, 0.9, 1]">
+    <ng-template>
+      <ion-header class="filter-modal__header">
+        <ion-toolbar class="filter-modal__toolbar">
+          <ion-title class="filter-modal__title">{{ 'filter' | translate }}</ion-title>
+          <ion-buttons slot="end">
+            <ion-button type="button" class="filter-modal__close-btn" (click)="closeFilter()">
+              {{ 'close' | translate }}
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="filter-modal__content ion-padding">
+        <ion-grid>
+          <ion-row>
+            <ion-col size="12">
+              <div class="filter-section">
+                <ion-label class="filter-section__label">{{ 'category' | translate }}</ion-label>
+                <div class="category-chips">
+                  @for(cat of category; track cat.id){
+                    <button
+                      type="button"
+                      class="category-chip"
+                      [class.category-chip--active]="isCategorySelected(cat.id)"
+                      (click)="toggleCategory(cat.id)">
+                      {{cat.name}}
+                    </button>
+                  }
+                </div>
+              </div>
+            </ion-col>
+          </ion-row>
+
+          <ion-row>
+            <ion-col size="12">
+              <div class="filter-section">
+                <ion-label class="filter-section__label">{{ 'price_range' | translate }}</ion-label>
+                <div class="price-inputs">
+                  <ion-input
+                    class="price-input"
+                    type="number"
+                    [value]="range().lower"
+                    (ionInput)="onLowerInput($event)"
+                    [placeholder]="'placeholder_min' | translate">
+                  </ion-input>
+                  <span class="price-separator">-</span>
+                  <ion-input
+                    class="price-input"
+                    type="number"
+                    [value]="range().upper"
+                    (ionInput)="onUpperInput($event)"
+                    [placeholder]="'placeholder_max' | translate">
+                  </ion-input>
+                </div>
+                <ion-range
+                  class="price-range"
+                  [dualKnobs]="true"
+                  [min]="min"
+                  [max]="max"
+                  [step]="step"
+                  [value]="range()"
+                  (ionInput)="onRangeChange($event)">
+                </ion-range>
+              </div>
+            </ion-col>
+          </ion-row>
+
+          <ion-row>
+            <ion-col size="12">
+              <div class="filter-actions">
+                <ion-button type="button" class="filter-action-btn filter-action-btn--reset" fill="outline" (click)="resetFilters()">
+                  {{ 'button_reset' | translate }}
+                </ion-button>
+                <ion-button type="button" class="filter-action-btn filter-action-btn--apply" (click)="get_filtered_products()">
+                  {{ 'button_apply_filters' | translate }}
+                </ion-button>
+              </div>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 
   <!-- Wishlist sheet -->
   <ax-bottom-sheet

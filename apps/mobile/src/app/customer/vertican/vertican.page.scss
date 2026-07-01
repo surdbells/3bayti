@@ -667,6 +667,13 @@ ion-modal.filter-modal {
   }
 }
 
+.loader-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+}
+
 /* Closet category rows */
 .custom-list {
   list-style: none;

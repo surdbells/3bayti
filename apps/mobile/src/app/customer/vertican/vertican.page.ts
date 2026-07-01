@@ -6,34 +6,52 @@ import {
   HostListener,
   NgZone,
   OnDestroy,
-  OnInit, QueryList,
+  OnInit,
   signal,
-  ViewChild, ViewChildren,
+  ViewChild,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonButton,
+  IonButtons,
+  IonCol,
   IonContent,
+  IonGrid,
+  IonHeader,
+  IonInput,
+  IonLabel,
+  IonModal,
+  IonRange,
+  IonRow,
+  IonTitle,
+  IonToolbar,
   NavController
 } from '@ionic/angular/standalone';
-import {Gesture, GestureController, Platform, ToastController} from "@ionic/angular";
+import { Platform, ToastController } from "@ionic/angular";
 import { Products } from "../../class/products";
 import { Labels } from "../../class/labels";
 import { Subscription } from "rxjs";
 import { ConnectionService } from "../../service/connection.service";
 import { Router } from "@angular/router";
 import { NetworkService } from "../../service/network.service";
-import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { MobileNetworkAdapter } from "../../core/http/mobile-network-adapter";
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { Preferences } from "@capacitor/preferences";
 import { GlobalComponent } from "../../global-component";
-import {TranslatePipe} from "../../translate.pipe";
+import { TranslatePipe } from "../../translate.pipe";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { I18nService } from '../../i18n.service';
+
+interface Category {
+  readonly id: number;
+  readonly name: string;
+}
+
+type DualRange = { lower: number; upper: number };
 
 @Component({
   selector: 'app-vertican',
@@ -45,6 +63,17 @@ import { I18nService } from '../../i18n.service';
   imports: [
     IonContent,
     IonButton,
+    IonButtons,
+    IonModal,
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonGrid,
+    IonRow,
+    IonCol,
+    IonLabel,
+    IonRange,
+    IonInput,
     FormsModule,
     TranslatePipe,
     AxIconComponent,
@@ -57,9 +86,9 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   categories: Labels[] = [];
   private swiperInitialized = false;
   private verticalSwiper: any = null;
-  @ViewChildren('swipeArea', { read: ElementRef })
-  swipeAreas!: QueryList<ElementRef>;
 
+  @ViewChild(IonModal) modal!: IonModal;
+  @ViewChild('filter_modal', { read: ElementRef }) filterModal!: ElementRef<HTMLIonModalElement>;
   @ViewChild('swiper', { static: false }) swiperEl!: ElementRef<HTMLElement>;
   @ViewChild(IonContent, { static: false }) ionContent!: IonContent;
 
@@ -76,7 +105,20 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
 
   index = signal(0);
   isOnline = true;
+  range = signal<DualRange>({ lower: 5, upper: 500 });
 
+  protected readonly category: Category[] = [
+    { id: 1, name: 'Abayas' },
+    { id: 2, name: 'Mukhawars' },
+    { id: 3, name: 'Kaftans' },
+    { id: 4, name: 'Bags' },
+    { id: 5, name: 'Accessories' },
+    { id: 6, name: 'Modest clothes' },
+    { id: 7, name: 'Dresses' }
+  ];
+
+  protected value: Category | null = { id: 1, name: 'Abayas' };
+  isFilterOpen = false;
   isWishOpen = false;
   images: string[] = [];
   private sub: Subscription;
@@ -84,7 +126,6 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     private nav: NavController,
     private net: ConnectionService,
-    private gestureCtrl: GestureController,
     private toastController: ToastController,
     private platform: Platform,
     private router: Router,
@@ -120,6 +161,15 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     is_loading_category: false
   }
 
+  filter = {
+    id: 0,
+    token: "",
+    category: [1] as number[],
+    price_start: 5,
+    price_end: 500,
+    delivery: "1 - 3"
+  }
+
   single_user = {
     id: 0,
     token: "",
@@ -139,6 +189,7 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit() {
     if (!this.isOnline) {
+      console.log('You are offline');
     }
   }
 
@@ -186,21 +237,6 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     return this.activeImageIndices.get(productId) || 0;
   }
 
-  /**
-   * iOS WKWebView memory guard. Only product images within WINDOW slides of
-   * the active one are mounted (see the @if in the template); far-offscreen
-   * <img> elements are removed so their decoded full-screen bitmaps are
-   * freed. Without this, a long explore scroll accumulates dozens of decoded
-   * full-screen images, exceeds the iOS WebView memory ceiling, and WKWebView
-   * silently reloads the page ("the page refreshes"). Android tolerates the
-   * growth; iOS does not. currentProductIndex is updated on every slide
-   * change, so the window follows the user as they scroll.
-   */
-  isInImageWindow(idx: number): boolean {
-    const WINDOW = 2;
-    return Math.abs(idx - this.currentProductIndex) <= WINDOW;
-  }
-
   getCurrentImage(product: any): string {
     if (!product) return '';
     const images = this.getProductImages(product);
@@ -216,11 +252,9 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.cdr.markForCheck();
   }
 
-  nextImage(productId: number, event?: Event) {
-    if (event) {
-      event.stopPropagation();
-      event.preventDefault();
-    }
+  nextImage(productId: number, event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
 
     const product = this.products.find(p => p.product_id === productId);
     if (!product) return;
@@ -235,11 +269,9 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
-  prevImage(productId: number, event?: Event) {
-    if (event) {
-      event.stopPropagation();
-      event.preventDefault();
-    }
+  prevImage(productId: number, event: Event) {
+    event.preventDefault();
+    event.stopPropagation();
 
     const currentIndex = this.getActiveImageIndex(productId);
 
@@ -347,6 +379,36 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // ========================================
+  // Filter methods
+  // ========================================
+
+  closeFilter() {
+    this.isFilterOpen = false;
+  }
+
+  isCategorySelected(categoryId: number): boolean {
+    return this.filter.category.includes(categoryId);
+  }
+
+  toggleCategory(categoryId: number) {
+    const index = this.filter.category.indexOf(categoryId);
+    if (index > -1) {
+      if (this.filter.category.length > 1) {
+        this.filter.category.splice(index, 1);
+      }
+    } else {
+      this.filter.category.push(categoryId);
+    }
+  }
+
+  resetFilters() {
+    this.filter.category = [1];
+    this.range.set({ lower: 5, upper: 500 });
+    this.filter.price_start = 5;
+    this.filter.price_end = 500;
+  }
+
+  // ========================================
   // API request parameters
   // ========================================
 
@@ -372,8 +434,78 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   }
 
   // ========================================
+  // Range slider
+  // ========================================
+
+  readonly min = 1;
+  readonly max = 5000;
+  readonly step = 5;
+
+  onRangeChange(ev: any) {
+    const v = ev?.detail?.value as DualRange | number;
+    if (typeof v === 'number') return;
+    const lower = this.clamp(v.lower, this.min, Math.min(v.upper, this.max));
+    const upper = this.clamp(v.upper, Math.max(v.lower, this.min), this.max);
+    this.range.set({ lower: this.snap(lower), upper: this.snap(upper) });
+    this.filter.price_start = this.range().lower;
+    this.filter.price_end = this.range().upper;
+  }
+
+  onLowerInput(ev: any) {
+    const raw = Number(ev?.target?.value ?? this.range().lower);
+    const snapped = this.snap(this.clamp(raw, this.min, this.range().upper));
+    this.range.set({ lower: snapped, upper: this.range().upper });
+    this.filter.price_start = this.range().lower;
+    this.filter.price_end = this.range().upper;
+  }
+
+  onUpperInput(ev: any) {
+    const raw = Number(ev?.target?.value ?? this.range().upper);
+    const snapped = this.snap(this.clamp(raw, this.range().lower, this.max));
+    this.range.set({ lower: this.range().lower, upper: snapped });
+    this.filter.price_start = this.range().lower;
+    this.filter.price_end = this.range().upper;
+  }
+
+  private clamp(n: number, lo: number, hi: number) {
+    return Math.min(Math.max(n, lo), hi);
+  }
+
+  private snap(n: number) {
+    return Math.round(n / this.step) * this.step;
+  }
+
+  // ========================================
   // API calls
   // ========================================
+
+  get_filtered_products() {
+    this.isFilterOpen = false;
+    this.resetState();
+
+    this.ui_controls.is_loading = true;
+    this.cdr.markForCheck();
+
+    this.filter.id = this.single_user.id;
+    this.filter.token = this.single_user.token;
+
+    this.networkService.post_request(this.filter, GlobalComponent.filterexplore)
+      .subscribe({
+        next: (response) => {
+          if (response.response_code === 200 && response.status === "success") {
+            this.products = response.data;
+            this.ui_controls.is_loading = false;
+            this.ui_controls.is_loaded = true;
+            this.cdr.markForCheck();
+            setTimeout(() => this.initializeSwipers(), 200);
+          } else {
+            this.ui_controls.is_loading = false;
+            this.cdr.markForCheck();
+            this.presentToast('middle', this.i18n.t('empty_filter'));
+          }
+        }
+      });
+  }
 
   explore_products() {
     console.log('[Vertican] explore_products');
@@ -583,9 +715,11 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   openHome() {
     this.router.navigate(['/', 'account']);
   }
+
   OnDidDismiss() {
     this.isWishOpen = false;
   }
+
   // ========================================
   // Swiper initialization
   // ========================================
@@ -623,17 +757,6 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
 
   ngAfterViewInit(): void {
     setTimeout(() => this.initializeSwipers(), 200);
-    // Handle DOM changes (important when product changes)
-    this.swipeAreas.changes.subscribe(() => {
-      this.initSwipeGestures();
-    });
-  }
-
-  onSwipeLeft(index: number) {
-    this.nextImage(this.products[index].product_id);
-  }
-  onSwipeRight(index: number) {
-    this.prevImage(this.products[index].product_id);
   }
 
   async presentToast(position: 'top' | 'middle' | 'bottom', message: string) {
@@ -644,21 +767,6 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     });
     await toast.present();
   }
-  private initSwipeGestures() {
-    if (!this.swipeAreas || this.swipeAreas.length === 0) return;
 
-    this.swipeAreas.forEach((area, index) => {
-      const gesture = this.gestureCtrl.create({
-        el: area.nativeElement,
-        gestureName: `swipe-gesture-${index}`,
-        threshold: 15,
-        onEnd: ev => {
-          if (ev.deltaX < -50) this.onSwipeLeft(index);
-          if (ev.deltaX > 50) this.onSwipeRight(index);
-        }
-      });
-
-      gesture.enable();
-    });
-  }
+  protected readonly Math = Math;
 }
