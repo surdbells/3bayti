@@ -49,14 +49,37 @@ ion-content.page-bg {
   font-size: 14px;
 }
 
-ion-select {
-  --color: var(--ax-color-text-primary);
-  --placeholder-color: var(--ax-color-text-tertiary);
-  font-family: inherit;
-  font-size: 14px;
-  min-height: 44px;
+/* Tappable category field (opens the category picker sheet). Styled to
+   match the .input-frame text fields. */
+.category-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
-  padding-inline-start: 0;
+  min-height: 44px;
+  padding: 0 12px;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  text-align: start;
+
+  .category-field__value {
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ax-color-text-primary);
+  }
+
+  .category-field__placeholder {
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--ax-color-text-tertiary);
+  }
+
+  .category-field__chevron {
+    font-size: 18px;
+    color: var(--ax-color-text-secondary);
+    flex-shrink: 0;
+  }
 }
 
 ion-checkbox {
@@ -256,35 +279,101 @@ ion-checkbox {
   }
 }
 
-.store-list {
+/* ----- Product-category chips (product picker sheet) ---------- */
+
+.category-chips {
   display: flex;
-  flex-direction: column;
   gap: 8px;
-}
+  overflow-x: auto;
+  padding: 4px 20px 12px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 
-.store-accordion {
-  background: var(--ax-color-bg-surface);
-  border-radius: var(--ax-radius-md);
-  margin-bottom: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(46, 36, 28, 0.06);
-}
-
-.store-header {
-  --background: var(--ax-color-bg-surface);
-  --inner-padding-end: 12px;
-  --padding-start: 14px;
-  --min-height: 48px;
-
-  ion-label {
-    font-family: inherit;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--ax-color-text-primary);
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 
-.store-content {
-  padding: 8px;
-  background: var(--ax-color-bg-canvas);
+.category-chip {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.12));
+  background: var(--ax-color-bg-surface);
+  color: var(--ax-color-text-secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+
+  &--active {
+    background: var(--ax-color-bg-brand);
+    border-color: var(--ax-color-bg-brand);
+    color: var(--ax-palette-neutral-0);
+  }
+}
+
+.products-grid {
+  --ion-grid-padding: 0;
+  padding: 0 12px;
+
+  ion-row {
+    --ion-grid-column-padding: 4px;
+  }
+}
+
+.products-empty {
+  padding: 24px 20px;
+  text-align: center;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--ax-color-text-tertiary);
+}
+
+/* ----- Style-category option list (category picker sheet) ----- */
+
+.category-option-list {
+  display: flex;
+  flex-direction: column;
+  padding: 0 8px 16px;
+}
+
+.category-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--ax-radius-md);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  text-align: start;
+
+  .category-option__label {
+    font-family: inherit;
+    font-size: 15px;
+    color: var(--ax-color-text-primary);
+  }
+
+  .category-option__check {
+    font-size: 20px;
+    color: var(--ax-color-text-brand);
+    flex-shrink: 0;
+  }
+
+  &--active {
+    background: rgba(90, 58, 44, 0.06);
+
+    .category-option__label {
+      font-weight: 600;
+      color: var(--ax-color-text-brand);
+    }
+  }
 }

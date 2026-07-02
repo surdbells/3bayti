@@ -282,6 +282,59 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     }
   }
 
+  // ========================================
+  // Horizontal swipe to change image
+  //
+  // Lightweight touch handlers on the .image-container — NO nested Swiper.
+  // The main swiper is direction="vertical", so horizontal drags never move
+  // it; we do not stopPropagation, which keeps vertical dragging working.
+  // ========================================
+  private imageTouchStartX = 0;
+  private imageTouchStartY = 0;
+  private readonly imageSwipeThreshold = 40;
+
+  onImageTouchStart(event: TouchEvent) {
+    const touch = event.touches?.[0];
+    if (!touch) return;
+    this.imageTouchStartX = touch.clientX;
+    this.imageTouchStartY = touch.clientY;
+  }
+
+  onImageTouchEnd(event: TouchEvent, productId: number) {
+    const touch = event.changedTouches?.[0];
+    if (!touch) return;
+
+    const deltaX = touch.clientX - this.imageTouchStartX;
+    const deltaY = touch.clientY - this.imageTouchStartY;
+
+    // Only treat as an image swipe when the gesture is predominantly
+    // horizontal and clears the threshold. Otherwise let it pass through
+    // (e.g. a vertical drag for the vertical swiper, or a tap).
+    if (Math.abs(deltaX) <= Math.abs(deltaY) || Math.abs(deltaX) < this.imageSwipeThreshold) {
+      return;
+    }
+
+    const product = this.products.find(p => p.product_id === productId);
+    if (!product) return;
+
+    const images = this.getProductImages(product);
+    const currentIndex = this.getActiveImageIndex(productId);
+
+    if (deltaX < 0) {
+      // Swipe left -> next image (respect upper bound).
+      if (currentIndex < images.length - 1) {
+        this.activeImageIndices.set(productId, currentIndex + 1);
+        this.cdr.markForCheck();
+      }
+    } else {
+      // Swipe right -> previous image (respect lower bound).
+      if (currentIndex > 0) {
+        this.activeImageIndices.set(productId, currentIndex - 1);
+        this.cdr.markForCheck();
+      }
+    }
+  }
+
   onImageLoad(productId: number, imageIndex: number) {
     const key = `${productId}-${imageIndex}`;
     console.log('[Image] Loaded:', key);

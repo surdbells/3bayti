@@ -92,51 +92,6 @@ ion-content {
 }
 
 /* ========================================
-   IMAGE NAVIGATION BUTTONS (Left/Right)
-   ======================================== */
-.image-nav {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 70px;
-  z-index: 20;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-}
-
-.image-nav-btn {
-  pointer-events: auto;
-  width: 44px;
-  height: 80px;
-  background: rgba(0, 0, 0, 0.3);
-  border: none;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 32px;
-  font-weight: 300;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  -webkit-tap-highlight-color: transparent;
-
-  &:active {
-    background: rgba(0, 0, 0, 0.5);
-    transform: scale(0.95);
-  }
-
-  &:disabled {
-    opacity: 0.2;
-    pointer-events: none;
-  }
-}
-
-/* ========================================
    IMAGE PAGINATION DOTS (tappable)
    ======================================== */
 .image-pagination {

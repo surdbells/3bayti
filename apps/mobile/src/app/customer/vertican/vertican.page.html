@@ -16,7 +16,10 @@
         <div class="hero">
 
           <!-- Image Container -->
-          <div class="image-container">
+          <div
+            class="image-container"
+            (touchstart)="onImageTouchStart($event)"
+            (touchend)="onImageTouchEnd($event, product.product_id)">
             <!-- Loading skeleton -->
             <div class="image-skeleton" [class.hidden]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]">
               <div class="skeleton-shimmer"></div>
@@ -42,24 +45,6 @@
                   (click)="setActiveImage(product.product_id, i, $event)">
                 </span>
               }
-            </div>
-
-            <!-- Left/Right image navigation -->
-            <div class="image-nav">
-              <button
-                type="button"
-                class="image-nav-btn prev"
-                (click)="prevImage(product.product_id, $event)"
-                [disabled]="getActiveImageIndex(product.product_id) === 0">
-                ‹
-              </button>
-              <button
-                type="button"
-                class="image-nav-btn next"
-                (click)="nextImage(product.product_id, $event)"
-                [disabled]="getActiveImageIndex(product.product_id) >= getProductImages(product).length - 1">
-                ›
-              </button>
             </div>
           }
 

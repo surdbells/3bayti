@@ -21,45 +21,14 @@
 
     <div class="field ion-padding-bottom">
       <label class="field__label">{{ 'label_category' | translate }}</label>
-      <ion-item lines="none" class="input-frame">
-        <ion-select interface="action-sheet" [placeholder]="'placeholder_select_category' | translate" [(ngModel)]="create_style.category">
-          <!-- Classic & Timeless -->
-          <ion-select-option value="classic">{{ 'style_category_classic' | translate }}</ion-select-option>
-          <ion-select-option value="minimalist">{{ 'style_category_minimalist' | translate }}</ion-select-option>
-          <ion-select-option value="preppy">{{ 'style_category_preppy' | translate }}</ion-select-option>
-          <ion-select-option value="elegant">{{ 'style_category_elegant' | translate }}</ion-select-option>
-
-          <!-- Casual & Street -->
-          <ion-select-option value="casual">{{ 'style_category_casual' | translate }}</ion-select-option>
-          <ion-select-option value="streetwear">{{ 'style_category_streetwear' | translate }}</ion-select-option>
-          <ion-select-option value="athleisure">{{ 'style_category_athleisure' | translate }}</ion-select-option>
-          <ion-select-option value="normcore">{{ 'style_category_normcore' | translate }}</ion-select-option>
-
-          <!-- Artistic & Expressive -->
-          <ion-select-option value="bohemian">{{ 'style_category_bohemian' | translate }}</ion-select-option>
-          <ion-select-option value="vintage">{{ 'style_category_vintage' | translate }}</ion-select-option>
-          <ion-select-option value="retro">{{ 'style_category_retro' | translate }}</ion-select-option>
-          <ion-select-option value="artsy">{{ 'style_category_artsy' | translate }}</ion-select-option>
-
-          <!-- Bold & Alternative -->
-          <ion-select-option value="gothic">{{ 'style_category_gothic' | translate }}</ion-select-option>
-          <ion-select-option value="punk">{{ 'style_category_punk' | translate }}</ion-select-option>
-          <ion-select-option value="grunge">{{ 'style_category_grunge' | translate }}</ion-select-option>
-          <ion-select-option value="emo">{{ 'style_category_emo' | translate }}</ion-select-option>
-
-          <!-- Cultural & Lifestyle -->
-          <ion-select-option value="traditional">{{ 'style_category_traditional' | translate }}</ion-select-option>
-          <ion-select-option value="modest">{{ 'style_category_modest' | translate }}</ion-select-option>
-          <ion-select-option value="afrocentric">{{ 'style_category_afrocentric' | translate }}</ion-select-option>
-          <ion-select-option value="western">{{ 'style_category_western' | translate }}</ion-select-option>
-
-          <!-- Modern & Trend -->
-          <ion-select-option value="high-fashion">{{ 'style_category_high_fashion' | translate }}</ion-select-option>
-          <ion-select-option value="chic">{{ 'style_category_chic' | translate }}</ion-select-option>
-          <ion-select-option value="glam">{{ 'style_category_glam' | translate }}</ion-select-option>
-          <ion-select-option value="y2k">{{ 'style_category_y2k' | translate }}</ion-select-option>
-        </ion-select>
-      </ion-item>
+      <button type="button" class="input-frame category-field" (click)="openCategorySheet()">
+        @if (selectedCategoryLabelKey) {
+          <span class="category-field__value">{{ selectedCategoryLabelKey | translate }}</span>
+        } @else {
+          <span class="category-field__placeholder">{{ 'placeholder_select_category' | translate }}</span>
+        }
+        <ax-icon name="chevron-down" class="category-field__chevron" />
+      </button>
     </div>
 
     <div class="field ion-padding-bottom">
@@ -126,39 +95,77 @@
       </button>
     </div>
 
-    <div class="store-list">
-      <ion-accordion-group>
-        @for (store of stores; track store.store_id) {
-          <ion-accordion [value]="store.store_id" class="store-accordion">
-            <ion-item (click)="get_vendor_product(store.store_id)" slot="header" class="store-header">
-              <ion-label>{{ store.store_name }}</ion-label>
-            </ion-item>
-            <div slot="content" class="store-content">
-              <ion-grid>
-                <ion-row>
-                  @for (p of products; track p.product_id) {
-                    <ion-col size="6" sizeSm="6">
-                      <ion-card class="product-card" (click)="addProductToStyle(create_style, p)">
-                        <ion-img [src]="p.image_1" class="product-image"></ion-img>
-                        <ion-card-header class="ion-no-padding">
-                          <ion-card-title class="product-title">{{ p.product_name }}</ion-card-title>
-                        </ion-card-header>
-                        <ion-card-content class="product-price">Ð{{ p.price }}</ion-card-content>
-                      </ion-card>
-                    </ion-col>
-                  }
-                </ion-row>
-              </ion-grid>
-            </div>
-          </ion-accordion>
-        }
-      </ion-accordion-group>
+    <div class="category-chips" role="tablist">
+      @for (cat of productCategories; track cat.id) {
+        <button
+          type="button"
+          role="tab"
+          class="category-chip"
+          [class.category-chip--active]="selectedProductCategoryId === cat.id"
+          [attr.aria-selected]="selectedProductCategoryId === cat.id"
+          (click)="selectProductCategory(cat)">
+          {{ cat.labelKey | translate }}
+        </button>
+      }
     </div>
+
+    @if (ui_controls.is_loading) {
+      <div class="loader-row">
+        <ax-loader></ax-loader>
+      </div>
+    } @else if (ui_controls.is_empty && products.length === 0) {
+      <p class="products-empty">{{ 'text_tap_category_to_view' | translate }}</p>
+    } @else {
+      <ion-grid class="products-grid">
+        <ion-row>
+          @for (p of products; track p.product_id) {
+            <ion-col size="6" sizeSm="6">
+              <ion-card class="product-card" (click)="addProductToStyle(create_style, p)">
+                <ion-img [src]="p.image_1" class="product-image"></ion-img>
+                <ion-card-header class="ion-no-padding">
+                  <ion-card-title class="product-title">{{ p.product_name }}</ion-card-title>
+                </ion-card-header>
+                <ion-card-content class="product-price">Ð{{ p.price }}</ion-card-content>
+              </ion-card>
+            </ion-col>
+          }
+        </ion-row>
+      </ion-grid>
+    }
     @if(!ui_controls.is_empty){
       <ion-infinite-scroll (ionInfinite)="onIonInfinite($event)">
         <ion-infinite-scroll-content [loadingText]="'please_wait' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
       </ion-infinite-scroll>
     }
+  </ax-bottom-sheet>
+
+  <ax-bottom-sheet
+    [isOpen]="isCategoryOpen"
+    (didDismiss)="onCategoryDidDismiss()"
+    [snapPoints]="[1]"
+    [initialSnap]="0">
+
+    <div ax-sheet-header class="select-products-modal__title-row">
+      <h2 class="select-products-modal__title">{{ 'label_category' | translate }}</h2>
+      <button type="button" class="select-products-modal__close-btn" (click)="isCategoryOpen = false">
+        {{ 'close' | translate }}
+      </button>
+    </div>
+
+    <div class="category-option-list">
+      @for (cat of styleCategories; track cat.value) {
+        <button
+          type="button"
+          class="category-option"
+          [class.category-option--active]="create_style.category === cat.value"
+          (click)="selectStyleCategory(cat)">
+          <span class="category-option__label">{{ cat.labelKey | translate }}</span>
+          @if (create_style.category === cat.value) {
+            <ax-icon name="check" class="category-option__check" />
+          }
+        </button>
+      }
+    </div>
   </ax-bottom-sheet>
 </ion-content>
 

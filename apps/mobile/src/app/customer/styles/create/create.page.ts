@@ -10,8 +10,6 @@ import {NetworkService} from "../../../service/network.service";
 import {MobileNetworkAdapter} from "../../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../../shared/ax-mobile/notification';
 import {
-  IonAccordion,
-  IonAccordionGroup,
   IonButton,
   IonButtons,
   IonCard,
@@ -28,10 +26,7 @@ import {
   IonInfiniteScrollContent,
   IonInput,
   IonItem,
-  IonLabel,
   IonRow,
-  IonSelect,
-  IonSelectOption,
   IonTitle,
   IonToolbar,
   NavController,
@@ -44,11 +39,15 @@ import { AxIconComponent } from '../../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../../shared/ax-mobile/loader';
 import { AxBottomSheetComponent } from '../../../shared/ax-mobile/bottom-sheet';
-export interface Store {
+/** A selectable aesthetic style category (drives create_style.category). */
+export interface StyleCategoryOption {
+  value: string;
+  labelKey: string;
+}
+/** A selectable PRODUCT category — numeric legacy category_id + i18n label. */
+export interface ProductCategoryOption {
   id: number;
-  token: string;
-  store_name: string;
-  store_id: number;
+  labelKey: string;
 }
 export interface Product {
   id: number;
@@ -72,8 +71,6 @@ export interface selectedProduct {
   styleUrls: ['./create.page.scss'],
   standalone: true,
   imports: [
-    IonAccordion,
-    IonAccordionGroup,
     IonButton,
     IonButtons,
     IonCard,
@@ -90,10 +87,7 @@ export interface selectedProduct {
     IonInfiniteScrollContent,
     IonInput,
     IonItem,
-    IonLabel,
     IonRow,
-    IonSelect,
-    IonSelectOption,
     IonTitle,
     IonToolbar,
     FormsModule,
@@ -105,8 +99,61 @@ export interface selectedProduct {
   ]
 })
 export class CreatePage {
-  stores: Store[] = [];
   products: Product[] = [];
+
+  /**
+   * Aesthetic style categories (bound to create_style.category via the
+   * category picker sheet). These are the same 24 options the legacy
+   * ion-select carried — labels resolve through the style_category_*
+   * i18n keys.
+   */
+  readonly styleCategories: StyleCategoryOption[] = [
+    { value: 'classic', labelKey: 'style_category_classic' },
+    { value: 'minimalist', labelKey: 'style_category_minimalist' },
+    { value: 'preppy', labelKey: 'style_category_preppy' },
+    { value: 'elegant', labelKey: 'style_category_elegant' },
+    { value: 'casual', labelKey: 'style_category_casual' },
+    { value: 'streetwear', labelKey: 'style_category_streetwear' },
+    { value: 'athleisure', labelKey: 'style_category_athleisure' },
+    { value: 'normcore', labelKey: 'style_category_normcore' },
+    { value: 'bohemian', labelKey: 'style_category_bohemian' },
+    { value: 'vintage', labelKey: 'style_category_vintage' },
+    { value: 'retro', labelKey: 'style_category_retro' },
+    { value: 'artsy', labelKey: 'style_category_artsy' },
+    { value: 'gothic', labelKey: 'style_category_gothic' },
+    { value: 'punk', labelKey: 'style_category_punk' },
+    { value: 'grunge', labelKey: 'style_category_grunge' },
+    { value: 'emo', labelKey: 'style_category_emo' },
+    { value: 'traditional', labelKey: 'style_category_traditional' },
+    { value: 'modest', labelKey: 'style_category_modest' },
+    { value: 'afrocentric', labelKey: 'style_category_afrocentric' },
+    { value: 'western', labelKey: 'style_category_western' },
+    { value: 'high-fashion', labelKey: 'style_category_high_fashion' },
+    { value: 'chic', labelKey: 'style_category_chic' },
+    { value: 'glam', labelKey: 'style_category_glam' },
+    { value: 'y2k', labelKey: 'style_category_y2k' },
+  ];
+  isCategoryOpen = false;
+
+  /**
+   * PRODUCT categories for the picker sheet. These are the real numeric
+   * legacy category_id values the catalog uses (mirrors the account page's
+   * category chips — Abayas..Pyjamas → ids 1..8). GET /mobile/category-listing
+   * filters server-side on category_id (resolved to a v3 category in
+   * ListProductsController), so these ids drive the product grid.
+   */
+  readonly productCategories: ProductCategoryOption[] = [
+    { id: 1, labelKey: 'abayas' },
+    { id: 2, labelKey: 'mukhawars' },
+    { id: 3, labelKey: 'kaftans' },
+    { id: 4, labelKey: 'bags' },
+    { id: 5, labelKey: 'accessories' },
+    { id: 6, labelKey: 'modest_clothes' },
+    { id: 7, labelKey: 'dresses' },
+    { id: 8, labelKey: 'pyjamas' },
+  ];
+  selectedProductCategoryId = 1;
+
   single_user = {
     id: 0,
     token: "",
@@ -157,11 +204,6 @@ export class CreatePage {
     limit: 15,
     offset: 0
   }
-  product_handler = {
-    id: 0,
-    token: "",
-    storeId: 5
-  }
   create_style = {
     id: 0,
     token: "",
@@ -179,8 +221,74 @@ export class CreatePage {
       this.single_user = JSON.parse(ret.value);
       this.initial.id = this.single_user.id;
       this.initial.token = this.single_user.token;
-      this.get_vendors();
+      // Prime the product picker with the first product category so the
+      // grid is populated the moment the sheet opens.
+      this.loadProductsForCategory(this.selectedProductCategoryId);
     }
+  }
+
+  /** Human label for the currently selected aesthetic style category. */
+  get selectedCategoryLabelKey(): string {
+    const match = this.styleCategories.find(c => c.value === this.create_style.category);
+    return match ? match.labelKey : '';
+  }
+
+  /** Open / close the aesthetic-style-category picker sheet. */
+  openCategorySheet() {
+    this.isCategoryOpen = true;
+  }
+  onCategoryDidDismiss() {
+    this.isCategoryOpen = false;
+  }
+  selectStyleCategory(option: StyleCategoryOption) {
+    this.create_style.category = option.value;
+    this.isCategoryOpen = false;
+  }
+
+  /**
+   * Switch the product picker to a different PRODUCT category. Resets
+   * paging and reloads the grid for that category_id.
+   */
+  selectProductCategory(option: ProductCategoryOption) {
+    if (this.selectedProductCategoryId === option.id) return;
+    this.selectedProductCategoryId = option.id;
+    this.ui_controls.is_empty = false;
+    this.initial.offset = 0;
+    this.loadProductsForCategory(option.id);
+  }
+
+  /**
+   * Load the first page of products for a product category_id.
+   *
+   * Direct v3 via GET /mobile/category-listing (→ /v3/products). The v3
+   * ListProductsController resolves category_id to a category and filters
+   * server-side; the registered transformProductListResponse reshapes the
+   * v3 envelope back into the legacy product-card shape
+   * ({product_id, product_name, image_1, price}) the grid + addProductToStyle
+   * expect. Public read — no authToken.
+   */
+  loadProductsForCategory(categoryId: number) {
+    this.ui_controls.is_loading = true;
+    this.initial.offset = 0;
+    this.networkAdapter.get_v3('GET /mobile/category-listing', {
+      queryParams: {
+        category_id: categoryId,
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+      },
+    })
+      .subscribe(({
+        next: (response: any) => {
+          if (response.response_code === 200 && response.status === "success") {
+            this.products = response.data ?? [];
+            this.ui_controls.is_empty = this.products.length === 0;
+          } else {
+            this.products = [];
+            this.ui_controls.is_empty = true;
+          }
+          this.ui_controls.is_loading = false;
+        }
+      }))
   }
   error_notification(message: string) {
     this.toast.error(message, {
@@ -191,56 +299,6 @@ export class CreatePage {
     this.toast.success(message, {
       position: 'bottom-center'
     });
-  }
-  get_vendors() {
-    this.ui_controls.is_loading = true;
-    // Direct v3 (GET /v3/vendors). Public store-directory read — no authToken.
-    // There is no GET /vendors request transform (the legacy id/token pair is
-    // dropped; v3 derives nothing from them); the only thing the legacy body
-    // carried that v3 honours is paging, so forward limit/offset as query
-    // params (v3 clamps limit 1..48, offset >= 0). The registered response
-    // transform (transformVendorListResponse) still applies via get_v3, so
-    // response.data keeps the legacy {store_id, store_name, ...} picker shape.
-    this.networkAdapter.get_v3('GET /vendors', {
-      queryParams: { limit: this.initial.limit, offset: this.initial.offset },
-    })
-      .subscribe(({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.stores = response.data;
-            this.ui_controls.is_loading = false;
-          }else {
-            this.ui_controls.is_loading = false;
-          }
-        }
-      }))
-  }
-  get_vendor_product(storeId: number) {
-    this.ui_controls.is_loading = true;
-    this.product_handler.id = this.single_user.id;
-    this.product_handler.token = this.single_user.token;
-    this.product_handler.storeId = storeId;
-
-    // Direct v3 (GET /v3/vendors/by-legacy-id/{id}/products). Public read — no
-    // authToken. transformVendorsProductsListingRequest maps storeId into the
-    // {id} path param and ONLY adds limit/offset query params when the legacy
-    // body carried them; product_handler is {id, token, storeId} (no paging),
-    // so the transform produces pathParams only — replicate that exactly here.
-    // The response transform (transformProductListResponse) applies via get_v3,
-    // so response.data keeps the legacy product-card shape.
-    this.networkAdapter.get_v3('GET /mobile/vendors-products', {
-      pathParams: { id: String(storeId) },
-    })
-      .subscribe(({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.products = response.data;
-            this.ui_controls.is_loading = false;
-          }else {
-            this.ui_controls.is_loading = false;
-          }
-        }
-      }))
   }
   createStyle() {
     if (this.create_style.name.length == 0){
@@ -314,20 +372,22 @@ export class CreatePage {
     }
   }
   getMoreItems() {
-    this.initial.id = this.single_user.id;
-    this.initial.token = this.single_user.token;
-    this.initial.offset = this.initial.offset + this.initial.limit
-    // Direct v3 (GET /v3/vendors) — paginated load-more. Same migration as
-    // get_vendors(): public read, no request transform, forward the bumped
-    // limit/offset as query params. transformVendorListResponse applies via
-    // get_v3 so the appended rows keep the legacy picker shape.
-    this.networkAdapter.get_v3('GET /vendors', {
-      queryParams: { limit: this.initial.limit, offset: this.initial.offset },
+    this.initial.offset = this.initial.offset + this.initial.limit;
+    // Direct v3 (GET /mobile/category-listing → /v3/products) — paginated
+    // load-more for the currently selected product category. Same server-side
+    // category_id filter + transformProductListResponse reshaping as the
+    // initial load; append the next page's cards to the grid.
+    this.networkAdapter.get_v3('GET /mobile/category-listing', {
+      queryParams: {
+        category_id: this.selectedProductCategoryId,
+        limit: this.initial.limit,
+        offset: this.initial.offset,
+      },
     })
       .subscribe(({
         next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.stores.push(...response.data);
+          if (response.response_code === 200 && response.status === "success" && (response.data?.length ?? 0) > 0) {
+            this.products.push(...response.data);
           }else{
             this.ui_controls.is_empty = true;
           }
