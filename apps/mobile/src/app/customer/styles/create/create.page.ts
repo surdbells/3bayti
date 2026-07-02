@@ -5,7 +5,6 @@ import {Subscription} from "rxjs";
 import {Router} from "@angular/router";
 import {ConnectionService} from "../../../service/connection.service";
 import {BlockerService} from "../../../blocker.service";
-import {InfiniteScrollCustomEvent} from "@ionic/angular";
 import {NetworkService} from "../../../service/network.service";
 import {MobileNetworkAdapter} from "../../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../../shared/ax-mobile/notification';
@@ -22,8 +21,6 @@ import {
   IonGrid,
   IonHeader,
   IonImg,
-  IonInfiniteScroll,
-  IonInfiniteScrollContent,
   IonInput,
   IonItem,
   IonRow,
@@ -83,8 +80,6 @@ export interface selectedProduct {
     IonGrid,
     IonHeader,
     IonImg,
-    IonInfiniteScroll,
-    IonInfiniteScrollContent,
     IonInput,
     IonItem,
     IonRow,
@@ -154,6 +149,12 @@ export class CreatePage {
   ];
   selectedProductCategoryId = 1;
 
+  /** Product-picker fulltext search (global ?q= over the catalog). */
+  productSearchQuery = '';
+  private searchDebounce: any = null;
+  /** Discards stale responses when search / category change rapidly. */
+  private reqToken = 0;
+
   single_user = {
     id: 0,
     token: "",
@@ -196,7 +197,9 @@ export class CreatePage {
     is_loading: false,
     is_creating: false,
     is_empty: false,
-    is_loading_category: false
+    is_loading_category: false,
+    is_loading_more: false,
+    hasMore: true
   }
   initial = {
     id: 0,
@@ -250,11 +253,27 @@ export class CreatePage {
    * paging and reloads the grid for that category_id.
    */
   selectProductCategory(option: ProductCategoryOption) {
-    if (this.selectedProductCategoryId === option.id) return;
+    if (this.selectedProductCategoryId === option.id && this.productSearchQuery.trim() === '') return;
     this.selectedProductCategoryId = option.id;
-    this.ui_controls.is_empty = false;
-    this.initial.offset = 0;
-    this.loadProductsForCategory(option.id);
+    // Switching category clears any active search so the chip drives the grid.
+    this.productSearchQuery = '';
+    if (this.searchDebounce) { clearTimeout(this.searchDebounce); this.searchDebounce = null; }
+    this.fetchProducts(true);
+  }
+
+  /**
+   * Product-picker search. Debounced ~300ms; a non-empty query runs a GLOBAL
+   * fulltext search (?q=) across the catalog (ignoring the category chip), so
+   * a shopper can find a product without knowing its category. Clearing the
+   * box reverts to the selected category.
+   */
+  onProductSearch(query: string) {
+    this.productSearchQuery = query;
+    if (this.searchDebounce) { clearTimeout(this.searchDebounce); }
+    this.searchDebounce = setTimeout(() => {
+      this.searchDebounce = null;
+      this.fetchProducts(true);
+    }, 300);
   }
 
   /**
@@ -268,27 +287,79 @@ export class CreatePage {
    * expect. Public read — no authToken.
    */
   loadProductsForCategory(categoryId: number) {
-    this.ui_controls.is_loading = true;
-    this.initial.offset = 0;
+    this.selectedProductCategoryId = categoryId;
+    this.productSearchQuery = '';
+    this.fetchProducts(true);
+  }
+
+  /**
+   * Build the product-listing query. A non-empty search query runs a global
+   * fulltext search (?q=) across the catalog; otherwise it filters by the
+   * selected product category_id. Always carries the current limit/offset.
+   */
+  private productQueryParams(): Record<string, string | number> {
+    const params: Record<string, string | number> = {
+      limit: this.initial.limit,
+      offset: this.initial.offset,
+    };
+    const q = this.productSearchQuery.trim();
+    if (q.length > 0) {
+      params['q'] = q;
+    } else {
+      params['category_id'] = this.selectedProductCategoryId;
+    }
+    return params;
+  }
+
+  /**
+   * Fetch products for the current category/search. reset=true replaces the
+   * grid (first load / category switch / new search); reset=false appends the
+   * next page (infinite scroll, driven by the sheet's scrolledToBottom). A
+   * per-request token discards stale responses when the user changes
+   * category/search mid-flight, and hasMore stops paging once a short page
+   * comes back. GET /mobile/category-listing → /v3/products with the mobile
+   * transform applied. Public read — no authToken.
+   */
+  private fetchProducts(reset: boolean) {
+    if (!reset && (this.ui_controls.is_loading || this.ui_controls.is_loading_more || !this.ui_controls.hasMore)) {
+      return;
+    }
+    if (reset) {
+      this.initial.offset = 0;
+      this.ui_controls.hasMore = true;
+      this.ui_controls.is_loading = true;
+    } else {
+      this.initial.offset += this.initial.limit;
+      this.ui_controls.is_loading_more = true;
+    }
+    const token = ++this.reqToken;
     this.networkAdapter.get_v3('GET /mobile/category-listing', {
-      queryParams: {
-        category_id: categoryId,
-        limit: this.initial.limit,
-        offset: this.initial.offset,
-      },
+      queryParams: this.productQueryParams(),
     })
-      .subscribe(({
+      .subscribe({
         next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success") {
-            this.products = response.data ?? [];
-            this.ui_controls.is_empty = this.products.length === 0;
+          if (token !== this.reqToken) return;
+          const data = (response.response_code === 200 && response.status === 'success')
+            ? (response.data ?? [])
+            : [];
+          if (reset) {
+            this.products = data;
           } else {
-            this.products = [];
-            this.ui_controls.is_empty = true;
+            this.products.push(...data);
           }
+          if (data.length < this.initial.limit) {
+            this.ui_controls.hasMore = false;
+          }
+          this.ui_controls.is_empty = this.products.length === 0;
           this.ui_controls.is_loading = false;
-        }
-      }))
+          this.ui_controls.is_loading_more = false;
+        },
+        error: () => {
+          if (token !== this.reqToken) return;
+          this.ui_controls.is_loading = false;
+          this.ui_controls.is_loading_more = false;
+        },
+      });
   }
   error_notification(message: string) {
     this.toast.error(message, {
@@ -372,27 +443,7 @@ export class CreatePage {
     }
   }
   getMoreItems() {
-    this.initial.offset = this.initial.offset + this.initial.limit;
-    // Direct v3 (GET /mobile/category-listing → /v3/products) — paginated
-    // load-more for the currently selected product category. Same server-side
-    // category_id filter + transformProductListResponse reshaping as the
-    // initial load; append the next page's cards to the grid.
-    this.networkAdapter.get_v3('GET /mobile/category-listing', {
-      queryParams: {
-        category_id: this.selectedProductCategoryId,
-        limit: this.initial.limit,
-        offset: this.initial.offset,
-      },
-    })
-      .subscribe(({
-        next: (response: any) => {
-          if (response.response_code === 200 && response.status === "success" && (response.data?.length ?? 0) > 0) {
-            this.products.push(...response.data);
-          }else{
-            this.ui_controls.is_empty = true;
-          }
-        }
-      }))
+    this.fetchProducts(false);
   }
   handleRefresh(event: any) {
     setTimeout(() => {
@@ -413,12 +464,6 @@ export class CreatePage {
   }
   addProduct(id: number) {
 
-  }
-  onIonInfinite(event: InfiniteScrollCustomEvent) {
-    this.getMoreItems();
-    setTimeout(() => {
-      event.target.complete();
-    }, 500);
   }
 
   removeProduct(product_id: number): void {

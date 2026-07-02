@@ -175,6 +175,15 @@ export class AxBottomSheetComponent implements OnChanges, OnDestroy, AfterViewIn
   @Output() searchChange = new EventEmitter<string>();
   @Output() searchQueryChange = new EventEmitter<string>();
 
+  /**
+   * Emitted once when the body scrolls within ~120px of the bottom, then
+   * latches until the user scrolls back up. Lets consumers drive
+   * infinite-scroll / load-more — ion-infinite-scroll does NOT work inside
+   * this sheet because the body is a plain scroll container, not an
+   * <ion-content>. Additive + optional: existing consumers are unaffected.
+   */
+  @Output() scrolledToBottom = new EventEmitter<void>();
+
   /** ===== Refs ===== */
   @ViewChild('sheetTemplate', { static: true }) private sheetTemplate!: TemplateRef<unknown>;
 
@@ -353,6 +362,24 @@ export class AxBottomSheetComponent implements OnChanges, OnDestroy, AfterViewIn
     this.searchChange.emit('');
     this.searchQueryChange.emit('');
     this.cdr.markForCheck();
+  }
+
+  /** ===== Body scroll (infinite-scroll trigger) ===== */
+
+  /** Latch so scrolledToBottom fires once per bottom-approach, not per event. */
+  private nearBottomLatched = false;
+
+  onBodyScroll(event: Event): void {
+    const el = event.target as HTMLElement;
+    const remaining = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (remaining <= 120) {
+      if (!this.nearBottomLatched) {
+        this.nearBottomLatched = true;
+        this.scrolledToBottom.emit();
+      }
+    } else {
+      this.nearBottomLatched = false;
+    }
   }
 
   /** ===== Drag handling ===== */

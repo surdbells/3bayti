@@ -71,7 +71,7 @@
     }
 
     <!-- Body content -->
-    <div class="ax-sheet__body">
+    <div class="ax-sheet__body" (scroll)="onBodyScroll($event)">
       <ng-content></ng-content>
     </div>
 

@@ -246,6 +246,7 @@
   "label_selected_products": "Selected Products",
   "button_add_products": "Add products",
   "title_select_products": "Select products",
+  "placeholder_search_products": "Search products",
   "heading_style_summary": "Style summary",
   "label_total_style_price": "Total style price",
   "heading_products_in_style": "Products in this style",

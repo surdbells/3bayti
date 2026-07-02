@@ -246,6 +246,7 @@
   "label_selected_products": "المنتجات المحددة",
   "button_add_products": "إضافة منتجات",
   "title_select_products": "اختر المنتجات",
+  "placeholder_search_products": "ابحث عن المنتجات",
   "heading_style_summary": "ملخص النمط",
   "label_total_style_price": "إجمالي سعر النمط",
   "heading_products_in_style": "المنتجات في هذا النمط",
