@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Serializers;
 
+use Bayti\Api\Domain\GiftCard\GiftCard;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderAddress;
 use Bayti\Api\Domain\Order\OrderItem;
@@ -48,14 +49,38 @@ final class OrderSerializer
      * badge on the order card; clients drill down via
      * GET /v3/returns/{id} when needed.
      *
+     * Gift-card purchase orders (M-giftcard)
+     * ======================================
+     * Gift-card PURCHASE orders are created synthetically with NO
+     * order_items (InitiateCheckoutController::initiateGiftCardPurchase);
+     * the funded card is linked back via
+     * gift_cards.purchase_order_reference = orders.order_reference.
+     *
+     * When such an order (zero real items) is accompanied by its linked
+     * GiftCard (passed in as $giftCard), we synthesize a SINGLE "Gift
+     * Card" line item so the mobile my-orders list + detail always show
+     * an item. Normal orders (>=1 real item) are unaffected and ignore
+     * $giftCard entirely.
+     *
+     * The list path prefetches a reference→card map (see
+     * ListOrdersController) to avoid an N+1; the detail path does one
+     * lookup.
+     *
      * @param list<OrderReturnRequest>|null $returns
      * @return array<string, mixed>
      */
-    public function listShape(Order $order, ?array $returns = null): array
+    public function listShape(Order $order, ?array $returns = null, ?GiftCard $giftCard = null): array
     {
         $items = [];
         foreach ($order->getItems() as $item) {
             $items[] = $this->itemShape($item);
+        }
+
+        // Synthesize a Gift Card line ONLY when the order has zero real
+        // items AND a linked gift card was provided. Never touches
+        // normal orders.
+        if ($items === [] && $giftCard !== null) {
+            $items[] = $this->giftCardItemShape($order, $giftCard);
         }
 
         $shape = [
@@ -96,9 +121,9 @@ final class OrderSerializer
      * @param list<OrderReturnRequest>|null $returns
      * @return array<string, mixed>
      */
-    public function detailShape(Order $order, ?array $returns = null): array
+    public function detailShape(Order $order, ?array $returns = null, ?GiftCard $giftCard = null): array
     {
-        $shape = $this->listShape($order, $returns);
+        $shape = $this->listShape($order, $returns, $giftCard);
         $shape['billing_address'] = $this->addressShape($order->getBillingAddress());
         $shape['shipping_address'] = $this->addressShape($order->getShippingAddress());
         return $shape;
@@ -206,6 +231,85 @@ final class OrderSerializer
             // Legacy field name (my-orders.page reads item.store);
             // duplicate of vendor_id but mobile already binds 'store'.
             'store' => $vendorId,
+        ];
+    }
+
+    /**
+     * Synthesize the SINGLE "Gift Card" line item for a gift-card
+     * purchase order (which carries no real OrderItem rows).
+     *
+     * The returned array uses the EXACT same keys and value types as
+     * itemShape() so the mobile list/detail bindings treat it
+     * identically to a normal line. There is no OrderItem / Product /
+     * Vendor entity behind it, so the entity-derived ids are 0:
+     *
+     *   id            0                (no OrderItem row)
+     *   product_id    0                (no Product;   mobile: product_id)
+     *   vendor_id     0                (no Vendor)
+     *   store         0                (legacy alias of vendor_id; mobile: store)
+     *   product_name  "Gift Card"      (or the themed label, e.g.
+     *                                   "Luxury Gift Card"; mobile: product_name)
+     *   product_image theme photo URL if resolvable else ""
+     *                                   (mobile: product_image)
+     *   quantity      1
+     *   unit_price    order subtotal (the card denomination; decimal string)
+     *   subtotal      order subtotal (same; decimal string)
+     *   size / color / measurement / extra_measurement / note  null
+     *   is_custom     false
+     *   item_status   order status     (mobile reads this as the line status)
+     *
+     * unit_price / subtotal use the order SUBTOTAL — for a gift-card
+     * purchase the subtotal equals the denomination (delivery_fee and
+     * discount are both '0.00' on these synthetic orders).
+     *
+     * @return array{
+     *     id: int,
+     *     product_id: int,
+     *     vendor_id: int,
+     *     product_name: string,
+     *     product_image: string,
+     *     quantity: int,
+     *     unit_price: string,
+     *     subtotal: string,
+     *     size: null,
+     *     color: null,
+     *     is_custom: bool,
+     *     measurement: null,
+     *     extra_measurement: null,
+     *     note: null,
+     *     item_status: string,
+     *     store: int
+     * }
+     */
+    private function giftCardItemShape(Order $order, GiftCard $giftCard): array
+    {
+        $theme = $giftCard->getTheme();
+        $name = ucfirst($theme) . ' Gift Card';
+
+        // No server-side theme→image catalog exists; the luxury theme is
+        // the only one that carries an uploaded photo. Fall back to "".
+        $image = $giftCard->getRecipientPhotoUrl() ?? '';
+
+        $price = $order->getSubtotal();
+
+        return [
+            'id' => 0,
+            'product_id' => 0,
+            'vendor_id' => 0,
+            'product_name' => $name,
+            'product_image' => $image,
+            'quantity' => 1,
+            'unit_price' => $price,
+            'subtotal' => $price,
+            'size' => null,
+            'color' => null,
+            'is_custom' => false,
+            'measurement' => null,
+            'extra_measurement' => null,
+            'note' => null,
+            'item_status' => $order->getStatus(),
+            // Legacy field name (my-orders.page reads item.store).
+            'store' => 0,
         ];
     }
 

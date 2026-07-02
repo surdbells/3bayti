@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Order;
 
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\User\User;
@@ -38,6 +40,12 @@ use Psr\Http\Message\ServerRequestInterface;
  * correctly with limit/offset infinite-scroll. An unknown / empty value is
  * ignored (treated as "all").
  *
+ * type: optional order-type filter — "product" (only orders with a real
+ * product line; excludes gift-card purchases) or "gift_card" ("card" is
+ * accepted as an alias; only synthetic gift-card purchase orders). Applied
+ * SERVER-SIDE and composes with `status` + pagination. Absent / any other
+ * value is ignored (treated as "all").
+ *
  * Returns the order list ordered by created_at DESC (newest first;
  * matches mobile's display expectation).
  */
@@ -62,6 +70,10 @@ final class ListOrdersController
         Order::STATUS_REFUNDED,
         Order::STATUS_FAILED,
     ];
+
+    /** Order-type filter values (normalised); null = all. */
+    public const TYPE_PRODUCT = 'product';
+    public const TYPE_GIFT_CARD = 'gift_card';
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
@@ -89,13 +101,32 @@ final class ListOrdersController
         $limit = $this->clampLimit($query['limit'] ?? null);
         $offset = $this->clampOffset($query['offset'] ?? null);
         $status = $this->normalizeStatus($query['status'] ?? null);
+        $type = $this->normalizeType($query['type'] ?? null);
 
         /** @var OrderRepository $orders */
         $orders = $this->em->getRepository(Order::class);
-        [$list, $total] = $orders->paginatedForUser($user, $limit, $offset, $status);
+        [$list, $total] = $orders->paginatedForUser($user, $limit, $offset, $status, $type);
+
+        // Prefetch the gift-card map for THIS page in one query, so
+        // synthesizing the "Gift Card" line for gift-card purchase
+        // orders (those with zero real items) never triggers an N+1.
+        // Keyed by order_reference == gift_cards.purchase_order_reference.
+        // Skip the gift-card lookup entirely for an empty page — no orders
+        // means no lines to synthesize, and it avoids a needless query.
+        $giftCardMap = [];
+        if ($list !== []) {
+            $refs = array_map(static fn (Order $o): string => $o->getOrderReference(), $list);
+            /** @var GiftCardRepository $giftCards */
+            $giftCards = $this->em->getRepository(GiftCard::class);
+            $giftCardMap = $giftCards->findByPurchaseOrderReferences($refs);
+        }
 
         $items = array_map(
-            fn (Order $o): array => $this->serializer->listShape($o),
+            fn (Order $o): array => $this->serializer->listShape(
+                $o,
+                null,
+                $giftCardMap[$o->getOrderReference()] ?? null,
+            ),
             $list,
         );
 
@@ -107,8 +138,27 @@ final class ListOrdersController
                 'count' => count($items),
                 'total' => $total,
                 'status' => $status,
+                'type' => $type,
             ],
         ]);
+    }
+
+    /**
+     * Normalise the raw ?type= query value. "product" and "gift_card"
+     * pass through; "card" is an accepted alias for "gift_card". Any
+     * other / empty value becomes null ("all"), so a bad client param
+     * degrades to an unfiltered list rather than an error.
+     */
+    private function normalizeType(mixed $raw): ?string
+    {
+        if (!is_string($raw) || $raw === '') {
+            return null;
+        }
+        return match ($raw) {
+            self::TYPE_PRODUCT => self::TYPE_PRODUCT,
+            self::TYPE_GIFT_CARD, 'card' => self::TYPE_GIFT_CARD,
+            default => null,
+        };
     }
 
     /**

@@ -6,6 +6,8 @@ namespace Bayti\Api\Tests\Http\Controllers\Order;
 
 use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\Vendor;
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\Order\OrderRepository;
@@ -85,10 +87,14 @@ final class ListOrdersControllerTest extends HttpTestCase
         $orderRepo = $this->createMock(OrderRepository::class);
         $orderRepo->method('paginatedForUser')->willReturn([[$order], 1]);
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo) {
+        $giftCardRepo = $this->createMock(GiftCardRepository::class);
+        $giftCardRepo->method('findByPurchaseOrderReferences')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $giftCardRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Order::class, $orderRepo],
+                [GiftCard::class, $giftCardRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
@@ -227,6 +233,54 @@ final class ListOrdersControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function synthesizesGiftCardLineForGiftCardPurchaseOrder(): void
+    {
+        $user = $this->makeUser(id: 7);
+        // Gift-card purchase order: NO real items, subtotal == denomination.
+        $order = $this->makeOrder($user, id: 300, reference: 'V3-GC-1', subtotal: '500.00');
+        $giftCard = $this->makeGiftCard(theme: 'birthday');
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('paginatedForUser')->willReturn([[$order], 1]);
+
+        $giftCardRepo = $this->createMock(GiftCardRepository::class);
+        $giftCardRepo->method('findByPurchaseOrderReferences')
+            ->willReturn(['V3-GC-1' => $giftCard]);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $giftCardRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+                [GiftCard::class, $giftCardRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('GET', '/v3/orders', [], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+
+        self::assertCount(1, $body['orders']);
+        // A single synthesized "Gift Card" line is present even though the
+        // order carries zero real OrderItem rows.
+        self::assertCount(1, $body['orders'][0]['items']);
+        self::assertSame('Birthday Gift Card', $body['orders'][0]['items'][0]['product_name']);
+        self::assertSame(1, $body['orders'][0]['items'][0]['quantity']);
+        self::assertSame(0, $body['orders'][0]['items'][0]['store']);
+    }
+
+    #[Test]
     public function requiresAuth(): void
     {
         $response = $this->handle(
@@ -272,5 +326,16 @@ final class ListOrdersControllerTest extends HttpTestCase
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
         return $vendor;
+    }
+
+    private function makeGiftCard(string $theme): GiftCard
+    {
+        // Only theme + recipientPhotoUrl are read by the serializer's
+        // synthesized-line logic; build without the constructor and set
+        // just those props (recipientPhotoUrl defaults to null).
+        $card = (new \ReflectionClass(GiftCard::class))->newInstanceWithoutConstructor();
+        $this->setEntityProp($card, 'theme', $theme);
+        $this->setEntityProp($card, 'recipientPhotoUrl', null);
+        return $card;
     }
 }

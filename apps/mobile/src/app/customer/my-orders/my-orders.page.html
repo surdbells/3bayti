@@ -26,6 +26,23 @@
     }
   </div>
 
+  <!-- Type filter chips — parallel to the status row. Drives server-side
+       ?type= filtering (All / Products / Gift Cards); tapping refetches from
+       offset 0. -->
+  <div class="status-filters horizontal-scroll" role="tablist">
+    @for (chip of types; track chip.value) {
+      <button
+        type="button"
+        role="tab"
+        class="status-chip"
+        [class.status-chip--active]="selectedType === chip.value"
+        [attr.aria-selected]="selectedType === chip.value"
+        (click)="selectType(chip.value)">
+        {{ chip.labelKey | translate }}
+      </button>
+    }
+  </div>
+
   @if (ui_controls.is_loading){
     <div class="loader-row">
       <ax-loader></ax-loader>
@@ -52,7 +69,7 @@
         </div>
 
         <!-- Compact summary: thumbnail strip + item count (collapsed view) -->
-        @if (!order.showItems && order.items?.length) {
+        @if (!order.showItems && order.items.length) {
           <div class="order-summary">
             <div class="thumb-strip">
               @for (item of order.items.slice(0, 4); track item) {

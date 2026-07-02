@@ -80,6 +80,16 @@ class OrderRepository extends EntityRepository
      * empty string means "all statuses". The same filter is applied to
      * both the count and the id-page query so pagination stays consistent.
      *
+     * An optional $typeFilter scopes by order TYPE:
+     *   - 'product'   → only orders WITHOUT a linked gift card
+     *                   (NOT EXISTS on gift_cards.purchase_order_reference)
+     *   - 'gift_card' → only synthetic gift-card PURCHASE orders
+     *                   (EXISTS on the same back-reference)
+     *   - null / other → no type filter.
+     * It reuses the exact gift-card back-reference subquery shape as the
+     * admin exclusion (excludeGiftCardPurchases) and composes with the
+     * status filter. Applied to both count + id-page for consistency.
+     *
      * @return array{0: list<Order>, 1: int} Tuple of [orders, total_count].
      */
     public function paginatedForUser(
@@ -87,11 +97,13 @@ class OrderRepository extends EntityRepository
         int $limit,
         int $offset,
         ?string $statusFilter = null,
+        ?string $typeFilter = null,
     ): array {
         $limit = max(1, min($limit, 100));
         $offset = max(0, $offset);
 
         $status = ($statusFilter !== null && $statusFilter !== '') ? $statusFilter : null;
+        $type = ($typeFilter !== null && $typeFilter !== '') ? $typeFilter : null;
 
         // Total count: simple, no joins
         $totalQb = $this->createQueryBuilder('o')
@@ -101,6 +113,7 @@ class OrderRepository extends EntityRepository
         if ($status !== null) {
             $totalQb->andWhere('o.status = :status')->setParameter('status', $status);
         }
+        $this->applyTypeFilter($totalQb, $type);
         $total = (int) $totalQb->getQuery()->getSingleScalarResult();
 
         if ($total === 0) {
@@ -120,6 +133,7 @@ class OrderRepository extends EntityRepository
         if ($status !== null) {
             $idQb->andWhere('o.status = :status')->setParameter('status', $status);
         }
+        $this->applyTypeFilter($idQb, $type);
         $idResult = $idQb->getQuery()->getScalarResult();
 
         $ids = array_map(static fn(array $row): int => (int) $row['id'], $idResult);
@@ -317,6 +331,35 @@ class OrderRepository extends EntityRepository
             . "WHERE gc.purchaseOrderReference = {$alias}.orderReference"
             . ')'
         );
+    }
+
+    /**
+     * Apply the customer-facing order-TYPE filter, reusing the exact
+     * gift-card back-reference subquery shape as excludeGiftCardPurchases:
+     *
+     *   'gift_card' → EXISTS     (only synthetic gift-card purchase orders)
+     *   'product'   → NOT EXISTS (only orders with no linked gift card —
+     *                             i.e. real product orders)
+     *   null / other → no filter (all orders).
+     *
+     * The 'product' branch delegates to excludeGiftCardPurchases so the
+     * two stay in lock-step. The subquery is uncorrelated-to-status, so
+     * this composes cleanly with the status filter.
+     *
+     * @param string $alias the Order alias used in the query builder ('o').
+     */
+    private function applyTypeFilter(QueryBuilder $qb, ?string $type, string $alias = 'o'): void
+    {
+        if ($type === 'gift_card') {
+            $qb->andWhere(
+                'EXISTS ('
+                . 'SELECT 1 FROM \\Bayti\\Api\\Domain\\GiftCard\\GiftCard gc '
+                . "WHERE gc.purchaseOrderReference = {$alias}.orderReference"
+                . ')'
+            );
+        } elseif ($type === 'product') {
+            $this->excludeGiftCardPurchases($qb, $alias);
+        }
     }
 
     /**

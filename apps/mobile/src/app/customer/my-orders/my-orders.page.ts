@@ -62,6 +62,17 @@ interface StatusChip {
   /** i18n key for the chip label. */
   labelKey: string;
 }
+// Order type filter. 'all' = no server filter; 'product' / 'gift_card' are
+// sent verbatim as ?type= to GET /v3/orders (server-side EXISTS/NOT EXISTS on
+// a linked gift card). Composes with the status filter + offset pagination.
+type FilterType = 'all' | 'product' | 'gift_card';
+
+interface TypeChip {
+  /** Filter bucket — 'all', 'product', or 'gift_card'. */
+  value: FilterType;
+  /** i18n key for the chip label. */
+  labelKey: string;
+}
 interface OrderItem {
   product_id: number;
   store: number;
@@ -121,6 +132,15 @@ export class MyOrdersPage implements OnInit {
     { value: 'cancelled', labelKey: 'orders_filter_cancelled' },
   ];
   selectedStatus: FilterStatus = 'all';
+  // Type filter chips — parallel to the status chips. 'all' sends no ?type=;
+  // 'product' / 'gift_card' filter server-side by whether the order has a
+  // linked gift card.
+  types: TypeChip[] = [
+    { value: 'all', labelKey: 'orders_type_all' },
+    { value: 'product', labelKey: 'orders_type_products' },
+    { value: 'gift_card', labelKey: 'orders_type_gift_cards' },
+  ];
+  selectedType: FilterType = 'all';
   constructor(
     private nav: NavController,
     private net: ConnectionService,
@@ -185,6 +205,9 @@ export class MyOrdersPage implements OnInit {
     };
     if (this.selectedStatus !== 'all') {
       params['status'] = this.selectedStatus;
+    }
+    if (this.selectedType !== 'all') {
+      params['type'] = this.selectedType;
     }
     return params;
   }
@@ -284,6 +307,17 @@ export class MyOrdersPage implements OnInit {
       return;
     }
     this.selectedStatus = s;
+    this.orders = [];
+    this.order_listing();
+  }
+
+  // Switch the active type chip and refetch from offset 0 (mirrors
+  // selectStatus) so the list reflects the server-side ?type= filtered page.
+  selectType(t: FilterType) {
+    if (this.selectedType === t) {
+      return;
+    }
+    this.selectedType = t;
     this.orders = [];
     this.order_listing();
   }

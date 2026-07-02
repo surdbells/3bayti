@@ -31,6 +31,44 @@ class GiftCardRepository extends EntityRepository
     }
 
     /**
+     * Batch lookup of gift cards by their purchase-order references,
+     * keyed by reference. Used by the orders LIST serialization to
+     * resolve, in ONE query, which of the page's orders are gift-card
+     * purchases (avoids an N+1 lookup per order).
+     *
+     * References with no matching card simply don't appear in the map.
+     * A blank input returns an empty map. If two cards somehow share a
+     * reference (the column is UNIQUE, so this shouldn't happen) the
+     * last one wins — acceptable for the display-only use here.
+     *
+     * @param list<string> $refs
+     * @return array<string, GiftCard> keyed by purchaseOrderReference
+     */
+    public function findByPurchaseOrderReferences(array $refs): array
+    {
+        $refs = array_values(array_unique(array_filter($refs, static fn ($r): bool => is_string($r) && $r !== '')));
+        if ($refs === []) {
+            return [];
+        }
+
+        /** @var list<GiftCard> $cards */
+        $cards = $this->createQueryBuilder('g')
+            ->where('g.purchaseOrderReference IN (:refs)')
+            ->setParameter('refs', $refs)
+            ->getQuery()
+            ->getResult();
+
+        $map = [];
+        foreach ($cards as $card) {
+            $ref = $card->getPurchaseOrderReference();
+            if ($ref !== null) {
+                $map[$ref] = $card;
+            }
+        }
+        return $map;
+    }
+
+    /**
      * All cards where user is the buyer OR the assigned recipient.
      * @return list<GiftCard>
      */

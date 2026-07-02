@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Order;
 
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\Order\OrderReturnRequest;
@@ -92,8 +94,19 @@ final class GetOrderController
             $returns = [];
         }
 
+        // Gift-card purchase orders carry no real items; resolve the
+        // linked card (one lookup) so the serializer can synthesize the
+        // "Gift Card" line. Only worth looking up when there are no real
+        // items — a normal order never has a linked purchase card.
+        $giftCard = null;
+        if ($order->getItems()->isEmpty()) {
+            /** @var GiftCardRepository $giftCards */
+            $giftCards = $this->em->getRepository(GiftCard::class);
+            $giftCard = $giftCards->findByPurchaseOrderReference($order->getOrderReference());
+        }
+
         return $this->ok([
-            'order' => $this->serializer->detailShape($order, $returns),
+            'order' => $this->serializer->detailShape($order, $returns, $giftCard),
         ]);
     }
 }
