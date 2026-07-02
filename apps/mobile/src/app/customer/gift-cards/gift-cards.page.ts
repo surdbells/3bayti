@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
   IonButton, IonButtons, IonContent, IonHeader, IonTitle,
-  IonToolbar, IonSpinner, IonIcon, NavController,
+  IonToolbar, IonSpinner, NavController,
 } from '@ionic/angular/standalone';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { Preferences } from '@capacitor/preferences';
@@ -45,7 +45,7 @@ export interface GiftCardTheme {
   imports: [
     CommonModule, FormsModule, TranslatePipe,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent,
-    IonSpinner, IonIcon,
+    IonSpinner,
     AxLoaderComponent, AxIconComponent, AxTextFieldComponent,
     AxBottomSheetComponent,
   ],

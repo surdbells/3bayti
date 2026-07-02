@@ -1,6 +1,6 @@
 import { Component, Input, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonBadge, IonFooter, IonLabel, IonTabBar, IonTabButton } from '@ionic/angular/standalone';
+import { IonFooter, IonLabel, IonTabBar, IonTabButton } from '@ionic/angular/standalone';
 
 import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../ax-mobile/icon';
@@ -32,7 +32,6 @@ export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'pr
     IonTabBar,
     IonTabButton,
     IonLabel,
-    IonBadge,
     AxIconComponent,
     TranslatePipe,
   ],

@@ -4,7 +4,6 @@ import {Cart} from "../../class/cart";
 import {Labels} from "../../class/labels";
 import {Subscription} from "rxjs";
 import {
-  IonAccordion,
   IonAccordionGroup,
   IonButton,
   IonButtons,
@@ -70,7 +69,6 @@ import { AddressService, SavedAddress, NewAddress } from '../../core/services/ad
     IonRow,
     TranslatePipe,
     IonAccordionGroup,
-    IonAccordion,
     FormsModule,
     DecimalPipe,
     AxIconComponent,

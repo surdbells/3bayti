@@ -9,9 +9,7 @@ import {
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 import { Preferences } from '@capacitor/preferences';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
-import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
 
@@ -23,7 +21,7 @@ import { I18nService } from '../../i18n.service';
   imports: [
     CommonModule, FormsModule,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonButton, IonContent, IonSpinner,
-    AxLoaderComponent, AxIconComponent, AxTextFieldComponent, TranslatePipe,
+    AxIconComponent, TranslatePipe,
   ],
 })
 export class GiftCardRedeemPage {
