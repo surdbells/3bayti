@@ -1,0 +1,35 @@
+# fastlane snapshot — https://docs.fastlane.tools/actions/snapshot/
+#
+# The app is iPhone-only + portrait (TARGETED_DEVICE_FAMILY = 1,
+# UISupportedInterfaceOrientations = Portrait), so we only need the 6.9"
+# device. The iPhone 16 Pro Max renders at 1290 x 2796 — the single size
+# App Store Connect now requires; it auto-scales that set down for smaller
+# displays. Add a 6.5" device only if you want native-resolution 6.5" shots.
+devices([
+  "iPhone 16 Pro Max"
+  # , "iPhone 15 Plus"   # optional native 6.5" (1284 x 2778)
+])
+
+# Store localizations. Drop "ar-SA" if you are not publishing Arabic
+# screenshots; it renders the app in RTL Arabic.
+languages([
+  "en-US",
+  "ar-SA"
+])
+
+# The Xcode scheme that builds the app + the UI Test target. After you add the
+# "AppUITests" target in Xcode, make sure this scheme includes it under Test.
+scheme("App")
+
+output_directory("./fastlane/screenshots")
+clear_previous_screenshots(true)
+concurrent_simulators(false)
+
+# Clean store status bar: full signal/battery + a fixed 9:41 time.
+override_status_bar(true)
+
+# Run only our screenshot class, not the whole UI-test target.
+only_testing(["AppUITests/ScreenshotUITests"])
+
+# Keep going if one screen fails so a single flaky tap doesn't abort the run.
+stop_after_first_error(false)

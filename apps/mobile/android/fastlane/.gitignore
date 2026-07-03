@@ -1,0 +1,5 @@
+# Generated screenshot output + fastlane run artifacts (not source).
+# The supply upload lane reads from metadata/android/<locale>/images/.
+metadata/android/*/images/
+report.xml
+screengrab/

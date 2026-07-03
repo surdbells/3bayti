@@ -1,0 +1,5 @@
+package_name("ae.threebayti.app")
+
+# Only needed for the upload_screens lane (supply). A Google Play service-account
+# JSON with "Release manager" access to the app.
+# json_key_file("fastlane/play-service-account.json")

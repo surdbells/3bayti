@@ -1,0 +1,12 @@
+# Fastlane toolchain for store-screenshot automation:
+#   - iOS   : `snapshot`   (XCUITest-driven captures at device sizes)
+#   - Android: `screengrab` (instrumented-test-driven captures)
+# plus metadata upload via `deliver` (App Store) / `supply` (Play).
+#
+# Run on a machine with Ruby + bundler. iOS lanes also need Xcode + iOS
+# simulators; Android lanes need the Android SDK + a running emulator.
+#
+#   cd apps/mobile && bundle install
+source "https://rubygems.org"
+
+gem "fastlane", "~> 2.226"

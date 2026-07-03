@@ -1,0 +1,23 @@
+default_platform(:ios)
+
+platform :ios do
+  desc "Capture App Store screenshots (iPhone 6.9\", en + ar) via snapshot"
+  lane :screenshots do
+    capture_ios_screenshots # reads fastlane/Snapfile
+    UI.success("Screenshots in ios/App/fastlane/screenshots/<lang>/ — 1290x2796")
+    # Optional: device frames + captions (needs ImageMagick + a Framefile).
+    # frame_screenshots(path: "./fastlane/screenshots")
+  end
+
+  desc "Upload screenshots to App Store Connect (no binary, no metadata)"
+  lane :upload_screens do
+    deliver(
+      screenshots_path: "./fastlane/screenshots",
+      skip_binary_upload: true,
+      skip_metadata: true,
+      overwrite_screenshots: true,
+      run_precheck_before_submit: false,
+      force: true
+    )
+  end
+end

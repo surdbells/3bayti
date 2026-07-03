@@ -1,0 +1,7 @@
+app_identifier("ae.threebayti.app")
+
+# Only needed for the upload_screens lane (deliver). Leave commented until you
+# wire up App Store Connect auth (an API key is preferred over apple_id).
+# apple_id("you@3bayti.ae")
+# itc_team_id("XXXXXXXX")
+# team_id("XXXXXXXXXX")

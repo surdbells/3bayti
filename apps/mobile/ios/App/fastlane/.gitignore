@@ -1,0 +1,6 @@
+# Generated screenshot output + fastlane run artifacts (not source).
+screenshots/
+report.xml
+Preview.html
+screenshots.html
+test_output/
