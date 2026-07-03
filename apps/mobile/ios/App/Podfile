@@ -34,6 +34,14 @@ target 'App' do
   # unversioned let the lock hold it at 11.15, which clashed with the auth
   # plugin's FirebaseCore 12.7 (CocoaPods can't have two FirebaseCore majors).
   pod 'FirebaseMessaging', '~> 12.7'
+  # Native Google Sign-In. @capacitor-firebase/authentication defaults to its
+  # 'Lite' subspec (FirebaseAuth only, NO GoogleSignIn SDK), so on iOS
+  # signInWithGoogle() has no native SDK/handler and hangs at "Signing in…".
+  # Pulling the 'Google' subspec adds GoogleSignIn 9.0.0 + the
+  # -DRGCFA_INCLUDE_GOOGLE flag that compiles in the plugin's Google path.
+  # It lives here in the target block (not the auto-generated capacitor_pods
+  # def), so `npx cap sync` won't drop it. Run `pod install` after adding.
+  pod 'CapacitorFirebaseAuthentication/Google', :path => '../../../../node_modules/.pnpm/@capacitor-firebase+authentication@8.3.0_@capacitor+core@8.3.3_firebase@12.15.0/node_modules/@capacitor-firebase/authentication'
 end
 
 post_install do |installer|

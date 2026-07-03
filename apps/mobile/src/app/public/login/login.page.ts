@@ -697,6 +697,9 @@ export class LoginPage implements OnInit, OnDestroy {
       next: (response: any) => {
         this.ui_controls.login_loading = false;
         if (response.response_code === 200 && response.status === 'success') {
+          // Capture the verification_id — POST /me/phone/verify REQUIRES it
+          // alongside the code (same contract as the normal OTP flow).
+          this.verificationId = response.data?.verification_id ?? '';
           this.otp.code = '';
           this.view = 'social-otp';
           this.startResendCooldown();
@@ -718,7 +721,9 @@ export class LoginPage implements OnInit, OnDestroy {
     this.ui_controls.login_loading = true;
     this.networkAdapter.post_v3(
       'POST /me/phone/verify',
-      { code: this.otp.code },
+      // verification_id is required by the API; strip any spaces the OTP
+      // field may carry so the code matches the server's ^\d{4,6}$ rule.
+      { verification_id: this.verificationId, code: this.otp.code.replace(/\D/g, '') },
       { authToken: this.socialAuthToken },
     ).subscribe({
       next: (response: any) => {
