@@ -227,7 +227,7 @@
         </div>
 
         <!-- Color Selection Pills -->
-        @if(single.category_id !== '5' && colors.length > 0){
+        @if(!isBagOrAccessory && colors.length > 0){
           <div class="color-section">
             <div class="section-label">
               <span class="label-text">{{ 'color' | translate }}</span>
@@ -261,7 +261,7 @@
         }
 
         <!-- Size Selection -->
-        @if(single.category_id !== '4' && single.category_id !== '5'){
+        @if(!isBagOrAccessory){
           <div class="size-section">
             @if(single.size_custom){
               <!-- CUSTOM-MEASUREMENT product: user enters her own measurements.

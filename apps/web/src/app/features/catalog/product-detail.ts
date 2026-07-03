@@ -402,7 +402,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
 
   /** Whether to show the "Size guide" trigger beside the Sizes legend. */
   readonly showSizeGuide = computed(
-    () => this.hasSizes() && !this.requiresExtraMeasurement(),
+    () => this.hasSizes() && !this.requiresExtraMeasurement() && !this.isBagOrAccessory(),
   );
 
   /** Modal open/close. */
@@ -538,6 +538,13 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
     const key = (this.product()?.category_slug ?? '').toLowerCase().replace(/-\d+$/, '');
     return SIZE_OPTIONAL_CATEGORIES.includes(key);
   });
+  /** True for bags/accessories only — these hide the size + colour selectors
+   *  and the size guide, and never require a colour on add-to-cart. Scoped
+   *  narrower than isSizeOptional (which also covers kaftans/mukhawars). */
+  readonly isBagOrAccessory = computed(() => {
+    const key = (this.product()?.category_slug ?? '').toLowerCase().replace(/-\d+$/, '');
+    return key === 'bags' || key === 'accessories';
+  });
   /** Canonical body-measurement fields (mirrors the account profile). */
   readonly measurementFields = MEASUREMENT_FIELDS;
   /** Custom-size body measurements: field -> input string (cm). */
@@ -580,7 +587,7 @@ export class ProductDetailComponent implements AfterViewChecked, OnDestroy {
       if (!s || !sizes.some((x) => x.label === s && x.in_stock)) return false;
     }
     const colors = p.colors ?? [];
-    if (colors.length > 0) {
+    if (colors.length > 0 && !this.isBagOrAccessory()) {
       const c = this.selectedColor();
       if (!c || !colors.some((x) => x.label === c && x.in_stock)) return false;
     }

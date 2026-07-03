@@ -183,7 +183,7 @@
           </p>
 
           <!-- Sizes -->
-          @if (p.sizes && p.sizes.length > 0) {
+          @if (p.sizes && p.sizes.length > 0 && !isBagOrAccessory()) {
             <fieldset class="pdp-options">
               <div class="pdp-options__legend-row">
                 <legend>{{ 'product.size' | translate }}</legend>
@@ -221,7 +221,7 @@
           }
 
           <!-- Colors -->
-          @if (p.colors && p.colors.length > 0) {
+          @if (p.colors && p.colors.length > 0 && !isBagOrAccessory()) {
             <fieldset class="pdp-options">
               <legend>{{ 'product.color' | translate }}</legend>
               <div class="pdp-chips">
@@ -340,7 +340,7 @@
               <span>{{ 'product.hintSize' | translate }}</span>
             </p>
           }
-          @if (p.in_stock && hasColors() && !selectedColor()) {
+          @if (p.in_stock && hasColors() && !selectedColor() && !isBagOrAccessory()) {
             <p class="pdp-buybox__hint" data-testid="pdp-hint-color">
               <svg class="pdp-buybox__hint-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                 <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"></circle>

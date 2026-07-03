@@ -402,6 +402,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     store: 0,
     store_name: "",
     category_id: "",
+    category_slug: "",
     category_name: "",
     name: "",
     description: "",
@@ -458,6 +459,15 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     try_on_active: false,
     label: 0
   };
+
+  /** True for BAGS / ACCESSORIES products, which have no size/color/size-chart.
+   *  The v3 detail transform hardcodes category_id to 0, so we can't guard on
+   *  it; category_slug (e.g. "bags-4", "accessories-5") is populated instead —
+   *  strip the trailing "-<id>" and match the category name. */
+  get isBagOrAccessory(): boolean {
+    const c = String(this.single?.category_slug ?? "").toLowerCase().replace(/-\d+$/, "");
+    return c === "bags" || c === "accessories";
+  }
 
   bill = {
     count: 0,
@@ -936,8 +946,9 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    if (!this.single.size_custom) {
-      if (this.single.category_id !== "4" && this.single.category_id !== "5" && this.single.category_id !== "2") {
+    if (!this.single.size_custom && !this.isBagOrAccessory) {
+      // Mukhawars (legacy category_id "2") remain size-optional.
+      if (this.single.category_id !== "2") {
         if (this.add_cart.size.length === 0) {
           this.error_notification(this.i18n.t('text_select_size'));
           return;
@@ -945,7 +956,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
-    if (this.single.category_id !== "5") {
+    if (!this.isBagOrAccessory) {
       if (this.add_cart.color.length === 0) {
         this.error_notification(this.i18n.t('text_select_color'));
         return;
