@@ -21,18 +21,32 @@
             (touchstart)="onImageTouchStart($event)"
             (touchend)="onImageTouchEnd($event, product.product_id)">
             <!-- Loading skeleton -->
-            <div class="image-skeleton" [class.hidden]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]">
+            <!--
+              Hide the skeleton only when this slide is in the image window AND
+              its image has loaded. Off-window slides have no <img> mounted, so
+              the skeleton must stay visible as the placeholder (never a black
+              slide) until the slide scrolls back into the window and reloads.
+            -->
+            <div class="image-skeleton" [class.hidden]="isInImageWindow(idx) && imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]">
               <div class="skeleton-shimmer"></div>
             </div>
 
             <!-- Product Image -->
-            <img
-              [src]="getCurrentImage(product)"
-              alt="{{product.product_name}}"
-              class="model"
-              [class.loaded]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]"
-              (load)="onImageLoad(product.product_id, getActiveImageIndex(product.product_id))"
-              (error)="onImageError(product.product_id, getActiveImageIndex(product.product_id))">
+            <!--
+              Image windowing: mount the <img> only for slides within ±2 of the
+              active slide. Off-window slides keep the skeleton above and drop
+              their <img> so iOS (WKWebView) frees the decoded full-screen bitmap
+              during infinite scroll — this prevents the memory-pressure reload.
+            -->
+            @if (isInImageWindow(idx)) {
+              <img
+                [src]="getCurrentImage(product)"
+                alt="{{product.product_name}}"
+                class="model"
+                [class.loaded]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]"
+                (load)="onImageLoad(product.product_id, getActiveImageIndex(product.product_id))"
+                (error)="onImageError(product.product_id, getActiveImageIndex(product.product_id))">
+            }
           </div>
 
           <!-- Image pagination dots - tap to change image -->

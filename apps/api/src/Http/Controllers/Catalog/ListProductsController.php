@@ -111,6 +111,15 @@ final class ListProductsController
             'isNew' => $this->parseBool($query['new'] ?? null),
             'isSale' => $this->parseBool($query['sale'] ?? null),
             'sort' => $this->parseSort($query['sort'] ?? null),
+            // M-EXPLORE — seeded random order for the EXPLORE feed
+            // (mobile route key GET /mobile/explore-listing → /v3/products).
+            // When `seed` is present the repository orders products by a
+            // deterministic per-seed shuffle (md5(seed || '-' || id)) that
+            // is STABLE across offset pages, so infinite scroll never
+            // duplicates or skips. Absent (or unparseable) => null, which
+            // falls back to the normal `sort` order (default 'newest'). The
+            // seed overrides `sort` in the repository when non-null.
+            'seed' => $this->parseSeed($query['seed'] ?? null),
             // M3.1.5.5d — fulltext search via PostgreSQL tsvector.
             // When `q` is present and non-empty, the repository adds
             // a TSMATCH WHERE clause against the products.search_tsv
@@ -304,6 +313,53 @@ final class ListProductsController
         $valid = ['newest', 'oldest', 'price_asc', 'price_desc', 'relevance', 'best_seller'];
         return in_array($value, $valid, true) ? $value : 'newest';
     }
+
+    /**
+     * Normalise the `seed` query param for the EXPLORE feed's seeded
+     * random ordering.
+     *
+     * Semantics:
+     *   - absent / empty / non-numeric  => null  (no seeded shuffle; the
+     *     listing falls back to the normal `sort` order, default 'newest')
+     *   - any numeric input             => a bounded NON-NEGATIVE int
+     *
+     * The value is only ever used as text fed into md5() to derive a
+     * per-seed shuffle, so its exact magnitude is irrelevant — but we
+     * normalise defensively: take the absolute value (so a leading '-'
+     * can't sneak in), floor to an int, and clamp to 0 .. SEED_MAX so a
+     * URL-bombed 10^300 value can't bloat the bound parameter. Two callers
+     * that send the same seed get the same order; that is the only
+     * contract that matters.
+     */
+    private function parseSeed(?string $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+        $trimmed = trim($value);
+        if ($trimmed === '' || !is_numeric($trimmed)) {
+            return null;
+        }
+
+        $seed = (int) abs((float) $trimmed);
+        if ($seed < 0) {
+            // Defensive: (int) of a huge abs() float that overflows PHP_INT
+            // could theoretically wrap; clamp to 0 as the floor.
+            $seed = 0;
+        }
+        if ($seed > self::SEED_MAX) {
+            $seed = $seed % (self::SEED_MAX + 1);
+        }
+
+        return $seed;
+    }
+
+    /**
+     * Upper bound for a normalised `seed`. 2^31 - 1 — comfortably wide
+     * enough for daily/session rotation while keeping the bound param a
+     * small, tidy integer.
+     */
+    private const SEED_MAX = 2147483647;
 
     /**
      * Normalise the `q` query param.

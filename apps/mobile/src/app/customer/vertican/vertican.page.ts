@@ -103,6 +103,19 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   currentProductDot = 0;
   currentProductIndex = 0;
 
+  // Image windowing: only slides within ±IMAGE_WINDOW of the active index
+  // mount their full-screen <img>. Off-window slides render the skeleton only,
+  // so iOS (WKWebView) can free the decoded full-screen bitmaps and stop
+  // building memory pressure that forces a WebView reload during infinite
+  // scroll. Kept updated via currentProductIndex in onVerticalSlideChange.
+  private readonly IMAGE_WINDOW = 2;
+
+  // Random ordering: a per-session seed sent to the API so it returns a stable
+  // random order across every page of one browsing session. Regenerated on each
+  // fresh (re)entry / refresh via resetState() so the order varies session to
+  // session. We do NOT shuffle client-side (that would break pagination).
+  exploreSeed = 0;
+
   index = signal(0);
   isOnline = true;
   range = signal<DualRange>({ lower: 5, upper: 500 });
@@ -235,6 +248,16 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
 
   getActiveImageIndex(productId: number): number {
     return this.activeImageIndices.get(productId) || 0;
+  }
+
+  // Image windowing gate. Only slides whose index is within ±IMAGE_WINDOW of the
+  // currently active slide mount their <img>; every other slide shows just the
+  // skeleton placeholder so iOS can release the decoded full-screen bitmap.
+  // This is what keeps WKWebView memory flat during infinite scroll and stops
+  // the "glitch"/reload. currentProductIndex is kept in sync in
+  // onVerticalSlideChange (and on initial swiper attach).
+  isInImageWindow(idx: number): boolean {
+    return Math.abs(idx - this.currentProductIndex) <= this.IMAGE_WINDOW;
   }
 
   getCurrentImage(product: any): string {
@@ -576,6 +599,7 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
       queryParams: {
         limit: this.explore.limit,
         offset: this.explore.offset,
+        seed: this.exploreSeed,
       },
     })
       .subscribe({
@@ -606,6 +630,11 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.imageLoaded = {};
     this.ui_controls.is_loaded = false;
     this.ui_controls.is_empty = false;
+
+    // Fresh random seed for this browsing session. The same seed is reused for
+    // every page (initial + getMoreItems) so the API returns one stable random
+    // order; regenerating here means each fresh (re)entry / refresh reshuffles.
+    this.exploreSeed = Math.floor(Math.random() * 2_000_000_000);
   }
 
   getMoreItems() {
@@ -632,6 +661,7 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
       queryParams: {
         limit: this.explore.limit,
         offset: nextOffset,
+        seed: this.exploreSeed,
       },
     })
       .subscribe({

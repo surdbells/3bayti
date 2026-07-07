@@ -213,36 +213,11 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
         self::assertStringContainsString('empty', strtolower($body['error']['message']));
     }
 
-    #[Test]
-    public function rejectsWhenPhoneNotVerified(): void
-    {
-        // Phone verification is required before placing any order. The
-        // guard fires before cart lookup, so only the user repo is needed.
-        $user = $this->makeUser(id: 7, phoneVerified: false);
-
-        $userRepo = $this->createMock(UserRepository::class);
-        $userRepo->method('findById')->with(7)->willReturn($user);
-
-        $em = $this->stubEm(function ($em) use ($userRepo) {
-            $em->method('getRepository')->willReturnMap([
-                [User::class, $userRepo],
-            ]);
-        });
-        $this->bind(EntityManagerInterface::class, $em);
-
-        $jwt = $this->app->getContainer()->get(JwtService::class);
-        $pair = $jwt->issueTokenPair($user);
-
-        $response = $this->handle(
-            $this->jsonRequest('POST', '/v3/checkout/initiate', [], [
-                'Authorization' => 'Bearer ' . $pair->accessToken,
-            ])
-        );
-
-        self::assertSame(403, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
-        $body = $this->jsonBody($response);
-        self::assertSame('AUTH_PHONE_NOT_VERIFIED', $body['error']['code']);
-    }
+    // NOTE: The former `rejectsWhenPhoneNotVerified` test was removed together
+    // with the pre-checkout phone-verification gate. Checkout no longer blocks
+    // on !is_phone_verified (all customers have a verified phone from
+    // onboarding), so an unverified-phone user is now allowed to proceed and
+    // there is nothing to assert here.
 
     #[Test]
     public function rejectsWhenNoDefaultBillingAddress(): void

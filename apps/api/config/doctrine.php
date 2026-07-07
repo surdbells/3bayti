@@ -121,6 +121,17 @@ return [
             \Bayti\Api\Doctrine\DqlFunction\JsonbExistsAnyFunction::class
         );
 
+        // SEEDED_RAND(seed, id) → TEXT — wraps `md5(<seed> || '-' || <id>)`.
+        // A deterministic per-seed shuffle key used by the EXPLORE feed to
+        // order products in a random-looking but pagination-stable way
+        // (same seed => same total order across LIMIT/OFFSET pages). Used in
+        // ORDER BY. Registered as a string function (md5 returns text), like
+        // TSMATCH / JSONB_EXISTS_ANY.
+        $config->addCustomStringFunction(
+            'SEEDED_RAND',
+            \Bayti\Api\Doctrine\DqlFunction\SeededRandFunction::class
+        );
+
         return $config;
     },
 

@@ -84,6 +84,7 @@ class ProductRepository extends EntityRepository
      *     isNew?: bool|null,
      *     isSale?: bool|null,
      *     sort?: string,
+     *     seed?: int|null,
      *     searchQuery?: string|null,
      *     limit?: int,
      *     offset?: int,
@@ -325,6 +326,38 @@ class ProductRepository extends EntityRepository
         // "rank against nothing" sort.
         if ($sort === 'relevance' && !$hasSearch) {
             $sort = 'newest';
+        }
+
+        // Seeded random order (EXPLORE feed). When a non-null `seed` is
+        // supplied, the listing is presented in a deterministic per-seed
+        // shuffle instead of the normal `sort` order, using
+        //   ORDER BY md5(<seed> || '-' || id)
+        // (SEEDED_RAND DQL function). The md5 key is a pure function of
+        // (seed, id), so for a fixed seed the total order over the whole
+        // result set is fixed — LIMIT/OFFSET then walk that single stable
+        // order and infinite scroll never duplicates or skips a product.
+        // Change the seed and the whole order reshuffles.
+        //
+        // This is a distinct ordering MODE: it overrides `sort` (including
+        // best_seller / relevance) so it never collides with the
+        // groupBy(p.id) / addSelect branches below. The controller passes
+        // the seed as a normalized non-negative int; here it is bound as a
+        // string so Postgres' `||` (text concat) sees a text operand.
+        $seed = $filters['seed'] ?? null;
+        if ($seed !== null) {
+            $qb->orderBy('SEEDED_RAND(:seed, p.id)', 'ASC')
+               ->setParameter('seed', (string) $seed);
+            // Stable id tie-break (md5 collisions are astronomically
+            // unlikely, but keep pagination fully deterministic anyway).
+            $qb->addOrderBy('p.id', 'DESC');
+
+            $qb->setMaxResults($filters['limit'] ?? 24)
+               ->setFirstResult($filters['offset'] ?? 0);
+
+            /** @var list<Product> $seededItems */
+            $seededItems = $qb->getQuery()->getResult();
+
+            return ['items' => $seededItems, 'total' => $total];
         }
         // 'best_seller' (M3.2.X.1) needs a LEFT JOIN onto an aggregate
         // of order_items filtered by:
