@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 
 import {
   IonContent,
@@ -22,10 +22,11 @@ import { I18nService } from '../../i18n.service';
   standalone: true,
   imports: [IonContent, TranslatePipe, AxLoaderComponent]
 })
-export class ProcessPage implements OnInit {
+export class ProcessPage implements OnInit, OnDestroy {
   isOnline = true;
   private sub: Subscription;
   private orderReference: string = '';
+  private blockActive = false;
   constructor(
     private net: ConnectionService,
     private platform: Platform,
@@ -49,6 +50,7 @@ export class ProcessPage implements OnInit {
     // the legacy finalizePayment call.
     this.orderReference = this.route.snapshot.queryParamMap.get('orderReference') || '';
     this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
+    this.blockActive = true;
     this.getObject();
 
   }
@@ -173,5 +175,26 @@ finalize() {
           this.router.navigate(['/failed'], { replaceUrl: true });
         },
       });
+  }
+
+  ionViewWillLeave(): void {
+    this.releaseBlock();
+  }
+
+  ngOnDestroy(): void {
+    this.releaseBlock();
+    this.sub?.unsubscribe();
+  }
+
+  /**
+   * Release the nav block exactly once when the page is left/destroyed.
+   * ngOnInit blocks swipe + hardware-back; without this the block leaked and
+   * back-navigation stayed disabled app-wide after every checkout.
+   */
+  private releaseBlock(): void {
+    if (this.blockActive) {
+      this.blockActive = false;
+      this.blocker.unblock();
+    }
   }
 }

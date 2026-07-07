@@ -153,7 +153,11 @@ final class NoonPaymentGateway implements PaymentGatewayInterface
             'apiOperation' => 'INITIATE',
             'order' => [
                 'reference' => $order->getOrderReference(),
-                'amount' => $order->getTotal(),
+                // Charge what is actually due at the gateway: total minus any
+                // gift-card credit already applied to this order. Using
+                // getTotal() double-charged a buyer who part-paid with a gift
+                // card (card debited AND full total charged at Noon).
+                'amount' => $order->gatewayChargeAmount(),
                 'currency' => $order->getCurrency(),
                 'channel' => $channel,
                 'category' => $this->orderCategory,

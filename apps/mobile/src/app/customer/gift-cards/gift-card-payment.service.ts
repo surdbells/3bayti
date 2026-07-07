@@ -150,7 +150,12 @@ export class GiftCardPaymentService {
     attempts = 0,
   ): void {
     if (attempts > 12) { // 12 × 2.5s = 30s timeout
-      this.notify.error(this.i18n.t('gc_error_payment_timeout'));
+      // Unknown outcome — the webhook may still land. Don't claim success or
+      // failure, and do NOT bounce back to the purchase wizard (that risks a
+      // duplicate card). Route to the wallet (My Gift Cards) where the card
+      // shows its real state (pending -> "Complete payment", or active), with
+      // an honest "still processing" message instead of a failure toast.
+      this.notify.info(this.i18n.t('text_payment_processing_check_later'));
       handlers.onPaid();
       return;
     }
