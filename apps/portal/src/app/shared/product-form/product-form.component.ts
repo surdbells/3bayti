@@ -188,7 +188,7 @@ export class ProductFormComponent implements OnInit {
     allow_checkout_when_out_of_stock: false,
     with_storehouse_management: false,
     stock_status: 'in_stock',
-    price: 0, cost_per_item: 0,
+    price: 0, cost_per_item: 0, sale_price: null as number | null,
     minimum_order_quantity: 1, maximum_order_quantity: 1,
     delivery_time: '', custom_delivery_time: '', delivery_note: '',
     size_xs: false, size_s: false, size_m: false, size_l: false, size_xl: false, size_xxl: false,
@@ -293,6 +293,11 @@ export class ProductFormComponent implements OnInit {
         this.model.description = p.description ?? '';
         this.model.price = Number(p.price?.amount ?? p.price ?? 0);
         this.model.cost_per_item = Number(p.cost_per_item ?? 0);
+        // sale_price is serialized as a Money object ({amount,currency}) like
+        // price, or absent/null when the product isn't discounted. Keep it null
+        // when unset so the input renders blank (not "0").
+        const rawSale = p.sale_price?.amount ?? p.sale_price;
+        this.model.sale_price = rawSale == null || rawSale === '' ? null : Number(rawSale);
         // Coerce to Number so the category radio (bound via [value]="c.id",
         // a number) pre-selects even when the serializer emits a string id.
         this.model.category = Number(p.category?.id ?? p.category_id ?? p.category ?? 0) || 0;
@@ -466,6 +471,11 @@ export class ProductFormComponent implements OnInit {
       description: d.description,
       price: d.price,
       cost_per_item: d.cost_per_item,
+      // Send null (not 0) when blank so the product isn't flagged on-sale.
+      sale_price:
+        d.sale_price === null || (d.sale_price as any) === '' || Number.isNaN(Number(d.sale_price))
+          ? null
+          : Number(d.sale_price),
       category_id: d.category || null,
       stock_quantity: d.quantity,
       stock_status: d.stock_status,

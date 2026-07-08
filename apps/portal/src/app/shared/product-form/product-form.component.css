@@ -1,4 +1,20 @@
-/* app-create-product.component.css */
+/* product-form.component.css */
+
+/* Currency-prefixed price inputs (Price / Cost per item / Sale price).
+   Root cause of the "AED25" overlap: the shared .ax-input-group only pads the
+   input by 2.5rem on the left — a value sized for a single icon glyph. The
+   3-letter "AED" prefix (which also inherited the 1.1em prefix font-size) is
+   wider than that, so the typed value started underneath it. Fix: give the
+   prefix a normal font-size and reserve enough left padding to clear it. */
+.ax-currency-prefix {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ax-color-text-secondary);
+}
+.ax-currency-group .ax-input {
+  padding-left: 3.25rem;
+}
+
 .color-switch-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));

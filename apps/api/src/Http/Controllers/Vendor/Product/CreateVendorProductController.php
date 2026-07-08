@@ -104,6 +104,13 @@ final class CreateVendorProductController
         if ($input->price !== null) {
             $product->setPrice(number_format((float) $input->price, 2, '.', ''));
         }
+        // Always apply sale_price so a blank value clears any existing discount
+        // (the portal form always sends the key; null = not on sale).
+        $product->setSalePrice(
+            $input->sale_price !== null
+                ? number_format((float) $input->sale_price, 2, '.', '')
+                : null,
+        );
         if ($input->cost_per_item !== null) {
             $product->setCostPerItem(number_format((float) $input->cost_per_item, 2, '.', ''));
         }

@@ -38,6 +38,7 @@ final class UpdateAdminProductController
         if ($product === null) throw HttpException::notFound('Product not found.');
 
         $input = $this->validator->parse($request, VendorProductInput::class);
+        $body  = (array) ($request->getParsedBody() ?? []);
         /** @var CategoryRepository $cRepo */
         $cRepo = $this->em->getRepository(Category::class);
         $cat   = $input->category_id !== null ? $cRepo->find($input->category_id) : null;
@@ -45,6 +46,11 @@ final class UpdateAdminProductController
         if ($input->name !== null)            $product->setName($input->name);
         if ($input->description !== null)     $product->setDescription($input->description);
         if ($input->price !== null)           $product->setPrice(number_format((float) $input->price, 2, '.', ''));
+        // Only touch sale_price when the key is present (a partial update that
+        // omits it preserves the stored discount; an explicit null clears it).
+        if (array_key_exists('sale_price', $body)) {
+            $product->setSalePrice($input->sale_price !== null ? number_format((float) $input->sale_price, 2, '.', '') : null);
+        }
         if ($input->status !== null)          $product->setStatus($input->status);
         if ($input->primary_image_url !== null) $product->setPrimaryImageUrl($input->primary_image_url);
         if ($input->image_urls !== null)      $product->setImages($input->image_urls);

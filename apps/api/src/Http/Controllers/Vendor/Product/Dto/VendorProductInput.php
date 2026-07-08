@@ -22,6 +22,10 @@ final class VendorProductInput
     #[Assert\PositiveOrZero(message: 'Price must be zero or positive.')]
     public readonly int|float|null $price;
 
+    /** Optional discounted price. Rendered as on-sale when set and below price. */
+    #[Assert\PositiveOrZero(message: 'Sale price must be zero or positive.')]
+    public readonly int|float|null $sale_price;
+
     #[Assert\PositiveOrZero(message: 'Cost per item must be zero or positive.')]
     public readonly int|float|null $cost_per_item;
 
@@ -92,6 +96,7 @@ final class VendorProductInput
         ?string  $name             = null,
         ?string  $description      = null,
         int|float|null $price      = null,
+        int|float|null $sale_price = null,
         int|float|null $cost_per_item = null,
         ?string  $stock_status     = null,
         ?int     $stock_quantity   = null,
@@ -116,6 +121,7 @@ final class VendorProductInput
         $this->name              = $name;
         $this->description       = $description;
         $this->price             = $price;
+        $this->sale_price        = $sale_price;
         $this->cost_per_item     = $cost_per_item;
         $this->stock_status      = $stock_status;
         $this->stock_quantity    = $stock_quantity;

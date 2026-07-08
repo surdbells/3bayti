@@ -52,6 +52,7 @@ final class CreateAdminProductController
 
         $product = new Product(vendor: $vendor, slug: $slug, name: $input->name ?? '');
         if ($input->price !== null)        $product->setPrice(number_format((float) $input->price, 2, '.', ''));
+        $product->setSalePrice($input->sale_price !== null ? number_format((float) $input->sale_price, 2, '.', '') : null);
         if ($input->description !== null)  $product->setDescription($input->description);
         if ($input->status !== null)       $product->setStatus($input->status);
         if ($input->primary_image_url !== null) $product->setPrimaryImageUrl($input->primary_image_url);

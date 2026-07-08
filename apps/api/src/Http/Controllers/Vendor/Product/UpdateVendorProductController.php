@@ -93,7 +93,12 @@ final class UpdateVendorProductController
         // external/legacy URLs are left untouched.
         $oldImageUrls = $this->collectImageUrls($product);
 
-        $this->applyInput($product, $input, $category);
+        $this->applyInput(
+            $product,
+            $input,
+            $category,
+            array_key_exists('sale_price', (array) ($request->getParsedBody() ?? [])),
+        );
         $productRepo->save($product);
 
         $this->deleteOrphanedImages($oldImageUrls, $this->collectImageUrls($product));
@@ -128,11 +133,18 @@ final class UpdateVendorProductController
         }
     }
 
-    private function applyInput(Product $product, VendorProductInput $input, ?Category $category): void
+    private function applyInput(Product $product, VendorProductInput $input, ?Category $category, bool $salePricePresent): void
     {
         if ($input->name !== null)                $product->setName($input->name);
         if ($input->description !== null)         $product->setDescription($input->description);
         if ($input->price !== null)               $product->setPrice(number_format((float) $input->price, 2, '.', ''));
+        // Apply sale_price ONLY when the request includes the key, so an
+        // explicit value (or null) sets/clears the discount while a partial
+        // update that omits it preserves the stored value. The portal form
+        // always sends the key (null = not on sale).
+        if ($salePricePresent) {
+            $product->setSalePrice($input->sale_price !== null ? number_format((float) $input->sale_price, 2, '.', '') : null);
+        }
         if ($input->cost_per_item !== null)       $product->setCostPerItem(number_format((float) $input->cost_per_item, 2, '.', ''));
         if ($input->stock_quantity !== null)      $product->setStockQuantity($input->stock_quantity);
         if ($input->stock_status !== null)        $product->setStockStatus($input->stock_status);

@@ -90,18 +90,26 @@
         <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-4">
           <div class="ax-form-field">
             <label class="ax-label ax-label-required" for="price">Price</label>
-            <div class="ax-input-group">
-              <span class="ax-input-group-prefix" style="font-weight: 500; color: var(--ax-color-text-secondary);">AED</span>
+            <div class="ax-input-group ax-currency-group">
+              <span class="ax-input-group-prefix ax-currency-prefix">AED</span>
               <input id="price" name="price" type="number" class="ax-input" [(ngModel)]="model.price" [min]="0.1" [step]="0.5" />
             </div>
           </div>
           <div class="ax-form-field">
             <label class="ax-label" for="cost_per_item">Cost per item</label>
-            <div class="ax-input-group">
-              <span class="ax-input-group-prefix" style="font-weight: 500; color: var(--ax-color-text-secondary);">AED</span>
+            <div class="ax-input-group ax-currency-group">
+              <span class="ax-input-group-prefix ax-currency-prefix">AED</span>
               <input id="cost_per_item" name="cost_per_item" type="number" class="ax-input" [(ngModel)]="model.cost_per_item" [max]="model.price" [step]="0.5" />
             </div>
             <span class="ax-hint">Customers won't see this.</span>
+          </div>
+          <div class="ax-form-field">
+            <label class="ax-label" for="sale_price">Sale price</label>
+            <div class="ax-input-group ax-currency-group">
+              <span class="ax-input-group-prefix ax-currency-prefix">AED</span>
+              <input id="sale_price" name="sale_price" type="number" class="ax-input" [(ngModel)]="model.sale_price" [min]="0" [max]="model.price" [step]="0.5" placeholder="Optional" />
+            </div>
+            <span class="ax-hint">Shown as a discount when below the price. Leave blank for no sale.</span>
           </div>
         </div>
 
