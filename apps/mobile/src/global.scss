@@ -1215,6 +1215,35 @@ ion-header.md ion-toolbar {
   line-height: 1;
 }
 
+/* ----- SALE flag badge — distinct discount colour (red) --------- */
+.m6d-img-wrap .m6d-flag-badge--sale {
+  background: var(--ax-color-bg-danger);  /* discount red, distinct from brand */
+  color: var(--ax-palette-neutral-0);
+}
+
+/* ----- On-sale price rendering (product cards) ------------------ */
+/* Sale + struck original sit together as one flex item so the
+   price-row's space-between keeps the add-to-cart button pinned right. */
+.m6d-price-sale-group {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.m6d-price--sale {
+  color: var(--ax-color-text-danger);  /* prominent discount accent */
+  font-weight: 700;
+}
+
+.m6d-price-original {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ax-color-text-tertiary);  /* muted */
+  text-decoration: line-through;
+  margin-inline-start: 6px;
+  line-height: 1.4;
+}
+
 
 /* ----- M7 header badge — passive count (e.g. total unread) ----- */
 .m7-header-badge {

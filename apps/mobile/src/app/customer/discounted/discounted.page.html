@@ -5,35 +5,9 @@
         <ax-icon name="arrow-left" />
       </ion-button>
     </ion-buttons>
-    <ion-title class="m7-title">{{ 'best_seller' | translate }}</ion-title>
-    <ion-buttons slot="end">
-      <ion-button (click)="openFilter()" class="m7-header-back" [attr.aria-label]="'filter_title' | translate">
-        <ax-icon name="sliders-horizontal" />
-      </ion-button>
-    </ion-buttons>
+    <ion-title class="m7-title">{{ 'title_discounted' | translate }}</ion-title>
   </ion-toolbar>
-  <div class="m7-subtitle">{{ 'subtitle_best_sellers' | translate }}</div>
-  <div class="m7-filter-chips">
-    <!-- All Button -->
-    <button
-      type="button"
-      class="m7-filter-chip"
-      [class.m7-filter-chip--active]="selectedFilter === 'all'"
-      (click)="selectFilter('all'); bestSellers()">
-      {{ 'button_all' | translate }}
-    </button>
-
-    <!-- Price Filter Chips -->
-    @for(price of priceFilters; track price){
-      <button
-        type="button"
-        class="m7-filter-chip"
-        [class.m7-filter-chip--active]="selectedFilter === price"
-        (click)="selectFilter(price); filterByPrice(price)">
-        {{ 'label_under' | translate }} Ð{{ price | number }}
-      </button>
-    }
-  </div>
+  <div class="m7-subtitle">{{ 'subtitle_discounted' | translate }}</div>
 </ion-header>
 
 <ion-content fullscreen="true" class="page-bg ion-padding-horizontal ion-padding-vertical">
@@ -42,12 +16,10 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
-
-
   <!-- Results Count -->
-  @if(!ui_controls.is_loading && best_sellers.length > 0){
+  @if(!ui_controls.is_loading && discounted.length > 0){
     <div class="results-count">
-      <span>{{ best_sellers.length }} {{ 'label_products_found' | translate }}</span>
+      <span>{{ discounted.length }} {{ 'label_products_found' | translate }}</span>
     </div>
   }
 
@@ -55,7 +27,7 @@
   @if(!ui_controls.is_loading){
     <ion-grid class="products-grid">
       <ion-row>
-        @for(product of best_sellers; track product.product_id){
+        @for(product of discounted; track product.product_id){
           <ion-col size="6">
             <article class="m6d-product-card">
               <div class="m6d-img-wrap">
@@ -141,21 +113,21 @@
   }
 
   <!-- Empty State -->
-  @if(!ui_controls.is_loading && best_sellers.length === 0){
+  @if(!ui_controls.is_loading && discounted.length === 0){
     <div class="empty-state">
       <div class="empty-icon">
-        <ax-icon name="package-x"></ax-icon>
+        <ax-icon name="tag"></ax-icon>
       </div>
       <h3>{{ 'heading_no_products_found' | translate }}</h3>
-      <p>{{ 'text_try_adjusting_filter' | translate }}</p>
-      <button type="button" class="reset-btn" (click)="selectFilter('all'); bestSellers()">
-        {{ 'button_view_all_products' | translate }}
+      <p>{{ 'text_check_back_soon' | translate }}</p>
+      <button type="button" class="reset-btn" (click)="loadDiscounted()">
+        {{ 'button_refresh' | translate }}
       </button>
     </div>
   }
 
   <!-- Infinite Scroll -->
-  @if(!ui_controls.is_empty && !ui_controls.is_loading && best_sellers.length > 0){
+  @if(!ui_controls.is_empty && !ui_controls.is_loading && discounted.length > 0){
     <ion-infinite-scroll threshold="150px" (ionInfinite)="onIonInfinite($event)">
       <ion-infinite-scroll-content [loadingText]="'text_loading_more' | translate" loadingSpinner="dots"></ion-infinite-scroll-content>
     </ion-infinite-scroll>
@@ -188,14 +160,4 @@
       </div>
     }
   </ax-bottom-sheet>
-
-  <!-- Web-parity filter sheet (sort / size / colour / price) -->
-  <ax-product-filter-sheet
-    [isOpen]="isFilterOpen"
-    [facets]="facets"
-    [state]="filterState"
-    [defaultSort]="defaultSort"
-    (apply)="onFilterApply($event)"
-    (didDismiss)="isFilterOpen = false">
-  </ax-product-filter-sheet>
 </ion-content>

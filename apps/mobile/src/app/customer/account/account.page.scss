@@ -166,6 +166,28 @@
       line-height: 1;
     }
   }
+
+  /* Discounted (on-sale) shortcut — filled accent chip, deliberately
+     distinct from the outlined category chips. Leads the row. */
+  .m6-chip--discounted {
+    background: var(--ax-color-bg-danger);
+    border-color: var(--ax-color-bg-danger);
+
+    .m6-chip-ico ax-icon {
+      color: var(--ax-palette-neutral-0);
+      font-size: 16px;
+    }
+
+    .m6-chip-text {
+      color: var(--ax-palette-neutral-0);
+      font-weight: 600;
+    }
+
+    &:active {
+      background: var(--ax-palette-danger-600, var(--ax-color-bg-danger));
+      border-color: var(--ax-palette-danger-600, var(--ax-color-bg-danger));
+    }
+  }
 }
 
 /* Search wrap container — beige bg flows under it from header */

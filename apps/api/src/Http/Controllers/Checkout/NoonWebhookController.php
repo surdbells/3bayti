@@ -288,30 +288,44 @@ final class NoonWebhookController
                 $this->activateGiftCardForOrder($order);
             } catch (\Throwable) { /* silent — logged inside activateGiftCardForOrder */ }
 
+            // A gift-card PURCHASE order is a synthetic payment vehicle with
+            // NO vendor line items, so the vendor "new order to prepare" email
+            // and per-item chat provisioning must NOT fire for it. Detect it
+            // via the same purchase-order back-reference lookup that
+            // activateGiftCardForOrder uses (reusing GiftCardRepository).
+            /** @var GiftCardRepository $gcRepo */
+            $gcRepo = $this->em->getRepository(GiftCard::class);
+            $isGiftCardPurchase = $gcRepo->findByPurchaseOrderReference($order->getOrderReference()) !== null;
+
             // Single order-confirmation for the gateway flow. This is the
             // authoritative paid transition (gated above on $transition ===
             // 'paid', which only happens on the FIRST markPaid() — idempotent
             // re-deliveries find $transition='' and skip). The pre-payment
             // orderPlaced() dispatch was removed from InitiateCheckoutController,
             // so this is the ONE place a gateway order is confirmed:
-            //   - orderPaid(): customer "payment confirmed" email/push.
-            //   - orderPaidVendors(): vendor "new order to prepare" email
-            //     (moved here from the old pre-payment orderPlaced() so vendors
-            //     are only asked to prepare a PAID order).
+            //   - orderPaid(): customer "payment confirmed" email/push. Fires
+            //     for BOTH product and gift-card purchases (buyer confirmation).
             $this->notifications->orderPaid($order);
-            $this->notifications->orderPaidVendors($order);
             $this->pushNotifications->orderPaid($order);
 
-            // Auto-create the per-item customer<->vendor chat threads.
-            // Fire-and-forget: provisioning failure must never abort the
-            // webhook (the order is already paid). Idempotent on retry.
-            try {
-                $this->chatProvisioner->provisionForOrder($order);
-            } catch (\Throwable $e) {
-                $this->logger->error('order_chat.provision_failed', [
-                    'order_reference' => $order->getOrderReference(),
-                    'error'           => $e->getMessage(),
-                ]);
+            // Vendor-facing side effects — ONLY for real product orders.
+            if (!$isGiftCardPurchase) {
+                //   - orderPaidVendors(): vendor "new order to prepare" email
+                //     (moved here from the old pre-payment orderPlaced() so
+                //     vendors are only asked to prepare a PAID order).
+                $this->notifications->orderPaidVendors($order);
+
+                // Auto-create the per-item customer<->vendor chat threads.
+                // Fire-and-forget: provisioning failure must never abort the
+                // webhook (the order is already paid). Idempotent on retry.
+                try {
+                    $this->chatProvisioner->provisionForOrder($order);
+                } catch (\Throwable $e) {
+                    $this->logger->error('order_chat.provision_failed', [
+                        'order_reference' => $order->getOrderReference(),
+                        'error'           => $e->getMessage(),
+                    ]);
+                }
             }
         } elseif ($transition === 'failed') {
             $this->notifications->orderPaymentFailed($order);

@@ -491,16 +491,15 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
     }
 
     /**
-     * Regression: a gift-card purchase whose resolved billing/shipping
-     * address has no street line previously threw an uncaught
-     * \InvalidArgumentException from OrderAddress::__construct, which the
-     * error middleware surfaced as a generic 500 INTERNAL_ERROR ("An
-     * unexpected error occurred"). The buyer saw the card created but
-     * checkout fail. It must instead be a clear, actionable 422 telling
-     * them to complete their address.
+     * A gift card is a digital product with nothing to ship, so an incomplete
+     * (e.g. street-less) address must NOT block its purchase. The gift-card
+     * path resolves the buyer's billing address tolerantly ('N/A' placeholders
+     * for the delivery-only fields Noon never receives) and proceeds to
+     * payment. (The normal cart checkout still enforces a complete address —
+     * see cartCheckoutWithStreetlessAddressReturns422NotInternalError.)
      */
     #[Test]
-    public function giftCardPurchaseWithStreetlessAddressReturns422NotInternalError(): void
+    public function giftCardPurchaseWithStreetlessAddressSucceeds(): void
     {
         $user = $this->makeUser(id: 7);
         $card = $this->makeGiftCard($user, id: 900, denomination: '500.00');
@@ -517,16 +516,29 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
         $addressRepo->method('findDefaultBillingForUser')->with($user)->willReturn($billing);
         $addressRepo->method('findDefaultShippingForUser')->with($user)->willReturn($shipping);
 
-        // Mapped so the (unfixed) code reaches the order-creation/snapshot
-        // step where the real OrderAddress street throw lives, rather than
-        // dying earlier on an unmapped repo. After the fix, the address
-        // guard short-circuits before this lookup is ever used.
         $txRepo = $this->createMock(PaymentTransactionRepository::class);
         $txRepo->method('findByIdempotencyKey')->willReturn(null);
+        $txRepo->method('save');
 
-        // The gateway must never be reached — we fail on the address guard.
+        // The street-less address no longer blocks the gift-card purchase; it
+        // now reaches the gateway with the denomination as the order total.
         $gateway = $this->createMock(PaymentGatewayInterface::class);
-        $gateway->expects(self::never())->method('initiateCheckout');
+        $gateway->expects(self::once())
+            ->method('initiateCheckout')
+            ->willReturnCallback(function (Order $order, string $returnUrl, string $channel): CheckoutInitiation {
+                self::assertSame('500.00', $order->getTotal());
+                return new CheckoutInitiation(
+                    checkoutUrl: 'https://api-test.noonpayments.com/checkout/gc124',
+                    providerOrderRef: '222222222223',
+                    rawResponse: [
+                        'resultCode' => 0,
+                        'result' => [
+                            'order' => ['id' => '222222222223'],
+                            'checkoutData' => ['postUrl' => 'https://api-test.noonpayments.com/checkout/gc124'],
+                        ],
+                    ],
+                );
+            });
 
         $em = $this->stubEm(function ($em) use ($userRepo, $gcRepo, $addressRepo, $txRepo) {
             $em->method('getRepository')->willReturnMap([
@@ -552,10 +564,10 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
             ])
         );
 
-        self::assertSame(422, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
+        self::assertSame(200, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
         $body = $this->jsonBody($response);
-        self::assertSame('VALIDATION_FAILED', $body['error']['code']);
-        self::assertStringContainsString('address', strtolower($body['error']['message']));
+        self::assertSame('https://api-test.noonpayments.com/checkout/gc124', $body['checkout_url']);
+        self::assertSame(900, $body['gift_card_id']);
     }
 
     /**

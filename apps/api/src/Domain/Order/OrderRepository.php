@@ -172,6 +172,12 @@ class OrderRepository extends EntityRepository
      *     a paid order needs no reconciliation)
      *   - created_at < cutoff (we want orders old enough that the
      *     webhook delivery window should have passed)
+     *   - PRODUCT orders only — synthetic gift-card PURCHASE orders are
+     *     excluded (NOT EXISTS on gift_cards.purchase_order_reference,
+     *     reusing excludeGiftCardPurchases). ReconcilePendingOrdersCommand
+     *     marks orders paid/failed but does NOT activate gift cards, so a
+     *     gift-card funding order must not be reconciled here — it stays on
+     *     its own poll/complete-payment (webhook + activate) path.
      *   - ordered by created_at ASC (oldest first; reconcile the
      *     most-painful-to-the-customer ones first)
      *
@@ -187,15 +193,18 @@ class OrderRepository extends EntityRepository
     {
         $batchLimit = max(1, min($batchLimit, 500));
 
-        $result = $this->createQueryBuilder('o')
+        $qb = $this->createQueryBuilder('o')
             ->where('o.status = :status')
             ->andWhere('o.createdAt < :cutoff')
             ->setParameter('status', Order::STATUS_PENDING_PAYMENT)
             ->setParameter('cutoff', $cutoff)
             ->orderBy('o.createdAt', 'ASC')
-            ->setMaxResults($batchLimit)
-            ->getQuery()
-            ->getResult();
+            ->setMaxResults($batchLimit);
+
+        // Product orders only — never reconcile gift-card funding orders here.
+        $this->excludeGiftCardPurchases($qb);
+
+        $result = $qb->getQuery()->getResult();
 
         /** @var list<Order> $result */
         return $result;

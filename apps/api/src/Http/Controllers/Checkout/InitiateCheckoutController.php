@@ -593,10 +593,19 @@ final class InitiateCheckoutController
             );
         }
 
+        // A gift card is a DIGITAL product — it needs no deliverable
+        // shipping address. Noon only needs (a) a payer NAME on the billing
+        // OrderAddress and (b) a shipping OrderAddress to merely EXIST (the
+        // gateway never receives the shipping content). So — unlike the cart
+        // path — we do NOT run assertAddressComplete here: we resolve the
+        // buyer's billing address if they happen to have one (for a nicer
+        // payer name) but never hard-fail on a missing/incomplete one, and we
+        // snapshot the SAME resolved address as both the billing and shipping
+        // OrderAddress so both rows exist without forcing the buyer to own a
+        // deliverable address.
         /** @var \Bayti\Api\Domain\User\AddressRepository $addresses */
-        $addresses = $this->em->getRepository(\Bayti\Api\Domain\User\Address::class);
-        $billing  = $this->resolveAddress($addresses, $user, $input->billing_address_id, 'billing');
-        $shipping = $this->resolveAddress($addresses, $user, $input->shipping_address_id, 'shipping');
+        $addresses    = $this->em->getRepository(\Bayti\Api\Domain\User\Address::class);
+        $payerAddress = $this->resolveGiftCardPayerAddress($addresses, $user, $input->billing_address_id);
 
         $denomination   = $card->getDenomination();
         $orderReference = $this->generateOrderReference();
@@ -624,7 +633,7 @@ final class InitiateCheckoutController
         // Create the synthetic order (no cart items — just the denomination).
         $order = $this->em->wrapInTransaction(
             function (\Doctrine\ORM\EntityManagerInterface $em) use (
-                $user, $orderReference, $denomination, $billing, $shipping,
+                $user, $orderReference, $denomination, $payerAddress,
             ): Order {
                 $order = new Order(
                     user: $user,
@@ -633,8 +642,10 @@ final class InitiateCheckoutController
                     deliveryFee: '0.00',
                     discount: '0.00',
                 );
-                $order->addAddress($this->snapshotAddress($billing, OrderAddress::TYPE_BILLING));
-                $order->addAddress($this->snapshotAddress($shipping, OrderAddress::TYPE_SHIPPING));
+                // Same resolved (or synthesized) address as BOTH billing +
+                // shipping — the shipping row only has to exist for Noon.
+                $order->addAddress($this->snapshotGiftCardAddress($payerAddress, $user, OrderAddress::TYPE_BILLING));
+                $order->addAddress($this->snapshotGiftCardAddress($payerAddress, $user, OrderAddress::TYPE_SHIPPING));
                 $em->persist($order);
                 $em->flush();
                 return $order;
@@ -813,6 +824,98 @@ final class InitiateCheckoutController
             stateProvince: $source->getArea(),
             countryCode: $source->getCountry(),
             postalCode: $source->getPostalCode(),
+        );
+    }
+
+    /**
+     * Resolve the billing address to use for a GIFT-CARD purchase WITHOUT
+     * asserting completeness. Unlike resolveAddress() (used by the cart
+     * path), this never throws: a gift card is digital, so a missing or
+     * incomplete address is fine — the only thing we want the address for
+     * is a nicer payer name.
+     *
+     *   - If a specific id was requested and it belongs to the user, use it.
+     *   - Otherwise fall back to the user's default billing address.
+     *   - May return null (buyer has no address at all); the caller then
+     *     synthesizes a minimal snapshot from the user profile.
+     */
+    private function resolveGiftCardPayerAddress(
+        AddressRepository $addresses,
+        User $user,
+        ?int $requestedId,
+    ): ?Address {
+        if ($requestedId !== null) {
+            $candidate = $addresses->find($requestedId);
+            if ($candidate !== null && $candidate->getUser()->getId() === $user->getId()) {
+                return $candidate;
+            }
+            // Foreign/unknown id: don't hard-fail a digital purchase — fall
+            // through to the default-billing lookup below.
+        }
+        return $addresses->findDefaultBillingForUser($user);
+    }
+
+    /**
+     * Build an OrderAddress snapshot for a gift-card purchase. Tolerant of a
+     * null/incomplete source Address: OrderAddress mandates a non-empty
+     * name/phone/email/street/city, so we fall back to the user profile for
+     * name/phone/email and to a placeholder for the delivery-only fields
+     * (street/city) that Noon never receives for a digital gift card. This
+     * lets both the billing and shipping rows exist without forcing the
+     * buyer to have a deliverable address on file.
+     */
+    private function snapshotGiftCardAddress(?Address $source, User $user, string $type): OrderAddress
+    {
+        // Payer name: saved recipient name → user's own name → email → literal.
+        $name = $source !== null ? trim($source->getRecipientName()) : '';
+        if ($name === '') {
+            $name = trim(trim((string) $user->getFirstName()) . ' ' . trim((string) $user->getLastName()));
+        }
+        if ($name === '') {
+            $name = trim((string) $user->getEmail());
+        }
+        if ($name === '') {
+            $name = 'Customer';
+        }
+
+        // Phone: saved recipient phone → user phone → placeholder (no courier
+        // for a digital card, but OrderAddress requires a non-empty value).
+        $phone = $source !== null ? trim($source->getRecipientPhone()) : '';
+        if ($phone === '') {
+            $phone = trim((string) $user->getPhone());
+        }
+        if ($phone === '') {
+            $phone = 'N/A';
+        }
+
+        // Email: user email (guaranteed present in practice); placeholder is a
+        // last-resort guard so a blank can never surface as an opaque 500.
+        $email = trim((string) $user->getEmail());
+        if ($email === '') {
+            $email = 'no-reply@3bayti.ae';
+        }
+
+        // Delivery-only fields — irrelevant for a digital gift card (never sent
+        // to Noon) but non-empty is required by OrderAddress.
+        $street = $source !== null ? trim((string) ($source->getStreetAddress() ?? '')) : '';
+        if ($street === '') {
+            $street = 'N/A';
+        }
+        $city = $source !== null ? trim($source->getEmirate()) : '';
+        if ($city === '') {
+            $city = 'N/A';
+        }
+
+        return new OrderAddress(
+            type: $type,
+            firstName: $name,
+            phone: $phone,
+            email: $email,
+            street: $street,
+            city: $city,
+            stateProvince: $source?->getArea(),
+            countryCode: $source?->getCountry() ?? 'AE',
+            postalCode: $source?->getPostalCode(),
         );
     }
 

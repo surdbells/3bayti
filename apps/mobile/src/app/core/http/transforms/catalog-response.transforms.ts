@@ -272,6 +272,11 @@ function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
     product_name: asString(item['name']),
     image_1: flatImageUrl(item['primary_image']),
     price: flatPrice(item['price']),
+    // Sale price (ON-SALE card rendering). v3 list items carry sale_price
+    // as a `{amount, currency}` object (or null). Mirror the detail
+    // transform: flatten to a bare number when present, null otherwise, so
+    // card templates can test `sale_price > 0 && sale_price < price`.
+    sale_price: item['sale_price'] != null ? flatPrice(item['sale_price']) : null,
     store_name: vendorName(item['vendor']),
     // Secondary bindings some pages may use (vendors.page reads
     // `vendor_products.image` not `vendor_products.image_1`):

@@ -73,8 +73,13 @@
                   (load)="onImageLoad(product.product_id)"
                   (error)="onImageError(product.product_id)"
                   (click)="open_product(product.product_id, product.product_name)" />
-                <!-- NEW flag (top-left) -->
-                <span class="m6d-flag-badge">NEW</span>
+                <!-- Flag (top-left): SALE takes precedence over NEW when the
+                     product is genuinely discounted, so the two never overlap -->
+                @if(product.sale_price && +product.sale_price > 0 && +product.sale_price < +product.price){
+                  <span class="m6d-flag-badge m6d-flag-badge--sale">{{ 'badge_sale' | translate }}</span>
+                } @else {
+                  <span class="m6d-flag-badge">NEW</span>
+                }
                 <!-- Heart-plus (top-right) -->
                 <button
                   type="button"
@@ -89,7 +94,14 @@
               <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
                 <p class="m6d-name">{{ product.product_name }}</p>
                 <div class="m6d-price-row">
-                  <span class="m6d-price">Ð{{ product.price | number }}</span>
+                  @if(product.sale_price && +product.sale_price > 0 && +product.sale_price < +product.price){
+                    <span class="m6d-price-sale-group">
+                      <span class="m6d-price m6d-price--sale">Ð{{ product.sale_price | number }}</span>
+                      <span class="m6d-price-original">Ð{{ product.price | number }}</span>
+                    </span>
+                  } @else {
+                    <span class="m6d-price">Ð{{ product.price | number }}</span>
+                  }
                   <button
                     type="button"
                     class="m6d-add-to-cart"

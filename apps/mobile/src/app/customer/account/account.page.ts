@@ -623,6 +623,11 @@ export class AccountPage implements OnInit, OnDestroy {
     );
   }
 
+  /** Open the discounted (on-sale) listing page. */
+  open_discounted() {
+    this.router.navigate(['/', 'discounted']);
+  }
+
   refresh_products() {
     this.ui_controls.is_loading = true;
     this.imageLoaded = {}; // Reset image loading states

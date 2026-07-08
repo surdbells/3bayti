@@ -140,6 +140,10 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/category/category.page').then( m => m.CategoryPage)
   },
   {
+    path: 'discounted',
+    loadComponent: () => import('./customer/discounted/discounted.page').then( m => m.DiscountedPage)
+  },
+  {
     path: 'vendor-reviews',
     loadComponent: () => import('./customer/vendor-reviews/vendor-reviews.page').then( m => m.VendorReviewsPage)
   },

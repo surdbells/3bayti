@@ -45,6 +45,10 @@
         <ion-col>
           <section class="section">
             <div class="h-scroll categories">
+              <button class="m6-chip m6-chip--discounted" type="button" (click)="open_discounted()">
+                <span class="m6-chip-ico"><ax-icon name="tag" /></span>
+                <span class="m6-chip-text">{{ 'nav_discounted' | translate }}</span>
+              </button>
               <button class="m6-chip" type="button" (click)="open_category(1, 'Abayas');">
                 <span class="m6-chip-ico"><ion-icon src="assets/icon/abayas.svg"></ion-icon></span>
                 <span class="m6-chip-text">{{ 'abayas' | translate }}</span>
@@ -175,6 +179,10 @@
                 (error)="onImageError('best-' + best_seller.product_id)"
                 [src]="cfImage(best_seller.image_1, 'card')"
                 alt="{{best_seller.product_name}}" />
+              <!-- SALE flag (top-left) — only when genuinely discounted -->
+              @if(best_seller.sale_price && +best_seller.sale_price > 0 && +best_seller.sale_price < +best_seller.price){
+                <span class="m6d-flag-badge m6d-flag-badge--sale">{{ 'badge_sale' | translate }}</span>
+              }
               <button (click)="startAddToCloset(best_seller.product_id, best_seller.product_name, best_seller.image_1)" class="m6d-like" type="button" [attr.aria-label]="'account_add_to_closet' | translate">
                 <ax-icon name="heart-plus" />
               </button>
@@ -183,7 +191,14 @@
             <div (click)="open_product(best_seller.product_id)" class="m6d-info">
               <p class="m6d-name">{{best_seller.product_name}}</p>
               <div class="m6d-price-row">
-                <span class="m6d-price">Ð{{best_seller.price}}</span>
+                @if(best_seller.sale_price && +best_seller.sale_price > 0 && +best_seller.sale_price < +best_seller.price){
+                  <span class="m6d-price-sale-group">
+                    <span class="m6d-price m6d-price--sale">Ð{{best_seller.sale_price}}</span>
+                    <span class="m6d-price-original">Ð{{best_seller.price}}</span>
+                  </span>
+                } @else {
+                  <span class="m6d-price">Ð{{best_seller.price}}</span>
+                }
                 <button (click)="open_product(best_seller.product_id); $event.stopPropagation()" class="m6d-add-to-cart" type="button" [attr.aria-label]="'account_add_to_cart' | translate">
                   <ax-icon name="plus" />
                 </button>
@@ -218,6 +233,10 @@
                 (error)="onImageError('new-' + new_arrival.product_id)"
                 [src]="cfImage(new_arrival.image_1, 'card')"
                 alt="{{new_arrival.product_name}}" />
+              <!-- SALE flag (top-left) — only when genuinely discounted -->
+              @if(new_arrival.sale_price && +new_arrival.sale_price > 0 && +new_arrival.sale_price < +new_arrival.price){
+                <span class="m6d-flag-badge m6d-flag-badge--sale">{{ 'badge_sale' | translate }}</span>
+              }
               <button (click)="startAddToCloset(new_arrival.product_id, new_arrival.product_name, new_arrival.image_1)" class="m6d-like" type="button" [attr.aria-label]="'account_add_to_closet' | translate">
                 <ax-icon name="heart-plus" />
               </button>
@@ -226,7 +245,14 @@
             <div (click)="open_product(new_arrival.product_id)" class="m6d-info">
               <p class="m6d-name">{{new_arrival.product_name}}</p>
               <div class="m6d-price-row">
-                <span class="m6d-price">Ð{{new_arrival.price}}</span>
+                @if(new_arrival.sale_price && +new_arrival.sale_price > 0 && +new_arrival.sale_price < +new_arrival.price){
+                  <span class="m6d-price-sale-group">
+                    <span class="m6d-price m6d-price--sale">Ð{{new_arrival.sale_price}}</span>
+                    <span class="m6d-price-original">Ð{{new_arrival.price}}</span>
+                  </span>
+                } @else {
+                  <span class="m6d-price">Ð{{new_arrival.price}}</span>
+                }
                 <button (click)="open_product(new_arrival.product_id); $event.stopPropagation()" class="m6d-add-to-cart" type="button" [attr.aria-label]="'account_add_to_cart' | translate">
                   <ax-icon name="plus" />
                 </button>

@@ -147,7 +147,7 @@ finalize() {
           this.ui_controls.confirming_transaction = false;
           switch (outcome.kind) {
             case 'paid':
-              this.router.navigate(['/success'], { replaceUrl: true });
+              this.router.navigate(['/success'], { replaceUrl: true, queryParams: { orderReference: reference } });
               break;
             case 'failed':
               this.router.navigate(['/failed'], { replaceUrl: true });

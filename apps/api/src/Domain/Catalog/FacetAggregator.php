@@ -432,7 +432,10 @@ class FacetAggregator
             $where[] = 'p.is_new = TRUE';
         }
         if (!empty($filters['isSale'])) {
-            $where[] = 'p.is_sale = TRUE';
+            // On sale = a real markdown (sale_price below regular price), matching
+            // the price-based listing filter in ProductRepository, not the
+            // standalone is_sale flag — so the facet count agrees with results.
+            $where[] = '(p.sale_price IS NOT NULL AND p.sale_price < p.price)';
         }
 
         // M3.1.5.5d — fulltext via TSMATCH; reuse the same approach as

@@ -8,7 +8,15 @@
     <h1>{{ 'text_purchase_successful' | translate }}</h1>
     <p>{{ 'text_purchase_successful_subtitle' | translate }}</p>
 
+    <p *ngIf="orderReference" class="order-reference">
+      {{ 'label_order_reference' | translate }} #{{ orderReference }}
+    </p>
+
     <div class="status-actions">
+      <ion-button *ngIf="orderReference" shape="round" expand="block" fill="outline" [routerLink]="['/my-orders']">
+        <ax-icon name="package" slot="start"></ax-icon>
+        <span>{{ 'button_view_order' | translate }}</span>
+      </ion-button>
       <ion-button shape="round" expand="block" [routerLink]="['/account']">
         <ax-icon name="house" slot="start"></ax-icon>
         <span>{{ 'button_home' | translate }}</span>

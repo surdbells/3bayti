@@ -243,7 +243,14 @@ class ProductRepository extends EntityRepository
             $qb->andWhere('p.isNew = TRUE');
         }
         if (!empty($filters['isSale'])) {
-            $qb->andWhere('p.isSale = TRUE');
+            // ON SALE is PRICE-BASED, not a standalone flag: a product is
+            // "on sale" only when it carries a sale_price that is present
+            // AND strictly below its regular price. This matches the
+            // operator's definition used everywhere (mobile discounted page,
+            // card sale rendering) — the legacy `is_sale` boolean could be
+            // set independently of the prices and so returned products that
+            // weren't genuinely discounted.
+            $qb->andWhere('p.salePrice IS NOT NULL AND p.salePrice < p.price');
         }
 
         // In-stock filter (Stores #4): mirrors the serializer's `in_stock`
