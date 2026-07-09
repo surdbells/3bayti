@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Vendor\Product\Dto;
 
 use Symfony\Component\Validator\Constraints as Assert;
+use Symfony\Component\Validator\Context\ExecutionContextInterface;
 
 /**
  * Shared DTO for vendor product create + update (M3.3.1-C).
@@ -142,5 +143,24 @@ final class VendorProductInput
         $this->extra_msmt        = $extra_msmt;
         $this->collection_id     = $collection_id;
         $this->label_id          = $label_id;
+    }
+
+    /**
+     * A sale price must be a real markdown: strictly below the regular price.
+     * Enforced only when both are present (the portal form always sends both);
+     * a partial update that omits price can't be compared here and falls back
+     * to the customer-side "sale_price < price" display guard.
+     */
+    #[Assert\Callback]
+    public function validateSalePriceBelowPrice(ExecutionContextInterface $context): void
+    {
+        if ($this->sale_price !== null
+            && $this->price !== null
+            && (float) $this->sale_price > 0.0
+            && (float) $this->sale_price >= (float) $this->price) {
+            $context->buildViolation('Sale price must be lower than the regular price.')
+                ->atPath('sale_price')
+                ->addViolation();
+        }
     }
 }

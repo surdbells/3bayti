@@ -109,7 +109,11 @@ final class AddCartItemController
         $candidate = new CartItem(
             product: $product,
             quantity: $input->quantity ?? 1,
-            unitPriceSnapshot: $product->getPrice(),
+            // Snapshot the EFFECTIVE price so a product on sale is charged at
+            // its sale price. Subtotal, quote, and the placed order all read
+            // this snapshot, so this one line makes both mobile + web honor
+            // the sale (neither client sends a price).
+            unitPriceSnapshot: $product->effectivePrice(),
             size: $input->size,
             color: $input->color,
             isCustom: $input->is_custom,

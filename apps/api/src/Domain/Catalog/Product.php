@@ -234,6 +234,23 @@ class Product
     public function isActive(): bool { return $this->isActive; }
     public function getPrice(): string { return $this->price; }
     public function getSalePrice(): ?string { return $this->salePrice; }
+
+    /**
+     * The price actually charged: the sale price when the product is genuinely
+     * on sale (sale_price set, > 0, and strictly below the regular price),
+     * otherwise the regular price. Snapshotted into the cart so a discounted
+     * product is charged at its sale price on both mobile and web.
+     */
+    public function effectivePrice(): string
+    {
+        if ($this->salePrice !== null
+            && bccomp($this->salePrice, '0.00', 2) > 0
+            && bccomp($this->salePrice, $this->price, 2) < 0) {
+            return $this->salePrice;
+        }
+        return $this->price;
+    }
+
     public function getCostPerItem(): ?string { return $this->costPerItem; }
     public function getStockQuantity(): int { return $this->stockQuantity; }
     public function getAllowOversell(): bool { return $this->allowOversell; }

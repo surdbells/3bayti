@@ -435,6 +435,11 @@ export class ProductFormComponent implements OnInit {
       this.toast.error('Featured image is required'); return false;
     }
     if (!this.isEdit && !this.model.delivery_time.length) { this.toast.error('Delivery time is required'); return false; }
+    if (this.model.sale_price != null
+        && Number(this.model.sale_price) > 0
+        && Number(this.model.sale_price) >= Number(this.model.price)) {
+      this.toast.error('Sale price must be lower than the regular price'); return false;
+    }
     return true;
   }
 

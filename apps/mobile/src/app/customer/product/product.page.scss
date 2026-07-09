@@ -1045,6 +1045,18 @@ swiper-slide,
     font-weight: 800;
     color: var(--text-primary);
   }
+
+  .price-value--sale {
+    color: var(--ax-color-text-danger, #c0392b);
+  }
+
+  .price-original {
+    margin-inline-start: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary, #999);
+    text-decoration: line-through;
+  }
 }
 
 .add-cart-btn {
