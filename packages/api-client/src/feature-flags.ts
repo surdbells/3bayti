@@ -1064,6 +1064,18 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/admin/vendor-applications',
     shape: 'v3-envelope',
   },
+  // ---- Public account-deletion request (Google Play compliance) ----
+  // PUBLIC intake for the storefront /delete-account page. Lets a user
+  // who CANNOT sign in (forgot password, or a Google/Apple sign-up)
+  // request deletion by email. Distinct from the authed self-serve
+  // 'DELETE /me'. Net-new v3-only; body { email, reason?, phone? } ->
+  // 202 { status: 'received' }.
+  'POST /account/deletion-request': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/account/deletion-request',
+    shape: 'v3-envelope',
+  },
   'POST /admin/vendor-applications/:id/approve': {
     target: 'new',
     oldPath: '',

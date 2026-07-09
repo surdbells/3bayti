@@ -60,6 +60,7 @@
     "legal": "Legal",
     "terms": "Terms of service",
     "privacy": "Privacy policy",
+    "deleteAccount": "Delete account",
     "cookies": "Cookie policy",
     "shipping": "Shipping policy",
     "copyright": "© {{year}} 3bayti. All rights reserved.",
@@ -601,6 +602,10 @@
       "password": {
         "title": "Password",
         "desc": "Change your account password."
+      },
+      "delete": {
+        "title": "Delete account",
+        "desc": "Permanently close your account."
       },
       "whatsapp": {
         "title": "WhatsApp support",
@@ -1340,7 +1345,27 @@
     "home": "Back to home",
     "categories": "Browse categories"
   },
+  "legal": {
+    "deleteAccount": {
+      "form": {
+        "emailLabel": "Email address",
+        "emailPlaceholder": "you@example.com",
+        "reasonLabel": "Reason (optional)",
+        "reasonPlaceholder": "Anything you'd like us to know (optional)",
+        "submit": "Submit deletion request",
+        "submitting": "Submitting…",
+        "successTitle": "Request received",
+        "successBody": "Thanks — we have received your request. After we verify your identity, your account and data will be deleted; you will get a confirmation by email.",
+        "errors": {
+          "emailInvalid": "Please enter a valid email address.",
+          "generic": "We couldn't submit your request. Please try again."
+        }
+      }
+    }
+  },
   "routeTitles": {
+    "privacy": "Privacy Policy · 3bayti",
+    "deleteAccount": "Delete your account · 3bayti",
     "styleCreate": "Create a style · 3bayti",
     "home": "3bayti — Premium Abayas, Kaftans & Modest Wear",
     "categories": "Shop by Category · 3bayti",

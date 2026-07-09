@@ -1,0 +1,195 @@
+/* Public account-deletion page — prose + request form.
+   Shares the legal-doc prose scale with privacy-policy-page.scss and
+   the form styling tokens with account-delete.scss. */
+
+.legal-doc {
+  min-height: calc(100vh - 200px);
+  padding: 40px 0 72px;
+  background: var(--color-bg-default, #faf7f1);
+}
+
+.legal-doc__container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 20px;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.legal-doc__header {
+  margin-bottom: 28px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--color-border-subtle, #e2dccc);
+}
+
+.legal-doc__title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0;
+  line-height: 1.15;
+}
+
+.legal-doc__section {
+  margin-bottom: 28px;
+
+  h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 21px;
+    font-weight: 600;
+    color: var(--color-text-primary, #2e241c);
+    margin: 0 0 12px 0;
+    line-height: 1.25;
+  }
+
+  p {
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--color-text-muted, #4f463d);
+    margin: 0 0 14px 0;
+  }
+
+  ul {
+    margin: 0 0 14px 0;
+    padding-inline-start: 22px;
+
+    li {
+      font-size: 16px;
+      line-height: 1.7;
+      color: var(--color-text-muted, #4f463d);
+      margin-bottom: 10px;
+    }
+  }
+
+  strong {
+    color: var(--color-text-primary, #2e241c);
+    font-weight: 600;
+  }
+
+  a {
+    color: var(--color-brand-700, #5a3a2c);
+    text-decoration: underline;
+
+    &:hover,
+    &:focus-visible {
+      color: var(--color-text-primary, #2e241c);
+      outline: none;
+    }
+  }
+}
+
+/* ---- Request form ---- */
+
+.legal-doc__form-section {
+  background: #fff;
+  border: 1px solid var(--color-border-subtle, #e2dccc);
+  border-radius: 14px;
+  padding: 26px 24px;
+}
+
+.legal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.legal-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.legal-form__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+}
+
+.legal-form__input {
+  appearance: none;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 13px;
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--color-text-primary, #2e241c);
+  background: var(--color-bg-default, #faf7f1);
+  border: 1px solid var(--color-border-subtle, #e2dccc);
+  border-radius: 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-brand-700, #5a3a2c);
+    box-shadow: 0 0 0 3px rgba(90, 58, 44, 0.12);
+  }
+}
+
+.legal-form__input--textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.legal-form__field-error {
+  font-size: 13px;
+  color: #8f1810;
+  margin: 0;
+}
+
+.legal-form__error {
+  background: rgba(180, 34, 24, 0.06);
+  border: 1px solid rgba(180, 34, 24, 0.28);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #8f1810;
+}
+
+.legal-form__submit {
+  appearance: none;
+  align-self: flex-start;
+  background: var(--color-brand-700, #5a3a2c);
+  color: #fff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: var(--color-brand-800, #47281c);
+    outline: none;
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.legal-form__success {
+  background: rgba(38, 122, 72, 0.07);
+  border: 1px solid rgba(38, 122, 72, 0.28);
+  border-radius: 12px;
+  padding: 22px 20px;
+}
+
+.legal-form__success-title {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary, #2e241c);
+  margin: 0 0 8px 0;
+}
+
+.legal-form__success-text {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--color-text-muted, #4f463d);
+  margin: 0;
+}

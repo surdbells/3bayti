@@ -406,6 +406,23 @@ export const routes: Routes = [
       import('./features/checkout/checkout-success-page').then(m => m.CheckoutSuccessPageComponent),
     title: 'routeTitles.checkoutSuccess',
   },
+  /* --- Legal / compliance (public, no guard) --------------------------
+     Two static public pages required for app-store + Google Play review:
+     the Privacy Policy and a public account-deletion page (the latter
+     MUST be reachable without signing in). Both localize their <title>
+     via I18nTitleStrategy and are indexable. */
+  {
+    path: 'privacy',
+    loadComponent: () =>
+      import('./features/legal/privacy-policy-page').then(m => m.PrivacyPolicyPageComponent),
+    title: 'routeTitles.privacy',
+  },
+  {
+    path: 'delete-account',
+    loadComponent: () =>
+      import('./features/legal/delete-account-page').then(m => m.DeleteAccountPageComponent),
+    title: 'routeTitles.deleteAccount',
+  },
   {
     /* Catch-all 404 — MUST remain last. This is a client route (not a
        top-level 404.html asset), so Cloudflare Pages' built-in SPA

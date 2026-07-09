@@ -1,4 +1,4 @@
-package ae.threebayti.app
+package com.threebayti.app
 
 import android.content.Intent
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -33,7 +33,7 @@ class ScreenshotTest {
     }
 
     private lateinit var device: UiDevice
-    private val pkg = "ae.threebayti.app"
+    private val pkg = "com.threebayti.app"
 
     @Before
     fun setUp() {

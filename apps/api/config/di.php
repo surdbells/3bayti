@@ -442,6 +442,35 @@ return [
         );
     },
 
+    // PUBLIC account + data deletion request controller. Factory-bound
+    // (not autowired) because the $adminRecipients constructor param is a
+    // plain array parsed from ADMIN_NOTIFICATION_EMAILS — PHP-DI can't
+    // autowire a scalar/array. Mirrors the SubmitVendorApplicationController
+    // deps otherwise. NO constructor defaults, NO use() closures →
+    // compiled-container safe (env read from $_ENV inside the factory).
+    \Bayti\Api\Http\Controllers\Account\RequestAccountDeletionController::class => static function (
+        ContainerInterface $c,
+    ): \Bayti\Api\Http\Controllers\Account\RequestAccountDeletionController {
+        $raw = $_ENV['ADMIN_NOTIFICATION_EMAILS'] ?? '';
+        $recipients = [];
+        if (is_string($raw) && $raw !== '') {
+            foreach (explode(',', $raw) as $email) {
+                $email = trim($email);
+                if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                    $recipients[] = $email;
+                }
+            }
+        }
+        return new \Bayti\Api\Http\Controllers\Account\RequestAccountDeletionController(
+            responseFactory: $c->get(\Psr\Http\Message\ResponseFactoryInterface::class),
+            validator: $c->get(\Bayti\Api\Http\Validator\RequestValidator::class),
+            cache: $c->get(\Bayti\Api\Infrastructure\Cache\KeyValueStore::class),
+            mailer: $c->get(\Bayti\Api\Notification\MailerInterface::class),
+            logger: $c->get(\Psr\Log\LoggerInterface::class),
+            adminRecipients: $recipients,
+        );
+    },
+
     // ── Gift-card recipient delivery (email + SMS) ────────────────────
     //
     // Renderer is a pure service — safe to autowire.

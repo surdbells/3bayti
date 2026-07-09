@@ -1,4 +1,4 @@
-package ae.threebayti.app;
+package com.threebayti.app;
 
 import com.getcapacitor.BridgeActivity;
 

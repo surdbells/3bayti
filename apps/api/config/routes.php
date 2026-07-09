@@ -516,6 +516,28 @@ return function (App $app): void {
         \Bayti\Api\Http\Controllers\VendorApplication\SubmitVendorApplicationController::class,
     );
 
+    // -------------------------------------------------------------------
+    // Account deletion — PUBLIC (NO auth) data-deletion request.
+    //
+    // POST /v3/account/deletion-request  (NO auth)
+    //
+    // Google Play requires a publicly reachable (no login) URL where a
+    // user can request account + data deletion. The authenticated
+    // DELETE /v3/me can't serve that: it needs a session AND rejects
+    // social-only accounts (no password to self-authenticate). This
+    // endpoint accepts { email, reason?, phone? } and emails ops to
+    // process the deletion manually.
+    //
+    // Anti-enumeration: ALWAYS returns 202 { "status": "received" } for
+    // a well-formed request — it never reveals whether the email matches
+    // an account. Anti-spam: throttled per-IP (CF-Connecting-IP) +
+    // per-email inside the controller via the KeyValueStore.
+    // -------------------------------------------------------------------
+    $app->post(
+        '/v3/account/deletion-request',
+        \Bayti\Api\Http\Controllers\Account\RequestAccountDeletionController::class,
+    );
+
     // M2.2 — Products (Day 2 of 10-day rollout)
     $app->get('/v3/products', \Bayti\Api\Http\Controllers\Catalog\ListProductsController::class);
     // M3.2.X.10 — Faceted search. Registered BEFORE /v3/products/{slug}
