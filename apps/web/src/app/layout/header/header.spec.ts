@@ -220,9 +220,28 @@ describe('HeaderComponent (auth-aware)', () => {
         expect(a, id).not.toBeNull();
         const href = a!.getAttribute('href') ?? a!.getAttribute('ng-reflect-router-link') ?? '';
         expect(href, id).toMatch(re);
-        // The glyph renders (icon binding resolved, not a no-op).
-        expect(a!.querySelector('app-nav-icon svg'), `${id} icon`).not.toBeNull();
+        // Tidied nav is text-only — no icon glyph should be rendered.
+        expect(a!.querySelector('app-nav-icon'), `${id} icon removed`).toBeNull();
       }
+    });
+
+    it('renders a text-only Discounted nav item (desktop + drawer) linking to /discounted', () => {
+      const { fixture } = setup({ user: null });
+      const root: HTMLElement = fixture.nativeElement;
+      const desktop = root.querySelector(
+        '.primary-nav [data-testid="nav-discounted"]',
+      ) as HTMLAnchorElement | null;
+      expect(desktop).not.toBeNull();
+      const href = desktop!.getAttribute('href') ?? desktop!.getAttribute('ng-reflect-router-link') ?? '';
+      expect(href).toMatch(/discounted/);
+      expect(desktop!.querySelector('app-nav-icon')).toBeNull();
+      expect(root.querySelector('[data-testid="drawer-nav-discounted"]')).not.toBeNull();
+    });
+
+    it('renders a visual divider between the primary links and Discounted', () => {
+      const { fixture } = setup({ user: null });
+      const nav = fixture.nativeElement.querySelector('.primary-nav') as HTMLElement;
+      expect(nav.querySelector('.nav-divider')).not.toBeNull();
     });
 
     it('renders the Gift Cards nav item (Phase E) in the desktop nav and the drawer', () => {

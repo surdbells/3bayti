@@ -34,6 +34,7 @@
     "categories": "Categories",
     "styles": "Styles",
     "giftCards": "Gift Cards",
+    "discounted": "Discounted",
     "menuToggle": "Open navigation menu"
   },
   "footer": {
@@ -797,6 +798,11 @@
       "title": "New Arrivals",
       "subtitle": "The latest pieces just added — discover fresh abayas, kaftans and modest wear from our designers.",
       "empty": "No new arrivals to show just yet. Check back soon."
+    },
+    "discounted": {
+      "title": "Discounted",
+      "subtitle": "On-sale pieces across the boutique — shop discounted abayas, kaftans and modest wear while they last.",
+      "empty": "No discounted pieces right now. Check back soon."
     }
   },
   "giftCards": {
@@ -1375,6 +1381,7 @@
     "storeReviews": "Store Reviews · 3bayti",
     "bestSellers": "Best Sellers · 3bayti",
     "newArrivals": "New Arrivals · 3bayti",
+    "discounted": "Discounted · 3bayti",
     "giftCards": "Gift Cards · 3bayti",
     "giftCardRedeem": "Redeem a Gift Card · 3bayti",
     "sell": "Sell on 3bayti",

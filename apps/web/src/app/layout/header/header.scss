@@ -55,8 +55,8 @@
      nav in the middle (via flex-grow on .primary-nav), and actions
      on the end edge. */
   justify-content: space-between;
-  gap: 24px;
-  max-width: 1280px;
+  gap: 32px;
+  max-width: 1360px;
   /* margin-inline + padding-inline are logical properties — they map
      to left/right in LTR and right/left in RTL automatically, so the
      same rules work for both directions. */
@@ -92,13 +92,26 @@
 }
 
 .primary-nav {
-  /* Mobile-first: the inline nav is hidden below 900px; the hamburger
-     drawer takes over (see the bottom of this file). */
+  /* Mobile-first: the inline nav is hidden below the desktop breakpoint;
+     the hamburger drawer takes over (see the bottom of this file). */
   display: none;
-  gap: 20px;
+  align-items: center;
+  /* Roomier inter-item spacing so the text-only links breathe. */
+  gap: 26px;
   /* Pull nav toward the center; actions slot keeps end alignment. */
   flex: 1 1 auto;
   justify-content: center;
+}
+
+/* Vertical rule separating the primary browse links from the Discounted
+   (promotional) entry. Logical height so it stays centered; subtle border
+   colour keeps it quiet. RTL-safe (it's a symmetric vertical line). */
+.nav-divider {
+  width: 1px;
+  align-self: center;
+  height: 20px;
+  background: var(--color-border-default);
+  flex: 0 0 auto;
 }
 
 .header-actions {
@@ -139,20 +152,10 @@
   color: var(--color-text-primary);
   text-decoration: none;
   letter-spacing: 0.01em;
+  white-space: nowrap;
   padding: 6px 0;
   position: relative;
   transition: color 0.15s ease;
-}
-
-.nav-link app-nav-icon {
-  color: var(--color-text-secondary);
-  transition: color 0.15s ease;
-}
-
-.nav-link:hover app-nav-icon,
-.nav-link:focus-visible app-nav-icon,
-.nav-link.is-active app-nav-icon {
-  color: var(--color-brand-700);
 }
 
 .nav-link:hover,
@@ -164,6 +167,22 @@
 .nav-link.is-active {
   color: var(--color-brand-700);
   font-weight: 600;
+}
+
+/* "Discounted" — a subtle promotional accent so it reads as distinct from
+   the plain browse links, while staying consistent with the gilded text
+   menu. Uses the brand gold that the product-card sale treatment uses,
+   so the on-sale visual language matches across the site. */
+.nav-link--sale {
+  color: var(--color-brand-600);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.nav-link--sale:hover,
+.nav-link--sale:focus-visible,
+.nav-link--sale.is-active {
+  color: var(--color-brand-700);
 }
 
 .nav-link::after {
@@ -457,10 +476,6 @@
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.nav-drawer__link app-nav-icon {
-  color: var(--color-text-secondary);
-}
-
 .nav-drawer__link:hover,
 .nav-drawer__link:focus-visible {
   background: var(--color-bg-subtle, #f4f1ec);
@@ -468,16 +483,30 @@
   outline: none;
 }
 
-.nav-drawer__link:hover app-nav-icon,
-.nav-drawer__link:focus-visible app-nav-icon,
-.nav-drawer__link.is-active app-nav-icon {
-  color: var(--color-brand-700);
-}
-
 .nav-drawer__link.is-active {
   background: var(--color-brand-50);
   color: var(--color-brand-700);
   font-weight: 600;
+}
+
+/* Divider between the primary browse links and the Discounted entry
+   inside the drawer — a full-width hairline with a little breathing room. */
+.nav-drawer__divider {
+  height: 1px;
+  margin: 6px 4px;
+  background: var(--color-border-subtle);
+}
+
+/* "Discounted" in the drawer — same gilded accent as the desktop nav. */
+.nav-drawer__link--sale {
+  color: var(--color-brand-600);
+  font-weight: 600;
+}
+
+.nav-drawer__link--sale:hover,
+.nav-drawer__link--sale:focus-visible,
+.nav-drawer__link--sale.is-active {
+  color: var(--color-brand-700);
 }
 
 .nav-drawer__cta {
@@ -494,8 +523,11 @@
   height: 44px;
 }
 
-/* Desktop (≥900px): inline nav returns, drawer affordances disappear. */
-@media (min-width: 900px) {
+/* Desktop (≥1000px): the inline text nav returns, drawer affordances
+   disappear. Bumped from 900px so the roomier, text-only nav (now with the
+   Discounted entry + divider) has space to breathe without crowding the
+   brand + actions; below this the hamburger drawer takes over. */
+@media (min-width: 1000px) {
   .nav-toggle {
     display: none;
   }

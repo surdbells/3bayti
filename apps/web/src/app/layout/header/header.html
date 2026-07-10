@@ -30,12 +30,24 @@
           [routerLink]="item.path"
           routerLinkActive="is-active"
           class="nav-link"
-          [attr.data-testid]="'nav-' + item.icon"
+          [attr.data-testid]="'nav-' + item.key"
         >
-          <app-nav-icon [icon]="item.icon" />
           <span>{{ item.labelKey | translate }}</span>
         </a>
       }
+
+      <!-- Divider separating the primary browse links from the
+           Discounted / promotional entry. -->
+      <span class="nav-divider" aria-hidden="true"></span>
+
+      <a
+        routerLink="/discounted"
+        routerLinkActive="is-active"
+        class="nav-link nav-link--sale"
+        data-testid="nav-discounted"
+      >
+        <span>{{ 'nav.discounted' | translate }}</span>
+      </a>
     </nav>
 
     <div class="header-actions">
@@ -140,12 +152,23 @@
           routerLinkActive="is-active"
           (click)="closeDrawer()"
           class="nav-drawer__link"
-          [attr.data-testid]="'drawer-nav-' + item.icon"
+          [attr.data-testid]="'drawer-nav-' + item.key"
         >
-          <app-nav-icon [icon]="item.icon" />
           <span>{{ item.labelKey | translate }}</span>
         </a>
       }
+
+      <span class="nav-drawer__divider" aria-hidden="true"></span>
+
+      <a
+        routerLink="/discounted"
+        routerLinkActive="is-active"
+        (click)="closeDrawer()"
+        class="nav-drawer__link nav-drawer__link--sale"
+        data-testid="drawer-nav-discounted"
+      >
+        <span>{{ 'nav.discounted' | translate }}</span>
+      </a>
     </nav>
 
     @if (showLoggedOutCta()) {

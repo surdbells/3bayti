@@ -23,7 +23,6 @@ import { LocaleSwitcherComponent } from './locale-switcher';
 import { UserMenuComponent } from './user-menu';
 import { CartIconComponent } from './cart-icon';
 import { CurrencySwitcherComponent } from './currency-switcher';
-import { NavIconComponent } from './nav-icon';
 import { SearchOverlayComponent } from '../../features/search/search-overlay';
 import { AuthService } from '../../core/auth/auth.service';
 
@@ -33,8 +32,8 @@ interface NavItem {
   path: string;
   /** i18n key for the label. */
   labelKey: string;
-  /** NavIcon key. */
-  icon: string;
+  /** Stable slug used for the item's `data-testid` (e.g. 'categories'). */
+  key: string;
 }
 
 /**
@@ -69,7 +68,6 @@ interface NavItem {
     UserMenuComponent,
     CartIconComponent,
     CurrencySwitcherComponent,
-    NavIconComponent,
     SearchOverlayComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -82,18 +80,22 @@ export class HeaderComponent {
   private readonly router = inject(Router);
 
   /**
-   * Primary navigation entries (H1.3). Order: Categories, Stores, New In,
-   * Best Sellers, Gift Cards. Categories leads (browse-by-department is the
-   * top of the IA); New In precedes Best Sellers so the freshest catalogue
-   * reads first. Gift Cards links to the gift-card storefront.
+   * Primary navigation entries (H1.3). Order: Categories, Styles, Stores,
+   * New In, Best Sellers, Gift Cards. Categories leads (browse-by-department
+   * is the top of the IA); New In precedes Best Sellers so the freshest
+   * catalogue reads first. Gift Cards links to the gift-card storefront.
+   *
+   * Text-only in the tidied nav (icons removed) — `key` survives purely as
+   * the stable `data-testid` slug. The "Discounted" entry is rendered
+   * separately (after a divider) so it reads as a distinct, accented item.
    */
   protected readonly navItems: readonly NavItem[] = [
-    { path: '/category', labelKey: 'nav.categories', icon: 'categories' },
-    { path: '/styles', labelKey: 'nav.styles', icon: 'styles' },
-    { path: '/stores', labelKey: 'nav.stores', icon: 'stores' },
-    { path: '/new-arrivals', labelKey: 'nav.newArrivals', icon: 'newArrivals' },
-    { path: '/best-sellers', labelKey: 'nav.bestSellers', icon: 'bestSellers' },
-    { path: '/gift-cards', labelKey: 'nav.giftCards', icon: 'gift' },
+    { path: '/category', labelKey: 'nav.categories', key: 'categories' },
+    { path: '/styles', labelKey: 'nav.styles', key: 'styles' },
+    { path: '/stores', labelKey: 'nav.stores', key: 'stores' },
+    { path: '/new-arrivals', labelKey: 'nav.newArrivals', key: 'newArrivals' },
+    { path: '/best-sellers', labelKey: 'nav.bestSellers', key: 'bestSellers' },
+    { path: '/gift-cards', labelKey: 'nav.giftCards', key: 'gift' },
   ];
 
   /** Mobile drawer open state. */

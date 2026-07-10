@@ -31,6 +31,12 @@ export interface ProductListingRouteData {
   seoTitle: string;
   /** Crawler-facing English meta description. */
   seoDescription: string;
+  /**
+   * When true, this listing is restricted to on-sale products — the sale
+   * filter is forced on every load (grid + facets + load-more) regardless
+   * of the user's other filter selections. Powers the /discounted route.
+   */
+  saleOnly?: boolean;
 }
 
 /**
@@ -131,11 +137,14 @@ export class ProductListingPageComponent implements OnInit {
 
   /** The route's default sort — used to keep it out of the URL when unchanged. */
   private baseSort: CatalogSort = 'newest';
+  /** When true, every load pins the sale filter on (the /discounted route). */
+  private saleOnly = false;
   private readonly page = signal(0);
 
   ngOnInit(): void {
     const data = this.route.snapshot.data as Partial<ProductListingRouteData>;
     this.baseSort = data.sort ?? 'newest';
+    this.saleOnly = data.saleOnly === true;
     this.i18nKey.set(data.i18nKey ?? '');
 
     // Seed filter state from the URL query string (deep links / refresh).
@@ -206,6 +215,10 @@ export class ProductListingPageComponent implements OnInit {
     if (f.colors?.length) out.colors = f.colors;
     if (f.minPrice != null) out.minPrice = f.minPrice;
     if (f.maxPrice != null) out.maxPrice = f.maxPrice;
+    /* Discounted listing: pin the sale filter on so the grid, facets and
+       "load more" only ever surface on-sale products, whatever else the
+       shopper refines. */
+    if (this.saleOnly) out.sale = true;
     return out;
   }
 

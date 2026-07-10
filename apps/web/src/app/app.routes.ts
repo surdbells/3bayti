@@ -168,6 +168,26 @@ export const routes: Routes = [
     title: 'routeTitles.newArrivals',
   },
   {
+    /* Discounted — on-sale product listing. Reuses the shared listing
+       component with `saleOnly` pinned so the API filters to price-based
+       on-sale products (GET /v3/products?sale=true) across grid + facets +
+       load-more. Linked from the primary nav's "Discounted" entry. */
+    path: 'discounted',
+    loadComponent: () =>
+      import('./features/listings/product-listing-page').then(m => m.ProductListingPageComponent),
+    data: {
+      sort: 'newest',
+      i18nKey: 'discounted',
+      canonicalPath: '/discounted',
+      saleOnly: true,
+      seoTitle: 'Discounted · 3bayti',
+      seoDescription:
+        'Shop discounted abayas, kaftans and modest wear on 3bayti — ' +
+        'on-sale pieces from independent UAE designers, while they last.',
+    },
+    title: 'routeTitles.discounted',
+  },
+  {
     /* Gift Cards — browse the themed designs + purchase (Phase E2).
        Public page; purchasing requires auth (the API rejects an
        unauthenticated purchase) and sends the buyer to Noon checkout. */

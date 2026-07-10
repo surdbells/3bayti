@@ -28,6 +28,8 @@ export interface CatalogFilters {
   maxPrice?: number | null;
   sort?: CatalogSort;
   q?: string | null;
+  /** When true, restrict to on-sale products (GET /v3/products?sale=true). */
+  sale?: boolean;
 }
 
 /** A single selectable facet value with its live count. */
@@ -188,6 +190,7 @@ export class CatalogService {
     if (typeof filters.maxPrice === 'number') q['max_price'] = filters.maxPrice;
     if (filters.sort && filters.sort !== 'newest') q['sort'] = filters.sort;
     if (filters.q) q['q'] = filters.q;
+    if (filters.sale) q['sale'] = 'true';
     return q;
   }
 }
