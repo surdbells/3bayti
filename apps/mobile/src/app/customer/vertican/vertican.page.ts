@@ -110,6 +110,18 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   // scroll. Kept updated via currentProductIndex in onVerticalSlideChange.
   private readonly IMAGE_WINDOW = 2;
 
+  // Bounded sliding window: never keep more than this many product SLIDES
+  // mounted. Image windowing (above) drops off-screen <img> bitmaps, but the
+  // swiper-slide nodes themselves — hero, overlays, buttons, bindings and
+  // listeners — still accumulated for every product as the feed grew, and that
+  // unbounded slide count is what eventually pushed iOS/WKWebView over its
+  // memory budget and forced a silent reload. trimRenderedWindow() keeps only
+  // the newest MAX_RENDERED_PRODUCTS slides. Must comfortably exceed the fetch
+  // page size (explore.limit = 10) plus the near-end prefetch trigger (5) plus
+  // a back-scroll buffer, so trimming never drops the slide the user is on or
+  // its neighbours.
+  private readonly MAX_RENDERED_PRODUCTS = 24;
+
   // Random ordering: a per-session seed sent to the API so it returns a stable
   // random order across every page of one browsing session. Regenerated on each
   // fresh (re)entry / refresh via resetState() so the order varies session to
@@ -701,14 +713,14 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
           }
 
           this.ui_controls.is_loading = false;
-          this.cdr.markForCheck();
 
-          // Let swiper pick up the newly appended slides so swiper.slides.length
-          // tracks the data, preserving the current active index.
-          setTimeout(() => {
-            const sw: any = this.verticalSwiper || (this.swiperEl?.nativeElement as any)?.swiper;
-            sw?.update?.();
-          }, 0);
+          // Enforce the bounded sliding window: drop the oldest slides beyond
+          // MAX_RENDERED_PRODUCTS and re-sync Swiper's active index so the
+          // product currently on screen does not jump. Also lets swiper pick up
+          // the newly appended slides (update()), preserving the active index.
+          this.trimRenderedWindow();
+
+          this.cdr.markForCheck();
         },
         error: () => {
           this.ui_controls.hasMore = false;
@@ -716,6 +728,75 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
           this.cdr.markForCheck();
         }
       });
+  }
+
+  // ========================================
+  // Sliding window
+  // ========================================
+  //
+  // The explore feed appends pages forever. Without a cap, every product slide
+  // stays mounted and iOS/WKWebView eventually hits memory pressure and silently
+  // reloads the WebView (the "glitch"). Here we keep only the newest
+  // MAX_RENDERED_PRODUCTS slides.
+  //
+  // The catch: Swiper tracks slides by NUMERIC index, not by product. Dropping N
+  // slides off the FRONT shifts every remaining slide's index down by N, so the
+  // slide Swiper considers "active" would now hold a DIFFERENT product and the
+  // feed would visibly jump forward. We compensate by shifting Swiper's active
+  // index back by the same N (slideTo, instant, callbacks off).
+  //
+  // removedCount MUST be computed BEFORE splicing — computing it against the
+  // already-trimmed array yields 0 and the index re-sync silently never happens.
+  private trimRenderedWindow() {
+    const sw: any = this.verticalSwiper || (this.swiperEl?.nativeElement as any)?.swiper;
+
+    const removedCount = this.products.length - this.MAX_RENDERED_PRODUCTS;
+    if (removedCount <= 0) {
+      // Under the cap — just let Swiper pick up the freshly appended slides so
+      // swiper.slides.length tracks the data, preserving the active index.
+      setTimeout(() => sw?.update?.(), 0);
+      return;
+    }
+
+    try {
+      // Capture the active index BEFORE any DOM change.
+      const activeBefore = sw?.activeIndex ?? this.currentProductIndex;
+
+      // Release per-product image state for the slides we are about to drop so
+      // activeImageIndices / imageLoaded don't grow unbounded alongside the feed.
+      const removed = this.products.slice(0, removedCount);
+      for (const p of removed) {
+        this.activeImageIndices.delete(p.product_id);
+        const prefix = p.product_id + '-';
+        for (const key of Object.keys(this.imageLoaded)) {
+          if (key.startsWith(prefix)) delete this.imageLoaded[key];
+        }
+      }
+
+      // Drop the oldest slides from the data.
+      this.products.splice(0, removedCount);
+
+      // Flush the @for synchronously so the removed <swiper-slide> nodes are
+      // actually gone from the DOM before we ask Swiper to recount + reposition.
+      this.cdr.detectChanges();
+
+      const newActive = Math.max(0, activeBefore - removedCount);
+      this.currentProductIndex = newActive;
+      this.index.set(newActive);
+      this.updateVerticalPagination(newActive, this.products.length);
+
+      if (sw) {
+        // update() first so Swiper re-scans the now-shorter slide list, then
+        // jump to the SAME product instantly. runCallbacks=false so this
+        // reposition does not re-fire onVerticalSlideChange (which would kick
+        // off another fetch). A trailing update() settles the new geometry.
+        sw.update();
+        sw.slideTo(newActive, 0, false);
+        sw.update();
+      }
+    } catch (error) {
+      console.error('[Vertican] trimRenderedWindow error:', error);
+    }
   }
 
   get_label() {

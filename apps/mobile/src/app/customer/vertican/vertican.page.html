@@ -42,6 +42,8 @@
               <img
                 [src]="getCurrentImage(product)"
                 alt="{{product.product_name}}"
+                loading="lazy"
+                decoding="async"
                 class="model"
                 [class.loaded]="imageLoaded[product.product_id + '-' + getActiveImageIndex(product.product_id)]"
                 (load)="onImageLoad(product.product_id, getActiveImageIndex(product.product_id))"
