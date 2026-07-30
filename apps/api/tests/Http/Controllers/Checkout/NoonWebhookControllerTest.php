@@ -32,6 +32,13 @@ final class NoonWebhookControllerTest extends HttpTestCase
         $this->bind(PaymentGatewayInterface::class, $this->createMock(PaymentGatewayInterface::class));
     }
 
+    protected function tearDown(): void
+    {
+        // The JWT-trust tests set this; never let it leak into other tests.
+        unset($_ENV['NOON_WEBHOOK_SECRET']);
+        parent::tearDown();
+    }
+
     #[Test]
     public function returns401WhenSignatureVerificationFails(): void
     {
@@ -339,18 +346,146 @@ final class NoonWebhookControllerTest extends HttpTestCase
     }
 
     /**
-     * Build a Noon-style HS256 JWT string (header.payload.sig). The signature
-     * is a placeholder — these tests mock the verifier, and the controller
-     * only decodes the payload claims here.
+     * Build a Noon-style HS256 JWT string (header.payload.sig). When $secret
+     * is given the signature is a real HMAC-SHA256 over "header.payload"
+     * (so authoritativeStatusFromSignedJwt verifies it); otherwise it's a
+     * placeholder (verification will fail → retrieve-order fallback).
      *
      * @param array<string, mixed> $claims
      */
-    private function makeNoonJwt(array $claims): string
+    private function makeNoonJwt(array $claims, ?string $secret = null): string
     {
         $b64 = static fn (string $s): string => rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
         $header = $b64((string) json_encode(['alg' => 'HS256', 'kid' => 'key1']));
         $payload = $b64((string) json_encode($claims));
-        return $header . '.' . $payload . '.' . $b64('signature-placeholder');
+        $signingInput = $header . '.' . $payload;
+        $sig = $secret !== null
+            ? $b64(hash_hmac('sha256', $signingInput, $secret, true))
+            : $b64('signature-placeholder');
+        return $signingInput . '.' . $sig;
+    }
+
+    #[Test]
+    public function trustsVerifiedJwtStatusWithoutCallingGetOrder(): void
+    {
+        // When the JWT signature verifies against NOON_WEBHOOK_SECRET, the
+        // controller trusts the signed orderStatus and does NOT call
+        // GET_ORDER (which Noon's account rejects with 403). Use a terminal
+        // FAILED status to prove the transition without the paid-path side
+        // effects.
+        $_ENV['NOON_WEBHOOK_SECRET'] = 's3cr3t-key';
+
+        $user = $this->makeUser(id: 7);
+        $order = new Order(user: $user, orderReference: 'V3-JWT-TRUST-1', subtotal: '470.00');
+        $this->setEntityId($order, 100);
+
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        // retrieveOrder must NEVER be called — the verified JWT is authoritative.
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('retrieveOrder');
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save');
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $tx = $this->createMock(PaymentTransaction::class);
+        $tx->method('getOrder')->willReturn($order);
+        $txRepo->method('findByProviderOrderRef')->with('916653060229')->willReturn($tx);
+
+        $em = $this->stubEm(function ($em) use ($eventRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $txRepo],
+                [Order::class, $this->createMock(OrderRepository::class)],
+            ]);
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->makeNoonJwt([
+            'orderId' => '916653060229',
+            'orderStatus' => 'FAILED',
+            'eventType' => 'Sale',
+            'eventId' => 'evt-jwt-trust-1',
+            'merchantOrderRef' => 'V3-JWT-TRUST-1',
+        ], 's3cr3t-key');
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', ['data' => $jwt])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(Order::STATUS_FAILED, $order->getStatus());
+    }
+
+    #[Test]
+    public function fallsBackToRetrieveOrderWhenJwtSignatureInvalid(): void
+    {
+        // A JWT signed with the WRONG secret must NOT be trusted — the
+        // controller falls back to retrieve-order-before-acting.
+        $_ENV['NOON_WEBHOOK_SECRET'] = 's3cr3t-key';
+
+        $user = $this->makeUser(id: 7);
+        $order = new Order(user: $user, orderReference: 'V3-JWT-BAD-1', subtotal: '470.00');
+        $this->setEntityId($order, 100);
+
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        // Because the JWT signature is invalid, GET_ORDER IS the authority.
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('retrieveOrder')
+            ->with('916653060229')
+            ->willReturn(new OrderStatusResponse(
+                providerOrderRef: '916653060229',
+                status: 'FAILED',
+                terminal: true,
+                paid: false,
+                amount: '470.00',
+                currency: 'AED',
+                rawResponse: [],
+            ));
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save');
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $tx = $this->createMock(PaymentTransaction::class);
+        $tx->method('getOrder')->willReturn($order);
+        $txRepo->method('findByProviderOrderRef')->with('916653060229')->willReturn($tx);
+
+        $em = $this->stubEm(function ($em) use ($eventRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $txRepo],
+                [Order::class, $this->createMock(OrderRepository::class)],
+            ]);
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        // Signed with a DIFFERENT secret → signature won't verify.
+        $jwt = $this->makeNoonJwt([
+            'orderId' => '916653060229',
+            'orderStatus' => 'CAPTURED',
+            'merchantOrderRef' => 'V3-JWT-BAD-1',
+        ], 'wrong-secret');
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', ['data' => $jwt])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(Order::STATUS_FAILED, $order->getStatus());
     }
 
     #[Test]

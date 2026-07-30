@@ -271,7 +271,14 @@ final class NoonWebhookController
         // Noon directly. The webhook body is informational, not
         // authoritative.
         // ------------------------------------------------------------------
-        $authoritative = $this->retrieveAuthoritativeStatus($providerOrderRef, $merchantReference);
+        // Prefer the webhook's OWN signed JWT when we can verify it (Noon
+        // signs HS256 with NOON_WEBHOOK_SECRET) — a valid signature makes the
+        // claimed orderStatus authoritative WITHOUT a GET_ORDER call, which
+        // Noon's account rejects with 403. Fall back to
+        // retrieve-order-before-acting when the JWT can't be verified. Both
+        // fail closed (an unverifiable webhook cannot mark an order paid).
+        $authoritative = $this->authoritativeStatusFromSignedJwt($payload)
+            ?? $this->retrieveAuthoritativeStatus($providerOrderRef, $merchantReference);
         if ($authoritative === null) {
             $this->logger->error('noon.webhook: retrieve-order failed; deferring action', [
                 'order_id' => $order->getId(),
@@ -423,13 +430,8 @@ final class NoonWebhookController
         if (count($parts) !== 3) {
             return null;
         }
-        $segment = strtr($parts[1], '-_', '+/');
-        $pad = strlen($segment) % 4;
-        if ($pad !== 0) {
-            $segment .= str_repeat('=', 4 - $pad);
-        }
-        $json = base64_decode($segment, true);
-        if ($json === false) {
+        $json = $this->base64UrlDecode($parts[1]);
+        if ($json === null) {
             return null;
         }
         try {
@@ -439,6 +441,98 @@ final class NoonWebhookController
             return null;
         }
         return is_array($claims) ? $claims : null;
+    }
+
+    /**
+     * Base64url-decode a JWT segment (RFC 7515: '-_' alphabet, padding
+     * stripped). Returns null on invalid input.
+     */
+    private function base64UrlDecode(string $segment): ?string
+    {
+        $b64 = strtr($segment, '-_', '+/');
+        $pad = strlen($b64) % 4;
+        if ($pad !== 0) {
+            $b64 .= str_repeat('=', 4 - $pad);
+        }
+        $decoded = base64_decode($b64, true);
+        return $decoded === false ? null : $decoded;
+    }
+
+    /**
+     * Build an authoritative OrderStatusResponse from the webhook's OWN
+     * signed JWT — used INSTEAD of a GET_ORDER round-trip when we can verify
+     * the signature.
+     *
+     * Noon signs each notification HS256 with NOON_WEBHOOK_SECRET, so a valid
+     * signature makes the claimed orderStatus trustworthy on its own. This
+     * matters because Noon's account rejects GET_ORDER with HTTP 403 even when
+     * INITIATE/SALE succeed, which otherwise leaves every paid order stuck at
+     * "received_unconfirmed" with no confirmation email.
+     *
+     * Returns null — so the caller falls back to retrieve-order-before-acting
+     * — when there is no secret, the body is not the JWT envelope, or the
+     * signature does not verify. Fails CLOSED: an unverifiable webhook never
+     * yields a trusted status.
+     *
+     * @param array<string, mixed> $payload Unwrapped payload (JWT claims merged up)
+     */
+    private function authoritativeStatusFromSignedJwt(array $payload): ?OrderStatusResponse
+    {
+        $jwt = $payload['data'] ?? null;
+        $secret = (string) ($_ENV['NOON_WEBHOOK_SECRET'] ?? '');
+        if (!is_string($jwt) || $jwt === '' || $secret === '') {
+            return null;
+        }
+        if (!$this->verifyNoonJwtSignature($jwt, $secret)) {
+            $this->logger->warning('noon.webhook: JWT signature did not verify; falling back to retrieve-order');
+            return null;
+        }
+
+        // orderStatus is the trusted, signed order state. Map EXACTLY as
+        // NoonPaymentGateway::buildOrderStatus does so the two paths agree.
+        $status = $this->firstScalar($payload, ['orderStatus', 'status']) ?? '';
+        $statusUpper = strtoupper($status);
+        $terminal = in_array($statusUpper, [
+            'CAPTURED', 'PAID', 'FAILED', 'EXPIRED', 'CANCELLED', 'CANCELED', 'REFUNDED',
+        ], true);
+        $paid = in_array($statusUpper, ['CAPTURED', 'PAID'], true);
+
+        $this->logger->info('noon.webhook: authoritative status from verified JWT', [
+            'order_status' => $status,
+            'terminal' => $terminal,
+            'paid' => $paid,
+        ]);
+
+        return new OrderStatusResponse(
+            providerOrderRef: $this->extractProviderOrderRef($payload) ?? '',
+            status: $status,
+            terminal: $terminal,
+            paid: $paid,
+            amount: $this->firstScalar($payload, ['txnAmount', 'amount']) ?? '0',
+            currency: $this->firstScalar($payload, ['currency', 'txnCurrency']) ?? 'AED',
+            rawResponse: $payload,
+        );
+    }
+
+    /**
+     * Verify a Noon webhook JWT's HS256 signature. The signing input is the
+     * literal "<header>.<payload>" segments AS TRANSMITTED (not re-encoded);
+     * the signature is base64url(HMAC-SHA256(input, secret)). Constant-time
+     * comparison via hash_equals.
+     */
+    private function verifyNoonJwtSignature(string $jwt, string $secret): bool
+    {
+        $parts = explode('.', $jwt);
+        if (count($parts) !== 3) {
+            return false;
+        }
+        [$header, $claims, $signature] = $parts;
+        $expected = hash_hmac('sha256', $header . '.' . $claims, $secret, true);
+        $actual = $this->base64UrlDecode($signature);
+        if ($actual === null) {
+            return false;
+        }
+        return hash_equals($expected, $actual);
     }
 
     /**
