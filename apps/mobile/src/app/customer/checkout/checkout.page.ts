@@ -537,13 +537,18 @@ export class CheckoutPage implements OnInit, OnDestroy {
     this.checkout.deliveryConfiguration.receipt.toRecipients.push(this.single_user.email);
 
     this.ui_controls.checking_out = true;
-    // Two return-URL prefixes during the M3.1.6 strangler-fig window:
-    //   Legacy:  https://api.3bayti.ae/customer/complete?orderId=&...
-    //   v3:      https://api.3bayti.ae/v3/checkout/return/{order_reference}
+    // Return-URL detection. Three shapes the webview may surface after
+    // Noon finishes hosted checkout:
+    //   Legacy:  https://api-v3.3bayti.ae/customer/complete?orderId=&...
+    //   v3 API:  https://api-v3.3bayti.ae/v3/checkout/return/{order_reference}
+    //   Web:     {WEB_APP_URL}/checkout/return?ref={order_reference}
     //
-    // We check both. Whichever matches first determines the
-    // post-redirect handling: legacy passes query params to /process;
-    // v3 passes only order_reference to /process which then polls.
+    // The v3 API return endpoint 302-redirects to the web return page. Some
+    // webviews only surface the FINAL committed URL (the web page), not the
+    // intermediate API URL — so we must also match the web return page or the
+    // browser hangs on a blank screen after a successful payment. Whichever
+    // matches first closes the webview and hands off to /process, which polls
+    // GET /v3/checkout/status to the authoritative outcome.
     const legacyReturnPrefix = 'https://api-v3.3bayti.ae/customer/complete';
     const v3ReturnPrefix = 'https://api-v3.3bayti.ae/v3/checkout/return/';
     let listenerHandle: any = null;
@@ -643,12 +648,24 @@ export class CheckoutPage implements OnInit, OnDestroy {
               if (!info || !info.url) return;    // defensive
               const urlStr: string = info.url;
 
-              // Match against EITHER prefix; payment provider may redirect
-              // to whichever URL was configured server-side (legacy
-              // backend → legacy return; v3 backend → v3 return).
+              // Parse once (host-tolerant). Match against any of the three
+              // return shapes; the provider/redirect chain determines which
+              // one the webview surfaces first.
+              let parsed: URL | null = null;
+              try { parsed = new URL(urlStr); } catch { parsed = null; }
+
               const matchesLegacy = urlStr.startsWith(legacyReturnPrefix);
               const matchesV3 = urlStr.startsWith(v3ReturnPrefix);
-              if (!matchesLegacy && !matchesV3) return;
+              // Web return page after the API 302. Host-agnostic (match on the
+              // path + presence of ?ref=) so it fires whether WEB_APP_URL is
+              // 3bayti.ae, www.3bayti.ae, etc. This is the branch that fixes
+              // the post-payment white screen when the webview only reports
+              // the final committed URL, not the intermediate API return URL.
+              const matchesWebReturn =
+                !!parsed &&
+                parsed.pathname.replace(/\/+$/, '') === '/checkout/return' &&
+                parsed.searchParams.has('ref');
+              if (!matchesLegacy && !matchesV3 && !matchesWebReturn) return;
 
               const deliveryFee = Number(this.bill.delivery) || 0;
               let orderId: string | null = null;
@@ -658,21 +675,27 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
               if (matchesLegacy) {
                 // Legacy: orderId/merchantReference/paymentType in query
-                const params = new URL(urlStr).searchParams;
+                const params = (parsed ?? new URL(urlStr)).searchParams;
                 orderId = params.get('orderId');
                 merchantReference = params.get('merchantReference');
                 paymentType = params.get('paymentType');
-              } else {
-                // v3: order_reference is in the URL path
-                // (https://api.3bayti.ae/v3/checkout/return/{ref})
+              } else if (matchesV3) {
+                // v3 API return: order_reference is in the URL path
+                // (https://api-v3.3bayti.ae/v3/checkout/return/{ref})
                 const refFromUrl = urlStr.substring(v3ReturnPrefix.length).split(/[?#/]/)[0];
                 if (refFromUrl) {
                   orderReference = refFromUrl;
                 }
+              } else {
+                // Web return page: order_reference is in ?ref=
+                const refFromQuery = parsed?.searchParams.get('ref') ?? '';
+                if (refFromQuery) {
+                  orderReference = refFromQuery;
+                }
               }
 
               console.log('Captured redirect:', {
-                shape: matchesV3 ? 'v3' : 'legacy',
+                shape: matchesV3 ? 'v3' : (matchesLegacy ? 'legacy' : 'web'),
                 orderId, merchantReference, paymentType, orderReference,
               });
               processed = true; // prevent re-entry
