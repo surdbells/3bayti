@@ -95,6 +95,35 @@ final class PurchaseGiftCardControllerTest extends TestCase
         ]);
     }
 
+    #[Test]
+    public function schedulingWithoutRecipientContactIsRejected(): void
+    {
+        // A card scheduled for a future date has no one to deliver to unless a
+        // recipient email or phone is supplied.
+        $this->expectException(HttpException::class);
+        $this->expectExceptionMessage('recipient email or phone is required when scheduling');
+        $this->invoke([
+            'denomination' => '100.00',
+            'theme' => 'eid',
+            'scheduled_delivery_at' => (new \DateTimeImmutable('+7 days'))->format(\DateTimeInterface::ATOM),
+        ]);
+    }
+
+    #[Test]
+    public function schedulingWithRecipientEmailIsAccepted(): void
+    {
+        $response = $this->invoke([
+            'denomination' => '100.00',
+            'theme' => 'eid',
+            'recipient_email' => 'sara@example.com',
+            'scheduled_delivery_at' => (new \DateTimeImmutable('+7 days'))->format(\DateTimeInterface::ATOM),
+        ]);
+
+        self::assertSame(201, $response->getStatusCode());
+        self::assertSame('sara@example.com', $this->saved->getRecipientEmail());
+        self::assertNotNull($this->saved->getScheduledDeliveryAt());
+    }
+
     // -----------------------------------------------------------------
 
     /**

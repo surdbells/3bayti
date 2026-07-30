@@ -103,6 +103,16 @@ final class PurchaseGiftCardController
             }
         }
 
+        // Recipient contact is optional in general (the buyer can share the
+        // code manually) — BUT a card scheduled for a future delivery date has
+        // no one to deliver to without it, so require at least an email or
+        // phone when scheduling.
+        if ($scheduledDeliveryAt !== null && $recipientEmail === null && $recipientPhone === null) {
+            throw HttpException::badRequest(
+                'A recipient email or phone is required when scheduling the card for a later delivery date.'
+            );
+        }
+
         try {
             $card = new GiftCard(
                 buyerUser: $user,

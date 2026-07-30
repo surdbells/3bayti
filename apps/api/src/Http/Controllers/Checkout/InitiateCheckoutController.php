@@ -8,6 +8,7 @@ use Bayti\Api\Domain\Cart\Cart;
 use Bayti\Api\Domain\Cart\CartRepository;
 use Bayti\Api\Domain\GiftCard\GiftCard;
 use Bayti\Api\Domain\GiftCard\GiftCardRepository;
+use Bayti\Api\Domain\GiftCard\GiftCardWalletService;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderAddress;
 use Bayti\Api\Domain\Order\OrderItem;
@@ -252,8 +253,21 @@ final class InitiateCheckoutController
         // a clear message. No debit happens here — debit is inside the
         // transaction so it's atomic with the order creation.
         // ------------------------------------------------------------------
-        $giftCard = null;
-        $giftCardAmount = '0.00';
+        // Unified gift-card plan. An explicit gift_card_code applies ONE card;
+        // use_gift_wallet applies the customer's whole wallet across ALL their
+        // spendable cards (soonest-expiry first). Both resolve to a list of
+        // [card => amount] that is debited atomically inside the checkout
+        // transaction below. No debit happens here — validation only.
+        //
+        // Tentative order total (subtotal + deliveryFee - discount): same
+        // arithmetic as Order::computeTotal(), used to size the gift-card draw.
+        // The exact split is reconciled inside the transaction.
+        $tentativeTotal = bcsub(bcadd($subtotal, $deliveryFee, 2), $discount, 2);
+        $tentativeTotal = bccomp($tentativeTotal, '0.00', 2) < 0 ? '0.00' : $tentativeTotal;
+
+        /** @var list<array{card: GiftCard, amount: string}> $giftCardPlan */
+        $giftCardPlan = [];
+
         if ($input->gift_card_code !== null) {
             /** @var GiftCardRepository $gcRepo */
             $gcRepo = $this->em->getRepository(GiftCard::class);
@@ -274,17 +288,14 @@ final class InitiateCheckoutController
                     'This gift card is not spendable (status: ' . $giftCard->getStatus() . ').'
                 );
             }
-            // Compute how much the card can cover (may be < total)
-            // We pass a tentative total here (subtotal + deliveryFee - discount).
-            // The exact order total is computed inside the transaction — we use
-            // the same arithmetic as Order::computeTotal() for consistency.
-            $tentativeTotal = bcsub(
-                bcadd($subtotal, $deliveryFee, 2),
-                $discount,
-                2
-            );
-            $tentativeTotal = bccomp($tentativeTotal, '0.00', 2) < 0 ? '0.00' : $tentativeTotal;
-            $giftCardAmount = $giftCard->applyableAmount($tentativeTotal);
+            $applied = $giftCard->applyableAmount($tentativeTotal);
+            if (bccomp($applied, '0.00', 2) > 0) {
+                $giftCardPlan = [['card' => $giftCard, 'amount' => $applied]];
+            }
+        } elseif ($input->use_gift_wallet) {
+            // One-tap wallet: draw across the user's spendable cards.
+            $wallet = new GiftCardWalletService($this->em);
+            $giftCardPlan = $wallet->planApply($wallet->spendableCards($user), $tentativeTotal);
         }
 
         // Server-generated order reference: V3- + 13-digit epoch_ms +
@@ -336,7 +347,7 @@ final class InitiateCheckoutController
         $order = $this->em->wrapInTransaction(
             function (EntityManagerInterface $em) use (
                 $user, $cart, $orderReference, $subtotal, $deliveryFee, $discount,
-                $billing, $shipping, $resolution, $giftCard, $giftCardAmount,
+                $billing, $shipping, $resolution, $giftCardPlan,
             ): Order {
                 $order = new Order(
                     user: $user,
@@ -389,26 +400,43 @@ final class InitiateCheckoutController
                     $em->flush();
                 }
 
-                // M3.5 — Gift card debit (atomic with order creation).
-                // Debit the card inside the transaction so a gateway failure
-                // after this point rolls back both the order AND the debit
-                // (they're in the same EM transaction; gateway call is outside).
-                if ($giftCard !== null && bccomp($giftCardAmount, '0.00', 2) > 0) {
-                    // Re-check spendability under the write lock (order row
-                    // now exists; gift card row is about to be mutated).
-                    $em->refresh($giftCard);
-                    if (!$giftCard->isSpendable()) {
-                        throw new \LogicException(
-                            'Gift card became non-spendable between validation and debit.'
+                // M3.5 / wallet — Gift card debit (atomic with order creation).
+                // Debit the planned card(s) inside the transaction so a gateway
+                // failure after this point rolls back both the order AND every
+                // debit (same EM transaction; the gateway call is outside).
+                // For the wallet this walks several cards; for a single code
+                // it's a one-element plan. Each card is refreshed + re-checked
+                // under the write lock — a balance that changed since planning
+                // makes debit() throw and rolls the whole checkout back.
+                if ($giftCardPlan !== []) {
+                    $applied   = '0.00';
+                    $firstCode = $giftCardPlan[0]['card']->getCode();
+                    foreach ($giftCardPlan as $row) {
+                        $card   = $row['card'];
+                        $amount = $row['amount'];
+                        if (bccomp($amount, '0.00', 2) <= 0) {
+                            continue;
+                        }
+                        $em->refresh($card);
+                        if (!$card->isSpendable()) {
+                            throw new \LogicException(
+                                'Gift card became non-spendable between validation and debit.'
+                            );
+                        }
+                        $card->debit(
+                            amount: $amount,
+                            orderReference: $orderReference,
+                            orderId: $order->getId(),
                         );
+                        $applied = bcadd($applied, $amount, 2);
                     }
-                    $giftCard->debit(
-                        amount: $giftCardAmount,
-                        orderReference: $orderReference,
-                        orderId: $order->getId(),
-                    );
-                    $order->applyGiftCard($giftCardAmount, $giftCard->getCode());
-                    $em->flush();
+                    if (bccomp($applied, '0.00', 2) > 0) {
+                        // Record the aggregate on the order; the per-card detail
+                        // lives in each GiftCardTransaction (tagged with this
+                        // order reference). Snapshot the first card's code.
+                        $order->applyGiftCard($applied, $firstCode);
+                        $em->flush();
+                    }
                 }
 
                 return $order;

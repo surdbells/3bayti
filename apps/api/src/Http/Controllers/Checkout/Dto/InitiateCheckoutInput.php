@@ -132,6 +132,18 @@ final class InitiateCheckoutInput
     #[Assert\Positive(message: 'gift_card_purchase_id must be a positive integer.')]
     public readonly ?int $gift_card_purchase_id;
 
+    /**
+     * Apply the customer's whole gift-card WALLET (aggregate balance across
+     * all their spendable cards) to this order — the one-tap alternative to
+     * supplying a single gift_card_code. The server debits across the cards
+     * (soonest-expiry first) up to the order total, then charges Noon the
+     * remainder (or skips the gateway when the wallet covers it all).
+     *
+     * When both are supplied, an explicit gift_card_code wins (ignore the
+     * wallet). Ignored for the gift_card_purchase_id flow.
+     */
+    public readonly bool $use_gift_wallet;
+
     public function __construct(
         ?string $channel = 'MOBILE',
         ?string $delivery_fee = '0.00',
@@ -141,6 +153,7 @@ final class InitiateCheckoutInput
         ?int $shipping_address_id = null,
         ?string $gift_card_code = null,
         ?int $gift_card_purchase_id = null,
+        ?bool $use_gift_wallet = false,
     ) {
         /* Accept any casing from clients (the web app sends 'web'); the
            Choice + Noon gateway require uppercase. Normalising here means
@@ -162,5 +175,6 @@ final class InitiateCheckoutInput
             ? (strtoupper(str_replace('-', '', trim($gift_card_code))) ?: null)
             : null;
         $this->gift_card_purchase_id = $gift_card_purchase_id;
+        $this->use_gift_wallet = $use_gift_wallet ?? false;
     }
 }

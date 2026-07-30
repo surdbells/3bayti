@@ -311,6 +311,9 @@ return function (App $app): void {
         // M3.5 — Gift card preview: how much of this card applies to the cart.
         // Pure read — no balance deducted (debit happens at /checkout/initiate).
         $group->post('/gift-card', \Bayti\Api\Http\Controllers\GiftCard\ApplyGiftCardToCartController::class);
+        // Wallet preview: how much of the customer's WHOLE gift-card wallet
+        // applies to the cart (one-tap alternative to a single code). Pure read.
+        $group->get('/gift-wallet', \Bayti\Api\Http\Controllers\GiftCard\PreviewGiftWalletForCartController::class);
     })->add(AuthMiddleware::class);
 
     // ===================================================================
@@ -328,6 +331,10 @@ return function (App $app): void {
     )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
     $app->get('/v3/gift-cards/mine',
         \Bayti\Api\Http\Controllers\GiftCard\ListMyGiftCardsController::class
+    )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
+    // Aggregate wallet: spendable balance across all the customer's cards.
+    $app->get('/v3/gift-cards/wallet',
+        \Bayti\Api\Http\Controllers\GiftCard\GetGiftCardWalletController::class
     )->add(\Bayti\Api\Http\Middleware\AuthMiddleware::class);
     $app->post('/v3/gift-cards/redeem',
         \Bayti\Api\Http\Controllers\GiftCard\RedeemGiftCardController::class
