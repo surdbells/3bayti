@@ -195,6 +195,78 @@ final class NoonWebhookControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function matchesOrderFromFlatWebhookShapeOrderId(): void
+    {
+        // Noon's real WEBHOOK notification is a FLAT payload with the order
+        // id at the top level as `orderId` (+ merchant ref as `orderReference`)
+        // — NOT the nested result.order.id shape the API RESPONSE uses. This
+        // is the shape observed in production sandbox traffic. Regression
+        // guard: an earlier version only read result.order.id, so every real
+        // webhook resolved to no_match and orders were never confirmed.
+        $user = $this->makeUser(id: 7);
+        $order = new Order(user: $user, orderReference: 'V3-1785406275341-1ad4', subtotal: '1370.00');
+        $this->setEntityId($order, 100);
+
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        // Drive a terminal FAILED outcome: the point of THIS test is to prove
+        // the order was MATCHED from the flat orderId (reaching a transition at
+        // all), not to exercise the paid-path side effects. retrieveOrder is
+        // called with the string-coerced top-level orderId.
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('retrieveOrder')
+            ->with('886482671413')
+            ->willReturn(new OrderStatusResponse(
+                providerOrderRef: '886482671413',
+                status: 'FAILED',
+                terminal: true,
+                paid: false,
+                amount: '1370.00',
+                currency: 'AED',
+                rawResponse: [],
+            ));
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save');
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $tx = $this->createMock(PaymentTransaction::class);
+        $tx->method('getOrder')->willReturn($order);
+        // Match must be driven off the top-level orderId, coerced to string.
+        $txRepo->method('findByProviderOrderRef')->with('886482671413')->willReturn($tx);
+
+        $em = $this->stubEm(function ($em) use ($eventRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $txRepo],
+                [Order::class, $this->createMock(OrderRepository::class)],
+            ]);
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', [
+                'eventType' => 'SALE',
+                // Numeric orderId (as Noon sends it) — must be coerced to the
+                // string form stored in payment_transactions.provider_order_ref.
+                'orderId' => 886482671413,
+                'orderReference' => 'V3-1785406275341-1ad4',
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        // Reaching a terminal transition proves the order was found from the
+        // flat orderId — a miss would have returned no_match with status unchanged.
+        self::assertSame(Order::STATUS_FAILED, $order->getStatus());
+    }
+
+    #[Test]
     public function appliesFailedStatusWhenRetrieveOrderConfirmsFailed(): void
     {
         $user = $this->makeUser(id: 7);

@@ -373,26 +373,53 @@ final class NoonWebhookController
     }
 
     /**
+     * Read the first present key whose value is an int or a non-empty
+     * string, coerced to string. Noon sends the same logical field under
+     * different names/types across the webhook notification shape vs the
+     * API-response shape, so we probe a list of candidates.
+     *
+     * @param array<string, mixed> $arr
+     * @param list<string> $keys
+     */
+    private function firstScalar(array $arr, array $keys): ?string
+    {
+        foreach ($keys as $key) {
+            $v = $arr[$key] ?? null;
+            if (is_int($v)) {
+                return (string) $v;
+            }
+            if (is_string($v) && $v !== '') {
+                return $v;
+            }
+        }
+        return null;
+    }
+
+    /**
      * @param array<string, mixed> $payload
      */
     private function extractProviderOrderRef(array $payload): ?string
     {
-        // Noon webhook payloads place the order id at result.order.id
-        // (same path as the API response shape).
+        // Noon's WEBHOOK notification is a FLAT payload with the order id
+        // at the top level as `orderId` (int or string). This differs from
+        // the API-response shape (result.order.id) — an earlier assumption
+        // that the two shared a shape caused every webhook to resolve to
+        // no_match. Check the webhook shape first.
+        $flat = $this->firstScalar($payload, ['orderId', 'order_id']);
+        if ($flat !== null) {
+            return $flat;
+        }
+
+        // Fallback — API-response / nested shape: result.order.id or order.id.
         $result = $payload['result'] ?? $payload;
-        if (!is_array($result)) {
-            return null;
-        }
-        $order = $result['order'] ?? null;
-        if (!is_array($order)) {
-            return null;
-        }
-        $id = $order['id'] ?? null;
-        if (is_string($id) && $id !== '') {
-            return $id;
-        }
-        if (is_int($id)) {
-            return (string) $id;
+        if (is_array($result)) {
+            $order = $result['order'] ?? null;
+            if (is_array($order)) {
+                $nested = $this->firstScalar($order, ['id']);
+                if ($nested !== null) {
+                    return $nested;
+                }
+            }
         }
         return null;
     }
@@ -402,16 +429,30 @@ final class NoonWebhookController
      */
     private function extractMerchantReference(array $payload): ?string
     {
+        // Webhook flat shape — Noon carries the merchant's own reference
+        // (our V3-... order_reference) under one of these top-level keys.
+        $flat = $this->firstScalar($payload, [
+            'orderReference',
+            'merchantOrderReference',
+            'merchantReference',
+            'reference',
+        ]);
+        if ($flat !== null) {
+            return $flat;
+        }
+
+        // Fallback — nested API-response shape: result.order.reference.
         $result = $payload['result'] ?? $payload;
-        if (!is_array($result)) {
-            return null;
+        if (is_array($result)) {
+            $order = $result['order'] ?? null;
+            if (is_array($order)) {
+                $nested = $this->firstScalar($order, ['reference']);
+                if ($nested !== null) {
+                    return $nested;
+                }
+            }
         }
-        $order = $result['order'] ?? null;
-        if (!is_array($order)) {
-            return null;
-        }
-        $ref = $order['reference'] ?? null;
-        return is_string($ref) && $ref !== '' ? $ref : null;
+        return null;
     }
 
     /**
