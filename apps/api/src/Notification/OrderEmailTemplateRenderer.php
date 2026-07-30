@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Notification;
 
+use Bayti\Api\Domain\Chat\OrderDetailsMessageBuilder;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\User\User;
@@ -206,28 +207,30 @@ HTML,
     private function orderPaidCustomerEn(Order $order): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $total = $order->getTotal();
-        $currency = $order->getCurrency();
+        [$detailsText, $detailsHtml] = $this->fullDetails(
+            $order,
+            $order->getItems(),
+            false,
+            'Here are your order details:',
+        );
 
         return new RenderedEmail(
             subject: "Payment confirmed for order {$ref} — 3bayti",
             textBody: <<<TXT
-Your payment has been confirmed.
+Thank you — your payment has been confirmed and we're preparing your order now.
 
-Order reference: {$ref}
-Amount: {$total} {$currency}
+{$detailsText}
 
-We're preparing your order now. You'll get another email once it ships.
+You'll get another email once it ships.
 
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
                 title: "Payment confirmed",
                 body: <<<HTML
-<p>Your payment has been confirmed.</p>
-<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
-<strong>Amount:</strong> {$this->esc($total)} {$this->esc($currency)}</p>
-<p>We're preparing your order now. You'll get another email once it ships.</p>
+<p>Thank you — your payment has been confirmed and we're preparing your order now.</p>
+{$detailsHtml}
+<p style="margin-top:16px;">You'll get another email once it ships.</p>
 HTML,
             ),
         );
@@ -700,42 +703,66 @@ HTML,
     private function orderPlacedVendorEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $vendorItems = $extra['vendor_items'] ?? [];
-        $itemsList = '';
-        $itemsHtml = '';
-        if (is_array($vendorItems)) {
-            foreach ($vendorItems as $name) {
-                $nameStr = (string) $name;
-                $itemsList .= "  - {$nameStr}\n";
-                $itemsHtml .= '<li>' . $this->esc($nameStr) . '</li>';
-            }
-        }
+        $vendorName = (string) ($extra['vendor_name'] ?? '');
+        $greeting = $vendorName !== '' ? "Hi {$vendorName}," : 'Hi,';
+        [$detailsText, $detailsHtml] = $this->vendorDetails($order, $extra, false);
 
         return new RenderedEmail(
             subject: "New order {$ref} — items to prepare",
             textBody: <<<TXT
-You have a new order to fulfil.
+{$greeting}
 
-Order reference: {$ref}
+You have a new PAID order to fulfil. Everything you need to prepare and
+ship it is below.
 
-Your items:
-{$itemsList}
-Please mark each item as 'accepted' and then 'shipped' from the
-vendor dashboard once you've packed and dispatched.
+{$detailsText}
+
+Mark each item 'accepted', then 'shipped', from your vendor dashboard
+once you've packed and dispatched.
 
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
                 title: "New order to prepare",
                 body: <<<HTML
-<p>You have a new order to fulfil.</p>
-<p><strong>Order reference:</strong> {$this->esc($ref)}</p>
-<h3>Your items</h3>
-<ul>{$itemsHtml}</ul>
-<p>Please mark each item as 'accepted' and then 'shipped' from the vendor dashboard once you've packed and dispatched.</p>
+<p>{$this->esc($greeting)}</p>
+<p>You have a new <strong>paid</strong> order to fulfil. Everything you need to prepare and ship it is below.</p>
+{$detailsHtml}
+<p style="margin-top:16px;">Mark each item <strong>accepted</strong>, then <strong>shipped</strong>, from your vendor dashboard once you've packed and dispatched.</p>
 HTML,
             ),
         );
+    }
+
+    /**
+     * Full detail block(s) for a vendor's items. Prefers the rich
+     * OrderDetailsMessageBuilder snapshot from 'vendor_order_items'
+     * (list<OrderItem>); falls back to bare names in 'vendor_items' if a
+     * caller didn't pass the items (defensive — the paid-order path always
+     * passes them).
+     *
+     * @param array<string, mixed> $extra
+     * @return array{0: string, 1: string} [text, html]
+     */
+    private function vendorDetails(Order $order, array $extra, bool $isArabic): array
+    {
+        $items = $extra['vendor_order_items'] ?? null;
+        if (is_array($items) && $items !== []) {
+            return $this->fullDetails($order, $items, $isArabic, 'Order details:', 'تفاصيل الطلب:');
+        }
+
+        // Fallback: names only.
+        $names = $extra['vendor_items'] ?? [];
+        $text = '';
+        $html = '<ul>';
+        if (is_array($names)) {
+            foreach ($names as $name) {
+                $text .= '  - ' . (string) $name . "\n";
+                $html .= '<li>' . $this->esc((string) $name) . '</li>';
+            }
+        }
+        $html .= '</ul>';
+        return [$text, $html];
     }
 
     /**
@@ -922,6 +949,39 @@ HTML,
     }
 
     /**
+     * Full order-detail block(s) — the SAME snapshot the order chat opens with
+     * (product, variant, measurements, pricing, totals, shipping + the
+     * keep-communication-here policy footer), reused verbatim via
+     * OrderDetailsMessageBuilder so the emails never drift from the chat. One
+     * block per item passed in. Returns [plainText, html]; the HTML preserves
+     * the line structure (pre-wrap + <br>).
+     *
+     * @param iterable<OrderItem> $items
+     * @return array{0: string, 1: string} [text, html]
+     */
+    private function fullDetails(
+        Order $order,
+        iterable $items,
+        bool $isArabic,
+        ?string $introEn = null,
+        ?string $introAr = null,
+    ): array {
+        $builder = new OrderDetailsMessageBuilder();
+        $blocks = [];
+        foreach ($items as $item) {
+            $built = $builder->build($order, $item, $introEn, $introAr);
+            $blocks[] = $isArabic ? $built[1] : $built[0];
+        }
+        $text = implode("\n\n", $blocks);
+        $html = '<div style="white-space: pre-wrap; font-size: 14px; line-height: 1.6; '
+            . 'color: #1c1c1e; background: #faf8f5; border: 1px solid #ece7df; '
+            . 'border-radius: 8px; padding: 16px;">'
+            . nl2br($this->esc($text))
+            . '</div>';
+        return [$text, $html];
+    }
+
+    /**
      * Wrap the body content in a minimal HTML envelope with branded
      * header + footer. Keeps templates focused on content, not
      * markup boilerplate.
@@ -1035,28 +1095,31 @@ HTML,
     private function orderPaidCustomerAr(Order $order): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $total = $order->getTotal();
-        $currency = $order->getCurrency();
+        [$detailsText, $detailsHtml] = $this->fullDetails(
+            $order,
+            $order->getItems(),
+            true,
+            null,
+            'إليك تفاصيل طلبك:',
+        );
 
         return new RenderedEmail(
             subject: "تأكيد الدفع للطلب {$ref} — 3bayti",
             textBody: <<<TXT
-تم تأكيد دفعتك بنجاح.
+شكراً لك — تم تأكيد دفعتك ونقوم الآن بتجهيز طلبك.
 
-رقم الطلب: {$ref}
-المبلغ: {$total} {$currency}
+{$detailsText}
 
-نقوم الآن بتجهيز طلبك. ستصلك رسالة أخرى عند شحنه.
+ستصلك رسالة أخرى عند شحنه.
 
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
                 title: 'تأكيد الدفع',
                 body: <<<HTML
-<p>تم تأكيد دفعتك بنجاح.</p>
-<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
-<strong>المبلغ:</strong> {$this->esc($total)} {$this->esc($currency)}</p>
-<p>نقوم الآن بتجهيز طلبك. ستصلك رسالة أخرى عند شحنه.</p>
+<p>شكراً لك — تم تأكيد دفعتك ونقوم الآن بتجهيز طلبك.</p>
+{$detailsHtml}
+<p style="margin-top:16px;">ستصلك رسالة أخرى عند شحنه.</p>
 HTML,
                 locale: User::LOCALE_AR,
             ),
@@ -1257,39 +1320,31 @@ HTML,
     private function orderPlacedVendorAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $vendorItems = $extra['vendor_items'] ?? [];
-        $itemsList = '';
-        $itemsHtml = '';
-        if (is_array($vendorItems)) {
-            foreach ($vendorItems as $name) {
-                $nameStr = (string) $name;
-                $itemsList .= "  - {$nameStr}\n";
-                $itemsHtml .= '<li>' . $this->esc($nameStr) . '</li>';
-            }
-        }
+        $vendorName = (string) ($extra['vendor_name'] ?? '');
+        $greeting = $vendorName !== '' ? "مرحباً {$vendorName}،" : 'مرحباً،';
+        [$detailsText, $detailsHtml] = $this->vendorDetails($order, $extra, true);
 
         return new RenderedEmail(
             subject: "طلب جديد {$ref} — منتجات للتجهيز",
             textBody: <<<TXT
-لديك طلب جديد للتجهيز.
+{$greeting}
 
-رقم الطلب: {$ref}
+لديك طلب جديد مدفوع للتجهيز. كل ما تحتاجه لتجهيزه وشحنه موضح أدناه.
 
-منتجاتك:
-{$itemsList}
-يرجى تعليم كل منتج بحالة 'مقبول' ثم 'تم الشحن' من لوحة تحكم
-البائع بعد تجهيزه وشحنه.
+{$detailsText}
+
+يرجى تعليم كل منتج بحالة 'مقبول' ثم 'تم الشحن' من لوحة تحكم البائع بعد
+تجهيزه وشحنه.
 
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
                 title: 'طلب جديد للتجهيز',
                 body: <<<HTML
-<p>لديك طلب جديد للتجهيز.</p>
-<p><strong>رقم الطلب:</strong> {$this->esc($ref)}</p>
-<h3>منتجاتك</h3>
-<ul>{$itemsHtml}</ul>
-<p>يرجى تعليم كل منتج بحالة 'مقبول' ثم 'تم الشحن' من لوحة تحكم البائع بعد تجهيزه وشحنه.</p>
+<p>{$this->esc($greeting)}</p>
+<p>لديك طلب جديد <strong>مدفوع</strong> للتجهيز. كل ما تحتاجه لتجهيزه وشحنه موضح أدناه.</p>
+{$detailsHtml}
+<p style="margin-top:16px;">يرجى تعليم كل منتج بحالة 'مقبول' ثم 'تم الشحن' من لوحة تحكم البائع بعد تجهيزه وشحنه.</p>
 HTML,
                 locale: User::LOCALE_AR,
             ),

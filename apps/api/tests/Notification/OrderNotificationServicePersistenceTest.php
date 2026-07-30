@@ -246,31 +246,32 @@ final class OrderNotificationServicePersistenceTest extends TestCase
     }
 
     #[Test]
-    public function vendorWithContactEmailUnsetProducesSkippedRowWithDistinctReason(): void
+    public function vendorWithoutContactEmailFallsBackToOwnerAccountEmail(): void
     {
-        // Vendor entity constructed without contact_email (uninitialized
-        // typed property — distinct from empty-string case).
+        // Vendor entity with an UNINITIALIZED contact_email (typed property
+        // never set) but a linked owner account. The new-order email must fall
+        // back to the owner's email instead of silently skipping — a vendor
+        // without a dedicated contact address still gets notified.
         $order = $this->makeOrder('V3-205');
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', 7);
         $this->setEntityProp($vendor, 'name', 'Vendor 7');
-        // Intentionally do NOT set contactEmail
+        // contactEmail intentionally NOT set; owner account carries the email.
+        $this->setEntityProp($vendor, 'ownerUser', $this->makeUser('owner@shops.com'));
         $this->addItem($order, $vendor, 'Item');
 
         $this->service->orderPlaced($order);
 
-        // 1 customer (sent) + 1 vendor (skipped, contact_email_unset)
+        // 1 customer (sent) + 1 vendor (sent to the owner email) = 2 rows.
         self::assertCount(2, $this->captured);
-        $skipped = array_values(array_filter(
+        $vendorRow = array_values(array_filter(
             $this->captured,
-            static fn (NotificationLog $log): bool => $log->getStatus() === NotificationLog::STATUS_SKIPPED,
+            static fn (NotificationLog $log): bool =>
+                $log->getTemplate() === EmailTemplate::ORDER_PLACED_VENDOR->value,
         ));
-        self::assertCount(1, $skipped);
-        self::assertSame(
-            'contact_email_unset',
-            $skipped[0]->getErrorMessage(),
-            'distinct reason from empty-email case for triage clarity',
-        );
+        self::assertCount(1, $vendorRow);
+        self::assertSame(NotificationLog::STATUS_SENT, $vendorRow[0]->getStatus());
+        self::assertSame('owner@shops.com', $vendorRow[0]->getRecipient());
     }
 
     #[Test]

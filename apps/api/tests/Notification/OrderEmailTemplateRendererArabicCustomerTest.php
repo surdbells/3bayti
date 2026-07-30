@@ -87,7 +87,10 @@ final class OrderEmailTemplateRendererArabicCustomerTest extends TestCase
         self::assertStringContainsString('V3-AR-PAID', $rendered->subject);
 
         self::assertStringContainsString('تم تأكيد دفعتك', $rendered->textBody);
-        self::assertStringContainsString('المبلغ', $rendered->textBody);
+        // Full order details are now embedded (same snapshot as the order
+        // chat): pricing breakdown with the order total, plus the policy note.
+        self::assertStringContainsString('الإجمالي', $rendered->textBody);
+        self::assertStringContainsString('التسعير', $rendered->textBody);
         // Next-step pointer: order being prepared, will ship
         self::assertStringContainsString('تجهيز طلبك', $rendered->textBody);
 

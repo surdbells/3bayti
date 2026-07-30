@@ -18,14 +18,25 @@ use Bayti\Api\Domain\Order\OrderItem;
  */
 class OrderDetailsMessageBuilder
 {
-    /** @return array{0: string, 1: string} [english, arabic] */
-    public function build(Order $order, OrderItem $item): array
-    {
+    /**
+     * @param ?string $introEn Override the opening line (English). Defaults to
+     *        the vendor-facing "New order received…". The order-confirmation
+     *        emails pass a customer/vendor-appropriate opener while reusing the
+     *        identical detail body + policy footer.
+     * @param ?string $introAr Override the opening line (Arabic).
+     * @return array{0: string, 1: string} [english, arabic]
+     */
+    public function build(
+        Order $order,
+        OrderItem $item,
+        ?string $introEn = null,
+        ?string $introAr = null,
+    ): array {
         $en = [];
         $ar = [];
 
-        $en[] = 'New order received. Here are the full details:';
-        $ar[] = 'تم استلام طلب جديد. إليك التفاصيل الكاملة:';
+        $en[] = $introEn ?? 'New order received. Here are the full details:';
+        $ar[] = $introAr ?? 'تم استلام طلب جديد. إليك التفاصيل الكاملة:';
         $en[] = '';
         $ar[] = '';
 

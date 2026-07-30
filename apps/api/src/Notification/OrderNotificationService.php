@@ -587,40 +587,22 @@ final class OrderNotificationService
      */
     private function sendToVendors(Order $order, EmailTemplate $template, array $extra = []): void
     {
-        /** @var array<int, array{vendor: Vendor, items: list<string>}> $byVendor */
+        /** @var array<int, array{vendor: Vendor, items: list<string>, orderItems: list<OrderItem>}> $byVendor */
         $byVendor = [];
         foreach ($order->getItems() as $item) {
             /** @var OrderItem $item */
             $vendor = $item->getVendor();
             $vid = $vendor->getId() ?? 0;
             if (!isset($byVendor[$vid])) {
-                $byVendor[$vid] = ['vendor' => $vendor, 'items' => []];
+                $byVendor[$vid] = ['vendor' => $vendor, 'items' => [], 'orderItems' => []];
             }
             $byVendor[$vid]['items'][] = $item->getProductNameSnapshot();
+            $byVendor[$vid]['orderItems'][] = $item;
         }
 
         foreach ($byVendor as $group) {
-            // Defensive: in some test setups (and rare prod cases where
-            // a vendor was created with a placeholder), contactEmail may
-            // be unset or empty. Guard before reading the typed property
-            // (which would throw if uninitialized) and skip with a log.
             $vendor = $group['vendor'];
-            try {
-                $email = $vendor->getContactEmail();
-            } catch (\Error $e) {
-                $this->logger->warning('notification.vendor.contact_email_unset', [
-                    'order_id' => $order->getId(),
-                    'vendor_id' => $vendor->getId(),
-                    'template' => $template->value,
-                ]);
-                $this->persistSkipped(
-                    $order,
-                    $template,
-                    '',
-                    self::SKIP_REASON_VENDOR_CONTACT_EMAIL_UNSET,
-                );
-                continue;
-            }
+            $email = $this->resolveVendorEmail($vendor);
             if ($email === '') {
                 $this->logger->warning('notification.vendor.no_email', [
                     'order_id' => $order->getId(),
@@ -635,9 +617,40 @@ final class OrderNotificationService
                 );
                 continue;
             }
-            $vendorExtra = array_merge($extra, ['vendor_items' => $group['items']]);
+            $vendorExtra = array_merge($extra, [
+                'vendor_items' => $group['items'],
+                // Rich item objects so the vendor email reuses the full
+                // OrderDetailsMessageBuilder snapshot (same content as the
+                // order chat). Falls back to the names above if a caller
+                // doesn't pass these.
+                'vendor_order_items' => $group['orderItems'],
+                'vendor_name' => $vendor->getName(),
+            ]);
             $this->safeSend($email, $template, $order, $vendorExtra);
         }
+    }
+
+    /**
+     * Resolve the email to notify a vendor at. Prefers the vendor's dedicated
+     * contact email; falls back to the OWNER ACCOUNT's email when no contact
+     * email is set. Without this, a vendor with no separate contact address
+     * silently received NO new-order email even though the order chat opened
+     * fine (the chat keys off the owner user, not contactEmail). The typed
+     * contactEmail property may be uninitialized on legacy/placeholder
+     * vendors, hence the \Error guard.
+     */
+    private function resolveVendorEmail(Vendor $vendor): string
+    {
+        try {
+            $email = $vendor->getContactEmail();
+        } catch (\Error) {
+            $email = '';
+        }
+        if ($email !== '') {
+            return $email;
+        }
+        $owner = $vendor->getOwnerUser();
+        return $owner !== null ? $owner->getEmail() : '';
     }
 
     /**
