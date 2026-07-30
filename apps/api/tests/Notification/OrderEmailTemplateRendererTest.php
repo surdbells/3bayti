@@ -67,6 +67,21 @@ final class OrderEmailTemplateRendererTest extends TestCase
     }
 
     #[Test]
+    public function orderPaidCustomerItemlessOrderGetsCleanConfirmation(): void
+    {
+        // A gift-card PURCHASE is a synthetic order with no line items — the
+        // paid email must NOT show the empty details block or a "we're
+        // preparing… it ships" line, and should mention the gift card.
+        $order = $this->makeOrder(reference: 'V3-GC-PURCHASE');
+        $rendered = $this->renderer->render(EmailTemplate::ORDER_PAID_CUSTOMER, $order);
+
+        self::assertStringContainsString('V3-GC-PURCHASE', $rendered->textBody);
+        self::assertStringContainsStringIgnoringCase('gift card', $rendered->textBody);
+        self::assertStringNotContainsString('once it ships', $rendered->textBody);
+        self::assertStringNotContainsString('MEASUREMENTS', $rendered->textBody);
+    }
+
+    #[Test]
     public function orderPaymentFailedCustomerIncludesTryAgainLanguage(): void
     {
         $order = $this->makeOrder(reference: 'V3-003');

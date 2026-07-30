@@ -207,6 +207,38 @@ HTML,
     private function orderPaidCustomerEn(Order $order): RenderedEmail
     {
         $ref = $order->getOrderReference();
+
+        // Itemless orders (e.g. a gift-card PURCHASE — a synthetic order with
+        // no product line items) get a clean confirmation, not the empty
+        // item/measurement block or a "we're preparing… it ships" line.
+        if ($order->getItems()->isEmpty()) {
+            $total    = $order->getTotal();
+            $currency = $order->getCurrency();
+            return new RenderedEmail(
+                subject: "Payment confirmed for order {$ref} — 3bayti",
+                textBody: <<<TXT
+Thank you — your payment has been confirmed.
+
+Order reference: {$ref}
+Amount: {$total} {$currency}
+
+If this was a gift card, it will be delivered to the recipient (or is ready
+in your account to share). Thank you for shopping with 3bayti.
+
+— 3bayti
+TXT,
+                htmlBody: $this->wrapHtml(
+                    title: 'Payment confirmed',
+                    body: <<<HTML
+<p>Thank you — your payment has been confirmed.</p>
+<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
+<strong>Amount:</strong> {$this->esc($total)} {$this->esc($currency)}</p>
+<p>If this was a gift card, it will be delivered to the recipient (or is ready in your account to share). Thank you for shopping with 3bayti.</p>
+HTML,
+                ),
+            );
+        }
+
         [$detailsText, $detailsHtml] = $this->fullDetails(
             $order,
             $order->getItems(),
@@ -1095,6 +1127,37 @@ HTML,
     private function orderPaidCustomerAr(Order $order): RenderedEmail
     {
         $ref = $order->getOrderReference();
+
+        // Itemless order (e.g. a gift-card purchase) — clean confirmation.
+        if ($order->getItems()->isEmpty()) {
+            $total    = $order->getTotal();
+            $currency = $order->getCurrency();
+            return new RenderedEmail(
+                subject: "تأكيد الدفع للطلب {$ref} — 3bayti",
+                textBody: <<<TXT
+شكراً لك — تم تأكيد دفعتك.
+
+رقم الطلب: {$ref}
+المبلغ: {$total} {$currency}
+
+إذا كانت هذه بطاقة هدية، فسيتم تسليمها إلى المستلم (أو أصبحت جاهزة في حسابك
+لمشاركتها). شكراً لتسوقك مع 3bayti.
+
+— 3bayti
+TXT,
+                htmlBody: $this->wrapHtml(
+                    title: 'تأكيد الدفع',
+                    body: <<<HTML
+<p>شكراً لك — تم تأكيد دفعتك.</p>
+<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
+<strong>المبلغ:</strong> {$this->esc($total)} {$this->esc($currency)}</p>
+<p>إذا كانت هذه بطاقة هدية، فسيتم تسليمها إلى المستلم (أو أصبحت جاهزة في حسابك لمشاركتها). شكراً لتسوقك مع 3bayti.</p>
+HTML,
+                    locale: User::LOCALE_AR,
+                ),
+            );
+        }
+
         [$detailsText, $detailsHtml] = $this->fullDetails(
             $order,
             $order->getItems(),
