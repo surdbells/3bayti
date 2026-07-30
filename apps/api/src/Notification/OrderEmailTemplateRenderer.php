@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Notification;
 
-use Bayti\Api\Domain\Chat\OrderDetailsMessageBuilder;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\User\User;
@@ -80,6 +79,40 @@ final class OrderEmailTemplateRenderer
     ): RenderedEmail {
         $isArabic = ($locale === User::LOCALE_AR);
 
+        $rendered = $this->dispatch($template, $order, $extra, $isArabic);
+
+        // Support-contact footer — CUSTOMER emails only (never vendor/admin).
+        // Filled centrally into the slot wrapHtml() leaves in the content card,
+        // so every customer template carries it without per-template edits.
+        $isCustomer = str_ends_with($template->value, '.customer');
+        $html = str_replace(
+            '<!--3BAYTI_SUPPORT_SLOT-->',
+            $isCustomer ? $this->supportHtml($isArabic) : '',
+            $rendered->htmlBody,
+        );
+        $text = $isCustomer
+            ? rtrim($rendered->textBody) . "\n" . $this->supportText($isArabic)
+            : $rendered->textBody;
+
+        return new RenderedEmail(
+            subject: $rendered->subject,
+            textBody: $text,
+            htmlBody: $html,
+        );
+    }
+
+    /**
+     * Locale-aware template dispatch. Kept separate from render() so the
+     * shared post-processing (support footer) applies to every template.
+     *
+     * @param array<string, mixed> $extra
+     */
+    private function dispatch(
+        EmailTemplate $template,
+        Order $order,
+        array $extra,
+        bool $isArabic,
+    ): RenderedEmail {
         return match ($template) {
             EmailTemplate::ORDER_PLACED_CUSTOMER => $isArabic
                 ? $this->orderPlacedCustomerAr($order)
@@ -214,6 +247,7 @@ HTML,
         if ($order->getItems()->isEmpty()) {
             $total    = $order->getTotal();
             $currency = $order->getCurrency();
+            $summary  = $this->totalRowHtml('Total', $total, $currency, true);
             return new RenderedEmail(
                 subject: "Payment confirmed for order {$ref} — 3bayti",
                 textBody: <<<TXT
@@ -224,48 +258,54 @@ Amount: {$total} {$currency}
 
 If this was a gift card, it will be delivered to the recipient (or is ready
 in your account to share). Thank you for shopping with 3bayti.
-
 — 3bayti
 TXT,
                 htmlBody: $this->wrapHtml(
                     title: 'Payment confirmed',
-                    body: <<<HTML
-<p>Thank you — your payment has been confirmed.</p>
-<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
-<strong>Amount:</strong> {$this->esc($total)} {$this->esc($currency)}</p>
-<p>If this was a gift card, it will be delivered to the recipient (or is ready in your account to share). Thank you for shopping with 3bayti.</p>
-HTML,
+                    preheader: "Order {$ref} — payment confirmed",
+                    body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">Thank you — your payment has been confirmed.</p>'
+                        . $this->progressHtml(2, false)
+                        . $this->refBadgeHtml($ref, false)
+                        . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;">'
+                        . '<tr><td style="padding:12px 18px;"><table role="presentation" width="100%">' . $summary . '</table></td></tr></table>'
+                        . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">If this was a gift card, it will be delivered to the recipient (or is ready in your account to share). Thank you for shopping with 3bayti.</p>',
                 ),
             );
         }
 
-        [$detailsText, $detailsHtml] = $this->fullDetails(
-            $order,
-            $order->getItems(),
-            false,
-            'Here are your order details:',
-        );
+        [$detailsText, $detailsHtml] = $this->orderDetails($order, $order->getItems(), false, true);
 
         return new RenderedEmail(
             subject: "Payment confirmed for order {$ref} — 3bayti",
             textBody: <<<TXT
 Thank you — your payment has been confirmed and we're preparing your order now.
 
+Order reference: {$ref}
+
 {$detailsText}
-
 You'll get another email once it ships.
-
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
                 title: "Payment confirmed",
-                body: <<<HTML
-<p>Thank you — your payment has been confirmed and we're preparing your order now.</p>
-{$detailsHtml}
-<p style="margin-top:16px;">You'll get another email once it ships.</p>
-HTML,
+                preheader: "Order {$ref} — we're preparing it now",
+                body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">Thank you — your payment has been confirmed and we\'re preparing your order now.</p>'
+                    . $this->progressHtml(2, false)
+                    . $this->refBadgeHtml($ref, false)
+                    . $detailsHtml
+                    . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">You\'ll get another email once it ships.</p>',
             ),
         );
+    }
+
+    /** Small "Order reference" badge shown under the progress tracker. */
+    private function refBadgeHtml(string $ref, bool $ar): string
+    {
+        $label = $ar ? 'رقم الطلب' : 'Order reference';
+        return '<table role="presentation" width="100%" style="margin:0 0 4px;"><tr>'
+            . '<td style="font-size:13px;color:#8a8378;">' . $this->esc($label) . '</td>'
+            . '<td style="font-size:13px;font-weight:700;color:#1c1c1e;text-align:right;">' . $this->esc($ref) . '</td>'
+            . '</tr></table>';
     }
 
     private function orderPaymentFailedCustomerEn(Order $order): RenderedEmail
@@ -756,19 +796,20 @@ once you've packed and dispatched.
 TXT,
             htmlBody: $this->wrapHtml(
                 title: "New order to prepare",
-                body: <<<HTML
-<p>{$this->esc($greeting)}</p>
-<p>You have a new <strong>paid</strong> order to fulfil. Everything you need to prepare and ship it is below.</p>
-{$detailsHtml}
-<p style="margin-top:16px;">Mark each item <strong>accepted</strong>, then <strong>shipped</strong>, from your vendor dashboard once you've packed and dispatched.</p>
-HTML,
+                preheader: "Order {$ref} — items to prepare",
+                body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">' . $this->esc($greeting) . '</p>'
+                    . '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">You have a new <strong>paid</strong> order to fulfil. Everything you need to prepare and ship it is below.</p>'
+                    . $this->progressHtml(2, false)
+                    . $this->refBadgeHtml($ref, false)
+                    . $detailsHtml
+                    . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">Mark each item <strong>accepted</strong>, then <strong>shipped</strong>, from your vendor dashboard once you\'ve packed and dispatched.</p>',
             ),
         );
     }
 
     /**
      * Full detail block(s) for a vendor's items. Prefers the rich
-     * OrderDetailsMessageBuilder snapshot from 'vendor_order_items'
+     * orderDetails() card built from 'vendor_order_items'
      * (list<OrderItem>); falls back to bare names in 'vendor_items' if a
      * caller didn't pass the items (defensive — the paid-order path always
      * passes them).
@@ -780,7 +821,8 @@ HTML,
     {
         $items = $extra['vendor_order_items'] ?? null;
         if (is_array($items) && $items !== []) {
-            return $this->fullDetails($order, $items, $isArabic, 'Order details:', 'تفاصيل الطلب:');
+            // Vendors need the full fulfilment detail, measurements included.
+            return $this->orderDetails($order, $items, $isArabic, true);
         }
 
         // Fallback: names only.
@@ -981,36 +1023,220 @@ HTML,
     }
 
     /**
-     * Full order-detail block(s) — the SAME snapshot the order chat opens with
-     * (product, variant, measurements, pricing, totals, shipping + the
-     * keep-communication-here policy footer), reused verbatim via
-     * OrderDetailsMessageBuilder so the emails never drift from the chat. One
-     * block per item passed in. Returns [plainText, html]; the HTML preserves
-     * the line structure (pre-wrap + <br>).
+     * Rich, email-safe order-detail block: a branded card of item rows (image,
+     * name, variant, optional measurements, qty + unit price), a totals table,
+     * and the delivery address. Returns [plainText, html].
+     *
+     * Unlike the order CHAT (OrderDetailsMessageBuilder), emails deliberately
+     * do NOT carry the "keep all communication here" policy line — that stays
+     * in the in-app chat only.
      *
      * @param iterable<OrderItem> $items
+     * @param bool $withMeasurements include custom measurements per item
      * @return array{0: string, 1: string} [text, html]
      */
-    private function fullDetails(
-        Order $order,
-        iterable $items,
-        bool $isArabic,
-        ?string $introEn = null,
-        ?string $introAr = null,
-    ): array {
-        $builder = new OrderDetailsMessageBuilder();
-        $blocks = [];
+    private function orderDetails(Order $order, iterable $items, bool $ar, bool $withMeasurements): array
+    {
+        $cur = $order->getCurrency();
+        $l = $ar
+            ? ['items' => 'المنتجات', 'size' => 'المقاس', 'color' => 'اللون', 'qty' => 'الكمية',
+               'measures' => 'القياسات', 'sub' => 'المجموع الفرعي', 'del' => 'التوصيل', 'disc' => 'الخصم',
+               'gc' => 'بطاقة هدية', 'total' => 'الإجمالي', 'pricing' => 'التسعير', 'ship' => 'عنوان التسليم']
+            : ['items' => 'Items', 'size' => 'Size', 'color' => 'Color', 'qty' => 'Qty',
+               'measures' => 'Measurements', 'sub' => 'Subtotal', 'del' => 'Delivery', 'disc' => 'Discount',
+               'gc' => 'Gift card', 'total' => 'Total', 'pricing' => 'Pricing', 'ship' => 'Delivery address'];
+
+        $rows = '';
+        $text = "{$l['items']}:\n";
         foreach ($items as $item) {
-            $built = $builder->build($order, $item, $introEn, $introAr);
-            $blocks[] = $isArabic ? $built[1] : $built[0];
+            /** @var OrderItem $item */
+            $name  = $item->getProductNameSnapshot();
+            $qty   = (string) $item->getQuantity();
+            $price = $item->getUnitPrice();
+
+            $img = trim((string) $item->getProductImageSnapshot());
+            $imgCell = $img !== ''
+                ? '<td width="68" style="padding:0 12px 0 0; vertical-align:top;"><img src="' . $this->esc($img)
+                    . '" width="56" height="56" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;border:1px solid #eee;"></td>'
+                : '';
+
+            $meta = [];
+            if ($item->getSize() !== null && $item->getSize() !== '') {
+                $meta[] = $l['size'] . ': ' . (string) $item->getSize();
+            }
+            if ($item->getColor() !== null && $item->getColor() !== '') {
+                $meta[] = $l['color'] . ': ' . (string) $item->getColor();
+            }
+            $metaLine = $meta !== []
+                ? '<div style="font-size:12px;color:#8a8378;margin-top:2px;">' . $this->esc(implode(' · ', $meta)) . '</div>'
+                : '';
+
+            $measBlock = '';
+            $measText  = '';
+            if ($withMeasurements) {
+                $pairs = $this->measurementPairs($item);
+                if ($pairs !== []) {
+                    $parts = [];
+                    foreach ($pairs as $k => $v) {
+                        $parts[] = "{$k}: {$v}";
+                    }
+                    $joined = implode(' · ', $parts);
+                    $measBlock = '<div style="font-size:12px;color:#8a8378;margin-top:4px;"><strong>'
+                        . $l['measures'] . ':</strong> ' . $this->esc($joined) . '</div>';
+                    $measText = "    {$l['measures']}: {$joined}\n";
+                }
+                $note = $item->getNote();
+                if ($note !== null && trim($note) !== '') {
+                    $measBlock .= '<div style="font-size:12px;color:#8a8378;margin-top:2px;">' . $this->esc(trim($note)) . '</div>';
+                }
+            }
+
+            $rows .= '<tr><td style="padding:12px 0;border-bottom:1px solid #f0e9dd;">'
+                . '<table role="presentation" width="100%"><tr>' . $imgCell
+                . '<td style="vertical-align:top;">'
+                . '<div style="font-size:15px;font-weight:600;color:#1c1c1e;">' . $this->esc($name) . '</div>'
+                . '<div style="font-size:12px;color:#8a8378;margin-top:2px;">' . $this->esc($l['qty'] . ': ' . $qty) . '</div>'
+                . $metaLine . $measBlock . '</td>'
+                . '<td width="96" style="vertical-align:top;text-align:right;font-size:15px;font-weight:600;white-space:nowrap;">'
+                . $this->esc($price . ' ' . $cur) . '</td>'
+                . '</tr></table></td></tr>';
+
+            $text .= "  - {$name} (x{$qty}) — {$price} {$cur}\n";
+            if ($meta !== []) {
+                $text .= '    ' . implode(' · ', $meta) . "\n";
+            }
+            $text .= $measText;
         }
-        $text = implode("\n\n", $blocks);
-        $html = '<div style="white-space: pre-wrap; font-size: 14px; line-height: 1.6; '
-            . 'color: #1c1c1e; background: #faf8f5; border: 1px solid #ece7df; '
-            . 'border-radius: 8px; padding: 16px;">'
-            . nl2br($this->esc($text))
-            . '</div>';
+
+        // Totals.
+        $totalRows  = $this->totalRowHtml($l['sub'], $order->getSubtotal(), $cur, false);
+        $totalRows .= $this->totalRowHtml($l['del'], $order->getDeliveryFee(), $cur, false);
+        $text .= "\n{$l['sub']}: {$order->getSubtotal()} {$cur}\n{$l['del']}: {$order->getDeliveryFee()} {$cur}\n";
+        if ($this->isPositiveAmount($order->getDiscount())) {
+            $totalRows .= $this->totalRowHtml($l['disc'], '-' . $order->getDiscount(), $cur, false);
+            $text .= "{$l['disc']}: -{$order->getDiscount()} {$cur}\n";
+        }
+        if ($this->isPositiveAmount($order->getGiftCardAmount())) {
+            $totalRows .= $this->totalRowHtml($l['gc'], '-' . $order->getGiftCardAmount(), $cur, false);
+            $text .= "{$l['gc']}: -{$order->getGiftCardAmount()} {$cur}\n";
+        }
+        $totalRows .= $this->totalRowHtml($l['total'], $order->getTotal(), $cur, true);
+        $text .= "{$l['total']}: {$order->getTotal()} {$cur}\n";
+
+        $sectionHead = static fn (string $t): string =>
+            '<tr><td style="padding-top:10px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#B9935A;font-weight:700;">'
+            . $t . '</td></tr>';
+
+        $html = '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;">'
+            . '<tr><td style="padding:14px 18px 2px;"><table role="presentation" width="100%">'
+            . $sectionHead($this->esc($l['items']))
+            . '<tr><td><table role="presentation" width="100%">' . $rows . '</table></td></tr>'
+            . $sectionHead($this->esc($l['pricing']))
+            . '<tr><td style="padding-bottom:12px;"><table role="presentation" width="100%">' . $totalRows . '</table></td></tr>'
+            . '</table></td></tr></table>';
+
+        [$addrText, $addrHtml] = $this->shippingBlock($order, $l['ship'], $ar);
+        return [$text . $addrText, $html . $addrHtml];
+    }
+
+    /** One totals-table row (email-safe). */
+    private function totalRowHtml(string $label, string $amount, string $currency, bool $strong): string
+    {
+        $weight = $strong ? 'font-weight:700;' : '';
+        $top    = $strong ? 'border-top:1px solid #f0e9dd;padding-top:8px;' : '';
+        $size   = $strong ? '15px' : '14px';
+        return '<tr>'
+            . '<td style="font-size:' . $size . ';color:#4a453e;padding:3px 0;' . $top . $weight . '">' . $this->esc($label) . '</td>'
+            . '<td style="font-size:' . $size . ';color:#1c1c1e;text-align:right;padding:3px 0;' . $top . $weight . '">'
+            . $this->esc($amount . ' ' . $currency) . '</td></tr>';
+    }
+
+    /**
+     * Delivery-address block. Returns [text, html]; empty strings when the
+     * order has no shipping address (e.g. gift-card purchases).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function shippingBlock(Order $order, string $label, bool $ar): array
+    {
+        $addr = $order->getShippingAddress();
+        if ($addr === null) {
+            return ['', ''];
+        }
+        $name     = trim($addr->getFirstName() . ' ' . ($addr->getLastName() ?? ''));
+        $cityLine = trim($addr->getCity() . ' ' . ($addr->getStateProvince() ?? ''));
+        $lines    = array_values(array_filter([$name, $addr->getPhone(), $addr->getStreet(), $cityLine, $addr->getCountryCode()]));
+
+        $text = "\n{$label}:\n" . implode("\n", $lines) . "\n";
+        $html = '<table role="presentation" width="100%" style="margin:4px 0 8px;"><tr><td>'
+            . '<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#B9935A;font-weight:700;margin-bottom:4px;">'
+            . $this->esc($label) . '</div>'
+            . '<div style="font-size:14px;color:#4a453e;line-height:1.6;">'
+            . implode('<br>', array_map([$this, 'esc'], $lines)) . '</div>'
+            . '</td></tr></table>';
         return [$text, $html];
+    }
+
+    /**
+     * A 4-step order progress tracker (Ordered → Paid → Shipped → Delivered),
+     * email-safe. $active is the 1-based index of the current/reached step.
+     */
+    private function progressHtml(int $active, bool $ar): string
+    {
+        $steps = $ar
+            ? ['تم الطلب', 'الدفع', 'الشحن', 'التسليم']
+            : ['Ordered', 'Paid', 'Shipped', 'Delivered'];
+        $cells = '';
+        foreach ($steps as $i => $label) {
+            $done = ($i + 1) <= $active;
+            $bg   = $done ? '#B9935A' : '#ffffff';
+            $bd   = $done ? '#B9935A' : '#d8cfbf';
+            $fg   = $done ? '#ffffff' : '#b3a894';
+            $mark = $done ? '&#10003;' : (string) ($i + 1);
+            $lc   = $done ? '#1c1c1e' : '#9a948b';
+            $cells .= '<td align="center" style="width:25%;vertical-align:top;">'
+                . '<div style="width:30px;height:30px;line-height:30px;border-radius:50%;margin:0 auto;background:'
+                . $bg . ';border:2px solid ' . $bd . ';color:' . $fg . ';font-weight:700;font-size:14px;">' . $mark . '</div>'
+                . '<div style="font-size:11px;color:' . $lc . ';margin-top:6px;text-transform:uppercase;letter-spacing:0.5px;">'
+                . $this->esc($label) . '</div></td>';
+        }
+        return '<table role="presentation" width="100%" style="margin:6px 0 18px;"><tr>' . $cells . '</tr></table>';
+    }
+
+    private function isPositiveAmount(string $amount): bool
+    {
+        return is_numeric($amount) && (float) $amount > 0.0;
+    }
+
+    /**
+     * Normalise an item's measurement JSON (+ extra) into label => value pairs.
+     *
+     * @return array<string, string>
+     */
+    private function measurementPairs(OrderItem $item): array
+    {
+        $out = [];
+        foreach ([$item->getMeasurement(), $item->getExtraMeasurement()] as $raw) {
+            if ($raw === null) {
+                continue;
+            }
+            $raw = trim($raw);
+            if ($raw === '') {
+                continue;
+            }
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                foreach ($decoded as $k => $v) {
+                    if ($v === null || $v === '' || is_array($v)) {
+                        continue;
+                    }
+                    $out[ucwords(str_replace(['_', '-'], ' ', (string) $k))] = (string) $v;
+                }
+            } else {
+                $out['Details'] = $raw;
+            }
+        }
+        return $out;
     }
 
     /**
@@ -1029,29 +1255,108 @@ HTML,
      * The brand name "3bayti" stays in Latin script (consistent
      * brand identity); the locale-specific tagline localizes.
      */
-    private function wrapHtml(string $title, string $body, string $locale = User::LOCALE_EN): string
+    /** Support contact surfaced at the bottom of every CUSTOMER email. */
+    public const SUPPORT_EMAIL     = 'support@3bayti.com';
+    public const SUPPORT_INSTAGRAM = '3baytii.ae';
+
+    /**
+     * Support-contact footer (customer emails only). Plain-text twin of
+     * supportHtml(); render() fills both into the slot for CUSTOMER templates
+     * only, so vendor/admin emails never carry it.
+     */
+    private function supportText(bool $ar = false): string
     {
+        return $ar
+            ? "\nلأي استفسار لا تتردد في التواصل معنا على\n"
+                . self::SUPPORT_EMAIL . "\nأو عبر إنستغرام\n" . self::SUPPORT_INSTAGRAM . "\n"
+            : "\nFor any issue do not hesitate on contacting us at\n"
+                . self::SUPPORT_EMAIL . "\nOr our Instagram\n" . self::SUPPORT_INSTAGRAM . "\n";
+    }
+
+    private function supportHtml(bool $ar = false): string
+    {
+        $lead = $ar
+            ? 'لأي استفسار لا تتردد في التواصل معنا على'
+            : 'For any issue do not hesitate on contacting us at';
+        $or = $ar ? 'أو عبر إنستغرام' : 'Or our Instagram';
+
+        return '<table role="presentation" width="100%" style="margin:20px 0 4px;background:#faf7f2;'
+            . 'border:1px solid #f0e9dd;border-radius:12px;"><tr><td style="padding:16px 18px;text-align:center;">'
+            . '<div style="font-size:14px;color:#4a453e;">' . $this->esc($lead) . '</div>'
+            . '<div style="margin-top:6px;"><a href="mailto:' . self::SUPPORT_EMAIL
+            . '" style="font-size:15px;font-weight:600;color:#B9935A;text-decoration:none;">'
+            . self::SUPPORT_EMAIL . '</a></div>'
+            . '<div style="font-size:14px;color:#4a453e;margin-top:10px;">' . $this->esc($or) . '</div>'
+            . '<div style="margin-top:4px;"><a href="https://instagram.com/' . self::SUPPORT_INSTAGRAM
+            . '" style="font-size:15px;font-weight:600;color:#B9935A;text-decoration:none;">'
+            . self::SUPPORT_INSTAGRAM . '</a></div>'
+            . '</td></tr></table>';
+    }
+
+    /**
+     * Wrap a body in the 3bayti email HTML scaffold: a warm branded shell
+     * (wordmark header, white content card, footer) built from tables +
+     * inline styles so it renders consistently in Gmail/Outlook/Apple Mail.
+     *
+     * Emits proper lang= and dir= attributes so email clients render Arabic
+     * RTL — without these, Outlook and some webmail clients render Arabic
+     * left-to-right which is visually broken.
+     *
+     * $preheader is the short line email clients show next to the subject in
+     * the inbox list; hidden in the rendered body.
+     *
+     * The brand name "3bayti" stays in Latin script (consistent brand
+     * identity); the locale-specific tagline localizes.
+     */
+    private function wrapHtml(
+        string $title,
+        string $body,
+        string $locale = User::LOCALE_EN,
+        string $preheader = '',
+    ): string {
         $titleEsc = $this->esc($title);
-        $dir = ($locale === User::LOCALE_AR) ? 'rtl' : 'ltr';
-        $tagline = ($locale === User::LOCALE_AR)
+        $isAr = ($locale === User::LOCALE_AR);
+        $dir = $isAr ? 'rtl' : 'ltr';
+        $tagline = $isAr
             ? '3bayti — السوق الإلكتروني المتميز في الإمارات'
             : '3bayti — premium UAE marketplace';
         $taglineEsc = $this->esc($tagline);
+        $preheaderEsc = $this->esc($preheader);
+        $year = date('Y');
+
         return <<<HTML
 <!DOCTYPE html>
 <html lang="{$locale}" dir="{$dir}">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
 <title>{$titleEsc}</title>
 </head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; color: #1c1c1e;">
-  <div style="border-bottom: 2px solid #B9935A; padding-bottom: 12px; margin-bottom: 24px;">
-    <h2 style="margin: 0; color: #B9935A;">3bayti</h2>
-  </div>
-  <h1 style="font-size: 20px; margin-top: 0;">{$titleEsc}</h1>
-  {$body}
-  <hr style="border: none; border-top: 1px solid #e5e5e7; margin-top: 32px;">
-  <p style="font-size: 12px; color: #8e8e93;">{$taglineEsc}</p>
+<body style="margin:0;padding:0;background:#fdf8f0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1c1c1e;">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;">{$preheaderEsc}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fdf8f0;">
+  <tr><td align="center" style="padding:28px 12px;">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;">
+
+      <tr><td align="center" style="padding-bottom:18px;">
+        <span style="font-size:24px;font-weight:700;letter-spacing:3px;color:#B9935A;text-transform:uppercase;">3bayti</span>
+      </td></tr>
+
+      <tr><td style="background:#ffffff;border:1px solid #f0e9dd;border-radius:16px;padding:28px 24px;">
+        <h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#1c1c1e;">{$titleEsc}</h1>
+        {$body}
+        <!--3BAYTI_SUPPORT_SLOT-->
+      </td></tr>
+
+      <tr><td align="center" style="padding:18px 8px 0;">
+        <div style="font-size:12px;color:#a49a8c;">{$taglineEsc}</div>
+        <div style="font-size:11px;color:#b8b0a4;margin-top:6px;">&copy; {$year} 3bayti</div>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>
 </body>
 </html>
 HTML;
@@ -1132,6 +1437,7 @@ HTML,
         if ($order->getItems()->isEmpty()) {
             $total    = $order->getTotal();
             $currency = $order->getCurrency();
+            $summary  = $this->totalRowHtml('الإجمالي', $total, $currency, true);
             return new RenderedEmail(
                 subject: "تأكيد الدفع للطلب {$ref} — 3bayti",
                 textBody: <<<TXT
@@ -1142,48 +1448,43 @@ HTML,
 
 إذا كانت هذه بطاقة هدية، فسيتم تسليمها إلى المستلم (أو أصبحت جاهزة في حسابك
 لمشاركتها). شكراً لتسوقك مع 3bayti.
-
 — 3bayti
 TXT,
                 htmlBody: $this->wrapHtml(
                     title: 'تأكيد الدفع',
-                    body: <<<HTML
-<p>شكراً لك — تم تأكيد دفعتك.</p>
-<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
-<strong>المبلغ:</strong> {$this->esc($total)} {$this->esc($currency)}</p>
-<p>إذا كانت هذه بطاقة هدية، فسيتم تسليمها إلى المستلم (أو أصبحت جاهزة في حسابك لمشاركتها). شكراً لتسوقك مع 3bayti.</p>
-HTML,
+                    preheader: "الطلب {$ref} — تم تأكيد الدفع",
+                    body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">شكراً لك — تم تأكيد دفعتك.</p>'
+                        . $this->progressHtml(2, true)
+                        . $this->refBadgeHtml($ref, true)
+                        . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;">'
+                        . '<tr><td style="padding:12px 18px;"><table role="presentation" width="100%">' . $summary . '</table></td></tr></table>'
+                        . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">إذا كانت هذه بطاقة هدية، فسيتم تسليمها إلى المستلم (أو أصبحت جاهزة في حسابك لمشاركتها). شكراً لتسوقك مع 3bayti.</p>',
                     locale: User::LOCALE_AR,
                 ),
             );
         }
 
-        [$detailsText, $detailsHtml] = $this->fullDetails(
-            $order,
-            $order->getItems(),
-            true,
-            null,
-            'إليك تفاصيل طلبك:',
-        );
+        [$detailsText, $detailsHtml] = $this->orderDetails($order, $order->getItems(), true, true);
 
         return new RenderedEmail(
             subject: "تأكيد الدفع للطلب {$ref} — 3bayti",
             textBody: <<<TXT
 شكراً لك — تم تأكيد دفعتك ونقوم الآن بتجهيز طلبك.
 
+رقم الطلب: {$ref}
+
 {$detailsText}
-
 ستصلك رسالة أخرى عند شحنه.
-
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
                 title: 'تأكيد الدفع',
-                body: <<<HTML
-<p>شكراً لك — تم تأكيد دفعتك ونقوم الآن بتجهيز طلبك.</p>
-{$detailsHtml}
-<p style="margin-top:16px;">ستصلك رسالة أخرى عند شحنه.</p>
-HTML,
+                preheader: "الطلب {$ref} — جارٍ التجهيز",
+                body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">شكراً لك — تم تأكيد دفعتك ونقوم الآن بتجهيز طلبك.</p>'
+                    . $this->progressHtml(2, true)
+                    . $this->refBadgeHtml($ref, true)
+                    . $detailsHtml
+                    . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">ستصلك رسالة أخرى عند شحنه.</p>',
                 locale: User::LOCALE_AR,
             ),
         );
@@ -1403,12 +1704,13 @@ HTML,
 TXT,
             htmlBody: $this->wrapHtml(
                 title: 'طلب جديد للتجهيز',
-                body: <<<HTML
-<p>{$this->esc($greeting)}</p>
-<p>لديك طلب جديد <strong>مدفوع</strong> للتجهيز. كل ما تحتاجه لتجهيزه وشحنه موضح أدناه.</p>
-{$detailsHtml}
-<p style="margin-top:16px;">يرجى تعليم كل منتج بحالة 'مقبول' ثم 'تم الشحن' من لوحة تحكم البائع بعد تجهيزه وشحنه.</p>
-HTML,
+                preheader: "طلب جديد {$ref} — منتجات للتجهيز",
+                body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">' . $this->esc($greeting) . '</p>'
+                    . '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">لديك طلب جديد <strong>مدفوع</strong> للتجهيز. كل ما تحتاجه لتجهيزه وشحنه موضح أدناه.</p>'
+                    . $this->progressHtml(2, true)
+                    . $this->refBadgeHtml($ref, true)
+                    . $detailsHtml
+                    . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">يرجى تعليم كل منتج بحالة \'مقبول\' ثم \'تم الشحن\' من لوحة تحكم البائع بعد تجهيزه وشحنه.</p>',
                 locale: User::LOCALE_AR,
             ),
         );

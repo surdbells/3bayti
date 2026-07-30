@@ -67,6 +67,58 @@ final class OrderEmailTemplateRendererTest extends TestCase
     }
 
     #[Test]
+    public function customerEmailsCarryTheSupportFooterAndNoChatPolicyLine(): void
+    {
+        $order = $this->makeOrder(reference: 'V3-SUPPORT');
+        $rendered = $this->renderer->render(EmailTemplate::ORDER_PAID_CUSTOMER, $order);
+
+        // Support contact is appended to customer emails (text + HTML).
+        self::assertStringContainsString('support@3bayti.com', $rendered->textBody);
+        self::assertStringContainsString('3baytii.ae', $rendered->textBody);
+        self::assertStringContainsString('For any issue do not hesitate', $rendered->textBody);
+        self::assertStringContainsString('mailto:support@3bayti.com', $rendered->htmlBody);
+        self::assertStringContainsString('instagram.com/3baytii.ae', $rendered->htmlBody);
+
+        // The in-app chat policy line must NEVER appear in an email.
+        self::assertStringNotContainsString('keep all communication here', $rendered->textBody);
+        self::assertStringNotContainsString('keep all communication here', $rendered->htmlBody);
+
+        // No unfilled slot leaks into the markup.
+        self::assertStringNotContainsString('3BAYTI_SUPPORT_SLOT', $rendered->htmlBody);
+    }
+
+    #[Test]
+    public function vendorAndAdminEmailsDoNotCarryTheSupportFooter(): void
+    {
+        $order = $this->makeOrder(reference: 'V3-NO-SUPPORT');
+
+        $vendor = $this->renderer->render(EmailTemplate::ORDER_PLACED_VENDOR, $order, ['vendor_items' => ['A']]);
+        self::assertStringNotContainsString('support@3bayti.com', $vendor->textBody);
+        self::assertStringNotContainsString('support@3bayti.com', $vendor->htmlBody);
+        self::assertStringNotContainsString('3BAYTI_SUPPORT_SLOT', $vendor->htmlBody);
+
+        $admin = $this->renderer->render(EmailTemplate::DISPUTE_OPENED_ADMIN, $order);
+        self::assertStringNotContainsString('support@3bayti.com', $admin->textBody);
+        self::assertStringNotContainsString('keep all communication here', $admin->htmlBody);
+        self::assertStringNotContainsString('3BAYTI_SUPPORT_SLOT', $admin->htmlBody);
+    }
+
+    #[Test]
+    public function htmlEmailsUseTheRichBrandedShell(): void
+    {
+        $order = $this->makeOrder(reference: 'V3-RICH');
+        $rendered = $this->renderer->render(EmailTemplate::ORDER_PAID_CUSTOMER, $order);
+
+        // Table-based, inline-styled shell (email-client safe) with the brand
+        // wordmark, a preheader, and the progress tracker.
+        self::assertStringContainsString('role="presentation"', $rendered->htmlBody);
+        self::assertStringContainsString('3bayti', $rendered->htmlBody);
+        self::assertStringContainsString('V3-RICH', $rendered->htmlBody);
+        self::assertStringContainsString('Delivered', $rendered->htmlBody); // tracker step
+        self::assertStringNotContainsString('white-space: pre-wrap', $rendered->htmlBody);
+    }
+
+    #[Test]
     public function orderPaidCustomerItemlessOrderGetsCleanConfirmation(): void
     {
         // A gift-card PURCHASE is a synthetic order with no line items — the
