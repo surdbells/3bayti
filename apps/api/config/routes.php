@@ -836,6 +836,10 @@ return function (App $app): void {
         // segment count).
         $group->get('/gift-cards',
             \Bayti\Api\Http\Controllers\Admin\GiftCard\ListGiftCardsController::class)->add($perm->for('gift_cards.view'));
+        // Redemptions report (gift-card value spent at checkout). Literal path
+        // registered before the {id} route so it isn't captured by it.
+        $group->get('/gift-cards/redemptions',
+            \Bayti\Api\Http\Controllers\Admin\GiftCard\ListGiftCardRedemptionsController::class)->add($perm->for('gift_cards.view'));
         $group->post('/gift-cards',
             \Bayti\Api\Http\Controllers\Admin\GiftCard\IssueGiftCardController::class)->add($perm->for('gift_cards.create'));
         $group->get('/gift-cards/{id:[0-9]+}',
