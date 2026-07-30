@@ -132,6 +132,17 @@ final class NoonWebhookController
 
         $payload = $this->parsePayload($rawBody);
 
+        // Noon delivers the notification as a SIGNED JWT wrapped in a JSON
+        // envelope: the body is {"data": "<header>.<payload>.<sig>"} (HS256,
+        // header {"alg":"HS256","kid":"key1"}). The order identifiers, event
+        // type and event id all live INSIDE the JWT payload — the outer
+        // envelope only carries `data` — so decode the claims and merge them
+        // up before extraction. Without this every real webhook extracts a
+        // null order id and resolves to no_match. Signature verification is
+        // the separate NoonWebhookSignatureVerifier concern; retrieve-order
+        // remains the authoritative safety net.
+        $payload = $this->unwrapNoonEnvelope($payload);
+
         // Derive idempotency key. Prefer Noon's eventId if present;
         // fall back to sha256(body) (covers retries that send identical
         // bodies but different event IDs).
@@ -373,6 +384,64 @@ final class NoonWebhookController
     }
 
     /**
+     * Noon delivers its webhook as a signed JWT wrapped in a JSON envelope:
+     *   { "data": "<base64url header>.<base64url payload>.<base64url sig>" }
+     * (HS256, signed with NOON_WEBHOOK_SECRET). The order identifiers, event
+     * type and event id live in the JWT PAYLOAD, not the outer envelope — so
+     * if the body is that envelope, decode the JWT claims and merge them up so
+     * the extractors read the real fields. Non-envelope bodies pass through
+     * unchanged. This reads the (as-yet unverified) claims only; signature
+     * verification is the bound NoonWebhookSignatureVerifier's job.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    private function unwrapNoonEnvelope(array $payload): array
+    {
+        $data = $payload['data'] ?? null;
+        if (!is_string($data) || $data === '') {
+            return $payload;
+        }
+        $claims = $this->decodeJwtClaims($data);
+        if ($claims === null) {
+            return $payload;
+        }
+        // Claims win over the envelope; keep the envelope keys for forensics.
+        return array_merge($payload, $claims);
+    }
+
+    /**
+     * Base64url-decode a JWT's payload segment into its claims array. Returns
+     * null if the string is not a well-formed three-segment JWT or the payload
+     * is not a JSON object.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function decodeJwtClaims(string $jwt): ?array
+    {
+        $parts = explode('.', $jwt);
+        if (count($parts) !== 3) {
+            return null;
+        }
+        $segment = strtr($parts[1], '-_', '+/');
+        $pad = strlen($segment) % 4;
+        if ($pad !== 0) {
+            $segment .= str_repeat('=', 4 - $pad);
+        }
+        $json = base64_decode($segment, true);
+        if ($json === false) {
+            return null;
+        }
+        try {
+            /** @var mixed $claims */
+            $claims = json_decode($json, true, 32, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return null;
+        }
+        return is_array($claims) ? $claims : null;
+    }
+
+    /**
      * Read the first present key whose value is an int or a non-empty
      * string, coerced to string. Noon sends the same logical field under
      * different names/types across the webhook notification shape vs the
@@ -430,8 +499,11 @@ final class NoonWebhookController
     private function extractMerchantReference(array $payload): ?string
     {
         // Webhook flat shape — Noon carries the merchant's own reference
-        // (our V3-... order_reference) under one of these top-level keys.
+        // (our V3-... order_reference) under one of these keys. Noon's JWT
+        // notification uses `merchantOrderRef`; other shapes/docs use the
+        // longer variants, so probe them all.
         $flat = $this->firstScalar($payload, [
+            'merchantOrderRef',
             'orderReference',
             'merchantOrderReference',
             'merchantReference',

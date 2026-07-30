@@ -267,6 +267,93 @@ final class NoonWebhookControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function matchesOrderFromJwtEnvelope(): void
+    {
+        // Noon's REAL webhook body is a signed JWT wrapped in an envelope:
+        // {"data":"<header>.<payload>.<sig>"}. The order id (orderId) and our
+        // reference (merchantOrderRef) live inside the JWT payload — the outer
+        // JSON only has `data`. The controller must decode the JWT and match
+        // off its claims; otherwise every real webhook is no_match.
+        $user = $this->makeUser(id: 7);
+        $order = new Order(user: $user, orderReference: 'V3-1785419262981-69ed', subtotal: '470.00');
+        $this->setEntityId($order, 100);
+
+        $verifier = $this->createMock(NoonWebhookSignatureVerifier::class);
+        $verifier->method('verify')->willReturn(true);
+        $this->bind(NoonWebhookSignatureVerifier::class, $verifier);
+
+        // Terminal FAILED outcome — the point is to prove the order was MATCHED
+        // from inside the JWT, not to exercise the paid-path side effects.
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('retrieveOrder')
+            ->with('218806973375')
+            ->willReturn(new OrderStatusResponse(
+                providerOrderRef: '218806973375',
+                status: 'FAILED',
+                terminal: true,
+                paid: false,
+                amount: '470.00',
+                currency: 'AED',
+                rawResponse: [],
+            ));
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $eventRepo = $this->createMock(PaymentWebhookEventRepository::class);
+        $eventRepo->method('findByIdempotencyKey')->willReturn(null);
+        $eventRepo->method('save');
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $tx = $this->createMock(PaymentTransaction::class);
+        $tx->method('getOrder')->willReturn($order);
+        $txRepo->method('findByProviderOrderRef')->with('218806973375')->willReturn($tx);
+
+        $em = $this->stubEm(function ($em) use ($eventRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [PaymentWebhookEvent::class, $eventRepo],
+                [PaymentTransaction::class, $txRepo],
+                [Order::class, $this->createMock(OrderRepository::class)],
+            ]);
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        // Build a real {"data": JWT} body, exactly as Noon sends it.
+        $jwt = $this->makeNoonJwt([
+            'orderId' => '218806973375',
+            'orderStatus' => 'CAPTURED',
+            'eventType' => 'Sale',
+            'eventId' => 'a5da7f4a-568d-4523-bfee-6105f672575f',
+            'merchantOrderRef' => 'V3-1785419262981-69ed',
+            'txnStatus' => 'SUCCESS',
+        ]);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/payment/webhook/noon', ['data' => $jwt])
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        // Matched from inside the JWT → terminal transition applied. A miss
+        // would have returned no_match with the status unchanged.
+        self::assertSame(Order::STATUS_FAILED, $order->getStatus());
+    }
+
+    /**
+     * Build a Noon-style HS256 JWT string (header.payload.sig). The signature
+     * is a placeholder — these tests mock the verifier, and the controller
+     * only decodes the payload claims here.
+     *
+     * @param array<string, mixed> $claims
+     */
+    private function makeNoonJwt(array $claims): string
+    {
+        $b64 = static fn (string $s): string => rtrim(strtr(base64_encode($s), '+/', '-_'), '=');
+        $header = $b64((string) json_encode(['alg' => 'HS256', 'kid' => 'key1']));
+        $payload = $b64((string) json_encode($claims));
+        return $header . '.' . $payload . '.' . $b64('signature-placeholder');
+    }
+
+    #[Test]
     public function appliesFailedStatusWhenRetrieveOrderConfirmsFailed(): void
     {
         $user = $this->makeUser(id: 7);
