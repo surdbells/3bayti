@@ -122,15 +122,60 @@ final class OrderEmailTemplateRendererTest extends TestCase
     public function orderPaidCustomerItemlessOrderGetsCleanConfirmation(): void
     {
         // A gift-card PURCHASE is a synthetic order with no line items — the
-        // paid email must NOT show the empty details block or a "we're
-        // preparing… it ships" line, and should mention the gift card.
+        // paid email must NOT show an empty details block or a "we're
+        // preparing… it ships" line.
         $order = $this->makeOrder(reference: 'V3-GC-PURCHASE');
         $rendered = $this->renderer->render(EmailTemplate::ORDER_PAID_CUSTOMER, $order);
 
         self::assertStringContainsString('V3-GC-PURCHASE', $rendered->textBody);
-        self::assertStringContainsStringIgnoringCase('gift card', $rendered->textBody);
         self::assertStringNotContainsString('once it ships', $rendered->textBody);
         self::assertStringNotContainsString('MEASUREMENTS', $rendered->textBody);
+    }
+
+    #[Test]
+    public function orderPaidCustomerShowsThePurchasedGiftCardDetails(): void
+    {
+        // When the order funded a gift card, OrderNotificationService resolves
+        // the card and passes it in $extra — the buyer's confirmation must show
+        // what they actually bought (value, code, recipient, expiry).
+        $order = $this->makeOrder(reference: 'V3-GC-DETAIL');
+        $rendered = $this->renderer->render(EmailTemplate::ORDER_PAID_CUSTOMER, $order, [
+            'gift_card' => [
+                'code'           => 'A1B2-C3D4-E5F6-7890',
+                'denomination'   => '500.00',
+                'currency'       => 'AED',
+                'theme'          => 'birthday',
+                'recipient_name' => 'Sara',
+                'expires_at'     => '31 Jul 2027',
+                'auto_delivered' => true,
+            ],
+        ]);
+
+        foreach ([$rendered->textBody, $rendered->htmlBody] as $body) {
+            self::assertStringContainsString('A1B2-C3D4-E5F6-7890', $body);
+            self::assertStringContainsString('500.00', $body);
+            self::assertStringContainsString('Sara', $body);
+            self::assertStringContainsString('31 Jul 2027', $body);
+        }
+        // auto_delivered=true → tells the buyer we deliver it for them.
+        self::assertStringContainsString("We'll deliver the card", $rendered->textBody);
+    }
+
+    #[Test]
+    public function giftCardBlockTellsBuyerToShareTheCodeWhenNoRecipientContact(): void
+    {
+        $order = $this->makeOrder(reference: 'V3-GC-SHARE');
+        $rendered = $this->renderer->render(EmailTemplate::ORDER_PAID_CUSTOMER, $order, [
+            'gift_card' => [
+                'code'           => 'AAAA-BBBB-CCCC-DDDD',
+                'denomination'   => '100.00',
+                'currency'       => 'AED',
+                'auto_delivered' => false,
+            ],
+        ]);
+
+        self::assertStringContainsString('Share this code', $rendered->textBody);
+        self::assertStringNotContainsString("We'll deliver the card", $rendered->textBody);
     }
 
     #[Test]

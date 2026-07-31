@@ -120,7 +120,50 @@ final class OrderNotificationService
      */
     public function orderPaid(Order $order): void
     {
-        $this->sendToCustomer($order, EmailTemplate::ORDER_PAID_CUSTOMER);
+        $this->sendToCustomer(
+            $order,
+            EmailTemplate::ORDER_PAID_CUSTOMER,
+            $this->giftCardContext($order),
+        );
+    }
+
+    /**
+     * Extra template context for a gift-card PURCHASE order.
+     *
+     * Such an order is synthetic (no line items), so the confirmation email
+     * has nothing to describe unless we resolve the funded card and pass its
+     * details through. Returns an empty array for ordinary product orders.
+     *
+     * @return array<string, mixed>
+     */
+    private function giftCardContext(Order $order): array
+    {
+        try {
+            /** @var \Bayti\Api\Domain\GiftCard\GiftCardRepository $repo */
+            $repo = $this->em?->getRepository(\Bayti\Api\Domain\GiftCard\GiftCard::class);
+            $card = $repo?->findByPurchaseOrderReference($order->getOrderReference());
+        } catch (\Throwable) {
+            return [];
+        }
+        if ($card === null) {
+            return [];
+        }
+
+        return [
+            'gift_card' => [
+                'code'           => $card->formattedCode(),
+                'denomination'   => $card->getDenomination(),
+                'balance'        => $card->getBalance(),
+                'currency'       => $card->getCurrency(),
+                'theme'          => $card->getTheme(),
+                'recipient_name' => $card->getRecipientName(),
+                'message'        => $card->getRecipientMessage(),
+                'expires_at'     => $card->getExpiresAt()?->format('d M Y'),
+                'scheduled_at'   => $card->getScheduledDeliveryAt()?->format('d M Y'),
+                // Whether we will deliver it for them, or they share the code.
+                'auto_delivered' => $card->getRecipientEmail() !== null || $card->getRecipientPhone() !== null,
+            ],
+        ];
     }
 
     /**

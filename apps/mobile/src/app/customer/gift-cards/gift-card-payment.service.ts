@@ -118,7 +118,26 @@ export class GiftCardPaymentService {
       try {
         if (processed) return;
         const urlStr: string = info?.url ?? '';
-        if (!urlStr.startsWith(returnPrefix)) return;
+
+        // Two shapes the webview may surface once Noon finishes:
+        //   v3 API:  https://api-v3.3bayti.ae/v3/checkout/return/{ref}
+        //   Web:     {WEB_APP_URL}/checkout/return?ref={ref}
+        // The API return endpoint 302-redirects to the web page, and the
+        // InAppBrowser surfaces the FINAL committed URL after the redirect
+        // resolves — so matching only the API prefix left the user stuck on a
+        // blank "Pay for gift card" webview after a successful payment. Match
+        // the web return page too (host-agnostic: path + ?ref), same fix as
+        // the product checkout page. Whichever surfaces first wins.
+        let parsed: URL | null = null;
+        try { parsed = new URL(urlStr); } catch { parsed = null; }
+
+        const matchesApiReturn = urlStr.startsWith(returnPrefix);
+        const matchesWebReturn =
+          !!parsed &&
+          parsed.pathname.replace(/\/+$/, '') === '/checkout/return' &&
+          parsed.searchParams.has('ref');
+
+        if (!matchesApiReturn && !matchesWebReturn) return;
 
         processed = true;
         try {

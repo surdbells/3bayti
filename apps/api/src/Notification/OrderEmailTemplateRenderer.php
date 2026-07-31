@@ -118,8 +118,8 @@ final class OrderEmailTemplateRenderer
                 ? $this->orderPlacedCustomerAr($order)
                 : $this->orderPlacedCustomerEn($order),
             EmailTemplate::ORDER_PAID_CUSTOMER => $isArabic
-                ? $this->orderPaidCustomerAr($order)
-                : $this->orderPaidCustomerEn($order),
+                ? $this->orderPaidCustomerAr($order, $extra)
+                : $this->orderPaidCustomerEn($order, $extra),
             EmailTemplate::ORDER_PAYMENT_FAILED_CUSTOMER => $isArabic
                 ? $this->orderPaymentFailedCustomerAr($order)
                 : $this->orderPaymentFailedCustomerEn($order),
@@ -237,7 +237,8 @@ HTML,
         );
     }
 
-    private function orderPaidCustomerEn(Order $order): RenderedEmail
+    /** @param array<string, mixed> $extra */
+    private function orderPaidCustomerEn(Order $order, array $extra = []): RenderedEmail
     {
         $ref = $order->getOrderReference();
 
@@ -248,6 +249,9 @@ HTML,
             $total    = $order->getTotal();
             $currency = $order->getCurrency();
             $summary  = $this->totalRowHtml('Total', $total, $currency, true);
+            [$gcText, $gcHtml] = $this->giftCardBlock($extra, false);
+            $closing = 'Thank you for shopping with 3bayti.';
+
             return new RenderedEmail(
                 subject: "Payment confirmed for order {$ref} — 3bayti",
                 textBody: <<<TXT
@@ -255,9 +259,8 @@ Thank you — your payment has been confirmed.
 
 Order reference: {$ref}
 Amount: {$total} {$currency}
-
-If this was a gift card, it will be delivered to the recipient (or is ready
-in your account to share). Thank you for shopping with 3bayti.
+{$gcText}
+{$closing}
 — 3bayti
 TXT,
                 htmlBody: $this->wrapHtml(
@@ -266,9 +269,10 @@ TXT,
                     body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">Thank you — your payment has been confirmed.</p>'
                         . $this->progressHtml(2, false)
                         . $this->refBadgeHtml($ref, false)
+                        . $gcHtml
                         . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;">'
                         . '<tr><td style="padding:12px 18px;"><table role="presentation" width="100%">' . $summary . '</table></td></tr></table>'
-                        . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">If this was a gift card, it will be delivered to the recipient (or is ready in your account to share). Thank you for shopping with 3bayti.</p>',
+                        . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">' . $this->esc($closing) . '</p>',
                 ),
             );
         }
@@ -296,6 +300,80 @@ TXT,
                     . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">You\'ll get another email once it ships.</p>',
             ),
         );
+    }
+
+    /**
+     * Purchased-gift-card panel for the buyer's payment-confirmation email.
+     *
+     * A gift-card purchase order has no line items, so without this the
+     * confirmation says nothing about what was bought. The card details are
+     * resolved by OrderNotificationService (which has the repository) and
+     * handed over in $extra['gift_card']. Returns ['',''] for ordinary orders.
+     *
+     * @param array<string, mixed> $extra
+     * @return array{0: string, 1: string} [text, html]
+     */
+    private function giftCardBlock(array $extra, bool $ar): array
+    {
+        $gc = $extra['gift_card'] ?? null;
+        if (!is_array($gc)) {
+            return ['', ''];
+        }
+
+        $l = $ar
+            ? ['head' => 'بطاقة الهدية', 'value' => 'القيمة', 'code' => 'رمز البطاقة',
+               'to' => 'إلى', 'expires' => 'صالحة حتى', 'scheduled' => 'موعد التسليم',
+               'sent' => 'سنرسل البطاقة إلى المستلم.',
+               'share' => 'شارك هذا الرمز مع من تحب — أو اعثر عليه في أي وقت في تطبيق 3bayti.']
+            : ['head' => 'Your gift card', 'value' => 'Value', 'code' => 'Card code',
+               'to' => 'To', 'expires' => 'Valid until', 'scheduled' => 'Scheduled delivery',
+               'sent' => "We'll deliver the card to the recipient.",
+               'share' => 'Share this code with them — you can also find it any time in the 3bayti app.'];
+
+        $cur   = (string) ($gc['currency'] ?? 'AED');
+        $rows  = [];
+        $rows[] = [$l['value'], trim(((string) ($gc['denomination'] ?? '')) . ' ' . $cur)];
+        $rows[] = [$l['code'], (string) ($gc['code'] ?? '')];
+        if (!empty($gc['recipient_name'])) {
+            $rows[] = [$l['to'], (string) $gc['recipient_name']];
+        }
+        if (!empty($gc['scheduled_at'])) {
+            $rows[] = [$l['scheduled'], (string) $gc['scheduled_at']];
+        }
+        if (!empty($gc['expires_at'])) {
+            $rows[] = [$l['expires'], (string) $gc['expires_at']];
+        }
+        $note = !empty($gc['auto_delivered']) ? $l['sent'] : $l['share'];
+
+        // Plain text
+        $text = "\n{$l['head']}:\n";
+        foreach ($rows as [$k, $v]) {
+            $text .= "  {$k}: {$v}\n";
+        }
+        $text .= "  {$note}\n";
+
+        // HTML — themed panel with the code called out.
+        $rowsHtml = '';
+        foreach ($rows as [$k, $v]) {
+            $isCode = ($k === $l['code']);
+            $valStyle = $isCode
+                ? 'font-size:16px;font-weight:700;letter-spacing:1px;color:#B9935A;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;'
+                : 'font-size:14px;font-weight:600;color:#1c1c1e;';
+            $rowsHtml .= '<tr>'
+                . '<td style="font-size:13px;color:#8a8378;padding:4px 0;">' . $this->esc($k) . '</td>'
+                . '<td style="text-align:right;padding:4px 0;' . $valStyle . '">' . $this->esc($v) . '</td>'
+                . '</tr>';
+        }
+
+        $html = '<table role="presentation" width="100%" style="margin:14px 0;border:1px solid #efe3cc;'
+            . 'border-radius:12px;background:#fdf8ef;"><tr><td style="padding:16px 18px;">'
+            . '<div style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#B9935A;font-weight:700;margin-bottom:8px;">'
+            . $this->esc($l['head']) . '</div>'
+            . '<table role="presentation" width="100%">' . $rowsHtml . '</table>'
+            . '<p style="margin:10px 0 0;font-size:13px;color:#6b6154;line-height:1.6;">' . $this->esc($note) . '</p>'
+            . '</td></tr></table>';
+
+        return [$text, $html];
     }
 
     /** Small "Order reference" badge shown under the progress tracker. */
@@ -1429,7 +1507,8 @@ HTML,
         );
     }
 
-    private function orderPaidCustomerAr(Order $order): RenderedEmail
+    /** @param array<string, mixed> $extra */
+    private function orderPaidCustomerAr(Order $order, array $extra = []): RenderedEmail
     {
         $ref = $order->getOrderReference();
 
@@ -1438,6 +1517,9 @@ HTML,
             $total    = $order->getTotal();
             $currency = $order->getCurrency();
             $summary  = $this->totalRowHtml('الإجمالي', $total, $currency, true);
+            [$gcText, $gcHtml] = $this->giftCardBlock($extra, true);
+            $closing = 'شكراً لتسوقك مع 3bayti.';
+
             return new RenderedEmail(
                 subject: "تأكيد الدفع للطلب {$ref} — 3bayti",
                 textBody: <<<TXT
@@ -1445,9 +1527,8 @@ HTML,
 
 رقم الطلب: {$ref}
 المبلغ: {$total} {$currency}
-
-إذا كانت هذه بطاقة هدية، فسيتم تسليمها إلى المستلم (أو أصبحت جاهزة في حسابك
-لمشاركتها). شكراً لتسوقك مع 3bayti.
+{$gcText}
+{$closing}
 — 3bayti
 TXT,
                 htmlBody: $this->wrapHtml(
@@ -1456,9 +1537,10 @@ TXT,
                     body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">شكراً لك — تم تأكيد دفعتك.</p>'
                         . $this->progressHtml(2, true)
                         . $this->refBadgeHtml($ref, true)
+                        . $gcHtml
                         . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;">'
                         . '<tr><td style="padding:12px 18px;"><table role="presentation" width="100%">' . $summary . '</table></td></tr></table>'
-                        . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">إذا كانت هذه بطاقة هدية، فسيتم تسليمها إلى المستلم (أو أصبحت جاهزة في حسابك لمشاركتها). شكراً لتسوقك مع 3bayti.</p>',
+                        . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">' . $this->esc($closing) . '</p>',
                     locale: User::LOCALE_AR,
                 ),
             );
