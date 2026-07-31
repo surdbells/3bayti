@@ -143,15 +143,22 @@
         <span class="gc-char-count">{{ (form.recipient_message || '').length }}/200</span>
       </div>
 
-      <!-- Auto-delivery: recipient email + phone (both REQUIRED) -->
-      <p class="gc-hint gc-hint--deliver">{{ 'gift_card_auto_delivery_required_hint' | translate }}</p>
+      <!--
+        Auto-delivery: recipient email + phone are OPTIONAL. Leave both blank
+        and the buyer shares the code themselves; fill either and we deliver
+        the card automatically. They become REQUIRED only when a later
+        delivery date is scheduled (see isScheduled + validateRecipient).
+      -->
+      <p class="gc-hint gc-hint--deliver">
+        {{ (isScheduled ? 'gift_card_auto_delivery_required_hint' : 'gift_card_auto_delivery_optional_hint') | translate }}
+      </p>
 
       <ax-text-field
         [label]="'gift_card_recipient_email' | translate"
         type="email"
         inputmode="email"
         autocomplete="off"
-        [required]="true"
+        [required]="isScheduled"
         [(ngModel)]="form.recipient_email"
         (ngModelChange)="onRecipientEmailInput()"
         name="recipient_email"
@@ -161,7 +168,8 @@
 
       <div class="gc-phone-block">
         <label class="gc-label gc-label--sm">
-          {{ 'gift_card_recipient_phone' | translate }}<span class="gc-required">*</span>
+          {{ 'gift_card_recipient_phone' | translate }}
+          @if (isScheduled) { <span class="gc-required">*</span> }
         </label>
         <div class="gc-phone-row">
           <button type="button" class="gc-cc-button" (click)="dialCodeOpen = true" [attr.aria-label]="'gc_select_country_code' | translate">

@@ -270,11 +270,84 @@ export class CheckoutPage implements OnInit, OnDestroy {
     is_open:           false,     // accordion open state
   };
 
+  // ── Gift wallet (aggregate balance across the customer's cards) ────
+  //
+  // One-tap alternative to typing a single code: the server sums every
+  // spendable card the customer owns/redeemed and draws across them
+  // (soonest-expiry first). Full cover skips Noon entirely; partial cover
+  // charges Noon the remainder. Mutually exclusive with the code path — an
+  // explicit code wins server-side, so the UI only offers one at a time.
+  wallet = {
+    balance:   0,        // total spendable wallet balance (AED)
+    applied:   false,    // user tapped "apply"
+    loading:   false,    // preview request in flight
+    preview:   null as any, // GET /cart/gift-wallet response.data
+  };
+
+  /** Wallet has spendable balance and no single code is applied. */
+  get walletAvailable(): boolean {
+    return this.wallet.balance > 0 && !this.giftCard.applied;
+  }
+
+  /** Amount the wallet draws for this cart (0 when not applied). */
+  get walletAppliedAmount(): number {
+    return this.wallet.applied ? Number(this.wallet.preview?.applied ?? 0) : 0;
+  }
+
+  /**
+   * Fetch the wallet preview for the current cart. Safe to call repeatedly;
+   * failures degrade silently (the wallet section just stays hidden — the
+   * customer can still pay normally or use a code).
+   */
+  loadGiftWallet(): void {
+    if (!this.single_user.token) { return; }
+    this.wallet.loading = true;
+    this.networkAdapter
+      .get_v3('GET /cart/gift-wallet', { authToken: this.single_user.token })
+      .subscribe({
+        next: (res: any) => {
+          const d = res?.data;
+          if (res?.response_code === 200 && d) {
+            this.wallet.preview = d;
+            this.wallet.balance = Number(d.wallet_balance ?? 0);
+          } else {
+            this.wallet.preview = null;
+            this.wallet.balance = 0;
+          }
+          this.wallet.loading = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.wallet.preview = null;
+          this.wallet.balance = 0;
+          this.wallet.loading = false;
+          this.cdr.markForCheck();
+        },
+      });
+  }
+
+  /** One-tap apply of the wallet. Clears any typed code (server: code wins). */
+  applyGiftWallet(): void {
+    if (!this.wallet.preview) { return; }
+    this.removeGiftCard();
+    this.wallet.applied = true;
+    this.cdr.markForCheck();
+  }
+
+  removeGiftWallet(): void {
+    this.wallet.applied = false;
+    this.cdr.markForCheck();
+  }
+
   get gcAppliedAmount(): number {
+    if (this.wallet.applied) { return this.walletAppliedAmount; }
     return this.giftCard.applied ? Number(this.giftCard.preview?.gift_card_amount ?? 0) : 0;
   }
 
   get gcGatewayAmount(): number {
+    if (this.wallet.applied) {
+      return Number(this.wallet.preview?.gateway_amount ?? this.bill.total);
+    }
     return this.giftCard.applied
       ? Number(this.giftCard.preview?.gateway_amount ?? this.bill.total)
       : Number(this.bill.total) || 0;
@@ -290,7 +363,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
    */
   get amountDue(): number {
     const total = Number(this.promo.quote?.total ?? this.bill.total) || 0;
-    return this.giftCard.applied ? Math.max(0, total - this.gcAppliedAmount) : total;
+    return (this.giftCard.applied || this.wallet.applied)
+      ? Math.max(0, total - this.gcAppliedAmount)
+      : total;
   }
 
   // ── Promo code ─────────────────────────────────────────────────────
@@ -488,6 +563,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
     if (!this.promo.quote) {
       this.quoteCart(this.promo.applied ? this.promo.code : null);
     }
+    // Gift wallet: fetch here (not on cart load) so the preview is sized
+    // against the final cart the customer is about to pay for.
+    this.loadGiftWallet();
   }
 
   /** Step 2 -> Step 1 (back to the address step). */
@@ -563,6 +641,10 @@ export class CheckoutPage implements OnInit, OnDestroy {
     const initiateBody = {
       channel: 'MOBILE',
       gift_card_code: this.giftCard.applied ? this.giftCard.code : undefined,
+      // One-tap wallet: the server draws across every spendable card the
+      // customer owns. Ignored server-side when gift_card_code is also sent
+      // (an explicit code wins), and the two are mutually exclusive in the UI.
+      use_gift_wallet: this.wallet.applied ? true : undefined,
       promo_code: this.promo.applied ? this.promo.code : undefined,
       // Ship + bill to the SELECTED saved address (web parity). Without these
       // the server falls back to the customer's default address, ignoring the
@@ -808,6 +890,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
         if (res?.data?.gift_card_amount) {
           this.giftCard.preview = res.data;
           this.giftCard.applied = true;
+          // A specific code wins server-side, so drop the wallet selection to
+          // keep the displayed totals honest.
+          this.wallet.applied = false;
         } else {
           // Prefer the server's specific message (e.g. "Gift card not found.",
           // "This gift card is not spendable") over a generic one.

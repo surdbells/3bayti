@@ -319,6 +319,13 @@ export function transformInitiatePaymentResponse(data: unknown): unknown {
     order_id: v3['order_id'] ?? 0,
     provider_order_ref: v3['provider_order_ref'] ?? '',
     idempotent: v3['idempotent'] === true,
+    // Gift-card / gift-wallet full cover: the server charged nothing to Noon
+    // and marked the order paid at creation, so checkout_url is null. These
+    // MUST pass through — checkout.page.ts branches on gateway_skipped to skip
+    // the webview and go straight to /success. Without them the page saw an
+    // empty url, matched no known shape, and showed "something went wrong".
+    gateway_skipped: v3['gateway_skipped'] === true,
+    gift_card_amount: v3['gift_card_amount'] ?? '0.00',
   };
 }
 

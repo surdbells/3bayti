@@ -322,6 +322,97 @@
   overflow: hidden;
 }
 
+/* ── Gift wallet (one-tap aggregate balance) ───────────────────────── */
+.gw-section {
+  margin: 0 0 10px;
+  background: var(--ax-color-bg-surface, #fff);
+  border-radius: var(--ax-radius-lg, 16px);
+  border: 1px solid var(--ax-color-border-subtle, rgba(46,36,28,0.08));
+  overflow: hidden;
+
+  &--applied {
+    border-color: rgba(45, 125, 79, 0.35);
+    background: rgba(45, 125, 79, 0.04);
+  }
+}
+
+.gw-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+
+  &__left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+  }
+}
+
+.gw-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary, #2E241C);
+}
+
+.gw-balance {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2D7D4F;
+  margin-top: 2px;
+}
+
+.gw-apply-btn {
+  flex-shrink: 0;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--ax-color-accent, #B9935A);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:disabled { opacity: 0.6; }
+}
+
+.gw-body {
+  border-top: 1px solid var(--ax-color-border-subtle);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gw-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--ax-color-text-secondary, #6B5F52);
+
+  &__saving {
+    font-weight: 700;
+    color: #2D7D4F;
+  }
+
+  &--total {
+    padding-top: 8px;
+    border-top: 1px solid var(--ax-color-border-subtle);
+    font-size: 14px;
+    color: var(--ax-color-text-primary, #2E241C);
+  }
+}
+
+.gw-note {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2D7D4F;
+}
+
 .gc-apply-toggle {
   display: flex;
   align-items: center;

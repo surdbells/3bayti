@@ -1182,6 +1182,16 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/cart/gift-card',
     shape: 'v3-envelope',
   },
+  // One-tap gift WALLET preview for the current cart — how much of the
+  // customer's whole wallet covers it: { wallet_balance, applied,
+  // gateway_amount, cart_total, fully_covered, cards_used[] }. Pure read;
+  // the debit happens at POST /checkout/initiate with use_gift_wallet=true.
+  'GET /cart/gift-wallet': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/cart/gift-wallet',
+    shape: 'v3-envelope',
+  },
   // M3.1.6f1 backend uses POST /v3/checkout/initiate (more specific
   // than the previous /v3/checkout entry). Corrected; flipped back to
   // 'old' pending mobile rewrite.
@@ -1639,6 +1649,17 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   },
   'GET /gift-cards/mine': {
     target: 'new', oldPath: '/gift-cards/mine', newPath: '/v3/gift-cards/mine', shape: 'v3-envelope',
+  },
+  // Aggregate gift-card WALLET: the customer's total spendable balance across
+  // every card they own/redeemed, plus those cards (soonest-expiry first).
+  // Returns { balance, currency, card_count, cards[] }.
+  'GET /gift-cards/wallet': {
+    target: 'new', oldPath: '', newPath: '/v3/gift-cards/wallet', shape: 'v3-envelope',
+  },
+  // Admin redemptions report: gift-card value spent at checkout, paginated
+  // with a { total_redeemed, redemption_count } summary.
+  'GET /admin/gift-cards/redemptions': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/gift-cards/redemptions', shape: 'v3-envelope',
   },
   'POST /gift-cards/purchase': {
     target: 'new', oldPath: '/gift-cards/purchase', newPath: '/v3/gift-cards/purchase', shape: 'v3-envelope',

@@ -228,17 +228,19 @@ export class GiftCardsPage implements OnInit {
     if ((this.form.recipient_message || '').length > 200) {
       this.notify.error(this.i18n.t('gc_error_message_too_long')); return;
     }
-    // Recipient email AND phone are now COMPULSORY: both are required so the
-    // gift card is always auto-delivered. Validate format + show inline errors
-    // that block submit.
-    if (!this.validateRecipient()) { return; }
-    // Scheduled delivery, if set, must be in the future.
+    // Scheduled delivery, if set, must be in the future. Checked BEFORE the
+    // recipient rules because scheduling is what makes a contact mandatory.
     if (this.form.scheduled_delivery_at) {
       const when = new Date(this.form.scheduled_delivery_at).getTime();
       if (isNaN(when) || when <= Date.now()) {
         this.notify.error(this.i18n.t('gc_error_schedule_future')); return;
       }
     }
+    // Recipient email/phone are OPTIONAL — leave both blank and the buyer
+    // simply shares the code themselves. They only become required when the
+    // card is SCHEDULED for a later date (there'd be no one to deliver to).
+    // Anything entered is still format-validated.
+    if (!this.validateRecipient()) { return; }
     this.ui.step = 3;
   }
 
@@ -249,27 +251,40 @@ export class GiftCardsPage implements OnInit {
 
   // ── Recipient validation (email + phone compulsory) ────────────────
 
+  /** True when the card is queued for a future delivery date. */
+  get isScheduled(): boolean {
+    return !!this.form.scheduled_delivery_at;
+  }
+
   /**
-   * Validate the now-compulsory recipient email + phone. Sets inline
-   * `errors.*` strings and returns true only when BOTH are valid. Called by
-   * nextToConfirm() to block advancing to confirm.
+   * Validate the OPTIONAL recipient email + phone.
+   *
+   * Both are optional by default — a buyer who leaves them blank just shares
+   * the code themselves. Whatever IS entered must be well-formed. When the
+   * card is SCHEDULED for a later date, at least one contact becomes required
+   * (mirrors the server rule in PurchaseGiftCardController): without one there
+   * is nobody to deliver to when the date arrives.
+   *
+   * Sets inline `errors.*` strings; returns true when the form may advance.
    */
   validateRecipient(): boolean {
     this.errors.recipient_email = '';
     this.errors.recipient_phone = '';
 
-    const email = (this.form.recipient_email || '').trim();
-    if (!email) {
-      this.errors.recipient_email = this.i18n.t('gift_card_recipient_email_required');
-    } else if (!GlobalComponent.validateEmail(email)) {
+    const email  = (this.form.recipient_email || '').trim();
+    const digits = (this.form.recipient_phone || '').replace(/\D/g, '');
+
+    // Format checks apply only to values that were actually provided.
+    if (email && !GlobalComponent.validateEmail(email)) {
       this.errors.recipient_email = this.i18n.t('gift_card_recipient_email_invalid');
     }
-
-    const digits = (this.form.recipient_phone || '').replace(/\D/g, '');
-    if (digits.length === 0) {
-      this.errors.recipient_phone = this.i18n.t('gift_card_recipient_phone_required');
-    } else if (digits.length < 6 || digits.length > 15) {
+    if (digits.length > 0 && (digits.length < 6 || digits.length > 15)) {
       this.errors.recipient_phone = this.i18n.t('gift_card_recipient_phone_invalid');
+    }
+
+    // Scheduling requires at least one delivery channel.
+    if (this.isScheduled && !email && digits.length === 0) {
+      this.errors.recipient_email = this.i18n.t('gift_card_recipient_required_when_scheduled');
     }
 
     return !this.errors.recipient_email && !this.errors.recipient_phone;

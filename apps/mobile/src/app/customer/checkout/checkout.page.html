@@ -226,7 +226,49 @@
     }
   </div>
 
-  <!-- ── Gift card section ──────────────────────────────────────── -->
+  <!-- ── Gift wallet (one-tap, aggregate balance) ───────────────── -->
+  @if (walletAvailable || wallet.applied) {
+    <div class="gw-section" [class.gw-section--applied]="wallet.applied">
+      <div class="gw-head">
+        <div class="gw-head__left">
+          <ax-icon name="gift" [size]="18" />
+          <div>
+            <div class="gw-title">{{ 'gift_wallet_title' | translate }}</div>
+            <div class="gw-balance">
+              {{ 'gift_wallet_balance' | translate }}: AED {{ wallet.balance | number:'1.2-2' }}
+            </div>
+          </div>
+        </div>
+        @if (!wallet.applied) {
+          <button type="button" class="gw-apply-btn" (click)="applyGiftWallet()" [disabled]="wallet.loading">
+            {{ 'text_apply' | translate }}
+          </button>
+        }
+      </div>
+
+      @if (wallet.applied) {
+        <div class="gw-body">
+          <div class="gw-row">
+            <span>{{ 'gift_wallet_applied' | translate }}</span>
+            <span class="gw-row__saving">−AED {{ walletAppliedAmount | number:'1.2-2' }}</span>
+          </div>
+          @if (wallet.preview?.fully_covered) {
+            <p class="gw-note">{{ 'gift_wallet_covers_order' | translate }}</p>
+          } @else {
+            <div class="gw-row gw-row--total">
+              <span>{{ 'text_amount_to_pay_via_card' | translate }}</span>
+              <strong>AED {{ wallet.preview?.gateway_amount }}</strong>
+            </div>
+          }
+          <button type="button" class="gc-remove-btn" (click)="removeGiftWallet()">
+            <ax-icon name="x" [size]="14" /> {{ 'text_remove' | translate }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── Gift card section (single code) ────────────────────────── -->
   <div class="gc-apply-section">
     <button type="button" class="gc-apply-toggle" (click)="toggleGiftCardSection()">
       <div class="gc-apply-toggle__left">
@@ -289,9 +331,9 @@
         </ion-button>
         <ion-button (click)="checkout_initiate()" expand="block" class="checkout-cta ion-margin-vertical" type="button">
           <ax-icon name="shopping-cart" slot="start" />
-          @if (giftCard.applied && gcGatewayAmount === 0) {
+          @if ((giftCard.applied || wallet.applied) && gcGatewayAmount === 0) {
             {{ 'text_complete_with_gift_card' | translate }}
-          } @else if (giftCard.applied) {
+          } @else if (giftCard.applied || wallet.applied) {
             {{ 'text_pay_aed_amount' | translate: { amount: (gcGatewayAmount | number:'1.2-2') } }}
           } @else {
             {{ 'button_checkout' | translate }}
