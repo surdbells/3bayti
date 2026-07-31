@@ -278,6 +278,17 @@ export class MyOrdersPage implements OnInit {
   }
 
   /**
+   * Item rows to render for a card: just the first one when collapsed, all of
+   * them when expanded. Collapsing to one row (rather than swapping to a
+   * thumbnail strip) keeps the card the same shape either way, so expanding
+   * grows the list in place instead of changing its layout.
+   */
+  visibleItems(order: any): any[] {
+    const items: any[] = Array.isArray(order?.items) ? order.items : [];
+    return order?.showItems ? items : items.slice(0, 1);
+  }
+
+  /**
    * Unit price. v3 returns `unit_price`; the legacy shape used `price`.
    * Without this the expanded card rendered a bare currency symbol.
    */

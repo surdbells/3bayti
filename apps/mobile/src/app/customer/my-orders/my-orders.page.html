@@ -59,87 +59,89 @@
   } @else {
     @for (order of orders; track order.id; let i = $index) {
       <ion-card class="order-card">
-        <!-- Order Header -->
+        <!--
+          Header: the date and status are what a customer scans for, so they
+          lead; the order reference is demoted to a quiet mono line (it matters
+          only when quoting the order to support).
+        -->
         <div class="order-header">
           <div class="order-info">
-            <h4 class="order-id">{{ order.order_reference || order.id }}</h4>
             <span class="order-date">{{ order.date | date:'MMM d, y' }}</span>
+            <span class="order-ref">{{ order.order_reference || order.id }}</span>
           </div>
           <span class="status-pill" [ngClass]="'status-pill--' + order.status">{{ statusLabelKey(order.status) | translate }}</span>
         </div>
 
-        <!-- Compact summary: thumbnail strip + item count (collapsed view) -->
-        @if (!order.showItems && order.items.length) {
-          <div class="order-summary">
-            <div class="thumb-strip">
-              @for (item of order.items.slice(0, 4); track item) {
-                @if (hasItemImage(item)) {
-                  <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="{{ item.product_name }}" class="thumb" />
-                } @else {
-                  <!-- Gift cards (and any item without an image) get a themed
-                       tile — the old <img src=""> rendered as a broken icon. -->
-                  <span class="thumb thumb--placeholder" [class.thumb--gift]="isGiftCardItem(item)">
-                    <ax-icon [name]="isGiftCardItem(item) ? 'gift' : 'image'" [size]="18" />
-                  </span>
-                }
+        <!--
+          Items — ONE presentation at both sizes: a compact vertical row per
+          item (thumb, name, qty, line price). Collapsed shows the first row
+          only; expanding reveals the rest in place. This replaces the old
+          thumbnail-strip/horizontal-card-scroller split, which changed shape
+          on toggle and turned a single-item order into a large empty tile.
+        -->
+        <div class="order-items">
+          @for (item of visibleItems(order); track item) {
+            <div class="order-item" (click)="open_vendor(item.store, item.product_name)">
+              @if (hasItemImage(item)) {
+                <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="" class="order-item__thumb" />
+              } @else {
+                <span class="order-item__thumb order-item__thumb--placeholder"
+                      [class.order-item__thumb--gift]="isGiftCardItem(item)">
+                  <ax-icon [name]="isGiftCardItem(item) ? 'gift' : 'image'" [size]="20" />
+                </span>
               }
-              @if (order.items.length > 4) {
-                <span class="thumb-more">+{{ order.items.length - 4 }}</span>
-              }
-            </div>
-            <span class="item-count">{{ itemCount(order) }} {{ (itemCount(order) === 1 ? 'orders_item_singular' : 'orders_item_plural') | translate }}</span>
-          </div>
-        }
 
-        <!-- Collapsible items section -->
-        @if (order.showItems) {
-          <div class="items-list horizontal-scroll">
-            @for (item of order.items; track item) {
-              <div (click)="open_vendor(item.store, item.product_name)" class="product-card">
-                <div class="product-image-wrapper">
-                  @if (hasItemImage(item)) {
-                    <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="{{ item.product_name }}" class="product-image" />
-                  } @else {
-                    <span class="product-image product-image--placeholder" [class.product-image--gift]="isGiftCardItem(item)">
-                      <ax-icon [name]="isGiftCardItem(item) ? 'gift' : 'image'" [size]="28" />
+              <div class="order-item__info">
+                <span class="order-item__name">{{ item.product_name }}</span>
+                <span class="order-item__meta">
+                  {{ 'label_qty' | translate }}: {{ item.quantity }}
+                  <!-- Gift cards have no fulfilment lifecycle — no status. -->
+                  @if (!isGiftCardItem(item) && item.status) {
+                    <span class="order-item__status" [ngClass]="'order-item__status--' + item.status">
+                      {{ item.status | uppercase }}
                     </span>
                   }
-                  <!-- A gift card has no fulfilment lifecycle — no pill. -->
-                  @if (!isGiftCardItem(item)) {
-                    <span class="item-status-pill" [ngClass]="'item-status-pill--' + item.status">{{ item.status | uppercase }}</span>
-                  }
-                </div>
-                <h5 class="product-name">{{ item.product_name }}</h5>
-                <p class="qty">{{ 'label_qty' | translate }}: {{ item.quantity }}</p>
-                <p class="price">Ð{{ itemPrice(item) | number:'1.2-2' }}</p>
+                </span>
               </div>
-            }
-          </div>
-        }
 
-        <!-- Footer with toggle -->
+              <span class="order-item__price">Ð{{ itemPrice(item) | number:'1.2-2' }}</span>
+            </div>
+          }
+
+          <!--
+            Quiet toggle: a text row, not a button competing with the primary
+            CTA — and only rendered when there is actually something hidden.
+          -->
+          @if (order.items.length > 1) {
+            <button type="button" class="order-items__toggle" (click)="toggleItems(i)">
+              <span>
+                @if (order.showItems) {
+                  {{ 'orders_show_less' | translate }}
+                } @else {
+                  {{ 'orders_show_more_items' | translate: { count: order.items.length - 1 } }}
+                }
+              </span>
+              <ax-icon [name]="order.showItems ? 'chevron-up' : 'chevron-down'" [size]="14" />
+            </button>
+          }
+        </div>
+
+        <!-- Footer: total on the left, single primary action on the right. -->
         <div class="order-footer">
-          <div class="footer-main">
+          <div class="order-footer__main">
             <div class="total">
               <span class="total-label">{{ 'label_total' | translate }}</span>
               <strong class="total-amount">Ð{{ order.total }}</strong>
             </div>
-            <div class="actions">
-              <ion-button size="small" fill="outline" class="toggle-btn" (click)="toggleItems(i)">
-                {{ order.showItems ? ('button_hide_items' | translate) : ('button_view_items' | translate) }}
-                <ax-icon [name]="order.showItems ? 'chevron-up' : 'chevron-down'" slot="end"></ax-icon>
-              </ion-button>
-              <ion-button size="small" fill="solid" class="view-detail-btn" (click)="onView(order)">
-                {{ 'button_view_details' | translate }}
-              </ion-button>
-            </div>
+            <button type="button" class="order-detail-btn" (click)="onView(order)">
+              {{ 'button_view_details' | translate }}
+            </button>
           </div>
-          <!-- Cancel gets its own full-width row so it can never collide with
-               the primary actions on narrow screens. -->
+          <!-- Cancel is a quiet destructive link, never a competing button. -->
           @if (canCancel(order)) {
-            <ion-button size="small" expand="block" fill="outline" color="danger" class="cancel-btn" (click)="confirmCancel(order)">
+            <button type="button" class="order-cancel-link" (click)="confirmCancel(order)">
               {{ 'button_cancel_order' | translate }}
-            </ion-button>
+            </button>
           }
         </div>
       </ion-card>
