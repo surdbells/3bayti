@@ -153,6 +153,21 @@
         {{ (isScheduled ? 'gift_card_auto_delivery_required_hint' : 'gift_card_auto_delivery_optional_hint') | translate }}
       </p>
 
+      <!--
+        Spendability is decided by these fields: a card with NO recipient
+        details belongs to the buyer and can be spent from their own balance
+        at checkout; naming a recipient makes it theirs. Say so plainly here,
+        since the rule is otherwise invisible until checkout.
+      -->
+      @if (!isScheduled) {
+        <p class="gc-hint gc-hint--keep" [class.gc-hint--keep-active]="!hasRecipientDetails">
+          <ax-icon [name]="hasRecipientDetails ? 'gift' : 'wallet'" [size]="14" />
+          <span>
+            {{ (hasRecipientDetails ? 'gift_card_for_recipient_hint' : 'gift_card_keep_for_self_hint') | translate }}
+          </span>
+        </p>
+      }
+
       <ax-text-field
         [label]="'gift_card_recipient_email' | translate"
         type="email"

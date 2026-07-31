@@ -154,6 +154,27 @@ export class MyGiftCardsPage implements OnInit {
   }
 
   /**
+   * Copy a card's code straight from the wallet list.
+   *
+   * stopPropagation matters: the code sits inside the card tile, whose own
+   * click opens the detail view — without it, copying would also navigate.
+   */
+  async copyCode(card: any, event: Event): Promise<void> {
+    event.stopPropagation();
+    event.preventDefault();
+    const code = card?.code ?? '';
+    if (!code) { return; }
+    try {
+      await navigator.clipboard.writeText(code);
+      this.notify.success(this.i18n.t('gcd_code_copied'));
+    } catch {
+      // Clipboard unavailable (older webview) — surface the code so the
+      // customer can still read/select it.
+      this.notify.info(code);
+    }
+  }
+
+  /**
    * Resume checkout for an unpaid card. /checkout/initiate is idempotent
    * (returns the cached checkout URL), so this picks up where the buyer left
    * off. On success we reload the wallet so the now-active card refreshes.

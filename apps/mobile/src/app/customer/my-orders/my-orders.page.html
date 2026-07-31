@@ -73,7 +73,15 @@
           <div class="order-summary">
             <div class="thumb-strip">
               @for (item of order.items.slice(0, 4); track item) {
-                <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="{{ item.product_name }}" class="thumb" />
+                @if (hasItemImage(item)) {
+                  <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="{{ item.product_name }}" class="thumb" />
+                } @else {
+                  <!-- Gift cards (and any item without an image) get a themed
+                       tile — the old <img src=""> rendered as a broken icon. -->
+                  <span class="thumb thumb--placeholder" [class.thumb--gift]="isGiftCardItem(item)">
+                    <ax-icon [name]="isGiftCardItem(item) ? 'gift' : 'image'" [size]="18" />
+                  </span>
+                }
               }
               @if (order.items.length > 4) {
                 <span class="thumb-more">+{{ order.items.length - 4 }}</span>
@@ -89,12 +97,21 @@
             @for (item of order.items; track item) {
               <div (click)="open_vendor(item.store, item.product_name)" class="product-card">
                 <div class="product-image-wrapper">
-                  <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="{{ item.product_name }}" class="product-image" />
-                  <span class="item-status-pill" [ngClass]="'item-status-pill--' + item.status">{{ item.status | uppercase }}</span>
+                  @if (hasItemImage(item)) {
+                    <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="{{ item.product_name }}" class="product-image" />
+                  } @else {
+                    <span class="product-image product-image--placeholder" [class.product-image--gift]="isGiftCardItem(item)">
+                      <ax-icon [name]="isGiftCardItem(item) ? 'gift' : 'image'" [size]="28" />
+                    </span>
+                  }
+                  <!-- A gift card has no fulfilment lifecycle — no pill. -->
+                  @if (!isGiftCardItem(item)) {
+                    <span class="item-status-pill" [ngClass]="'item-status-pill--' + item.status">{{ item.status | uppercase }}</span>
+                  }
                 </div>
                 <h5 class="product-name">{{ item.product_name }}</h5>
                 <p class="qty">{{ 'label_qty' | translate }}: {{ item.quantity }}</p>
-                <p class="price">Ð{{ item.price }}</p>
+                <p class="price">Ð{{ itemPrice(item) | number:'1.2-2' }}</p>
               </div>
             }
           </div>
@@ -102,24 +119,28 @@
 
         <!-- Footer with toggle -->
         <div class="order-footer">
-          <div class="total">
-            <span class="total-label">{{ 'label_total' | translate }}</span>
-            <strong class="total-amount">Ð{{ order.total }}</strong>
-          </div>
-          <div class="actions">
-            <ion-button size="small" fill="outline" class="toggle-btn" (click)="toggleItems(i)">
-              {{ order.showItems ? ('button_hide_items' | translate) : ('button_view_items' | translate) }}
-              <ax-icon [name]="order.showItems ? 'chevron-up' : 'chevron-down'" slot="end"></ax-icon>
-            </ion-button>
-            <ion-button size="small" fill="solid" class="view-detail-btn" (click)="onView(order)">
-              {{ 'button_view_details' | translate }}
-            </ion-button>
-            @if (canCancel(order)) {
-              <ion-button size="small" fill="outline" color="danger" class="cancel-btn" (click)="confirmCancel(order)">
-                {{ 'button_cancel_order' | translate }}
+          <div class="footer-main">
+            <div class="total">
+              <span class="total-label">{{ 'label_total' | translate }}</span>
+              <strong class="total-amount">Ð{{ order.total }}</strong>
+            </div>
+            <div class="actions">
+              <ion-button size="small" fill="outline" class="toggle-btn" (click)="toggleItems(i)">
+                {{ order.showItems ? ('button_hide_items' | translate) : ('button_view_items' | translate) }}
+                <ax-icon [name]="order.showItems ? 'chevron-up' : 'chevron-down'" slot="end"></ax-icon>
               </ion-button>
-            }
+              <ion-button size="small" fill="solid" class="view-detail-btn" (click)="onView(order)">
+                {{ 'button_view_details' | translate }}
+              </ion-button>
+            </div>
           </div>
+          <!-- Cancel gets its own full-width row so it can never collide with
+               the primary actions on narrow screens. -->
+          @if (canCancel(order)) {
+            <ion-button size="small" expand="block" fill="outline" color="danger" class="cancel-btn" (click)="confirmCancel(order)">
+              {{ 'button_cancel_order' | translate }}
+            </ion-button>
+          }
         </div>
       </ion-card>
     }

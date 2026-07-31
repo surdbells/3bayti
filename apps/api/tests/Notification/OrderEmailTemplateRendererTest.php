@@ -106,7 +106,10 @@ final class OrderEmailTemplateRendererTest extends TestCase
     #[Test]
     public function htmlEmailsUseTheRichBrandedShell(): void
     {
+        // A PRODUCT order — the tracker only belongs on orders that actually
+        // ship (a gift-card purchase is digital; see the itemless test below).
         $order = $this->makeOrder(reference: 'V3-RICH');
+        $this->addItem($order, name: 'Abaya');
         $rendered = $this->renderer->render(EmailTemplate::ORDER_PAID_CUSTOMER, $order);
 
         // Table-based, inline-styled shell (email-client safe) with the brand
@@ -116,6 +119,27 @@ final class OrderEmailTemplateRendererTest extends TestCase
         self::assertStringContainsString('V3-RICH', $rendered->htmlBody);
         self::assertStringContainsString('Delivered', $rendered->htmlBody); // tracker step
         self::assertStringNotContainsString('white-space: pre-wrap', $rendered->htmlBody);
+    }
+
+    #[Test]
+    public function giftCardPurchaseEmailHasNoShippingTracker(): void
+    {
+        // A gift card is digital: an Ordered→Paid→Shipped→Delivered tracker
+        // would never advance past Paid, so it must not be rendered.
+        $order = $this->makeOrder(reference: 'V3-GC-NOTRACK');
+        $rendered = $this->renderer->render(EmailTemplate::ORDER_PAID_CUSTOMER, $order, [
+            'gift_card' => [
+                'code' => 'AAAA-BBBB-CCCC-DDDD',
+                'denomination' => '200.00',
+                'currency' => 'AED',
+                'auto_delivered' => false,
+            ],
+        ]);
+
+        self::assertStringNotContainsString('Delivered', $rendered->htmlBody);
+        self::assertStringNotContainsString('Shipped', $rendered->htmlBody);
+        // The card details are still there.
+        self::assertStringContainsString('AAAA-BBBB-CCCC-DDDD', $rendered->htmlBody);
     }
 
     #[Test]

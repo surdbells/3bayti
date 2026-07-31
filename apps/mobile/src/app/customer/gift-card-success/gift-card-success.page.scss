@@ -175,6 +175,25 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+
+  /* Explicit copy affordance (icon + label), same language as the detail page. */
+  &__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex-shrink: 0;
+    color: var(--ax-color-text-brand, #b9935a);
+  }
+
+  &__cta-label {
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 360px) {
+  .gcs-code__cta-label { display: none; }
 }
 
 /* Meta rows */

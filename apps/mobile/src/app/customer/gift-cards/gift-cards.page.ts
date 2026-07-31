@@ -257,6 +257,20 @@ export class GiftCardsPage implements OnInit {
   }
 
   /**
+   * True once the buyer has named/contacted a recipient — which makes the card
+   * a GIFT (spendable by that recipient once they redeem it), not a top-up the
+   * buyer can spend from their own balance. Drives the hint under the
+   * recipient fields so the rule isn't a surprise at checkout.
+   */
+  get hasRecipientDetails(): boolean {
+    return !!(
+      (this.form.recipient_name || '').trim() ||
+      (this.form.recipient_email || '').trim() ||
+      (this.form.recipient_phone || '').replace(/\D/g, '')
+    );
+  }
+
+  /**
    * Validate the OPTIONAL recipient email + phone.
    *
    * Both are optional by default — a buyer who leaves them blank just shares

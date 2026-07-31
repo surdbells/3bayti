@@ -266,8 +266,10 @@ TXT,
                 htmlBody: $this->wrapHtml(
                     title: 'Payment confirmed',
                     preheader: "Order {$ref} — payment confirmed",
+                    // No Ordered→Paid→Shipped→Delivered tracker here: a
+                    // gift-card purchase is digital, so there is nothing to
+                    // ship or deliver and the steps would never advance.
                     body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">Thank you — your payment has been confirmed.</p>'
-                        . $this->progressHtml(2, false)
                         . $this->refBadgeHtml($ref, false)
                         . $gcHtml
                         . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;">'
@@ -1534,8 +1536,8 @@ TXT,
                 htmlBody: $this->wrapHtml(
                     title: 'تأكيد الدفع',
                     preheader: "الطلب {$ref} — تم تأكيد الدفع",
+                    // No shipping tracker for a digital gift-card purchase.
                     body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">شكراً لك — تم تأكيد دفعتك.</p>'
-                        . $this->progressHtml(2, true)
                         . $this->refBadgeHtml($ref, true)
                         . $gcHtml
                         . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;">'

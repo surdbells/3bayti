@@ -29,10 +29,17 @@
           </div>
         </div>
 
-        <button type="button" class="gcs-code" (click)="copyCode()">
+        <button
+          type="button"
+          class="gcs-code"
+          (click)="copyCode()"
+          [attr.aria-label]="'gcd_tap_to_copy' | translate">
           <span class="gcs-code__label">{{ 'gcs_code_label' | translate }}</span>
           <span class="gcs-code__value">{{ card.code }}</span>
-          <ax-icon name="copy" [size]="16" />
+          <span class="gcs-code__cta">
+            <ax-icon name="copy" [size]="16" />
+            <span class="gcs-code__cta-label">{{ 'gcd_tap_to_copy' | translate }}</span>
+          </span>
         </button>
 
         <div class="gcs-rows">

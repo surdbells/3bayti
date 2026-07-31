@@ -21,6 +21,19 @@ ion-content {
   height: 100%;
   width: 100%;
   overflow: hidden;
+  /*
+    iOS swipe smoothness: isolate each slide so the compositor can treat it as
+    an independent layer and skip layout/paint work for off-screen slides
+    while the feed is being dragged. Without containment, every drag frame
+    re-evaluated the whole (windowed) slide list, which is what made the
+    vertical swipe feel sticky on iOS.
+
+    Deliberately NOT using content-visibility/contain-intrinsic-size here:
+    Swiper measures slide boxes, and a skipped-rendering slide can report the
+    wrong height and break the feed. `contain` alone is size-safe because the
+    slide takes its dimensions from the container, not its content.
+  */
+  contain: layout paint style;
 }
 
 .hero {
@@ -29,6 +42,9 @@ ion-content {
   width: 100%;
   background: #000;
   overflow: hidden;
+  /* Promote to its own layer so dragging composites instead of repainting. */
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 /* ========================================

@@ -257,6 +257,34 @@ export class MyOrdersPage implements OnInit {
     this.orders[index].showItems = !this.orders[index].showItems;
   }
 
+  // ── Item display helpers ───────────────────────────────────────────
+  //
+  // The list binds the API's item rows directly, so these normalise the
+  // few fields whose names differ (or are absent) rather than remapping
+  // every row on load.
+
+  /**
+   * A gift-card purchase is a synthetic order line: product_id 0 and no real
+   * product image. Used to render a themed placeholder instead of a broken
+   * <img>, and to hide the per-item fulfilment pill (nothing ships).
+   */
+  isGiftCardItem(item: any): boolean {
+    return Number(item?.product_id ?? 0) === 0;
+  }
+
+  /** True when there is an image worth rendering. */
+  hasItemImage(item: any): boolean {
+    return typeof item?.product_image === 'string' && item.product_image.trim() !== '';
+  }
+
+  /**
+   * Unit price. v3 returns `unit_price`; the legacy shape used `price`.
+   * Without this the expanded card rendered a bare currency symbol.
+   */
+  itemPrice(item: any): number {
+    return Number(item?.unit_price ?? item?.price ?? 0);
+  }
+
   // i18n key for the per-filter empty state. Each non-'all' chip gets a
   // tailored "no <status> orders" message; 'all' falls back to the generic
   // "no orders yet" heading.

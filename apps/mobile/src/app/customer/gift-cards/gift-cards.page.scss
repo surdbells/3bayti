@@ -470,6 +470,30 @@
   line-height: 1.45;
 }
 
+/* Ownership hint: spells out that a card with no recipient details stays the
+   buyer's (spendable from their own balance), and flips to a gift notice as
+   soon as they name a recipient. */
+.gc-hint--keep {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  line-height: 1.45;
+  background: rgba(139, 111, 71, 0.07);
+  border: 1px solid rgba(139, 111, 71, 0.18);
+
+  ax-icon { flex-shrink: 0; margin-top: 1px; }
+}
+
+/* Keeping it for yourself — positive/green treatment. */
+.gc-hint--keep-active {
+  background: rgba(45, 125, 79, 0.08);
+  border-color: rgba(45, 125, 79, 0.25);
+  color: #2d7d4f;
+}
+
 // Phone block: a single label on top, then one aligned row of
 // [country code | phone input | contacts button], all 48px tall.
 .gc-phone-block {

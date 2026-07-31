@@ -117,10 +117,11 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   // unbounded slide count is what eventually pushed iOS/WKWebView over its
   // memory budget and forced a silent reload. trimRenderedWindow() keeps only
   // the newest MAX_RENDERED_PRODUCTS slides. Must comfortably exceed the fetch
-  // page size (explore.limit = 10) plus the near-end prefetch trigger (5) plus
-  // a back-scroll buffer, so trimming never drops the slide the user is on or
-  // its neighbours.
-  private readonly MAX_RENDERED_PRODUCTS = 24;
+  // page size (explore.limit = 10) plus the near-end prefetch trigger (5), so
+  // trimming never drops the slide the user is on or its neighbours — 20 keeps
+  // two full pages live (a 5-slide back-scroll buffer behind the prefetch
+  // point) while holding the mounted DOM lower for iOS/WKWebView.
+  private readonly MAX_RENDERED_PRODUCTS = 20;
 
   // Random ordering: a per-session seed sent to the API so it returns a stable
   // random order across every page of one browsing session. Regenerated on each

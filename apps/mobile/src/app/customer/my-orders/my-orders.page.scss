@@ -74,6 +74,34 @@ ion-content.page-bg {
   }
 }
 
+/* Placeholder tile for items with no image (gift cards especially) — the
+   previous <img src=""> rendered as a broken-image glyph. */
+.thumb--placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ax-color-text-secondary);
+  background: var(--ax-color-bg-brand-subtle);
+}
+
+.thumb--gift {
+  color: #8b6f47;
+  background: linear-gradient(135deg, #fbf4e4, #f7ecd4);
+}
+
+.product-image--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ax-color-text-secondary);
+  background: var(--ax-color-bg-brand-subtle);
+}
+
+.product-image--gift {
+  color: #8b6f47;
+  background: linear-gradient(135deg, #fbf4e4, #f7ecd4);
+}
+
 .thumb-more {
   margin-inline-start: 6px;
   font-family: inherit;
@@ -291,11 +319,21 @@ ion-content.page-bg {
 
 .order-footer {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+}
+
+/* Total + primary actions share a row; Cancel drops to its own full-width
+   row below (it used to wrap into the action group and overlap on narrow
+   screens). */
+.footer-main {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  flex-wrap: wrap;
 }
 
 .total {

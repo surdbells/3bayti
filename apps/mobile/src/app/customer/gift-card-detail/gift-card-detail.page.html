@@ -55,9 +55,20 @@
     <!-- Code section -->
     <div class="gcd-section ion-padding-horizontal">
       <p class="gcd-section__title">{{ 'gift_card_code' | translate }}</p>
-      <button type="button" class="gcd-code-row" (click)="copyCode()">
+      <!--
+        The whole row is the copy target. The icon alone read as decoration,
+        so it now carries an explicit "Tap to copy" label beside it.
+      -->
+      <button
+        type="button"
+        class="gcd-code-row"
+        (click)="copyCode()"
+        [attr.aria-label]="'gcd_tap_to_copy' | translate">
         <span class="gcd-code">{{ card.code }}</span>
-        <ax-icon name="copy" [size]="18" />
+        <span class="gcd-copy-cta">
+          <ax-icon name="copy" [size]="18" />
+          <span class="gcd-copy-cta__label">{{ 'gcd_tap_to_copy' | translate }}</span>
+        </span>
       </button>
     </div>
 

@@ -76,6 +76,32 @@
   font-weight: 700;
   letter-spacing: 0.15em;
   color: var(--ax-color-text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Explicit copy affordance — icon + "Tap to copy", tinted in the brand accent
+   so the row reads as interactive rather than a static field. */
+.gcd-copy-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  margin-inline-start: 12px;
+  color: var(--ax-color-text-brand, #b9935a);
+
+  &__label {
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 360px) {
+  /* Keep the code readable on narrow screens — drop the words, keep the icon. */
+  .gcd-copy-cta__label { display: none; }
+  .gcd-code { font-size: 16px; letter-spacing: 0.1em; }
 }
 
 .gcd-info {

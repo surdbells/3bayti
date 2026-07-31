@@ -1,14 +1,28 @@
 <ion-content [fullscreen]="true" [scrollY]="false" [scrollX]="false" [forceOverscroll]="false">
 
   <!-- Main Vertical Swiper -->
+  <!--
+    Touch tuning for iOS smoothness:
+      threshold 10 -> 3   the drag follows the finger almost immediately
+                          instead of feeling like it "catches" late
+      touch-angle 60      only near-vertical gestures grab the feed, so the
+                          per-image horizontal swipe doesn't fight it
+      touch-ratio 1       1:1 finger tracking
+      resistance-ratio 0  no rubber-band drag at the ends
+      follow-finger       explicit: the slide tracks the finger while dragging
+  -->
   <swiper-container
     #swiper
     class="vertical-slides"
     direction="vertical"
     slides-per-view="1"
-    speed="300"
+    speed="280"
     allow-touch-move="true"
-    threshold="10"
+    threshold="3"
+    touch-angle="60"
+    touch-ratio="1"
+    resistance-ratio="0"
+    follow-finger="true"
     (swiperslidechange)="onVerticalSlideChange($event)">
 
     @for(product of products; track product.product_id; let idx = $index){
