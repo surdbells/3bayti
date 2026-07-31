@@ -4,6 +4,8 @@ import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { provideHttpClient } from '@angular/common/http';
 import { of, throwError } from 'rxjs';
 
+import { Preferences } from '@capacitor/preferences';
+
 import { SuccessPage } from './success.page';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
 
@@ -76,8 +78,16 @@ describe('SuccessPage', () => {
   let component: SuccessPage;
   let adapter: AdapterStub;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     adapter = new AdapterStub();
+    // The page reads the auth token from Preferences before fetching. Seed it
+    // explicitly so these specs never depend on state another spec happened to
+    // leave behind.
+    await Preferences.set({ key: 'user', value: JSON.stringify({ token: 'test-token' }) });
+  });
+
+  afterEach(async () => {
+    await Preferences.remove({ key: 'user' });
   });
 
   it('should create', async () => {

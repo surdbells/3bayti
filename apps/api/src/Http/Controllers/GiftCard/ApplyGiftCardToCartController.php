@@ -6,6 +6,7 @@ namespace Bayti\Api\Http\Controllers\GiftCard;
 use Bayti\Api\Domain\Cart\Cart;
 use Bayti\Api\Domain\Cart\CartItem;
 use Bayti\Api\Domain\Cart\CartRepository;
+use Bayti\Api\Domain\Cart\DeliveryFeeCalculator;
 use Bayti\Api\Domain\GiftCard\GiftCard;
 use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\User\User;
@@ -44,6 +45,7 @@ final class ApplyGiftCardToCartController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly DeliveryFeeCalculator $delivery,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 
@@ -65,12 +67,17 @@ final class ApplyGiftCardToCartController
             throw HttpException::badRequest('This gift card is not spendable (status: ' . $card->getStatus() . ').');
         }
 
-        // Must belong to user (buyer or assigned recipient)
-        $buyerId    = $card->getBuyerUser()->getId();
-        $recipientId = $card->getRecipientUser()?->getId();
-        $userId     = $user->getId();
-        if ($buyerId !== $userId && $recipientId !== $userId) {
-            throw HttpException::forbidden('This gift card is not associated with your account.');
+        // Must be spendable BY THIS USER. A card the buyer designated for
+        // someone else belongs to that recipient — the buyer can still claim
+        // it back for themselves via POST /v3/gift-cards/redeem, which assigns
+        // recipient_user and makes it spendable again.
+        if (!$card->isSpendableBy($user)) {
+            $buyerId = $card->getBuyerUser()->getId();
+            throw HttpException::forbidden(
+                $buyerId === $user->getId()
+                    ? 'This gift card was bought as a gift for someone else. Redeem it to your account to spend it.'
+                    : 'This gift card is not associated with your account.'
+            );
         }
 
         // Load active cart total
@@ -81,12 +88,18 @@ final class ApplyGiftCardToCartController
             throw HttpException::badRequest('Your cart is empty.');
         }
 
-        $cartTotal = '0.00';
+        // Payable total = subtotal + delivery, matching what checkout charges
+        // (Order::computeTotal). Sizing the card against the item subtotal
+        // alone left the delivery fee uncovered even when the card could pay
+        // for the whole order.
+        $subtotal = '0.00';
         /** @var CartItem $item */
         foreach ($cart->getItems() as $item) {
-            $line      = bcmul($item->getUnitPriceSnapshot(), (string) $item->getQuantity(), 2);
-            $cartTotal = bcadd($cartTotal, $line, 2);
+            $line     = bcmul($item->getUnitPriceSnapshot(), (string) $item->getQuantity(), 2);
+            $subtotal = bcadd($subtotal, $line, 2);
         }
+        $deliveryFee = $this->delivery->forCart($cart);
+        $cartTotal   = bcadd($subtotal, $deliveryFee, 2);
 
         $applied          = $card->applyableAmount($cartTotal);
         $gatewayAmount    = bcsub($cartTotal, $applied, 2);

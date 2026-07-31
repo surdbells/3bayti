@@ -6,7 +6,7 @@ import {
   computed,
   OnInit,
 } from '@angular/core';
-import { NgIf, NgFor } from '@angular/common';
+import { DecimalPipe, NgIf, NgFor } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -85,7 +85,7 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
 @Component({
   selector: 'app-checkout-review',
   standalone: true,
-  imports: [CfImagePipe, NgIf, NgFor, ReactiveFormsModule, TranslatePipe, CheckoutStepperComponent],
+  imports: [CfImagePipe, DecimalPipe, NgIf, NgFor, ReactiveFormsModule, TranslatePipe, CheckoutStepperComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="checkout-page checkout-page--review" data-testid="checkout-review-page">
@@ -278,16 +278,16 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
                 <dl class="review-giftcard-applied__amounts checkout-summary">
                   <div class="checkout-summary__line">
                     <dt>{{ 'checkout.review.giftCardCredit' | translate }}</dt>
-                    <dd>−{{ walletPreview()!.currency }} {{ walletPreview()!.applied }}</dd>
+                    <dd>−{{ walletPreview()!.currency }} {{ walletCredit() | number: '1.2-2' }}</dd>
                   </div>
                   <div class="checkout-summary__line checkout-summary__line--total">
                     <dt>{{ 'checkout.review.amountDue' | translate }}</dt>
                     <dd data-testid="review-giftwallet-due">
-                      {{ walletPreview()!.currency }} {{ walletPreview()!.gateway_amount }}
+                      {{ walletPreview()!.currency }} {{ walletRemainingDue() | number: '1.2-2' }}
                     </dd>
                   </div>
                 </dl>
-                @if (walletPreview()!.fully_covered) {
+                @if (walletCoversOrder()) {
                   <p class="review-giftwallet__covered" data-testid="review-giftwallet-covered">
                     {{ 'checkout.review.giftWalletCovers' | translate }}
                   </p>
@@ -555,6 +555,37 @@ export class CheckoutReviewPageComponent implements OnInit {
     const w = this._walletPreview();
     return w !== null && Number(w.wallet_balance) > 0 && this.appliedGiftCode() === null;
   });
+
+  /**
+   * The payable total the gift balance must cover — the server-authoritative
+   * quote total (subtotal + delivery − promo), i.e. the "amount due" shown in
+   * the summary before any gift credit.
+   */
+  protected readonly payableBeforeGift = computed<number>(() =>
+    Number(this.breakdown()?.total ?? this.subtotal() ?? 0),
+  );
+
+  /**
+   * Credit drawn from the wallet. Derived from the authoritative total rather
+   * than echoing the preview's own `applied`, so the figure stays correct when
+   * a promo is applied after the preview was fetched. The server caps the real
+   * draw the same way at initiate.
+   */
+  protected readonly walletCredit = computed<number>(() => {
+    const w = this._walletPreview();
+    if (w === null) return 0;
+    return Math.min(Number(w.wallet_balance), this.payableBeforeGift());
+  });
+
+  /** Remainder the gateway will be charged after the wallet credit. */
+  protected readonly walletRemainingDue = computed<number>(() =>
+    Math.max(0, this.payableBeforeGift() - this.walletCredit()),
+  );
+
+  /** True when the wallet covers the whole payable total. */
+  protected readonly walletCoversOrder = computed<boolean>(() =>
+    this.payableBeforeGift() > 0 && this.walletRemainingDue() === 0,
+  );
 
   /** Load (or refresh) the wallet preview for the current cart. */
   private async loadWalletPreview(): Promise<void> {

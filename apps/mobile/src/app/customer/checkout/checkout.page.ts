@@ -291,9 +291,33 @@ export class CheckoutPage implements OnInit, OnDestroy {
     return this.wallet.balance > 0 && !this.giftCard.applied;
   }
 
-  /** Amount the wallet draws for this cart (0 when not applied). */
+  /**
+   * The order total the gift balance has to cover — the server-authoritative
+   * quote total (subtotal + delivery − promo), i.e. exactly the "Amount due"
+   * the summary and floating bar show before any gift credit.
+   */
+  get payableBeforeGift(): number {
+    return Number(this.promo.quote?.total ?? this.bill.total) || 0;
+  }
+
+  /**
+   * Amount the wallet draws for this cart (0 when not applied).
+   *
+   * Computed against payableBeforeGift rather than echoing the preview's
+   * `applied`, so the figure always matches the total on screen — including
+   * when a promo is applied after the preview was fetched. The server caps
+   * the real draw the same way at initiate.
+   */
   get walletAppliedAmount(): number {
-    return this.wallet.applied ? Number(this.wallet.preview?.applied ?? 0) : 0;
+    if (!this.wallet.applied) { return 0; }
+    return Math.min(this.wallet.balance, this.payableBeforeGift);
+  }
+
+  /** True when the wallet covers the whole payable total. */
+  get walletCoversOrder(): boolean {
+    return this.wallet.applied
+      && this.payableBeforeGift > 0
+      && this.wallet.balance >= this.payableBeforeGift;
   }
 
   /**
@@ -346,13 +370,20 @@ export class CheckoutPage implements OnInit, OnDestroy {
     return this.giftCard.applied ? Number(this.giftCard.preview?.gift_card_amount ?? 0) : 0;
   }
 
+  /**
+   * What the payment gateway will actually be charged. Derived from the
+   * authoritative quote total minus the gift credit (never the preview's own
+   * remainder, which is computed before any promo and can drift).
+   */
   get gcGatewayAmount(): number {
     if (this.wallet.applied) {
-      return Number(this.wallet.preview?.gateway_amount ?? this.bill.total);
+      return Math.max(0, this.payableBeforeGift - this.walletAppliedAmount);
     }
-    return this.giftCard.applied
-      ? Number(this.giftCard.preview?.gateway_amount ?? this.bill.total)
-      : Number(this.bill.total) || 0;
+    if (this.giftCard.applied) {
+      const applied = Number(this.giftCard.preview?.gift_card_amount ?? 0);
+      return Math.max(0, this.payableBeforeGift - applied);
+    }
+    return this.payableBeforeGift;
   }
 
   /**

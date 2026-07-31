@@ -276,12 +276,15 @@ final class InitiateCheckoutController
             if ($giftCard === null) {
                 throw HttpException::badRequest('Gift card not found.');
             }
-            // Must be owned by or assigned to this user
-            $gcBuyerId     = $giftCard->getBuyerUser()->getId();
-            $gcRecipientId = $giftCard->getRecipientUser()?->getId();
-            $uid           = $user->getId();
-            if ($gcBuyerId !== $uid && $gcRecipientId !== $uid) {
-                throw HttpException::forbidden('This gift card is not associated with your account.');
+            // Must be spendable BY THIS USER. A card designated for someone
+            // else is theirs to spend; the buyer can claim it back via
+            // POST /v3/gift-cards/redeem (which assigns recipient_user).
+            if (!$giftCard->isSpendableBy($user)) {
+                throw HttpException::forbidden(
+                    $giftCard->getBuyerUser()->getId() === $user->getId()
+                        ? 'This gift card was bought as a gift for someone else. Redeem it to your account to spend it.'
+                        : 'This gift card is not associated with your account.'
+                );
             }
             if (!$giftCard->isSpendable()) {
                 throw HttpException::badRequest(

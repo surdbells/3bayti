@@ -635,6 +635,45 @@ class GiftCard
         return bccomp($this->balance, '0.00', 2) > 0;
     }
 
+    /**
+     * Was this card bought FOR SOMEONE ELSE?
+     *
+     * True as soon as the buyer designated a recipient in any form — a name,
+     * an email or a phone. Those cards are the recipient's to spend, so they
+     * must NOT sit in the buyer's spendable wallet just because the buyer
+     * paid for them. A card bought with no recipient details at all is a
+     * self-purchase (top-up) and is immediately spendable by the buyer.
+     */
+    public function isGiftForSomeoneElse(): bool
+    {
+        return $this->recipientName !== null
+            || $this->recipientEmail !== null
+            || $this->recipientPhone !== null;
+    }
+
+    /**
+     * May $user spend this card (wallet or code entry)?
+     *
+     * Rules:
+     *   - The assigned recipient may always spend it. Claiming a card via
+     *     POST /v3/gift-cards/redeem sets recipient_user, so this is also the
+     *     escape hatch for a buyer who decides to keep a card they had bought
+     *     as a gift.
+     *   - The buyer may spend it only while it is NOT designated for someone
+     *     else and nobody else has claimed it.
+     *
+     * Spendability of the card itself (status/expiry/balance) is a separate
+     * concern — see isSpendable().
+     */
+    public function isSpendableBy(User $user): bool
+    {
+        $uid = $user->getId();
+        if ($this->recipientUser !== null) {
+            return $this->recipientUser->getId() === $uid;
+        }
+        return $this->buyerUser->getId() === $uid && !$this->isGiftForSomeoneElse();
+    }
+
     /** How much of this card can actually be applied to a given order total. */
     public function applyableAmount(string $orderTotal): string
     {

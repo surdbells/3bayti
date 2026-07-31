@@ -90,24 +90,12 @@
 </ion-header>
 
 <ion-content fullscreen="true" class="home-bg">
-  <!-- Gift Card balance widget -->
-  @if (activeGiftCards.length > 0) {
-    <div class="gc-balance-widget ion-padding-horizontal" (click)="openGiftCards()">
-      <div class="gc-balance-widget__left">
-        <ax-icon name="gift" [size]="22" />
-        <div>
-          <div class="gc-balance-widget__label">{{ 'gift_card_balance_label' | translate }}</div>
-          <div class="gc-balance-widget__amount">AED {{ totalGiftCardBalance }}</div>
-        </div>
-      </div>
-      <div class="gc-balance-widget__right">
-        <span class="gc-balance-widget__count">{{ activeGiftCards.length }} {{ (activeGiftCards.length > 1 ? 'gift_card_count_plural' : 'gift_card_count_singular') | translate }}</span>
-        <ax-icon name="chevron-right" [size]="16" />
-      </div>
-    </div>
-  }
-
-  <!-- Gift-card promo — compact by default, tap the row to expand -->
+  <!--
+    Gift-card promo — compact by default, tap the row to expand.
+    The gift-card BALANCE is nested inside this card (a line under the
+    heading + a tappable row when expanded) rather than sitting above it as
+    its own widget, so having a balance costs no extra page height.
+  -->
   <section class="section ion-padding-horizontal">
     <article class="gift-promo" [class.gift-promo--expanded]="giftPromoExpanded">
       <span class="gift-promo__glow" aria-hidden="true"></span>
@@ -124,12 +112,34 @@
         <span class="gift-promo__compact">
           <span class="gift-promo__eyebrow">{{ 'gift_cards' | translate }}</span>
           <span class="gift-promo__heading">{{ 'gift_promo_heading' | translate }}</span>
+          <!-- Balance inline in the collapsed header — no extra height. -->
+          @if (activeGiftCards.length > 0) {
+            <span class="gift-promo__balance">
+              {{ 'gift_card_balance_label' | translate }}: <strong>AED {{ totalGiftCardBalance }}</strong>
+            </span>
+          }
         </span>
         <ax-icon class="gift-promo__chevron" name="chevron-down" [size]="18" />
       </button>
 
       @if (giftPromoExpanded) {
         <div class="gift-promo__body">
+          <!-- Expanded: the balance becomes a tappable row into the wallet. -->
+          @if (activeGiftCards.length > 0) {
+            <button type="button" class="gift-promo__balance-row" (click)="openGiftCards()">
+              <span class="gift-promo__balance-row-left">
+                <ax-icon name="wallet" [size]="18" />
+                <span>
+                  <span class="gift-promo__balance-label">{{ 'gift_card_balance_label' | translate }}</span>
+                  <span class="gift-promo__balance-amount">AED {{ totalGiftCardBalance }}</span>
+                </span>
+              </span>
+              <span class="gift-promo__balance-row-right">
+                <span class="gift-promo__balance-count">{{ activeGiftCards.length }} {{ (activeGiftCards.length > 1 ? 'gift_card_count_plural' : 'gift_card_count_singular') | translate }}</span>
+                <ax-icon name="chevron-right" [size]="16" />
+              </span>
+            </button>
+          }
           <p class="gift-promo__subtitle">{{ 'gift_promo_subtitle' | translate }}</p>
           <div class="gift-promo__actions">
             <a class="gift-promo__tile" routerLink="/gift-cards">

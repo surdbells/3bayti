@@ -2,6 +2,18 @@
    Checkout — M2 redesign
    ============================================================================ */
 
+/*
+  Brand gradient aliases. These are declared per-page (product.page.scss and
+  home.page.scss do the same) rather than globally — without them the
+  floating CTA's `linear-gradient(var(--brand-dark), var(--brand-light))`
+  resolved to nothing and its white label sat on a transparent background,
+  making the checkout button invisible.
+*/
+:host {
+  --brand-dark: var(--ax-color-text-brand);
+  --brand-light: var(--ax-color-bg-brand-hover);
+}
+
 /* ----- Info notices (replaces <button tuiNotification> banners) ---------- */
 
 .info-notice {
@@ -41,7 +53,10 @@
               0 4px 12px rgba(46, 36, 28, 0.04);
   overflow: hidden;
   padding: 12px;
-  margin-bottom: 12px;
+  /* Explicit margins: ion-card ships its own horizontal margin, which made
+     the order-summary card narrower than the sibling promo / gift-card
+     sections. Zero it so every card on the review step is the same width. */
+  margin: 0 0 12px;
 }
 
 .cart-card__title {

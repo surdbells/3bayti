@@ -85,15 +85,30 @@ class GiftCardRepository extends EntityRepository
     }
 
     /**
-     * All spendable cards for a user (active or partially_used, not expired).
-     * Used at checkout to show available balance.
+     * The user's WALLET: cards they may actually spend (active or
+     * partially_used, unexpired, with balance).
+     *
+     * Ownership mirrors GiftCard::isSpendableBy():
+     *   - cards assigned to them (they redeemed the code — including a buyer
+     *     who claimed back a card they had bought as a gift), OR
+     *   - cards they bought for THEMSELVES: no recipient was designated
+     *     (no name / email / phone) and nobody has claimed them.
+     *
+     * A card bought as a gift for someone else therefore never shows up in
+     * the buyer's spendable balance — the recipient's to spend, unless the
+     * buyer explicitly redeems it back to their own account.
+     *
      * @return list<GiftCard>
      */
     public function findSpendableByUser(User $user): array
     {
         /** @var list<GiftCard> $results */
         $results = $this->createQueryBuilder('g')
-            ->where('g.recipientUser = :uid OR g.buyerUser = :uid')
+            ->where(
+                'g.recipientUser = :uid'
+                . ' OR (g.buyerUser = :uid AND g.recipientUser IS NULL'
+                . ' AND g.recipientName IS NULL AND g.recipientEmail IS NULL AND g.recipientPhone IS NULL)'
+            )
             ->andWhere("g.status IN ('active', 'partially_used')")
             ->andWhere('(g.expiresAt IS NULL OR g.expiresAt > CURRENT_TIMESTAMP())')
             ->andWhere('g.balance > 0')

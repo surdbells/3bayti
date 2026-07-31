@@ -4,6 +4,7 @@ namespace Bayti\Api\Http\Controllers\GiftCard;
 use Bayti\Api\Domain\Cart\Cart;
 use Bayti\Api\Domain\Cart\CartItem;
 use Bayti\Api\Domain\Cart\CartRepository;
+use Bayti\Api\Domain\Cart\DeliveryFeeCalculator;
 use Bayti\Api\Domain\GiftCard\GiftCardWalletService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
@@ -46,6 +47,7 @@ final class PreviewGiftWalletForCartController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly DeliveryFeeCalculator $delivery,
     ) {}
     protected function getResponseFactory(): ResponseFactoryInterface { return $this->responseFactory; }
 
@@ -63,12 +65,18 @@ final class PreviewGiftWalletForCartController
             throw HttpException::badRequest('Your cart is empty.');
         }
 
-        $cartTotal = '0.00';
+        // The payable total the wallet must cover — subtotal PLUS delivery,
+        // the same arithmetic checkout uses (Order::computeTotal). Sizing the
+        // draw off the item subtotal alone under-applied the wallet: a card
+        // that covers the whole order still showed a delivery-fee remainder.
+        $subtotal = '0.00';
         /** @var CartItem $item */
         foreach ($cart->getItems() as $item) {
-            $line      = bcmul($item->getUnitPriceSnapshot(), (string) $item->getQuantity(), 2);
-            $cartTotal = bcadd($cartTotal, $line, 2);
+            $line     = bcmul($item->getUnitPriceSnapshot(), (string) $item->getQuantity(), 2);
+            $subtotal = bcadd($subtotal, $line, 2);
         }
+        $deliveryFee = $this->delivery->forCart($cart);
+        $cartTotal   = bcadd($subtotal, $deliveryFee, 2);
 
         $wallet  = new GiftCardWalletService($this->em);
         $cards   = $wallet->spendableCards($user);
@@ -83,6 +91,8 @@ final class PreviewGiftWalletForCartController
             'applied'        => $applied,
             'gateway_amount' => $gateway,
             'cart_total'     => $cartTotal,
+            'subtotal'       => $subtotal,
+            'delivery_fee'   => $deliveryFee,
             'fully_covered'  => bccomp($gateway, '0.00', 2) === 0 && bccomp($applied, '0.00', 2) > 0,
             'currency'       => 'AED',
             'cards_used'     => array_map(

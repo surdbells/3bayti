@@ -575,52 +575,9 @@ ion-modal ion-content {
   --background: var(--profile-bg);
 }
 
-// ── Gift card balance widget ───────────────────────────────────────
-
-.gc-balance-widget {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: linear-gradient(135deg, #2E241C 0%, #4A3728 100%);
-  border-radius: var(--ax-radius-lg, 16px);
-  padding: 14px 16px;
-  margin: 4px 0 12px;
-  cursor: pointer;
-  transition: opacity 0.15s;
-  &:active { opacity: 0.88; }
-
-  &__left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    color: #fff;
-    ion-icon, ax-icon { color: #C8B88A; }
-  }
-
-  &__label {
-    font-size: 12px;
-    color: rgba(255,255,255,0.65);
-    font-weight: 500;
-  }
-
-  &__amount {
-    font-size: 18px;
-    font-weight: 800;
-    color: #fff;
-  }
-
-  &__right {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    color: rgba(255,255,255,0.5);
-  }
-
-  &__count {
-    font-size: 12px;
-    font-weight: 500;
-  }
-}
+// The standalone .gc-balance-widget strip was removed: the gift-card balance
+// now lives INSIDE the gift promo card (see .gift-promo__balance below), so a
+// customer with a balance no longer pays an extra band of page height.
 
 // ── Gift-card advertorial promo card ───────────────────────────────
 //
@@ -695,6 +652,73 @@ ion-modal ion-content {
     display: flex;
     flex-direction: column;
     gap: 2px;
+  }
+
+  // Balance inline in the collapsed header — one extra text line, no band.
+  &__balance {
+    margin-top: 2px;
+    font-size: 12px;
+    color: rgba(120, 84, 0, 0.75);
+
+    strong {
+      font-weight: 800;
+      color: #7A5400;
+    }
+  }
+
+  // Expanded: a tappable row into the wallet (replaces the old dark strip).
+  &__balance-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border: 1px solid rgba(196, 154, 56, 0.35);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    text-align: start;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s ease;
+
+    &:active { background: rgba(255, 255, 255, 0.9); }
+  }
+
+  &__balance-row-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    color: #7A5400;
+  }
+
+  &__balance-row-right {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: rgba(120, 84, 0, 0.6);
+    flex-shrink: 0;
+  }
+
+  &__balance-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(120, 84, 0, 0.7);
+  }
+
+  &__balance-amount {
+    display: block;
+    font-size: 16px;
+    font-weight: 800;
+    color: #4A3728;
+  }
+
+  &__balance-count {
+    font-size: 12px;
+    font-weight: 600;
   }
 
   &__chevron {
