@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 263 route keys.
+ * 275 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -22,6 +22,7 @@ export type V3RouteKey =
   | 'DELETE /me/device-tokens'
   | 'DELETE /me/measurements/:id'
   | 'DELETE /me/reviews/:id'
+  | 'DELETE /me/social-identities/:provider'
   | 'DELETE /me/wishlist/:productId'
   | 'DELETE /me/wishlist/labels/:id'
   | 'DELETE /vendor/coupons/:id'
@@ -40,6 +41,7 @@ export type V3RouteKey =
   | 'GET /admin/customers'
   | 'GET /admin/gift-cards'
   | 'GET /admin/gift-cards/:id'
+  | 'GET /admin/gift-cards/redemptions'
   | 'GET /admin/notifications'
   | 'GET /admin/orders'
   | 'GET /admin/orders/:id'
@@ -65,6 +67,7 @@ export type V3RouteKey =
   | 'GET /campaigns/:slug'
   | 'GET /campaigns/active'
   | 'GET /cart'
+  | 'GET /cart/gift-wallet'
   | 'GET /categories'
   | 'GET /categories/:slug'
   | 'GET /chat/conversation-stores'
@@ -76,6 +79,7 @@ export type V3RouteKey =
   | 'GET /gift-cards/balance'
   | 'GET /gift-cards/mine'
   | 'GET /gift-cards/themes'
+  | 'GET /gift-cards/wallet'
   | 'GET /health'
   | 'GET /me/addresses'
   | 'GET /me/addresses/:id'
@@ -84,6 +88,7 @@ export type V3RouteKey =
   | 'GET /me/profile'
   | 'GET /me/recommendations'
   | 'GET /me/reviews'
+  | 'GET /me/social-identities'
   | 'GET /me/styles'
   | 'GET /me/wishlist'
   | 'GET /me/wishlist/labels'
@@ -109,6 +114,7 @@ export type V3RouteKey =
   | 'GET /orders'
   | 'GET /orders/:id'
   | 'GET /products'
+  | 'GET /products/:productId/reviews'
   | 'GET /products/:slug'
   | 'GET /products/:slug/recommendations'
   | 'GET /products/by-legacy-id/:id'
@@ -178,6 +184,7 @@ export type V3RouteKey =
   | 'PATCH /vendor/store/payment'
   | 'PATCH /vendor/store/status'
   | 'PATCH /vendor/store/tax'
+  | 'POST /account/deletion-request'
   | 'POST /admin/brands'
   | 'POST /admin/campaigns'
   | 'POST /admin/categories'
@@ -219,6 +226,7 @@ export type V3RouteKey =
   | 'POST /auth/reset'
   | 'POST /auth/reset/confirm'
   | 'POST /auth/send-otp'
+  | 'POST /auth/social'
   | 'POST /auth/validate-email'
   | 'POST /auth/validate-phone'
   | 'POST /cart/gift-card'
@@ -236,11 +244,15 @@ export type V3RouteKey =
   | 'POST /me/avatar'
   | 'POST /me/device-tokens'
   | 'POST /me/measurements'
+  | 'POST /me/phone'
+  | 'POST /me/phone/verify'
+  | 'POST /me/social-identities'
   | 'POST /me/styles'
   | 'POST /me/wishlist'
   | 'POST /me/wishlist/labels'
   | 'POST /orders/:id/cancel'
   | 'POST /payment/webhook/noon'
+  | 'POST /products/:productId/reviews'
   | 'POST /reviews/:id/helpful'
   | 'POST /vendor-applications'
   | 'POST /vendor/chat/conversations/:uuid/messages'
@@ -288,6 +300,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /me/device-tokens',
   'DELETE /me/measurements/:id',
   'DELETE /me/reviews/:id',
+  'DELETE /me/social-identities/:provider',
   'DELETE /me/wishlist/:productId',
   'DELETE /me/wishlist/labels/:id',
   'DELETE /vendor/coupons/:id',
@@ -306,6 +319,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/customers',
   'GET /admin/gift-cards',
   'GET /admin/gift-cards/:id',
+  'GET /admin/gift-cards/redemptions',
   'GET /admin/notifications',
   'GET /admin/orders',
   'GET /admin/orders/:id',
@@ -331,6 +345,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /campaigns/:slug',
   'GET /campaigns/active',
   'GET /cart',
+  'GET /cart/gift-wallet',
   'GET /categories',
   'GET /categories/:slug',
   'GET /chat/conversation-stores',
@@ -342,6 +357,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /gift-cards/balance',
   'GET /gift-cards/mine',
   'GET /gift-cards/themes',
+  'GET /gift-cards/wallet',
   'GET /health',
   'GET /me/addresses',
   'GET /me/addresses/:id',
@@ -350,6 +366,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /me/profile',
   'GET /me/recommendations',
   'GET /me/reviews',
+  'GET /me/social-identities',
   'GET /me/styles',
   'GET /me/wishlist',
   'GET /me/wishlist/labels',
@@ -375,6 +392,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /orders',
   'GET /orders/:id',
   'GET /products',
+  'GET /products/:productId/reviews',
   'GET /products/:slug',
   'GET /products/:slug/recommendations',
   'GET /products/by-legacy-id/:id',
@@ -444,6 +462,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PATCH /vendor/store/payment',
   'PATCH /vendor/store/status',
   'PATCH /vendor/store/tax',
+  'POST /account/deletion-request',
   'POST /admin/brands',
   'POST /admin/campaigns',
   'POST /admin/categories',
@@ -485,6 +504,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /auth/reset',
   'POST /auth/reset/confirm',
   'POST /auth/send-otp',
+  'POST /auth/social',
   'POST /auth/validate-email',
   'POST /auth/validate-phone',
   'POST /cart/gift-card',
@@ -502,11 +522,15 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /me/avatar',
   'POST /me/device-tokens',
   'POST /me/measurements',
+  'POST /me/phone',
+  'POST /me/phone/verify',
+  'POST /me/social-identities',
   'POST /me/styles',
   'POST /me/wishlist',
   'POST /me/wishlist/labels',
   'POST /orders/:id/cancel',
   'POST /payment/webhook/noon',
+  'POST /products/:productId/reviews',
   'POST /reviews/:id/helpful',
   'POST /vendor-applications',
   'POST /vendor/chat/conversations/:uuid/messages',

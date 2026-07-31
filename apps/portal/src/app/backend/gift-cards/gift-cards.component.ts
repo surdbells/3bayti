@@ -38,6 +38,20 @@ interface GiftCardRow extends Record<string, unknown> {
   created_at: string;
 }
 
+/** A row from GET /admin/gift-cards/redemptions — one checkout debit. */
+interface RedemptionRow extends Record<string, unknown> {
+  id: number | string;
+  amount: string;
+  currency: string;
+  balance_after: string;
+  order_reference: string;
+  created_at: string;
+  code: string;
+  card_status: string;
+  purchaser_email: string;
+  purchaser_name: string;
+}
+
 /** Filter-panel state, sent to GET /admin/gift-cards when present. */
 interface GiftCardFilters {
   status: string;
@@ -102,6 +116,9 @@ interface GiftCardFilters {
       <div class="ax-tabs-list" role="tablist">
         <button type="button" class="ax-tab" role="tab" [attr.aria-selected]="tab === 'issued'" [class.ax-tab-active]="tab === 'issued'" (click)="tab = 'issued'">
           {{ 'gift_cards_admin.tab_issued' | translate }}
+        </button>
+        <button type="button" class="ax-tab" role="tab" [attr.aria-selected]="tab === 'redemptions'" [class.ax-tab-active]="tab === 'redemptions'" (click)="setRedemptionsTab()">
+          {{ 'gift_cards_admin.tab_redemptions' | translate }}
         </button>
         <button type="button" class="ax-tab" role="tab" [attr.aria-selected]="tab === 'themes'" [class.ax-tab-active]="tab === 'themes'" (click)="setThemesTab()">
           {{ 'gift_cards_admin.tab_themes' | translate }}
@@ -189,6 +206,60 @@ interface GiftCardFilters {
             <span class="ax-badge" [class.ax-badge-success]="row.is_delivered" [class.ax-badge-neutral]="!row.is_delivered">
               {{ (row.is_delivered ? 'gift_cards_admin.delivered_yes' : 'gift_cards_admin.delivered_no') | translate }}
             </span>
+          </ng-template>
+        </app-ax-data-table>
+      </section>
+    </ng-container>
+
+    <!--
+      Redemptions: gift-card value actually SPENT at checkout (every debit
+      tied to an order — a single card or the customer's whole wallet).
+      Complements the per-card ledger with the cross-card picture.
+    -->
+    <ng-container *ngIf="tab === 'redemptions'">
+      <section class="ax-card ax-mb-4">
+        <div class="ax-filter-grid">
+          <label class="ax-field">
+            <span class="ax-field-label">{{ 'gift_cards_admin.redeemed_from' | translate }}</span>
+            <input type="date" class="ax-input ax-input-sm" [(ngModel)]="redemptionFilters.from" (change)="applyRedemptionFilters()" />
+          </label>
+          <label class="ax-field">
+            <span class="ax-field-label">{{ 'gift_cards_admin.redeemed_to' | translate }}</span>
+            <input type="date" class="ax-input ax-input-sm" [(ngModel)]="redemptionFilters.to" (change)="applyRedemptionFilters()" />
+          </label>
+          <div class="ax-field ax-filter-actions">
+            <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="clearRedemptionFilters()">
+              <app-icon name="close" aria-hidden="true"></app-icon> {{ 'gift_cards_admin.filter_clear' | translate }}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Summary over the whole filtered range (not just this page). -->
+      <section class="ax-card ax-mb-4">
+        <div class="ax-flex ax-gap-6 ax-items-center ax-flex-wrap">
+          <div>
+            <div class="ax-field-label">{{ 'gift_cards_admin.total_redeemed' | translate }}</div>
+            <div class="ax-page-title" style="margin:0">{{ redemptionSummary.total_redeemed }} {{ redemptionSummary.currency }}</div>
+          </div>
+          <div>
+            <div class="ax-field-label">{{ 'gift_cards_admin.redemption_count' | translate }}</div>
+            <div class="ax-page-title" style="margin:0">{{ redemptionSummary.redemption_count }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ax-card ax-p-0">
+        <app-ax-data-table [config]="redemptionConfig" [dataSource]="redemptionSource">
+          <ng-template axCell="code" let-row>
+            <span class="ax-font-medium ax-text-primary" style="font-variant-numeric:tabular-nums">{{ row.code }}</span>
+          </ng-template>
+          <ng-template axCell="amount" let-row>
+            <span class="ax-font-medium">−{{ row.amount }} {{ row.currency }}</span>
+          </ng-template>
+          <ng-template axCell="purchaser_email" let-row>
+            <span class="ax-text-primary">{{ row.purchaser_name || '—' }}</span>
+            <span *ngIf="row.purchaser_email" class="ax-block ax-text-sm ax-text-secondary">{{ row.purchaser_email }}</span>
           </ng-template>
         </app-ax-data-table>
       </section>
@@ -288,7 +359,7 @@ export class GiftCardsAdminComponent implements OnInit {
   private readonly toast = inject(HotToastService);
   private readonly i18n = inject(I18nService);
 
-  tab: 'issued' | 'themes' = 'issued';
+  tab: 'issued' | 'redemptions' | 'themes' = 'issued';
 
   filters: GiftCardFilters = {
     status: '', min_balance: '', max_balance: '',
@@ -297,6 +368,13 @@ export class GiftCardsAdminComponent implements OnInit {
 
   config!: AxDataTableConfig<GiftCardRow>;
   dataSource!: AxServerDataSource<GiftCardRow>;
+
+  // Redemptions (gift-card value spent at checkout)
+  redemptionFilters = { from: '', to: '' };
+  redemptionConfig!: AxDataTableConfig<RedemptionRow>;
+  redemptionSource!: AxServerDataSource<RedemptionRow>;
+  redemptionSummary = { total_redeemed: '0.00', redemption_count: 0, currency: 'AED' };
+  private redemptionsBuilt = false;
 
   // Themes (secondary tab)
   themes: any[] = [];
@@ -454,6 +532,89 @@ export class GiftCardsAdminComponent implements OnInit {
 
   openDetail(row: GiftCardRow) {
     this.router.navigate(['/admin-gift-cards', row.id]);
+  }
+
+  // ── Redemptions (gift-card value spent at checkout) ─────────────────
+
+  setRedemptionsTab() {
+    this.tab = 'redemptions';
+    if (this.redemptionsBuilt) return;
+    this.redemptionsBuilt = true;
+    this.redemptionSource = new AxServerDataSource<RedemptionRow>((q) => this.fetchRedemptions(q));
+    this.redemptionConfig = {
+      tableId: 'admin-gift-card-redemptions',
+      mode: 'server',
+      rowId: 'id',
+      pageSize: 20,
+      pageSizeOptions: [20, 50, 100],
+      globalSearch: false,
+      stickyHeader: true,
+      hover: true,
+      emptyTitle: 'No redemptions yet',
+      emptyDescription: 'No gift-card balance has been spent at checkout in this period.',
+      columns: [
+        { key: 'created_at', label: 'When', sticky: 'left', width: '12rem',
+          format: (v) => (v ? new Date(String(v)).toLocaleString() : '—') },
+        { key: 'code', label: 'Card', width: '13rem' },
+        { key: 'amount', label: 'Redeemed', align: 'right' },
+        { key: 'order_reference', label: 'Order' },
+        { key: 'purchaser_email', label: 'Customer', hideOnMobile: true },
+        { key: 'balance_after', label: 'Balance after', align: 'right', hideOnMobile: true,
+          value: (r) => `${r.balance_after} ${r.currency}` },
+      ],
+    };
+  }
+
+  private fetchRedemptions(query: AxQueryState) {
+    const q: any = {
+      limit: query.pageSize,
+      offset: query.pageIndex * query.pageSize,
+    };
+    if (this.redemptionFilters.from) q.from = this.redemptionFilters.from;
+    if (this.redemptionFilters.to) q.to = this.redemptionFilters.to;
+
+    return this.adapter.get_v3('GET /admin/gift-cards/redemptions', { query: q }).pipe(
+      map((response: any): AxServerFetchResult<RedemptionRow> => {
+        const raw: any[] = Array.isArray(response?.data) ? response.data : [];
+        // Summary covers the whole filtered range, not just this page.
+        const s = response?.summary;
+        if (s) {
+          this.redemptionSummary = {
+            total_redeemed: s.total_redeemed ?? '0.00',
+            redemption_count: Number(s.redemption_count ?? 0),
+            currency: s.currency ?? 'AED',
+          };
+        }
+        const rows = raw.map((t) => this.mapRedemption(t));
+        return { rows, total: response?.meta?.total ?? rows.length };
+      }),
+      catchError((err: any) => {
+        this.toast.error(this.loadErrorMessage(err));
+        return throwError(() => err);
+      }),
+    );
+  }
+
+  private mapRedemption(t: any): RedemptionRow {
+    return {
+      id: t.id,
+      amount: t.amount ?? '0.00',
+      currency: this.redemptionSummary.currency,
+      balance_after: t.balance_after ?? '0.00',
+      order_reference: t.order_reference ?? '—',
+      created_at: t.created_at ?? '',
+      code: t.card?.code ?? '',
+      card_status: t.card?.status ?? '',
+      purchaser_email: t.purchaser?.email ?? '',
+      purchaser_name: t.purchaser?.name ?? '',
+    };
+  }
+
+  applyRedemptionFilters() { this.redemptionSource?.retry(); }
+
+  clearRedemptionFilters() {
+    this.redemptionFilters = { from: '', to: '' };
+    this.redemptionSource?.retry();
   }
 
   // ── Themes (secondary tab) ──────────────────────────────────────────
