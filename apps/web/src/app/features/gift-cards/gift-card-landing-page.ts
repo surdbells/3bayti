@@ -287,6 +287,12 @@ type LoadState = 'loading' | 'ready' | 'error';
                     [ngModel]="scheduledAt()"
                     (ngModelChange)="scheduledAt.set($event)"
                   />
+                  <!-- Scheduling needs someone to deliver to (server rule). -->
+                  @if (scheduleNeedsContact()) {
+                    <p class="gc__hint gc__hint--error" role="alert" data-testid="gc-schedule-needs-contact">
+                      {{ 'giftCards.landing.scheduleNeedsContact' | translate }}
+                    </p>
+                  }
                 }
               </div>
 
@@ -443,12 +449,27 @@ export class GiftCardLandingPageComponent implements OnInit {
     return len >= parsed.country.nationalDigits.min && len <= parsed.country.nationalDigits.max;
   });
 
+  /**
+   * A card SCHEDULED for a later date must carry at least one recipient
+   * contact — otherwise there is nobody to deliver to when the date arrives.
+   * Mirrors the server rule in PurchaseGiftCardController. Contact stays fully
+   * optional for immediate (unscheduled) cards: the buyer shares the code.
+   */
+  protected readonly scheduleNeedsContact = computed<boolean>(
+    () =>
+      this.scheduleEnabled() &&
+      this.scheduledAt().trim() !== '' &&
+      this.recipientEmail().trim() === '' &&
+      this.recipientPhone().trim() === '',
+  );
+
   protected readonly canSubmit = computed<boolean>(
     () =>
       this.loadState() === 'ready' &&
       this.amountValid() &&
       this.recipientEmailValid() &&
       this.recipientPhoneValid() &&
+      !this.scheduleNeedsContact() &&
       !this.submitting(),
   );
 
@@ -604,6 +625,13 @@ export class GiftCardLandingPageComponent implements OnInit {
         gift_card_purchase_id: card.id,
       });
       markGiftCardCheckout(res.order_reference);
+      /* A gift-card PURCHASE always goes through Noon, so a missing
+         checkout_url is a server-side anomaly (gateway_skipped applies only
+         to gift-card-funded CART orders). Fail into the catch below rather
+         than navigating nowhere. */
+      if (!res.checkout_url) {
+        throw new Error('checkout_url missing for gift-card purchase');
+      }
       this.redirectTo(res.checkout_url);
     } catch (err) {
       this.submitting.set(false);

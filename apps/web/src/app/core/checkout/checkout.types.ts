@@ -35,10 +35,19 @@ export const EMPTY_CHECKOUT_STATE: CheckoutState = {
  * Server response from POST /v3/checkout/initiate.
  */
 export interface InitiateCheckoutResponse {
-  checkout_url: string;
+  /** Null when the gateway was skipped (gift card / wallet covered it all). */
+  checkout_url: string | null;
   order_reference: string;
   provider_order_ref: string;
   order_id: number;
+  /**
+   * True when a gift card or the gift wallet covered the FULL order total:
+   * no Noon round-trip happened and the order is already paid, so the client
+   * skips the payment handoff and goes straight to the return/success page.
+   */
+  gateway_skipped?: boolean;
+  /** Amount drawn from gift-card balance (aggregate when the wallet is used). */
+  gift_card_amount?: string;
 }
 
 /**
@@ -67,6 +76,14 @@ export interface InitiateCheckoutInput {
    * only the remainder via Noon.
    */
   gift_card_code?: string | null;
+  /**
+   * Apply the customer's whole gift WALLET (aggregate balance across all
+   * their spendable cards) instead of a single code. The server draws across
+   * the cards soonest-expiry first, then charges Noon the remainder — or
+   * skips the gateway entirely when the wallet covers the order. Ignored when
+   * gift_card_code is also supplied (an explicit code wins).
+   */
+  use_gift_wallet?: boolean;
 }
 
 /**

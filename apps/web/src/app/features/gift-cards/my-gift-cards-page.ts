@@ -203,6 +203,11 @@ export class MyGiftCardsPageComponent implements OnInit {
         gift_card_purchase_id: card.id,
       });
       markGiftCardCheckout(res.order_reference);
+      /* Resuming a gift-card purchase always goes through Noon; a missing
+         checkout_url is an anomaly, so surface the resume error state. */
+      if (!res.checkout_url) {
+        throw new Error('checkout_url missing for gift-card purchase');
+      }
       this.redirectTo(res.checkout_url);
     } catch {
       this.resumingId.set(null);

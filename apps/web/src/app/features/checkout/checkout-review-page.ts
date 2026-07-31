@@ -16,7 +16,7 @@ import { CartService } from '../../core/cart';
 import type { CartItem, CartQuoteResponse } from '../../core/cart';
 import { CheckoutService } from '../../core/checkout';
 import { GiftCardService } from '../gift-cards/gift-card.service';
-import type { GiftCardCartPreview } from '../gift-cards/gift-card.model';
+import type { GiftCardCartPreview, GiftWalletCartPreview } from '../gift-cards/gift-card.model';
 import { AuthService } from '../../core/auth/auth.service';
 import { AUTH_ERROR_CODES } from '../../core/auth/auth.types';
 import { AddressService } from '../../core/addresses';
@@ -233,6 +233,69 @@ const CHECKOUT_REVIEW_PATH = '/checkout/review';
             </div>
           </ng-template>
         </section>
+
+        @if (walletAvailable() || walletApplied()) {
+          <section class="checkout-page__section" aria-labelledby="giftwallet-heading">
+            <h2 id="giftwallet-heading" class="checkout-page__section-title">
+              {{ 'checkout.review.giftWalletHeading' | translate }}
+            </h2>
+
+            @if (!walletApplied()) {
+              <div class="review-giftwallet" data-testid="review-giftwallet">
+                <div class="review-giftwallet__info">
+                  <span class="review-giftwallet__balance" data-testid="review-giftwallet-balance">
+                    {{ walletPreview()!.currency }} {{ walletPreview()!.wallet_balance }}
+                  </span>
+                  <span class="review-giftwallet__label">
+                    {{ 'checkout.review.giftWalletAvailable' | translate }}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  class="review-promo__btn"
+                  (click)="onApplyWallet()"
+                  [disabled]="isInitiating()"
+                  data-testid="review-giftwallet-apply"
+                >
+                  {{ 'checkout.review.giftWalletApply' | translate }}
+                </button>
+              </div>
+            } @else {
+              <div class="review-giftcard-applied" data-testid="review-giftwallet-applied">
+                <div class="review-giftcard-applied__head">
+                  <span class="review-promo-applied__status">
+                    {{ 'checkout.review.giftWalletApplied' | translate }}
+                  </span>
+                  <button
+                    type="button"
+                    class="review-promo-applied__remove"
+                    (click)="onRemoveWallet()"
+                    data-testid="review-giftwallet-remove"
+                  >
+                    {{ 'checkout.review.giftCardRemove' | translate }}
+                  </button>
+                </div>
+                <dl class="review-giftcard-applied__amounts checkout-summary">
+                  <div class="checkout-summary__line">
+                    <dt>{{ 'checkout.review.giftCardCredit' | translate }}</dt>
+                    <dd>−{{ walletPreview()!.currency }} {{ walletPreview()!.applied }}</dd>
+                  </div>
+                  <div class="checkout-summary__line checkout-summary__line--total">
+                    <dt>{{ 'checkout.review.amountDue' | translate }}</dt>
+                    <dd data-testid="review-giftwallet-due">
+                      {{ walletPreview()!.currency }} {{ walletPreview()!.gateway_amount }}
+                    </dd>
+                  </div>
+                </dl>
+                @if (walletPreview()!.fully_covered) {
+                  <p class="review-giftwallet__covered" data-testid="review-giftwallet-covered">
+                    {{ 'checkout.review.giftWalletCovers' | translate }}
+                  </p>
+                }
+              </div>
+            }
+          </section>
+        }
 
         <section class="checkout-page__section" aria-labelledby="giftcard-heading">
           <h2 id="giftcard-heading" class="checkout-page__section-title">
@@ -476,6 +539,44 @@ export class CheckoutReviewPageComponent implements OnInit {
   protected readonly giftError = signal<'none' | 'notfound' | 'notApplicable' | 'error'>('none');
   protected readonly appliedGiftCode = computed<string | null>(() => this._giftPreview()?.code ?? null);
 
+  /* -----------------------------------------------------------------
+     Gift WALLET — one-tap alternative to typing a single code. Previews
+     GET /v3/cart/gift-wallet (aggregate balance across every spendable
+     card the customer owns/redeemed) and, when applied, sends
+     use_gift_wallet=true to initiate. Mutually exclusive with the single
+     code above, mirroring the server rule that an explicit code wins.
+     ----------------------------------------------------------------- */
+  private readonly _walletPreview = signal<GiftWalletCartPreview | null>(null);
+  protected readonly walletPreview = this._walletPreview.asReadonly();
+  protected readonly walletApplied = signal<boolean>(false);
+
+  /** Wallet has spendable balance and no single card is applied. */
+  protected readonly walletAvailable = computed<boolean>(() => {
+    const w = this._walletPreview();
+    return w !== null && Number(w.wallet_balance) > 0 && this.appliedGiftCode() === null;
+  });
+
+  /** Load (or refresh) the wallet preview for the current cart. */
+  private async loadWalletPreview(): Promise<void> {
+    try {
+      this._walletPreview.set(await this.giftCards.previewWalletApply());
+    } catch {
+      /* Non-fatal: the wallet section just stays hidden. */
+      this._walletPreview.set(null);
+    }
+  }
+
+  /** One-tap apply. Clears any applied single card (server: code wins). */
+  protected onApplyWallet(): void {
+    this._giftPreview.set(null);
+    this.giftError.set('none');
+    this.walletApplied.set(true);
+  }
+
+  protected onRemoveWallet(): void {
+    this.walletApplied.set(false);
+  }
+
   constructor() {
     const fb = inject(FormBuilder).nonNullable;
     this.promoForm = fb.group({
@@ -502,6 +603,9 @@ export class CheckoutReviewPageComponent implements OnInit {
 
     /* Initial quote (may carry a promo code from /cart). */
     await this.refreshQuote(this.checkout.promoCode());
+
+    /* Gift wallet availability for this cart (non-blocking). */
+    await this.loadWalletPreview();
   }
 
   private async resolveShippingAddress(): Promise<void> {
@@ -646,7 +750,21 @@ export class CheckoutReviewPageComponent implements OnInit {
         billing_address_id: billingId,
         shipping_address_id: shippingId,
         gift_card_code: this.appliedGiftCode(),
+        use_gift_wallet: this.walletApplied() ? true : undefined,
       });
+
+      /* Gift card / wallet covered the whole total: the server skipped Noon
+         and the order is already paid, so there is no checkout_url to hand
+         off to. Go straight to the return page, which resolves the order
+         state and shows the confirmation. */
+      if (response.gateway_skipped === true || !response.checkout_url) {
+        this.checkout.clear();
+        await this.router.navigate(['/checkout/return'], {
+          queryParams: { ref: response.order_reference },
+        });
+        return;
+      }
+
       /* Hand off to the payment-handoff page with the URL via router
          state — query params would expose the redirect URL in browser
          history which is fine for Noon but better kept off the URL bar. */

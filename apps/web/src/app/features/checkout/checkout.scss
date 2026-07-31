@@ -737,6 +737,39 @@
   margin: 0.6rem 0 0;
 }
 
+/* Gift wallet — one-tap aggregate balance (review page) */
+.review-giftwallet {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-subtle, rgba(46, 36, 28, 0.12));
+  border-radius: var(--radius-md, 12px);
+  background: var(--color-brand-50, #f9f4ea);
+}
+.review-giftwallet__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+.review-giftwallet__balance {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--color-success-text, #2d7d4f);
+}
+.review-giftwallet__label {
+  font-size: 0.85rem;
+  color: var(--text-muted, #6b5f52);
+}
+.review-giftwallet__covered {
+  margin: 0.6rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-success-text, #2d7d4f);
+}
+
 /* =============================================================================
    Review page — two-column layout (sticky summary + mobile sticky CTA)
    Left: delivery + items. Right: promo, gift card, totals, place order.

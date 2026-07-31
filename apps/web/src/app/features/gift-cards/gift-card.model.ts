@@ -130,6 +130,21 @@ export interface GiftCardCartPreview {
   currency: string;
 }
 
+/**
+ * Result of GET /v3/cart/gift-wallet — how much of the customer's WHOLE gift
+ * wallet (aggregate balance across all their spendable cards) covers the cart.
+ * `cards_used` is the draw plan, soonest-expiry first.
+ */
+export interface GiftWalletCartPreview {
+  wallet_balance: string;
+  applied: string;
+  gateway_amount: string;
+  cart_total: string;
+  fully_covered: boolean;
+  currency: string;
+  cards_used: Array<{ code: string; theme: string; amount: string }>;
+}
+
 /** Denomination bounds (mirror GiftCard::MIN/MAX_DENOMINATION). */
 export const GIFT_CARD_MIN_DENOMINATION = 100;
 export const GIFT_CARD_MAX_DENOMINATION = 10000;

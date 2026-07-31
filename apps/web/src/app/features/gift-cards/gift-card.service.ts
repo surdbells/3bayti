@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   GiftCard,
   GiftCardCartPreview,
+  GiftWalletCartPreview,
   GiftCardPurchaseInput,
   GiftCardTheme,
   GiftCardThemeMeta,
@@ -129,6 +130,19 @@ export class GiftCardService {
       this.http.post<Envelope<GiftCardCartPreview>>(`${V3_BASE}/v3/cart/gift-card`, {
         code: this.normaliseCode(code),
       }),
+    );
+    return res.data;
+  }
+
+  /**
+   * Auth — preview applying the customer's whole gift WALLET (aggregate
+   * balance across every spendable card they own or redeemed) to the current
+   * cart. One-tap alternative to entering a single code. Pure read; the debit
+   * happens at POST /v3/checkout/initiate with use_gift_wallet=true.
+   */
+  async previewWalletApply(): Promise<GiftWalletCartPreview> {
+    const res = await firstValueFrom(
+      this.http.get<Envelope<GiftWalletCartPreview>>(`${V3_BASE}/v3/cart/gift-wallet`),
     );
     return res.data;
   }
