@@ -975,6 +975,8 @@
   "orders_empty_cancelled": "لا توجد طلبات ملغاة",
   "orders_item_singular": "منتج",
   "orders_item_plural": "منتجات",
+  "orders_show_more_items": "عرض {{count}} إضافية",
+  "orders_show_less": "عرض أقل",
   "button_add_all_to_cart": "أضف الكل إلى السلة",
   "text_adding": "جارٍ الإضافة...",
   "text_style_added_to_cart": "تمت إضافة الإطلالة إلى سلتك",

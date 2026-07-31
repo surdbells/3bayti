@@ -44,79 +44,9 @@ ion-content.page-bg {
   }
 }
 
-/* ----- Collapsed order summary (thumbs + count) --------- */
-
-.order-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin: 4px 0 10px;
-}
-
-.thumb-strip {
-  display: flex;
-  align-items: center;
-}
-
-.thumb {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--ax-radius-sm, 8px);
-  object-fit: cover;
-  object-position: top center;
-  background: var(--ax-color-bg-brand-subtle);
-  border: 2px solid var(--ax-color-bg-surface);
-  margin-inline-start: -8px;
-
-  &:first-child {
-    margin-inline-start: 0;
-  }
-}
-
-/* Placeholder tile for items with no image (gift cards especially) — the
-   previous <img src=""> rendered as a broken-image glyph. */
-.thumb--placeholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ax-color-text-secondary);
-  background: var(--ax-color-bg-brand-subtle);
-}
-
-.thumb--gift {
-  color: #8b6f47;
-  background: linear-gradient(135deg, #fbf4e4, #f7ecd4);
-}
-
-.product-image--placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--ax-color-text-secondary);
-  background: var(--ax-color-bg-brand-subtle);
-}
-
-.product-image--gift {
-  color: #8b6f47;
-  background: linear-gradient(135deg, #fbf4e4, #f7ecd4);
-}
-
-.thumb-more {
-  margin-inline-start: 6px;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ax-color-text-secondary);
-}
-
-.item-count {
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--ax-color-text-secondary);
-  flex-shrink: 0;
-}
+/* The collapsed thumbnail-strip + count block was removed: collapsed and
+   expanded now share one item-row layout (see .order-item below), so the card
+   no longer changes shape when toggled. */
 
 /* ----- Order card --------------------------------------- */
 
@@ -141,25 +71,27 @@ ion-content.page-bg {
 .order-info {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.order-id {
-  margin: 0 0 2px;
-  font-family: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--ax-color-text-primary);
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
+/* Date leads — it's what customers scan for. */
 .order-date {
   font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ax-color-text-primary);
+}
+
+/* Reference demoted to a quiet mono line (only needed when quoting support). */
+.order-ref {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
   color: var(--ax-color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ----- Status pills -------------------------------------- */
@@ -214,126 +146,147 @@ ion-content.page-bg {
   }
 }
 
-/* ----- Items horizontal scroll --------------------------- */
+/* ----- Order items (one row per item, collapsed to the first) -----
+   Replaces the old thumbnail-strip + horizontal card-scroller pair. Both
+   states now share the same row layout, so expanding grows the list in place
+   instead of changing the card's shape, and a single-item order no longer
+   renders as a large mostly-empty tile. */
 
-.items-list {
+.order-items {
+  margin: 2px 0 4px;
+}
+
+.order-item {
   display: flex;
-  gap: 10px;
-  margin: 12px -4px;
-  padding: 0 4px 4px;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scroll-snap-type: x mandatory;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.product-card {
-  flex: 0 0 140px;
-  scroll-snap-align: start;
-  cursor: pointer;
-}
-
-.product-image-wrapper {
-  position: relative;
-  width: 140px;
-  height: 140px;
-  border-radius: var(--ax-radius-md);
-  overflow: hidden;
-  background: var(--ax-color-bg-brand-subtle);
-  margin-bottom: 6px;
-}
-
-.product-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: top center;
-}
-
-.item-status-pill {
-  position: absolute;
-  top: 6px;
-  left: 6px;
-  display: inline-flex;
   align-items: center;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-family: inherit;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--ax-palette-neutral-0);
+  gap: 10px;
+  padding: 8px 0;
+  cursor: pointer;
 
-  &--pending {
-    background: rgba(245, 158, 11, 0.95);
+  & + .order-item {
+    border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
   }
 
-  &--processing {
-    background: rgba(59, 130, 246, 0.95);
+  &__thumb {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: var(--ax-radius-sm, 8px);
+    object-fit: cover;
+    object-position: top center;
+    background: var(--ax-color-bg-brand-subtle);
   }
 
-  &--completed,
-  &--delivered {
-    background: rgba(34, 197, 94, 0.95);
+  /* Items with no image (gift cards especially) get a themed tile — the old
+     <img src=""> rendered as a broken-image glyph. */
+  &__thumb--placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ax-color-text-secondary);
   }
 
-  &--cancelled {
-    background: rgba(192, 57, 43, 0.95);
+  &__thumb--gift {
+    color: #8b6f47;
+    background: linear-gradient(135deg, #fbf4e4, #f7ecd4);
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  &__name {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--ax-color-text-primary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  &__meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    font-size: 11px;
+    color: var(--ax-color-text-tertiary, var(--ax-color-text-secondary));
+  }
+
+  /* Per-item fulfilment state, inline instead of floating over the image. */
+  &__status {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    background: var(--ax-color-bg-brand-subtle);
+    color: var(--ax-color-text-secondary);
+
+    &--pending { background: rgba(245, 158, 11, 0.14); color: #a16207; }
+    &--processing { background: rgba(59, 130, 246, 0.14); color: #1d4ed8; }
+    &--completed,
+    &--delivered { background: rgba(34, 197, 94, 0.14); color: #15803d; }
+    &--cancelled { background: rgba(192, 57, 43, 0.14); color: #b91c1c; }
+  }
+
+  &__price {
+    flex-shrink: 0;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ax-color-text-primary);
+    white-space: nowrap;
   }
 }
 
-.product-name {
-  margin: 0 0 2px;
-  font-family: inherit;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--ax-color-text-primary);
-  line-height: 1.3;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.qty {
-  margin: 0;
-  font-family: inherit;
-  font-size: 11px;
-  color: var(--ax-color-text-tertiary);
-}
-
-.price {
-  margin: 2px 0 0;
+/* Quiet expand/collapse — a text row, deliberately NOT a button, so it never
+   competes with the card's primary action. Only rendered when something is
+   actually hidden. */
+.order-items__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  padding: 8px 0 2px;
+  background: none;
+  border: 0;
+  cursor: pointer;
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
   color: var(--ax-color-text-brand);
+  -webkit-tap-highlight-color: transparent;
+
+  &:active { opacity: 0.6; }
 }
 
-/* ----- Order footer (total + toggle) --------------------- */
+/* ----- Order footer (total + primary action) ------------- */
 
 .order-footer {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   padding-top: 10px;
   border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
-}
 
-/* Total + primary actions share a row; Cancel drops to its own full-width
-   row below (it used to wrap into the action group and overlap on narrow
-   screens). */
-.footer-main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
+  &__main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
 }
 
 .total {
@@ -353,25 +306,45 @@ ion-content.page-bg {
 
 .total-amount {
   font-family: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--ax-color-text-brand);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ax-color-text-primary);
 }
 
-.toggle-btn {
-  --color: var(--ax-color-text-brand);
-  --border-color: var(--ax-color-text-brand);
-  --border-radius: 999px;
+/* Single primary action. Plain button (not ion-button) so it sizes to the
+   text and lines up with the total without Ionic's own margins. */
+.order-detail-btn {
+  flex-shrink: 0;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 999px;
+  background: var(--ax-color-text-brand);
+  color: var(--ax-palette-neutral-0, #fff);
   font-family: inherit;
-  font-size: 11px;
-  font-weight: 500;
-  text-transform: none;
-  letter-spacing: 0.02em;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 
-  ax-icon {
-    font-size: 12px;
-    margin-inline-start: 4px;
-  }
+  &:active { transform: scale(0.97); opacity: 0.9; }
+}
+
+/* Cancel is a quiet destructive link on its own row — it used to be a
+   full-width outlined button that read as important as "View details". */
+.order-cancel-link {
+  align-self: flex-start;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ax-color-text-danger, #c0392b);
+  -webkit-tap-highlight-color: transparent;
+
+  &:active { opacity: 0.6; }
 }
 
 /* ----- Empty state -------------------------------------- */

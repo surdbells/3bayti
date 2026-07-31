@@ -975,6 +975,8 @@
   "orders_empty_cancelled": "No cancelled orders",
   "orders_item_singular": "item",
   "orders_item_plural": "items",
+  "orders_show_more_items": "Show {{count}} more",
+  "orders_show_less": "Show less",
   "button_add_all_to_cart": "Add all to cart",
   "text_adding": "Adding...",
   "text_style_added_to_cart": "Style added to your cart",

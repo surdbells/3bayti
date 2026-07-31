@@ -330,14 +330,9 @@ export class MyOrdersPage implements OnInit {
     }
   }
 
-  // Total item count for the card summary (sum of line quantities; falls
-  // back to the number of line items when a quantity is missing).
-  itemCount(order: Order): number {
-    if (!order.items || order.items.length === 0) {
-      return 0;
-    }
-    return order.items.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0);
-  }
+  // itemCount() was dropped with the collapsed thumbnail-strip summary — the
+  // card now lists item rows directly, each showing its own quantity.
+
   // Switch the active status chip and refetch from offset 0 so the list
   // authoritatively reflects the server-side filtered page (rather than
   // filtering the already-loaded — possibly partial — client list).
