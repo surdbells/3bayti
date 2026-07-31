@@ -1,30 +1,133 @@
-<ion-content [fullscreen]="true" class="page-bg">
-  <div class="status-screen">
-    <img loading="lazy"
-         class="status-illustration"
-         src="assets/images/success.gif"
-         alt="" />
+<ion-content [fullscreen]="true" class="success-bg">
+  <div class="success-screen">
 
-    <h1>{{ 'text_purchase_successful' | translate }}</h1>
-    <p>{{ 'text_purchase_successful_subtitle' | translate }}</p>
-
-    <p *ngIf="orderReference" class="order-reference">
-      {{ 'label_order_reference' | translate }} #{{ orderReference }}
-    </p>
-
-    <div class="status-actions">
-      <ion-button *ngIf="orderReference" shape="round" expand="block" fill="outline" [routerLink]="['/my-orders']">
-        <ax-icon name="package" slot="start"></ax-icon>
-        <span>{{ 'button_view_order' | translate }}</span>
-      </ion-button>
-      <ion-button shape="round" expand="block" [routerLink]="['/account']">
-        <ax-icon name="house" slot="start"></ax-icon>
-        <span>{{ 'button_home' | translate }}</span>
-      </ion-button>
-      <ion-button shape="round" expand="block" fill="outline" [routerLink]="['/chat-vendors']">
-        <ax-icon name="message-square-text" slot="start"></ax-icon>
-        <span>{{ 'button_message_vendor' | translate }}</span>
-      </ion-button>
+    <!--
+      Success mark — inline SVG (replaces the old success.gif): crisp at any
+      density, themeable via CSS, no network fetch, and it animates the ring
+      and tick on entry.
+    -->
+    <div class="success-mark" aria-hidden="true">
+      <svg viewBox="0 0 96 96" width="96" height="96" focusable="false">
+        <circle class="success-mark__ring" cx="48" cy="48" r="44" />
+        <circle class="success-mark__disc" cx="48" cy="48" r="34" />
+        <path class="success-mark__tick" d="M32 49.5 L43 60 L64 38" />
+      </svg>
     </div>
+
+    <h1 class="success-title">{{ 'text_purchase_successful' | translate }}</h1>
+    <p class="success-subtitle">{{ 'text_purchase_successful_subtitle' | translate }}</p>
+
+    <!-- Reference + date -->
+    @if (orderReference) {
+      <div class="success-meta">
+        <div class="success-meta__row">
+          <span class="success-meta__label">{{ 'label_order_reference' | translate }}</span>
+          <span class="success-meta__value">{{ orderReference }}</span>
+        </div>
+        @if (order?.date) {
+          <div class="success-meta__row">
+            <span class="success-meta__label">{{ 'order_date' | translate }}</span>
+            <span class="success-meta__value">{{ order?.date }}</span>
+          </div>
+        }
+      </div>
+    }
+
+    @if (isLoading) {
+      <div class="success-loading">
+        <ax-loader></ax-loader>
+      </div>
+    }
+
+    <!-- Full order receipt -->
+    @if (!isLoading && order) {
+      <div class="success-card">
+        @if (order.items.length > 0) {
+          <div class="success-card__section">
+            <div class="success-card__heading">{{ 'text_items' | translate }}</div>
+
+            @for (item of order.items; track $index) {
+              <div class="success-item">
+                @if (item.product_image) {
+                  <img
+                    class="success-item__img"
+                    [src]="item.product_image"
+                    alt=""
+                    loading="lazy"
+                    decoding="async" />
+                }
+                <div class="success-item__info">
+                  <div class="success-item__name">{{ item.product_name }}</div>
+                  <div class="success-item__meta">
+                    {{ 'quantity' | translate }}: {{ item.quantity }}
+                    @if (variantLine(item)) { <span> · {{ variantLine(item) }}</span> }
+                  </div>
+                </div>
+                <div class="success-item__price">
+                  {{ order.currency }} {{ item.subtotal | number:'1.2-2' }}
+                </div>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Money breakdown -->
+        <div class="success-card__section success-card__section--totals">
+          <div class="success-total-row">
+            <span>{{ 'text_subtotal' | translate }}</span>
+            <span>{{ order.currency }} {{ order.subtotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="success-total-row">
+            <span>{{ 'text_delivery' | translate }}</span>
+            <span>{{ order.currency }} {{ order.delivery_fee | number:'1.2-2' }}</span>
+          </div>
+          @if (order.discount > 0) {
+            <div class="success-total-row success-total-row--credit">
+              <span>{{ 'text_discount' | translate }}</span>
+              <span>−{{ order.currency }} {{ order.discount | number:'1.2-2' }}</span>
+            </div>
+          }
+          @if (order.gift_card_amount > 0) {
+            <div class="success-total-row success-total-row--credit">
+              <span>{{ 'text_gift_card_label' | translate }}</span>
+              <span>−{{ order.currency }} {{ order.gift_card_amount | number:'1.2-2' }}</span>
+            </div>
+          }
+          <div class="success-total-row success-total-row--grand">
+            <span>{{ 'total' | translate }}</span>
+            <span>{{ order.currency }} {{ order.total | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <!-- Delivery address -->
+        @if (order.address_lines.length > 0) {
+          <div class="success-card__section">
+            <div class="success-card__heading">{{ 'text_delivery_address' | translate }}</div>
+            <div class="success-address">
+              @if (order.recipient) {
+                <div class="success-address__name">{{ order.recipient }}</div>
+              }
+              @for (line of order.address_lines; track $index) {
+                <div class="success-address__line">{{ line }}</div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 </ion-content>
+
+<!-- Floating actions — same bar language as the product page footer -->
+<ion-footer class="success-footer ion-no-border">
+  <div class="footer-content">
+    <button type="button" class="success-secondary-btn" (click)="goHome()">
+      <ax-icon name="house" [size]="18" />
+      <span>{{ 'button_home' | translate }}</span>
+    </button>
+    <button type="button" class="success-primary-btn" (click)="goToOrder()">
+      <ax-icon name="package" [size]="18" />
+      <span>{{ 'button_view_order' | translate }}</span>
+    </button>
+  </div>
+</ion-footer>

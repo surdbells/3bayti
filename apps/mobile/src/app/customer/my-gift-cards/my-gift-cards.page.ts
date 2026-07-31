@@ -162,19 +162,22 @@ export class MyGiftCardsPage implements OnInit {
     if (this.payingCardId !== null) return; // a resume is already in flight
     if (!card?.id) return;
     this.payingCardId = card.id;
+    const toSuccess = () => {
+      this.payingCardId = null;
+      // Same confirmation as a fresh purchase — the buyer sees the now-active
+      // card rather than being dropped back on the list.
+      this.router.navigate(['/gift-card-success'], {
+        replaceUrl: true,
+        queryParams: { cardId: card.id },
+      });
+    };
     this.giftCardPayment.pay(card.id, this.authToken, {
-      onPaid: () => {
-        this.payingCardId = null;
-        this.load();
-      },
+      onPaid: toSuccess,
       onFailed: () => {
         this.payingCardId = null;
         this.load();
       },
-      onGatewaySkipped: () => {
-        this.payingCardId = null;
-        this.load();
-      },
+      onGatewaySkipped: toSuccess,
     });
   }
 

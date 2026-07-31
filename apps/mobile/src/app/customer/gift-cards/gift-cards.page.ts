@@ -560,7 +560,12 @@ export class GiftCardsPage implements OnInit {
     this.giftCardPayment.pay(giftCardId, this.authToken, {
       onPaid: () => {
         this.ui_checking_out = false;
-        this.router.navigate(['/my-gift-cards']);
+        // Dedicated gift-card confirmation (shows the funded card), not the
+        // product success screen and not a silent drop into the wallet.
+        this.router.navigate(['/gift-card-success'], {
+          replaceUrl: true,
+          queryParams: { cardId: giftCardId },
+        });
       },
       onFailed: () => {
         this.ui_checking_out = false;
@@ -568,7 +573,10 @@ export class GiftCardsPage implements OnInit {
       },
       onGatewaySkipped: () => {
         this.ui_checking_out = false;
-        this.router.navigate(['/my-gift-cards']);
+        this.router.navigate(['/gift-card-success'], {
+          replaceUrl: true,
+          queryParams: { cardId: giftCardId },
+        });
       },
     });
   }

@@ -147,7 +147,16 @@ finalize() {
           this.ui_controls.confirming_transaction = false;
           switch (outcome.kind) {
             case 'paid':
-              this.router.navigate(['/success'], { replaceUrl: true, queryParams: { orderReference: reference } });
+              // Pass the order id through so /success can fetch the full
+              // receipt directly instead of re-resolving it from the status
+              // endpoint.
+              this.router.navigate(['/success'], {
+                replaceUrl: true,
+                queryParams: {
+                  orderReference: reference,
+                  orderId: outcome.status?.order_id ?? undefined,
+                },
+              });
               break;
             case 'failed':
               this.router.navigate(['/failed'], { replaceUrl: true });

@@ -1,0 +1,84 @@
+<ion-content [fullscreen]="true" class="gcs-bg">
+  <div class="gcs-screen">
+
+    <!-- Success mark — inline SVG, same language as the order success screen -->
+    <div class="gcs-mark" aria-hidden="true">
+      <svg viewBox="0 0 96 96" width="96" height="96" focusable="false">
+        <circle class="gcs-mark__ring" cx="48" cy="48" r="44" />
+        <circle class="gcs-mark__disc" cx="48" cy="48" r="34" />
+        <path class="gcs-mark__tick" d="M32 49.5 L43 60 L64 38" />
+      </svg>
+    </div>
+
+    <h1 class="gcs-title">{{ 'gcs_title' | translate }}</h1>
+    <p class="gcs-subtitle">{{ 'gcs_subtitle' | translate }}</p>
+
+    @if (isLoading) {
+      <div class="gcs-loading"><ax-loader></ax-loader></div>
+    }
+
+    @if (!isLoading && card) {
+      <!-- The purchased card -->
+      <div class="gcs-card" [style.--gcs-accent]="accent">
+        <div class="gcs-card__top">
+          @if (themeLabel) {
+            <span class="gcs-card__theme">{{ themeLabel }}</span>
+          }
+          <div class="gcs-card__value">
+            {{ card.currency }} {{ card.denomination | number:'1.2-2' }}
+          </div>
+        </div>
+
+        <button type="button" class="gcs-code" (click)="copyCode()">
+          <span class="gcs-code__label">{{ 'gcs_code_label' | translate }}</span>
+          <span class="gcs-code__value">{{ card.code }}</span>
+          <ax-icon name="copy" [size]="16" />
+        </button>
+
+        <div class="gcs-rows">
+          @if (card.recipient_name) {
+            <div class="gcs-row">
+              <span>{{ 'gcs_recipient' | translate }}</span>
+              <span class="gcs-row__value">{{ card.recipient_name }}</span>
+            </div>
+          }
+          @if (card.scheduled_delivery_at) {
+            <div class="gcs-row">
+              <span>{{ 'gcs_scheduled' | translate }}</span>
+              <span class="gcs-row__value">{{ card.scheduled_delivery_at | date:'d MMM y' }}</span>
+            </div>
+          }
+          @if (card.expires_at) {
+            <div class="gcs-row">
+              <span>{{ 'gcs_expires' | translate }}</span>
+              <span class="gcs-row__value">{{ card.expires_at | date:'d MMM y' }}</span>
+            </div>
+          }
+        </div>
+
+        <p class="gcs-note">
+          {{ (autoDelivered ? 'gcs_note_delivered' : 'gcs_note_share') | translate }}
+        </p>
+      </div>
+    }
+
+    @if (!isLoading && !card) {
+      <!-- Payment succeeded but we couldn't load the card — never an error. -->
+      <p class="gcs-fallback">{{ 'gcs_fallback' | translate }}</p>
+    }
+  </div>
+</ion-content>
+
+<!-- Floating actions — same bar language as the product page footer -->
+<ion-footer class="gcs-footer ion-no-border">
+  <div class="footer-content">
+    <button type="button" class="gcs-secondary-btn" (click)="goHome()">
+      <ax-icon name="house" [size]="18" />
+      <span>{{ 'button_home' | translate }}</span>
+    </button>
+    <button type="button" class="gcs-primary-btn" (click)="goToWallet()">
+      <ax-icon name="gift" [size]="18" />
+      <span>{{ 'gcs_view_cards' | translate }}</span>
+    </button>
+  </div>
+</ion-footer>

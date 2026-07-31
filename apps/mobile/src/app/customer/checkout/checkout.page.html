@@ -323,24 +323,6 @@
     }
   </div>
 
-      <!-- Step 2 footer actions -->
-      <div class="checkout-step-actions">
-        <ion-button (click)="backToAddress()" expand="block" fill="outline" class="ion-margin-vertical" type="button" data-testid="checkout-back">
-          <ax-icon name="arrow-left" slot="start" />
-          {{ 'button_back' | translate }}
-        </ion-button>
-        <ion-button (click)="checkout_initiate()" expand="block" class="checkout-cta ion-margin-vertical" type="button">
-          <ax-icon name="shopping-cart" slot="start" />
-          @if ((giftCard.applied || wallet.applied) && gcGatewayAmount === 0) {
-            {{ 'text_complete_with_gift_card' | translate }}
-          } @else if (giftCard.applied || wallet.applied) {
-            {{ 'text_pay_aed_amount' | translate: { amount: (gcGatewayAmount | number:'1.2-2') } }}
-          } @else {
-            {{ 'button_checkout' | translate }}
-          }
-        </ion-button>
-      </div>
-
       @if (ui_controls.checking_out){
         <div class="loader-row">
           <ax-loader></ax-loader>
@@ -483,3 +465,46 @@
     </div>
   </ax-bottom-sheet>
 </ion-content>
+
+<!--
+  Floating action bar (step 2 / review) — mirrors the product page's
+  price + add-to-cart footer: surface background, lifted shadow, safe-area
+  padding, amount on the left, gradient CTA on the right. Back sits beside the
+  CTA as a compact icon button so both float above the scrolling review.
+-->
+@if (step === 2 && !ui_controls.checking_out) {
+  <ion-footer class="checkout-footer ion-no-border">
+    <div class="footer-content">
+      <div class="price-display">
+        <span class="price-label">{{ 'text_amount_due' | translate }}</span>
+        <span class="price-value">AED {{ amountDue | number:'1.2-2' }}</span>
+      </div>
+
+      <button
+        type="button"
+        class="checkout-back-btn"
+        (click)="backToAddress()"
+        [attr.aria-label]="'button_back' | translate"
+        data-testid="checkout-back">
+        <ax-icon name="arrow-left" [size]="20" />
+      </button>
+
+      <button
+        type="button"
+        class="checkout-pay-btn"
+        (click)="checkout_initiate()"
+        data-testid="checkout-cta">
+        <ax-icon name="shopping-cart" [size]="18" />
+        <span>
+          @if ((giftCard.applied || wallet.applied) && gcGatewayAmount === 0) {
+            {{ 'text_complete_with_gift_card' | translate }}
+          } @else if (giftCard.applied || wallet.applied) {
+            {{ 'text_pay_aed_amount' | translate: { amount: (gcGatewayAmount | number:'1.2-2') } }}
+          } @else {
+            {{ 'button_checkout' | translate }}
+          }
+        </span>
+      </button>
+    </div>
+  </ion-footer>
+}

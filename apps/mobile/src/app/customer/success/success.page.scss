@@ -1,0 +1,300 @@
+/* ============================================================
+   POST-PAYMENT SUCCESS SCREEN
+   Centred success mark + full order receipt, with a floating
+   action bar that matches the product page footer.
+   ============================================================ */
+
+.success-bg {
+  --background: var(--ax-color-bg-page, #fdf8f0);
+}
+
+.success-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 20px 24px;
+  text-align: center;
+}
+
+/* ── Success mark (inline SVG) ───────────────────────────── */
+
+.success-mark {
+  margin-bottom: 20px;
+
+  svg {
+    display: block;
+  }
+
+  &__ring {
+    fill: none;
+    stroke: var(--ax-color-text-success, #2d7d4f);
+    stroke-width: 2;
+    opacity: 0.18;
+    transform-origin: 50% 50%;
+    animation: success-ring 520ms ease-out both;
+  }
+
+  &__disc {
+    fill: var(--ax-color-text-success, #2d7d4f);
+    transform-origin: 50% 50%;
+    animation: success-disc 420ms cubic-bezier(0.34, 1.36, 0.64, 1) both;
+  }
+
+  &__tick {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-dasharray: 56;
+    stroke-dashoffset: 56;
+    animation: success-tick 380ms ease-out 260ms both;
+  }
+}
+
+@keyframes success-disc {
+  from { transform: scale(0.4); opacity: 0; }
+  to   { transform: scale(1);   opacity: 1; }
+}
+
+@keyframes success-ring {
+  from { transform: scale(0.8); opacity: 0; }
+  to   { transform: scale(1);   opacity: 0.18; }
+}
+
+@keyframes success-tick {
+  to { stroke-dashoffset: 0; }
+}
+
+/* Respect reduced-motion: show the final state, skip the animation. */
+@media (prefers-reduced-motion: reduce) {
+  .success-mark__ring,
+  .success-mark__disc,
+  .success-mark__tick {
+    animation: none;
+  }
+  .success-mark__tick { stroke-dashoffset: 0; }
+}
+
+/* ── Headline ────────────────────────────────────────────── */
+
+.success-title {
+  margin: 0 0 6px;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--text-primary, #2e241c);
+}
+
+.success-subtitle {
+  margin: 0 0 20px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary, #6b5f52);
+  max-width: 30ch;
+}
+
+/* ── Reference / date ────────────────────────────────────── */
+
+.success-meta {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+
+  &__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__label {
+    font-size: 13px;
+    color: var(--text-secondary, #6b5f52);
+  }
+
+  &__value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary, #2e241c);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.success-loading {
+  padding: 24px 0;
+}
+
+/* ── Receipt card ────────────────────────────────────────── */
+
+.success-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--ax-color-bg-surface, #fff);
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.08));
+  border-radius: var(--radius-lg, 16px);
+  overflow: hidden;
+  text-align: start;
+
+  &__section {
+    padding: 14px 16px;
+
+    & + & {
+      border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.08));
+    }
+
+    &--totals {
+      background: var(--ax-color-bg-subtle, rgba(46, 36, 28, 0.02));
+    }
+  }
+
+  &__heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--brand-dark, #b9935a);
+    margin-bottom: 10px;
+  }
+}
+
+/* Items */
+
+.success-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+
+  & + .success-item {
+    border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.06));
+  }
+
+  &__img {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    object-fit: cover;
+    background: var(--ax-color-bg-subtle, #f4efe7);
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary, #2e241c);
+    line-height: 1.35;
+  }
+
+  &__meta {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--text-secondary, #6b5f52);
+  }
+
+  &__price {
+    flex-shrink: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary, #2e241c);
+    white-space: nowrap;
+  }
+}
+
+/* Totals */
+
+.success-total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  font-size: 14px;
+  color: var(--text-secondary, #6b5f52);
+
+  &--credit span:last-child {
+    color: var(--ax-color-text-success, #2d7d4f);
+    font-weight: 600;
+  }
+
+  &--grand {
+    margin-top: 6px;
+    padding-top: 10px;
+    border-top: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.1));
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary, #2e241c);
+  }
+}
+
+/* Address */
+
+.success-address {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary, #6b5f52);
+
+  &__name {
+    font-weight: 700;
+    color: var(--text-primary, #2e241c);
+  }
+}
+
+/* ── Floating actions (matches .product-footer) ──────────── */
+
+.success-footer {
+  background: var(--ax-color-bg-surface);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+  padding: 16px 20px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0));
+
+  .footer-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+}
+
+.success-secondary-btn,
+.success-primary-btn {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 15px 16px;
+  border-radius: var(--radius-lg, 16px);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &:active { transform: scale(0.98); }
+}
+
+.success-secondary-btn {
+  background: transparent;
+  border: 1px solid var(--ax-color-border-default, rgba(46, 36, 28, 0.16));
+  color: var(--text-primary, #2e241c);
+}
+
+.success-primary-btn {
+  background: linear-gradient(135deg, var(--brand-dark), var(--brand-light));
+  border: none;
+  color: var(--ax-color-bg-surface, #fff);
+}

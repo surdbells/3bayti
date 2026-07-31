@@ -193,6 +193,12 @@ export const routes: Routes = [
     loadComponent: () => import('./customer/gift-card-detail/gift-card-detail.page').then(m => m.GiftCardDetailPage)
   },
   {
+    // Post-payment confirmation for a gift-card purchase (the product
+    // /success screen doesn't fit — no vendor, no line items).
+    path: 'gift-card-success',
+    loadComponent: () => import('./customer/gift-card-success/gift-card-success.page').then(m => m.GiftCardSuccessPage)
+  },
+  {
     path: 'gift-card-redeem',
     loadComponent: () => import('./customer/gift-card-redeem/gift-card-redeem.page').then(m => m.GiftCardRedeemPage)
   },
