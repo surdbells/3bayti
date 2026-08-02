@@ -7,13 +7,14 @@
     </ion-buttons>
     <ion-title class="m7-title">{{ 'title_order_detail' | translate }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="openSupport()" fill="clear" class="m7-header-action">
-        <ion-chip class="abayti_primary_background abayti_white">
-          <ion-avatar>
-            <ax-icon name="headset" />
-          </ion-avatar>
-          <ion-label>{{ 'support' | translate }}</ion-label>
-        </ion-chip>
+      <!--
+        Plain round icon button — the M7 header action is a 44×44 circle sized
+        for a single icon. The old ion-chip/avatar/label was squeezed into it
+        and clipped to a mangled artifact ("6g"); a bare headset icon matches
+        every other M7 header action (e.g. the wishlist button on cart).
+      -->
+      <ion-button (click)="openSupport()" class="m7-header-action" [attr.aria-label]="'support' | translate">
+        <ax-icon name="headset" />
       </ion-button>
     </ion-buttons>
   </ion-toolbar>
