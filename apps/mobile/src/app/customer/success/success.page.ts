@@ -193,8 +193,10 @@ export class SuccessPage implements OnInit {
   }
 
   goToOrder(): void {
+    // The order-detail route is 'orders/:id' (NOT 'order-detail/:id') — the
+    // wrong path matched nothing, so the button silently did nothing.
     if (this.order?.id) {
-      this.router.navigate(['/order-detail', this.order.id]);
+      this.router.navigate(['/', 'orders', this.order.id]);
     } else {
       this.router.navigate(['/my-orders']);
     }

@@ -588,13 +588,19 @@ export class MobileNetworkAdapter {
               map(() => this.extractAccessToken(response)),
             );
           }),
-          catchError(() => {
-            // Refresh itself failed — clear stored user so the next
-            // app load goes to /login. The original 401 will surface
-            // to the caller via withRefreshRetry's null branch.
-            return from(Preferences.remove({ key: 'user' })).pipe(
-              map(() => null),
-            );
+          catchError((err: any) => {
+            // Only DROP the session when the refresh token is genuinely
+            // rejected — a 401/403 from /auth/refresh (expired / revoked /
+            // invalid). A network blip, timeout or 5xx must NOT log the user
+            // out: the session should end only on manual logout or a real
+            // auth rejection, so we keep the stored user and let the caller's
+            // request fail transiently (it retries on the next call).
+            const status = Number(err?.status ?? 0);
+            const isAuthRejection = status === 401 || status === 403;
+            if (isAuthRejection) {
+              return from(Preferences.remove({ key: 'user' })).pipe(map(() => null));
+            }
+            return of<string | null>(null);
           }),
         );
       }),

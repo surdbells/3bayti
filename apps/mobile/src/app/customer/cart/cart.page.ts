@@ -461,7 +461,10 @@ export class CartPage implements OnInit, OnDestroy {
     this.router.navigate(['/', 'wishlist']);
   }
   user_orders() {
-    this.router.navigate(['/', 'orders']);
+    // The orders LIST route is 'my-orders'; 'orders' only exists as
+    // 'orders/:id' (detail), so the bare path matched nothing and the tap did
+    // nothing.
+    this.router.navigate(['/', 'my-orders']);
   }
   user_messages() {
     this.router.navigate(['/', 'chat-vendors']);

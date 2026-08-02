@@ -198,6 +198,7 @@ describe('RegisterPage (v3 phone-first 4-step flow)', () => {
     it('error envelope (OTP_VERIFICATION_FAILED): toast, stays on step (no advance)', () => {
       const { component, adapter, toast } = setup();
       component.ui_controls.step = 2;
+      component.phoneVerificationId = 'phone-vid-1';
       component.otp.code = '000000';
       adapter.post_v3.and.returnValue(err('OTP_VERIFICATION_FAILED', 'bad', 401));
 

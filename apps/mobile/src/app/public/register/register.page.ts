@@ -322,15 +322,30 @@ export class RegisterPage implements OnInit, OnDestroy {
   // --- Step 2: verify phone OTP -> registration_token --------------------
 
   verify_phone() {
-    if (this.otp.code.length === 0) {
+    const code = (this.otp.code ?? '').trim();
+    if (code.length === 0) {
       this.error_notification(this.i18n.t('text_otp_required'));
+      return;
+    }
+    // The API rejects a non-4-6-digit code as a validation failure. Catch it
+    // here with a clear message instead of the opaque server banner (an
+    // autofilled OTP can carry stray spaces/characters).
+    if (!/^\d{4,6}$/.test(code)) {
+      this.error_notification(this.i18n.t('text_otp_verification_failed'));
+      return;
+    }
+    // Guard the verification_id too: if it's been lost (blank), the server
+    // returns the same generic "fields failed validation" — restart cleanly
+    // rather than firing a doomed request.
+    if (!this.phoneVerificationId) {
+      this.restartExpired();
       return;
     }
 
     this.ui_controls.loading = true;
     this.networkAdapter.post_v3('POST /auth/register/verify-phone', {
       verification_id: this.phoneVerificationId,
-      code: this.otp.code,
+      code,
     }).subscribe({
       next: (response: any) => {
         this.ui_controls.loading = false;
@@ -600,6 +615,21 @@ export class RegisterPage implements OnInit, OnDestroy {
           return this.i18n.t('text_session_expired_restart');
         default:
           break;
+      }
+    }
+
+    // A 422 validation failure ("One or more fields failed validation") is
+    // useless without the offending field. The v3 envelope carries the
+    // per-field messages in error_details ({ field: [msg, …] }) — surface the
+    // first one instead of the generic banner so the user knows what to fix.
+    const details = response?.error_details;
+    if (details && typeof details === 'object') {
+      for (const key of Object.keys(details)) {
+        const list = (details as any)[key];
+        const msg = Array.isArray(list) ? list[0] : list;
+        if (typeof msg === 'string' && msg.trim() !== '') {
+          return msg;
+        }
       }
     }
     return response?.message ?? this.i18n.t('text_request_failed');
