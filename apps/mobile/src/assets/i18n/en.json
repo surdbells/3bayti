@@ -853,6 +853,8 @@
   "gcd_tap_to_copy": "Tap to copy",
   "gc_paste": "Paste",
   "gc_paste_code": "Paste gift card code",
+  "gc_copy": "Copy",
+  "gc_copy_code": "Copy gift card code",
   "gc_paste_failed": "Couldn't read the clipboard. Paste the code manually.",
   "mgc_redeem_code": "Redeem a code",
   "mgc_empty_title": "No gift cards yet",

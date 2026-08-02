@@ -845,6 +845,8 @@
   "gcd_tap_to_copy": "اضغط للنسخ",
   "gc_paste": "لصق",
   "gc_paste_code": "لصق رمز بطاقة الهدية",
+  "gc_copy": "نسخ",
+  "gc_copy_code": "نسخ رمز بطاقة الهدية",
   "gc_paste_failed": "تعذّر قراءة الحافظة. الصق الرمز يدويًا.",
   "mgc_redeem_code": "استبدال رمز",
   "mgc_empty_title": "لا توجد بطاقات هدايا بعد",
