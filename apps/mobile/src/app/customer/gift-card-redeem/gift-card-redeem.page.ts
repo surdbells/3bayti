@@ -12,6 +12,7 @@ import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
+import { ClipboardService } from '../../core/services/clipboard.service';
 
 @Component({
   selector: 'app-gift-card-redeem',
@@ -38,6 +39,7 @@ export class GiftCardRedeemPage {
     private network: MobileNetworkAdapter,
     private notify: AxNotificationService,
     private i18n: I18nService,
+    private clipboard: ClipboardService,
   ) {
     this.loadAuthToken();
   }
@@ -66,13 +68,13 @@ export class GiftCardRedeemPage {
    * it — so a code shared over email/SMS drops in without manual cleanup.
    */
   async pasteCode(): Promise<void> {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text) { return; }
-      this.setCode(text);
-    } catch {
+    const text = await this.clipboard.read();
+    if (text === null) {
       this.notify.error(this.i18n.t('gc_paste_failed'));
+      return;
     }
+    if (text === '') { return; }
+    this.setCode(text);
   }
 
   private setCode(raw: string): void {

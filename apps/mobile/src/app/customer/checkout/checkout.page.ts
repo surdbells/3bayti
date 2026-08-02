@@ -46,6 +46,7 @@ import { AxTextFieldComponent } from '../../shared/ax-mobile/text-field';
 import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
 import { AxPlaceAutocompleteComponent, PlaceDetails } from '../../shared/ax-mobile/place-autocomplete';
 import { AddressService, SavedAddress, NewAddress } from '../../core/services/address.service';
+import { ClipboardService } from '../../core/services/clipboard.service';
 @Component({
   selector: 'app-checkout',
   templateUrl: './checkout.page.html',
@@ -132,6 +133,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
     private i18n: I18nService,
     private addressService: AddressService,
     private cdr: ChangeDetectorRef,
+    private clipboard: ClipboardService,
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
@@ -910,14 +912,16 @@ export class CheckoutPage implements OnInit, OnDestroy {
    * a code copied from an email/SMS/wallet drops straight in.
    */
   async pasteGiftCode(): Promise<void> {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!text) { return; }
-      this.setGiftCode(text);
-      this.cdr.markForCheck();
-    } catch {
+    const text = await this.clipboard.read();
+    if (text === null) {
+      // Clipboard couldn't be read (blocked / old shell) — tell the user to
+      // paste manually rather than failing silently.
       this.error_notification(this.i18n.t('gc_paste_failed'));
+      return;
     }
+    if (text === '') { return; }
+    this.setGiftCode(text);
+    this.cdr.markForCheck();
   }
 
   /** Normalise raw input into the hyphenated code + reset any applied state. */
