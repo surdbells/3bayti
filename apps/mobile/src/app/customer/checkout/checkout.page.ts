@@ -901,8 +901,29 @@ export class CheckoutPage implements OnInit, OnDestroy {
   }
 
   onGiftCodeInput(event: any) {
-    const raw = (event.target?.value ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 16);
-    this.giftCard.code = raw.match(/.{1,4}/g)?.join('-') ?? raw;
+    this.setGiftCode((event.target?.value ?? ''));
+  }
+
+  /**
+   * Paste a gift-card code from the clipboard. Reuses the same normalisation
+   * as typing (strip non-alphanumerics, uppercase, 16 chars, 4×4 grouping) so
+   * a code copied from an email/SMS/wallet drops straight in.
+   */
+  async pasteGiftCode(): Promise<void> {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) { return; }
+      this.setGiftCode(text);
+      this.cdr.markForCheck();
+    } catch {
+      this.error_notification(this.i18n.t('gc_paste_failed'));
+    }
+  }
+
+  /** Normalise raw input into the hyphenated code + reset any applied state. */
+  private setGiftCode(raw: string): void {
+    const cleaned = raw.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 16);
+    this.giftCard.code = cleaned.match(/.{1,4}/g)?.join('-') ?? cleaned;
     this.giftCard.preview = null;
     this.giftCard.applied = false;
   }

@@ -58,8 +58,26 @@ export class GiftCardRedeemPage {
   }
 
   onCodeInput(event: any) {
-    const raw = (event.target?.value ?? '').replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 16);
-    this.code = raw.match(/.{1,4}/g)?.join('-') ?? raw;
+    this.setCode(event.target?.value ?? '');
+  }
+
+  /**
+   * Paste a gift-card code from the clipboard, normalised exactly like typing
+   * it — so a code shared over email/SMS drops in without manual cleanup.
+   */
+  async pasteCode(): Promise<void> {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!text) { return; }
+      this.setCode(text);
+    } catch {
+      this.notify.error(this.i18n.t('gc_paste_failed'));
+    }
+  }
+
+  private setCode(raw: string): void {
+    const cleaned = raw.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().slice(0, 16);
+    this.code = cleaned.match(/.{1,4}/g)?.join('-') ?? cleaned;
     this.preview = null;
   }
 

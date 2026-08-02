@@ -236,16 +236,26 @@
     @if (giftCard.is_open) {
       <div class="gc-apply-body">
         @if (!giftCard.applied) {
-          <input
-            class="gc-code-input"
-            type="text"
-            [value]="giftCard.code"
-            (input)="onGiftCodeInput($event)"
-            placeholder="XXXX-XXXX-XXXX-XXXX"
-            maxlength="19"
-            autocorrect="off"
-            autocapitalize="characters"
-          />
+          <div class="gc-code-wrap">
+            <input
+              class="gc-code-input"
+              type="text"
+              [value]="giftCard.code"
+              (input)="onGiftCodeInput($event)"
+              placeholder="XXXX-XXXX-XXXX-XXXX"
+              maxlength="19"
+              autocorrect="off"
+              autocapitalize="characters"
+            />
+            <button
+              type="button"
+              class="gc-paste-btn"
+              (click)="pasteGiftCode()"
+              [attr.aria-label]="'gc_paste_code' | translate">
+              <ax-icon name="clipboard-paste" [size]="16" />
+              <span>{{ 'gc_paste' | translate }}</span>
+            </button>
+          </div>
           <button type="button" class="gc-apply-btn"
                   (click)="previewGiftCard()"
                   [disabled]="giftCard.checking || giftCard.code.replace('-','').length < 16">

@@ -89,6 +89,33 @@
   &::placeholder { opacity: 0.3; font-weight: 400; letter-spacing: 0.05em; }
 }
 
+/* Input + a right-aligned Paste button beneath it (kept out of the centred
+   code field so it never overlaps a full 16-char code). */
+.gcr-code-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.gcr-paste-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.15));
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ax-color-text-brand, #b9935a);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  &:active { background: rgba(46, 36, 28, 0.05); }
+}
+
 .gcr-preview {
   background: var(--ax-color-bg-surface);
   border-radius: 14px;

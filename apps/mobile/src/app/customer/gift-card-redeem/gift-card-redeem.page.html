@@ -31,18 +31,28 @@
     <!-- Code input -->
     <div class="gcr-code-field">
       <label class="gcr-label">{{ 'gift_card_redeem_code_label' | translate }}</label>
-      <input
-        class="gcr-code-input"
-        type="text"
-        [value]="code"
-        (input)="onCodeInput($event)"
-        placeholder="XXXX-XXXX-XXXX-XXXX"
-        maxlength="19"
-        autocomplete="off"
-        autocorrect="off"
-        autocapitalize="characters"
-        spellcheck="false"
-      />
+      <div class="gcr-code-wrap">
+        <input
+          class="gcr-code-input"
+          type="text"
+          [value]="code"
+          (input)="onCodeInput($event)"
+          placeholder="XXXX-XXXX-XXXX-XXXX"
+          maxlength="19"
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="characters"
+          spellcheck="false"
+        />
+        <button
+          type="button"
+          class="gcr-paste-btn"
+          (click)="pasteCode()"
+          [attr.aria-label]="'gc_paste_code' | translate">
+          <ax-icon name="clipboard-paste" [size]="16" />
+          <span>{{ 'gc_paste' | translate }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- Balance preview -->
