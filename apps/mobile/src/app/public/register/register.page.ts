@@ -25,6 +25,7 @@ import { I18nService } from '../../i18n.service';
 import {TranslatePipe} from "../../translate.pipe";
 import {Preferences} from "@capacitor/preferences";
 import {FirebaseAuthentication} from "@capacitor-firebase/authentication";
+import {parseSocialAuthError, socialAuthErrorMessage} from "../../core/auth/social-auth-error";
 import {BlockerService} from "../../blocker.service";
 
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
@@ -788,22 +789,15 @@ export class RegisterPage implements OnInit, OnDestroy {
       });
     } catch (err) {
       this.socialLoading = false;
-      if (this.isCancelledSignIn(err)) return;
-      console.error('[Register] social sign-in failed', err);
-      this.error_notification(this.i18n.t('text_social_signin_failed'));
+      const info = parseSocialAuthError(err);
+      if (info.cancelled) return;
+      console.error('[Register] social sign-in failed', {
+        provider,
+        code: info.code,
+        message: info.rawMessage,
+      });
+      this.error_notification(socialAuthErrorMessage(info, (k) => this.i18n.t(k)));
     }
-  }
-
-  private isCancelledSignIn(err: unknown): boolean {
-    const msg = (err && typeof err === 'object' && 'message' in err
-      ? String((err as any).message)
-      : String(err)).toLowerCase();
-    return (
-      msg.includes('cancel') ||
-      msg.includes('canceled') ||
-      msg.includes('1001') ||
-      msg.includes('12501')
-    );
   }
 
   /**

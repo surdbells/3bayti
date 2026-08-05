@@ -16,6 +16,7 @@ import {
 import { Preferences } from '@capacitor/preferences';
 import { App as CapacitorApp } from '@capacitor/app';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { parseSocialAuthError, socialAuthErrorMessage } from '../../core/auth/social-auth-error';
 import { Subscription } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
@@ -256,9 +257,14 @@ export class SettingsPage implements OnInit, OnDestroy {
       });
     } catch (err) {
       this.socialBusy = null;
-      if (this.isCancelledSignIn(err)) return;
-      console.error('[Settings] connect provider failed', err);
-      this.showError(this.i18n.t('text_social_signin_failed'));
+      const info = parseSocialAuthError(err);
+      if (info.cancelled) return;
+      console.error('[Settings] connect provider failed', {
+        provider: key,
+        code: info.code,
+        message: info.rawMessage,
+      });
+      this.showError(socialAuthErrorMessage(info, (k) => this.i18n.t(k)));
     }
   }
 
@@ -296,17 +302,6 @@ export class SettingsPage implements OnInit, OnDestroy {
     });
   }
 
-  private isCancelledSignIn(err: unknown): boolean {
-    const msg = (err && typeof err === 'object' && 'message' in err
-      ? String((err as any).message)
-      : String(err)).toLowerCase();
-    return (
-      msg.includes('cancel') ||
-      msg.includes('canceled') ||
-      msg.includes('1001') ||
-      msg.includes('12501')
-    );
-  }
 
   /**
    * Resolve the real installed app version for the Settings footer. Prefers

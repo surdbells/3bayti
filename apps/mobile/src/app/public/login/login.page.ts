@@ -6,6 +6,7 @@ import {
 } from '@ionic/angular/standalone';
 import { Preferences } from '@capacitor/preferences';
 import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
+import { parseSocialAuthError, socialAuthErrorMessage } from '../../core/auth/social-auth-error';
 import { ConnectionService } from '../../service/connection.service';
 import { Subscription } from 'rxjs';
 
@@ -650,29 +651,19 @@ export class LoginPage implements OnInit, OnDestroy {
       });
     } catch (err) {
       this.socialLoading = false;
+      const info = parseSocialAuthError(err);
       // User cancelled the native sheet — stay quiet (no error toast).
-      if (this.isCancelledSignIn(err)) return;
-      console.error('[Login] social sign-in failed', err);
-      this.show_error(this.i18n.t('text_social_signin_failed'));
+      if (info.cancelled) return;
+      // Log the real code + message so the failure is diagnosable off-device,
+      // and show the user a message that names the cause (or carries the code
+      // for support) instead of a bare "try again".
+      console.error('[Login] social sign-in failed', {
+        provider,
+        code: info.code,
+        message: info.rawMessage,
+      });
+      this.show_error(socialAuthErrorMessage(info, (k) => this.i18n.t(k)));
     }
-  }
-
-  /**
-   * Detect a user-cancelled native sign-in so we can swallow it silently.
-   * The Firebase Auth plugin surfaces cancellation differently per platform
-   * (a "canceled"/"cancelled" message, or Apple's 1001 / Google's 12501
-   * codes), so we match on the common substrings.
-   */
-  private isCancelledSignIn(err: unknown): boolean {
-    const msg = (err && typeof err === 'object' && 'message' in err
-      ? String((err as any).message)
-      : String(err)).toLowerCase();
-    return (
-      msg.includes('cancel') ||
-      msg.includes('canceled') ||
-      msg.includes('1001') ||
-      msg.includes('12501')
-    );
   }
 
   // ===== Phone-after-social gate (capture + verify phone) =================
