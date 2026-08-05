@@ -155,7 +155,7 @@ final class GetVendorProductSalesController
         $rows = $conn->fetchAllAssociative(
             "SELECT o.order_reference,
                     o.status,
-                    to_char(o.created_at, 'YYYY-MM-DD\"T\"HH24:MI:SSOF') AS created_at,
+                    to_char(o.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS created_at,
                     SUM(oi.quantity)                 AS quantity,
                     SUM(oi.quantity * oi.unit_price) AS line_total
              FROM order_items oi
