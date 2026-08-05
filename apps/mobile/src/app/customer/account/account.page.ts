@@ -21,13 +21,15 @@ import {
   IonFooter, IonGrid,
   IonHeader, IonIcon, IonInfiniteScroll, IonInfiniteScrollContent,
   IonLabel,
+  IonRefresher,
+  IonRefresherContent,
   IonRow,
   IonTabBar,
   IonTabButton,
   IonToolbar
 } from '@ionic/angular/standalone';
 import {Router, RouterLink} from "@angular/router";
-import {ActionSheetController, InfiniteScrollCustomEvent, Platform} from '@ionic/angular';
+import {ActionSheetController, InfiniteScrollCustomEvent, Platform, RefresherCustomEvent} from '@ionic/angular';
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
@@ -74,7 +76,7 @@ export interface Store {
   templateUrl: './account.page.html',
   styleUrls: ['./account.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonTabBar, IonTabButton, IonLabel, IonFooter, IonRow, IonCol, IonGrid, IonIcon, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent, RouterLink]
+  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonTabBar, IonTabButton, IonLabel, IonFooter, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent, RouterLink]
 })
 
 export class AccountPage implements OnInit, OnDestroy {
@@ -310,6 +312,26 @@ export class AccountPage implements OnInit, OnDestroy {
     this.chatService.getUnreadCount('customer').subscribe((n) => {
       this.unreadMessages.set(n);
     });
+  }
+
+  /**
+   * Pull-to-refresh: re-pull everything the dashboard shows (profile + vendor
+   * flags, gift-card balance, the three product rails, the cart badge and the
+   * unread-message count). Each loader drives its own skeleton state, so we
+   * just fire them all and dismiss the refresher spinner after a short settle
+   * window (the catalog GETs are quick and the rails cover the rest with their
+   * own loading state).
+   */
+  async doRefresh(event: RefresherCustomEvent) {
+    this.refreshProfile();
+    this.loadGiftCardBalance();
+    this.get_best_sellers();
+    this.get_new_arrivals();
+    this.get_featured_products();
+    this.load_cart();
+    void this.cartCount.refresh();
+    this.refreshUnreadMessages();
+    setTimeout(() => event.target.complete(), 700);
   }
 
   ionViewDidEnter(){

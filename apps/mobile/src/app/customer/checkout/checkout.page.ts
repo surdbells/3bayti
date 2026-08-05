@@ -1184,14 +1184,22 @@ export class CheckoutPage implements OnInit, OnDestroy {
 
   /**
    * Open the add-new-address bottom sheet (web parity). Resets the form to
-   * a clean slate so a previous (cancelled) entry doesn't leak in. Closes
-   * the saved-address picker if it happened to be open.
+   * a clean slate so a previous (cancelled) entry doesn't leak in, then
+   * pre-fills the recipient Name and Phone from the logged-in user as a
+   * convenience default — both stay fully editable (most people ship to
+   * themselves, but they can type a different recipient). Closes the
+   * saved-address picker if it happened to be open.
    */
   openAddAddress() {
+    const defaultName = [this.single_user?.first_name, this.single_user?.last_name]
+      .filter((p) => !!p && `${p}`.trim().length > 0)
+      .join(' ')
+      .trim();
+    const defaultPhone = (this.single_user?.phone || this.single_user?.billing_phone || '').trim();
     this.newAddress = {
       label: '',
-      recipient_name: '',
-      recipient_phone: '',
+      recipient_name: defaultName,
+      recipient_phone: defaultPhone,
       emirate: '',
       area: '',
       street_address: '',

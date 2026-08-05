@@ -19,7 +19,12 @@
 
 .ax-notification-host__stack {
   position: fixed;
-  z-index: 9999; /* above ion-modal/ion-toast/etc. */
+  /* Ionic overlays (ion-modal, ion-alert, ion-action-sheet, ion-toast) are
+     assigned z-index values starting at 20000 and climbing as they stack, so
+     the old 9999 left notifications *behind* an open modal (e.g. the write-a-
+     review sheet). Sit above the entire Ionic overlay range so a toast fired
+     while a modal is open is still visible. */
+  z-index: 100000; /* above ion-modal/ion-alert/ion-toast (Ionic starts at 20000) */
   display: flex;
   flex-direction: column-reverse; /* newest visually on top */
   gap: 8px;

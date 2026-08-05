@@ -547,7 +547,7 @@
   @if(!ui_controls.is_adding_to_cart && !ui_controls.is_loading && !ui_controls.product_missing){
     <div class="footer-content">
       <div class="price-display">
-        <span class="price-label">{{ 'total' | translate }}</span>
+        <span class="price-label">{{ 'price' | translate }}</span>
         @if (single.sale_price && single.sale_price < single.price) {
           <span class="price-value price-value--sale">Ð{{ single.sale_price | number }}</span>
           <span class="price-original">Ð{{ single.price_formated }}</span>

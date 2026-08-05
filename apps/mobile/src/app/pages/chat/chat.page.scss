@@ -174,13 +174,16 @@
   font-family: inherit;
   font-size: 0.9rem;
   line-height: 1.35;
-  color: var(--ion-text-color, #1a1a1a);
-  background: var(--ion-color-step-50, #f6f7f9);
-  border: 1px solid var(--ion-color-step-150, #e2e5e9);
+  /* Theme-aware tokens (the raw --ion-* vars weren't remapped for dark mode,
+     so the text rendered dark-on-dark and became invisible). */
+  color: var(--ax-color-text-primary, #1a1a1a);
+  background: var(--ax-color-bg-muted, #f6f7f9);
+  border: 1px solid var(--ax-color-border-subtle, #e2e5e9);
   border-radius: 20px;
   outline: none;
 
-  &:focus { border-color: var(--ion-color-primary, #c8a04a); }
+  &::placeholder { color: var(--ax-color-text-secondary, #8a8378); }
+  &:focus { border-color: var(--ax-color-text-brand, #c8a04a); }
 }
 .send-btn {
   flex-shrink: 0;
