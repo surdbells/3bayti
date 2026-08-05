@@ -63,7 +63,6 @@ export class SettingsPage implements OnInit, OnDestroy {
   isOnline = true;
   notificationsEnabled = true;
   private sub: Subscription;
-  private backSub?: Subscription;
 
   /**
    * Marketing push opt-out toggle ("Promotions & reminders").
@@ -329,18 +328,12 @@ export class SettingsPage implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
-    this.backSub?.unsubscribe();
   }
 
-  ionViewDidEnter(): void {
-    this.backSub = this.platform.backButton.subscribeWithPriority(9999, () => {
-      this.nav.navigateRoot('/account');
-    });
-  }
-
-  ionViewWillLeave(): void {
-    this.backSub?.unsubscribe();
-  }
+  // Hardware back is left to Ionic's default IonRouterOutlet handling so it
+  // pops to the previous screen natively (and closes any open overlay first)
+  // instead of the old priority-9999 override that force-reset the stack to
+  // /account — which broke native back and caused the inconsistent loops.
 
   async loadUser(): Promise<void> {
     const ret: any = await Preferences.get({ key: 'user' });
@@ -494,17 +487,20 @@ export class SettingsPage implements OnInit, OnDestroy {
     window.open(`mailto:${email}`);
   }
 
-  // Tab bar navigation
+  // Tab bar navigation. Use a normal (push) navigation like the account tab
+  // bar does — navigateRoot reset the stack to a single page, so hardware back
+  // from the destination had nothing to pop and exited the app. A push keeps
+  // history so native back returns here.
   user_home(): void {
-    this.nav.navigateRoot('/home');
+    this.router.navigate(['/home']);
   }
 
   user_explore(): void {
-    this.nav.navigateRoot('/explore');
+    this.router.navigate(['/explore']);
   }
 
   user_cart(): void {
-    this.nav.navigateRoot('/cart');
+    this.router.navigate(['/cart']);
   }
 
   // ========================================

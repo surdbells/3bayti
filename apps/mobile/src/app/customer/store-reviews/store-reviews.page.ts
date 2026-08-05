@@ -1,4 +1,4 @@
-import {Component, HostListener, OnDestroy, OnInit} from '@angular/core';
+import {Component, OnDestroy, OnInit} from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import {
@@ -36,7 +36,6 @@ export class StoreReviewsPage implements OnInit, OnDestroy {
   reviews: Reviews[] = [];
   isOnline = true;
   private sub: Subscription;
-  private backSub?: Subscription;
   constructor(
     private nav: NavController,
     private net: ConnectionService,
@@ -51,12 +50,9 @@ export class StoreReviewsPage implements OnInit, OnDestroy {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
   }
-  @HostListener('window:ionBackButton', ['$event'])
-  onHardwareBack(ev: Event) {
-    (ev as CustomEvent).detail.register(100, () => {
-      this.nav.navigateRoot('/settings');
-    });
-  }
+  // Hardware back is left to Ionic's default IonRouterOutlet handling so it
+  // pops to the previous screen natively (and closes any open overlay first)
+  // instead of the old forced navigateRoot('/settings') overrides.
   ui_controls = {
     is_empty: false,
     is_loading: false,
@@ -95,14 +91,7 @@ export class StoreReviewsPage implements OnInit, OnDestroy {
   }
   // Called when the page becomes active (Ionic RouterOutlet triggers this)
   ionViewDidEnter() {
-     this.getObject();
-    this.backSub = this.platform.backButton.subscribeWithPriority(9999, () => {
-      this.nav.navigateRoot('/settings'); // or Router: navigateByUrl('/account', { replaceUrl: true })
-    });
-  }
-  // Clean up when you leave the page
-  ionViewWillLeave() {
-    this.backSub?.unsubscribe();
+    this.getObject();
   }
   rqst_param = {
     id: 0,

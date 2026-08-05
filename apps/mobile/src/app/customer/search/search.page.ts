@@ -1,4 +1,4 @@
-import {Component, HostListener, OnDestroy, OnInit} from '@angular/core';
+import {Component, OnDestroy, OnInit} from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import {
@@ -90,12 +90,8 @@ export class SearchPage implements OnInit, OnDestroy {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
   }
-  @HostListener('window:ionBackButton', ['$event'])
-  onHardwareBack(ev: Event) {
-    (ev as any).detail.register(100, () => {
-      this.nav.navigateRoot('/account');
-    });
-  }
+  // Hardware back left to Ionic's native handling (pop / overlay-close)
+  // instead of the old forced navigateRoot('/account').
   ui_controls = {
     is_loading: false,
     is_creating: false,

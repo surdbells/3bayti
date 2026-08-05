@@ -11,6 +11,7 @@ import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { BlockerService } from '../../blocker.service';
 
 /** One purchased line on the receipt. */
 interface SuccessItem {
@@ -83,7 +84,19 @@ export class SuccessPage implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private adapter: MobileNetworkAdapter,
+    private blocker: BlockerService,
   ) {}
+
+  ionViewDidEnter(): void {
+    // Block hardware back + edge-swipe while the confirmation is shown so the
+    // customer can't reverse into the completed checkout. They move on via the
+    // explicit "View order" / "Continue shopping" buttons.
+    this.blocker.block({ disableSwipe: true, disableHardwareBack: true });
+  }
+
+  ionViewWillLeave(): void {
+    this.blocker.unblock();
+  }
 
   async ngOnInit(): Promise<void> {
     const params = this.route.snapshot.queryParamMap;

@@ -3,7 +3,6 @@ import {
   Component,
   CUSTOM_ELEMENTS_SCHEMA,
   ElementRef,
-  HostListener,
   NgZone,
   OnDestroy,
   OnInit,
@@ -169,12 +168,8 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
   }
 
-  @HostListener('window:ionBackButton', ['$event'])
-  onHardwareBack(ev: Event) {
-    (ev as CustomEvent).detail.register(100, () => {
-      this.nav.navigateRoot('/account');
-    });
-  }
+  // Hardware back left to Ionic's native handling (pop / overlay-close)
+  // instead of the old forced navigateRoot('/account').
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();

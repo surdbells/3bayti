@@ -1,4 +1,4 @@
-import {Component, HostListener, OnDestroy, OnInit} from '@angular/core';
+import {Component, OnDestroy, OnInit} from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import {
@@ -167,12 +167,8 @@ export class CartPage implements OnInit, OnDestroy {
     f_subtotal: "",
     f_total: ""
   };
-  @HostListener('window:ionBackButton', ['$event'])
-  onHardwareBack(ev: Event) {
-    (ev as CustomEvent).detail.register(100, () => {
-      this.nav.navigateRoot('/account');
-    });
-  }
+  // Hardware back left to Ionic's native handling (pop / overlay-close)
+  // instead of the old forced navigateRoot('/account').
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
   }

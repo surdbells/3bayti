@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonButton,
@@ -75,7 +75,6 @@ export class WishlistPage implements OnInit, OnDestroy {
   isOnline = true;
   isAddLabelOpen = false;
   private sub: Subscription;
-  private backSub?: Subscription;
 
   constructor(
     private nav: NavController,
@@ -90,12 +89,8 @@ export class WishlistPage implements OnInit, OnDestroy {
     this.sub = this.net.online$.subscribe(v => (this.isOnline = v));
   }
 
-  @HostListener('window:ionBackButton', ['$event'])
-  onHardwareBack(ev: Event) {
-    (ev as CustomEvent).detail.register(100, () => {
-      this.nav.navigateRoot('/account');
-    });
-  }
+  // Hardware back left to Ionic's native handling (pop / overlay-close)
+  // instead of the old forced navigateRoot('/account').
 
   ui_controls = {
     is_empty: false,
@@ -136,15 +131,9 @@ export class WishlistPage implements OnInit, OnDestroy {
     this.sub?.unsubscribe();
   }
 
-  ionViewDidEnter() {
-    this.backSub = this.platform.backButton.subscribeWithPriority(9999, () => {
-      this.nav.navigateRoot('/settings');
-    });
-  }
-
-  ionViewWillLeave() {
-    this.backSub?.unsubscribe();
-  }
+  // Hardware back is left to Ionic's default IonRouterOutlet handling so it
+  // pops to the previous screen natively (and closes any open overlay first)
+  // instead of the old priority-9999 override that force-reset the stack.
 
   async getObject() {
     const ret: any = await Preferences.get({ key: 'user' });

@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonButton,
@@ -115,12 +115,8 @@ export class CategoryPage implements OnInit, OnDestroy {
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
   }
 
-  @HostListener('window:ionBackButton', ['$event'])
-  onHardwareBack(ev: Event) {
-    (ev as CustomEvent).detail.register(100, () => {
-      this.nav.navigateRoot('/account');
-    });
-  }
+  // Hardware back left to Ionic's native handling (pop / overlay-close)
+  // instead of the old forced navigateRoot('/account').
 
   ui_controls = {
     is_loading: false,

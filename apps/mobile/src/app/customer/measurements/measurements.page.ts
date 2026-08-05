@@ -63,7 +63,6 @@ export class MeasurementsPage implements OnInit, OnDestroy {
   list: List[] = [];
   isOnline = true;
   private sub: Subscription;
-  private backSub?: Subscription;
   protected index = 0;
   constructor(
     private nav: NavController,
@@ -77,12 +76,6 @@ export class MeasurementsPage implements OnInit, OnDestroy {
   ) {
     this.net.setReachabilityCheck(true);
     this.sub = this.net.online$.subscribe(v => this.isOnline = v);
-  }
-  @HostListener('window:ionBackButton', ['$event'])
-  onHardwareBack(ev: Event) {
-    (ev as CustomEvent).detail.register(100, () => {
-      this.nav.navigateRoot('/settings');
-    });
   }
   ui_controls = {
     is_loading: false,
@@ -122,18 +115,10 @@ export class MeasurementsPage implements OnInit, OnDestroy {
     hip: "",
     arm: ""
   };
-  // Called when the page becomes active (Ionic RouterOutlet triggers this)
-  ionViewDidEnter() {
-  //  this.getObject();
-    this.backSub = this.platform.backButton.subscribeWithPriority(9999, () => {
-      this.nav.navigateRoot('/account'); // or Router: navigateByUrl('/account', { replaceUrl: true })
-    });
-  }
-
-  // Clean up when you leave the page
-  ionViewWillLeave() {
-    this.backSub?.unsubscribe();
-  }
+  // Hardware back is left to Ionic's default IonRouterOutlet handling so it
+  // pops to the previous screen natively (and closes any open overlay first)
+  // instead of the old priority-9999 override that force-reset the stack to
+  // /account.
   rqst_param = {
     id: 0,
     token: ""
