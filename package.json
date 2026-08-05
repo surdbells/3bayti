@@ -2,7 +2,7 @@
   "name": "3bayti",
   "version": "0.0.0",
   "private": true,
-  "description": "3bayti platform monorepo \u2014 web, mobile, portal, api",
+  "description": "3bayti platform monorepo — web, mobile, portal, api",
   "license": "UNLICENSED",
   "packageManager": "pnpm@9.15.0",
   "engines": {
@@ -22,8 +22,13 @@
     "clean": "turbo run clean && rm -rf node_modules"
   },
   "devDependencies": {
+    "@types/node": "22.10.2",
     "turbo": "2.3.3",
-    "typescript": "5.9.2",
-    "@types/node": "22.10.2"
+    "typescript": "5.9.2"
+  },
+  "pnpm": {
+    "patchedDependencies": {
+      "@capgo/inappbrowser@8.0.6": "patches/@capgo__inappbrowser@8.0.6.patch"
+    }
   }
 }

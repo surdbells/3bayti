@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@capgo/inappbrowser@8.0.6':
+    hash: u2mrdjiw46mrceqn4foagmkmce
+    path: patches/@capgo__inappbrowser@8.0.6.patch
+
 importers:
 
   .:
@@ -100,7 +105,7 @@ importers:
         version: 8.49.7(@capacitor/core@8.3.3)
       '@capgo/inappbrowser':
         specifier: 8.0.6
-        version: 8.0.6(@capacitor/core@8.3.3)
+        version: 8.0.6(patch_hash=u2mrdjiw46mrceqn4foagmkmce)(@capacitor/core@8.3.3)
       '@ionic/angular':
         specifier: ^8.0.0
         version: 8.8.6(d3u2lte633f2tisac6sadjgt3a)
@@ -13782,7 +13787,7 @@ snapshots:
     dependencies:
       '@capacitor/core': 8.3.3
 
-  '@capgo/inappbrowser@8.0.6(@capacitor/core@8.3.3)':
+  '@capgo/inappbrowser@8.0.6(patch_hash=u2mrdjiw46mrceqn4foagmkmce)(@capacitor/core@8.3.3)':
     dependencies:
       '@capacitor/core': 8.3.3
 

@@ -1,0 +1,86 @@
+diff --git a/android/src/main/java/ee/forgr/capacitor_inappbrowser/WebViewDialog.java b/android/src/main/java/ee/forgr/capacitor_inappbrowser/WebViewDialog.java
+index 660e07bb4263e94f57207b94cc527e578d9e9923..c26860f350fa8fa3053d364f66c6a1badbf6a5d9 100644
+--- a/android/src/main/java/ee/forgr/capacitor_inappbrowser/WebViewDialog.java
++++ b/android/src/main/java/ee/forgr/capacitor_inappbrowser/WebViewDialog.java
+@@ -2232,70 +2232,20 @@ public class WebViewDialog extends Dialog {
+ 
+                 @Override
+                 public void onReceivedClientCertRequest(WebView view, android.webkit.ClientCertRequest request) {
+-                    Log.i("InAppBrowser", "onReceivedClientCertRequest CALLED");
+-
+-                    if (request == null) {
+-                        Log.e("InAppBrowser", "ClientCertRequest is null");
+-                        return;
+-                    }
+-
+-                    if (activity == null) {
+-                        Log.e("InAppBrowser", "Activity is null, canceling request");
++                    // A TLS server may send an OPTIONAL client-certificate request during
++                    // the handshake. Upstream popped the Android KeyChain chooser and called
++                    // request.proceed(privateKey, certChain) with the user-selected cert,
++                    // which fails the handshake with ERR_SSL_CLIENT_AUTH_SIGNATURE_FAILED on
++                    // servers that don't actually require a client cert (e.g. the Noon
++                    // hosted-checkout page, which a normal browser loads with NO client
++                    // certificate). Decline the request so the connection continues without a
++                    // client certificate — the default WebViewClient / normal-browser behaviour.
++                    Log.i("InAppBrowser", "onReceivedClientCertRequest: proceeding without a client certificate");
++                    if (request != null) {
+                         try {
+                             request.cancel();
+                         } catch (Exception e) {
+-                            Log.e("InAppBrowser", "Error canceling request: " + e.getMessage());
+-                        }
+-                        return;
+-                    }
+-
+-                    try {
+-                        Log.i("InAppBrowser", "Host: " + request.getHost());
+-                        Log.i("InAppBrowser", "Port: " + request.getPort());
+-                        Log.i("InAppBrowser", "Principals: " + java.util.Arrays.toString(request.getPrincipals()));
+-                        Log.i("InAppBrowser", "KeyTypes: " + java.util.Arrays.toString(request.getKeyTypes()));
+-
+-                        KeyChain.choosePrivateKeyAlias(
+-                            activity,
+-                            new KeyChainAliasCallback() {
+-                                @Override
+-                                public void alias(String alias) {
+-                                    if (alias != null) {
+-                                        try {
+-                                            PrivateKey privateKey = KeyChain.getPrivateKey(activity, alias);
+-                                            X509Certificate[] certChain = KeyChain.getCertificateChain(activity, alias);
+-                                            request.proceed(privateKey, certChain);
+-                                            Log.i("InAppBrowser", "Selected certificate: " + alias);
+-                                        } catch (Exception e) {
+-                                            try {
+-                                                request.cancel();
+-                                            } catch (Exception cancelEx) {
+-                                                Log.e("InAppBrowser", "Error canceling request: " + cancelEx.getMessage());
+-                                            }
+-                                            Log.e("InAppBrowser", "Error selecting certificate: " + e.getMessage());
+-                                        }
+-                                    } else {
+-                                        try {
+-                                            request.cancel();
+-                                        } catch (Exception e) {
+-                                            Log.e("InAppBrowser", "Error canceling request: " + e.getMessage());
+-                                        }
+-                                        Log.i("InAppBrowser", "No certificate found");
+-                                    }
+-                                }
+-                            },
+-                            null, // keyTypes
+-                            null, // issuers
+-                            request.getHost(),
+-                            request.getPort(),
+-                            null // alias (null = system asks user to choose)
+-                        );
+-                    } catch (Exception e) {
+-                        Log.e("InAppBrowser", "Error in onReceivedClientCertRequest: " + e.getMessage());
+-                        try {
+-                            request.cancel();
+-                        } catch (Exception cancelEx) {
+-                            Log.e("InAppBrowser", "Error canceling request after exception: " + cancelEx.getMessage());
++                            Log.e("InAppBrowser", "Error declining client cert request: " + e.getMessage());
+                         }
+                     }
+                 }
