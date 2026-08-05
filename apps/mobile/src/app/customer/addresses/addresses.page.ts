@@ -118,6 +118,12 @@ export class AddressesPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // Loaded in ionViewWillEnter so the address list refreshes on every entry
+    // (Ionic caches the page, so ngOnInit runs only once — otherwise a newly
+    // added/edited address doesn't show until a manual refresh).
+  }
+
+  ionViewWillEnter() {
     this.getObject();
   }
 

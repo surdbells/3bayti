@@ -105,6 +105,11 @@ export class ReviewsPage implements OnInit, OnDestroy {
   };
 
   ngOnInit() {
+    // Loaded in ionViewWillEnter so the list refreshes on every entry (Ionic
+    // caches the page, so ngOnInit runs only once — otherwise it shows a
+    // stale/empty snapshot after navigating away and back).
+  }
+  ionViewWillEnter() {
     this.getObject();
   }
   ngOnDestroy(): void {

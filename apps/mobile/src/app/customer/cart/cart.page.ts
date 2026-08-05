@@ -177,6 +177,14 @@ export class CartPage implements OnInit, OnDestroy {
     this.sub?.unsubscribe();
   }
   ngOnInit() {
+    // Cart contents are (re)loaded in ionViewWillEnter so they refresh on every
+    // entry. ngOnInit runs only once because Ionic caches the page in the nav
+    // stack — loading here left the cart showing stale/empty content after
+    // navigating away and back, until a manual pull-to-refresh.
+  }
+  ionViewWillEnter() {
+    // Fires on first entry AND every re-entry — re-pull the cart each time the
+    // page is shown so it never shows a stale/empty snapshot.
     this.getObject();
   }
   ionViewDidEnter() {

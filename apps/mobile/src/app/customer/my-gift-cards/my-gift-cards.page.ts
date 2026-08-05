@@ -111,7 +111,13 @@ export class MyGiftCardsPage implements OnInit {
     };
   }
 
-  async ngOnInit() {
+  ngOnInit() {
+    // Loaded in ionViewWillEnter so the wallet refreshes on every entry (Ionic
+    // caches the page, so ngOnInit runs only once — otherwise a card just
+    // purchased/redeemed elsewhere doesn't appear until a manual refresh).
+  }
+
+  async ionViewWillEnter() {
     await this.loadAuthToken();
     this.load();
   }

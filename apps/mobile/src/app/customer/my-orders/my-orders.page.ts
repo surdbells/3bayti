@@ -160,6 +160,11 @@ export class MyOrdersPage implements OnInit {
     is_creating: false
   }
   ngOnInit() {
+    // Loaded in ionViewWillEnter so the list refreshes on every entry (Ionic
+    // caches the page, so ngOnInit runs only once — otherwise the orders show
+    // a stale/empty snapshot after navigating away and back).
+  }
+  ionViewWillEnter() {
     this.getObject();
   }
   async getObject() {

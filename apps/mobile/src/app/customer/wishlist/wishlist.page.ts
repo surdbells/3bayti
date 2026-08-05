@@ -122,6 +122,13 @@ export class WishlistPage implements OnInit, OnDestroy {
   };
 
   ngOnInit() {
+    // Loaded in ionViewWillEnter so the wishlist refreshes on every entry
+    // (Ionic caches the page, so ngOnInit runs only once — otherwise labels
+    // and items show a stale/empty snapshot after adding elsewhere and
+    // returning).
+  }
+
+  ionViewWillEnter() {
     this.getObject();
   }
 
