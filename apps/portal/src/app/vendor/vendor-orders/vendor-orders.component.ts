@@ -187,9 +187,26 @@ export class VendorOrdersComponent implements OnInit {
 
     return this.adapter.get_v3('GET /vendor/orders', { query: q }).pipe(
       map((res: any): AxServerFetchResult<OrderRow> => {
-        const raw: any[] = res?.data ?? [];
+        // The API (ListVendorOrdersController) responds with the list nested
+        // under `orders` and the count under `pagination.total` — same shape as
+        // the admin store-orders screen. The previous `res.data` / `res.meta`
+        // reads never matched, so every response mapped to an empty array and
+        // the table showed "No orders" even when the API returned rows. Read
+        // the real keys, keeping envelope/array fallbacks for safety.
+        const raw: any[] = Array.isArray(res?.orders)
+          ? res.orders
+          : Array.isArray(res?.data?.orders)
+            ? res.data.orders
+            : Array.isArray(res?.data)
+              ? res.data
+              : [];
         const rows = raw.map((o) => this.mapOrder(o));
-        return { rows, total: res?.meta?.total ?? rows.length };
+        const total =
+          res?.pagination?.total ??
+          res?.data?.pagination?.total ??
+          res?.meta?.total ??
+          rows.length;
+        return { rows, total };
       }),
       catchError(() => {
         this.toast.error('Unable to load orders right now.');
@@ -201,17 +218,21 @@ export class VendorOrdersComponent implements OnInit {
   private mapOrder(o: any): OrderRow {
     const firstItem = (o.items ?? [])[0] ?? {};
     const customer = o.customer ?? {};
+    // Field names match OrderSerializer::listShape: `date` (ATOM, not
+    // `created_at`), `total`/`subtotal`, and `product_image` is a URL string
+    // snapshot (not an object). The vendor list shape carries no customer
+    // block, so the Customer column falls back to "—".
     return {
       id: o.id,
       order_ref: o.order_reference ?? '',
       order_reference: o.order_reference ?? '',
       product: firstItem.product_name ?? `Order ${o.order_reference}`,
-      image: firstItem.product_image?.url ?? '',
+      image: firstItem.product_image ?? '',
       quantity: (o.items ?? []).reduce((s: number, i: any) => s + (i.quantity ?? 1), 0),
       email: customer.email ?? '',
-      total_price: `AED ${parseFloat(o.subtotal ?? '0').toFixed(2)}`,
+      total_price: `AED ${parseFloat(o.total ?? o.subtotal ?? '0').toFixed(2)}`,
       name: `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim() || '—',
-      created: o.created_at ? new Date(o.created_at).toLocaleDateString('en-AE') : '',
+      created: o.date ? new Date(o.date).toLocaleDateString('en-AE') : '',
       status: o.status ?? '',
     };
   }
