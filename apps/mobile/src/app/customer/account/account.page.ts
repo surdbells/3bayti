@@ -47,7 +47,7 @@ import {TranslatePipe} from "../../translate.pipe";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
-import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import { AxWishlistSheetComponent } from '../../shared/ax-mobile/wishlist-sheet';
 import { cfImage } from '../../shared/cf-image';
 interface Category {
   readonly id: number;
@@ -76,7 +76,7 @@ export interface Store {
   templateUrl: './account.page.html',
   styleUrls: ['./account.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonTabBar, IonTabButton, IonLabel, IonFooter, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent, RouterLink]
+  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonTabBar, IonTabButton, IonLabel, IonFooter, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink]
 })
 
 export class AccountPage implements OnInit, OnDestroy {
@@ -94,6 +94,8 @@ export class AccountPage implements OnInit, OnDestroy {
   isOnline = true;
   categories: Labels[] = [];
   isWishOpen = false;
+  /** True while POST /me/wishlist/labels is in flight (inline label create). */
+  isCreatingLabel = false;
   isFilterOpen = false;
   @Input() rating: number = 4.5;
   @Input() ratingsCount: number | string = '100+';
@@ -614,6 +616,30 @@ export class AccountPage implements OnInit, OnDestroy {
       position: "top-center"
     });
   }
+  /**
+   * Inline create from the wishlist sheet: POST the new label, then drop the
+   * pending product straight into it (addToCloset closes the sheet + toasts).
+   * On failure the sheet stays open so the user can retry.
+   */
+  async onCreateLabel(name: string): Promise<void> {
+    if (this.isCreatingLabel) {
+      return;
+    }
+    this.isCreatingLabel = true;
+    try {
+      const label = await this.wishlistService.createLabel(this.single_user.token, name);
+      if (label) {
+        this.addToCloset(label.id);
+      } else {
+        this.error_notification(this.i18n.t('network_error_retry'));
+      }
+    } catch {
+      this.error_notification(this.i18n.t('network_error_retry'));
+    } finally {
+      this.isCreatingLabel = false;
+    }
+  }
+
   success_notification(message: string) {
     this.toast.success(message, {
       position: 'top-center'

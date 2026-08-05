@@ -123,33 +123,17 @@
     </div>
   }
 
-  <!-- Wishlist sheet -->
-  <ax-bottom-sheet
+  <!-- Wishlist sheet (shared component; supports inline label creation) -->
+  <ax-wishlist-sheet
     [isOpen]="isWishOpen"
-    (didDismiss)="OnDidDismiss(); isWishOpen = false"
-    [snapPoints]="[0.5, 0.9]"
-    [initialSnap]="0"
-    [title]="('save' | translate) + ' ' + addCloset.product_name + ' ' + ('to' | translate)">
-
-    @if(!ui_controls.is_loading_category){
-      <ul class="wishlist-list">
-        @for(category of categories; track category.id){
-          <li class="wishlist-item" (click)="addToCloset(category.id)" role="button" tabindex="0">
-            <div class="folder-icon">
-              <ax-icon name="folder-plus"></ax-icon>
-            </div>
-            <span class="wishlist-item__label">{{category.name}}</span>
-            <ax-icon name="chevron-right" class="chevron"></ax-icon>
-          </li>
-        }
-      </ul>
-    }
-    @if(ui_controls.is_loading_category){
-      <div class="modal-loading">
-        <ax-loader></ax-loader>
-      </div>
-    }
-  </ax-bottom-sheet>
+    [productName]="addCloset.product_name"
+    [labels]="categories"
+    [loading]="ui_controls.is_loading_category"
+    [creating]="isCreatingLabel"
+    (dismiss)="OnDidDismiss(); isWishOpen = false"
+    (select)="addToCloset($event)"
+    (createLabel)="onCreateLabel($event)">
+  </ax-wishlist-sheet>
 </ion-content>
 
 <app-tab-bar active="sketch"></app-tab-bar>

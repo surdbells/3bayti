@@ -31,8 +31,7 @@ import { GlobalComponent } from "../../global-component";
 import { InfiniteScrollCustomEvent } from "@ionic/angular";
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
-import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
-import { AxBottomSheetComponent } from '../../shared/ax-mobile/bottom-sheet';
+import { AxWishlistSheetComponent } from '../../shared/ax-mobile/wishlist-sheet';
 import {
   AxProductFilterSheetComponent,
   type ProductFacets,
@@ -62,7 +61,8 @@ import { cfImage } from '../../shared/cf-image';
     IonRefresher,
     IonRefresherContent,
     IonRow,
-    TranslatePipe, AxIconComponent, AxLoaderComponent, AxBottomSheetComponent,
+    TranslatePipe, AxIconComponent,
+    AxWishlistSheetComponent,
     AxProductFilterSheetComponent]
 })
 export class CategoryPage implements OnInit, OnDestroy {
@@ -72,6 +72,8 @@ export class CategoryPage implements OnInit, OnDestroy {
   categories: Labels[] = [];
   isOnline = true;
   isWishOpen = false;
+  /** True while POST /me/wishlist/labels is in flight (inline label create). */
+  isCreatingLabel = false;
   private sub: Subscription;
 
   // Image loading tracking
@@ -476,6 +478,32 @@ export class CategoryPage implements OnInit, OnDestroy {
 
   error_notification(message: string) {
     this.toast.error(message, { position: "top-center" });
+  }
+
+  /**
+   * Inline create from the wishlist sheet: POST the new label, then drop the
+   * pending product straight into it (addToCloset closes the sheet + toasts).
+   * On failure the sheet stays open so the user can retry.
+   */
+  async onCreateLabel(name: string): Promise<void> {
+    if (this.isCreatingLabel) {
+      return;
+    }
+    this.isCreatingLabel = true;
+    this.cdr.markForCheck();
+    try {
+      const label = await this.wishlistService.createLabel(this.single_user.token, name);
+      if (label) {
+        this.addToCloset(label.id);
+      } else {
+        this.error_notification(this.i18n.t('network_error_retry'));
+      }
+    } catch {
+      this.error_notification(this.i18n.t('network_error_retry'));
+    } finally {
+      this.isCreatingLabel = false;
+      this.cdr.markForCheck();
+    }
   }
 
   success_notification(message: string) {

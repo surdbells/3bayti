@@ -350,40 +350,17 @@
   }
 
 
-  <!-- Wishlist sheet -->
-  <ax-bottom-sheet
+  <!-- Wishlist sheet (shared component; supports inline label creation) -->
+  <ax-wishlist-sheet
     [isOpen]="isWishOpen"
-    (didDismiss)="OnDidDismiss(); isWishOpen = false"
-    [snapPoints]="[0.5, 0.9]"
-    [initialSnap]="0">
-
-    <div ax-sheet-header class="m6f-wishlist-sheet__title-row">
-      <h2 class="m6f-wishlist-sheet__title">
-        {{ 'save' | translate }} {{ addCloset.product_name }} {{ 'to' | translate }}
-      </h2>
-      <button type="button" class="m6f-wishlist-sheet__close-btn" (click)="isWishOpen = false">
-        {{ 'close' | translate }}
-      </button>
-    </div>
-
-    @if (!ui_controls.is_loading_category){
-      <ul class="m6f-wishlist-list">
-        @for(category of categories; track category.id; let i = $index){
-          <li class="m6f-wishlist-item" (click)="addToCloset(category.id)" role="button" tabindex="0">
-            <span class="m6f-wishlist-add">
-              <ax-icon name="plus" />
-            </span>
-            <span class="m6f-wishlist-label">{{category.name}}</span>
-          </li>
-        }
-      </ul>
-    }
-    @if (ui_controls.is_loading_category){
-      <div class="m6f-wishlist-loading">
-        <ax-loader></ax-loader>
-      </div>
-    }
-  </ax-bottom-sheet>
+    [productName]="addCloset.product_name"
+    [labels]="categories"
+    [loading]="ui_controls.is_loading_category"
+    [creating]="isCreatingLabel"
+    (dismiss)="OnDidDismiss(); isWishOpen = false"
+    (select)="addToCloset($event)"
+    (createLabel)="onCreateLabel($event)">
+  </ax-wishlist-sheet>
 
   <!-- Premium floating action buttons (stacked above the footer tab bar).
        FAB 1 (Messages) is shown for any logged-in customer; FAB 2 (Vendor

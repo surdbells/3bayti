@@ -1,0 +1,71 @@
+<ax-bottom-sheet
+  [isOpen]="isOpen"
+  (didDismiss)="onDismiss()"
+  [snapPoints]="[0.5, 0.9]"
+  [initialSnap]="0"
+  [title]="('save' | translate) + ' ' + productName + ' ' + ('to' | translate)">
+
+  @if (loading) {
+    <div class="modal-loading">
+      <ax-loader></ax-loader>
+    </div>
+  } @else {
+    <ul class="wishlist-list">
+      @for (label of labels; track label.id) {
+        <li class="wishlist-item" (click)="choose(label.id)" role="button" tabindex="0">
+          <div class="folder-icon">
+            <ax-icon name="folder-plus"></ax-icon>
+          </div>
+          <span class="wishlist-item__label">{{ label.name }}</span>
+          <ax-icon name="chevron-right" class="chevron-icon"></ax-icon>
+        </li>
+      } @empty {
+        <li class="wishlist-empty">{{ 'wishlist_no_labels' | translate }}</li>
+      }
+    </ul>
+
+    <!-- Inline create: a user with no lists yet (or who wants a new one) can
+         create a label without leaving the sheet. -->
+    @if (!showCreateForm) {
+      <button type="button" class="wishlist-create-trigger" (click)="openCreateForm()">
+        <div class="folder-icon folder-icon--add">
+          <ax-icon name="plus"></ax-icon>
+        </div>
+        <span class="wishlist-create-trigger__label">{{ 'wishlist_create_label' | translate }}</span>
+      </button>
+    } @else {
+      <form class="wishlist-create-form" (ngSubmit)="submitCreate()">
+        <input
+          class="wishlist-create-input"
+          type="text"
+          name="newLabelName"
+          [(ngModel)]="newLabelName"
+          [placeholder]="'wishlist_new_label_placeholder' | translate"
+          [attr.aria-label]="'wishlist_new_label_placeholder' | translate"
+          maxlength="40"
+          autocomplete="off"
+          enterkeyhint="done"
+          [disabled]="creating" />
+        <div class="wishlist-create-actions">
+          <button
+            type="button"
+            class="wishlist-create-btn wishlist-create-btn--ghost"
+            (click)="cancelCreate()"
+            [disabled]="creating">
+            {{ 'cancel' | translate }}
+          </button>
+          <button
+            type="submit"
+            class="wishlist-create-btn wishlist-create-btn--primary"
+            [disabled]="creating || newLabelName.trim().length === 0">
+            @if (creating) {
+              <ax-loader class="wishlist-create-btn__spinner"></ax-loader>
+            } @else {
+              {{ 'wishlist_create' | translate }}
+            }
+          </button>
+        </div>
+      </form>
+    }
+  }
+</ax-bottom-sheet>

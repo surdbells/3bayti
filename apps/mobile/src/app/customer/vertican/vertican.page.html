@@ -260,36 +260,15 @@
     </ng-template>
   </ion-modal>
 
-  <!-- Wishlist sheet -->
-  <ax-bottom-sheet
+  <!-- Wishlist sheet (shared component; supports inline label creation) -->
+  <ax-wishlist-sheet
     [isOpen]="isWishOpen"
-    (didDismiss)="OnDidDismiss(); isWishOpen = false"
-    [snapPoints]="[0.5, 0.9]"
-    [initialSnap]="0">
-
-    <div ax-sheet-header class="wishlist-modal__title-row">
-      <h2 class="wishlist-modal__title">
-        {{ 'save' | translate }} {{ addCloset.product_name }} {{ 'to' | translate }}
-      </h2>
-      <button type="button" class="wishlist-modal__close-btn" (click)="isWishOpen = false">
-        {{ 'close' | translate }}
-      </button>
-    </div>
-
-    @if (!ui_controls.is_loading_category){
-      <ul class="custom-list">
-        @for(category of categories; track category.id){
-          <li class="custom-list__item" (click)="addToCloset(category.id)" role="button" tabindex="0">
-            <ax-icon name="plus" class="custom-list__icon" />
-            <span class="custom-list__label">{{category.name}}</span>
-          </li>
-        }
-      </ul>
-    }
-    @if (ui_controls.is_loading_category) {
-      <div class="loader-row">
-        <ax-loader></ax-loader>
-      </div>
-    }
-  </ax-bottom-sheet>
+    [productName]="addCloset.product_name"
+    [labels]="categories"
+    [loading]="ui_controls.is_loading_category"
+    [creating]="isCreatingLabel"
+    (dismiss)="OnDidDismiss(); isWishOpen = false"
+    (select)="addToCloset($event)"
+    (createLabel)="onCreateLabel($event)">
+  </ax-wishlist-sheet>
 </ion-content>
