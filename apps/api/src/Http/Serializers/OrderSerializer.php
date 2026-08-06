@@ -94,6 +94,16 @@ final class OrderSerializer
             'total' => $order->getTotal(),
             'currency' => $order->getCurrency(),
             'paid_at' => $order->getPaidAt()?->format(\DateTimeInterface::ATOM),
+            // The customer who placed the order (order.user). Vendors use this
+            // to coordinate delivery, so name + contact are exposed on the
+            // vendor order list/detail. (detailShape reuses listShape, so this
+            // covers both.)
+            'customer' => [
+                'first_name' => $order->getUser()->getFirstName(),
+                'last_name' => $order->getUser()->getLastName(),
+                'email' => $order->getUser()->getEmail(),
+                'phone' => $order->getUser()->getPhone(),
+            ],
             'items' => $items,
             // M3.2.X.8-F — applied_promo block reads from the persisted
             // PromoRedemption row. Null when no promo was applied. The
