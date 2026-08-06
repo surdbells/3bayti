@@ -156,14 +156,23 @@ final class VendorCouponAnalyticsController
             [$couponId]
         );
 
+        // order_total_after = the final total the customer paid (discount applied);
+        // order_total_before = that plus this coupon's discount. Both come back NULL
+        // when the redemption has no order total (defensive; order_id is normally set).
+        // customer_name/email come from the redeemer (promo_redemptions.user_id).
         $rows = $conn->fetchAllAssociative(
             "SELECT r.id,
                     to_char(r.redeemed_at, 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS redeemed_at,
                     COALESCE(r.discount_amount, 0) AS discount_amount,
                     r.order_id,
-                    o.order_reference
+                    o.order_reference,
+                    o.total AS order_total_after,
+                    (o.total + COALESCE(r.discount_amount, 0)) AS order_total_before,
+                    NULLIF(TRIM(CONCAT(COALESCE(cust.first_name, ''), ' ', COALESCE(cust.last_name, ''))), '') AS customer_name,
+                    cust.email AS customer_email
              FROM promo_redemptions r
              LEFT JOIN orders o ON o.id = r.order_id
+             LEFT JOIN users cust ON cust.id = r.user_id
              WHERE r.promo_code_id = ?
              ORDER BY r.redeemed_at DESC
              LIMIT ? OFFSET ?",
@@ -172,11 +181,15 @@ final class VendorCouponAnalyticsController
 
         return [
             'data' => array_map(static fn (array $r): array => [
-                'id'              => (int) $r['id'],
-                'redeemed_at'     => $r['redeemed_at'],
-                'discount_amount' => round((float) $r['discount_amount'], 2),
-                'order_id'        => $r['order_id'] !== null ? (int) $r['order_id'] : null,
-                'order_reference' => $r['order_reference'] ?? null,
+                'id'                 => (int) $r['id'],
+                'redeemed_at'        => $r['redeemed_at'],
+                'customer_name'      => $r['customer_name'] ?? null,
+                'customer_email'     => $r['customer_email'] ?? null,
+                'discount_amount'    => round((float) $r['discount_amount'], 2),
+                'order_id'           => $r['order_id'] !== null ? (int) $r['order_id'] : null,
+                'order_reference'    => $r['order_reference'] ?? null,
+                'order_total_before' => $r['order_total_before'] !== null ? round((float) $r['order_total_before'], 2) : null,
+                'order_total_after'  => $r['order_total_after'] !== null ? round((float) $r['order_total_after'], 2) : null,
             ], $rows),
             'pagination' => [
                 'page'        => $page,
