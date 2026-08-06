@@ -91,6 +91,11 @@ $cli->addCommands([
     new Command\RollupCommand($migrationsFactory),
 ]);
 
+// Self-hosted OTA — register a published web bundle (ota:publish). Only needs
+// the EntityManager, which is always available (migrations need it too), so it
+// registers unconditionally.
+$cli->add(new \Bayti\Api\Console\PublishOtaBundleCommand($em));
+
 // M3.1.7-B — Application commands. Pull collaborators from the
 // container at registration time. The PaymentGateway resolution
 // requires NOON_* env vars; if those are missing (fresh dev
