@@ -1,0 +1,57 @@
+.ota-form {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem 1rem;
+}
+@media (max-width: 768px) {
+  .ota-form { grid-template-columns: 1fr 1fr; }
+}
+.ota-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+.ota-field--wide { grid-column: 1 / -1; }
+.ota-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ax-color-text-secondary);
+}
+.ota-hint {
+  font-weight: 400;
+  color: var(--ax-color-text-tertiary);
+}
+
+.ota-table-wrap {
+  overflow-x: auto;
+}
+.ota-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+}
+.ota-table th,
+.ota-table td {
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+}
+.ota-table th {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ax-color-text-tertiary);
+  font-weight: 600;
+}
+.ota-table tbody tr:hover {
+  background: var(--ax-color-bg-muted);
+}
+.ota-actions-col {
+  text-align: right;
+  white-space: nowrap;
+}
+.ota-danger {
+  color: var(--ax-color-text-danger, #c0392b);
+}

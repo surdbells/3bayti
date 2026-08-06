@@ -1,0 +1,128 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Mobile</span>
+        <h1 class="ax-page-title">OTA updates</h1>
+        <p class="ax-page-subtitle">
+          Ship a new mobile web bundle over-the-air. The newest active bundle per platform is served to devices; deactivate one to roll back.
+        </p>
+      </div>
+    </header>
+
+    <!-- Upload / publish -->
+    <section class="ax-card ax-p-4 ax-mb-5">
+      <h2 class="ax-h6 ax-mb-3">Publish a bundle</h2>
+      <div class="ota-form">
+        <label class="ota-field">
+          <span class="ota-label">Platform</span>
+          <select class="ax-input" [(ngModel)]="form.platform" name="platform">
+            <option value="android">Android</option>
+            <option value="ios">iOS</option>
+          </select>
+        </label>
+
+        <label class="ota-field">
+          <span class="ota-label">Version</span>
+          <input class="ax-input" type="text" [(ngModel)]="form.version" name="version" placeholder="1.0.7" autocomplete="off" />
+        </label>
+
+        <label class="ota-field">
+          <span class="ota-label">Channel</span>
+          <input class="ax-input" type="text" [(ngModel)]="form.channel" name="channel" placeholder="production" autocomplete="off" />
+        </label>
+
+        <label class="ota-field">
+          <span class="ota-label">Min native</span>
+          <input class="ax-input" type="text" [(ngModel)]="form.min_native" name="min_native" placeholder="1.6.0" autocomplete="off" />
+        </label>
+
+        <label class="ota-field ota-field--wide">
+          <span class="ota-label">Session key <span class="ota-hint">(only for signed bundles)</span></span>
+          <input class="ax-input" type="text" [(ngModel)]="form.session_key" name="session_key" placeholder="leave empty if unsigned" autocomplete="off" />
+        </label>
+
+        <label class="ota-field ota-field--wide">
+          <span class="ota-label">Bundle .zip</span>
+          <input id="ota-file" class="ax-input" type="file" accept=".zip,application/zip" (change)="onFileSelected($event)" />
+        </label>
+      </div>
+
+      <div class="ax-flex ax-justify-between ax-items-center ax-mt-3">
+        <p class="ax-text-2xs ax-text-tertiary ax-m-0">
+          Build the web bundle, zip it (<code>npx &#64;capgo/cli bundle zip com.threebayti.app --path www</code>), then upload the .zip here — the server stores it and computes the checksum.
+        </p>
+        <button type="button" class="ax-btn ax-btn-primary" [disabled]="uploading()" (click)="upload()">
+          <app-icon name="upload_file" aria-hidden="true"></app-icon>
+          {{ uploading() ? 'Uploading…' : 'Upload & publish' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- Bundles -->
+    <section class="ax-card ax-p-0">
+      <div class="ax-p-4" style="border-bottom: 1px solid var(--ax-color-border-subtle);">
+        <h2 class="ax-h6 ax-m-0">Published bundles</h2>
+      </div>
+
+      <div *ngIf="loading()" class="ax-flex ax-justify-center ax-py-8">
+        <span class="ax-spinner" aria-label="Loading"></span>
+      </div>
+
+      <div *ngIf="!loading() && bundles().length; else noBundles" class="ota-table-wrap">
+        <table class="ota-table">
+          <thead>
+            <tr>
+              <th>Platform</th>
+              <th>Channel</th>
+              <th>Version</th>
+              <th>Min native</th>
+              <th>Checksum</th>
+              <th>Signed</th>
+              <th>Status</th>
+              <th>Published</th>
+              <th class="ota-actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let b of bundles()">
+              <td class="ax-font-medium">{{ b.platform }}</td>
+              <td>{{ b.channel }}</td>
+              <td class="ax-font-medium">{{ b.version }}</td>
+              <td class="ax-text-tertiary">{{ b.min_native_version }}</td>
+              <td><code class="ax-text-2xs" [title]="b.checksum">{{ shortChecksum(b.checksum) }}</code></td>
+              <td>
+                <span [ngClass]="b.signed ? 'ax-badge ax-badge-success' : 'ax-badge ax-badge-neutral'">
+                  {{ b.signed ? 'signed' : 'unsigned' }}
+                </span>
+              </td>
+              <td>
+                <span [ngClass]="b.is_active ? 'ax-badge ax-badge-success' : 'ax-badge ax-badge-neutral'">
+                  {{ b.is_active ? 'active' : 'inactive' }}
+                </span>
+              </td>
+              <td class="ax-text-2xs ax-text-tertiary">{{ b.created_at | date:'medium' }}</td>
+              <td class="ota-actions-col">
+                <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="toggleActive(b)">
+                  {{ b.is_active ? 'Deactivate' : 'Activate' }}
+                </button>
+                <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm ota-danger" (click)="remove(b)">
+                  Delete
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noBundles>
+        <div *ngIf="!loading()" class="ax-p-6 ax-text-center ax-text-secondary">
+          No bundles published yet. Upload one above to start shipping OTA updates.
+        </div>
+      </ng-template>
+    </section>
+  </div>
+</app-admin-shell>

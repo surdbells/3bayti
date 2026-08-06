@@ -178,6 +178,12 @@ export const routes: Routes = [
     title: 'Create collection'
   },
   {
+    path: 'ota',
+    loadComponent: () => import('./backend/ota/ota.component').then(m => m.OtaComponent),
+    canActivate: [adminGuard, requirePermission('settings.edit')],
+    title: 'OTA updates'
+  },
+  {
     path: 'edit_collection',
     loadComponent: () => import('./backend/collections/edit-collection/edit-collection.component').then(m => m.EditCollectionComponent),
     canActivate: [adminGuard, requirePermission('catalog.collections_manage')],
