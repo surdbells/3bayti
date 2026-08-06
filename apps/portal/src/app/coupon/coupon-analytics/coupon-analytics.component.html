@@ -222,7 +222,7 @@
                   <td style="text-align: right;"><span class="ax-numeric">AED {{ u.order_total_before | number:'1.2-2' }}</span></td>
                   <td style="text-align: right;"><span class="ax-numeric ax-font-semibold" style="color: var(--ax-color-text-danger);">−AED {{ u.discount_amount | number:'1.2-2' }}</span></td>
                   <td style="text-align: right;"><span class="ax-numeric ax-font-semibold">AED {{ u.order_total_after | number:'1.2-2' }}</span></td>
-                  <td><span class="ax-text-2xs ax-text-tertiary">{{ u.used_at | date:'MMM d, y HH:mm' }}</span></td>
+                  <td><span class="ax-text-2xs ax-text-tertiary">{{ u.redeemed_at | date:'MMM d, y HH:mm' }}</span></td>
                 </tr>
               </tbody>
             </table>

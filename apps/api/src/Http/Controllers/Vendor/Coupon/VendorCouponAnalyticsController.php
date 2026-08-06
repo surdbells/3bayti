@@ -158,7 +158,7 @@ final class VendorCouponAnalyticsController
 
         $rows = $conn->fetchAllAssociative(
             "SELECT r.id,
-                    to_char(r.redeemed_at, 'YYYY-MM-DD\"T\"HH24:MI:SSOF') AS redeemed_at,
+                    to_char(r.redeemed_at, 'YYYY-MM-DD\"T\"HH24:MI:SS\"Z\"') AS redeemed_at,
                     COALESCE(r.discount_amount, 0) AS discount_amount,
                     r.order_id,
                     o.order_reference
