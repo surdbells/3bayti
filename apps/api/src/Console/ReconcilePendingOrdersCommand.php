@@ -300,6 +300,13 @@ final class ReconcilePendingOrdersCommand extends Command
                     // flash-campaign stock. The command flushes once after
                     // processing the batch, so this persists with it.
                     $this->flashStock->reduceForPaidOrder($order);
+                    // Convert the cart this order was created from (kept active
+                    // until payment). Null for orders with no cart (e.g. gift-
+                    // card purchases). Fallback path for a missed webhook.
+                    $cart = $order->getCart();
+                    if ($cart !== null && $cart->isActive()) {
+                        $cart->markConverted();
+                    }
                 }
             } catch (\Throwable $e) {
                 $this->logger->warning('reconcile_pending.mark_paid_failed', [

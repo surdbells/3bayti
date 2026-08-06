@@ -698,6 +698,14 @@ final class NoonWebhookController
             // re-deliveries). Mutations are persisted by the webhook's flush.
             if ($justPaid) {
                 $this->flashStock->reduceForPaidOrder($order);
+                // Payment confirmed — convert the cart this order was created
+                // from (kept active until now so cancelling checkout didn't
+                // empty it). Null for orders with no cart, e.g. gift-card
+                // purchases, so nothing is converted for those.
+                $cart = $order->getCart();
+                if ($cart !== null && $cart->isActive()) {
+                    $cart->markConverted();
+                }
             }
             // Only notify on the FIRST paid transition; idempotent
             // re-deliveries find the order already paid.

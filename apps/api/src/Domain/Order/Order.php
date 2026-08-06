@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\Order;
 
+use Bayti\Api\Domain\Cart\Cart;
 use Bayti\Api\Domain\Common\Timestamps;
 use Bayti\Api\Domain\Promo\PromoRedemption;
 use Bayti\Api\Domain\User\User;
@@ -92,6 +93,16 @@ class Order
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: false, onDelete: 'RESTRICT')]
     private User $user;
+
+    /**
+     * The cart this order was created from. Kept so the cart is converted only
+     * when the order is PAID (not at checkout initiate — otherwise cancelling
+     * out of the payment page would empty the cart). NULL for orders with no
+     * cart, e.g. gift-card purchases, so nothing is converted for those.
+     */
+    #[ORM\ManyToOne(targetEntity: Cart::class)]
+    #[ORM\JoinColumn(name: 'cart_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?Cart $cart = null;
 
     #[ORM\Column(name: 'order_reference', type: 'string', length: 32, unique: true)]
     private string $orderReference;
@@ -235,6 +246,16 @@ class Order
     public function getUser(): User
     {
         return $this->user;
+    }
+
+    public function getCart(): ?Cart
+    {
+        return $this->cart;
+    }
+
+    public function setCart(?Cart $cart): void
+    {
+        $this->cart = $cart;
     }
 
     public function getOrderReference(): string

@@ -384,11 +384,14 @@ final class InitiateCheckoutController
                 $order->addAddress($this->snapshotAddress($billing, OrderAddress::TYPE_BILLING));
                 $order->addAddress($this->snapshotAddress($shipping, OrderAddress::TYPE_SHIPPING));
 
+                // Link the cart to the order but DON'T convert it yet: the cart
+                // stays active through the pending-payment window so a customer
+                // who cancels out of the payment page keeps their cart. It's
+                // converted only when the order becomes PAID (see the zero-total
+                // path below + NoonWebhookController + ReconcilePendingOrdersCommand).
+                $order->setCart($cart);
+
                 $em->persist($order);
-
-                // Mark cart converted (won't be returned by GET /v3/cart anymore).
-                $cart->markConverted();
-
                 $em->flush();
 
                 // M3.2.X.8-D — Promo redemption (unchanged).
@@ -461,6 +464,11 @@ final class InitiateCheckoutController
                 // order — decrement flash-campaign stock before the save
                 // below persists everything in one flush.
                 $this->flashStock->reduceForPaidOrder($order);
+                // Payment is complete (gift-card balance covered the total) —
+                // NOW convert the cart it was created from.
+                if ($cart->isActive()) {
+                    $cart->markConverted();
+                }
             }
             $orderRepo->save($order);
 
