@@ -17,6 +17,29 @@ const config: CapacitorConfig = {
       skipNativeAuth: false,
       providers: ["google.com", "apple.com"],
     },
+    // Self-hosted OTA web-bundle updates (@capgo/capacitor-updater), pointed at
+    // OUR endpoint instead of Capgo Cloud (POST /v3/ota/updates → ota_bundles).
+    //   - autoUpdate=true: check on every resume, download in the background,
+    //     apply on the NEXT cold start.
+    //   - directUpdate=false: never swap the running bundle mid-session.
+    //   - resetWhenUpdate=true: when the NATIVE shell is updated via the store,
+    //     drop stale OTA bundles so the fresh builtin wins.
+    //   - appReadyTimeout=10000: if notifyAppReady() (app.component.ts) doesn't
+    //     fire within 10s of a new bundle booting, AUTO-ROLLBACK to the last
+    //     good bundle.
+    //   - updateUrl: our v3 API (same host as every other call). statsUrl /
+    //     channelUrl are omitted until those endpoints exist. publicKey is
+    //     added when bundles are signed (slice 5) — until then bundles are
+    //     unsigned (SHA256-verified only).
+    // NOTE: OTA ships JS/CSS only. Anything needing new native code must go via
+    // the store; the server's min_native_version gate enforces this.
+    CapacitorUpdater: {
+      autoUpdate: true,
+      directUpdate: false,
+      resetWhenUpdate: true,
+      appReadyTimeout: 10000,
+      updateUrl: "https://api-v3.3bayti.ae/v3/ota/updates",
+    },
     // M32: native splash. Logo centered on canvas-color background.
     // Programmatically dismissed from app.component.ts after Angular
     // bootstrap completes (see SplashScreen.hide() call there), so

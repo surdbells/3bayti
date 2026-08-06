@@ -3,6 +3,7 @@ import {IonApp, IonRouterOutlet, Platform} from '@ionic/angular/standalone';
 import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
 import { App as CapacitorApp } from '@capacitor/app';
+import { CapacitorUpdater } from '@capgo/capacitor-updater';
 import { ScreenOrientation } from '@capacitor/screen-orientation';
 import { SplashScreen } from '@capacitor/splash-screen';
 import {ToastController} from "@ionic/angular";
@@ -89,6 +90,16 @@ export class AppComponent {
     private pushManager: PushManager,
     private router: Router,
   ) {
+      /* OTA (self-hosted Capgo) — confirm the freshly-booted web bundle is
+         healthy. MUST run on EVERY native cold start as early as possible: if
+         notifyAppReady() doesn't fire within appReadyTimeout (10s, see
+         capacitor.config.ts) the plugin AUTO-ROLLS BACK to the previous bundle.
+         Called synchronously here — not behind platform.ready() — so nothing
+         can delay it past the timeout. Native-guarded + try/caught so a plugin
+         error can never block boot. (OTA = web/JS bundles only; native shell
+         updates remain handled by AppUpdateService — the store gate.) */
+      this.initOtaUpdater();
+
       this.initializeApp();
 
       /* Enable the update-debug overlay when ?debug=update appears in the
@@ -160,6 +171,41 @@ export class AppComponent {
       ScreenOrientation.lock({ orientation: 'portrait' })
         .then(() => console.log('ScreenOrientation loaded'))
         .catch((e) => console.warn('ScreenOrientation.lock failed:', e));
+    }
+  }
+
+  /* OTA bootstrap (self-hosted Capgo, @capgo/capacitor-updater → our
+     /v3/ota/updates endpoint).
+       - notifyAppReady() validates the running bundle so the plugin doesn't
+         auto-roll-back a healthy update.
+       - The listeners make OTA observable in chrome://inspect / Safari Web
+         Inspector.
+       - AppUpdateService.check() (runUpdateCheck) still governs mandatory
+         NATIVE shell updates via the store gate — the two never conflict: OTA
+         swaps the JS bundle inside the SAME native version; the store gate
+         forces a new native version when native code/permissions change.
+     Native-guarded + fully wrapped so a plugin error can never block boot. */
+  private initOtaUpdater(): void {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    try {
+      CapacitorUpdater.notifyAppReady()
+        .then(() => console.log('[OTA] notifyAppReady() ok'))
+        .catch((e) => console.warn('[OTA] notifyAppReady() failed:', e));
+
+      void CapacitorUpdater.addListener('updateAvailable', (info) =>
+        console.log('[OTA] updateAvailable', info));
+      void CapacitorUpdater.addListener('downloadComplete', (info) =>
+        console.log('[OTA] downloadComplete', info));
+      void CapacitorUpdater.addListener('majorAvailable', (info) =>
+        console.log('[OTA] majorAvailable', info));
+      void CapacitorUpdater.addListener('updateFailed', (info) =>
+        console.log('[OTA] updateFailed', info));
+      void CapacitorUpdater.addListener('appReloaded', () =>
+        console.log('[OTA] appReloaded'));
+    } catch (e) {
+      console.warn('[OTA] updater init failed:', e);
     }
   }
 

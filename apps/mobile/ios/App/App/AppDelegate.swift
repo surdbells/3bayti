@@ -2,7 +2,6 @@ import UIKit
 import Capacitor
 import FirebaseCore
 import FirebaseMessaging
-import WebKit
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -11,25 +10,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
       FirebaseApp.configure()
-      clearWebViewCacheOnUpgrade()
       return true
-    }
-
-    /// Post-Capgo safeguard. Clear the WKWebView disk/memory cache once when the
-    /// app version changes, so a stale cached index.html / assets from a previous
-    /// build can't survive an update (this app used to ship JS bundles OTA via
-    /// Capgo). Only cache types are cleared — cookies and localStorage (login,
-    /// preferences) are left intact so users aren't signed out. The persisted
-    /// bundle path itself is reset by Capacitor's own version check (isNewBinary),
-    /// which a store release always triggers.
-    private func clearWebViewCacheOnUpgrade() {
-      let current = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
-      let last = UserDefaults.standard.string(forKey: "ax_last_version_name") ?? ""
-      guard current != last else { return }
-      UserDefaults.standard.set(current, forKey: "ax_last_version_name")
-      let cacheTypes: Set<String> = [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache]
-      WKWebsiteDataStore.default().removeData(ofTypes: cacheTypes,
-                                              modifiedSince: Date(timeIntervalSince1970: 0)) { }
     }
 
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
