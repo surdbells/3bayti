@@ -41,8 +41,13 @@
         </label>
 
         <label class="ota-field ota-field--wide">
-          <span class="ota-label">Session key <span class="ota-hint">(only for signed bundles)</span></span>
-          <input class="ax-input" type="text" [(ngModel)]="form.session_key" name="session_key" placeholder="leave empty if unsigned" autocomplete="off" />
+          <span class="ota-label">Session key <span class="ota-hint">(signed bundles only — the ivSessionKey from <code>capgo encrypt</code>)</span></span>
+          <input class="ax-input" type="text" [(ngModel)]="form.session_key" name="session_key" placeholder="leave empty for an unsigned .zip" autocomplete="off" />
+        </label>
+
+        <label class="ota-field ota-field--wide">
+          <span class="ota-label">Checksum <span class="ota-hint">(signed bundles only — from <code>capgo encrypt</code>; auto-computed for a plain .zip)</span></span>
+          <input class="ax-input" type="text" [(ngModel)]="form.checksum" name="checksum" placeholder="auto (SHA256) when unsigned" autocomplete="off" />
         </label>
 
         <label class="ota-field ota-field--wide">

@@ -22,7 +22,10 @@ export interface OtaUploadMeta {
   version: string;
   channel?: string;
   min_native?: string;
+  /** Signed bundles only — the ivSessionKey from `@capgo/cli encrypt`. */
   session_key?: string;
+  /** Signed bundles only — the checksum from `@capgo/cli encrypt`. */
+  checksum?: string;
 }
 
 /**
@@ -64,6 +67,7 @@ export class OtaAdminService {
     if (meta.channel) q.set('channel', meta.channel.trim());
     if (meta.min_native) q.set('min_native', meta.min_native.trim());
     if (meta.session_key) q.set('session_key', meta.session_key.trim());
+    if (meta.checksum) q.set('checksum', meta.checksum.trim());
 
     const res: any = await firstValueFrom(
       this.http.post(`${this.base()}/v3/admin/ota/bundles?${q.toString()}`, form, { headers: this.headers() }),

@@ -59,6 +59,11 @@ final class UploadOtaBundleController
         $appId = trim((string) ($q['app_id'] ?? '')) ?: self::APP_ID;
         $sessionKeyRaw = trim((string) ($q['session_key'] ?? ''));
         $sessionKey = $sessionKeyRaw !== '' ? $sessionKeyRaw : null;
+        // For signed/encrypted bundles the plugin verifies against the checksum
+        // that `@capgo/cli encrypt` emits (not a SHA256 of the ciphertext), so
+        // the operator supplies it. Optional for plain bundles (we compute it).
+        $providedChecksum = trim((string) ($q['checksum'] ?? ''));
+        $signed = $sessionKey !== null;
 
         // Metadata validation.
         if (!in_array($platform, OtaBundle::ALL_PLATFORMS, true)) {
@@ -87,9 +92,21 @@ final class UploadOtaBundleController
             throw HttpException::badRequest('Bundle too large (max 60 MB).');
         }
         $bytes = (string) $upload->getStream();
-        // ZIP magic number: PK\x03\x04 (also PK\x05\x06 for an empty archive).
-        if (!str_starts_with($bytes, "PK\x03\x04") && !str_starts_with($bytes, "PK\x05\x06")) {
-            throw HttpException::badRequest('The uploaded file is not a .zip archive.');
+        if ($signed) {
+            // An encrypted bundle is ciphertext, not a readable .zip, and the
+            // plugin checks it against the encrypt-command checksum — which we
+            // can't derive — so the operator must supply it.
+            if ($providedChecksum === '') {
+                throw HttpException::badRequest('Signed bundles require the checksum from `@capgo/cli encrypt` (send it as ?checksum=…).');
+            }
+            $checksum = $providedChecksum;
+        } else {
+            // Plain bundle: must be a real .zip (PK\x03\x04, or PK\x05\x06 for an
+            // empty archive). Checksum is the SHA256 we compute (or an override).
+            if (!str_starts_with($bytes, "PK\x03\x04") && !str_starts_with($bytes, "PK\x05\x06")) {
+                throw HttpException::badRequest('The uploaded file is not a .zip archive.');
+            }
+            $checksum = $providedChecksum !== '' ? $providedChecksum : hash('sha256', $bytes);
         }
 
         // Duplicate guard — mirrors uniq_ota_bundle_version.
@@ -116,7 +133,7 @@ final class UploadOtaBundleController
             $channel,
             $version,
             $stored['url'],
-            $stored['checksum'],
+            $checksum,
             $minNative,
             $sessionKey,
         );

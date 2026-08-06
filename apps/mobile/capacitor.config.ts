@@ -28,9 +28,11 @@ const config: CapacitorConfig = {
     //     fire within 10s of a new bundle booting, AUTO-ROLLBACK to the last
     //     good bundle.
     //   - updateUrl: our v3 API (same host as every other call). statsUrl /
-    //     channelUrl are omitted until those endpoints exist. publicKey is
-    //     added when bundles are signed (slice 5) — until then bundles are
-    //     unsigned (SHA256-verified only).
+    //     channelUrl are omitted until those endpoints exist.
+    //   - publicKey: `npx @capgo/cli key create` writes it here to enable
+    //     end-to-end encryption / code signing — see OTA-SIGNING.md. Do this
+    //     BEFORE opening production OTA. Until then bundles are unsigned
+    //     (SHA256-verified only).
     // NOTE: OTA ships JS/CSS only. Anything needing new native code must go via
     // the store; the server's min_native_version gate enforces this.
     CapacitorUpdater: {

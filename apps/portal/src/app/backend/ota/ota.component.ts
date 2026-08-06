@@ -35,6 +35,7 @@ export class OtaComponent implements OnInit {
     channel: 'production',
     min_native: '0.0.0',
     session_key: '',
+    checksum: '',
   };
   file: File | null = null;
 
@@ -74,6 +75,11 @@ export class OtaComponent implements OnInit {
       this.toast.error('Version must be semver, e.g. 1.0.7.');
       return;
     }
+    // Signed bundles carry both the ivSessionKey and the encrypt-command checksum.
+    if (this.form.session_key?.trim() && !this.form.checksum?.trim()) {
+      this.toast.error('A signed bundle also needs the checksum from `capgo encrypt`.');
+      return;
+    }
 
     this.uploading.set(true);
     try {
@@ -83,12 +89,14 @@ export class OtaComponent implements OnInit {
         channel: this.form.channel,
         min_native: this.form.min_native,
         session_key: this.form.session_key || undefined,
+        checksum: this.form.checksum || undefined,
       });
       this.toast.success(`Published ${bundle.platform} ${bundle.version}.`);
       // Reset the file + version; keep platform/channel/min_native for the next one.
       this.file = null;
       this.form.version = '';
       this.form.session_key = '';
+      this.form.checksum = '';
       const fileInput = document.getElementById('ota-file') as HTMLInputElement | null;
       if (fileInput) fileInput.value = '';
       await this.load();

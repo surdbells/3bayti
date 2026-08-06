@@ -1,6 +1,13 @@
 # Specifies intentionally untracked files to ignore when using Git
 # http://git-scm.com/docs/gitignore
 
+# Capgo OTA code-signing keys. The PRIVATE key must NEVER be committed or shipped
+# in the app — anyone with it can sign a malicious bundle. The public key
+# (capgo_key.pub) is embedded in capacitor.config and is safe to commit.
+capgo_key
+capgo_key_v2
+.capgo_key_v2
+
 *~
 *.sw[mnpcod]
 .tmp
