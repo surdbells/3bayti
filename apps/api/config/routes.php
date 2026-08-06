@@ -504,6 +504,19 @@ return function (App $app): void {
     $app->post('/v3/cart/resolve', \Bayti\Api\Http\Controllers\Cart\ResolveCartController::class);
 
     // -------------------------------------------------------------------
+    // Self-hosted OTA (over-the-air web-bundle updates).
+    //
+    // POST /v3/ota/updates  (NO auth)
+    //
+    // Polled by @capgo/capacitor-updater on the device to check for a new
+    // web bundle. INTENTIONALLY UNAUTHENTICATED — the plugin carries no user
+    // token; it only returns public release metadata (version + CDN url +
+    // SHA256 checksum) and fails safe to "no update". Bundle integrity is
+    // enforced on-device (checksum + signature verification).
+    // -------------------------------------------------------------------
+    $app->post('/v3/ota/updates', \Bayti\Api\Http\Controllers\Ota\CheckOtaUpdateController::class);
+
+    // -------------------------------------------------------------------
     // Vendor applications — PUBLIC seller intake ("Become a seller").
     //
     // POST /v3/vendor-applications  (NO auth)
