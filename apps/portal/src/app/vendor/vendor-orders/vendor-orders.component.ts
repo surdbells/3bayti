@@ -102,7 +102,7 @@ export class VendorOrdersComponent implements OnInit {
         { key: 'total_price', label: 'Total', align: 'right' },
         { key: 'status', label: 'Status', align: 'center' },
       ],
-      rowActions: [{ id: 'manage', label: 'Manage order', icon: 'tune' }],
+      rowActions: [{ id: 'manage', label: 'Manage order', icon: 'arrow_forward' }],
     };
   }
 
