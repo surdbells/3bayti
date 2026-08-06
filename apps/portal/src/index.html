@@ -5,6 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sell More with 3bayti.ae</title>
   <base href="/" />
+  <!--
+    Stale-deploy recovery. After a new deploy, a browser holding an old
+    index.html can request a hashed JS chunk that no longer exists; the server
+    returns a 404 or the SPA shell, so the module import fails with
+    "Failed to load module script … MIME type text/html" / "Failed to fetch
+    dynamically imported module" and the app breaks. Reload ONCE to fetch the
+    fresh index.html + current chunk names. Registered before Angular's module
+    scripts so it catches their load failures. Loop-guarded via sessionStorage;
+    the guard is cleared in main.ts once the app boots, so a genuinely broken
+    deploy can't reload-loop but a future good deploy can still recover.
+  -->
+  <script>
+    (function () {
+      var KEY = 'ax_chunk_reloaded';
+      function isChunkError(text) {
+        return /Failed to load module script|Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Loading chunk [\w-]+ failed/i.test(String(text || ''));
+      }
+      function recover() {
+        try {
+          if (sessionStorage.getItem(KEY)) return; // already reloaded once this session
+          sessionStorage.setItem(KEY, '1');
+        } catch (e) { /* private mode / storage blocked — reload anyway */ }
+        location.reload();
+      }
+      // Resource load failures (a <script type=module> or modulepreload <link>
+      // that 404s or is served the wrong MIME) fire 'error' on the element in
+      // the capture phase. Only react to .js chunk assets — not runtime errors.
+      window.addEventListener('error', function (e) {
+        var t = e && e.target;
+        if (t && (t.tagName === 'SCRIPT' || t.tagName === 'LINK') && t.src && /chunk-|\.js(\?|$)/i.test(t.src)) {
+          recover();
+        } else if (isChunkError(e && e.message)) {
+          recover();
+        }
+      }, true);
+      // Lazy route imports reject here on failure.
+      window.addEventListener('unhandledrejection', function (e) {
+        var r = e && e.reason;
+        if (isChunkError(r && r.message ? r.message : r)) recover();
+      });
+    })();
+  </script>
   <link rel="shortcut icon" href="https://3bayti.ae/external/favicon.png" type="image/x-icon" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

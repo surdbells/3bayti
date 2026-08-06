@@ -1,1 +1,18 @@
-/*    /index.html   200
+# Cloudflare Pages — URL redirects
+# https://developers.cloudflare.com/pages/configuration/redirects/
+#
+# Format: /from /to [status]   (301 default; 302 temporary; 200 rewrite)
+#
+# SPA routing is handled automatically: the build output has no top-level
+# 404.html, so Cloudflare Pages treats this as a single-page app and serves
+# index.html for unmatched navigation paths (deep links route client-side).
+#
+# Do NOT add a "/* /index.html 200" catch-all. It makes a request for a
+# missing hashed JS chunk (e.g. after a deploy, when a browser holds a stale
+# index.html) fall back to index.html, so the browser receives text/html for a
+# module script and throws "Failed to load module script … MIME type
+# text/html". Cloudflare also flags the catch-all as an infinite loop.
+# Stale-chunk recovery is handled client-side (see src/index.html).
+#
+# Real content redirects go here as URLs evolve, e.g.:
+#   /old-slug /new-slug 301
