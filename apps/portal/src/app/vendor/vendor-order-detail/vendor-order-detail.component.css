@@ -1,0 +1,43 @@
+/* Two-column layout: items + totals on the left, customer + timeline on the
+   right. Stacks on narrow screens. */
+.voi-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 1.25rem;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .voi-grid { grid-template-columns: 1fr; }
+}
+
+.voi-item {
+  display: flex; gap: 0.75rem; align-items: flex-start;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--ax-color-border-subtle);
+}
+.voi-item:last-child { border-bottom: 0; }
+.voi-item-img {
+  width: 48px; height: 48px; object-fit: cover; object-position: top center;
+  border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);
+  flex-shrink: 0;
+}
+.voi-item-body { flex: 1; min-width: 0; }
+.voi-item-actions { flex-shrink: 0; }
+.voi-item-actions .ax-input { width: 9rem; }
+
+.voi-totals { }
+.voi-total-row {
+  display: flex; justify-content: space-between;
+  font-size: 0.8125rem; color: var(--ax-color-text-secondary); padding: 0.2rem 0;
+}
+.voi-total-grand {
+  font-size: 0.95rem; font-weight: 600; color: var(--ax-color-text-primary);
+  border-top: 1px solid var(--ax-color-border-subtle); margin-top: 0.3rem; padding-top: 0.5rem;
+}
+
+.voi-timeline { list-style: none; margin: 0; padding: 0; }
+.voi-timeline li { display: flex; gap: 0.625rem; align-items: flex-start; padding: 0.4rem 0; }
+.voi-timeline-dot {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--ax-color-brand, #906952); margin-top: 0.35rem; flex-shrink: 0;
+}
