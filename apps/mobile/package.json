@@ -16,7 +16,8 @@
     "lint": "ng lint",
     "type-check": "tsc --noEmit -p tsconfig.app.json",
     "check-icons": "python3 scripts/check-icons.py",
-    "wn-build": "./scripts/wn-build.sh"
+    "wn-build": "./scripts/wn-build.sh",
+    "ota:release": "node scripts/ota-release.mjs"
   },
   "private": true,
   "dependencies": {
