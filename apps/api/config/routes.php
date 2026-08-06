@@ -663,6 +663,17 @@ return function (App $app): void {
         $group->put('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\UpdateBrandController::class)->add($perm->for('catalog.brands_manage'));
         $group->delete('/brands/{id}', \Bayti\Api\Http\Controllers\Admin\Brand\DeleteBrandController::class)->add($perm->for('catalog.brands_manage'));
 
+        // Mobile OTA — self-hosted web-bundle releases, managed from the portal
+        // (upload a .zip, publish, roll back) so releases never touch the shell.
+        // Gated on settings.* — this is effectively super-admin scope because
+        // publishing OTA ships JS to every user. Bundles live on the app server
+        // (var/uploads/ota, served statically at /uploads/ota); devices poll the
+        // public POST /v3/ota/updates.
+        $group->get('/ota/bundles', \Bayti\Api\Http\Controllers\Admin\Ota\ListOtaBundlesController::class)->add($perm->for('settings.view'));
+        $group->post('/ota/bundles', \Bayti\Api\Http\Controllers\Admin\Ota\UploadOtaBundleController::class)->add($perm->for('settings.edit'));
+        $group->patch('/ota/bundles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Ota\SetOtaBundleActiveController::class)->add($perm->for('settings.edit'));
+        $group->delete('/ota/bundles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Ota\DeleteOtaBundleController::class)->add($perm->for('settings.edit'));
+
         // Vendor admin
         $group->get('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class)->add($perm->for('vendors.view'));
         $group->post('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\CreateVendorController::class)->add($perm->for('vendors.create'));

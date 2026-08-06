@@ -158,6 +158,11 @@ class OtaBundle
         $this->isActive = false;
     }
 
+    public function setActive(bool $active): void
+    {
+        $this->isActive = $active;
+    }
+
     public function getCreatedAt(): DateTimeImmutable
     {
         return $this->createdAt;
