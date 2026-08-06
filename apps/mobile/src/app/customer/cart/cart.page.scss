@@ -259,7 +259,38 @@ ion-content.page-bg {
   --border-radius: 999px;
   --box-shadow: none;
   --min-height: 52px;
-  margin: 16px 0 24px;
+  margin: 16px 0 0;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: none;
+
+  ax-icon {
+    margin-inline-end: 6px;
+  }
+}
+
+/* Separator between the primary Checkout action and the secondary
+   "Continue shopping" action. */
+.cart-cta-sep {
+  height: 1px;
+  background: var(--ax-color-border-subtle);
+  margin: 20px 8px;
+}
+
+.continue-shopping-btn {
+  --background: transparent;
+  --background-hover: var(--ax-color-bg-muted);
+  --background-activated: var(--ax-color-bg-muted);
+  --color: var(--ax-color-text-primary);
+  --border-color: var(--ax-color-border-default);
+  --border-width: 1.5px;
+  --border-style: solid;
+  --border-radius: 999px;
+  --box-shadow: none;
+  --min-height: 50px;
+  margin: 0 0 24px;
   font-family: inherit;
   font-size: 14px;
   font-weight: 500;

@@ -104,6 +104,18 @@
       <ax-icon name="shopping-bag" slot="start"></ax-icon>
       {{ 'button_checkout' | translate }}
     </ion-button>
+
+    <div class="cart-cta-sep" aria-hidden="true"></div>
+
+    <ion-button
+      [routerLink]="['/account']"
+      expand="block"
+      fill="outline"
+      class="continue-shopping-btn"
+      type="button">
+      <ax-icon name="arrow-left" slot="start"></ax-icon>
+      {{ 'button_continue_shopping' | translate }}
+    </ion-button>
   }
 
   @if (ui_controls.is_empty) {

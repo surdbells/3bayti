@@ -298,7 +298,9 @@
 .success-secondary-btn {
   background: transparent;
   border: 1px solid var(--ax-color-border-default, rgba(46, 36, 28, 0.16));
-  color: var(--text-primary, #2e241c);
+  /* Theme-aware token — the legacy --text-primary isn't remapped for dark mode,
+     so the label rendered dark-on-dark (invisible) there. */
+  color: var(--ax-color-text-primary, #2e241c);
 }
 
 .success-primary-btn {

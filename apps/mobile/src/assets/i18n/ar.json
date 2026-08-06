@@ -366,6 +366,7 @@
   "cart_empty_title": "سلة التسوق فارغة",
   "cart_empty_message": "أضف منتجات إلى السلة للمتابعة إلى الدفع.",
   "button_start_shopping": "ابدأ التسوق",
+  "button_continue_shopping": "متابعة التسوق",
   "title_order_summary": "ملخص الطلب",
   "label_delivery_fee": "رسوم التوصيل",
   "label_discount": "الخصم",

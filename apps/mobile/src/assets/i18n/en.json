@@ -367,6 +367,7 @@
   "cart_empty_title": "Your Cart is Empty",
   "cart_empty_message": "Add items to your cart to continue to checkout.",
   "button_start_shopping": "Start Shopping",
+  "button_continue_shopping": "Continue Shopping",
   "title_order_summary": "Order summary",
   "label_delivery_fee": "Delivery fee",
   "label_discount": "Discount",
