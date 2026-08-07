@@ -62,10 +62,10 @@ final class OrderTimelineBuilderTest extends TestCase
             // 4. order_return_requests rows
             [
                 ['id' => '42', 'status' => 'approved', 'reason' => 'defective',
-                 'customer_id' => '100',
+                 'customer_user_id' => '100',
                  'requested_at' => '2026-05-05 14:00:00',
                  'decided_at' => '2026-05-06 09:30:00',
-                 'decided_by_user_id' => '42',
+                 'decided_by_admin_user_id' => '42',
                  'picked_up_at' => null,
                  'delivered_to_vendor_at' => null,
                  'refunded_at' => null,
@@ -268,10 +268,10 @@ final class OrderTimelineBuilderTest extends TestCase
             [], [],
             [
                 ['id' => '42', 'status' => 'refunded', 'reason' => 'defective',
-                 'customer_id' => '100',
+                 'customer_user_id' => '100',
                  'requested_at' => '2026-05-05 14:00:00',
                  'decided_at' => '2026-05-06 09:30:00',
-                 'decided_by_user_id' => '42',
+                 'decided_by_admin_user_id' => '42',
                  'picked_up_at' => '2026-05-07 11:00:00',
                  'delivered_to_vendor_at' => '2026-05-08 15:00:00',
                  'refunded_at' => '2026-05-10 10:00:00',
@@ -305,10 +305,10 @@ final class OrderTimelineBuilderTest extends TestCase
             [], [],
             [
                 ['id' => '42', 'status' => 'denied', 'reason' => 'defective',
-                 'customer_id' => '100',
+                 'customer_user_id' => '100',
                  'requested_at' => '2026-05-05 14:00:00',
                  'decided_at' => '2026-05-06 09:30:00',
-                 'decided_by_user_id' => '42',
+                 'decided_by_admin_user_id' => '42',
                  'picked_up_at' => null, 'delivered_to_vendor_at' => null,
                  'refunded_at' => null, 'cancelled_at' => null],
             ],
@@ -471,10 +471,10 @@ final class OrderTimelineBuilderTest extends TestCase
             [], [],
             [
                 ['id' => '42', 'status' => 'approved', 'reason' => 'defective',
-                 'customer_id' => '100',
+                 'customer_user_id' => '100',
                  'requested_at' => '2026-05-05 14:00:00',
                  'decided_at' => null,  // not yet decided
-                 'decided_by_user_id' => null,
+                 'decided_by_admin_user_id' => null,
                  'picked_up_at' => null, 'delivered_to_vendor_at' => null,
                  'refunded_at' => null, 'cancelled_at' => null],
             ],
