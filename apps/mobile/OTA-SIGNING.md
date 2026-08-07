@@ -42,16 +42,18 @@ npm run build                                   # -> apps/mobile/www
 npx @capgo/cli bundle zip com.threebayti.app --path www --json
 #    -> { "bundle": "<zip>", "checksum": "<sha256>" }
 
-# 3. encrypt the zip in place — returns the ivSessionKey (v8 CLI)
+# 3. encrypt the zip in place — feed it the plain <sha256> from step 2; it
+#    prints the ivSessionKey AND the encrypted checksum to publish
 npx @capgo/cli bundle encrypt <zip> <sha256>
 #    -> ivSessionKey: <...>   (this is the Session key)
+#    -> checksum:     <...>   (the ENCRYPTED value to publish, NOT the plain sha256)
 ```
 
 Then in the portal → **OTA updates**, upload the **encrypted** file and fill:
 - **Session key** = the `ivSessionKey` from `bundle encrypt`
-- **Checksum** = the plain `<sha256>` from `bundle zip --json` (step 2). On the
-  v8 CLI/plugin the device verifies the *decrypted* bundle against it; `bundle
-  encrypt` no longer prints its own checksum.
+- **Checksum** = the ENCRYPTED checksum `bundle encrypt` prints (512 hex for
+  RSA-2048) — NOT the plain `bundle zip` sha256. The device verifies the bundle
+  against this signed checksum.
 - platform / version / min-native as usual.
 
 The server stores the encrypted blob and records that checksum + session key; the
@@ -59,10 +61,11 @@ endpoint returns them, and the device decrypts with its embedded public key. The
 bundle table shows **signed** for these.
 
 > Command names have shifted across CLI releases: v8 (8.33.0 here) nests it as
-> `bundle encrypt` and returns only the ivSessionKey; some older versions used a
-> bare `encrypt` that also printed a checksum. Check `npx @capgo/cli bundle
-> encrypt --help` for yours. The portal fields (session key + checksum) are what
-> matter regardless — and the checksum is always the plain `bundle zip` one on v8.
+> `bundle encrypt`; some older versions used a bare `encrypt`. Check
+> `npx @capgo/cli bundle encrypt --help` for yours. What matters regardless is
+> what goes in the portal fields: the ivSessionKey as **Session key** and the
+> **encrypted** checksum it prints as **Checksum** (never the plain `bundle zip`
+> sha256).
 
 ## Per-release (unsigned — dev/staging only)
 

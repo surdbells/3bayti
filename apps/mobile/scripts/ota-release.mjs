@@ -126,12 +126,13 @@ function buildAndZip() {
 
 function encrypt(zipPath, plainChecksum) {
   console.log('• Encrypting bundle (@capgo/cli bundle encrypt)…');
-  // @capgo/cli v8: `bundle encrypt <zip> <plainChecksum>` encrypts the zip in
-  // place (RSA/v2, auto-using .capgo_key_v2 in this folder) and returns the
-  // ivSessionKey. The checksum to PUBLISH is the plain-zip checksum from
-  // `bundle zip --json` — the device verifies the DECRYPTED bundle against it;
-  // encrypt no longer emits its own checksum. Older CLIs printed both, and the
-  // sub-command was a bare `encrypt`; we handle either shape/name below.
+  // @capgo/cli v8: `bundle encrypt <zip> <plainChecksum>` takes the plain-zip
+  // checksum (from `bundle zip --json`) as INPUT, encrypts the zip in place
+  // (RSA/v2, auto-using .capgo_key_v2 here), and emits BOTH an ivSessionKey
+  // (-> session_key) and an ENCRYPTED checksum (512 hex for RSA-2048). PUBLISH
+  // the emitted encrypted checksum — the device verifies against it — NOT the
+  // plain one. Older CLIs used a bare `encrypt`; we handle either name/shape
+  // below and fall back to the plain checksum only if the CLI emits none.
   if (!plainChecksum) {
     die('No plain checksum from `bundle zip --json` — cannot sign. Re-run with --session-key/--checksum.');
   }
