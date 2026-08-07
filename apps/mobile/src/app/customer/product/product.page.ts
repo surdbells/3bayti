@@ -469,6 +469,32 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     return c === "bags" || c === "accessories";
   }
 
+  /** Categories where size + colour are OPTIONAL even when the vendor DID set
+   *  them — mirrors the server's isSizeOptionalCategory()
+   *  (bags/accessories/kaftans/mukhawars). Bags/accessories carry no
+   *  size/colour at all; mukhawars/kaftans may, but must never FORCE the
+   *  choice. Guarded on category_slug because v3's detail transform zeroes
+   *  category_id. */
+  get isSizeColorOptionalCategory(): boolean {
+    const c = String(this.single?.category_slug ?? "").toLowerCase().replace(/-\d+$/, "");
+    return c === "bags" || c === "accessories" || c === "kaftans" || c === "mukhawars";
+  }
+
+  /** True only when the vendor actually enabled at least one ready size —
+   *  mirrors app-size-chips, which renders only the truthy apiSizes keys. A
+   *  product with NO sizes set must never force a size (it would silently kill
+   *  the sale). */
+  get hasSizes(): boolean {
+    return Object.values(this.apiSizes || {}).some((v) => !!v);
+  }
+
+  /** True only when the vendor set at least one colour — mirrors the colour
+   *  pills (rendered only when colors.length > 0). No colours -> never force a
+   *  colour. */
+  get hasColors(): boolean {
+    return this.colors.length > 0;
+  }
+
   bill = {
     count: 0,
     discount: 0,
@@ -946,21 +972,37 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    if (!this.single.size_custom && !this.isBagOrAccessory) {
-      // Mukhawars (legacy category_id "2") remain size-optional.
-      if (this.single.category_id !== "2") {
-        if (this.add_cart.size.length === 0) {
-          this.error_notification(this.i18n.t('text_select_size'));
-          return;
-        }
+    // Size is required only when the category enforces it AND the vendor
+    // actually offers ready sizes. Bags/accessories/mukhawars/kaftans never
+    // force a size; a product with NO sizes set must never be blocked (that
+    // silently kills the sale). Custom-measurement products collect body
+    // measurements instead of a size chip, so they're exempt too.
+    if (!this.single.size_custom && !this.isSizeColorOptionalCategory && this.hasSizes) {
+      if (this.add_cart.size.length === 0) {
+        this.error_notification(this.i18n.t('text_select_size'));
+        return;
       }
     }
 
-    if (!this.isBagOrAccessory) {
+    // Colour is required only when the category enforces it AND the vendor set
+    // colours. Optional categories, or a product with no colours, never block.
+    if (!this.isSizeColorOptionalCategory && this.hasColors) {
       if (this.add_cart.color.length === 0) {
         this.error_notification(this.i18n.t('text_select_color'));
         return;
       }
+    }
+
+    // Made-to-measure products (require_extra_msmt) need the vendor's extra
+    // measurement. The server rejects an empty value with a generic "one or
+    // more fields failed validation" — opaque, and for a ready-to-wear
+    // mukhawar the measurement sheet's trigger isn't even shown, so the sale
+    // is silently blocked. Catch it here with a clear prompt and open the
+    // measurement sheet so the customer can supply it.
+    if (this.single.require_extra_msmt && String(this.add_cart.extra_measurement ?? '').trim().length === 0) {
+      this.error_notification(this.i18n.t('text_provide_measurement'));
+      this.openMeasurement();
+      return;
     }
 
     this.ui_controls.is_adding_to_cart = true;

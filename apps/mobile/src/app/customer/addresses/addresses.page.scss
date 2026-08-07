@@ -91,11 +91,15 @@
   border: 1px solid var(--ax-color-border-subtle, rgba(46, 36, 28, 0.1));
   border-radius: var(--ax-radius-md, 12px);
   padding: 14px 16px;
-  background: var(--ax-color-surface, #fff);
+  // NB: use the real semantic token --ax-color-bg-surface (flips to dark
+  // espresso in dark mode). The old --ax-color-surface / --ax-color-primary
+  // names don't exist, so they fell back to their light literals and the card
+  // stayed white in dark mode — faint text on white.
+  background: var(--ax-color-bg-surface, #fff);
 
   &--default {
-    border-color: var(--ax-color-primary, #5a3a2c);
-    box-shadow: 0 0 0 1px var(--ax-color-primary, #5a3a2c) inset;
+    border-color: var(--ax-color-border-brand, #5a3a2c);
+    box-shadow: 0 0 0 1px var(--ax-color-border-brand, #5a3a2c) inset;
   }
 }
 
@@ -124,8 +128,8 @@
   line-height: 1;
   padding: 4px 8px;
   border-radius: 999px;
-  color: var(--ax-color-primary, #5a3a2c);
-  background: rgba(90, 58, 44, 0.08);
+  color: var(--ax-color-text-brand, #5a3a2c);
+  background: var(--ax-color-bg-brand-subtle, rgba(90, 58, 44, 0.08));
 }
 
 .address-card__line {
