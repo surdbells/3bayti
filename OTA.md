@@ -134,6 +134,8 @@ the next cold start.
 
 ## Deploy notes
 
+Full step-by-step rollout (phases, verification, rollback): **[OTA-DEPLOY.md](OTA-DEPLOY.md)**.
+
 - **API** changes deploy with the usual steps (pull → `rm -rf var/cache/di/*` →
   `orm:generate-proxies` → `chown -R www:www var/` → reload php-fpm). Run the
   migration: `bin/console migrations:migrate -n`.
