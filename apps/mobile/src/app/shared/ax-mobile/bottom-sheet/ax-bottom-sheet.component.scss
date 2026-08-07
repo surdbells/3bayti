@@ -212,7 +212,10 @@
   }
 
   &:focus {
-    border-color: var(--ax-color-primary, #2e241c);
+    // --ax-color-primary is not a real token (see _tokens.scss); it fell back
+    // to the dark literal #2e241c, giving a near-invisible dark-on-dark focus
+    // border in dark mode. Use the theme-aware brand-border token so it flips.
+    border-color: var(--ax-color-border-brand, #906952);
     background: var(--ax-color-bg-surface);
   }
 }
