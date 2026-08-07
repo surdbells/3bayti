@@ -38,5 +38,8 @@ project(':capawesome-capacitor-app-update').projectDir = new File('../../../node
 include ':capgo-capacitor-contacts'
 project(':capgo-capacitor-contacts').projectDir = new File('../../../node_modules/.pnpm/@capgo+capacitor-contacts@8.0.17_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-contacts/android')
 
+include ':capgo-capacitor-updater'
+project(':capgo-capacitor-updater').projectDir = new File('../../../node_modules/.pnpm/@capgo+capacitor-updater@8.51.3_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-updater/android')
+
 include ':capgo-inappbrowser'
 project(':capgo-inappbrowser').projectDir = new File('../../../node_modules/.pnpm/@capgo+inappbrowser@8.0.6_patch_hash=u2mrdjiw46mrceqn4foagmkmce_@capacitor+core@8.3.3/node_modules/@capgo/inappbrowser/android')

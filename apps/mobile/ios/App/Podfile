@@ -23,6 +23,7 @@ def capacitor_pods
   pod 'CapacitorStatusBar', :path => '../../../../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@8.3.3/node_modules/@capacitor/status-bar'
   pod 'CapawesomeCapacitorAppUpdate', :path => '../../../../node_modules/.pnpm/@capawesome+capacitor-app-update@8.0.3_@capacitor+core@8.3.3/node_modules/@capawesome/capacitor-app-update'
   pod 'CapgoCapacitorContacts', :path => '../../../../node_modules/.pnpm/@capgo+capacitor-contacts@8.0.17_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-contacts'
+  pod 'CapgoCapacitorUpdater', :path => '../../../../node_modules/.pnpm/@capgo+capacitor-updater@8.51.3_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-updater'
   pod 'CapgoInappbrowser', :path => '../../../../node_modules/.pnpm/@capgo+inappbrowser@8.0.6_patch_hash=u2mrdjiw46mrceqn4foagmkmce_@capacitor+core@8.3.3/node_modules/@capgo/inappbrowser'
 end
 
