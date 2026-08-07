@@ -60,16 +60,25 @@ class OtaBundle
     #[ORM\Column(type: 'string', length: 1000)]
     private string $url;
 
-    /** SHA256 of the .zip — the plugin verifies the download against this. */
-    #[ORM\Column(type: 'string', length: 128)]
+    /**
+     * Integrity checksum the plugin verifies the download against. For a PLAIN
+     * bundle this is the SHA256 of the .zip (64 hex); for a SIGNED bundle it's
+     * the RSA-encrypted checksum from `@capgo/cli bundle encrypt` (512 hex for
+     * RSA-2048, more for larger keys) — hence the generous length.
+     */
+    #[ORM\Column(type: 'string', length: 2048)]
     private string $checksum;
 
     /** Lowest native app build this bundle is compatible with. */
     #[ORM\Column(name: 'min_native_version', type: 'string', length: 64)]
     private string $minNativeVersion;
 
-    /** Non-null only for signed/encrypted bundles. */
-    #[ORM\Column(name: 'session_key', type: 'string', length: 255, nullable: true)]
+    /**
+     * The ivSessionKey from `@capgo/cli bundle encrypt` — non-null only for
+     * signed/encrypted bundles. It's an RSA-wrapped AES key (~370 chars for
+     * RSA-2048, more for larger keys), so it needs room well beyond 255.
+     */
+    #[ORM\Column(name: 'session_key', type: 'string', length: 2048, nullable: true)]
     private ?string $sessionKey = null;
 
     #[ORM\Column(name: 'is_active', type: 'boolean')]
