@@ -125,22 +125,33 @@ function buildAndZip() {
 }
 
 function encrypt(zipPath, plainChecksum) {
-  console.log('• Encrypting bundle (@capgo/cli encrypt)…');
-  // encrypt takes the zip + its plain SHA256; it encrypts in place and prints
-  // the ivSessionKey + the checksum to publish. Output format varies by CLI
-  // version — if this can't be parsed, run `encrypt` yourself and re-run with
-  // --session-key/--checksum (see OTA-SIGNING.md).
-  const out = sh(`npx @capgo/cli encrypt ${q(zipPath)} ${plainChecksum}`, true);
-  const iv = out.match(/ivSessionKey["'\s:=]+([A-Za-z0-9+/=:_-]+)/i);
-  const cs = out.match(/checksum["'\s:=]+([A-Za-z0-9+/=:_-]+)/i);
-  if (!iv || !cs) {
+  console.log('• Encrypting bundle (@capgo/cli bundle encrypt)…');
+  // @capgo/cli v8: `bundle encrypt <zip> <plainChecksum>` encrypts the zip in
+  // place (RSA/v2, auto-using .capgo_key_v2 in this folder) and returns the
+  // ivSessionKey. The checksum to PUBLISH is the plain-zip checksum from
+  // `bundle zip --json` — the device verifies the DECRYPTED bundle against it;
+  // encrypt no longer emits its own checksum. Older CLIs printed both, and the
+  // sub-command was a bare `encrypt`; we handle either shape/name below.
+  if (!plainChecksum) {
+    die('No plain checksum from `bundle zip --json` — cannot sign. Re-run with --session-key/--checksum.');
+  }
+  const out = sh(`npx @capgo/cli bundle encrypt ${q(zipPath)} ${plainChecksum} --json`, true);
+  const json = lastJson(out);
+  const iv =
+    json?.ivSessionKey ||
+    json?.sessionKey ||
+    out.match(/ivSessionKey["'\s:=]+([A-Za-z0-9+/=:_-]+)/i)?.[1];
+  if (!iv) {
     die(
-      'Could not parse ivSessionKey/checksum from encrypt output. Run `npx @capgo/cli encrypt` ' +
-        'manually and re-run this script with --session-key <iv> --checksum <checksum>.\n' +
+      'Could not parse ivSessionKey from `@capgo/cli bundle encrypt` output. Run it manually and ' +
+        're-run this script with --session-key <iv> --checksum <plainChecksum> (see OTA-SIGNING.md).\n' +
         `Output was:\n${out}`,
     );
   }
-  return { sessionKey: iv[1], checksum: cs[1] };
+  // Publish checksum: prefer one emitted by encrypt (older CLIs), else the
+  // plain-zip checksum (v8).
+  const emittedCs = json?.checksum || out.match(/checksum["'\s:=]+([A-Za-z0-9+/=:_-]+)/i)?.[1];
+  return { sessionKey: iv, checksum: emittedCs || plainChecksum };
 }
 
 async function upload(token, zipPath) {

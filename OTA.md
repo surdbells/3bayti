@@ -63,7 +63,8 @@ Portal → **OTA updates** (`/ota`, needs `settings.edit`):
    ```bash
    cd apps/mobile && npm run build
    npx @capgo/cli bundle zip com.threebayti.app --path www --json
-   # signed: also run `npx @capgo/cli encrypt <zip> <sha256>` → ivSessionKey + checksum
+   # signed: also run `npx @capgo/cli bundle encrypt <zip> <sha256>` → ivSessionKey
+   #         (= Session key); the Checksum to publish is the plain <sha256> above
    ```
 2. Upload the `.zip`, set platform / version / min-native. For a **signed**
    bundle also paste the **Session key** + **Checksum** from `encrypt`
