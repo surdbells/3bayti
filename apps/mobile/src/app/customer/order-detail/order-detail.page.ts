@@ -89,6 +89,15 @@ interface TimelineStep {
   at: string | null;
 }
 
+/** A real event from GET /orders/:id/timeline (the full server feed). */
+interface TimelineEvent {
+  id: string;
+  occurred_at: string | null;
+  summary: string;
+  /** 'ended' = a terminal/negative event (cancel/refund/denied) → danger marker. */
+  state: 'done' | 'ended';
+}
+
 interface OrderDetail {
   id: number;
   order_reference: string;
@@ -135,6 +144,9 @@ export class OrderDetailPage implements OnInit {
   readonly cfImage = cfImage;
   order: OrderDetail | null = null;
   orderId = 0;
+  /** Full server-side event feed; when populated it replaces the derived
+   *  stepper. Empty → the template falls back to timeline() (client-derived). */
+  timelineEvents: TimelineEvent[] = [];
 
   ui_controls = {
     is_loading: false,
@@ -265,6 +277,7 @@ export class OrderDetailPage implements OnInit {
             const o = response.data?.order;
             if (o) {
               this.order = this.mapOrder(o);
+              this.loadTimeline();
             } else {
               this.ui_controls.not_found = true;
             }
@@ -278,6 +291,38 @@ export class OrderDetailPage implements OnInit {
           this.ui_controls.is_loading = false;
           if (done) done();
           this.toast.error(this.i18n.t('order_detail_network_error'));
+        },
+      });
+  }
+
+  /**
+   * Fetch the full customer event feed (GET /orders/:id/timeline), requesting
+   * chronological (oldest → newest) order. On ANY failure — including the
+   * endpoint not being deployed yet — leaves timelineEvents empty so the
+   * template gracefully falls back to the client-derived stepper. Never blocks
+   * the order-detail render.
+   */
+  private loadTimeline() {
+    this.mobileAdapter
+      .get_v3('GET /orders/:id/timeline', {
+        authToken: this.token,
+        pathParams: { id: String(this.orderId) },
+        queryParams: { order: 'asc' },
+      })
+      .subscribe({
+        next: (response: any) => {
+          const events = response?.data?.events;
+          if (response?.response_code === 200 && Array.isArray(events)) {
+            this.timelineEvents = events.map((e: any) => ({
+              id: String(e?.id ?? ''),
+              occurred_at: e?.occurred_at ?? null,
+              summary: String(e?.summary ?? ''),
+              state: /refund|denied|cancel|failed/i.test(String(e?.type ?? '')) ? 'ended' : 'done',
+            }));
+          }
+        },
+        error: () => {
+          /* Fall back to the derived stepper — timelineEvents stays empty. */
         },
       });
   }

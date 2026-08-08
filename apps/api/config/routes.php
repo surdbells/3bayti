@@ -364,6 +364,9 @@ return function (App $app): void {
     $app->group('/v3/orders', function (RouteCollectorProxy $group): void {
         $group->get('', \Bayti\Api\Http\Controllers\Order\ListOrdersController::class);
         $group->get('/{id}', \Bayti\Api\Http\Controllers\Order\GetOrderController::class);
+        // Customer view of their own order's event history (reuses
+        // OrderTimelineBuilder; whitelisted + actor-sanitized in the controller).
+        $group->get('/{id:[0-9]+}/timeline', \Bayti\Api\Http\Controllers\Order\GetOrderTimelineController::class);
         // M3.1.7-F — customer self-serve cancel (pending_payment only)
         $group->post('/{id:[0-9]+}/cancel', \Bayti\Api\Http\Controllers\Order\CancelOrderController::class);
         // M3.2.X.18-D — customer return submission + list per order

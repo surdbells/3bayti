@@ -1237,6 +1237,13 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/orders/:id',
     shape: 'v2',
   },
+  // Customer order event timeline (native v3; no legacy path).
+  'GET /orders/:id/timeline': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/orders/:id/timeline',
+    shape: 'v3-envelope',
+  },
   // M3.1.7-F — customer self-serve cancel (pending_payment only)
   'POST /orders/:id/cancel': {
     target: 'new',

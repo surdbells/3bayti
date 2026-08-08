@@ -60,19 +60,37 @@
     <!-- Status timeline -->
     <ion-card class="detail-card">
       <h3 class="section-title">{{ 'orders_timeline_title' | translate }}</h3>
-      <ol class="timeline" data-testid="order-timeline">
-        @for (step of timeline(); track step.key) {
-          <li class="timeline__step" [ngClass]="'timeline__step--' + step.state">
-            <span class="timeline__marker" aria-hidden="true"></span>
-            <div class="timeline__body">
-              <span class="timeline__label">{{ step.labelKey | translate }}</span>
-              @if (step.at) {
-                <span class="timeline__time">{{ step.at | date: 'medium' }}</span>
-              }
-            </div>
-          </li>
-        }
-      </ol>
+      @if (timelineEvents.length) {
+        <!-- Full server event feed (chronological). -->
+        <ol class="timeline" data-testid="order-timeline">
+          @for (ev of timelineEvents; track ev.id) {
+            <li class="timeline__step" [ngClass]="ev.state === 'ended' ? 'timeline__step--ended' : 'timeline__step--done'">
+              <span class="timeline__marker" aria-hidden="true"></span>
+              <div class="timeline__body">
+                <span class="timeline__label">{{ ev.summary }}</span>
+                @if (ev.occurred_at) {
+                  <span class="timeline__time">{{ ev.occurred_at | date: 'medium' }}</span>
+                }
+              </div>
+            </li>
+          }
+        </ol>
+      } @else {
+        <!-- Fallback: client-derived status stepper (endpoint unavailable). -->
+        <ol class="timeline" data-testid="order-timeline">
+          @for (step of timeline(); track step.key) {
+            <li class="timeline__step" [ngClass]="'timeline__step--' + step.state">
+              <span class="timeline__marker" aria-hidden="true"></span>
+              <div class="timeline__body">
+                <span class="timeline__label">{{ step.labelKey | translate }}</span>
+                @if (step.at) {
+                  <span class="timeline__time">{{ step.at | date: 'medium' }}</span>
+                }
+              </div>
+            </li>
+          }
+        </ol>
+      }
     </ion-card>
 
     <!-- Items -->
