@@ -22,6 +22,7 @@
           <select class="ax-input" [(ngModel)]="form.platform" name="platform">
             <option value="android">Android</option>
             <option value="ios">iOS</option>
+            <option value="both">Both (iOS + Android)</option>
           </select>
         </label>
 
@@ -64,6 +65,15 @@
           <app-icon name="upload_file" aria-hidden="true"></app-icon>
           {{ uploading() ? 'Uploading…' : 'Upload & publish' }}
         </button>
+      </div>
+
+      <!-- Upload progress -->
+      <div *ngIf="uploading()" class="ota-progress" role="progressbar"
+           [attr.aria-valuenow]="uploadProgress()" aria-valuemin="0" aria-valuemax="100">
+        <div class="ota-progress__track">
+          <div class="ota-progress__fill" [style.width.%]="uploadProgress()"></div>
+        </div>
+        <span class="ota-progress__label">{{ uploadProgress() }}%</span>
       </div>
     </section>
 

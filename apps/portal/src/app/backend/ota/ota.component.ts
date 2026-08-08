@@ -26,6 +26,8 @@ export class OtaComponent implements OnInit {
 
   readonly loading = signal(true);
   readonly uploading = signal(false);
+  /** 0-100 upload progress for the bar shown while a bundle is uploading. */
+  readonly uploadProgress = signal(0);
   readonly bundles = signal<OtaBundle[]>([]);
 
   /** Upload form model. */
@@ -82,16 +84,23 @@ export class OtaComponent implements OnInit {
     }
 
     this.uploading.set(true);
+    this.uploadProgress.set(0);
     try {
-      const bundle = await this.ota.upload(this.file, {
-        platform: this.form.platform,
-        version: this.form.version,
-        channel: this.form.channel,
-        min_native: this.form.min_native,
-        session_key: this.form.session_key || undefined,
-        checksum: this.form.checksum || undefined,
-      });
-      this.toast.success(`Published ${bundle.platform} ${bundle.version}.`);
+      const published = await this.ota.upload(
+        this.file,
+        {
+          platform: this.form.platform,
+          version: this.form.version,
+          channel: this.form.channel,
+          min_native: this.form.min_native,
+          session_key: this.form.session_key || undefined,
+          checksum: this.form.checksum || undefined,
+        },
+        (pct) => this.uploadProgress.set(pct),
+      );
+      const platforms = published.map((b) => b.platform).join(' + ') || this.form.platform;
+      const version = published[0]?.version ?? this.form.version;
+      this.toast.success(`Published ${platforms} ${version}.`);
       // Reset the file + version; keep platform/channel/min_native for the next one.
       this.file = null;
       this.form.version = '';
@@ -104,6 +113,7 @@ export class OtaComponent implements OnInit {
       this.toast.error(e?.error?.error?.message || e?.error?.message || 'Upload failed.');
     } finally {
       this.uploading.set(false);
+      this.uploadProgress.set(0);
     }
   }
 

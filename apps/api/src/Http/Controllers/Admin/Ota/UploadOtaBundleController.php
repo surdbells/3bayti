@@ -65,9 +65,16 @@ final class UploadOtaBundleController
         $providedChecksum = trim((string) ($q['checksum'] ?? ''));
         $signed = $sessionKey !== null;
 
-        // Metadata validation.
-        if (!in_array($platform, OtaBundle::ALL_PLATFORMS, true)) {
-            throw HttpException::badRequest('platform must be one of: ' . implode(', ', OtaBundle::ALL_PLATFORMS));
+        // Metadata validation. `platform=both` fans one upload out to android +
+        // ios — the web bundle (and its signed checksum/session key) is
+        // platform-agnostic, so one file publishes to both.
+        $targets = $platform === 'both'
+            ? OtaBundle::ALL_PLATFORMS
+            : (in_array($platform, OtaBundle::ALL_PLATFORMS, true) ? [$platform] : []);
+        if ($targets === []) {
+            throw HttpException::badRequest(
+                'platform must be one of: ' . implode(', ', OtaBundle::ALL_PLATFORMS) . ', both',
+            );
         }
         if (!$this->isSemver($version)) {
             throw HttpException::badRequest('version must be semver (e.g. 1.0.7).');
@@ -109,38 +116,56 @@ final class UploadOtaBundleController
             $checksum = $providedChecksum !== '' ? $providedChecksum : hash('sha256', $bytes);
         }
 
-        // Duplicate guard — mirrors uniq_ota_bundle_version.
-        $existing = $this->em->getRepository(OtaBundle::class)->findOneBy([
-            'appId' => $appId,
-            'platform' => $platform,
-            'channel' => $channel,
-            'version' => $version,
-        ]);
-        if ($existing !== null) {
-            throw HttpException::badRequest(sprintf(
-                'A bundle already exists for %s / %s version %s. Bump the version.',
-                $platform,
-                $channel,
-                $version,
-            ));
+        // Duplicate guard for every target (atomic — reject before storing
+        // anything if any platform already has this version).
+        $repo = $this->em->getRepository(OtaBundle::class);
+        foreach ($targets as $target) {
+            $existing = $repo->findOneBy([
+                'appId' => $appId,
+                'platform' => $target,
+                'channel' => $channel,
+                'version' => $version,
+            ]);
+            if ($existing !== null) {
+                throw HttpException::badRequest(sprintf(
+                    'A bundle already exists for %s / %s version %s. Bump the version.',
+                    $target,
+                    $channel,
+                    $version,
+                ));
+            }
         }
 
-        $stored = $this->storage->store($bytes, $platform, $version);
-
-        $bundle = new OtaBundle(
-            $appId,
-            $platform,
-            $channel,
-            $version,
-            $stored['url'],
-            $checksum,
-            $minNative,
-            $sessionKey,
-        );
-        $this->em->persist($bundle);
+        // Store the (identical) bytes + register one row per target platform.
+        $bundles = [];
+        foreach ($targets as $target) {
+            $stored = $this->storage->store($bytes, $target, $version);
+            $bundle = new OtaBundle(
+                $appId,
+                $target,
+                $channel,
+                $version,
+                $stored['url'],
+                $checksum,
+                $minNative,
+                $sessionKey,
+            );
+            $this->em->persist($bundle);
+            $bundles[] = $bundle;
+        }
         $this->em->flush();
 
-        return $this->created(['bundle' => $this->serializer->shape($bundle)]);
+        // One platform → {bundle}; `both` → {bundles:[…]} (client accepts either).
+        if (count($bundles) === 1) {
+            return $this->created(['bundle' => $this->serializer->shape($bundles[0])]);
+        }
+
+        return $this->created([
+            'bundles' => array_map(
+                fn (OtaBundle $b): array => $this->serializer->shape($b),
+                $bundles,
+            ),
+        ]);
     }
 
     private function isSemver(string $value): bool

@@ -23,6 +23,34 @@
   color: var(--ax-color-text-tertiary);
 }
 
+.ota-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+.ota-progress__track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ax-color-bg-muted);
+  overflow: hidden;
+}
+.ota-progress__fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ax-color-bg-brand, #906952);
+  transition: width 150ms ease;
+}
+.ota-progress__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ax-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: right;
+}
+
 .ota-table-wrap {
   overflow-x: auto;
 }

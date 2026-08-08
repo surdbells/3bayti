@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpRequest, HttpEventType } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 import { PortalCrudAdapter } from './portal-crud-adapter';
 
@@ -18,7 +18,8 @@ export interface OtaBundle {
 }
 
 export interface OtaUploadMeta {
-  platform: 'android' | 'ios';
+  /** `both` publishes the same bundle to android + ios in one upload. */
+  platform: 'android' | 'ios' | 'both';
   version: string;
   channel?: string;
   min_native?: string;
@@ -57,7 +58,16 @@ export class OtaAdminService {
     return (res?.bundles ?? []) as OtaBundle[];
   }
 
-  async upload(file: File, meta: OtaUploadMeta): Promise<OtaBundle> {
+  /**
+   * Upload + publish a bundle. Streams `onProgress` (0-100) via HttpClient
+   * upload events for the UI progress bar. Returns the created bundle rows —
+   * one for a single platform, two when `platform: 'both'`.
+   */
+  async upload(
+    file: File,
+    meta: OtaUploadMeta,
+    onProgress?: (percent: number) => void,
+  ): Promise<OtaBundle[]> {
     const form = new FormData();
     form.append('file', file, file.name);
 
@@ -69,10 +79,29 @@ export class OtaAdminService {
     if (meta.session_key) q.set('session_key', meta.session_key.trim());
     if (meta.checksum) q.set('checksum', meta.checksum.trim());
 
-    const res: any = await firstValueFrom(
-      this.http.post(`${this.base()}/v3/admin/ota/bundles?${q.toString()}`, form, { headers: this.headers() }),
+    const req = new HttpRequest(
+      'POST',
+      `${this.base()}/v3/admin/ota/bundles?${q.toString()}`,
+      form,
+      { headers: this.headers(), reportProgress: true },
     );
-    return res?.bundle as OtaBundle;
+
+    return new Promise<OtaBundle[]>((resolve, reject) => {
+      this.http.request(req).subscribe({
+        next: (event) => {
+          if (event.type === HttpEventType.UploadProgress) {
+            const pct = event.total ? Math.round((event.loaded / event.total) * 100) : 0;
+            onProgress?.(pct);
+          } else if (event.type === HttpEventType.Response) {
+            const body: any = event.body;
+            // Server returns {bundle} for one platform, {bundles:[…]} for both.
+            const list: OtaBundle[] = body?.bundles ?? (body?.bundle ? [body.bundle] : []);
+            resolve(list);
+          }
+        },
+        error: (err) => reject(err),
+      });
+    });
   }
 
   async setActive(id: number, isActive: boolean): Promise<OtaBundle> {
