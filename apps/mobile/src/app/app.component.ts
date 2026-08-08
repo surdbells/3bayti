@@ -10,14 +10,16 @@ import {ToastController} from "@ionic/angular";
 import {fadeTransition} from "../fade.transition";
 import {AxNotificationHostComponent} from "./shared/ax-mobile/notification";
 import {AxUpdatePromptComponent} from "./shared/ax-mobile/update-prompt";
+import {AxOtaIndicatorComponent} from "./shared/ax-mobile/ota-indicator";
 import {AppUpdateService} from "./service/app-update.service";
 import {I18nService} from "./i18n.service";
+import {OtaUpdateService} from "./core/services/ota-update.service";
 import {PushManager, resolvePushDeepLink} from "./core/services/push-manager.service";
 
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
-  imports: [IonApp, IonRouterOutlet, AxNotificationHostComponent, AxUpdatePromptComponent],
+  imports: [IonApp, IonRouterOutlet, AxNotificationHostComponent, AxUpdatePromptComponent, AxOtaIndicatorComponent],
   standalone: true,
   styles: [`
     /* Debug overlay (visible only when ?debug=update or localStorage flag).
@@ -89,6 +91,7 @@ export class AppComponent {
     private i18n: I18nService,
     private pushManager: PushManager,
     private router: Router,
+    private ota: OtaUpdateService,
   ) {
       /* OTA (self-hosted Capgo) — confirm the freshly-booted web bundle is
          healthy. MUST run on EVERY native cold start as early as possible: if
@@ -194,16 +197,10 @@ export class AppComponent {
         .then(() => console.log('[OTA] notifyAppReady() ok'))
         .catch((e) => console.warn('[OTA] notifyAppReady() failed:', e));
 
-      void CapacitorUpdater.addListener('updateAvailable', (info) =>
-        console.log('[OTA] updateAvailable', info));
-      void CapacitorUpdater.addListener('downloadComplete', (info) =>
-        console.log('[OTA] downloadComplete', info));
-      void CapacitorUpdater.addListener('majorAvailable', (info) =>
-        console.log('[OTA] majorAvailable', info));
-      void CapacitorUpdater.addListener('updateFailed', (info) =>
-        console.log('[OTA] updateFailed', info));
-      void CapacitorUpdater.addListener('appReloaded', () =>
-        console.log('[OTA] appReloaded'));
+      // Reactive listeners (download percent / complete / failed) live in
+      // OtaUpdateService, which drives the silent top progress bar. Safe to
+      // await-less; the service is native-guarded + fully wrapped.
+      void this.ota.init();
     } catch (e) {
       console.warn('[OTA] updater init failed:', e);
     }

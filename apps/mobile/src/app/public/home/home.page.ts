@@ -21,6 +21,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {BlockerService} from "../../blocker.service";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import {OtaUpdateService} from "../../core/services/ota-update.service";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
@@ -99,7 +100,8 @@ export class HomePage implements OnInit, OnDestroy {
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
-    private i18n: I18nService
+    private i18n: I18nService,
+    private ota: OtaUpdateService
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -140,6 +142,11 @@ export class HomePage implements OnInit, OnDestroy {
     this.get_best_sellers();
     this.get_new_arrivals();
     this.get_featured_products();
+    // Proactively check for a freshly-published OTA bundle when the customer
+    // lands on the home dashboard, so updates are caught without waiting for
+    // the next app resume. Throttled + fully wrapped in the service; it only
+    // stages the bundle for the next cold start (never mid-session).
+    void this.ota.checkNow();
   }
 
   ngOnDestroy(): void {

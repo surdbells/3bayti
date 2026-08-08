@@ -1,6 +1,9 @@
 <ion-app>
   <ion-router-outlet [animated]="true" [animation]="fadeTransition" ></ion-router-outlet>
   <ax-notification-host></ax-notification-host>
+  <!-- Silent OTA download progress — thin top bar, tap-through, self-hiding.
+       Driven by OtaUpdateService (download percent). -->
+  <ax-ota-indicator></ax-ota-indicator>
   <!-- Force-update prompt — full-viewport blocker when shown.
        Driven by AppUpdateService.check() in app.component.ts. -->
   <ax-update-prompt

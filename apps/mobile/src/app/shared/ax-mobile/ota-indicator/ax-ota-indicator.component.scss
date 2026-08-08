@@ -1,0 +1,35 @@
+/* Thin, non-blocking OTA progress bar pinned to the top of the viewport.
+   Sits above app chrome but is tap-through, so it never interferes with the
+   UI. Theme-aware brand fill; fades out via the --hiding modifier. */
+.ax-ota-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: var(--ax-z-toast, 20000);
+  pointer-events: none;
+  background: transparent;
+  opacity: 1;
+  transition: opacity 300ms var(--ax-ease-out, ease);
+
+  &--hiding {
+    opacity: 0;
+  }
+}
+
+.ax-ota-bar__fill {
+  height: 100%;
+  width: 0;
+  background: var(--ax-color-bg-brand, #906952);
+  border-radius: 0 3px 3px 0;
+  box-shadow: 0 0 6px rgba(144, 105, 82, 0.55);
+  transition: width 250ms var(--ax-ease-out, ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ax-ota-bar,
+  .ax-ota-bar__fill {
+    transition: none;
+  }
+}
