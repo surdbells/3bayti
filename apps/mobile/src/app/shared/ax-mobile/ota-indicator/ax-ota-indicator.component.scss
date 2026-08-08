@@ -1,35 +1,150 @@
-/* Thin, non-blocking OTA progress bar pinned to the top of the viewport.
-   Sits above app chrome but is tap-through, so it never interferes with the
-   UI. Theme-aware brand fill; fades out via the --hiding modifier. */
-.ax-ota-bar {
+/* Visible OTA update sheet — a bottom sheet that slides up while a bundle
+   downloads (progress) and when it's ready (restart/later). Theme-aware; the
+   scrim dims the app behind but tapping it dismisses (non-trapping). */
+:host {
+  display: contents;
+}
+
+.ota-sheet-scrim {
   position: fixed;
-  top: 0;
+  inset: 0;
+  z-index: 15000;
+  background: var(--ax-color-bg-overlay, rgba(28, 25, 22, 0.48));
+  animation: ota-fade 200ms var(--ax-ease-out, ease);
+}
+
+.ota-sheet {
+  position: fixed;
   left: 0;
   right: 0;
-  height: 3px;
-  z-index: var(--ax-z-toast, 20000);
-  pointer-events: none;
-  background: transparent;
-  opacity: 1;
-  transition: opacity 300ms var(--ax-ease-out, ease);
+  bottom: 0;
+  z-index: 15001;
+  box-sizing: border-box;
+  padding: 14px 20px calc(24px + env(safe-area-inset-bottom, 0px));
+  background: var(--ax-color-bg-surface, #fff);
+  color: var(--ax-color-text-primary, #2a2722);
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.22);
+  animation: ota-slide-up 260ms var(--ax-ease-emphasized, cubic-bezier(0.2, 0, 0, 1));
+}
 
-  &--hiding {
-    opacity: 0;
+.ota-sheet__grip {
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  background: var(--ax-color-border-default, #d1c8bb);
+}
+
+.ota-sheet__title {
+  margin: 0 0 6px;
+  font-family: var(--ax-font-display, serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--ax-color-text-primary);
+}
+
+.ota-sheet__desc {
+  margin: 0 0 16px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  text-align: center;
+  color: var(--ax-color-text-secondary);
+}
+
+/* ── Download progress ─────────────────────────────── */
+.ota-sheet__progress {
+  margin-bottom: 8px;
+}
+
+.ota-sheet__track {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ax-color-bg-muted, #f1ede7);
+  overflow: hidden;
+}
+
+.ota-sheet__fill {
+  height: 100%;
+  width: 0;
+  border-radius: 999px;
+  background: var(--ax-color-bg-brand, #906952);
+  transition: width 200ms var(--ax-ease-out, ease);
+}
+
+.ota-sheet__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 8px;
+  font-size: 0.8rem;
+}
+
+.ota-sheet__pct {
+  font-weight: 700;
+  color: var(--ax-color-text-brand, #906952);
+  font-variant-numeric: tabular-nums;
+}
+
+.ota-sheet__eta {
+  color: var(--ax-color-text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Ready actions ─────────────────────────────────── */
+.ota-sheet__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ota-sheet__primary {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: var(--ax-radius-lg, 14px);
+  background: var(--ax-color-bg-brand, #906952);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  &:active { opacity: 0.85; }
+}
+
+.ota-sheet__ghost {
+  padding: 10px;
+  border: none;
+  background: transparent;
+  color: var(--ax-color-text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &--center {
+    display: block;
+    width: 100%;
+    text-align: center;
+    margin-top: 6px;
   }
 }
 
-.ax-ota-bar__fill {
-  height: 100%;
-  width: 0;
-  background: var(--ax-color-bg-brand, #906952);
-  border-radius: 0 3px 3px 0;
-  box-shadow: 0 0 6px rgba(144, 105, 82, 0.55);
-  transition: width 250ms var(--ax-ease-out, ease);
+@keyframes ota-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes ota-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ax-ota-bar,
-  .ax-ota-bar__fill {
+  .ota-sheet,
+  .ota-sheet-scrim,
+  .ota-sheet__fill {
+    animation: none;
     transition: none;
   }
 }

@@ -34,13 +34,22 @@ export type OtaStatus = 'idle' | 'checking' | 'downloading' | 'ready' | 'failed'
 export class OtaUpdateService {
   private readonly _status = signal<OtaStatus>('idle');
   private readonly _percent = signal<number>(0);
+  private readonly _etaSeconds = signal<number | null>(null);
 
   /** Current update lifecycle status (read-only signal). */
   readonly status: Signal<OtaStatus> = this._status.asReadonly();
   /** Download progress 0-100 (read-only signal). */
   readonly percent: Signal<number> = this._percent.asReadonly();
+  /** Rough estimated seconds remaining in the current download, null until it
+   *  can be estimated. Derived from the percent-over-time rate (the plugin's
+   *  download event carries no byte totals). */
+  readonly etaSeconds: Signal<number | null> = this._etaSeconds.asReadonly();
   /** True while a bundle is actively streaming — drives the top progress bar. */
   readonly isActive = computed(() => this._status() === 'downloading' || this._status() === 'ready');
+
+  /** Wall-clock + percent at the start of the current download, for the ETA. */
+  private dlStartMs: number | null = null;
+  private dlStartPct = 0;
 
   private listenersReady = false;
   private inFlight = false;               // guards concurrent checkNow()
@@ -64,9 +73,10 @@ export class OtaUpdateService {
     this.listenersReady = true;
     try {
       await CapacitorUpdater.addListener('download', (state) => {
-        const p = Math.round(Number(state?.percent ?? 0));
-        this._percent.set(Math.max(0, Math.min(100, p)));
+        const p = Math.max(0, Math.min(100, Math.round(Number(state?.percent ?? 0))));
+        this._percent.set(p);
         this._status.set('downloading');
+        this.updateEta(p);
       });
       await CapacitorUpdater.addListener('downloadComplete', () => this.markReady());
       await CapacitorUpdater.addListener('updateAvailable', () => this.markReady());
@@ -139,14 +149,58 @@ export class OtaUpdateService {
     }
     this._percent.set(100);
     this._status.set('ready');
+    this.resetEta();
   }
 
   private markFailed(): void {
     this._status.set('failed');
+    this.resetEta();
     // Reset quietly so a failed check doesn't leave a stuck indicator.
     if (this.resetTimer) {
       clearTimeout(this.resetTimer);
     }
     this.resetTimer = setTimeout(() => this._status.set('idle'), 4000);
+  }
+
+  /** Estimate seconds-remaining from the download rate so far (linear). */
+  private updateEta(percent: number): void {
+    const now = Date.now();
+    if (this.dlStartMs === null || percent < this.dlStartPct) {
+      // New (or restarted) download — anchor the rate baseline.
+      this.dlStartMs = now;
+      this.dlStartPct = percent;
+      this._etaSeconds.set(null);
+      return;
+    }
+    const elapsed = (now - this.dlStartMs) / 1000;
+    const gained = percent - this.dlStartPct;
+    if (elapsed < 0.5 || gained <= 0 || percent >= 100) {
+      return;
+    }
+    const rate = gained / elapsed; // percent per second
+    this._etaSeconds.set(Math.max(0, Math.round((100 - percent) / rate)));
+  }
+
+  private resetEta(): void {
+    this.dlStartMs = null;
+    this.dlStartPct = 0;
+    this._etaSeconds.set(null);
+  }
+
+  /**
+   * Apply a downloaded (staged) bundle immediately by reloading the web view —
+   * user-initiated only (the "Restart now" button), so it can't interrupt a
+   * checkout on its own. Native-only, fully wrapped. If it fails, the bundle
+   * still applies on the next natural cold start.
+   */
+  async restartToApply(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    try {
+      await CapacitorUpdater.reload();
+    } catch {
+      /* falls back to applying on the next cold start */
+    }
   }
 }
