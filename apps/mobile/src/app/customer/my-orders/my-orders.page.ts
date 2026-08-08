@@ -408,8 +408,12 @@ export class MyOrdersPage implements OnInit {
     this.router.navigate(['/', 'search']);
   }
   open_vendor(id: number, name: string) {
+    // Tapping an order item opens the VENDOR STORE (the card's own "View
+    // details" button opens the order). This previously pointed at
+    // 'vendor-reviews' — a copy-paste slip that sent shoppers to a reviews
+    // page and fed the vendors<->reviews back-navigation loop.
     this.router.navigate(
-      ['/', 'vendor-reviews'],
+      ['/', 'vendors'],
       { queryParams: { id, name } }
     );
   }

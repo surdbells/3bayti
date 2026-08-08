@@ -366,10 +366,11 @@ export class VendorReviewsPage implements OnInit {
       event.target.complete();
     }, 500);
   }
-  triggerBack(id: number, name: string) {
-    this.router.navigate(
-      ['/', 'vendors'],
-      { queryParams: { id, name } }
-    );
+  triggerBack() {
+    // Native pop — return to wherever we came from (vendor store, my-orders,
+    // etc.). Force-navigating to '/vendors' here pushed a NEW page, which then
+    // ping-ponged with the vendors page's native back and created a loop
+    // (see [[mobile-back-nav-model]]).
+    this.nav.back();
   }
 }
