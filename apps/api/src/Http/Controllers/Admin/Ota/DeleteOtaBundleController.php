@@ -34,8 +34,11 @@ final class DeleteOtaBundleController
         return $this->responseFactory;
     }
 
-    public function __invoke(ServerRequestInterface $request, array $args): ResponseInterface
-    {
+    public function __invoke(
+        ServerRequestInterface $request,
+        ResponseInterface $_response,
+        array $args,
+    ): ResponseInterface {
         $id = (int) ($args['id'] ?? 0);
         $bundle = $this->em->getRepository(OtaBundle::class)->find($id);
         if (!$bundle instanceof OtaBundle) {
