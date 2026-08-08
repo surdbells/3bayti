@@ -981,6 +981,8 @@
   "orders_status_cancelled": "Cancelled",
   "orders_status_refunded": "Refunded",
   "orders_status_failed": "Failed",
+  "orders_timeline_title": "Order timeline",
+  "orders_timeline_placed": "Order placed",
   "orders_empty_pending_payment": "No orders awaiting payment",
   "orders_empty_paid": "No paid orders yet",
   "orders_empty_fulfilling": "No orders being processed",

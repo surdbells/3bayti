@@ -981,6 +981,8 @@
   "orders_status_cancelled": "ملغي",
   "orders_status_refunded": "تم الاسترداد",
   "orders_status_failed": "فشل",
+  "orders_timeline_title": "مسار الطلب",
+  "orders_timeline_placed": "تم تقديم الطلب",
   "orders_empty_pending_payment": "لا توجد طلبات بانتظار الدفع",
   "orders_empty_paid": "لا توجد طلبات مدفوعة بعد",
   "orders_empty_fulfilling": "لا توجد طلبات قيد التجهيز",

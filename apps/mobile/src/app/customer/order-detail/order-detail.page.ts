@@ -78,6 +78,17 @@ interface ReturnSummary {
   status: string;
 }
 
+interface TimelineStep {
+  key: string;
+  /** i18n key for the stage label. */
+  labelKey: string;
+  /** done = reached earlier, current = latest reached, upcoming = not yet,
+   *  ended = a terminal state (cancelled/refunded/failed). */
+  state: 'done' | 'current' | 'upcoming' | 'ended';
+  /** ISO timestamp when known (placed + paid only); null otherwise. */
+  at: string | null;
+}
+
 interface OrderDetail {
   id: number;
   order_reference: string;
@@ -179,6 +190,63 @@ export class OrderDetailPage implements OnInit {
   /** Whether the money breakdown should show a discount line. */
   hasDiscount(): boolean {
     return (this.order?.discount ?? 0) > 0;
+  }
+
+  /** Canonical customer lifecycle stages, in order. A stage is "reached" when
+   *  the order's current status is in its `statuses` set. */
+  private static readonly LIFECYCLE: { key: string; labelKey: string; statuses: string[] }[] = [
+    { key: 'paid', labelKey: 'orders_status_paid', statuses: ['paid', 'fulfilling', 'shipping', 'shipped', 'delivered'] },
+    { key: 'fulfilling', labelKey: 'orders_status_fulfilling', statuses: ['fulfilling', 'shipping', 'shipped', 'delivered'] },
+    { key: 'shipped', labelKey: 'orders_status_shipped', statuses: ['shipping', 'shipped', 'delivered'] },
+    { key: 'delivered', labelKey: 'orders_status_delivered', statuses: ['delivered'] },
+  ];
+  private static readonly TERMINAL: Record<string, string> = {
+    cancelled: 'orders_status_cancelled',
+    refunded: 'orders_status_refunded',
+    failed: 'orders_status_failed',
+  };
+
+  /**
+   * Order status timeline derived from the fields the detail payload carries
+   * (placed `date`, `paid_at`, current `status`). Deliberately honest: only
+   * "placed" and "paid" have real timestamps; later stages render as
+   * reached/current/upcoming without a time, since per-stage timestamps aren't
+   * in the payload. Terminal states (cancelled/refunded/failed) end the track.
+   */
+  timeline(): TimelineStep[] {
+    if (!this.order) return [];
+    const status = this.order.status;
+    const steps: TimelineStep[] = [
+      { key: 'placed', labelKey: 'orders_timeline_placed', state: 'done', at: this.order.date },
+    ];
+
+    const terminalKey = OrderDetailPage.TERMINAL[status];
+    if (terminalKey) {
+      if (this.order.paid_at) {
+        steps.push({ key: 'paid', labelKey: 'orders_status_paid', state: 'done', at: this.order.paid_at });
+      }
+      steps.push({ key: status, labelKey: terminalKey, state: 'ended', at: null });
+      return steps;
+    }
+
+    const doneFlags = OrderDetailPage.LIFECYCLE.map((s) => s.statuses.includes(status));
+    const lastDone = doneFlags.lastIndexOf(true);
+    OrderDetailPage.LIFECYCLE.forEach((s, i) => {
+      const state: TimelineStep['state'] = doneFlags[i]
+        ? (i === lastDone ? 'current' : 'done')
+        : 'upcoming';
+      steps.push({
+        key: s.key,
+        labelKey: s.labelKey,
+        state,
+        at: s.key === 'paid' ? this.order!.paid_at : null,
+      });
+    });
+    // Nothing past "placed" reached yet (pending_payment) → placed is current.
+    if (lastDone === -1) {
+      steps[0].state = 'current';
+    }
+    return steps;
   }
 
   private loadOrder(done?: () => void) {

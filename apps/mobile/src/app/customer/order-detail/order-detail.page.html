@@ -57,6 +57,24 @@
       </div>
     </ion-card>
 
+    <!-- Status timeline -->
+    <ion-card class="detail-card">
+      <h3 class="section-title">{{ 'orders_timeline_title' | translate }}</h3>
+      <ol class="timeline" data-testid="order-timeline">
+        @for (step of timeline(); track step.key) {
+          <li class="timeline__step" [ngClass]="'timeline__step--' + step.state">
+            <span class="timeline__marker" aria-hidden="true"></span>
+            <div class="timeline__body">
+              <span class="timeline__label">{{ step.labelKey | translate }}</span>
+              @if (step.at) {
+                <span class="timeline__time">{{ step.at | date: 'medium' }}</span>
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    </ion-card>
+
     <!-- Items -->
     <ion-card class="detail-card">
       <h3 class="section-title">{{ 'order_items' | translate }}</h3>

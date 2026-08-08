@@ -55,6 +55,77 @@
   margin: 0 0 12px 0;
 }
 
+/* ----- Status timeline (derived stepper) ----------------- */
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.timeline__step {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 18px;
+
+  &:last-child { padding-bottom: 0; }
+
+  /* connector line down to the next marker */
+  &::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 6px;   /* centre of the 14px marker */
+    top: 18px;
+    bottom: 0;
+    width: 2px;
+    background: var(--ax-color-border-subtle);
+  }
+  &:last-child::before { display: none; }
+}
+.timeline__marker {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  border-radius: 50%;
+  border: 2px solid var(--ax-color-border-default);
+  background: var(--ax-color-bg-surface);
+  z-index: 1;
+}
+.timeline__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.timeline__label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary);
+}
+.timeline__time {
+  font-size: 12px;
+  color: var(--ax-color-text-secondary);
+}
+
+/* states */
+.timeline__step--done .timeline__marker,
+.timeline__step--current .timeline__marker {
+  background: var(--ax-color-bg-brand);
+  border-color: var(--ax-color-bg-brand);
+}
+.timeline__step--current .timeline__marker {
+  box-shadow: 0 0 0 4px var(--ax-color-ring);
+}
+.timeline__step--upcoming .timeline__label {
+  color: var(--ax-color-text-tertiary);
+}
+.timeline__step--ended .timeline__marker {
+  background: var(--ax-color-bg-danger, #a53826);
+  border-color: var(--ax-color-bg-danger, #a53826);
+}
+.timeline__step--ended .timeline__label {
+  color: var(--ax-color-text-danger);
+}
+
 /* ----- Status pills (full v3 enum) ----------------------- */
 
 .status-pill {
