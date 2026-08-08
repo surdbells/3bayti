@@ -14,8 +14,12 @@
   align-items: center;
   gap: 6px;
   padding: 14px;
-  background: var(--ax-color-brand-primary, #2E241C);
-  color: #fff;
+  // Theme-aware brand tokens (flip in dark mode). The old
+  // --ax-color-brand-primary isn't a real token, so it fell back to the dark
+  // literal #2E241C — leaving the outline button's border + text dark-on-dark
+  // (invisible) in dark mode.
+  background: var(--ax-color-bg-brand, #906952);
+  color: var(--ax-color-text-on-brand, #fff);
   border: none;
   border-radius: var(--ax-radius-lg, 16px);
   font-size: 13px;
@@ -26,8 +30,8 @@
 
   &--outline {
     background: transparent;
-    border: 1.5px solid var(--ax-color-brand-primary, #2E241C);
-    color: var(--ax-color-brand-primary, #2E241C);
+    border: 1.5px solid var(--ax-color-border-brand, #906952);
+    color: var(--ax-color-text-brand, #906952);
   }
 }
 
