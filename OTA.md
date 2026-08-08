@@ -55,40 +55,41 @@ server** (no Capgo Cloud, no external CDN). Bundles are managed from the **porta
 
 ## Releasing an update
 
-Every release is JS-only. Two equivalent paths:
+Every release is JS-only, and **always uploaded through the portal** — build +
+zip + encrypt locally, then upload the encrypted bundle in the admin UI. (No
+scripted auto-upload; see the footnote for the CI alternative.)
 
-### Portal (no shell)
-Portal → **OTA updates** (`/ota`, needs `settings.edit`):
-1. Build + zip the web bundle:
+1. **Build** the web bundle:
    ```bash
-   cd apps/mobile && npm run build
-   npx @capgo/cli bundle zip com.threebayti.app --path www --json
-   # signed: also run `npx @capgo/cli bundle encrypt <zip> <sha256>` → prints
-   #         ivSessionKey (= Session key) + an ENCRYPTED checksum — publish THAT
-   #         encrypted checksum, not the plain <sha256>
+   cd apps/mobile && npm run build          # -> www
    ```
-2. Upload the `.zip`, set platform / version / min-native. For a **signed**
-   bundle also paste the **Session key** + **Checksum** from `encrypt`
-   (unsigned: leave both empty — the server computes SHA256).
-
-### CLI / CI (one command)
-```bash
-cd apps/mobile
-# unsigned
-npm run ota:release -- --platform android --version 1.0.7 --min-native 1.6.0
-# signed (runs encrypt for you)
-npm run ota:release -- --platform ios --version 1.0.7 --sign
-```
-Auth via `OTA_ADMIN_TOKEN`, or `OTA_ADMIN_EMAIL` + `OTA_ADMIN_PASSWORD`. Flags:
-`--channel`, `--app-id`, `--www`, `--skip-build`, `--dry-run`, and
-`--session-key`/`--checksum` for a pre-encrypted bundle. See the header of
-[`scripts/ota-release.mjs`](apps/mobile/scripts/ota-release.mjs).
-
-> There's also a server-side `bin/console ota:publish …` for registering a
-> bundle whose `.zip` you placed/hosted yourself.
+2. **Zip** it and note the plain SHA256:
+   ```bash
+   npx @capgo/cli@latest bundle zip com.threebayti.app --path www --json
+   #   -> { "bundle": "<zip>", "checksum": "<plain sha256>" }
+   ```
+3. **Encrypt** it (signed bundles) — note the two values it prints:
+   ```bash
+   npx @capgo/cli@latest bundle encrypt <zip> <plain-sha256>
+   #   -> ivSessionKey        (= Session key)
+   #   -> encrypted checksum  (= Checksum to publish — NOT the plain sha256)
+   ```
+4. **Upload** in the portal → **OTA updates** (`/ota`, needs `settings.edit`):
+   upload the **encrypted** `.zip`; set platform / version (must exceed the
+   device's current bundle, e.g. `1.6.1` over builtin `1.6`) / min-native; paste
+   **Session key** = ivSessionKey and **Checksum** = the encrypted checksum.
+   (Unsigned/dev only: upload the plain `.zip` and leave both fields empty — the
+   server computes the SHA256.)
 
 Devices pick up the newest **active** bundle on their next resume and apply it on
-the next cold start.
+the next cold start. Repeat per platform (one upload each for android + ios), and
+bump the version each release (`1.6.2`, `1.6.3`, …).
+
+> **Scripted alternative (CI only — not the standard path):**
+> `npm run ota:release -- --platform ios --version 1.6.1 --min-native 1.6 --sign`
+> does build → zip → encrypt → upload in one shot (auth via `OTA_ADMIN_TOKEN`).
+> There's also `bin/console ota:publish …` for a bundle you hosted yourself. See
+> [`scripts/ota-release.mjs`](apps/mobile/scripts/ota-release.mjs).
 
 ---
 

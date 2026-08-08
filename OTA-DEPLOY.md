@@ -82,10 +82,17 @@ cd apps/mobile && pnpm install && npx cap sync
 ## Phase 5 — First bundle + end-to-end verify
 Only after Phases 1–2 are live and a Phase-4 build is on a test device.
 
-- [ ] Publish a bundle — portal (**OTA updates** → upload the `.zip`) or CLI:
-```bash
-cd apps/mobile && OTA_ADMIN_TOKEN=<admin token> npm run ota:release -- --platform android --version <bundleVersion> --min-native <shipped native version> --sign
-```
+- [ ] Publish a bundle **through the portal** (the standard path): build + zip +
+  encrypt locally, then upload the encrypted `.zip` in **OTA updates** with the
+  Session key + Checksum. Full steps in [OTA.md → Releasing an update](OTA.md#releasing-an-update).
+  ```bash
+  cd apps/mobile && npm run build
+  npx @capgo/cli@latest bundle zip com.threebayti.app --path www --json      # -> plain sha256
+  npx @capgo/cli@latest bundle encrypt <zip> <plain-sha256>                  # -> ivSessionKey + encrypted checksum
+  # then Portal → OTA updates → upload the encrypted .zip, platform/version/min-native,
+  #   Session key = ivSessionKey, Checksum = the encrypted checksum
+  ```
+  (Scripted CI alternative, not the standard path: `OTA_ADMIN_TOKEN=<token> npm run ota:release -- --platform android --version <bundleVersion> --min-native <shipped native version> --sign`.)
 - [ ] Confirm the endpoint serves it to an older bundle:
 ```bash
 curl -s -X POST https://api-v3.3bayti.ae/v3/ota/updates -H 'Content-Type: application/json' -d '{"platform":"android","app_id":"com.threebayti.app","version_name":"0.0.1","version_build":"<shipped native version>"}'
@@ -95,12 +102,14 @@ Expect `{"version":"<bundleVersion>","url":"https://api-v3.3bayti.ae/uploads/ota
   confirm it picks up the bundle (signed: decrypts + boots, no rollback).
 
 ## Ongoing — releasing an update
-JS/CSS-only, no store round-trip:
-```bash
-cd apps/mobile && npm run ota:release -- --platform android --version <next> --min-native <compatible native> --sign
-```
-(or the portal). Repeat per platform. Native code/permissions → new store build +
-`--min-native` bump.
+JS/CSS-only, no store round-trip. **Upload through the portal** every time:
+build → `bundle zip` → `bundle encrypt` → Portal **OTA updates** (upload the
+encrypted `.zip` + Session key + Checksum). Bump the version each release
+(`1.6.2`, `1.6.3`, …) and repeat per platform (android + ios). Full steps:
+[OTA.md → Releasing an update](OTA.md#releasing-an-update). Native
+code/permissions still require a new store build + a `min_native` bump.
+
+(CI alternative, not the standard path: `npm run ota:release … --sign`.)
 
 ## Rollback
 - Portal → **Deactivate** the bad bundle (serves the previous active one), or:
