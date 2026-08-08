@@ -93,13 +93,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Ready actions ─────────────────────────────────── */
-.ota-sheet__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
+/* ── Ready: single "restart now" action (also auto-fires) ──── */
 .ota-sheet__primary {
   width: 100%;
   padding: 14px;
@@ -112,23 +106,6 @@
   cursor: pointer;
   transition: opacity 0.15s;
   &:active { opacity: 0.85; }
-}
-
-.ota-sheet__ghost {
-  padding: 10px;
-  border: none;
-  background: transparent;
-  color: var(--ax-color-text-secondary);
-  font-size: 0.85rem;
-  font-weight: 600;
-  cursor: pointer;
-
-  &--center {
-    display: block;
-    width: 100%;
-    text-align: center;
-    margin-top: 6px;
-  }
 }
 
 @keyframes ota-slide-up {

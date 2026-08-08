@@ -1,16 +1,21 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject } from '@angular/core';
 import { TranslatePipe } from '../../../translate.pipe';
-import { OtaStatus, OtaUpdateService } from '../../../core/services/ota-update.service';
+import { OtaUpdateService } from '../../../core/services/ota-update.service';
 
 /**
- * AxOtaIndicatorComponent — a VISIBLE (but dismissible) OTA update sheet.
+ * AxOtaIndicatorComponent — the MANDATORY OTA update sheet.
  *
- * The customer should see updates happen, so a bottom sheet slides up while a
- * bundle downloads: title + description + a live progress bar with percent and
- * a rough ETA. When the download finishes it flips to a "ready" state offering
- * "Restart now" (applies immediately) or "Later" (applies on the next cold
- * start). It's non-trapping — the scrim / "Hide" dismisses it and the download
- * keeps going in the background.
+ * OTA updates are treated as required: the download runs automatically (no
+ * approval), the customer just has to be aware it's happening and can't bypass
+ * it. So this is a full-screen blocking sheet — no dismiss, no "later":
+ *   - downloading → title + description + live progress bar (percent + ETA)
+ *   - ready       → auto-restarts into the new bundle (reload()) after a brief
+ *                   beat, with an immediate "Restart now" button too.
+ *
+ * The scrim blocks interaction with the app behind it. Hardware-back isn't
+ * trapped on purpose: backing out just exits the app, and the freshly
+ * downloaded bundle applies on the next cold start anyway — so the update can't
+ * actually be skipped.
  *
  * Purely reactive off OtaUpdateService; shows for both the automatic
  * resume-time download and any on-demand dashboard check.
@@ -22,21 +27,17 @@ import { OtaStatus, OtaUpdateService } from '../../../core/services/ota-update.s
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (visible()) {
-      <div class="ota-sheet-scrim" (click)="dismiss()"></div>
-      <section class="ota-sheet" role="dialog" aria-live="polite" [attr.aria-label]="titleKey() | translate">
+      <div class="ota-sheet-scrim"></div>
+      <section class="ota-sheet" role="alertdialog" aria-live="assertive" aria-modal="true"
+               [attr.aria-label]="titleKey() | translate">
         <span class="ota-sheet__grip" aria-hidden="true"></span>
         <h2 class="ota-sheet__title">{{ titleKey() | translate }}</h2>
         <p class="ota-sheet__desc">{{ descKey() | translate }}</p>
 
         @if (status() === 'ready') {
-          <div class="ota-sheet__actions">
-            <button type="button" class="ota-sheet__primary" (click)="restart()">
-              {{ 'ota_update_restart' | translate }}
-            </button>
-            <button type="button" class="ota-sheet__ghost" (click)="dismiss()">
-              {{ 'ota_update_later' | translate }}
-            </button>
-          </div>
+          <button type="button" class="ota-sheet__primary" (click)="restart()">
+            {{ 'ota_update_restart' | translate }}
+          </button>
         } @else {
           <div class="ota-sheet__progress">
             <div class="ota-sheet__track">
@@ -49,9 +50,6 @@ import { OtaStatus, OtaUpdateService } from '../../../core/services/ota-update.s
               }
             </div>
           </div>
-          <button type="button" class="ota-sheet__ghost ota-sheet__ghost--center" (click)="dismiss()">
-            {{ 'ota_update_hide' | translate }}
-          </button>
         }
       </section>
     }
@@ -64,11 +62,9 @@ export class AxOtaIndicatorComponent {
   protected readonly status = this.ota.status;
   protected readonly percent = this.ota.percent;
 
-  private readonly _dismissed = signal(false);
-  private lastStatus: OtaStatus = 'idle';
-
+  /** Blocking sheet is up whenever a bundle is downloading or ready to apply. */
   protected readonly visible = computed(
-    () => !this._dismissed() && (this.status() === 'downloading' || this.status() === 'ready'),
+    () => this.status() === 'downloading' || this.status() === 'ready',
   );
   protected readonly titleKey = computed(() =>
     this.status() === 'ready' ? 'ota_update_ready_title' : 'ota_update_downloading_title',
@@ -87,23 +83,23 @@ export class AxOtaIndicatorComponent {
     return `${m}:${sec}`;
   });
 
+  private restartScheduled = false;
+
   constructor() {
     effect(() => {
       const s = this.status();
-      // A fresh download re-reveals the sheet even if a prior one was hidden.
-      if (s === 'downloading' && this.lastStatus !== 'downloading') {
-        this._dismissed.set(false);
+      // Auto-apply once the bundle is downloaded — a brief beat so the customer
+      // sees it hit 100%, then reload() swaps in the new bundle.
+      if (s === 'ready' && !this.restartScheduled) {
+        this.restartScheduled = true;
+        setTimeout(() => void this.ota.restartToApply(), 1200);
+      } else if (s !== 'ready') {
+        this.restartScheduled = false;
       }
-      this.lastStatus = s;
     });
   }
 
-  protected dismiss(): void {
-    this._dismissed.set(true);
-  }
-
   protected restart(): void {
-    this._dismissed.set(true);
     void this.ota.restartToApply();
   }
 }
