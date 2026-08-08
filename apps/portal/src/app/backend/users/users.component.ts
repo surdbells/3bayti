@@ -8,7 +8,6 @@ import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
-import { TranslatePipe } from '../../translate.pipe';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AxCanDirective } from '../../shared/security/ax-can.directive';
 import { PermissionService } from '../../services/permission.service';
@@ -63,7 +62,6 @@ export interface CatalogPreset { slug: string; name: string; description: string
     AxDataTableComponent,
     AxCellDirective,
     AxCanDirective,
-    TranslatePipe,
     IconComponent,
   ],
   templateUrl: './users.component.html',

@@ -30,7 +30,15 @@
               "node_modules/@angular/cdk/overlay-prebuilt.css",
               "src/styles.css"
             ],
-            "scripts": []
+            "scripts": [],
+            "allowedCommonJsDependencies": [
+              "html2canvas",
+              "jspdf-autotable",
+              "file-saver",
+              "core-js",
+              "raf",
+              "rgbcolor"
+            ]
           },
           "configurations": {
             "production": {

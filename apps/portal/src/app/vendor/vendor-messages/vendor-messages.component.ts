@@ -22,8 +22,11 @@ interface ChatConversation {
   unread_count: number;
   last_message_at: string | null;
   last_message_preview: string | null;
-  counterparty: ChatCounterparty;
-  item: { name: string; image: string | null; size: string | null; color: string | null };
+  // Nullable: a conversation may lack a resolvable counterparty (e.g. a
+  // removed customer) or item, which the template already guards with `?.`
+  // and 'Customer'/'?' fallbacks. Declaring them non-null triggered NG8107.
+  counterparty: ChatCounterparty | null;
+  item: { name: string; image: string | null; size: string | null; color: string | null } | null;
   created_at: string;
 }
 
