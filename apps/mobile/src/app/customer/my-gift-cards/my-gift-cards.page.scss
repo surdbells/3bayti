@@ -75,8 +75,8 @@
   transition: background 0.15s, color 0.15s, border-color 0.15s;
 
   &--active {
-    background: var(--ax-color-brand-primary, #2E241C);
-    border-color: var(--ax-color-brand-primary, #2E241C);
+    background: var(--ax-color-bg-brand, #2E241C);
+    border-color: var(--ax-color-border-brand, #2E241C);
     color: #fff;
   }
 }
@@ -84,7 +84,7 @@
 .mgc-cta {
   margin-top: 8px;
   padding: 12px 28px;
-  background: var(--ax-color-brand-primary, #2E241C);
+  background: var(--ax-color-bg-brand, #2E241C);
   color: #fff;
   border: none;
   border-radius: 100px;

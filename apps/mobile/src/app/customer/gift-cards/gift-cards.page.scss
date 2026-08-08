@@ -42,7 +42,7 @@
   }
 
   &.active .gc-step__dot {
-    background: var(--ax-color-brand-primary, #2E241C);
+    background: var(--ax-color-bg-brand, #2E241C);
     color: #fff;
   }
 
@@ -60,7 +60,7 @@
     min-width: 28px;
     transition: background 0.2s;
 
-    &.active { background: var(--ax-color-brand-primary, #2E241C); }
+    &.active { background: var(--ax-color-bg-brand, #2E241C); }
   }
 }
 
@@ -250,9 +250,9 @@
   transition: all 0.15s;
 
   &.selected {
-    background: var(--ax-color-brand-primary, #2E241C);
+    background: var(--ax-color-bg-brand, #2E241C);
     color: #fff;
-    border-color: var(--ax-color-brand-primary);
+    border-color: var(--ax-color-border-brand);
   }
 
   &--custom {
@@ -280,7 +280,7 @@
   resize: none;
   box-sizing: border-box;
 
-  &:focus { outline: none; border-color: var(--ax-color-brand-primary); }
+  &:focus { outline: none; border-color: var(--ax-color-border-brand); }
 }
 
 .gc-char-count {
@@ -299,7 +299,7 @@
   font-family: inherit;
   font-size: 14px;
   color: var(--ax-color-text-primary);
-  &:focus { outline: none; border-color: var(--ax-color-brand-primary); }
+  &:focus { outline: none; border-color: var(--ax-color-border-brand); }
 }
 
 .gc-hint {
@@ -339,7 +339,7 @@
   transition: border-color 0.15s;
 
   input { display: none; }
-  &:hover { border-color: var(--ax-color-brand-primary); }
+  &:hover { border-color: var(--ax-color-border-brand); }
 }
 
 .gc-photo-preview {
@@ -546,7 +546,7 @@
   text-align: start;
 
   &::placeholder { color: var(--ax-color-text-tertiary, #B8A898); }
-  &:focus { outline: none; border-color: var(--ax-color-brand-primary); }
+  &:focus { outline: none; border-color: var(--ax-color-border-brand); }
 }
 
 // "Pick from contacts" button — same 48px square, aligned with the row.
@@ -558,9 +558,9 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--ax-radius-md, 12px);
-  border: 1.5px solid var(--ax-color-brand-primary, #2E241C);
+  border: 1.5px solid var(--ax-color-border-brand, #2E241C);
   background: transparent;
-  color: var(--ax-color-brand-primary, #2E241C);
+  color: var(--ax-color-text-brand, #2E241C);
   cursor: pointer;
   transition: opacity 0.15s;
   &:active { opacity: 0.7; }

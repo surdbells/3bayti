@@ -254,11 +254,11 @@
 
   &:focus-visible {
     outline: none;
-    border-color: var(--ax-color-brand-primary, #2e241c);
+    border-color: var(--ax-color-border-brand, #2e241c);
   }
 
   &--selected {
-    border-color: var(--ax-color-brand-primary, #2e241c);
+    border-color: var(--ax-color-border-brand, #2e241c);
     background: var(--ax-color-bg-brand-subtle, #f3ede2);
   }
 }
@@ -274,14 +274,14 @@
   transition: border-color 120ms ease;
 
   .address-radio--selected & {
-    border-color: var(--ax-color-brand-primary, #2e241c);
+    border-color: var(--ax-color-border-brand, #2e241c);
 
     &::after {
       content: '';
       position: absolute;
       inset: 3px;
       border-radius: 999px;
-      background: var(--ax-color-brand-primary, #2e241c);
+      background: var(--ax-color-bg-brand, #2e241c);
     }
   }
 }
@@ -480,7 +480,7 @@
   background: var(--ax-color-bg-muted, #f5f0eb);
   overflow: hidden;
 
-  &:focus-within { border-color: var(--ax-color-brand-primary); }
+  &:focus-within { border-color: var(--ax-color-border-brand); }
 }
 
 .gc-code-input {
@@ -522,7 +522,7 @@
 
 .gc-apply-btn {
   padding: 11px;
-  background: var(--ax-color-brand-primary, #2E241C);
+  background: var(--ax-color-bg-brand, #2E241C);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -603,7 +603,7 @@
   }
 
   &.is-complete:not(:last-child)::after {
-    background: var(--ax-color-brand-primary, #2E241C);
+    background: var(--ax-color-bg-brand, #2E241C);
   }
 }
 
@@ -632,8 +632,8 @@
 
 .checkout-stepper__step.is-active {
   .checkout-stepper__index {
-    background: var(--ax-color-brand-primary, #2E241C);
-    border-color: var(--ax-color-brand-primary, #2E241C);
+    background: var(--ax-color-bg-brand, #2E241C);
+    border-color: var(--ax-color-border-brand, #2E241C);
     color: #fff;
   }
   .checkout-stepper__label {
@@ -645,8 +645,8 @@
 .checkout-stepper__step.is-complete {
   .checkout-stepper__index {
     background: var(--ax-color-bg-brand-subtle, #f3ede2);
-    border-color: var(--ax-color-brand-primary, #2E241C);
-    color: var(--ax-color-brand-primary, #2E241C);
+    border-color: var(--ax-color-border-brand, #2E241C);
+    color: var(--ax-color-text-brand, #2E241C);
   }
   .checkout-stepper__label {
     color: var(--ax-color-text-primary, #2E241C);

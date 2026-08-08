@@ -85,7 +85,7 @@
   text-transform: uppercase;
   transition: border-color 0.15s;
 
-  &:focus { outline: none; border-color: var(--ax-color-brand-primary, #2E241C); }
+  &:focus { outline: none; border-color: var(--ax-color-border-brand, #2E241C); }
   &::placeholder { opacity: 0.3; font-weight: 400; letter-spacing: 0.05em; }
 }
 
@@ -161,7 +161,7 @@
   &:active:not(:disabled) { opacity: 0.85; }
 
   &--primary {
-    background: var(--ax-color-brand-primary, #2E241C);
+    background: var(--ax-color-bg-brand, #2E241C);
     color: #fff;
   }
 
