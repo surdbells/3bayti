@@ -1097,6 +1097,23 @@
       "appStoreSoon": "3bayti لـ iPhone — قريباً على App Store",
       "playStoreSoon": "3bayti لـ Android — قريباً على Google Play",
       "comingSoon": "قريباً"
+    },
+    "heroTiles": {
+      "newEyebrow": "وصل حديثًا",
+      "newTitle": "إضافات جديدة يوميًا",
+      "topEyebrow": "الأكثر مبيعًا",
+      "topTitle": "تسوّقي المفضّلة",
+      "cta": "تسوّقي الآن"
+    },
+    "benefits": {
+      "deliveryTitle": "توصيل سريع داخل الإمارات",
+      "deliverySub": "متتبَّع حتى باب منزلك",
+      "returnsTitle": "إرجاع خلال 14 يومًا",
+      "returnsSub": "سهل ومجاني",
+      "secureTitle": "دفع آمن",
+      "secureSub": "مدفوعات محمية",
+      "ateliersTitle": "أكثر من 40 دار أزياء",
+      "ateliersSub": "علامات إماراتية مستقلة"
     }
   },
   "product": {

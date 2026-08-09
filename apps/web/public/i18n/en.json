@@ -1097,6 +1097,23 @@
       "appStoreSoon": "3bayti for iPhone — coming soon to the App Store",
       "playStoreSoon": "3bayti for Android — coming soon to Google Play",
       "comingSoon": "Coming soon"
+    },
+    "heroTiles": {
+      "newEyebrow": "New in",
+      "newTitle": "Fresh drops, daily",
+      "topEyebrow": "Best sellers",
+      "topTitle": "Shop the favourites",
+      "cta": "Shop now"
+    },
+    "benefits": {
+      "deliveryTitle": "Fast UAE delivery",
+      "deliverySub": "Tracked to your door",
+      "returnsTitle": "14-day returns",
+      "returnsSub": "Easy and free",
+      "secureTitle": "Secure checkout",
+      "secureSub": "Protected payments",
+      "ateliersTitle": "40+ ateliers",
+      "ateliersSub": "Independent UAE labels"
     }
   },
   "product": {

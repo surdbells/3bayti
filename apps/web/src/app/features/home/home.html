@@ -1,142 +1,123 @@
 <main class="home-page">
 
   <!-- ===========================================================
-       HERO BAND
-       Phase 1 W3 round-3: hero is now carousel-only. The static
-       eyebrow/H1/lede block was removed in ed3896f (May 2026); the
-       .hero band kept for its layout role (vertical padding, full-
-       bleed wrapper around the carousel). The carousel itself
-       declares role="region" + aria-label="Featured products" inside
-       HeroCarouselComponent, so this <section> doesn't need an
-       independent landmark — but keeping aria-label here gives
-       screen readers a meaningful name for the band wrapper if a
-       future change re-introduces text content above the carousel.
+       BENTO HERO — "Souk" direction
+       A saturated amber band carrying the editorial value prop in a
+       large banner, paired with two promo tiles. Replaces the former
+       editorial/carousel split. The band bleeds full-width and sits
+       under the floating transparent header (padding accounts for
+       --header-height); .hero-bento__grid holds the page gutter.
        =========================================================== -->
-  <!-- ===========================================================
-       HERO — editorial
-       HP2: the page's single <h1> + value proposition + primary CTAs
-       + grounded trust signals, paired with the featured-product
-       carousel as the supporting visual. Two columns on desktop
-       (editorial / carousel); stacked on mobile with the carousel
-       bleeding to the viewport edges for its side-card peek.
-       The carousel declares its own role="region" + aria-label.
-       =========================================================== -->
-  <section class="hero" [attr.aria-label]="'home.hero.bandAria' | translate">
-    <div class="hero__grid">
-      <div class="hero__editorial">
-        <p class="hero__eyebrow">{{ 'home.hero.eyebrow' | translate }}</p>
-        <h1 class="hero__title">{{ 'home.hero.title' | translate }}</h1>
-        <p class="hero__lede">{{ 'home.hero.lede' | translate }}</p>
-
-        <div class="hero__ctas">
-          <a href="/new-arrivals" class="hero__cta hero__cta--primary">
+  <section class="hero-bento" [attr.aria-label]="'home.hero.bandAria' | translate">
+    <div class="hero-bento__grid">
+      <div class="hero-bento__banner">
+        <p class="hero-bento__eyebrow">{{ 'home.hero.eyebrow' | translate }}</p>
+        <h1 class="hero-bento__title">{{ 'home.hero.title' | translate }}</h1>
+        <p class="hero-bento__lede">{{ 'home.hero.lede' | translate }}</p>
+        <div class="hero-bento__ctas">
+          <a href="/new-arrivals" class="hb-btn hb-btn--primary">
             {{ 'home.hero.shopNewArrivals' | translate }}
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </a>
-          <a href="/stores" class="hero__cta hero__cta--ghost">{{ 'home.hero.browseStores' | translate }}</a>
+          <a href="/stores" class="hb-btn hb-btn--ghost">{{ 'home.hero.browseStores' | translate }}</a>
         </div>
-
-        <ul class="hero__trust" [attr.aria-label]="'home.hero.trustAria' | translate">
-          <li class="hero__trust-item">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3 9l1.6-5h14.8L21 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M4.5 9v10.5h15V9M9.5 19.5V14h5v5.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            {{ 'home.hero.trustDesigners' | translate }}
-          </li>
-          <li class="hero__trust-item">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3l7 3v6c0 4-3 6.8-7 8-4-1.2-7-4-7-8V6z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-              <path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            {{ 'home.hero.trustSecure' | translate }}
-          </li>
-          <li class="hero__trust-item">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3L3.5 8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M3.5 3.5V8h4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            {{ 'home.hero.trustReturns' | translate }}
-          </li>
-        </ul>
       </div>
 
-      <div class="hero__carousel-wrapper">
-        <ui-hero-carousel
-          [products]="featured() ?? []"
-          [loading]="featured() === null"
-        />
-      </div>
+      <a href="/new-arrivals" class="hero-bento__tile hero-bento__tile--new">
+        <span class="hero-bento__tile-eyebrow">{{ 'home.heroTiles.newEyebrow' | translate }}</span>
+        <span class="hero-bento__tile-title">{{ 'home.heroTiles.newTitle' | translate }}</span>
+        <span class="hero-bento__tile-cta">{{ 'home.heroTiles.cta' | translate }}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </a>
+
+      <a href="/best-sellers" class="hero-bento__tile hero-bento__tile--top">
+        <span class="hero-bento__tile-eyebrow">{{ 'home.heroTiles.topEyebrow' | translate }}</span>
+        <span class="hero-bento__tile-title">{{ 'home.heroTiles.topTitle' | translate }}</span>
+        <span class="hero-bento__tile-cta">{{ 'home.heroTiles.cta' | translate }}
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+      </a>
     </div>
   </section>
 
   <!-- ===========================================================
-       CATEGORIES ROW
-       Phase 1 W3 round-2: horizontal-scrolling row of square
-       thumbnails with bundled illustration icons. Replaces the
-       previous letter-avatar grid. Categories without an icon
-       (currently just Pyjamas) are filtered out at the data layer
-       — see HomeComponent.fetchCategories$().
+       BENEFITS STRIP — trust signals as a scannable row.
+       (Absorbs the old hero trust list.)
        =========================================================== -->
-  <!-- ===========================================================
-       CATEGORIES — bento
-       HP3: a varied-size bento grid (the marquee category gets the
-       large feature tile) replacing the flat scroll row. Categories
-       have no cover photography, so each tile uses its bundled
-       illustration as a large motif. Icon-less categories are filtered
-       at the data layer (HomeComponent.fetchCategories$).
-       =========================================================== -->
-  <section class="home-section home-section--categories">
-    <div class="home-section__bounds">
-      <ui-section-header [eyebrow]="'home.categories.eyebrow' | translate" [title]="'home.categories.title' | translate" />
+  <section class="home-section">
+    <ul class="benefits" [attr.aria-label]="'home.hero.trustAria' | translate">
+      <li class="benefit">
+        <span class="benefit__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z" stroke-linejoin="round"/><circle cx="7" cy="18" r="1.7"/><circle cx="17" cy="18" r="1.7"/></svg></span>
+        <span class="benefit__text"><b>{{ 'home.benefits.deliveryTitle' | translate }}</b>{{ 'home.benefits.deliverySub' | translate }}</span>
+      </li>
+      <li class="benefit">
+        <span class="benefit__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3.5 12a8.5 8.5 0 1 0 2.8-6.3L3.5 8M3.5 3.5V8H8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="benefit__text"><b>{{ 'home.benefits.returnsTitle' | translate }}</b>{{ 'home.benefits.returnsSub' | translate }}</span>
+      </li>
+      <li class="benefit">
+        <span class="benefit__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l7 3v6c0 4-3 6.8-7 8-4-1.2-7-4-7-8V6z" stroke-linejoin="round"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="benefit__text"><b>{{ 'home.benefits.secureTitle' | translate }}</b>{{ 'home.benefits.secureSub' | translate }}</span>
+      </li>
+      <li class="benefit">
+        <span class="benefit__ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 9l1.6-5h14.8L21 9M4.5 9v10.5h15V9M9.5 19.5V14h5v5.5" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+        <span class="benefit__text"><b>{{ 'home.benefits.ateliersTitle' | translate }}</b>{{ 'home.benefits.ateliersSub' | translate }}</span>
+      </li>
+    </ul>
+  </section>
 
-      @if (categories(); as cats) {
-        @if (cats.length > 0) {
-          <div class="bento" role="list">
-            @for (cat of cats; track cat.id; let first = $first) {
-              <a
-                [href]="categoryUrl(cat.slug)"
-                class="bento__tile"
-                [class.bento__tile--feature]="first"
-                [class.bento__tile--photo]="cat.image"
-                role="listitem"
-                [attr.aria-label]="'home.categories.tileAria' | translate:{ name: cat.name, count: cat.product_count }"
-              >
+  <!-- ===========================================================
+       CATEGORY TILES — compact icon tiles (Souk).
+       Reworked from the bento grid into a scannable equal tile row so
+       the whole catalogue is reachable at a glance.
+       =========================================================== -->
+  <section class="home-section">
+    <div class="home-section__header">
+      <div>
+        <p class="home-section__eyebrow">{{ 'home.categories.eyebrow' | translate }}</p>
+        <h2 class="home-section__title">{{ 'home.categories.title' | translate }}</h2>
+      </div>
+    </div>
+
+    @if (categories(); as cats) {
+      @if (cats.length > 0) {
+        <div class="cat-tiles" role="list">
+          @for (cat of cats; track cat.id) {
+            <a
+              [href]="categoryUrl(cat.slug)"
+              class="cat-tile"
+              role="listitem"
+              [attr.aria-label]="'home.categories.tileAria' | translate:{ name: cat.name, count: cat.product_count }"
+            >
+              <span class="cat-tile__badge">
                 @if (cat.image) {
-                  <img class="bento__photo" [src]="cat.image.url" alt="" loading="lazy" decoding="async" />
+                  <img class="cat-tile__photo" [src]="cat.image.url" alt="" loading="lazy" decoding="async" />
                 } @else if (iconFor(cat.slug); as iconUrl) {
-                  <span class="bento__icon" aria-hidden="true">
-                    <img [src]="iconUrl" alt="" loading="lazy" decoding="async" />
-                  </span>
+                  <img class="cat-tile__icon" [src]="iconUrl" alt="" loading="lazy" decoding="async" />
+                } @else {
+                  <span class="cat-tile__initial">{{ initial(cat.name) }}</span>
                 }
-                <span class="bento__meta">
-                  <span class="bento__name">{{ cat.name }}</span>
-                  <span class="bento__count">
-                    {{ cat.product_count }} {{ (cat.product_count === 1 ? 'home.categories.piece' : 'home.categories.pieces') | translate }}
-                  </span>
-                </span>
-              </a>
-            }
-          </div>
-        }
-      } @else {
-        <div class="bento" aria-hidden="true">
-          @for (i of [0, 1, 2, 3, 4, 5, 6]; track i; let first = $first) {
-            <div class="bento__tile bento__tile--skeleton" [class.bento__tile--feature]="first">
-              <ui-skeleton-shimmer [rounded]="false" height="100%" />
-            </div>
+              </span>
+              <span class="cat-tile__name">{{ cat.name }}</span>
+              <span class="cat-tile__count">{{ cat.product_count }} {{ (cat.product_count === 1 ? 'home.categories.piece' : 'home.categories.pieces') | translate }}</span>
+            </a>
           }
         </div>
       }
-    </div>
+    } @else {
+      <div class="cat-tiles" aria-hidden="true">
+        @for (i of [0, 1, 2, 3, 4, 5]; track i) {
+          <div class="cat-tile cat-tile--skeleton">
+            <ui-skeleton-shimmer [rounded]="true" width="58px" height="58px" />
+            <ui-skeleton-shimmer height="12px" width="70%" [rounded]="false" />
+          </div>
+        }
+      </div>
+    }
   </section>
 
   <!-- ===========================================================
        ANNIVERSARY DEALS (campaign — hidden unless one is live)
-       GET /v3/campaigns/active -> anniversary. Savings badges + a live
-       countdown to ends_at (run against server_now).
        =========================================================== -->
   @if (anniversary(); as anniv) {
     <home-campaign-section
@@ -149,7 +130,6 @@
 
   <!-- ===========================================================
        FLASH SALE (campaign — hidden unless one is live)
-       GET /v3/campaigns/active -> flash. Countdown + per-item stock bars.
        =========================================================== -->
   @if (flash(); as fl) {
     <home-campaign-section
@@ -161,10 +141,28 @@
   }
 
   <!-- ===========================================================
+       TOP SELLERS (ranked) — the "Trending now" grid.
+       =========================================================== -->
+  <home-top-sellers
+    [products]="bestSellers() ?? []"
+    [loading]="bestSellers() === null"
+    viewAllUrl="/best-sellers"
+  />
+
+  <!-- ===========================================================
+       NEW ARRIVALS STRIP
+       =========================================================== -->
+  <ui-product-strip
+    [heading]="'home.newArrivals.heading' | translate"
+    [eyebrow]="'home.newArrivals.eyebrow' | translate"
+    viewAllUrl="/new-arrivals"
+    [products]="newArrivals() ?? []"
+    [loading]="newArrivals() === null"
+    [compact]="true"
+  />
+
+  <!-- ===========================================================
        GIFT CARD PROMO (marketing band)
-       Mirrors mobile's dashboard .gift-promo: a gilded card with a gift
-       motif funnelling to /gift-cards (buy) + /gift-cards/redeem. Placed
-       above best-sellers so it sits high in the shopping flow.
        =========================================================== -->
   <section class="home-section home-section--gift" aria-labelledby="gift-promo-title">
     <article class="gift-promo">
@@ -212,36 +210,7 @@
   </section>
 
   <!-- ===========================================================
-       TOP SELLERS (ranked)
-       /v3/products?sort=popular — a ranked treatment. The numbering is
-       meaningful here: the row genuinely is a most-loved ranking.
-       =========================================================== -->
-  <home-top-sellers
-    [products]="bestSellers() ?? []"
-    [loading]="bestSellers() === null"
-    viewAllUrl="/best-sellers"
-  />
-
-  <!-- ===========================================================
-       NEW ARRIVALS STRIP
-       /v3/products?sort=newest&limit=12
-       =========================================================== -->
-  <ui-product-strip
-    [heading]="'home.newArrivals.heading' | translate"
-    [eyebrow]="'home.newArrivals.eyebrow' | translate"
-    viewAllUrl="/new-arrivals"
-    [products]="newArrivals() ?? []"
-    [loading]="newArrivals() === null"
-    [compact]="true"
-  />
-
-  <!-- ===========================================================
-       FOR YOU STRIP (personalized — X.12 / W.1)
-       /v3/me/recommendations — signed-in users only. Hidden entirely when
-       anonymous or the engine returns nothing (forYou() is []).
-       Note: the Featured strip was removed in HP4b — the hero carousel
-       already showcases featured products, so a separate strip was
-       redundant. The featured() signal still feeds the hero.
+       FOR YOU / TRENDING STRIP (personalized — signed-in only)
        =========================================================== -->
   @if (forYou().length > 0) {
     <ui-product-strip
@@ -255,14 +224,14 @@
 
   <!-- ===========================================================
        STORE SPOTLIGHT
-       /v3/featured-vendors?limit=4 — vendor cards with embedded
-       product thumbnails. Uses StoreCard primitive.
        =========================================================== -->
   @if (vendors() === null || vendors()!.length > 0) {
   <section class="home-section home-section--stores" aria-labelledby="stores-title">
     <header class="home-section__header">
-      <p class="home-section__eyebrow">{{ 'home.stores.eyebrow' | translate }}</p>
-      <h2 id="stores-title" class="home-section__title">{{ 'home.stores.title' | translate }}</h2>
+      <div>
+        <p class="home-section__eyebrow">{{ 'home.stores.eyebrow' | translate }}</p>
+        <h2 id="stores-title" class="home-section__title">{{ 'home.stores.title' | translate }}</h2>
+      </div>
       <a href="/stores" class="home-section__view-all">
         {{ 'home.stores.viewAll' | translate }}
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -280,7 +249,6 @@
         </div>
       }
     } @else {
-      <!-- Skeleton state — 4 placeholders matching the real card's layout. -->
       <div class="stores-grid">
         @for (i of [0, 1, 2, 3]; track i) {
           <div class="store-skeleton">
@@ -297,14 +265,6 @@
 
   <!-- ===========================================================
        GET THE APP — mobile-app promo band.
-       Promotes the iOS + Android apps with a heading, subcopy and the
-       two official-style store badges. Store URLs come from
-       environment.appStores (placeholder '#' until the operator fills
-       them in); when a URL is '#' the badge degrades to a non-navigating
-       <button> so it never links to a dead page. A line-art phone
-       mockup with an app-shot motif sits alongside on desktop.
-       RTL-safe: the phone column reorders below the copy on mobile and
-       the arrow/decorative geometry mirrors via logical properties.
        =========================================================== -->
   <section class="home-section home-section--app" aria-labelledby="get-app-title">
     <article class="app-band">
@@ -322,53 +282,28 @@
         </ul>
 
         <div class="app-band__badges">
-          <!-- App Store badge -->
           @if (appStoreUrl !== '#') {
-            <a
-              [href]="appStoreUrl"
-              target="_blank"
-              rel="noopener"
-              class="store-badge"
-              [attr.aria-label]="'home.getApp.appStoreAria' | translate"
-            >
+            <a [href]="appStoreUrl" target="_blank" rel="noopener" class="store-badge" [attr.aria-label]="'home.getApp.appStoreAria' | translate">
               <ng-container *ngTemplateOutlet="appStoreBadge" />
             </a>
           } @else {
-            <button
-              type="button"
-              class="store-badge store-badge--disabled"
-              [attr.aria-label]="'home.getApp.appStoreSoon' | translate"
-              [title]="'home.getApp.comingSoon' | translate"
-            >
+            <button type="button" class="store-badge store-badge--disabled" [attr.aria-label]="'home.getApp.appStoreSoon' | translate" [title]="'home.getApp.comingSoon' | translate">
               <ng-container *ngTemplateOutlet="appStoreBadge" />
             </button>
           }
 
-          <!-- Google Play badge -->
           @if (playStoreUrl !== '#') {
-            <a
-              [href]="playStoreUrl"
-              target="_blank"
-              rel="noopener"
-              class="store-badge"
-              [attr.aria-label]="'home.getApp.playStoreAria' | translate"
-            >
+            <a [href]="playStoreUrl" target="_blank" rel="noopener" class="store-badge" [attr.aria-label]="'home.getApp.playStoreAria' | translate">
               <ng-container *ngTemplateOutlet="playStoreBadge" />
             </a>
           } @else {
-            <button
-              type="button"
-              class="store-badge store-badge--disabled"
-              [attr.aria-label]="'home.getApp.playStoreSoon' | translate"
-              [title]="'home.getApp.comingSoon' | translate"
-            >
+            <button type="button" class="store-badge store-badge--disabled" [attr.aria-label]="'home.getApp.playStoreSoon' | translate" [title]="'home.getApp.comingSoon' | translate">
               <ng-container *ngTemplateOutlet="playStoreBadge" />
             </button>
           }
         </div>
       </div>
 
-      <!-- Phone mockup (decorative app-shot motif) -->
       <div class="app-band__visual" aria-hidden="true">
         <div class="app-phone">
           <span class="app-phone__notch"></span>
@@ -387,9 +322,6 @@
     </article>
   </section>
 
-  <!-- App Store badge (official-style line-art rendition). Apple wordmark
-       reproduced as SVG glyphs to avoid bundling a binary asset; the
-       "coming soon" placeholder variant reuses the same artwork. -->
   <ng-template #appStoreBadge>
     <svg class="store-badge__art" viewBox="0 0 135 40" role="img" [attr.aria-label]="'home.getApp.appStoreAria' | translate">
       <rect x="0.5" y="0.5" width="134" height="39" rx="6.5" fill="#000" stroke="rgba(255,255,255,0.25)" />
@@ -399,8 +331,6 @@
     </svg>
   </ng-template>
 
-  <!-- Google Play badge (official-style line-art rendition). The triangular
-       Play glyph + wordmark are drawn as SVG so no binary asset is needed. -->
   <ng-template #playStoreBadge>
     <svg class="store-badge__art" viewBox="0 0 135 40" role="img" [attr.aria-label]="'home.getApp.playStoreAria' | translate">
       <rect x="0.5" y="0.5" width="134" height="39" rx="6.5" fill="#000" stroke="rgba(255,255,255,0.25)" />
@@ -414,8 +344,7 @@
   </ng-template>
 
   <!-- ===========================================================
-       SELL ON 3bayti — vendor-recruitment band (Phase F2).
-       Shopper-first: placed low on the page; funnels to /sell.
+       SELL ON 3bayti — vendor-recruitment band.
        =========================================================== -->
   <section class="home-section home-section--sell" aria-labelledby="sell-band-title">
     <div class="sell-band">

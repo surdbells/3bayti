@@ -1253,3 +1253,143 @@
     transform: none;
   }
 }
+
+
+/* =====================================================================
+   SOUK REBUILD — bento hero + benefits strip + category tiles
+   Reuses the Golden Hour --gh-* tokens + global page gutter/spacing.
+   RTL mirrors the band glows and flips CTA arrows via logical properties.
+   ===================================================================== */
+.hero-bento {
+  position: relative;
+  width: 100%;
+  padding-block-start: calc(clamp(2.25rem, 5vw, 4rem) + var(--header-height, 72px));
+  padding-block-end: clamp(2rem, 4vw, 3.25rem);
+  border-block-end: 1px solid rgba(46, 36, 28, 0.18);
+  background:
+    radial-gradient(rgba(251, 246, 238, 0.10) 0.5px, transparent 1px) 0 0 / 18px 18px,
+    radial-gradient(130% 110% at 90% -15%, rgba(214, 169, 59, 0.55), transparent 58%),
+    radial-gradient(120% 120% at -8% 118%, rgba(226, 98, 46, 0.45), transparent 60%),
+    linear-gradient(150deg, #c1791f 0%, #b26a1b 46%, #9a5613 100%);
+  color: var(--gh-cream);
+}
+:host-context([dir='rtl']) .hero-bento {
+  background:
+    radial-gradient(rgba(251, 246, 238, 0.10) 0.5px, transparent 1px) 0 0 / 18px 18px,
+    radial-gradient(130% 110% at 10% -15%, rgba(214, 169, 59, 0.55), transparent 58%),
+    radial-gradient(120% 120% at 108% 118%, rgba(226, 98, 46, 0.45), transparent 60%),
+    linear-gradient(210deg, #c1791f 0%, #b26a1b 46%, #9a5613 100%);
+}
+.hero-bento__grid {
+  max-width: var(--page-max-width);
+  margin-inline: auto;
+  padding-inline: var(--page-padding-x);
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 900px) {
+  .hero-bento__grid {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+    grid-auto-rows: 1fr;
+    gap: 16px;
+  }
+  .hero-bento__banner { grid-row: span 2; }
+}
+.hero-bento__banner {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  gap: var(--space-sm); padding-block: clamp(4px, 2vw, 18px);
+  animation: hero-rise var(--duration-slow) var(--ease-out) both;
+}
+.hero-bento__eyebrow {
+  margin: 0; font-family: 'Inter', system-ui, sans-serif; font-size: var(--text-eyebrow);
+  font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gh-gold-soft);
+}
+.hero-bento__title {
+  margin: 0; font-family: 'Playfair Display', Georgia, 'Times New Roman', serif; font-weight: 600;
+  font-size: var(--text-hero-title); line-height: 1.04; letter-spacing: -0.02em;
+  color: var(--gh-cream); text-wrap: balance;
+}
+.hero-bento__lede { margin: 0; max-width: 46ch; font-size: 1.0625rem; line-height: 1.6; color: rgba(251, 246, 238, 0.92); }
+.hero-bento__ctas { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-block-start: var(--space-xs); }
+
+.hb-btn {
+  display: inline-flex; align-items: center; gap: var(--space-xs);
+  padding-block: 0.8rem; padding-inline: 1.5rem; border-radius: var(--radius-pill);
+  font-weight: 600; font-size: 0.95rem; text-decoration: none;
+  transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out),
+    background-color var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out);
+}
+.hb-btn svg { width: 18px; height: 18px; }
+:host-context([dir='rtl']) .hb-btn svg { transform: scaleX(-1); }
+.hb-btn:focus-visible { outline: 2px solid var(--gh-cream); outline-offset: 3px; }
+.hb-btn--primary { background: var(--gh-coral); color: var(--gh-cream); box-shadow: 0 6px 18px -4px rgba(122, 31, 18, 0.45); }
+.hb-btn--primary:hover { background: var(--gh-coral-deep); transform: translateY(-2px); box-shadow: 0 10px 24px -4px rgba(122, 31, 18, 0.55); }
+.hb-btn--ghost { background: rgba(251, 246, 238, 0.06); color: var(--gh-cream); border: 1.5px solid rgba(251, 246, 238, 0.55); }
+.hb-btn--ghost:hover { border-color: var(--gh-cream); background: rgba(251, 246, 238, 0.16); }
+
+.hero-bento__tile {
+  position: relative; overflow: hidden; text-decoration: none;
+  border-radius: var(--radius-lg, 18px); min-height: 128px; padding: 18px 20px;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+  color: var(--gh-cream); box-shadow: 0 10px 26px -12px rgba(46, 36, 28, 0.5);
+  transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out);
+}
+.hero-bento__tile::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.08) 0 2px, transparent 2px 14px),
+    radial-gradient(120% 90% at 30% 0%, rgba(255, 255, 255, 0.18), transparent 55%);
+  mix-blend-mode: soft-light;
+}
+.hero-bento__tile:hover { transform: translateY(-3px); box-shadow: 0 16px 32px -12px rgba(46, 36, 28, 0.55); }
+.hero-bento__tile:focus-visible { outline: 2px solid var(--gh-cream); outline-offset: 3px; }
+.hero-bento__tile--new { background: linear-gradient(150deg, #4f5b50, #33463a); }
+.hero-bento__tile--top { background: linear-gradient(150deg, #c98a2a, #9a5613); }
+.hero-bento__tile-eyebrow { position: relative; z-index: 1; font-size: 11px; font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255, 255, 255, 0.82); }
+.hero-bento__tile-title { position: relative; z-index: 1; font-family: 'Playfair Display', Georgia, serif; font-size: 1.35rem; font-weight: 600; line-height: 1.1; }
+.hero-bento__tile-cta { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; margin-block-start: 2px; color: #fff; }
+.hero-bento__tile-cta svg { width: 15px; height: 15px; }
+:host-context([dir='rtl']) .hero-bento__tile-cta svg { transform: scaleX(-1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-bento__banner { animation: none; }
+  .hb-btn:hover, .hero-bento__tile:hover { transform: none; }
+}
+
+.benefits {
+  max-width: var(--page-max-width); margin: 0 auto; padding: 0; list-style: none;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+}
+@media (min-width: 720px) { .benefits { grid-template-columns: repeat(4, 1fr); } }
+.benefit {
+  display: flex; align-items: center; gap: 12px; background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg, 16px);
+  padding: 13px 15px; box-shadow: var(--shadow-card-resting);
+}
+.benefit__ico { flex: 0 0 auto; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--gh-tint-3); color: var(--gh-amber); }
+.benefit__ico svg { width: 22px; height: 22px; }
+.benefit__text { display: flex; flex-direction: column; font-size: 12px; line-height: 1.35; color: var(--color-text-secondary); }
+.benefit__text b { font-size: 13.5px; font-weight: 650; color: var(--color-text-primary); }
+
+.cat-tiles {
+  max-width: var(--page-max-width); margin: 0 auto; padding: 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+@media (min-width: 640px) { .cat-tiles { grid-template-columns: repeat(6, 1fr); } }
+.cat-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+  text-decoration: none; padding: 16px 8px; background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-subtle); border-radius: var(--radius-lg, 16px);
+  box-shadow: var(--shadow-card-resting);
+  transition: transform var(--duration-base) var(--ease-out), box-shadow var(--duration-base) var(--ease-out), border-color var(--duration-base) var(--ease-out);
+}
+.cat-tile:hover { transform: translateY(-3px); box-shadow: var(--shadow-card-hover); border-color: var(--color-brand-300); }
+.cat-tile:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 3px; }
+.cat-tile__badge { width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; overflow: hidden; background: linear-gradient(150deg, var(--gh-tint-3), var(--gh-tint)); }
+.cat-tile__photo { width: 100%; height: 100%; object-fit: cover; }
+.cat-tile__icon { width: 34px; height: 34px; object-fit: contain; }
+.cat-tile__initial { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 600; color: var(--gh-amber); }
+.cat-tile__name { font-size: 13px; font-weight: 650; color: var(--color-text-primary); line-height: 1.25; }
+.cat-tile__count { font-size: 11px; color: var(--color-text-tertiary); }
+.cat-tile--skeleton { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .cat-tile:hover { transform: none; } }

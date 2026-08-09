@@ -15,8 +15,6 @@ import { organizationSchema, websiteSchema } from '../../core/seo/schema.helpers
 import { environment } from '../../../environments/environment';
 import { SkeletonShimmerComponent } from '../../shared/ui/skeleton-shimmer';
 import { ProductStripComponent } from '../../shared/ui/product-strip';
-import { HeroCarouselComponent } from '../../shared/ui/hero-carousel';
-import { SectionHeaderComponent } from '../../shared/ui/section-header';
 import { CampaignSectionComponent } from './campaign-section';
 import { TopSellersComponent } from './top-sellers';
 import type { ActiveCampaigns } from '../campaigns/campaign.model';
@@ -56,9 +54,7 @@ import { TranslatePipe } from '@ngx-translate/core';
   imports: [
     SkeletonShimmerComponent,
     ProductStripComponent,
-    HeroCarouselComponent,
     StoreCardComponent,
-    SectionHeaderComponent,
     CampaignSectionComponent,
     TopSellersComponent,
     TranslatePipe,
@@ -89,8 +85,6 @@ export class HomeComponent {
    * Observable emits. null = loading state (renders skeletons), [] =
    * loaded but empty (strip silently omits itself), Product[] = real
    * data ready to render. ----------------------------------------- */
-
-  readonly featured     = toSignal(this.homeData.featuredProducts$(),  { initialValue: null });
   readonly bestSellers  = toSignal(this.homeData.bestSellers$(),       { initialValue: null });
   readonly newArrivals  = toSignal(this.homeData.newArrivals$(),       { initialValue: null });
   readonly vendors      = toSignal(this.homeData.featuredVendors$(),   { initialValue: null });
