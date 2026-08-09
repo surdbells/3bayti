@@ -914,7 +914,8 @@
       "notFoundTitle": "Gift card not found",
       "notFoundBody": "We couldn't find that gift card in your account.",
       "errorLoad": "We couldn't load this gift card. Please try again.",
-      "retry": "Try again"
+      "retry": "Try again",
+      "statusLabel": "Status"
     },
     "redeem": {
       "title": "Redeem a gift card",

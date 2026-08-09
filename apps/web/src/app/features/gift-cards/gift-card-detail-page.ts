@@ -14,7 +14,7 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { GiftCardVisualComponent } from './gift-card-visual';
 import { GiftCardService } from './gift-card.service';
 import { SeoService } from '../../core/seo/seo.service';
-import type { GiftCard, GiftCardTransaction } from './gift-card.model';
+import type { GiftCard, GiftCardStatus, GiftCardTransaction } from './gift-card.model';
 
 type LoadState = 'loading' | 'ready' | 'notfound' | 'error';
 
@@ -117,6 +117,12 @@ type LoadState = 'loading' | 'ready' | 'notfound' | 'error';
                     <span class="gcd__row-value">{{ card()!.scheduled_delivery_at | date:'medium' }}</span>
                   </div>
                 }
+                <div class="gcd__row">
+                  <span class="gcd__row-label">{{ 'giftCards.detail.statusLabel' | translate }}</span>
+                  <span class="gcd__status" [class]="'gcd__status--' + statusVariant(card()!.status)">
+                    {{ ('giftCards.status.' + card()!.status) | translate }}
+                  </span>
+                </div>
                 @if (card()!.expires_at) {
                   <div class="gcd__row">
                     <span class="gcd__row-label">{{ 'giftCards.detail.expiresLabel' | translate }}</span>
@@ -182,6 +188,21 @@ export class GiftCardDetailPageComponent implements OnInit {
     if (!Number.isFinite(denom) || denom <= 0) return 0;
     return Math.max(0, Math.min(100, Math.round((bal / denom) * 100)));
   });
+
+  /** Badge colour variant for a status (mirrors the wallet list). */
+  protected statusVariant(status: GiftCardStatus): string {
+    switch (status) {
+      case 'active':
+      case 'partially_used':
+        return 'active';
+      case 'pending_payment':
+        return 'pending';
+      case 'exhausted':
+        return 'used';
+      default:
+        return 'ended';
+    }
+  }
 
   ngOnInit(): void {
     this.seo.set({ title: 'Gift Card · 3bayti', description: 'Your 3bayti gift card details.' });

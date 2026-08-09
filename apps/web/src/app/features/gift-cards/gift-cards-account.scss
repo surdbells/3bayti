@@ -485,3 +485,13 @@
 .gca__copy:hover { background: var(--bg-muted); border-color: var(--color-brand-500); }
 .gca__copy:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
 .gca__state--filter { padding: 30px 20px; }
+
+/* --- Detail: status badge --- */
+.gcd__status {
+  display: inline-block; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.02em;
+  padding: 3px 11px; border-radius: 999px;
+}
+.gcd__status--active { background: rgba(45, 125, 79, 0.12); color: #2d7d4f; }
+.gcd__status--pending { background: rgba(245, 166, 35, 0.16); color: #a9741a; }
+.gcd__status--used { background: rgba(139, 111, 71, 0.15); color: #8b6f47; }
+.gcd__status--ended { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
