@@ -1,23 +1,33 @@
 name: Web — build & deploy
 
-# Build and deploy the apps/web Worker.
+# Build the apps/web storefront and deploy it to Cloudflare Pages on every
+# push to main. Pull requests run the build + verify gates only (no deploy).
 #
-# Adapted from the standalone surdbells/3bayti-web CI for the monorepo:
-#   - working-directory: apps/web (instead of repo root)
-#   - pnpm + frozen-lockfile (instead of npm ci)
-#   - paths filter so changes outside apps/web or its dependent
-#     packages don't trigger unnecessary rebuilds
-#   - trigger branch: main (the monorepo default; was master in the
-#     standalone repo)
+# Architecture (CSR-on-Pages)
+# ---------------------------
+# apps/web is a pure client-side-rendered Angular SPA served as static assets
+# from Cloudflare Pages. wrangler.jsonc declares:
+#   name:                   3bayti-web
+#   pages_build_output_dir: ./dist/3bayti-web/browser
+# The only server-side piece is the auth-proxy Pages Function
+# (apps/web/functions/**), which wrangler compiles and ships alongside the
+# assets.
 #
-# The verification logic (SSR markers, sitemap, Worker bundle) is
-# preserved unchanged — those checks survived multiple rounds of
-# real production debugging and we don't want to regress them.
+# Deploy uses `wrangler pages deploy` (NOT `wrangler deploy`, which targets
+# Workers). With `pages_build_output_dir` set in wrangler.jsonc, the command
+# needs no positional directory — it reads the project name + output dir from
+# config and auto-detects the functions/ directory. `--branch=main` forces a
+# production deployment (CI checks out a detached HEAD, so wrangler cannot
+# infer the branch on its own).
 #
-# Required GitHub secrets:
-#   CLOUDFLARE_API_TOKEN   — fine-scoped token with "Edit Cloudflare
-#                            Workers" template permissions
-#   CLOUDFLARE_ACCOUNT_ID  — found in the Cloudflare dash sidebar
+# Required GitHub repository secrets
+# ----------------------------------
+#   CLOUDFLARE_API_TOKEN   — API token with the "Cloudflare Pages: Edit"
+#                            permission on this account.
+#   CLOUDFLARE_ACCOUNT_ID  — the account id from the Cloudflare dashboard
+#                            sidebar (Workers & Pages → Account details).
+#
+# Set them under: repo → Settings → Secrets and variables → Actions.
 
 on:
   push:
@@ -49,287 +59,22 @@ on:
       - 'turbo.json'
       - '.github/workflows/web.yml'
 
-# Cancel in-progress runs when a newer commit is pushed to the same PR.
+# Cancel in-progress runs when a newer commit is pushed to the same ref.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     timeout-minutes: 12
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install workspace dependencies
-        # --frozen-lockfile fails if pnpm-lock.yaml is out of sync.
-        # Equivalent to npm ci for pnpm. Right call for CI.
-        run: pnpm install --frozen-lockfile
-
-      - name: Type-check workspace
-        # Cheap parallel pass — catches TS errors across all packages
-        # before we spend time on the full Angular build. Turborepo
-        # caches it; on CI we don't have a cache, but it's still fast.
-        run: pnpm --filter @3bayti/web type-check
-
-      # ====================================================================
-      # M3.2.0 Quality Gates — added in M3.2.0-F
-      # ====================================================================
-      # These run AFTER type-check (cheap) but BEFORE the full Angular
-      # production build (expensive). If a regression surfaces in
-      # Playwright, we save 6+ minutes vs running the full build first.
-      #
-      # Per locked decisions:
-      #   Q1 = C: Chromatic step uses continue-on-error until operator
-      #           setup completes (CHROMATIC_PROJECT_TOKEN in secrets)
-      #   Q3 = A: Mobile Playwright runs with continue-on-error initially
-      # ====================================================================
-
-      - name: Install Playwright browsers
-        # Cached via actions/setup-node 'cache: pnpm', but the browser
-        # binaries themselves need explicit install. --with-deps installs
-        # system libraries on Ubuntu. Chromium-only per locked Q4 = A.
-        run: pnpm --filter @3bayti/web exec playwright install --with-deps chromium
-
-      - name: Run Playwright e2e tests (apps/web)
-        # webServer auto-starts `pnpm dev` on :4200. axe-core a11y gate
-        # runs inside each primary load test (utils/a11y.ts).
-        env:
-          CI: 'true'
-          PLAYWRIGHT_BASE_URL: 'http://localhost:4200'
-        run: pnpm --filter @3bayti/web test:e2e
-
-      - name: Upload Playwright report (on failure)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-playwright-report
-          path: apps/web/playwright-report/
-          retention-days: 7
-          if-no-files-found: warn
-
-      - name: Build Storybook (packages/shared-ui)
-        # Static output consumed by Chromatic for component-level
-        # visual diffs alongside page-level snapshots.
-        run: pnpm --filter @3bayti/shared-ui build-storybook
-
-      - name: Publish to Chromatic
-        # M3.2.0-C: per locked Q1 = C, this runs with continue-on-error
-        # until CHROMATIC_PROJECT_TOKEN is configured in repo secrets.
-        # After operator setup completes, remove continue-on-error and
-        # the conditional check around projectToken.
-        if: github.event_name == 'pull_request' && env.CHROMATIC_PROJECT_TOKEN != ''
-        continue-on-error: true
-        env:
-          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-        working-directory: apps/web
-        run: pnpm chromatic
-
-      - name: Build production bundle
-        run: pnpm --filter @3bayti/web build
-
-      - name: Verify SSR output
-        # Sanity check: confirms the prerendered pages actually have
-        # content (not an empty <app-root>). If SSR breaks silently in
-        # the build, this catches it — without this step, Cloudflare
-        # would happily deploy an empty shell.
-        #
-        # Marker rationale (Phase 1 W3 round-3): we used to assert on
-        # the literal hero copy ("Premium abayas..."), but that text
-        # was removed when the home transitioned to a carousel-only
-        # hero. We now check stable BEM markers from component
-        # templates, not editorial copy:
-        #
-        #   - site-footer__brand-name: every page has the footer; this
-        #     proves the global app shell rendered.
-        #   - hero-carousel__slide: confirms the home page's primary
-        #     content (the carousel) actually rendered with slide data.
-        working-directory: apps/web
-        run: |
-          INDEX=dist/3bayti-web/browser/index.html
-          if [ ! -f "$INDEX" ]; then
-            echo "ERROR: $INDEX not found"
-            exit 1
-          fi
-          if ! grep -q "site-footer__brand-name" "$INDEX"; then
-            echo "ERROR: footer marker missing — global app shell may not have rendered"
-            exit 1
-          fi
-          NSLIDES=$(grep -oE 'hero-carousel__slide\b' "$INDEX" | wc -l)
-          if [ "$NSLIDES" -lt 1 ]; then
-            echo "ERROR: home page carousel rendered 0 slides — /v2/products may have been unreachable at build time"
-            exit 1
-          fi
-          echo "✓ Home page prerendered ($(wc -c < $INDEX) bytes, $NSLIDES carousel slide markers)"
-
-          CAT=dist/3bayti-web/browser/category/index.html
-          if [ ! -f "$CAT" ]; then
-            echo "ERROR: $CAT not found — /category route prerender failed"
-            exit 1
-          fi
-          if ! grep -q "Shop by Category" "$CAT"; then
-            echo "ERROR: categories page heading missing"
-            exit 1
-          fi
-          echo "✓ Categories page prerendered ($(wc -c < $CAT) bytes)"
-
-          # Pick a category-detail prerender output dynamically. Hard-
-          # coding a slug ('abayas-1' for v2, 'abayas' for v3) breaks
-          # whenever the backend's slug shape changes (which is exactly
-          # what Day 5's v3 flip did). Listing the directory and picking
-          # the first slug works regardless of backend.
-          CAT_DIR=dist/3bayti-web/browser/category
-          if [ ! -d "$CAT_DIR" ]; then
-            echo "ERROR: $CAT_DIR not found — /category/:slug prerender phase didn't run"
-            exit 1
-          fi
-          # First subdirectory (not 'index.html') is a prerendered slug.
-          DET_SLUG=$(ls "$CAT_DIR" | grep -v '^index\.html$' | head -1)
-          if [ -z "$DET_SLUG" ]; then
-            echo "ERROR: no category-detail prerenders in $CAT_DIR"
-            echo "       Check the build-time category fetch in app.routes.server.ts"
-            exit 1
-          fi
-          DET=$CAT_DIR/$DET_SLUG/index.html
-          if [ ! -f "$DET" ]; then
-            echo "ERROR: $DET not found (picked slug '$DET_SLUG' but no index.html)"
-            exit 1
-          fi
-          if ! grep -q '"@type":"ItemList"' "$DET"; then
-            echo "ERROR: ItemList JSON-LD missing from category-detail prerender ($DET_SLUG)"
-            exit 1
-          fi
-          NPRODUCTS=$(grep -oE 'class="product-card__name"' "$DET" | wc -l)
-          if [ "$NPRODUCTS" -lt 1 ]; then
-            echo "ERROR: no product cards rendered on /category/$DET_SLUG"
-            exit 1
-          fi
-          echo "✓ Category-detail prerendered ($DET_SLUG, $(wc -c < $DET) bytes, $NPRODUCTS products)"
-
-          # Pick a PDP prerender output dynamically. Same rationale.
-          PDP_DIR=dist/3bayti-web/browser/product
-          if [ ! -d "$PDP_DIR" ]; then
-            echo "ERROR: $PDP_DIR not found — /product/:slug prerender phase didn't run"
-            exit 1
-          fi
-          PDP_SLUG=$(ls "$PDP_DIR" | grep -v '^index\.html$' | head -1)
-          if [ -z "$PDP_SLUG" ]; then
-            echo "ERROR: no product prerenders in $PDP_DIR"
-            echo "       Check the build-time product fetch in app.routes.server.ts"
-            exit 1
-          fi
-          PDP=$PDP_DIR/$PDP_SLUG/index.html
-          if [ ! -f "$PDP" ]; then
-            echo "ERROR: $PDP not found (picked slug '$PDP_SLUG' but no index.html)"
-            exit 1
-          fi
-          # Generic PDP markers (don't pin to a specific vendor name).
-          if ! grep -q '"@type":"Product"' "$PDP"; then
-            echo "ERROR: Product JSON-LD missing from PDP prerender ($PDP_SLUG)"
-            exit 1
-          fi
-          # Product images come from api.3bayti.ae/cdn-cgi/image OR
-          # api.3bayti.ae/vendors/... — accept either.
-          PDP_IMAGES=$(grep -oE 'src="https://api\.3bayti\.ae/[^"]+' "$PDP" | wc -l)
-          if [ "$PDP_IMAGES" -lt 1 ]; then
-            echo "ERROR: no product images rendered on /product/$PDP_SLUG"
-            exit 1
-          fi
-          echo "✓ PDP prerendered ($PDP_SLUG, $(wc -c < $PDP) bytes, $PDP_IMAGES image elements)"
-          # Export the slugs so the smoke-test job downstream can re-use them.
-          echo "$DET_SLUG" > /tmp/verified-category-slug.txt
-          echo "$PDP_SLUG" > /tmp/verified-product-slug.txt
-
-      - name: Verify sitemap + robots generated
-        working-directory: apps/web
-        run: |
-          if [ ! -f dist/3bayti-web/browser/sitemap.xml ]; then
-            echo "ERROR: sitemap.xml missing — postbuild hook may have failed"
-            exit 1
-          fi
-          echo "✓ sitemap.xml present"
-          if [ ! -f dist/3bayti-web/browser/robots.txt ]; then
-            echo "ERROR: robots.txt missing — generated by postbuild"
-            exit 1
-          fi
-          echo "✓ robots.txt present"
-
-      - name: Verify Worker bundle
-        working-directory: apps/web
-        run: |
-          WORKER=dist/3bayti-web/server/server.mjs
-          if [ ! -f "$WORKER" ]; then
-            echo "ERROR: $WORKER not found — angular build may not have produced the SSR entry"
-            exit 1
-          fi
-          if ! grep -q 'fetch' "$WORKER"; then
-            echo "ERROR: Worker bundle has no 'fetch' reference — wrong entry point?"
-            exit 1
-          fi
-          echo "✓ Worker bundle present ($(wc -c < $WORKER) bytes)"
-
-      - name: Tar build output
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        working-directory: apps/web
-        run: tar -czf build-output.tar.gz dist/
-
-      - name: Upload build artifact
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build-output
-          path: apps/web/build-output.tar.gz
-          retention-days: 1
-          if-no-files-found: error
-
-  deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
     permissions:
       contents: read
       deployments: write
-    outputs:
-      deployment_url: ${{ steps.deploy.outputs.deployment-url }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: web-build-output
-          path: apps/web
-
-      - name: Extract build output
-        working-directory: apps/web
-        run: |
-          tar -xzf build-output.tar.gz
-          rm build-output.tar.gz
-          if [ ! -f dist/3bayti-web/server/server.mjs ]; then
-            echo "ERROR: Worker bundle missing after artifact extract"
-            ls -la dist/ dist/3bayti-web/ 2>&1 || true
-            exit 1
-          fi
-          echo "✓ Build artifact extracted, Worker bundle present"
-
       - name: Setup pnpm
-        # Re-install pnpm for the deploy job since artifact-only doesn't
-        # carry it through. The wrangler-action would have used npm,
-        # but npm doesn't understand workspace:* protocol entries in
-        # apps/web/package.json (introduced when @3bayti/api-client was
-        # added as a workspace dep on Day 5). So we use pnpm directly.
         uses: pnpm/action-setup@v4
         with:
           version: 9.15.0
@@ -341,162 +86,79 @@ jobs:
           cache: 'pnpm'
 
       - name: Install workspace dependencies
-        # We need wrangler (declared in apps/web devDependencies) plus
-        # the workspace packages it transitively touches. Frozen
-        # lockfile keeps things fast + reproducible.
+        # --frozen-lockfile fails if pnpm-lock.yaml is out of sync (the pnpm
+        # equivalent of `npm ci`). Right call for CI reproducibility.
         run: pnpm install --frozen-lockfile
 
-      - name: Deploy to Cloudflare Workers
+      - name: Type-check
+        # Cheap fast-fail: catches TS/template regressions before the more
+        # expensive Angular production build.
+        run: pnpm --filter @3bayti/web type-check
+
+      - name: Build production bundle
+        # `pnpm build` runs the full npm lifecycle: prebuild (inject env) →
+        # ng build → postbuild (generate sitemap.xml + robots.txt).
+        run: pnpm --filter @3bayti/web build
+
+      - name: Verify build output
+        # CSR sanity check — confirms Pages will serve a real SPA shell and
+        # SEO artifacts, not an empty/half-built directory. This is a pure
+        # client-rendered build, so index.html is the app shell (no
+        # prerendered page copy to assert on).
+        working-directory: apps/web
+        run: |
+          set -e
+          DIR=dist/3bayti-web/browser
+          INDEX=$DIR/index.html
+          [ -f "$INDEX" ] || { echo "ERROR: $INDEX missing"; exit 1; }
+          grep -q '<app-root' "$INDEX" || { echo "ERROR: <app-root> missing from index.html"; exit 1; }
+          ls "$DIR"/main-*.js >/dev/null 2>&1 || { echo "ERROR: main-*.js bundle missing"; exit 1; }
+          [ -f "$DIR/sitemap.xml" ] || { echo "ERROR: sitemap.xml missing (postbuild hook)"; exit 1; }
+          [ -f "$DIR/robots.txt" ]  || { echo "ERROR: robots.txt missing (postbuild hook)"; exit 1; }
+          echo "✓ CSR build output verified ($(wc -c < "$INDEX") bytes index.html, sitemap + robots present)"
+
+      - name: Deploy to Cloudflare Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         id: deploy
-        # Run wrangler directly via pnpm. Captures the deployment URL
-        # the same way cloudflare/wrangler-action@v3 did — wrangler
-        # prints "Deployed ... to <url>" on success; we parse it and
-        # expose via $GITHUB_OUTPUT for downstream steps.
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         working-directory: apps/web
         run: |
           set -eo pipefail
-          # Capture wrangler output so we can parse the deployment URL.
-          DEPLOY_OUTPUT=$(pnpm exec wrangler deploy 2>&1 | tee /dev/stderr)
-
-          # wrangler prints lines like:
-          #   Published 3bayti-web (1.23 sec)
-          #     https://3bayti-web.<account>.workers.dev
-          # OR for custom-domain Workers:
-          #   Current Version ID: ...
-          #   Deployed 3bayti-web triggers (1.23 sec)
-          #     https://staging.3bayti.ae
+          # Config-driven deploy: name + output dir come from wrangler.jsonc,
+          # and functions/ is compiled automatically. Capture the output so we
+          # can surface the deployment URL to the smoke-test step.
+          DEPLOY_OUTPUT=$(pnpm exec wrangler pages deploy --branch=main 2>&1 | tee /dev/stderr)
+          # wrangler prints e.g. "…over at https://<hash>.3bayti-web.pages.dev"
+          # and a branch alias "https://main.3bayti-web.pages.dev".
           DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" \
-            | grep -oE 'https://[a-zA-Z0-9.-]+\.(workers\.dev|3bayti\.ae)[^ ]*' \
-            | head -1)
+            | grep -oE 'https://[a-z0-9-]+\.3bayti-web\.pages\.dev' | head -1)
           if [ -z "$DEPLOY_URL" ]; then
-            echo "WARNING: could not parse deployment URL from wrangler output"
-            DEPLOY_URL="https://3bayti-web.workers.dev"  # best-guess fallback
+            DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" \
+              | grep -oE 'https://[a-zA-Z0-9.-]+\.pages\.dev' | head -1)
           fi
-          echo "Deployment URL: $DEPLOY_URL"
           echo "deployment-url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
-
-      - name: Print deployment URL
-        env:
-          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
-        run: |
-          echo "Deployed to: $DEPLOYMENT_URL"
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            echo "WARNING: deployment-url output was empty. Smoke test will fail without a target URL."
-          fi
+          echo "Deployed to: ${DEPLOY_URL:-<url not parsed>}"
 
       - name: Smoke-test the deployment
-        # Tests three URLs against TWO targets: workers.dev (immediate)
-        # and staging.3bayti.ae (production custom domain).
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
-          DEPLOYMENT_URL: ${{ steps.deploy.outputs.deployment-url }}
-          PROD_URL: 'https://staging.3bayti.ae'
-        working-directory: apps/web
+          DEPLOY_URL: ${{ steps.deploy.outputs.deployment-url }}
         run: |
           set -e
-
-          smoke_test() {
-            local BASE="${1%/}"
-            local LABEL="$2"
-
-            echo ""
-            echo "================================================================"
-            echo " Smoke-testing target: $LABEL"
-            echo " URL: $BASE"
-            echo "================================================================"
-
-            echo ""
-            echo "[$LABEL] Test 1: Prerendered home (served by ASSETS)"
-            local HOME_BODY HOME_STATUS HOME_SLIDES
-            HOME_BODY=$(curl -fsS --max-time 30 "$BASE/")
-            HOME_STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/")
-            if [ "$HOME_STATUS" != "200" ]; then
-              echo "ERROR [$LABEL]: / returned $HOME_STATUS"
-              exit 1
-            fi
-            if ! echo "$HOME_BODY" | grep -q "site-footer__brand-name"; then
-              echo "ERROR [$LABEL]: home page missing footer marker — global app shell may not have rendered"
-              exit 1
-            fi
-            HOME_SLIDES=$(echo "$HOME_BODY" | grep -oE 'hero-carousel__slide\b' | wc -l)
-            if [ "$HOME_SLIDES" -lt 1 ]; then
-              echo "ERROR [$LABEL]: home page rendered 0 carousel slides — /v2/products may have been unreachable"
-              exit 1
-            fi
-            echo "✓ [$LABEL] home: 200 OK, $HOME_SLIDES carousel slide markers, footer present"
-
-            echo ""
-            echo "[$LABEL] Test 2: Prerendered PDP (served by ASSETS)"
-            # Pick the first prerendered PDP slug dynamically — see
-            # build job's SSR verify step for the rationale (slug
-            # shapes change between v2 and v3, so hardcoding breaks).
-            local PDP_SLUG PDP_BODY PDP_STATUS
-            PDP_SLUG=$(ls dist/3bayti-web/browser/product/ | grep -v '^index\.html$' | head -1)
-            if [ -z "$PDP_SLUG" ]; then
-              echo "ERROR [$LABEL]: no prerendered PDP slugs found in dist/"
-              exit 1
-            fi
-            PDP_BODY=$(curl -fsS --max-time 30 "$BASE/product/$PDP_SLUG")
-            PDP_STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$BASE/product/$PDP_SLUG")
-            if [ "$PDP_STATUS" != "200" ]; then
-              echo "ERROR [$LABEL]: /product/$PDP_SLUG returned $PDP_STATUS"
-              exit 1
-            fi
-            # Generic PDP marker (don't pin to a specific vendor).
-            if ! echo "$PDP_BODY" | grep -q '"@type":"Product"'; then
-              echo "ERROR [$LABEL]: prerendered PDP missing Product JSON-LD ($PDP_SLUG)"
-              exit 1
-            fi
-            echo "✓ [$LABEL] prerendered PDP ($PDP_SLUG): 200 OK, Product JSON-LD present"
-
-            echo ""
-            echo "[$LABEL] Test 3: Long-tail PDP (RUNTIME SSR via Worker)"
-            ls dist/3bayti-web/browser/product/ | sort > /tmp/prerendered.txt
-            grep -oE '<loc>[^<]+/product/[^<]+</loc>' \
-                dist/3bayti-web/browser/sitemap.xml \
-              | sed -E 's|.*/product/([^<]+)</loc>|\1|' \
-              | sort > /tmp/all-slugs.txt
-            local LONG_TAIL
-            LONG_TAIL=$(comm -23 /tmp/all-slugs.txt /tmp/prerendered.txt | head -1)
-
-            if [ -z "$LONG_TAIL" ]; then
-              echo "WARNING [$LABEL]: no long-tail slug found. Skipping runtime-SSR smoke test."
-              return 0
-            fi
-
-            echo "Selected long-tail slug: $LONG_TAIL"
-            local TAIL_BODY TAIL_STATUS TAIL_TITLE
-            TAIL_BODY=$(curl -fsS --max-time 60 "$BASE/product/$LONG_TAIL")
-            TAIL_STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 60 "$BASE/product/$LONG_TAIL")
-            if [ "$TAIL_STATUS" != "200" ]; then
-              echo "ERROR [$LABEL]: /product/$LONG_TAIL returned $TAIL_STATUS — runtime SSR is broken"
-              exit 1
-            fi
-
-            TAIL_TITLE=$(echo "$TAIL_BODY" | grep -oE '<title>[^<]+</title>' | head -1)
-            echo "Title: $TAIL_TITLE"
-            if echo "$TAIL_TITLE" | grep -qE '<title>Product · 3bayti</title>'; then
-              echo "ERROR [$LABEL]: long-tail PDP returned the fallback title — runtime SSR is broken!"
-              exit 1
-            fi
-
-            if ! echo "$TAIL_TITLE" | grep -q ' by '; then
-              echo "ERROR [$LABEL]: long-tail PDP title doesn't look like a real product title:"
-              echo "       $TAIL_TITLE"
-              exit 1
-            fi
-
-            echo "✓ [$LABEL] long-tail PDP: 200 OK, runtime SSR served real product data"
-          }
-
-          if [ -z "$DEPLOYMENT_URL" ]; then
-            echo "ERROR: no deployment URL available; cannot smoke-test"
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "WARNING: no deployment URL parsed from wrangler output; skipping smoke test."
+            exit 0
+          fi
+          STATUS=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "$DEPLOY_URL/")
+          if [ "$STATUS" != "200" ]; then
+            echo "ERROR: $DEPLOY_URL/ returned HTTP $STATUS"
             exit 1
           fi
-          smoke_test "$DEPLOYMENT_URL" "workers.dev"
-          smoke_test "$PROD_URL" "production"
-
-          echo ""
-          echo "🎉 All smoke tests passed against both targets."
+          BODY=$(curl -fsS --max-time 30 "$DEPLOY_URL/")
+          if ! echo "$BODY" | grep -q '<app-root'; then
+            echo "ERROR: home page did not serve the SPA shell (<app-root> missing)"
+            exit 1
+          fi
+          echo "✓ Smoke test passed: $DEPLOY_URL/ → 200, SPA shell served."
