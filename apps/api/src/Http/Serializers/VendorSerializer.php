@@ -166,6 +166,12 @@ final class VendorSerializer
             // ignores it. Null for vendors with no legacy row.
             'store_id' => $vendor->getLegacyVendorId(),
             'name' => $vendor->getName(),
+            // Logo + cover for the rich hero-image store card (matches the
+            // mobile vendor card). Getters already used by publicShape /
+            // directoryShape; additive here — apps/web falls back to a product
+            // image when cover is null, so this degrades gracefully.
+            'logo_url' => $vendor->getLogoUrl(),
+            'cover_image_url' => $vendor->getCoverImageUrl(),
             'description' => $vendor->getDescription(),
             // Rating: round to 1dp for display; null preserved as null
             // (apps/web hides the rating chip when rating_count === 0,

@@ -1372,10 +1372,20 @@
 .benefit__text b { font-size: 13.5px; font-weight: 650; color: var(--color-text-primary); }
 
 .cat-tiles {
-  max-width: var(--page-max-width); margin: 0 auto; padding: 0;
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  max-width: var(--page-max-width); margin: 0 auto; padding: 6px 0;
+  /* Single row always: tiles stretch to fill the width on desktop, and the row
+     scrolls horizontally when they can't all fit (mobile / many categories). */
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(104px, 1fr);
+  gap: 12px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
 }
-@media (min-width: 640px) { .cat-tiles { grid-template-columns: repeat(6, 1fr); } }
+.cat-tiles::-webkit-scrollbar { display: none; }
+.cat-tile { scroll-snap-align: start; }
 .cat-tile {
   display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
   text-decoration: none; padding: 16px 8px; background: var(--color-bg-surface);

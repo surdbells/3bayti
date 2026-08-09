@@ -1,241 +1,173 @@
-/* StoreCard — vendor card with embedded product thumbnails
- * ============================================================
- * Same surface language as ProductCard (cream, 20px radius,
- * Pronounced shadow, hover lift). Sized for 2-up display on the
- * Store Spotlight section: wider, more spacious, more "panel"
- * than "card in a row."
- *
- * Phase 1 W3 redesign:
- *   - Was 4-up at ≥1280px with a 2x2 product mosaic
- *   - Now 2-up at ≥768px with a horizontal 4-product preview row
- *   - Bigger card → bigger description region → more vendor breathing room
- *   - Equal heights enforced by parent grid (.stores-grid uses align-
- *     items: stretch by default, plus min-height + flex column on
- *     this card pushes the products row to the bottom)
- */
-
-:host {
-  display: block;
-  height: 100%;
-}
+/* StoreCard — hero-image vendor card (matches the mobile vendor card).
+ * Cover image + gradient scrim + overlaid logo/name/rating, then a product
+ * thumbnail strip and a "View collection" link. Consumes the page's design
+ * tokens (Golden Hour palette when rendered inside .home-page), with literal
+ * fallbacks so it still reads correctly on any other surface. */
 
 .store-card {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  background: #fdfaf3;
-  border-radius: 14px;
-  padding: 28px 28px 32px;
-  /* Same soft & subtle shadow language as ProductCard via shared token.
-   * See --shadow-card-resting in src/styles.scss. */
-  box-shadow: var(--shadow-card-resting);
+  background: var(--color-bg-surface, #fffdf8);
+  border: 1px solid var(--color-border-subtle, rgba(46, 36, 28, 0.1));
+  border-radius: var(--radius-lg, 16px);
+  overflow: hidden;
+  box-shadow: var(--shadow-card-resting, 0 4px 12px -2px rgba(178, 106, 27, 0.1));
   transition:
-    box-shadow 0.5s cubic-bezier(0.22, 1, 0.36, 1),
-    transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-  /* Internal flex column with margin-top:auto on the products row keeps
-     all 2-up cards in a row at equal height even when descriptions
-     differ in length. */
-  height: 100%;
-  min-height: 360px;
+    transform 0.3s var(--ease-out, cubic-bezier(0, 0, 0.2, 1)),
+    box-shadow 0.3s var(--ease-out, cubic-bezier(0, 0, 0.2, 1));
 }
-
 .store-card:hover {
-  /* Lift kept at -3px (was -4px) to align with the softer shadow
-   * language. Smaller lift sits naturally with the gentler shadow. */
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-card-hover, 0 10px 24px -4px rgba(178, 106, 27, 0.16));
 }
 
-/* ----- Header (vendor name + rating) -------------------------------- */
-
-.store-card__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.store-card__name-link {
-  text-decoration: none;
-  color: inherit;
-  flex: 1;
-  min-width: 0;
-}
-
-.store-card__name-link:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
-
-.store-card__name {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-weight: 500;
-  /* Bigger at the new 2-up size — vendor name should command the card. */
-  font-size: 26px;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
-  color: var(--color-brand-700);
-  margin: 0;
-  /* Truncate to 2 lines for the rare extra-long studio names. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-@media (min-width: 1280px) {
-  .store-card__name {
-    font-size: 30px;
-  }
-}
-
-.store-card__name-link:hover .store-card__name {
-  color: var(--color-brand-500);
-}
-
-.store-card__rating {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--color-brand-700);
-  text-decoration: none;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: var(--color-brand-50);
-  border: 0.5px solid var(--color-brand-200);
-  transition: background 0.2s ease;
-  white-space: nowrap;
-}
-
-.store-card__rating:hover {
-  background: var(--color-brand-100);
-}
-
-.store-card__rating:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
-}
-
-.store-card__rating svg {
-  width: 12px;
-  height: 12px;
-  fill: var(--color-brand-500);
-}
-
-.store-card__rating-count {
-  color: var(--color-text-tertiary);
-  font-weight: 400;
-}
-
-/* ----- Description -------------------------------------------------- */
-
-.store-card__description {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-style: italic;
-  /* Bigger description font for the showcase format — Cormorant looks
-     better at ~17-18px than its previous 15px. */
-  font-size: 17px;
-  line-height: 1.55;
-  color: var(--color-text-secondary);
-  margin: 0;
-  /* Allow up to 4 lines now that cards have more room; truncates
-     gracefully if a vendor wrote more. */
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-@media (min-width: 1280px) {
-  .store-card__description {
-    font-size: 18px;
-  }
-}
-
-/* ----- Products row (horizontal 5-up, replaces the old 2x2 mosaic) -- */
-
-.store-card__products {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
-  /* margin-top:auto pushes the products row to the bottom of the card,
-     enforcing equal-height behavior across the 2-up grid. */
-  margin-top: auto;
-}
-
-@media (min-width: 1280px) {
-  .store-card__products {
-    gap: 10px;
-  }
-}
-
-.store-card__product {
+/* --- Cover / hero --- */
+.store-card__cover {
   position: relative;
   display: block;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
-  border-radius: 10px;
-  /* Square thumbnails — at 4 per row in a 620px card with 28px padding
-     and 10px gaps, each is roughly 130-140px square. Big enough to
-     read but proportional to the larger vendor name above. */
-  aspect-ratio: 1 / 1;
-  background: var(--color-bg-muted);
   text-decoration: none;
-  transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  /* Fallback when there's no cover or product image. */
+  background: linear-gradient(150deg, #8a6a4e, #5a3a2c);
 }
-
-.store-card__product:hover {
-  transform: scale(1.02);
-}
-
-.store-card__product:focus-visible {
-  outline: 2px solid var(--color-brand-500);
-  outline-offset: 2px;
-}
-
-.store-card__product img {
+.store-card__cover-img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  display: block;
-  transition: transform 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.store-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(30, 20, 14, 0.74) 0%, rgba(30, 20, 14, 0.18) 46%, transparent 72%);
+}
+.store-card__overlay {
+  position: absolute;
+  inset-inline: 14px;
+  inset-block-end: 12px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+.store-card__logo {
+  flex: 0 0 auto;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background: var(--color-bg-surface, #fffdf8);
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.store-card__logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.store-card__logo-initial {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--color-brand-500, #b26a1b);
+}
+.store-card__id {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  padding-block-end: 3px;
+}
+.store-card__name {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: #fff;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.store-card__rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fbeecf;
+  font-variant-numeric: tabular-nums;
+}
+.store-card__rating svg {
+  width: 13px;
+  height: 13px;
+  fill: var(--gh-gold, #d6a93b);
+}
+.store-card__rating-count {
+  color: rgba(251, 238, 207, 0.78);
+  font-weight: 500;
 }
 
-.store-card__product:hover img {
+/* --- Body --- */
+.store-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px 16px;
+}
+.store-card__thumbs {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.store-card__thumb {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--color-bg-muted, #f3e9d6);
+  transition: transform 0.2s var(--ease-out, ease);
+}
+.store-card__thumb:hover {
   transform: scale(1.04);
 }
-
-/* ----- View collection link ---------------------------------------- */
-
+.store-card__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
 .store-card__view-collection {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   align-self: flex-start;
-  font-family: 'Inter', system-ui, sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-brand-700);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-brand-600, #9a5613);
   text-decoration: none;
-  padding: 6px 0;
-  margin-top: 4px;
-  transition: color 0.2s ease, gap 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
-
-.store-card__view-collection:hover,
-.store-card__view-collection:focus-visible {
-  color: var(--color-brand-500);
-  gap: 10px;
-  outline: none;
-}
-
 .store-card__view-collection svg {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
+}
+.store-card__view-collection:hover {
+  color: var(--color-brand-700, #2e241c);
+}
+.store-card__cover:focus-visible,
+.store-card__thumb:focus-visible,
+.store-card__view-collection:focus-visible {
+  outline: 2px solid var(--color-brand-500, #b26a1b);
+  outline-offset: 2px;
+}
+
+:host-context([dir='rtl']) .store-card__view-collection svg {
+  transform: scaleX(-1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .store-card:hover { transform: none; }
+  .store-card__thumb:hover { transform: none; }
 }
