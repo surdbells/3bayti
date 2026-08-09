@@ -3,6 +3,7 @@ import {
   ChangeDetectionStrategy,
   computed,
   inject,
+  signal,
 } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { NgTemplateOutlet } from '@angular/common';
@@ -167,6 +168,14 @@ export class HomeComponent {
   readonly playStoreUrl: string = environment.appStores.playStore;
 
   /* ----- Helpers (used in template) ------------------------------------- */
+
+  /* ----- Store Spotlight reveal — show 6, then +6 per "Load more" tap.
+     The featured-vendors feed is fetched up to 12 (curated, no pagination),
+     so the button reveals what's already loaded, client-side. */
+  readonly storesShown = signal(6);
+  showMoreStores(): void {
+    this.storesShown.update((n) => n + 6);
+  }
 
   /** Build the URL for a category's detail page. */
   categoryUrl(slug: string): string {

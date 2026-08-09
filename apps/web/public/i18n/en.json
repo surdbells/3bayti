@@ -1065,7 +1065,8 @@
     "stores": {
       "eyebrow": "Meet the Stores",
       "title": "Stores we love",
-      "viewAll": "View all"
+      "viewAll": "View all",
+      "loadMore": "Load more stores"
     },
     "sell": {
       "eyebrow": "Become a seller",

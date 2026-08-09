@@ -36,7 +36,7 @@ export class HomeDataService {
   private readonly STRIP_LIMIT = 12;
 
   /** Number of vendors in the Store Spotlight. */
-  private readonly SPOTLIGHT_LIMIT = 4;
+  private readonly SPOTLIGHT_LIMIT = 12;
 
   /**
    * Featured products — the curated "this week's edit" strip.

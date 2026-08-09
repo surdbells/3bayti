@@ -243,10 +243,18 @@
     @if (vendors(); as vs) {
       @if (vs.length > 0) {
         <div class="stores-grid">
-          @for (vendor of vs; track vendor.slug) {
+          @for (vendor of vs.slice(0, storesShown()); track vendor.slug) {
             <ui-store-card [vendor]="vendor" />
           }
         </div>
+        @if (vs.length > storesShown()) {
+          <div class="stores-more">
+            <button type="button" class="stores-more__btn" (click)="showMoreStores()">
+              {{ 'home.stores.loadMore' | translate }}
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        }
       }
     } @else {
       <div class="stores-grid">

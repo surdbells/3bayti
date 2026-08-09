@@ -663,24 +663,55 @@
   max-width: var(--page-max-width);
   margin: 0 auto;
   display: grid;
-  gap: 24px;
+  gap: 20px;
   grid-template-columns: 1fr;
-  /* Equal heights enforced by grid's default align-items: stretch.
-     The StoreCard's internal flex column with margin-top:auto on the
-     products row keeps internal content aligned even when descriptions
-     vary in length. */
   align-items: stretch;
 }
 
-@media (min-width: 768px) {
-  .stores-grid {
-    /* 2-up at all desktop+ widths per Phase 1 W3 direction. The
-       previous 4-up layout made cards too small (≈300px wide) on
-       1280px+ screens; 2-up gives each card ~620px to work with —
-       enough room for the redesigned horizontal product row. */
-    grid-template-columns: repeat(2, 1fr);
-    gap: 32px;
-  }
+/* 2-up on tablet, 3-up on desktop (hero-image cards). */
+@media (min-width: 600px) {
+  .stores-grid { grid-template-columns: repeat(2, 1fr); gap: 22px; }
+}
+@media (min-width: 1000px) {
+  .stores-grid { grid-template-columns: repeat(3, 1fr); gap: 24px; }
+}
+
+/* Load more */
+.stores-more {
+  max-width: var(--page-max-width);
+  margin: 22px auto 0;
+  display: flex;
+  justify-content: center;
+}
+.stores-more__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: var(--radius-pill);
+  background: var(--color-bg-surface);
+  color: var(--color-brand-700);
+  border: 1.5px solid var(--color-border-default);
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background var(--duration-base) var(--ease-out),
+    border-color var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out);
+}
+.stores-more__btn:hover {
+  background: var(--color-bg-muted);
+  border-color: var(--color-brand-500);
+  transform: translateY(-1px);
+}
+.stores-more__btn:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 3px;
+}
+.stores-more__btn svg { width: 18px; height: 18px; }
+@media (prefers-reduced-motion: reduce) {
+  .stores-more__btn:hover { transform: none; }
 }
 
 /* Store skeleton — matches StoreCard's outer dimensions so the
