@@ -447,3 +447,41 @@
     animation: none;
   }
 }
+
+/* --- Status filter chips (mirrors the mobile wallet) --- */
+.gca__filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 22px; }
+.gca__chip {
+  padding: 8px 15px; border-radius: 999px; border: 1.5px solid var(--border-default);
+  background: transparent; color: var(--color-text-secondary, #6b4a2e);
+  font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.gca__chip:hover { border-color: var(--color-brand-500); }
+.gca__chip--active { background: var(--color-brand-500); border-color: var(--color-brand-500); color: #fff; }
+.gca__chip:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+
+/* --- Paid card: status badge + copy affordance --- */
+.gca__tile-link { display: block; text-decoration: none; border-radius: var(--radius-lg, 20px); }
+.gca__tile-link:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 3px; }
+.gca__status {
+  display: inline-block; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.02em;
+  padding: 3px 10px; border-radius: 999px; margin-bottom: 10px;
+}
+.gca__status--active { background: rgba(45, 125, 79, 0.12); color: #2d7d4f; }
+.gca__status--pending { background: rgba(245, 166, 35, 0.16); color: #a9741a; }
+.gca__status--used { background: rgba(139, 111, 71, 0.15); color: #8b6f47; }
+.gca__status--ended { background: rgba(192, 57, 43, 0.12); color: #c0392b; }
+.gca__tile-foot {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 12px;
+}
+.gca__balance { font-size: 0.82rem; color: var(--color-text-secondary, #6b4a2e); }
+.gca__balance strong { color: var(--color-text-primary, #2e241c); font-variant-numeric: tabular-nums; }
+.gca__copy {
+  display: inline-flex; align-items: center; gap: 5px; padding: 6px 13px; border-radius: 999px;
+  border: 1px solid var(--border-default); background: var(--bg-surface);
+  color: var(--color-brand-600, #9a5613); font-size: 0.78rem; font-weight: 600; cursor: pointer;
+  white-space: nowrap; transition: background 0.15s ease, border-color 0.15s ease;
+}
+.gca__copy:hover { background: var(--bg-muted); border-color: var(--color-brand-500); }
+.gca__copy:focus-visible { outline: 2px solid var(--color-brand-500); outline-offset: 2px; }
+.gca__state--filter { padding: 30px 20px; }

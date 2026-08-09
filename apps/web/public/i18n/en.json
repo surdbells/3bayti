@@ -816,7 +816,11 @@
       "partlyUsed": "Partly used",
       "usedUp": "Used up",
       "expired": "Expired",
-      "voided": "Voided"
+      "voided": "Voided",
+      "active": "Active",
+      "partially_used": "Partly used",
+      "exhausted": "Used up",
+      "pending_payment": "Pending payment"
     },
     "landing": {
       "eyebrow": "The 3bayti gift card",
@@ -871,7 +875,26 @@
       "unpaidBadge": "Unpaid",
       "completePayment": "Complete payment",
       "resuming": "Redirecting to checkout…",
-      "resumeError": "We couldn't resume your payment. Please try again."
+      "resumeError": "We couldn't resume your payment. Please try again.",
+      "filtersLabel": "Filter gift cards",
+      "copyCode": "Copy code",
+      "copied": "Copied!",
+      "balanceLabel": "Balance",
+      "filters": {
+        "all": "All",
+        "active": "Active",
+        "pending": "Pending payment",
+        "used": "Used",
+        "expired": "Expired",
+        "voided": "Voided"
+      },
+      "filterEmpty": {
+        "active": "No active gift cards.",
+        "pending_payment": "No cards awaiting payment.",
+        "used": "No used-up gift cards.",
+        "expired": "No expired gift cards.",
+        "voided": "No voided gift cards."
+      }
     },
     "detail": {
       "back": "Back to gift cards",

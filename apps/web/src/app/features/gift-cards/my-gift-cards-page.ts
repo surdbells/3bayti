@@ -7,7 +7,7 @@ import {
   OnInit,
   PLATFORM_ID,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { isPlatformBrowser, DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 
@@ -16,23 +16,27 @@ import { GiftCardService } from './gift-card.service';
 import { CheckoutService } from '../../core/checkout/checkout.service';
 import { markGiftCardCheckout } from './gift-card-checkout-handoff';
 import { SeoService } from '../../core/seo/seo.service';
-import type { GiftCard } from './gift-card.model';
+import type { GiftCard, GiftCardStatus } from './gift-card.model';
 
 type LoadState = 'loading' | 'ready' | 'error';
+
+/** UI buckets for the status filter row (mirrors the mobile wallet). */
+type GiftCardFilter = 'all' | 'active' | 'pending_payment' | 'used' | 'expired' | 'voided';
 
 /**
  * /account/gift-cards — the buyer's gift cards (purchased + redeemed).
  *
- * Auth-gated. Loads GET /v3/gift-cards/mine (which embeds transactions)
- * once on init and renders each card as a themed ui-gift-card tile that
- * links to the detail view. No manual activation: cards activate
- * automatically via the Noon webhook after purchase.
+ * Auth-gated. Loads GET /v3/gift-cards/mine (which embeds transactions) once on
+ * init and renders each card as a themed ui-gift-card tile. Mirrors the mobile
+ * "My gift cards" wallet: a status-filter chip row, a per-card status badge,
+ * and a copy-code affordance on spendable cards. Unpaid (pending_payment) cards
+ * offer pay-resume instead of a spendable code/detail link.
  */
 @Component({
   selector: 'app-my-gift-cards',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [RouterLink, TranslatePipe, GiftCardVisualComponent],
+  imports: [RouterLink, TranslatePipe, DecimalPipe, GiftCardVisualComponent],
   template: `
     <main class="gca" data-testid="my-gift-cards-page">
       <div class="gca__container">
@@ -50,6 +54,24 @@ type LoadState = 'loading' | 'ready' | 'error';
             </a>
           </div>
         </header>
+
+        @if (loadState() === 'ready' && cards().length > 0) {
+          <div class="gca__filters" role="tablist" [attr.aria-label]="'giftCards.mine.filtersLabel' | translate">
+            @for (f of filters; track f.key) {
+              <button
+                type="button"
+                class="gca__chip"
+                role="tab"
+                [class.gca__chip--active]="filter() === f.key"
+                [attr.aria-selected]="filter() === f.key"
+                (click)="setFilter(f.key)"
+                [attr.data-filter]="f.key"
+              >
+                {{ f.labelKey | translate }}
+              </button>
+            }
+          </div>
+        }
 
         @switch (loadState()) {
           @case ('loading') {
@@ -83,14 +105,18 @@ type LoadState = 'loading' | 'ready' | 'error';
                   </a>
                 </div>
               </div>
+            } @else if (filteredCards().length === 0) {
+              <div class="gca__state gca__state--empty gca__state--filter" data-testid="my-gift-cards-filter-empty">
+                <p class="gca__empty-body">{{ emptyFilterKey() | translate }}</p>
+              </div>
             } @else {
               <ul class="gca__grid" role="list" data-testid="my-gift-cards-list">
-                @for (c of cards(); track c.id) {
+                @for (c of filteredCards(); track c.id) {
                   <li class="gca__item">
                     @if (c.status === 'pending_payment') {
-                      <!-- Unpaid (in-flight) purchase: not yet funded, so it
-                           must NOT expose a spendable code or link to the
-                           detail view. Offer pay-resume instead. -->
+                      <!-- Unpaid (in-flight) purchase: not funded yet, so it must
+                           NOT expose a spendable code or link to the detail view.
+                           Offer pay-resume instead. -->
                       <div
                         class="gca__tile gca__tile--unpaid"
                         [attr.data-card-id]="c.id"
@@ -121,13 +147,30 @@ type LoadState = 'loading' | 'ready' | 'error';
                         }
                       </div>
                     } @else {
-                      <a
-                        [routerLink]="['/account/gift-cards', c.id]"
-                        class="gca__tile"
-                        [attr.data-card-id]="c.id"
-                      >
-                        <ui-gift-card [card]="c" [theme]="c.theme" />
-                      </a>
+                      <div class="gca__tile" [attr.data-card-id]="c.id">
+                        <span class="gca__status" [class]="'gca__status--' + statusVariant(c.status)">
+                          {{ ('giftCards.status.' + c.status) | translate }}
+                        </span>
+                        <a [routerLink]="['/account/gift-cards', c.id]" class="gca__tile-link">
+                          <ui-gift-card [card]="c" [theme]="c.theme" />
+                        </a>
+                        <div class="gca__tile-foot">
+                          <span class="gca__balance">
+                            {{ 'giftCards.mine.balanceLabel' | translate }}:
+                            <strong>{{ c.currency }} {{ +c.balance | number: '1.2-2' }}</strong>
+                          </span>
+                          @if (c.is_spendable && c.code) {
+                            <button
+                              type="button"
+                              class="gca__copy"
+                              (click)="copyCode(c, $event)"
+                              [attr.data-testid]="'my-gift-card-copy-' + c.id"
+                            >
+                              {{ (copiedId() === c.id ? 'giftCards.mine.copied' : 'giftCards.mine.copyCode') | translate }}
+                            </button>
+                          }
+                        </div>
+                      </div>
                     }
                   </li>
                 }
@@ -150,10 +193,49 @@ export class MyGiftCardsPageComponent implements OnInit {
   protected readonly loadState = signal<LoadState>('loading');
   protected readonly cards = signal<GiftCard[]>([]);
 
+  /** Active status filter (mirrors mobile's wallet chips). */
+  protected readonly filter = signal<GiftCardFilter>('all');
+
+  /** Id of the card whose code was just copied (drives the "Copied" label). */
+  protected readonly copiedId = signal<number | null>(null);
+
   /** Id of the unpaid card whose pay-resume is currently in flight (or null). */
   protected readonly resumingId = signal<number | null>(null);
   /** Id of the unpaid card whose last pay-resume failed (or null). */
   protected readonly resumeError = signal<number | null>(null);
+
+  /** UI bucket → the raw statuses it includes. */
+  private readonly filterBuckets: Record<string, GiftCardStatus[]> = {
+    active: ['active', 'partially_used'],
+    pending_payment: ['pending_payment'],
+    used: ['exhausted'],
+    expired: ['expired'],
+    voided: ['voided'],
+  };
+
+  /** Order + i18n keys for the chip row. */
+  protected readonly filters: { key: GiftCardFilter; labelKey: string }[] = [
+    { key: 'all', labelKey: 'giftCards.mine.filters.all' },
+    { key: 'active', labelKey: 'giftCards.mine.filters.active' },
+    { key: 'pending_payment', labelKey: 'giftCards.mine.filters.pending' },
+    { key: 'used', labelKey: 'giftCards.mine.filters.used' },
+    { key: 'expired', labelKey: 'giftCards.mine.filters.expired' },
+    { key: 'voided', labelKey: 'giftCards.mine.filters.voided' },
+  ];
+
+  /** Cards matching the active filter. */
+  protected readonly filteredCards = computed<GiftCard[]>(() => {
+    const f = this.filter();
+    if (f === 'all') return this.cards();
+    const allowed = this.filterBuckets[f] ?? [];
+    return this.cards().filter((c) => allowed.includes(c.status));
+  });
+
+  /** Per-filter empty-state message key. */
+  protected readonly emptyFilterKey = computed(() => {
+    const f = this.filter();
+    return f === 'all' ? 'giftCards.mine.emptyBody' : `giftCards.mine.filterEmpty.${f}`;
+  });
 
   protected readonly isEmpty = computed(
     () => this.loadState() === 'ready' && this.cards().length === 0,
@@ -171,12 +253,45 @@ export class MyGiftCardsPageComponent implements OnInit {
     void this.load();
   }
 
+  protected setFilter(key: GiftCardFilter): void {
+    this.filter.set(key);
+  }
+
+  /** Badge colour variant for a status. */
+  protected statusVariant(status: GiftCardStatus): string {
+    switch (status) {
+      case 'active':
+      case 'partially_used':
+        return 'active';
+      case 'pending_payment':
+        return 'pending';
+      case 'exhausted':
+        return 'used';
+      default:
+        return 'ended'; // expired / voided
+    }
+  }
+
+  /** Copy a card's code straight from the list (sits inside a link, so guard). */
+  protected async copyCode(card: GiftCard, event: Event): Promise<void> {
+    event.stopPropagation();
+    event.preventDefault();
+    if (!card.code || !isPlatformBrowser(this.platformId)) return;
+    try {
+      await navigator.clipboard.writeText(card.code);
+      this.copiedId.set(card.id);
+      setTimeout(() => {
+        if (this.copiedId() === card.id) this.copiedId.set(null);
+      }, 1800);
+    } catch {
+      /* clipboard unavailable — no-op */
+    }
+  }
+
   private async load(): Promise<void> {
     this.loadState.set('loading');
     try {
-      // Show ALL cards the buyer owns, including unpaid (pending_payment)
-      // ones. Unpaid cards render as UNPAID with a pay-resume button instead
-      // of linking to the detail view (which would expose the code).
+      // Show ALL cards the buyer owns, including unpaid (pending_payment) ones.
       const list = await this.gift.listMine();
       this.cards.set(list);
       this.loadState.set('ready');
@@ -188,8 +303,7 @@ export class MyGiftCardsPageComponent implements OnInit {
   /**
    * Resume payment for an unpaid (pending_payment) gift card. Re-initiates
    * checkout for the same purchase and redirects to the Noon hosted page.
-   * The /v3/checkout/initiate { gift_card_purchase_id } call is idempotent,
-   * so a buyer who bailed earlier simply lands back at the payment step.
+   * The /v3/checkout/initiate { gift_card_purchase_id } call is idempotent.
    */
   protected async completePayment(card: GiftCard): Promise<void> {
     if (this.resumingId() !== null) return;
@@ -203,8 +317,6 @@ export class MyGiftCardsPageComponent implements OnInit {
         gift_card_purchase_id: card.id,
       });
       markGiftCardCheckout(res.order_reference);
-      /* Resuming a gift-card purchase always goes through Noon; a missing
-         checkout_url is an anomaly, so surface the resume error state. */
       if (!res.checkout_url) {
         throw new Error('checkout_url missing for gift-card purchase');
       }
