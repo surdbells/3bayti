@@ -108,7 +108,7 @@
 
 @media (min-width: 1280px) {
   .home-page {
-    gap: 76px;
+    gap: 30px;
   }
 }
 
@@ -743,10 +743,6 @@
    Base .home-section supplies the inline gutter; the band
    centres itself (like __bounds) and renders a gilded card.
    =========================================================== */
-.home-section--sell {
-  margin-block: clamp(2.5rem, 5vw, 4rem);
-}
-
 .sell-band {
   max-width: var(--page-max-width, 1280px);
   margin-inline: auto;

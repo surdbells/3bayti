@@ -129,11 +129,6 @@
   gap: 24px;
   overflow-x: auto;
   overflow-y: visible;
-  /* Vertical breathing room so the card's lift-on-hover doesn't get
-   * clipped at the top/bottom of the scroll area. Horizontal padding
-   * aligns the leftmost card with the page gutter so it lines up with
-   * everything else (categories tiles, designers cards, footer). */
-  padding: 12px var(--page-padding-x) 32px;
   scroll-snap-type: x mandatory;
   scroll-padding-left: var(--page-padding-x);
   scroll-behavior: smooth;
