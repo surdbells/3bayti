@@ -15,9 +15,9 @@ import type { Cart } from '../../core/cart';
 
 function makeAddr(): OrderAddress {
   return {
-    id: 1, recipient_name: 'Jane', recipient_phone: '+971501234567',
-    emirate: 'Dubai', area: 'JLT', street_address: 'Beach Rd',
-    building_details: 'Tower B', postal_code: '12345', label: 'Home',
+    first_name: 'Jane', last_name: 'Doe', phone: '+971501234567',
+    email: 'jane@example.com', street: 'Beach Rd', city: 'Dubai',
+    state_province: 'JLT', country_code: 'AE', postal_code: '12345',
   };
 }
 

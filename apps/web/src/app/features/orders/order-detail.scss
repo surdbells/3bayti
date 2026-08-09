@@ -236,6 +236,86 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* --- Order timeline ------------------------------------------------- */
+
+.order-timeline {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.order-timeline__step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 12px;
+  padding: 0 0 18px 0;
+
+  /* Connector line down the left rail, from each marker to the next. */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 16px;
+    bottom: -2px;
+    width: 2px;
+    background: var(--color-border-subtle, #e2dccc);
+  }
+  &:last-child {
+    padding-bottom: 0;
+    &::before { display: none; }
+  }
+}
+
+.order-timeline__marker {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-top: 2px;
+  border: 2px solid var(--color-border-default, #d8cfc1);
+  background: #fff;
+  z-index: 1;
+
+  .order-timeline__step--done & {
+    border-color: #2e7d32;
+    background: #2e7d32;
+  }
+  .order-timeline__step--current & {
+    border-color: var(--color-brand-500, #b18f1f);
+    background: var(--color-brand-500, #b18f1f);
+    box-shadow: 0 0 0 4px rgba(177, 143, 31, 0.16);
+  }
+  .order-timeline__step--ended & {
+    border-color: #b42218;
+    background: #b42218;
+  }
+  /* upcoming keeps the default hollow marker */
+}
+
+.order-timeline__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.order-timeline__label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-primary, #2e241c);
+
+  .order-timeline__step--upcoming & {
+    color: var(--color-text-muted, #6b6056);
+    font-weight: 400;
+  }
+}
+
+.order-timeline__time {
+  font-size: 12px;
+  color: var(--color-text-muted, #6b6056);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- Promo line ----------------------------------------------------- */
 
 .order-detail__promo-line {

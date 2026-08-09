@@ -475,6 +475,10 @@
       "refunded": "Refunded",
       "failed": "Payment failed"
     },
+    "timeline": {
+      "heading": "Order timeline",
+      "placed": "Order placed"
+    },
     "list": {
       "title": "Your orders",
       "subtitle": "Track and review every order you've placed.",

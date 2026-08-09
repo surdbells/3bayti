@@ -11,6 +11,8 @@ export type {
   ReturnReason,
   SubmitReturnInput,
   ReturnRequestResponse,
+  OrderTimelineEvent,
+  OrderTimelineResponse,
 } from './order.types';
 export {
   ORDER_STATUS_LABELS,

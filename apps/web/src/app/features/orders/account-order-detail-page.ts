@@ -6,14 +6,36 @@ import {
   computed,
   OnInit,
 } from '@angular/core';
-import { NgIf, NgFor, DatePipe } from '@angular/common';
+import { NgIf, NgFor, NgClass, DatePipe } from '@angular/common';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { OrderService, ORDER_STATUS_LABELS } from '../../core/orders';
-import type { Order } from '../../core/orders';
+import type { Order, OrderTimelineEvent } from '../../core/orders';
 import { ToastService } from '../../shared/forms';
 import { ConfirmModalComponent } from '../../shared/ui';
 import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
+import { decodeHtmlEntities } from '../../shared/util/decode-html-entities';
+
+/** One step in the client-derived fallback stepper (used only when the
+ *  server timeline feed is unavailable). */
+interface TimelineStep {
+  key: string;
+  labelKey: string;
+  /** done = reached earlier, current = latest reached, upcoming = not yet,
+   *  ended = a terminal state (cancelled/refunded/failed). */
+  state: 'done' | 'current' | 'upcoming' | 'ended';
+  /** ISO timestamp when known (placed + paid only); null otherwise. */
+  at: string | null;
+}
+
+/** A server timeline event, normalized for rendering (adds a marker state). */
+interface TimelineEventView {
+  id: string;
+  occurred_at: string | null;
+  summary: string;
+  /** 'ended' = a terminal/negative event (cancel/refund/denied) → danger marker. */
+  state: 'done' | 'ended';
+}
 
 /**
  * /account/orders/:id — single-order detail page.
@@ -59,7 +81,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
 @Component({
   selector: 'app-account-order-detail',
   standalone: true,
-  imports: [CfImagePipe, NgIf, NgFor, DatePipe, RouterLink, TranslatePipe, ConfirmModalComponent],
+  imports: [CfImagePipe, NgIf, NgFor, NgClass, DatePipe, RouterLink, TranslatePipe, ConfirmModalComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="orders-page" data-testid="order-detail-page">
@@ -97,6 +119,47 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
             </p>
           </header>
 
+          <section class="checkout-section" data-testid="order-detail-timeline">
+            <h2 class="checkout-section__title">
+              {{ 'orders.timeline.heading' | translate }}
+            </h2>
+            <ol class="order-timeline" role="list">
+              <ng-container *ngIf="timelineEvents().length > 0; else derivedSteps">
+                <!-- Full server event feed (chronological, oldest→newest). -->
+                <li
+                  *ngFor="let ev of timelineEvents()"
+                  class="order-timeline__step"
+                  [class.order-timeline__step--ended]="ev.state === 'ended'"
+                  [class.order-timeline__step--done]="ev.state === 'done'"
+                >
+                  <span class="order-timeline__marker" aria-hidden="true"></span>
+                  <div class="order-timeline__body">
+                    <span class="order-timeline__label">{{ ev.summary }}</span>
+                    <time *ngIf="ev.occurred_at" class="order-timeline__time">
+                      {{ ev.occurred_at | date:'medium' }}
+                    </time>
+                  </div>
+                </li>
+              </ng-container>
+              <ng-template #derivedSteps>
+                <!-- Fallback: client-derived status stepper. -->
+                <li
+                  *ngFor="let step of timelineFallback()"
+                  class="order-timeline__step"
+                  [ngClass]="'order-timeline__step--' + step.state"
+                >
+                  <span class="order-timeline__marker" aria-hidden="true"></span>
+                  <div class="order-timeline__body">
+                    <span class="order-timeline__label">{{ step.labelKey | translate }}</span>
+                    <time *ngIf="step.at" class="order-timeline__time">
+                      {{ step.at | date:'medium' }}
+                    </time>
+                  </div>
+                </li>
+              </ng-template>
+            </ol>
+          </section>
+
           <section class="checkout-section">
             <h2 class="checkout-section__title">
               {{ 'checkout.review.itemsHeading' | translate }}
@@ -120,7 +183,7 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
                 </div>
                 <div class="review-item__body">
                   <p class="review-item__name">
-                    {{ item.product_name || ('cart.drawer.unnamedItem' | translate) }}
+                    {{ displayName(item.product_name) || ('cart.drawer.unnamedItem' | translate) }}
                   </p>
                   <p
                     *ngIf="item.size !== null || item.color !== null"
@@ -180,24 +243,71 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
             </p>
           </section>
 
-          <section class="checkout-section">
+          <section
+            *ngIf="order()!.shipping_address as addr"
+            class="checkout-section"
+            data-testid="order-detail-shipping"
+          >
             <h2 class="checkout-section__title">
               {{ 'orders.detail.shippingHeading' | translate }}
             </h2>
-            <p class="review-address__name">
-              {{ order()!.shipping_address.recipient_name }}
+            <p
+              *ngIf="addr.first_name || addr.last_name"
+              class="review-address__name"
+            >
+              {{ addr.first_name }} {{ addr.last_name }}
             </p>
-            <p class="review-address__line">
-              <ng-container *ngIf="order()!.shipping_address.street_address !== null">
-                {{ order()!.shipping_address.street_address }},
-              </ng-container>
-              <ng-container *ngIf="order()!.shipping_address.building_details !== null">
-                {{ order()!.shipping_address.building_details }},
-              </ng-container>
-              {{ order()!.shipping_address.area }}, {{ order()!.shipping_address.emirate }}
+            <p *ngIf="addr.street" class="review-address__line">
+              {{ addr.street }}
             </p>
-            <p class="review-address__phone">
-              {{ order()!.shipping_address.recipient_phone }}
+            <p *ngIf="addr.city || addr.state_province" class="review-address__line">
+              {{ addr.city
+              }}<ng-container *ngIf="addr.city && addr.state_province">, </ng-container
+              >{{ addr.state_province }}
+            </p>
+            <p
+              *ngIf="addr.country_code || addr.postal_code"
+              class="review-address__line"
+            >
+              {{ addr.country_code
+              }}<ng-container *ngIf="addr.postal_code"> {{ addr.postal_code }}</ng-container>
+            </p>
+            <p *ngIf="addr.phone" class="review-address__phone">
+              {{ addr.phone }}
+            </p>
+          </section>
+
+          <section
+            *ngIf="order()!.billing_address as addr"
+            class="checkout-section"
+            data-testid="order-detail-billing"
+          >
+            <h2 class="checkout-section__title">
+              {{ 'orders.detail.billingHeading' | translate }}
+            </h2>
+            <p
+              *ngIf="addr.first_name || addr.last_name"
+              class="review-address__name"
+            >
+              {{ addr.first_name }} {{ addr.last_name }}
+            </p>
+            <p *ngIf="addr.street" class="review-address__line">
+              {{ addr.street }}
+            </p>
+            <p *ngIf="addr.city || addr.state_province" class="review-address__line">
+              {{ addr.city
+              }}<ng-container *ngIf="addr.city && addr.state_province">, </ng-container
+              >{{ addr.state_province }}
+            </p>
+            <p
+              *ngIf="addr.country_code || addr.postal_code"
+              class="review-address__line"
+            >
+              {{ addr.country_code
+              }}<ng-container *ngIf="addr.postal_code"> {{ addr.postal_code }}</ng-container>
+            </p>
+            <p *ngIf="addr.phone" class="review-address__phone">
+              {{ addr.phone }}
             </p>
           </section>
 
@@ -302,6 +412,11 @@ export class AccountOrderDetailPageComponent implements OnInit {
   private readonly _order = signal<Order | null>(null);
   protected readonly order = this._order.asReadonly();
   protected readonly isLoading = this.orderService.isLoadingDetail;
+
+  /** Full server-side event feed. When populated it replaces the derived
+   *  stepper; empty → the template falls back to timelineFallback(). */
+  private readonly _timelineEvents = signal<TimelineEventView[]>([]);
+  protected readonly timelineEvents = this._timelineEvents.asReadonly();
   private readonly _errored = signal(false);
   protected readonly errored = this._errored.asReadonly();
   private readonly _isCancelling = signal(false);
@@ -357,10 +472,88 @@ export class AccountOrderDetailPageComponent implements OnInit {
     try {
       const order = await this.orderService.getById(id);
       this._order.set(order);
+      /* Best-effort event feed — never blocks the detail render, and the
+         template gracefully falls back to the derived stepper on empty. */
+      void this.loadTimeline(id);
     } catch {
       this._errored.set(true);
       this.toast.error('orders.detail.loadError');
     }
+  }
+
+  /**
+   * Fetch the customer event feed (GET /v3/orders/:id/timeline) and map it
+   * to view models. Terminal/negative events (cancel/refund/denied/failed)
+   * get an 'ended' marker; everything else is 'done'. Summaries are decoded
+   * for the same HTML-entity reason as product names.
+   */
+  private async loadTimeline(id: number): Promise<void> {
+    const events = await this.orderService.getTimeline(id);
+    this._timelineEvents.set(
+      events.map((e: OrderTimelineEvent) => ({
+        id: String(e.id ?? ''),
+        occurred_at: e.occurred_at ?? null,
+        summary: decodeHtmlEntities(e.summary),
+        state: /refund|denied|cancel|failed/i.test(e.type ?? '') ? 'ended' : 'done',
+      })),
+    );
+  }
+
+  /* -----------------------------------------------------------------
+     Timeline — client-derived fallback stepper
+     -----------------------------------------------------------------
+     Only rendered when the server feed is empty (endpoint unavailable).
+     Honest by design: only "placed" + "paid" carry real timestamps; later
+     stages render as reached/current/upcoming without a time. Terminal
+     states (cancelled/refunded/failed) end the track. Mirrors the mobile
+     order-detail stepper. */
+
+  private static readonly LIFECYCLE: { key: string; labelKey: string; statuses: string[] }[] = [
+    { key: 'paid', labelKey: 'orders.status.paid', statuses: ['paid', 'fulfilling', 'shipping', 'shipped', 'delivered'] },
+    { key: 'fulfilling', labelKey: 'orders.status.fulfilling', statuses: ['fulfilling', 'shipping', 'shipped', 'delivered'] },
+    { key: 'shipped', labelKey: 'orders.status.shipped', statuses: ['shipping', 'shipped', 'delivered'] },
+    { key: 'delivered', labelKey: 'orders.status.delivered', statuses: ['delivered'] },
+  ];
+  private static readonly TERMINAL: Record<string, string> = {
+    cancelled: 'orders.status.cancelled',
+    refunded: 'orders.status.refunded',
+    failed: 'orders.status.failed',
+  };
+
+  protected readonly timelineFallback = computed<TimelineStep[]>(() => {
+    const o = this._order();
+    if (o === null) return [];
+    const status = o.status;
+    const steps: TimelineStep[] = [
+      { key: 'placed', labelKey: 'orders.timeline.placed', state: 'done', at: o.date },
+    ];
+
+    const terminalKey = AccountOrderDetailPageComponent.TERMINAL[status];
+    if (terminalKey) {
+      if (o.paid_at) {
+        steps.push({ key: 'paid', labelKey: 'orders.status.paid', state: 'done', at: o.paid_at });
+      }
+      steps.push({ key: status, labelKey: terminalKey, state: 'ended', at: null });
+      return steps;
+    }
+
+    const doneFlags = AccountOrderDetailPageComponent.LIFECYCLE.map((s) => s.statuses.includes(status));
+    const lastDone = doneFlags.lastIndexOf(true);
+    AccountOrderDetailPageComponent.LIFECYCLE.forEach((s, i) => {
+      const state: TimelineStep['state'] = doneFlags[i]
+        ? (i === lastDone ? 'current' : 'done')
+        : 'upcoming';
+      steps.push({ key: s.key, labelKey: s.labelKey, state, at: s.key === 'paid' ? o.paid_at : null });
+    });
+    if (lastDone === -1) {
+      steps[0].state = 'current';
+    }
+    return steps;
+  });
+
+  /** Decode HTML entities in a product/line name (fixes literal `&amp;`). */
+  protected displayName(name: string | null | undefined): string {
+    return decodeHtmlEntities(name);
   }
 
   /* -----------------------------------------------------------------

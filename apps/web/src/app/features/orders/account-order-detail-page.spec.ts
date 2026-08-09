@@ -8,13 +8,19 @@ import { AccountOrderDetailPageComponent } from './account-order-detail-page';
 import { OrderService } from '../../core/orders';
 import { ToastService } from '../../shared/forms';
 import { provideI18n } from '../../core/i18n';
-import type { Order, OrderItem, OrderAddress, ReturnSummary } from '../../core/orders';
+import type {
+  Order,
+  OrderItem,
+  OrderAddress,
+  OrderTimelineEvent,
+  ReturnSummary,
+} from '../../core/orders';
 
 function makeAddr(o: Partial<OrderAddress> = {}): OrderAddress {
   return {
-    id: 1, recipient_name: 'Jane', recipient_phone: '+971501234567',
-    emirate: 'Dubai', area: 'JLT', street_address: 'Beach Rd',
-    building_details: 'Tower B', postal_code: '12345', label: 'Home',
+    first_name: 'Jane', last_name: 'Doe', phone: '+971501234567',
+    email: 'jane@example.com', street: 'Beach Rd', city: 'Dubai',
+    state_province: 'JLT', country_code: 'AE', postal_code: '12345',
     ...o,
   };
 }
@@ -46,8 +52,10 @@ class StubOrderService {
 
   getByIdCalls: number[] = [];
   cancelCalls: number[] = [];
+  timelineCalls: number[] = [];
   orderResponse: Order = makeOrder();
   cancelResponse: Order = makeOrder({ status: 'cancelled' });
+  timelineResponse: OrderTimelineEvent[] = [];
   shouldThrowGet = false;
   shouldThrowCancel = false;
 
@@ -55,6 +63,10 @@ class StubOrderService {
     this.getByIdCalls.push(id);
     if (this.shouldThrowGet) throw new Error('get failed');
     return this.orderResponse;
+  }
+  async getTimeline(id: number): Promise<OrderTimelineEvent[]> {
+    this.timelineCalls.push(id);
+    return this.timelineResponse;
   }
   async cancel(id: number): Promise<Order> {
     this.cancelCalls.push(id);
@@ -83,6 +95,7 @@ function setup(opts: {
   shouldThrowGet?: boolean;
   shouldThrowCancel?: boolean;
   cancelResponse?: Order;
+  timeline?: OrderTimelineEvent[];
 } = {}): {
   fixture: ComponentFixture<AccountOrderDetailPageComponent>;
   orderService: StubOrderService;
@@ -91,6 +104,7 @@ function setup(opts: {
   const orderService = new StubOrderService();
   if (opts.order !== undefined) orderService.orderResponse = opts.order;
   if (opts.cancelResponse !== undefined) orderService.cancelResponse = opts.cancelResponse;
+  if (opts.timeline !== undefined) orderService.timelineResponse = opts.timeline;
   if (opts.shouldThrowGet === true) orderService.shouldThrowGet = true;
   if (opts.shouldThrowCancel === true) orderService.shouldThrowCancel = true;
 
@@ -219,6 +233,94 @@ describe('AccountOrderDetailPageComponent', () => {
       await flush();
       fixture.detectChanges();
       expect(fixture.nativeElement.querySelector('[data-testid="order-detail-promo"]')).toBeNull();
+    });
+  });
+
+  describe('shipping + billing address', () => {
+    it('renders the shipping recipient, street and city from the API shape', async () => {
+      const { fixture } = setup({
+        order: makeOrder({
+          shipping_address: makeAddr({
+            first_name: 'Aisha', last_name: 'Khan', street: 'Marina Walk',
+            city: 'Dubai', state_province: 'Marina',
+          }),
+        }),
+      });
+      await flush();
+      fixture.detectChanges();
+      const section = fixture.nativeElement.querySelector('[data-testid="order-detail-shipping"]');
+      expect(section).not.toBeNull();
+      const text = section.textContent as string;
+      expect(text).toContain('Aisha Khan');
+      expect(text).toContain('Marina Walk');
+      expect(text).toContain('Dubai');
+      /* Regression: must NOT render the empty ` , , ` from the old field mismatch. */
+      expect(text).not.toMatch(/,\s*,/);
+    });
+
+    it('renders the billing address block', async () => {
+      const { fixture } = setup({ order: makeOrder({ billing_address: makeAddr({ first_name: 'Bill', last_name: 'Payer' }) }) });
+      await flush();
+      fixture.detectChanges();
+      const section = fixture.nativeElement.querySelector('[data-testid="order-detail-billing"]');
+      expect(section).not.toBeNull();
+      expect(section.textContent).toContain('Bill Payer');
+    });
+
+    it('omits the shipping section when the address is null', async () => {
+      const { fixture } = setup({ order: makeOrder({ shipping_address: null }) });
+      await flush();
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('[data-testid="order-detail-shipping"]')).toBeNull();
+    });
+  });
+
+  describe('product name entity decoding', () => {
+    it('decodes &amp; in a product name to a literal &', async () => {
+      const { fixture } = setup({
+        order: makeOrder({ items: [makeOrderItem({ product_name: 'Abaya &amp; Scarf' })] }),
+      });
+      await flush();
+      fixture.detectChanges();
+      const name = fixture.nativeElement.querySelector('.review-item__name');
+      expect(name.textContent).toContain('Abaya & Scarf');
+      expect(name.textContent).not.toContain('&amp;');
+    });
+  });
+
+  describe('order timeline', () => {
+    it('fetches the timeline for the order id', async () => {
+      const { orderService } = setup({ order: makeOrder({ id: 55 }), routeId: '55' });
+      await flush();
+      expect(orderService.timelineCalls).toEqual([55]);
+    });
+
+    it('renders the server event feed when present', async () => {
+      const { fixture } = setup({
+        order: makeOrder({ id: 42 }),
+        timeline: [
+          { id: 'e1', type: 'order.created', occurred_at: '2026-05-19T10:00:00Z', actor: { type: 'customer' }, summary: 'Order placed' },
+          { id: 'e2', type: 'order.paid', occurred_at: '2026-05-19T10:05:00Z', actor: { type: 'system' }, summary: 'Payment received' },
+        ],
+      });
+      await flush();
+      fixture.detectChanges();
+      const section = fixture.nativeElement.querySelector('[data-testid="order-detail-timeline"]');
+      expect(section).not.toBeNull();
+      const steps = section.querySelectorAll('.order-timeline__step');
+      expect(steps).toHaveLength(2);
+      expect(section.textContent).toContain('Payment received');
+    });
+
+    it('falls back to the derived stepper when the feed is empty', async () => {
+      const { fixture } = setup({ order: makeOrder({ status: 'paid' }), timeline: [] });
+      await flush();
+      fixture.detectChanges();
+      const section = fixture.nativeElement.querySelector('[data-testid="order-detail-timeline"]');
+      expect(section).not.toBeNull();
+      /* placed + paid + fulfilling + shipped + delivered = 5 derived steps. */
+      const steps = section.querySelectorAll('.order-timeline__step');
+      expect(steps.length).toBeGreaterThanOrEqual(2);
     });
   });
 

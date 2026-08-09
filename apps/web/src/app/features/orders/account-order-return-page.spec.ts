@@ -15,9 +15,9 @@ import type {
 
 function makeAddr(): OrderAddress {
   return {
-    id: 1, recipient_name: 'Jane', recipient_phone: '+971501234567',
-    emirate: 'Dubai', area: 'JLT', street_address: null,
-    building_details: null, postal_code: null, label: 'Home',
+    first_name: 'Jane', last_name: 'Doe', phone: '+971501234567',
+    email: 'jane@example.com', street: null, city: 'Dubai',
+    state_province: 'JLT', country_code: 'AE', postal_code: null,
   };
 }
 

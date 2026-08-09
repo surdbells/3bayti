@@ -8,6 +8,8 @@ import type {
   OrderListResponse,
   OrderDetailResponse,
   OrderCancelResponse,
+  OrderTimelineEvent,
+  OrderTimelineResponse,
   SubmitReturnInput,
   ReturnRequestResponse,
 } from './order.types';
@@ -134,6 +136,32 @@ export class OrderService {
       );
       return response.order;
     });
+  }
+
+  /**
+   * Fetch the customer-visible event feed for an order
+   * (GET /v3/orders/:id/timeline). Requested oldest→newest (order=asc) so
+   * the UI can render a top-down chronological timeline.
+   *
+   * Best-effort: any failure (including the endpoint not being deployed
+   * yet) resolves to an empty array so the detail page can fall back to a
+   * client-derived stepper rather than erroring. The body is the bare
+   * `{ events, total }` shape (Responder writes it at top level — no
+   * `data` envelope).
+   */
+  async getTimeline(id: number): Promise<OrderTimelineEvent[]> {
+    try {
+      const params = new HttpParams().set('order', 'asc');
+      const response = await firstValueFrom(
+        this.http.get<OrderTimelineResponse>(
+          `${V3_BASE}/v3/orders/${id}/timeline`,
+          { params },
+        ),
+      );
+      return Array.isArray(response?.events) ? response.events : [];
+    } catch {
+      return [];
+    }
   }
 
   /**

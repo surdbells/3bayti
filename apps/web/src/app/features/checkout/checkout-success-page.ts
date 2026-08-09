@@ -151,26 +151,36 @@ import { CfImagePipe } from '../../shared/ui/cf-image.pipe';
           </section>
 
           <section
+            *ngIf="order()!.shipping_address as addr"
             class="checkout-page__section"
             aria-labelledby="success-shipping-heading"
           >
             <h2 id="success-shipping-heading" class="checkout-page__section-title">
               {{ 'checkout.review.shippingHeading' | translate }}
             </h2>
-            <p class="review-address__name">
-              {{ order()!.shipping_address.recipient_name }}
+            <p
+              *ngIf="addr.first_name || addr.last_name"
+              class="review-address__name"
+            >
+              {{ addr.first_name }} {{ addr.last_name }}
             </p>
-            <p class="review-address__line">
-              <ng-container *ngIf="order()!.shipping_address.street_address !== null">
-                {{ order()!.shipping_address.street_address }},
-              </ng-container>
-              <ng-container *ngIf="order()!.shipping_address.building_details !== null">
-                {{ order()!.shipping_address.building_details }},
-              </ng-container>
-              {{ order()!.shipping_address.area }}, {{ order()!.shipping_address.emirate }}
+            <p *ngIf="addr.street" class="review-address__line">
+              {{ addr.street }}
             </p>
-            <p class="review-address__phone">
-              {{ order()!.shipping_address.recipient_phone }}
+            <p *ngIf="addr.city || addr.state_province" class="review-address__line">
+              {{ addr.city
+              }}<ng-container *ngIf="addr.city && addr.state_province">, </ng-container
+              >{{ addr.state_province }}
+            </p>
+            <p
+              *ngIf="addr.country_code || addr.postal_code"
+              class="review-address__line"
+            >
+              {{ addr.country_code
+              }}<ng-container *ngIf="addr.postal_code"> {{ addr.postal_code }}</ng-container>
+            </p>
+            <p *ngIf="addr.phone" class="review-address__phone">
+              {{ addr.phone }}
             </p>
           </section>
 

@@ -12,16 +12,27 @@
  * type for `status` accepts any value the API might send.
  */
 
+/**
+ * Order address snapshot — mirrors apps/api OrderSerializer::addressShape
+ * (Http/Serializers/OrderSerializer.php). The API captures the address at
+ * checkout time onto the order, exposing these exact keys. Every field is
+ * nullable because the snapshot columns are nullable on the entity.
+ *
+ * NOTE: an earlier version of this type used invented field names
+ * (recipient_name / street_address / emirate / area) that never matched
+ * the payload, so the order-detail address rendered blank (` , , `).
+ * Keep this aligned with addressShape().
+ */
 export interface OrderAddress {
-  id: number;
-  recipient_name: string;
-  recipient_phone: string;
-  emirate: string;
-  area: string;
-  street_address: string | null;
-  building_details: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  email: string | null;
+  street: string | null;
+  city: string | null;
+  state_province: string | null;
+  country_code: string | null;
   postal_code: string | null;
-  label: string | null;
 }
 
 export interface OrderItem {
@@ -84,10 +95,35 @@ export interface OrderListItem {
   returns?: ReturnSummary[];
 }
 
-/** Detail extends list shape with billing + shipping address snapshots. */
+/** Detail extends list shape with billing + shipping address snapshots.
+ *  Either address may be null (the entity's snapshot columns are nullable
+ *  and addressShape() returns null for an absent address). */
 export interface Order extends OrderListItem {
-  billing_address: OrderAddress;
-  shipping_address: OrderAddress;
+  billing_address: OrderAddress | null;
+  shipping_address: OrderAddress | null;
+}
+
+/**
+ * A single customer-visible event from GET /v3/orders/:id/timeline
+ * (GetOrderTimelineController). The controller whitelists customer-safe
+ * event types and collapses internal actors to a generic { type }.
+ */
+export interface OrderTimelineEvent {
+  id: string;
+  /** Machine event type, e.g. 'order.paid' / 'return.refunded'. */
+  type: string;
+  /** ISO 8601 timestamp, or null when the event carries no time. */
+  occurred_at: string | null;
+  /** Generic actor — 'customer' | 'store' | 'system'. */
+  actor: { type: string };
+  /** Human-readable one-line summary rendered as the step label. */
+  summary: string;
+}
+
+/** GET /v3/orders/:id/timeline response body — `{ events, total }`. */
+export interface OrderTimelineResponse {
+  events: OrderTimelineEvent[];
+  total: number;
 }
 
 /** Lifecycle statuses we surface as customer-friendly labels. The
