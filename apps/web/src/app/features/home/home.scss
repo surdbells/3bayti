@@ -1290,8 +1290,9 @@
 .hero-bento {
   position: relative;
   width: 100%;
-  padding-block-start: calc(clamp(2.25rem, 5vw, 4rem) + var(--header-height, 72px));
-  padding-block-end: clamp(2rem, 4vw, 3.25rem);
+  /* The header sits in normal flow above the hero (not overlaying it), so the
+     band needs no --header-height offset — symmetric top/bottom breathing room. */
+  padding-block: clamp(2rem, 4vw, 3.25rem);
   border-block-end: 1px solid rgba(46, 36, 28, 0.18);
   background:
     radial-gradient(rgba(251, 246, 238, 0.10) 0.5px, transparent 1px) 0 0 / 18px 18px,
