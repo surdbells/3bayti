@@ -1625,256 +1625,304 @@ final class MigrationSteps
     }
 
     // ===================================================================
-    // M3.1.6h — Order migration (orders, order_items, order_addresses)
+    // M3.1.6h — Order migration (single step: orders + items + addresses)
     // ===================================================================
     //
-    // The legacy schema for these tables isn't fully documented in this
-    // sandbox. The methods below use the same defensive probing pattern
-    // as migrateStyles/migrateVendorLabels: probe table names, probe
-    // columns, gracefully skip with explanatory output if the schema
-    // doesn't match expectations.
+    // Legacy model (verified against the production dump, Aug 2026):
     //
-    // DEPLOY OPERATOR ACTION REQUIRED before running --include-orders:
-    //   1. Verify the legacy table names match one of the probed candidates
-    //      (see candidate arrays in each method below). If your legacy
-    //      schema uses different names, edit the candidates lists.
-    //   2. Verify column names match expectations. If they don't, the
-    //      column probe will skip the migration with output describing
-    //      what was missing.
-    //   3. Test with --dry-run first on a staging copy.
-    //   4. Carts are NOT migrated: they're transient state. Active legacy
-    //      carts will simply be lost on cutover; users see an empty v3
-    //      cart on first login and re-add items. This is documented in
-    //      the M3.1.6 plan as an explicit decision.
+    //   ec_cart_items    — combined cart + order-line table.
+    //                        cart_code = 'PND'   → live cart (skipped)
+    //                        cart_code = 'TRN-…' → a placed order; the rows
+    //                        sharing one TRN are the lines of that order.
+    //   payment_attempts — the order/checkout HEADER, joined on cart_code.
+    //                        Holds the delivery address, delivery_fee,
+    //                        total_paid, cart_status ('paid'|'pending'),
+    //                        paymentType and the raw Noon response.
+    //
+    // v3 mapping — all done in THIS one method. The former separate
+    // migrateOrderItems / migrateOrderAddresses steps were removed: the
+    // legacy DB has no normalised order_items / order_addresses tables, and
+    // both matched orders on legacy_order_id — a column migrateOrders never
+    // populated — so they were permanent no-ops (0 rows, every run).
+    //
+    //   1 TRN cart_code                     → 1 orders row
+    //       order_reference = cart_code, legacy_order_id = payment.order_id
+    //   N ec_cart_items rows (same TRN)     → N order_items rows
+    //   payment_attempts.delivery_* columns → order_addresses (shipping+billing)
+    //
+    // Money: ec_cart_items.price / total_price are WHOLE-DIRHAM integers.
+    // subtotal = Σ total_price; delivery_fee from the header; total prefers
+    // the actually-charged payment_attempts.total_paid.
+    //
+    // Status: cart_status='pending' → order 'pending_payment' (no paid_at);
+    // 'paid' → fulfilment derived from the item statuses.
+    //
+    // Idempotent: an order whose order_reference already exists is skipped,
+    // so re-running only inserts orders placed since the last run. Carts
+    // (PND) are intentionally NOT migrated — transient state; users re-add
+    // items in v3 on first login.
+    //
+    // Honours --dry-run (setDryRun): each order is inserted inside its own
+    // transaction and rolled back, so counts are exact with zero writes.
+    // Per-order transactions also isolate failures — one bad order cannot
+    // abort the whole batch (important on Postgres, where a failed statement
+    // poisons the surrounding transaction).
 
     /**
-     * @return array{migrated: int, skipped: int, errors: int, status: string}
+     * @return array{migrated: int, skipped: int, errors: int, addresses: int, status: string}
      */
     public function migrateOrders(): array
     {
         echo "===== migrate-orders =====\n";
 
-        // Legacy schema: ec_cart_items is a combined cart + orders table.
-        //   cart_code = 'PND'      → items still in cart (skip)
-        //   cart_code = 'TRN-...'  → paid order; the TRN code is the
-        //                            transaction reference. Multiple rows
-        //                            sharing the same cart_code are items
-        //                            within the same order.
-        //
-        // v3 mapping:
-        //   1 unique cart_code (TRN)  → 1 orders row
-        //   N ec_cart_items rows      → N order_items rows
-        //
-        // Status mapping (ec_cart_items.status enum):
-        //   Pending              → item_status: pending   | order: paid
-        //   Accepted             → item_status: accepted  | order: fulfilling
-        //   Processing           → item_status: preparing | order: fulfilling
-        //   Ready for Delivery   → item_status: shipped   | order: shipped
-        //   Delivered            → item_status: delivered | order: delivered
-        //   Return Requested     → item_status: returned  | order: fulfilling
-        //   Returned             → item_status: returned  | order: fulfilling
-        //   Cancelled            → item_status: cancelled | order: paid
-        //   Refunded             → item_status: refunded  | order: refunded
-
         $sourceTable = $this->probeTable(['ec_cart_items', 'cart_items']);
         if ($sourceTable === null) {
-            return $this->skipMissingTable('orders', ['ec_cart_items']);
+            return $this->skipMissingTable('orders', ['ec_cart_items']) + ['addresses' => 0];
         }
         echo "  Source table: {$sourceTable}\n";
 
-        // Count distinct TRN groups (= orders)
-        $totalOrders = (int) $this->legacy->fetchOne(
-            "SELECT COUNT(DISTINCT cart_code) FROM `{$sourceTable}` WHERE cart_code != 'PND' AND cart_code != '' AND cart_code IS NOT NULL"
-        );
-        echo "  Found {$totalOrders} distinct TRN orders to migrate.\n\n";
-
-        // Load all non-PND items grouped by cart_code.
+        // Group placed-order line items by TRN cart_code.
         $allItems = $this->legacy->fetchAll(
             "SELECT * FROM `{$sourceTable}`
-             WHERE cart_code != 'PND'
-               AND cart_code != ''
-               AND cart_code IS NOT NULL
+             WHERE cart_code IS NOT NULL AND cart_code != '' AND cart_code != 'PND'
              ORDER BY cart_code, ec_cart_items_id"
         );
-
-        // Group by cart_code.
         $groups = [];
         foreach ($allItems as $item) {
-            $groups[$item['cart_code']][] = $item;
+            $groups[(string) $item['cart_code']][] = $item;
+        }
+        echo "  Found " . count($groups) . " TRN orders (" . count($allItems) . " item rows).\n";
+
+        // Load checkout headers (address / fee / paid status), one per
+        // cart_code, preferring the paid + most-recent attempt.
+        $paymentByCart = [];
+        $paymentTable = $this->probeTable(['payment_attempts']);
+        if ($paymentTable !== null) {
+            $rows = $this->legacy->fetchAll(
+                "SELECT * FROM `{$paymentTable}`
+                 WHERE cart_code IS NOT NULL AND cart_code != ''
+                 ORDER BY (cart_status = 'paid') DESC, `created` DESC"
+            );
+            foreach ($rows as $p) {
+                $cc = (string) $p['cart_code'];
+                if (!isset($paymentByCart[$cc])) {
+                    $paymentByCart[$cc] = $p;
+                }
+            }
+            echo "  Loaded " . count($paymentByCart) . " payment_attempts headers.\n\n";
+        } else {
+            echo "  WARNING: 'payment_attempts' not found — orders will migrate WITHOUT\n";
+            echo "  real totals, delivery fees, addresses or payment status.\n\n";
         }
 
         $migrated = 0;
         $skipped  = 0;
         $errors   = 0;
+        $withAddr = 0;
+        $noAddr   = 0;
 
-        $this->conn->beginTransaction();
-        try {
-            foreach ($groups as $trnCode => $items) {
-                // Idempotency: skip if already migrated (order_reference = TRN).
-                $existing = $this->conn->fetchOne(
-                    'SELECT id FROM orders WHERE order_reference = ?',
-                    [substr((string) $trnCode, 0, 32)]
-                );
-                if ($existing !== false) {
-                    $skipped++;
-                    continue;
-                }
+        foreach ($groups as $trnCode => $items) {
+            $ref = substr((string) $trnCode, 0, 32);
 
-                // Use first item for order-level fields.
-                $first       = $items[0];
-                $legacyUserId = (int) $first['user_id'];
-                $createdAt   = $first['_item_added'] ?? date('Y-m-d H:i:s');
+            // Idempotency — skip orders already migrated.
+            if ($this->conn->fetchOne('SELECT id FROM orders WHERE order_reference = ?', [$ref]) !== false) {
+                $skipped++;
+                continue;
+            }
 
-                // Resolve v3 user.
-                $userRow = $this->conn->fetchAssociative(
-                    'SELECT id FROM users WHERE legacy_user_id = ?',
-                    [$legacyUserId]
-                );
-                if ($userRow === false) {
-                    $this->log->error('orders', 0, "TRN={$trnCode} user legacy_user_id={$legacyUserId} not found");
-                    $skipped++;
-                    continue;
-                }
-                $v3UserId = (int) $userRow['id'];
+            $first = $items[0];
+            $legacyUserId = (int) ($first['user_id'] ?? 0);
+            $userRow = $this->conn->fetchAssociative(
+                'SELECT id FROM users WHERE legacy_user_id = ?',
+                [$legacyUserId]
+            );
+            if ($userRow === false) {
+                $this->log->error('orders', 0, "TRN={$trnCode} user legacy_user_id={$legacyUserId} not found");
+                $skipped++;
+                continue;
+            }
+            $v3UserId = (int) $userRow['id'];
+            $pay = $paymentByCart[(string) $trnCode] ?? null;
 
-                // Compute order totals from items.
-                $subtotal  = '0.00';
-                $discount  = '0.00';
-                foreach ($items as $item) {
-                    $subtotal = bcadd($subtotal, $this->normaliseMoneyString((string) ($item['total_price'] ?? 0)), 2);
-                    $discount = bcadd($discount, $this->normaliseMoneyString((string) ($item['discount']    ?? 0)), 2);
-                }
-                $total = bcsub($subtotal, $discount, 2);
-                if (bccomp($total, '0.00', 2) < 0) {
-                    $total = '0.00';
-                }
+            // Totals — subtotal from line items, fee + charged total from header.
+            $subtotal = '0.00';
+            $discount = '0.00';
+            foreach ($items as $it) {
+                $subtotal = bcadd($subtotal, $this->normaliseMoneyString($it['total_price'] ?? 0), 2);
+                $discount = bcadd($discount, $this->normaliseMoneyString($it['discount'] ?? 0), 2);
+            }
+            $deliveryFee = $pay !== null ? $this->normaliseMoneyString($pay['delivery_fee'] ?? 0) : '0.00';
+            $total = ($pay !== null && isset($pay['total_paid']) && trim((string) $pay['total_paid']) !== '')
+                ? $this->normaliseMoneyString($pay['total_paid'])
+                : bcadd(bcsub($subtotal, $discount, 2), $deliveryFee, 2);
+            if (bccomp($total, '0.00', 2) < 0) {
+                $total = '0.00';
+            }
 
-                // Determine order status from the worst/best item status.
-                $orderStatus = $this->deriveOrderStatusFromItems($items);
+            // Status + paid_at. cart_status drives the paid/unpaid axis;
+            // item statuses drive fulfilment. An order is only
+            // 'pending_payment' when there is no paid attempt AND no
+            // fulfilment progress — a delivered order carrying a stale
+            // 'pending' attempt still reads as delivered.
+            $isPaid = $pay !== null && strtolower(trim((string) ($pay['cart_status'] ?? ''))) === 'paid';
+            $createdAt = (string) ($first['_item_added'] ?? ($pay['created'] ?? date('Y-m-d H:i:s')));
+            $derived = $this->deriveOrderStatusFromItems($items);
+            if ($pay !== null && !$isPaid && $derived === 'paid') {
+                $orderStatus = 'pending_payment';
+                $paidAt = null;
+            } else {
+                $orderStatus = $derived;
+                $paidAt = $isPaid ? (string) ($pay['created'] ?? $createdAt) : $createdAt;
+            }
 
-                $ref = substr((string) $trnCode, 0, 32);
+            $legacyOrderId = ($pay !== null && isset($pay['order_id']) && ctype_digit(trim((string) $pay['order_id'])))
+                ? (int) $pay['order_id']
+                : null;
 
-                try {
-                    $this->conn->insert('orders', [
-                        'user_id'         => $v3UserId,
-                        'order_reference' => $ref,
-                        'status'          => $orderStatus,
-                        'subtotal'        => $subtotal,
-                        'delivery_fee'    => '0.00',
-                        'discount'        => $discount,
-                        'total'           => $total,
-                        'currency'        => 'AED',
-                        'paid_at'         => $createdAt,
-                        'created_at'      => $createdAt,
-                        'updated_at'      => $createdAt,
-                    ]);
-                } catch (\Throwable $e) {
-                    $this->log->error('orders', 0, "TRN={$trnCode} INSERT failed: " . $e->getMessage());
-                    $errors++;
-                    continue;
-                }
-
+            $this->conn->beginTransaction();
+            try {
+                $this->conn->insert('orders', [
+                    'legacy_order_id' => $legacyOrderId,
+                    'user_id'         => $v3UserId,
+                    'order_reference' => $ref,
+                    'status'          => $orderStatus,
+                    'subtotal'        => $subtotal,
+                    'delivery_fee'    => $deliveryFee,
+                    'discount'        => $discount,
+                    'total'           => $total,
+                    'currency'        => 'AED',
+                    'paid_at'         => $paidAt,
+                    'created_at'      => $createdAt,
+                    'updated_at'      => $createdAt,
+                ]);
                 $v3OrderId = (int) $this->conn->lastInsertId();
 
-                // Insert order_items.
-                foreach ($items as $item) {
-                    $legacyProductId = (int) $item['product_id'];
-                    $legacyStoreId   = (int) $item['store'];
+                foreach ($items as $it) {
+                    $legacyProductId = (int) ($it['product_id'] ?? 0);
+                    $legacyStoreId   = (int) ($it['store'] ?? 0);
 
-                    // Resolve v3 product.
                     $productRow = $this->conn->fetchAssociative(
                         'SELECT id FROM products WHERE legacy_product_id = ?',
                         [$legacyProductId]
                     );
                     if ($productRow === false) {
-                        $this->log->error('order_items', (int) $item['ec_cart_items_id'],
+                        $this->log->error('order_items', (int) ($it['ec_cart_items_id'] ?? 0),
                             "TRN={$trnCode} product legacy_id={$legacyProductId} not found — skipping item");
                         continue;
                     }
-                    $v3ProductId = (int) $productRow['id'];
-
-                    // Resolve v3 vendor.
                     $vendorRow = $this->conn->fetchAssociative(
                         'SELECT id FROM vendors WHERE legacy_vendor_id = ?',
                         [$legacyStoreId]
                     );
                     if ($vendorRow === false) {
-                        $this->log->error('order_items', (int) $item['ec_cart_items_id'],
+                        $this->log->error('order_items', (int) ($it['ec_cart_items_id'] ?? 0),
                             "TRN={$trnCode} vendor legacy_id={$legacyStoreId} not found — skipping item");
                         continue;
                     }
-                    $v3VendorId = (int) $vendorRow['id'];
 
-                    $unitPrice   = $this->normaliseMoneyString((string) ($item['price']       ?? 0));
-                    $itemSubtotal = $this->normaliseMoneyString((string) ($item['total_price'] ?? 0));
-                    $qty         = max(1, (int) ($item['quantity'] ?? 1));
-                    $productName = mb_substr(trim(strip_tags((string) ($item['product_name'] ?? ''))), 0, 255) ?: 'Migrated Product';
-                    $imageUrl    = isset($item['product_image']) && (string) $item['product_image'] !== ''
-                        ? mb_substr((string) $item['product_image'], 0, 500) : null;
-                    $size        = isset($item['size'])  && (string) $item['size']  !== '' ? mb_substr((string) $item['size'],  0, 50) : null;
-                    $color       = isset($item['color']) && (string) $item['color'] !== '' ? mb_substr((string) $item['color'], 0, 50) : null;
-                    $isCustom    = (bool) ($item['is_custom'] ?? false);
-                    $measurement = isset($item['measurement']) && (string) $item['measurement'] !== '' ? (string) $item['measurement'] : null;
-                    $extraMeas   = isset($item['extra_measurement']) && (string) $item['extra_measurement'] !== '' ? (string) $item['extra_measurement'] : null;
-                    $note        = isset($item['note']) && (string) $item['note'] !== '' ? (string) $item['note'] : null;
-                    $itemStatus  = $this->mapLegacyItemStatus((string) ($item['status'] ?? 'Pending'));
+                    $measurement = (isset($it['measurement']) && (string) $it['measurement'] !== '')
+                        ? html_entity_decode((string) $it['measurement'], ENT_QUOTES | ENT_HTML5, 'UTF-8')
+                        : null;
 
-                    try {
-                        $this->conn->insert('order_items', [
-                            'order_id'              => $v3OrderId,
-                            'product_id'            => $v3ProductId,
-                            'vendor_id'             => $v3VendorId,
-                            'quantity'              => $qty,
-                            'unit_price'            => $unitPrice,
-                            'subtotal'              => $itemSubtotal,
-                            'product_name_snapshot' => $productName,
-                            'product_image_snapshot'=> $imageUrl,
-                            'size'                  => $size,
-                            'color'                 => $color,
-                            'is_custom'             => $isCustom ? 1 : 0,
-                            'measurement'           => $measurement,
-                            'extra_measurement'     => $extraMeas,
-                            'note'                  => $note,
-                            'item_status'           => $itemStatus,
-                            'created_at'            => $createdAt,
-                            'updated_at'            => $createdAt,
-                        ]);
-                    } catch (\Throwable $e) {
-                        $this->log->error('order_items', (int) $item['ec_cart_items_id'],
-                            "TRN={$trnCode} item INSERT failed: " . $e->getMessage());
-                    }
+                    $this->conn->insert('order_items', [
+                        'order_id'               => $v3OrderId,
+                        'product_id'             => (int) $productRow['id'],
+                        'vendor_id'              => (int) $vendorRow['id'],
+                        'quantity'               => max(1, (int) ($it['quantity'] ?? 1)),
+                        'unit_price'             => $this->normaliseMoneyString($it['price'] ?? 0),
+                        'subtotal'               => $this->normaliseMoneyString($it['total_price'] ?? 0),
+                        'product_name_snapshot'  => mb_substr(trim(strip_tags((string) ($it['product_name'] ?? ''))), 0, 255) ?: 'Migrated Product',
+                        'product_image_snapshot' => (isset($it['product_image']) && (string) $it['product_image'] !== '')
+                            ? mb_substr((string) $it['product_image'], 0, 500) : null,
+                        'size'                   => (isset($it['size']) && (string) $it['size'] !== '') ? mb_substr((string) $it['size'], 0, 50) : null,
+                        'color'                  => (isset($it['color']) && (string) $it['color'] !== '') ? mb_substr((string) $it['color'], 0, 50) : null,
+                        'is_custom'              => ((bool) ($it['is_custom'] ?? false)) ? 'true' : 'false',
+                        'measurement'            => $measurement,
+                        'extra_measurement'      => (isset($it['extra_measurement']) && (string) $it['extra_measurement'] !== '') ? (string) $it['extra_measurement'] : null,
+                        'note'                   => (isset($it['note']) && (string) $it['note'] !== '') ? (string) $it['note'] : null,
+                        'item_status'            => $this->mapLegacyItemStatus((string) ($it['status'] ?? 'Pending')),
+                        'created_at'             => $createdAt,
+                        'updated_at'             => $createdAt,
+                    ]);
                 }
 
+                // Shipping + billing address from the payment header. Legacy
+                // stores a single delivery address; v3 wants both types, so
+                // duplicate shipping as billing rather than leaving billing
+                // null (which downstream order queries assume is present).
+                if ($pay !== null) {
+                    $street = trim((string) ($pay['delivery_street_address'] ?? ''));
+                    $villa  = trim((string) ($pay['villa_number'] ?? ''));
+                    if ($villa !== '' && stripos($street, $villa) === false) {
+                        $street = $street !== '' ? ($villa . ', ' . $street) : $villa;
+                    }
+                    $city  = trim((string) ($pay['delivery_city'] ?? ''));
+                    $area  = trim((string) ($pay['delivery_area'] ?? ''));
+                    $phone = trim((string) ($pay['delivery_phone'] ?? ''));
+                    $email = trim((string) ($pay['delivery_email'] ?? ''));
+                    $name  = trim((string) ($pay['delivery_name'] ?? ''));
+
+                    if ($street !== '' && $city !== '' && $phone !== '' && $name !== '') {
+                        $parts = preg_split('/\s+/', $name, 2) ?: [$name];
+                        $firstName = mb_substr($parts[0], 0, 100);
+                        $lastName  = isset($parts[1]) && $parts[1] !== '' ? mb_substr($parts[1], 0, 100) : null;
+                        $emailVal  = $email !== '' ? mb_substr($email, 0, 255) : 'unknown@migrated.local';
+                        $now = date('Y-m-d H:i:s');
+                        foreach (['shipping', 'billing'] as $type) {
+                            $this->conn->insert('order_addresses', [
+                                'order_id'       => $v3OrderId,
+                                'type'           => $type,
+                                'first_name'     => $firstName,
+                                'last_name'      => $lastName,
+                                'phone'          => mb_substr($phone, 0, 20),
+                                'email'          => $emailVal,
+                                'street'         => mb_substr($street, 0, 255),
+                                'city'           => mb_substr($city, 0, 100),
+                                'state_province' => $area !== '' ? mb_substr($area, 0, 100) : null,
+                                'country_code'   => 'AE',
+                                'created_at'     => $now,
+                                'updated_at'     => $now,
+                            ]);
+                        }
+                        $withAddr++;
+                    } else {
+                        $noAddr++;
+                        $this->log->skip('order_addresses', 0, "TRN={$trnCode} incomplete address in payment_attempts");
+                    }
+                } else {
+                    $noAddr++;
+                }
+
+                if ($this->dryRun) {
+                    $this->conn->rollBack();
+                } else {
+                    $this->conn->commit();
+                }
                 $migrated++;
                 if ($migrated % 50 === 0) {
                     echo "  ... {$migrated} orders processed\n";
                 }
+            } catch (\Throwable $e) {
+                try {
+                    if ($this->conn->isTransactionActive()) {
+                        $this->conn->rollBack();
+                    }
+                } catch (\Throwable) {}
+                $this->log->error('orders', 0, "TRN={$trnCode} failed: " . $e->getMessage());
+                $errors++;
             }
-
-            // Reset sequences.
-            $this->conn->executeStatement(
-                "SELECT setval('orders_id_seq', COALESCE((SELECT MAX(id) FROM orders), 0) + 1, false)"
-            );
-            $this->conn->executeStatement(
-                "SELECT setval('order_items_id_seq', COALESCE((SELECT MAX(id) FROM order_items), 0) + 1, false)"
-            );
-
-            $this->conn->commit();
-        } catch (\Throwable $e) {
-            try {
-                if ($this->conn->isTransactionActive()) {
-                    $this->conn->rollBack();
-                }
-            } catch (\Throwable) {}
-            throw $e;
         }
 
-        echo "  migrated={$migrated} skipped={$skipped} errors={$errors}\n\n";
+        echo "  migrated={$migrated} skipped={$skipped} errors={$errors}"
+            . " addresses={$withAddr} no_address={$noAddr}"
+            . ($this->dryRun ? "  (DRY RUN — all rolled back)" : "") . "\n\n";
+
         return [
-            'migrated' => $migrated,
-            'skipped'  => $skipped,
-            'errors'   => $errors,
-            'status'   => 'completed',
+            'migrated'  => $migrated,
+            'skipped'   => $skipped,
+            'errors'    => $errors,
+            'addresses' => $withAddr,
+            'status'    => 'completed',
         ];
     }
 
@@ -1898,330 +1946,45 @@ final class MigrationSteps
     }
 
     /**
-     * Derive the v3 order-level status from a group of legacy items.
-     * Uses the "most advanced" item to determine overall order state.
+     * Derive the v3 order-level status from a group of legacy items, for
+     * orders whose payment succeeded. Uniform terminal states (every item
+     * cancelled / every item refunded) map through; otherwise the
+     * most-advanced fulfilment state wins.
      */
     private function deriveOrderStatusFromItems(array $items): string
     {
         $statuses = array_map(
-            fn($i) => $this->mapLegacyItemStatus((string) ($i['status'] ?? 'Pending')),
+            fn ($i) => $this->mapLegacyItemStatus((string) ($i['status'] ?? 'Pending')),
             $items
         );
 
-        // Priority order — highest wins.
-        $priority = ['refunded', 'returned', 'delivered', 'shipped', 'preparing', 'accepted', 'cancelled', 'pending'];
+        $distinct = array_values(array_unique($statuses));
+        if ($distinct === ['cancelled']) {
+            return 'cancelled';
+        }
+        if ($distinct === ['refunded']) {
+            return 'refunded';
+        }
+
+        // Most-advanced fulfilment wins. A paid order with some (not all)
+        // cancelled lines is still 'paid' — the remaining lines fulfil.
+        $priority = ['refunded', 'delivered', 'shipped', 'preparing', 'accepted', 'returned', 'pending'];
         foreach ($priority as $s) {
             if (in_array($s, $statuses, true)) {
                 return match ($s) {
-                    'delivered'             => 'delivered',
-                    'shipped'               => 'shipped',
-                    'preparing', 'accepted' => 'fulfilling',
-                    'refunded'              => 'refunded',
-                    'returned'              => 'fulfilling',
-                    'cancelled'             => 'paid',
-                    default                 => 'paid',
+                    'delivered'                         => 'delivered',
+                    'shipped'                           => 'shipped',
+                    'preparing', 'accepted', 'returned' => 'fulfilling',
+                    'refunded'                          => 'refunded',
+                    default                             => 'paid',
                 };
             }
         }
         return 'paid';
     }
 
-    public function migrateOrderItems(): array
-    {
-        echo "===== migrate-order-items =====\n";
-
-        $candidates = ['ec_order_items', 'order_items', 'orderitems', 'order_item', 'order_details', 'order_lines'];
-        $sourceTable = $this->probeTable($candidates);
-        if ($sourceTable === null) {
-            return $this->skipMissingTable('order_items', $candidates);
-        }
-        echo "  Source table: {$sourceTable}\n";
-
-        $idCol = $this->firstPresentColumn($sourceTable, ['order_item_id', 'id']);
-        $orderCol = $this->firstPresentColumn($sourceTable, ['order_id', 'parent_order_id']);
-        $productCol = $this->firstPresentColumn($sourceTable, ['product_id']);
-        $qtyCol = $this->firstPresentColumn($sourceTable, ['quantity', 'qty']);
-        $priceCol = $this->firstPresentColumn($sourceTable, ['price', 'unit_price']);
-
-        if ($idCol === null || $orderCol === null || $productCol === null || $qtyCol === null || $priceCol === null) {
-            echo "  Legacy table '{$sourceTable}' missing required columns.\n";
-            echo "    id={$idCol} order={$orderCol} product={$productCol} qty={$qtyCol} price={$priceCol}\n";
-            echo "  Skipping. Edit migrateOrderItems() column probes if names differ.\n\n";
-            return ['migrated' => 0, 'skipped' => 0, 'errors' => 0, 'status' => 'skipped_unexpected_columns'];
-        }
-
-        $sizeCol = $this->firstPresentColumn($sourceTable, ['size']);
-        $colorCol = $this->firstPresentColumn($sourceTable, ['color', 'colour']);
-        $nameCol = $this->firstPresentColumn($sourceTable, ['product_name', 'name']);
-        $imageCol = $this->firstPresentColumn($sourceTable, ['product_image', 'image']);
-        $customCol = $this->firstPresentColumn($sourceTable, ['is_custom', 'custom']);
-        $measureCol = $this->firstPresentColumn($sourceTable, ['measurement']);
-        $extraMeasureCol = $this->firstPresentColumn($sourceTable, ['extra_measurement']);
-        $noteCol = $this->firstPresentColumn($sourceTable, ['note', 'notes']);
-
-        $selectCols = "{$idCol} AS lid, {$orderCol} AS lorder, {$productCol} AS lproduct, {$qtyCol} AS lqty, {$priceCol} AS lprice";
-        if ($sizeCol !== null) {
-            $selectCols .= ", {$sizeCol} AS lsize";
-        }
-        if ($colorCol !== null) {
-            $selectCols .= ", {$colorCol} AS lcolor";
-        }
-        if ($nameCol !== null) {
-            $selectCols .= ", {$nameCol} AS lname";
-        }
-        if ($imageCol !== null) {
-            $selectCols .= ", {$imageCol} AS limage";
-        }
-        if ($customCol !== null) {
-            $selectCols .= ", {$customCol} AS lcustom";
-        }
-        if ($measureCol !== null) {
-            $selectCols .= ", {$measureCol} AS lmeasure";
-        }
-        if ($extraMeasureCol !== null) {
-            $selectCols .= ", {$extraMeasureCol} AS lextra";
-        }
-        if ($noteCol !== null) {
-            $selectCols .= ", {$noteCol} AS lnote";
-        }
-
-        $totalRows = $this->legacy->count($sourceTable);
-        echo "  Migrating {$totalRows} order items...\n\n";
-
-        $migrated = 0;
-        $skipped = 0;
-        $errors = 0;
-
-        $this->conn->beginTransaction();
-        try {
-            foreach ($this->legacy->iterate("SELECT {$selectCols} FROM {$sourceTable} ORDER BY {$idCol}") as $row) {
-                $legacyId = (int) $row['lid'];
-                $legacyOrderId = (int) $row['lorder'];
-                $legacyProductId = (int) $row['lproduct'];
-
-                // Resolve v3 order_id + product_id + vendor_id.
-                $orderRow = $this->conn->fetchAssociative(
-                    'SELECT id FROM orders WHERE legacy_order_id = ?',
-                    [$legacyOrderId],
-                );
-                if ($orderRow === false) {
-                    $skipped++;
-                    continue;
-                }
-                $productRow = $this->conn->fetchAssociative(
-                    'SELECT id, vendor_id, name FROM products WHERE legacy_product_id = ?',
-                    [$legacyProductId],
-                );
-                if ($productRow === false) {
-                    $this->log->error('order_items', $legacyId, "Product legacy_product_id={$legacyProductId} not found");
-                    $skipped++;
-                    continue;
-                }
-
-                try {
-                    $this->conn->insert('order_items', [
-                        'order_id' => $orderRow['id'],
-                        'product_id' => $productRow['id'],
-                        'vendor_id' => $productRow['vendor_id'],
-                        'quantity' => (int) $row['lqty'],
-                        'unit_price' => $this->normaliseMoneyString($row['lprice']),
-                        'subtotal' => $this->normaliseMoneyString(
-                            bcmul((string) $row['lprice'], (string) (int) $row['lqty'], 2)
-                        ),
-                        'product_name_snapshot' => isset($row['lname'])
-                            ? substr((string) $row['lname'], 0, 255)
-                            : substr((string) $productRow['name'], 0, 255),
-                        'product_image_snapshot' => isset($row['limage']) ? (string) $row['limage'] : null,
-                        'size' => isset($row['lsize']) ? (string) $row['lsize'] : null,
-                        'color' => isset($row['lcolor']) ? (string) $row['lcolor'] : null,
-                        'is_custom' => isset($row['lcustom']) && (bool) $row['lcustom'] ? 1 : 0,
-                        'measurement' => isset($row['lmeasure']) ? (string) $row['lmeasure'] : null,
-                        'extra_measurement' => isset($row['lextra']) ? (string) $row['lextra'] : null,
-                        'note' => isset($row['lnote']) ? (string) $row['lnote'] : null,
-                        'item_status' => 'pending',
-                    ]);
-                    $migrated++;
-                } catch (\Throwable $e) {
-                    $this->log->error('order_items', $legacyId, $e->getMessage());
-                    $errors++;
-                }
-            }
-            $this->conn->commit();
-        } catch (\Throwable $e) {
-            $this->conn->rollBack();
-            echo "  ABORTED: " . $e->getMessage() . "\n\n";
-            throw $e;
-        }
-
-        echo "  Done: {$migrated} migrated, {$skipped} skipped, {$errors} errors.\n\n";
-        return [
-            'migrated' => $migrated,
-            'skipped' => $skipped,
-            'errors' => $errors,
-            'status' => 'completed',
-        ];
-    }
-
-    /**
-     * @return array{migrated: int, skipped: int, errors: int, status: string}
-     */
-    public function migrateOrderAddresses(): array
-    {
-        echo "===== migrate-order-addresses =====\n";
-
-        // Legacy schema: orders typically denormalise the address INTO
-        // the orders row itself rather than a separate table. Try both.
-        $candidates = ['order_addresses', 'order_address', 'order_shipping_address'];
-        $sourceTable = $this->probeTable($candidates);
-
-        if ($sourceTable !== null) {
-            // Separate address-table path: the legacy database has a
-            // dedicated address table whose column names can't be known
-            // in advance without inspecting that specific schema.
-            // This branch deliberately falls through to the
-            // inline-on-orders path below, which works for the known
-            // 3bayti legacy schema and handles the vast majority of
-            // real deployments. If a future legacy database uses a
-            // separate table, a schema probe + column mapping would be
-            // needed here — add it then; for now log a clear operator
-            // notice and continue with the safe fallback path.
-            echo "  Found separate address table '{$sourceTable}', but column\n";
-            echo "  mapping for an unknown schema is out of scope for this\n";
-            echo "  automated migrator. Falling back to the inline-on-orders\n";
-            echo "  address path (the standard 3bayti legacy layout).\n";
-            echo "  If your addresses are in '{$sourceTable}', inspect its\n";
-            echo "  columns and add a dedicated migration step.\n";
-        }
-
-        // Inline-on-orders path: extract address fields from the orders
-        // table itself. Probe the orders table for address columns.
-        $ordersTable = $this->probeTable(['ec_orders', 'orders', 'order', 'order_master']);
-        if ($ordersTable === null) {
-            return $this->skipMissingTable('orders (for inline addresses)', ['orders']);
-        }
-
-        $idCol = $this->firstPresentColumn($ordersTable, ['order_id', 'id']);
-        $streetCol = $this->firstPresentColumn($ordersTable, ['shipping_street', 'shipping_address', 'address']);
-        $cityCol = $this->firstPresentColumn($ordersTable, ['shipping_city', 'city', 'emirate']);
-        $phoneCol = $this->firstPresentColumn($ordersTable, ['shipping_phone', 'customer_phone', 'phone']);
-        $nameCol = $this->firstPresentColumn($ordersTable, ['shipping_name', 'customer_name']);
-        $emailCol = $this->firstPresentColumn($ordersTable, ['customer_email', 'email']);
-
-        if ($idCol === null || $streetCol === null || $cityCol === null) {
-            echo "  Orders table missing address columns (street, city).\n";
-            echo "  Skipping. Address data will need to be backfilled from user profiles\n";
-            echo "  or marked as 'address unavailable' on migrated orders.\n\n";
-            return ['migrated' => 0, 'skipped' => 0, 'errors' => 0, 'status' => 'skipped_no_inline_address'];
-        }
-
-        $selectCols = "{$idCol} AS lid, {$streetCol} AS lstreet, {$cityCol} AS lcity";
-        if ($phoneCol !== null) {
-            $selectCols .= ", {$phoneCol} AS lphone";
-        }
-        if ($nameCol !== null) {
-            $selectCols .= ", {$nameCol} AS lname";
-        }
-        if ($emailCol !== null) {
-            $selectCols .= ", {$emailCol} AS lemail";
-        }
-
-        $totalRows = $this->legacy->count($ordersTable);
-        echo "  Synthesising shipping addresses from {$totalRows} legacy orders...\n\n";
-
-        $migrated = 0;
-        $skipped = 0;
-        $errors = 0;
-
-        $this->conn->beginTransaction();
-        try {
-            foreach ($this->legacy->iterate("SELECT {$selectCols} FROM {$ordersTable} ORDER BY {$idCol}") as $row) {
-                $legacyOrderId = (int) $row['lid'];
-
-                $orderRow = $this->conn->fetchAssociative(
-                    'SELECT id FROM orders WHERE legacy_order_id = ?',
-                    [$legacyOrderId],
-                );
-                if ($orderRow === false) {
-                    $skipped++;
-                    continue;
-                }
-
-                // Skip if shipping address already exists for this order.
-                $existing = $this->conn->fetchAssociative(
-                    "SELECT id FROM order_addresses WHERE order_id = ? AND type = 'shipping'",
-                    [$orderRow['id']],
-                );
-                if ($existing !== false) {
-                    $skipped++;
-                    continue;
-                }
-
-                $street = trim((string) ($row['lstreet'] ?? ''));
-                $city = trim((string) ($row['lcity'] ?? ''));
-                $phone = trim((string) ($row['lphone'] ?? '0000000000'));
-                $name = trim((string) ($row['lname'] ?? 'Migrated Customer'));
-                $email = trim((string) ($row['lemail'] ?? 'unknown@migrated.local'));
-
-                if ($street === '' || $city === '' || $phone === '' || $name === '' || $email === '') {
-                    $skipped++;
-                    continue;
-                }
-
-                try {
-                    // Insert shipping. Some legacy orders may not have
-                    // a separate billing address — duplicate shipping
-                    // as billing when needed (rather than leaving
-                    // billing null, which would break checkout-related
-                    // queries downstream).
-                    $now = date('Y-m-d H:i:s');
-                    $this->conn->insert('order_addresses', [
-                        'order_id' => $orderRow['id'],
-                        'type' => 'shipping',
-                        'first_name' => substr($name, 0, 100),
-                        'phone' => substr($phone, 0, 32),
-                        'email' => substr($email, 0, 255),
-                        'street' => substr($street, 0, 255),
-                        'city' => substr($city, 0, 100),
-                        'country_code' => 'AE',
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                    $this->conn->insert('order_addresses', [
-                        'order_id' => $orderRow['id'],
-                        'type' => 'billing',
-                        'first_name' => substr($name, 0, 100),
-                        'phone' => substr($phone, 0, 32),
-                        'email' => substr($email, 0, 255),
-                        'street' => substr($street, 0, 255),
-                        'city' => substr($city, 0, 100),
-                        'country_code' => 'AE',
-                        'created_at' => $now,
-                        'updated_at' => $now,
-                    ]);
-                    $migrated++;
-                } catch (\Throwable $e) {
-                    $this->log->error('order_addresses', $legacyOrderId, $e->getMessage());
-                    $errors++;
-                }
-            }
-            $this->conn->commit();
-        } catch (\Throwable $e) {
-            $this->conn->rollBack();
-            echo "  ABORTED: " . $e->getMessage() . "\n\n";
-            throw $e;
-        }
-
-        echo "  Done: {$migrated} migrated, {$skipped} skipped, {$errors} errors.\n\n";
-        return [
-            'migrated' => $migrated,
-            'skipped' => $skipped,
-            'errors' => $errors,
-            'status' => 'completed',
-        ];
-    }
-
     // ===================================================================
-    // M3.1.6h — Helpers
+    // M3.1.6h — Helpers (shared by migrateOrders)
     // ===================================================================
 
     /** @param list<string> $candidates */
@@ -2230,17 +1993,6 @@ final class MigrationSteps
         foreach ($candidates as $name) {
             if ($this->legacy->tableExists($name)) {
                 return $name;
-            }
-        }
-        return null;
-    }
-
-    /** @param list<string> $candidates */
-    private function firstPresentColumn(string $table, array $candidates): ?string
-    {
-        foreach ($candidates as $col) {
-            if ($this->legacy->columnExists($table, $col)) {
-                return $col;
             }
         }
         return null;
@@ -2269,22 +2021,6 @@ final class MigrationSteps
         }
         // bcmath handles arbitrary-precision; round to 2dp.
         return bcadd($s, '0', 2);
-    }
-
-    private function mapLegacyOrderStatus(string $legacy): string
-    {
-        $key = strtolower(trim($legacy));
-        return match ($key) {
-            'pending', 'pending_payment', '0' => 'pending_payment',
-            'paid', 'completed', '1' => 'paid',
-            'fulfilling', 'processing', '2' => 'fulfilling',
-            'shipped', 'in_transit', '3' => 'shipped',
-            'delivered', '4' => 'delivered',
-            'cancelled', 'canceled', '5' => 'cancelled',
-            'refunded', '6' => 'refunded',
-            'failed', '7' => 'failed',
-            default => 'paid', // Migrated rows assumed paid unless told otherwise
-        };
     }
 
     // ===================================================================

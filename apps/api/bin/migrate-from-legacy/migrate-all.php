@@ -39,6 +39,7 @@ use Doctrine\ORM\EntityManagerInterface;
 
 $wipeSeed = in_array('--wipe-seed', $argv, true);
 $includeOrders = in_array('--include-orders', $argv, true);
+$dryRun = in_array('--dry-run', $argv, true);
 
 echo "============================================================\n";
 echo " 3bayti legacy data migration\n";
@@ -62,13 +63,28 @@ try {
     $log = new MigrationLog($conn);
     $slugger = new Slugger();
     $steps = new MigrationSteps($conn, $legacy, $log, $slugger);
+    $steps->setDryRun($dryRun);
 
     echo "Run ID: " . $log->getRunId() . "\n";
-    echo "Mode:   " . ($wipeSeed ? "WIPE-SEED + MIGRATE" : "MIGRATE (UPSERT)") . "\n\n";
+    echo "Mode:   " . ($dryRun
+        ? "DRY RUN — order-migration preview only (no writes)"
+        : ($wipeSeed ? "WIPE-SEED + MIGRATE" : "MIGRATE (UPSERT)")) . "\n\n";
 
     $stepNum = 0;
     $results = [];
 
+    if ($dryRun) {
+        // Dry-run is scoped to ORDER migration. The catalog steps
+        // (categories…wishlist) do not support rollback and would write for
+        // real, so they are skipped here. migrateOrders resolves the
+        // already-migrated users/products/vendors, inserts orders + items +
+        // addresses inside a transaction, then rolls back — exact counts,
+        // zero writes. If those catalog tables are empty, run a normal
+        // (non-dry) migration first, then dry-run the orders.
+        echo "----- DRY RUN: order-migration preview only -----\n";
+        echo "       Catalog steps skipped; orders validated then rolled back.\n\n";
+        $results['orders'] = $steps->migrateOrders();
+    } else {
     if ($wipeSeed) {
         $stepNum++;
         echo "----- step {$stepNum}: wipe fictional seed -----\n";
@@ -135,30 +151,22 @@ try {
     $results['wishlist'] = $steps->migrateWishlist();
 
     // ---------- M3.1.6h: order migration (opt-in) ----------
-    // Off by default because the legacy schema isn't fully verified;
-    // operator must explicitly opt in with --include-orders after
-    // reviewing the candidate table/column lists in migrateOrders /
-    // migrateOrderItems / migrateOrderAddresses.
+    // Off by default. Opt in with --include-orders (preview first with
+    // --dry-run). migrateOrders is a single step: it reads placed orders
+    // from ec_cart_items (grouped by TRN cart_code), enriches each with the
+    // payment_attempts header (address, delivery fee, total, paid status),
+    // and writes orders + items + addresses in one per-order transaction.
     //
-    // Carts are NOT migrated (transient state — active legacy carts
-    // are lost on cutover; users re-add items in v3). Documented in
-    // the M3.1.6 plan as an explicit decision.
+    // Carts (cart_code='PND') are NOT migrated (transient state — active
+    // legacy carts are lost on cutover; users re-add items in v3).
     if ($includeOrders) {
         $stepNum++;
-        echo "----- step {$stepNum}: orders (M3.1.6h, opt-in) -----\n";
+        echo "----- step {$stepNum}: orders + items + addresses (M3.1.6h, opt-in) -----\n";
         $results['orders'] = $steps->migrateOrders();
-
-        $stepNum++;
-        echo "----- step {$stepNum}: order_items (M3.1.6h, opt-in) -----\n";
-        $results['order_items'] = $steps->migrateOrderItems();
-
-        $stepNum++;
-        echo "----- step {$stepNum}: order_addresses (M3.1.6h, opt-in) -----\n";
-        $results['order_addresses'] = $steps->migrateOrderAddresses();
     } else {
-        echo "----- skip: orders/order_items/order_addresses (pass --include-orders to run) -----\n";
-        echo "       Review docs/runbooks/m3/m3.1.6h-order-migration.md before enabling.\n\n";
+        echo "----- skip: orders (pass --include-orders to run, --dry-run to preview) -----\n\n";
     }
+    } // end: non-dry-run catalog + order flow
 
     $elapsed = microtime(true) - $start;
 
@@ -180,7 +188,7 @@ try {
     printf("  %-15s  %-9s  %-9s  %-9s\n",
         '---------------', '---------', '---------', '---------');
     foreach (['categories', 'users', 'vendors', 'products', 'reviews',
-              'vendor_size_charts', 'wishlist_labels', 'wishlist'] as $phase) {
+              'vendor_size_charts', 'wishlist_labels', 'wishlist', 'orders'] as $phase) {
         if (!isset($results[$phase])) {
             continue;
         }
@@ -190,6 +198,9 @@ try {
     // M3.1.5.5c phases — print only if they ran (status field
     // distinguishes 'completed' vs 'skipped_no_legacy_table' etc).
     foreach (['vendor_labels', 'styles'] as $phase) {
+        if (!isset($results[$phase])) {
+            continue;
+        }
         $r = $results[$phase];
         $status = $r['status'] ?? 'completed';
         if ($status === 'completed') {
@@ -217,6 +228,9 @@ try {
     $vsc  = (int) $conn->fetchOne("SELECT COUNT(*) FROM vendor_size_charts");
     $wll  = (int) $conn->fetchOne("SELECT COUNT(*) FROM wishlist_labels WHERE legacy_wishlist_label_id IS NOT NULL");
     $wsh  = (int) $conn->fetchOne("SELECT COUNT(*) FROM wishlist");
+    $ord  = (int) $conn->fetchOne("SELECT COUNT(*) FROM orders");
+    $oit  = (int) $conn->fetchOne("SELECT COUNT(*) FROM order_items");
+    $oad  = (int) $conn->fetchOne("SELECT COUNT(*) FROM order_addresses");
     echo "    categories:        {$cats}\n";
     echo "    users (legacy):    {$usr}\n";
     echo "    vendors (legacy):  {$vnd}\n";
@@ -227,6 +241,9 @@ try {
     echo "    vendor_size_charts: {$vsc}\n";
     echo "    wishlist_labels:   {$wll}\n";
     echo "    wishlist:          {$wsh}\n";
+    echo "    orders:            {$ord}\n";
+    echo "    order_items:       {$oit}\n";
+    echo "    order_addresses:   {$oad}\n";
 
     exit(0);
 } catch (\Throwable $e) {
