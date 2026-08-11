@@ -12,6 +12,8 @@ import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TranslatePipe } from '../../translate.pipe';
+import { I18nService } from '../../i18n.service';
+import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -53,12 +55,13 @@ interface StoreFilters {
     CommonModule,
     FormsModule,
     AxDataTableComponent,
-    AxCellDirective, IconComponent, TranslatePipe],
+    AxCellDirective, IconComponent, TranslatePipe, AxComboboxComponent],
   templateUrl: './stores.component.html',
   styleUrl: './stores.component.css',
 })
 export class StoresComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
+  private readonly i18n = inject(I18nService);
 
   ui_controls = { is_loading: false, no_data: false, nav_open: false };
 
@@ -72,6 +75,44 @@ export class StoresComponent implements OnInit {
     { value: 'Ras Al Khaimah', key: 'emirate.ras_al_khaimah' },
     { value: 'Fujairah', key: 'emirate.fujairah' },
   ];
+
+  // ── Searchable filter dropdown options (labels resolved via i18n) ──────
+  private t(k: string): string { return this.i18n.t(k); }
+  get statusFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('stores.filter_status_any') },
+      { id: 'pending', label: this.t('stores.filter_status_pending') },
+      { id: 'approved', label: this.t('stores.filter_status_approved') },
+      { id: 'suspended', label: this.t('stores.filter_status_suspended') },
+    ];
+  }
+  get activeFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('stores.filter_any') },
+      { id: 'true', label: this.t('stores.filter_active_yes') },
+      { id: 'false', label: this.t('stores.filter_active_no') },
+    ];
+  }
+  get verifiedFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('stores.filter_any') },
+      { id: 'true', label: this.t('stores.filter_verified_yes') },
+      { id: 'false', label: this.t('stores.filter_verified_no') },
+    ];
+  }
+  get featuredFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('stores.filter_any') },
+      { id: 'true', label: this.t('stores.filter_featured_yes') },
+      { id: 'false', label: this.t('stores.filter_featured_no') },
+    ];
+  }
+  get emirateFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('stores.filter_emirate_any') },
+      ...this.emirateOptions.map((e) => ({ id: e.value, label: this.t(e.key) })),
+    ];
+  }
 
   /** Status/active/verified/featured/emirate + join-date-range filters. */
   filters: StoreFilters = {

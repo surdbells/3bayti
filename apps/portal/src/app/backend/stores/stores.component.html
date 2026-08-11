@@ -15,47 +15,37 @@
       <div class="ax-filter-grid">
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_status' | translate }}</span>
-          <select class="ax-select" [(ngModel)]="filters.status" (change)="applyFilters()">
-            <option value="">{{ 'stores.filter_status_any' | translate }}</option>
-            <option value="pending">{{ 'stores.filter_status_pending' | translate }}</option>
-            <option value="approved">{{ 'stores.filter_status_approved' | translate }}</option>
-            <option value="suspended">{{ 'stores.filter_status_suspended' | translate }}</option>
-          </select>
+          <app-ax-combobox [(ngModel)]="filters.status" (selectionChange)="applyFilters()"
+            [options]="statusFilterOptions" [searchable]="true" [allowClear]="false"
+            [ariaLabel]="'stores.filter_status' | translate"></app-ax-combobox>
         </label>
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_active' | translate }}</span>
-          <select class="ax-select" [(ngModel)]="filters.is_active" (change)="applyFilters()">
-            <option value="">{{ 'stores.filter_any' | translate }}</option>
-            <option value="true">{{ 'stores.filter_active_yes' | translate }}</option>
-            <option value="false">{{ 'stores.filter_active_no' | translate }}</option>
-          </select>
+          <app-ax-combobox [(ngModel)]="filters.is_active" (selectionChange)="applyFilters()"
+            [options]="activeFilterOptions" [searchable]="true" [allowClear]="false"
+            [ariaLabel]="'stores.filter_active' | translate"></app-ax-combobox>
         </label>
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_verified' | translate }}</span>
-          <select class="ax-select" [(ngModel)]="filters.is_verified" (change)="applyFilters()">
-            <option value="">{{ 'stores.filter_any' | translate }}</option>
-            <option value="true">{{ 'stores.filter_verified_yes' | translate }}</option>
-            <option value="false">{{ 'stores.filter_verified_no' | translate }}</option>
-          </select>
+          <app-ax-combobox [(ngModel)]="filters.is_verified" (selectionChange)="applyFilters()"
+            [options]="verifiedFilterOptions" [searchable]="true" [allowClear]="false"
+            [ariaLabel]="'stores.filter_verified' | translate"></app-ax-combobox>
         </label>
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_featured' | translate }}</span>
-          <select class="ax-select" [(ngModel)]="filters.is_featured" (change)="applyFilters()">
-            <option value="">{{ 'stores.filter_any' | translate }}</option>
-            <option value="true">{{ 'stores.filter_featured_yes' | translate }}</option>
-            <option value="false">{{ 'stores.filter_featured_no' | translate }}</option>
-          </select>
+          <app-ax-combobox [(ngModel)]="filters.is_featured" (selectionChange)="applyFilters()"
+            [options]="featuredFilterOptions" [searchable]="true" [allowClear]="false"
+            [ariaLabel]="'stores.filter_featured' | translate"></app-ax-combobox>
         </label>
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'stores.filter_emirate' | translate }}</span>
-          <select class="ax-select" [(ngModel)]="filters.emirate" (change)="applyFilters()">
-            <option value="">{{ 'stores.filter_emirate_any' | translate }}</option>
-            <option *ngFor="let e of emirateOptions" [value]="e.value">{{ e.key | translate }}</option>
-          </select>
+          <app-ax-combobox [(ngModel)]="filters.emirate" (selectionChange)="applyFilters()"
+            [options]="emirateFilterOptions" [searchable]="true" [allowClear]="false"
+            [ariaLabel]="'stores.filter_emirate' | translate"></app-ax-combobox>
         </label>
 
         <label class="ax-field">

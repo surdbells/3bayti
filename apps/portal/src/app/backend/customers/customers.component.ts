@@ -12,6 +12,8 @@ import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TranslatePipe } from '../../translate.pipe';
+import { I18nService } from '../../i18n.service';
+import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -48,12 +50,35 @@ interface CustomerFilters {
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective, IconComponent, TranslatePipe],
+  imports: [AdminShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective, IconComponent, TranslatePipe, AxComboboxComponent],
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css',
 })
 export class CustomersComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
+  private readonly i18n = inject(I18nService);
+  private t(k: string): string { return this.i18n.t(k); }
+  get statusFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('customers.filter_status_all') },
+      { id: 'active', label: this.t('customers.status_active') },
+      { id: 'inactive', label: this.t('customers.status_inactive') },
+    ];
+  }
+  get emailVerifiedFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('customers.filter_all') },
+      { id: 'true', label: this.t('customers.verified_yes') },
+      { id: 'false', label: this.t('customers.verified_no') },
+    ];
+  }
+  get phoneVerifiedFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('customers.filter_all') },
+      { id: 'true', label: this.t('customers.verified_yes') },
+      { id: 'false', label: this.t('customers.verified_no') },
+    ];
+  }
 
   /** Registration-date + status/verification/min-orders filters. */
   filters: CustomerFilters = {

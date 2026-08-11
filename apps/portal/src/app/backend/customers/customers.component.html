@@ -15,29 +15,23 @@
       <div class="ax-filter-grid">
         <label class="ax-field">
           <span class="ax-field-label">{{ 'customers.filter_status' | translate }}</span>
-          <select class="ax-select" [(ngModel)]="filters.status" (change)="applyFilters()">
-            <option value="">{{ 'customers.filter_status_all' | translate }}</option>
-            <option value="active">{{ 'customers.status_active' | translate }}</option>
-            <option value="inactive">{{ 'customers.status_inactive' | translate }}</option>
-          </select>
+          <app-ax-combobox [(ngModel)]="filters.status" (selectionChange)="applyFilters()"
+            [options]="statusFilterOptions" [searchable]="true" [allowClear]="false"
+            [ariaLabel]="'customers.filter_status' | translate"></app-ax-combobox>
         </label>
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'customers.filter_email_verified' | translate }}</span>
-          <select class="ax-select" [(ngModel)]="filters.email_verified" (change)="applyFilters()">
-            <option value="">{{ 'customers.filter_all' | translate }}</option>
-            <option value="true">{{ 'customers.verified_yes' | translate }}</option>
-            <option value="false">{{ 'customers.verified_no' | translate }}</option>
-          </select>
+          <app-ax-combobox [(ngModel)]="filters.email_verified" (selectionChange)="applyFilters()"
+            [options]="emailVerifiedFilterOptions" [searchable]="true" [allowClear]="false"
+            [ariaLabel]="'customers.filter_email_verified' | translate"></app-ax-combobox>
         </label>
 
         <label class="ax-field">
           <span class="ax-field-label">{{ 'customers.filter_phone_verified' | translate }}</span>
-          <select class="ax-select" [(ngModel)]="filters.phone_verified" (change)="applyFilters()">
-            <option value="">{{ 'customers.filter_all' | translate }}</option>
-            <option value="true">{{ 'customers.verified_yes' | translate }}</option>
-            <option value="false">{{ 'customers.verified_no' | translate }}</option>
-          </select>
+          <app-ax-combobox [(ngModel)]="filters.phone_verified" (selectionChange)="applyFilters()"
+            [options]="phoneVerifiedFilterOptions" [searchable]="true" [allowClear]="false"
+            [ariaLabel]="'customers.filter_phone_verified' | translate"></app-ax-combobox>
         </label>
 
         <label class="ax-field">
