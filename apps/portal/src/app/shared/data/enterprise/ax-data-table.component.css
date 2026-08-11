@@ -21,6 +21,11 @@
 .axdt-search .ax-input { padding-left: 2rem; min-width: 14rem; }
 
 .axdt-daterange { display: inline-flex; align-items: center; gap: 0.35rem; }
+
+/* Searchable combobox filters sit inline in the toolbar next to text/date
+   filters; give them a sensible min width so short option labels don't
+   collapse the control. */
+.axdt-filter { display: inline-block; min-width: 12rem; }
 .axdt-daterange-sep { color: var(--ax-color-text-tertiary); }
 
 /* ── Column manager ──────────────────────────────────────────────────── */

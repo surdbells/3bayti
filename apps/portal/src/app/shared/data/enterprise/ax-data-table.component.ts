@@ -49,6 +49,7 @@ import { AxDropdownDirective, AxDropdownItemDirective } from '../../overlays/ax-
 import { AxDataSource } from './ax-data-source';
 import { AxExportService } from './ax-export.service';
 import { IconComponent } from '../../icon/icon.component';
+import { AxComboboxComponent, AxComboboxOption } from '../../forms/ax-combobox.component';
 import {
   AX_EMPTY_QUERY,
   AxAuditEvent,
@@ -58,6 +59,7 @@ import {
   AxDataTableConfig,
   AxExportFormat,
   AxExportScope,
+  AxFilterOption,
   AxFilterValue,
   AxPage,
   AxQueryState,
@@ -75,7 +77,7 @@ interface ColumnView<T> {
 @Component({
   selector: 'app-ax-data-table',
   standalone: true,
-  imports: [CommonModule, FormsModule, AxDropdownDirective, AxDropdownItemDirective, IconComponent],
+  imports: [CommonModule, FormsModule, AxDropdownDirective, AxDropdownItemDirective, IconComponent, AxComboboxComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './ax-data-table.component.html',
   styleUrl: './ax-data-table.component.css',
@@ -111,6 +113,14 @@ export class AxDataTableComponent<T extends Record<string, unknown> = Record<str
   readonly columnManagerOpen = signal(false);
   readonly exporting = signal(false);
 
+  /**
+   * Searchable-combobox options per `select` filter key. Static `options`
+   * seed immediately; `optionsLoader` filters (e.g. the Store list) merge in
+   * when their fetch resolves. Previously the template only rendered static
+   * `options`, so a loader-only filter (Store) showed an empty dropdown.
+   */
+  readonly filterOptions = signal<Record<string, AxComboboxOption[]>>({});
+
   private cellTplByKey = new Map<string, TemplateRef<{ $implicit: T; index: number }>>();
   private expandTpl: TemplateRef<{ $implicit: T }> | null = null;
 
@@ -134,6 +144,7 @@ export class AxDataTableComponent<T extends Record<string, unknown> = Record<str
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['config'] && this.config) {
       this.initColumns();
+      this.initFilterOptions();
       this.query$.next({
         ...AX_EMPTY_QUERY,
         pageSize: this.config.pageSize ?? 20,
@@ -179,6 +190,27 @@ export class AxDataTableComponent<T extends Record<string, unknown> = Record<str
       order: i,
     }));
     this.columnViews.set(views);
+  }
+
+  /**
+   * Populate {@link filterOptions} for every `select` filter. Static option
+   * lists map immediately; async `optionsLoader`s resolve and merge in (empty
+   * on failure so the table stays usable).
+   */
+  private initFilterOptions(): void {
+    const toOpt = (o: AxFilterOption): AxComboboxOption => ({ id: o.value as string | number, label: o.label });
+    const seed: Record<string, AxComboboxOption[]> = {};
+    for (const f of this.config.filters ?? []) {
+      if (f.type === 'select' && f.options) seed[f.key] = f.options.map(toOpt);
+    }
+    this.filterOptions.set(seed);
+    for (const f of this.config.filters ?? []) {
+      if (f.type === 'select' && f.optionsLoader && !f.options) {
+        f.optionsLoader()
+          .then((opts) => this.filterOptions.update((m) => ({ ...m, [f.key]: opts.map(toOpt) })))
+          .catch(() => this.filterOptions.update((m) => ({ ...m, [f.key]: [] })));
+      }
+    }
   }
 
   private defaultFilters(): Record<string, AxFilterValue> {

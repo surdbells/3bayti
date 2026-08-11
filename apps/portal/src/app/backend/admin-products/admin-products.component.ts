@@ -10,6 +10,7 @@ import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { AxConfirmService } from '../../shared/overlays';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { loadAdminVendorOptions } from '../shared/order-filters';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -99,6 +100,9 @@ export class AdminProductsComponent implements OnInit {
             { label: 'On backorder', value: 'on_backorder' },
           ],
         },
+        // Store filter — value is the vendor SLUG (GET /products resolves a
+        // store by slug, not the v3 id used on the orders/sales tables).
+        { key: 'vendor', label: 'Store', type: 'select', optionsLoader: () => loadAdminVendorOptions(this.adapter, 'slug') },
       ],
       columns: [
         { key: 'name', label: 'Product', sortable: true, sticky: 'left', width: '16rem' },
@@ -127,6 +131,7 @@ export class AdminProductsComponent implements OnInit {
     if (query.search) q.search = query.search;
     if (query.filters['status']) q.status = query.filters['status'];
     if (query.filters['stock']) q.stock_status = query.filters['stock'];
+    if (query.filters['vendor']) q.vendor = query.filters['vendor'];
 
     return this.adapter.get_v3('GET /products', { query: q }).pipe(
       map((response: any): AxServerFetchResult<ProductRow> => {

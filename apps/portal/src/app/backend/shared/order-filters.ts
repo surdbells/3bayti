@@ -42,17 +42,27 @@ export const LOGISTICS_STATUS_OPTIONS: readonly AxFilterOption[] =
  * Async option provider for a "Store" (vendor) filter — fetches the admin
  * vendor list and maps it to {label,value}. Degrades to an empty list on
  * failure so the rest of the table stays usable.
+ *
+ * `valueKey` picks which identifier the filter value carries, because the
+ * two backends differ: the admin orders/sales endpoint (`GET /admin/orders`)
+ * filters by the v3 `vendor_id`, while the public catalog endpoint
+ * (`GET /products`, used by admin products) resolves a store by `vendor`
+ * SLUG. Pass 'slug' for the products table, 'id' (default) elsewhere.
  */
 export function loadAdminVendorOptions(
   adapter: PortalCrudAdapter,
+  valueKey: 'id' | 'slug' = 'id',
 ): Promise<readonly AxFilterOption[]> {
   return firstValueFrom(adapter.get_v3('GET /admin/vendors', { query: { limit: 200 } }))
     .then((res: any) => {
       const vendors: any[] = res?.vendors ?? res?.data ?? [];
-      return vendors.map((v) => ({
-        label: v.name ?? v.slug ?? `Vendor ${v.id}`,
-        value: String(v.id),
-      }));
+      return vendors
+        .map((v) => ({
+          label: v.name ?? v.slug ?? `Vendor ${v.id}`,
+          value: valueKey === 'slug' ? String(v.slug ?? '') : String(v.id),
+        }))
+        .filter((o) => o.value !== '')
+        .sort((a, b) => a.label.localeCompare(b.label));
     })
     .catch(() => []);
 }

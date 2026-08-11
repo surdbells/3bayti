@@ -27,16 +27,18 @@
           (ngModelChange)="onFilterChange(f.key, $event)"
           [attr.aria-label]="f.label" />
 
-        <!-- select -->
-        <select
+        <!-- select (searchable, labeled) -->
+        <app-ax-combobox
           *ngIf="f.type === 'select'"
-          class="ax-input ax-input-sm"
+          class="axdt-filter"
+          [options]="filterOptions()[f.key] || []"
+          [searchable]="true"
+          [placeholder]="f.placeholder || f.label"
+          [searchPlaceholder]="'Search ' + f.label.toLowerCase()"
+          [ariaLabel]="f.label"
           [ngModel]="$any(query().filters[f.key])"
-          (ngModelChange)="onFilterChange(f.key, $event)"
-          [attr.aria-label]="f.label">
-          <option [ngValue]="null">{{ f.placeholder || f.label }}</option>
-          <option *ngFor="let o of f.options" [ngValue]="o.value">{{ o.label }}</option>
-        </select>
+          (ngModelChange)="onFilterChange(f.key, $event)">
+        </app-ax-combobox>
 
         <!-- boolean -->
         <select
