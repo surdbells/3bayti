@@ -210,8 +210,19 @@ final class ProductSerializer
             'images' => $this->imagesArray($p),
             'category_id' => $p->getCategory()?->getId(),
             'category_slug' => $p->getCategory()?->getSlug(),
+            // Vendor embed. `legacy_id` is REQUIRED by mobile: product cards
+            // navigate to the vendor storefront via
+            // GET /v3/vendors/by-legacy-id/{id}, keyed on the legacy store id.
+            // Without it the card's `store` was undefined and tapping the
+            // vendor badge opened an empty storefront (store 0) — the same bug
+            // detailShape already fixed for the PDP size guide. Mirror it here.
             'vendor' => $p->getVendor()->getSlug() !== ''
-                ? ['slug' => $p->getVendor()->getSlug(), 'name' => $p->getVendor()->getName()]
+                ? [
+                    'slug' => $p->getVendor()->getSlug(),
+                    'name' => $p->getVendor()->getName(),
+                    'legacy_id' => $p->getVendor()->getLegacyVendorId(),
+                    'id' => $p->getVendor()->getId(),
+                ]
                 : null,
             'rating' => null, // computed later when we have review aggregation
             'review_count' => 0,

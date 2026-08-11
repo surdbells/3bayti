@@ -42,7 +42,7 @@ describe('transformProductListResponse', () => {
         sale_price: null,
         primary_image: { url: 'https://cdn/foo.jpg', alt: 'Silk Abaya', width: null, height: null },
         category_slug: 'abayas',
-        vendor: { slug: 'almas-fashion', name: 'Almas Fashion' },
+        vendor: { slug: 'almas-fashion', name: 'Almas Fashion', legacy_id: 77, id: 9 },
         rating: null,
         review_count: 0,
         in_stock: true,
@@ -59,6 +59,9 @@ describe('transformProductListResponse', () => {
     expect(card['image_1']).toBe('https://cdn/foo.jpg');
     expect(card['price']).toBe(299);
     expect(card['store_name']).toBe('Almas Fashion');
+    // store = vendor.legacy_id — the id the vendor badge navigates with
+    // (/vendors?id={store} -> GET /v3/vendors/by-legacy-id/{store}).
+    expect(card['store']).toBe(77);
     expect(card['in_stock']).toBe(true);
     expect(card['slug']).toBe('silk-abaya');
   });
@@ -88,12 +91,24 @@ describe('transformProductListResponse', () => {
     expect(card['image_1']).toBe('');
   });
 
-  it('handles missing vendor gracefully (empty store_name)', () => {
+  it('handles missing vendor gracefully (empty store_name, store 0)', () => {
     const v3 = [
       { id: 1, slug: 's', name: 'N', price: { amount: 10, currency: 'AED' }, primary_image: { url: 'x' }, vendor: null },
     ];
     const card = (transformProductListResponse(v3) as Array<Record<string, unknown>>)[0];
     expect(card['store_name']).toBe('');
+    expect(card['store']).toBe(0);
+  });
+
+  it('maps store to 0 when vendor has no legacy_id (v3-native vendor)', () => {
+    // A v3-native vendor with no legacy row must yield store 0 so the badge
+    // does not open a by-legacy-id/0 storefront with real-looking data.
+    const v3 = [
+      { id: 1, slug: 's', name: 'N', price: { amount: 10, currency: 'AED' }, primary_image: { url: 'x' }, vendor: { slug: 'v', name: 'V' } },
+    ];
+    const card = (transformProductListResponse(v3) as Array<Record<string, unknown>>)[0];
+    expect(card['store_name']).toBe('V');
+    expect(card['store']).toBe(0);
   });
 });
 

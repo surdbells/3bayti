@@ -278,6 +278,12 @@ function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
     // card templates can test `sale_price > 0 && sale_price < price`.
     sale_price: item['sale_price'] != null ? flatPrice(item['sale_price']) : null,
     store_name: vendorName(item['vendor']),
+    // Vendor legacy store id — the vendor badge navigates to the storefront
+    // via /vendors?id={store} (GET /v3/vendors/by-legacy-id/{store}). Mirrors
+    // the detail transform's `store`. 0 when the vendor has no legacy row
+    // (v3-native), so the storefront guard can skip a by-legacy-id/0 fetch.
+    // Requires ProductSerializer::listShape to embed vendor.legacy_id.
+    store: isRecord(item['vendor']) ? asNumber(item['vendor']['legacy_id'], 0) : 0,
     // Secondary bindings some pages may use (vendors.page reads
     // `vendor_products.image` not `vendor_products.image_1`):
     image: flatImageUrl(item['primary_image']),
