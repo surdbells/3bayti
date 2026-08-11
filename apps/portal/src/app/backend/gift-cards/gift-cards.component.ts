@@ -12,6 +12,7 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
+import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -69,7 +70,7 @@ interface GiftCardFilters {
   standalone: true,
   imports: [
     AdminShellComponent, CommonModule, FormsModule,
-    AxDataTableComponent, AxCellDirective, IconComponent, TranslatePipe,
+    AxDataTableComponent, AxCellDirective, IconComponent, TranslatePipe, AxComboboxComponent,
   ],
   styles: [`
     .ax-filter-grid {
@@ -131,24 +132,16 @@ interface GiftCardFilters {
         <div class="ax-filter-grid">
           <label class="ax-field">
             <span class="ax-field-label">{{ 'gift_cards_admin.filter_status' | translate }}</span>
-            <select class="ax-select ax-input-sm" [(ngModel)]="filters.status" (change)="applyFilters()">
-              <option value="">{{ 'gift_cards_admin.filter_all' | translate }}</option>
-              <option value="pending_payment">{{ 'gift_cards_admin.status_label_pending_payment' | translate }}</option>
-              <option value="active">{{ 'gift_cards_admin.status_label_active' | translate }}</option>
-              <option value="partially_used">{{ 'gift_cards_admin.status_label_partially_used' | translate }}</option>
-              <option value="exhausted">{{ 'gift_cards_admin.status_label_exhausted' | translate }}</option>
-              <option value="expired">{{ 'gift_cards_admin.status_label_expired' | translate }}</option>
-              <option value="voided">{{ 'gift_cards_admin.status_label_voided' | translate }}</option>
-            </select>
+            <app-ax-combobox class="ax-input-sm" [(ngModel)]="filters.status" (selectionChange)="applyFilters()"
+              [options]="statusFilterOptions" [searchable]="true" [allowClear]="false"
+              [ariaLabel]="'gift_cards_admin.filter_status' | translate"></app-ax-combobox>
           </label>
 
           <label class="ax-field">
             <span class="ax-field-label">{{ 'gift_cards_admin.filter_delivered' | translate }}</span>
-            <select class="ax-select ax-input-sm" [(ngModel)]="filters.delivered" (change)="applyFilters()">
-              <option value="">{{ 'gift_cards_admin.filter_all' | translate }}</option>
-              <option value="true">{{ 'gift_cards_admin.delivered_yes' | translate }}</option>
-              <option value="false">{{ 'gift_cards_admin.delivered_no' | translate }}</option>
-            </select>
+            <app-ax-combobox class="ax-input-sm" [(ngModel)]="filters.delivered" (selectionChange)="applyFilters()"
+              [options]="deliveredFilterOptions" [searchable]="false" [allowClear]="false"
+              [ariaLabel]="'gift_cards_admin.filter_delivered' | translate"></app-ax-combobox>
           </label>
 
           <label class="ax-field">
@@ -365,6 +358,26 @@ export class GiftCardsAdminComponent implements OnInit {
     status: '', min_balance: '', max_balance: '',
     min_value: '', max_value: '', created_from: '', created_to: '', delivered: '',
   };
+
+  /** Searchable combobox options for the issued-cards filter dropdowns. */
+  get statusFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('gift_cards_admin.filter_all') },
+      { id: 'pending_payment', label: this.t('gift_cards_admin.status_label_pending_payment') },
+      { id: 'active', label: this.t('gift_cards_admin.status_label_active') },
+      { id: 'partially_used', label: this.t('gift_cards_admin.status_label_partially_used') },
+      { id: 'exhausted', label: this.t('gift_cards_admin.status_label_exhausted') },
+      { id: 'expired', label: this.t('gift_cards_admin.status_label_expired') },
+      { id: 'voided', label: this.t('gift_cards_admin.status_label_voided') },
+    ];
+  }
+  get deliveredFilterOptions(): AxComboboxOption[] {
+    return [
+      { id: '', label: this.t('gift_cards_admin.filter_all') },
+      { id: 'true', label: this.t('gift_cards_admin.delivered_yes') },
+      { id: 'false', label: this.t('gift_cards_admin.delivered_no') },
+    ];
+  }
 
   config!: AxDataTableConfig<GiftCardRow>;
   dataSource!: AxServerDataSource<GiftCardRow>;

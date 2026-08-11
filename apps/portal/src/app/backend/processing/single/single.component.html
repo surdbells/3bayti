@@ -46,9 +46,9 @@
             <div class="ax-flex ax-gap-3 ax-flex-wrap ax-items-end">
               <div class="ax-form-field" style="min-width: 14rem; flex: 1;">
                 <label class="ax-label" for="orderStatus">Set status</label>
-                <select id="orderStatus" class="ax-input ax-select" [(ngModel)]="statusDraft">
-                  <option *ngFor="let s of orderStatuses" [value]="s">{{ prettyStatus(s) }}</option>
-                </select>
+                <app-ax-combobox id="orderStatus" [(ngModel)]="statusDraft" [ngModelOptions]="{ standalone: true }"
+                  [options]="orderStatusOptions" [searchable]="false" [allowClear]="false"
+                  ariaLabel="Order status"></app-ax-combobox>
               </div>
               <div class="ax-form-field" style="flex: 2; min-width: 16rem;">
                 <label class="ax-label" for="orderStatusReason">Reason <span class="ax-text-danger">*</span></label>
@@ -98,9 +98,9 @@
                     <td>
                       <div class="ax-flex ax-items-center ax-gap-2 ax-flex-wrap">
                         <span [ngClass]="itemBadgeClass(item.item_status)">{{ prettyStatus(item.item_status) }}</span>
-                        <select class="ax-input ax-select ax-input-sm" style="width: auto;" [(ngModel)]="item._statusDraft">
-                          <option *ngFor="let s of itemStatuses" [value]="s">{{ prettyStatus(s) }}</option>
-                        </select>
+                        <app-ax-combobox style="min-width: 9rem;" [(ngModel)]="item._statusDraft"
+                          [ngModelOptions]="{ standalone: true }" [options]="itemStatusOptions"
+                          [searchable]="false" [allowClear]="false" ariaLabel="Item status"></app-ax-combobox>
                       </div>
                       <div *ngIf="itemDirty(item)" class="ax-flex ax-items-center ax-gap-2 ax-mt-2">
                         <input type="text" class="ax-input ax-input-sm" style="flex: 1;" [(ngModel)]="item._reason"

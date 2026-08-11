@@ -22,6 +22,7 @@ import {
   AxMultiselectComponent,
   AxMultiselectOption,
 } from '../forms/ax-multiselect.component';
+import { AxComboboxComponent, AxComboboxOption } from '../forms/ax-combobox.component';
 import {
   AxAccordionComponent,
   AxAccordionItemComponent,
@@ -120,6 +121,7 @@ const SIZE_MAP: Record<string, string> = {
     AxAccordionComponent,
     AxAccordionItemComponent,
     IconComponent,
+    AxComboboxComponent,
   ],
   templateUrl: './product-form.component.html',
   styleUrl: './product-form.component.css',
@@ -145,6 +147,16 @@ export class ProductFormComponent implements OnInit {
   labels?: Labels[];
   colorOptions: ColorOption[] = COLOR_OPTIONS;
   vendors: VendorOption[] = [];
+  /** Store selector options (searchable combobox). */
+  get vendorOptions(): AxComboboxOption[] {
+    return this.vendors.map((v) => ({ id: v.id, label: v.name }));
+  }
+  readonly deliveryTimeOptions: AxComboboxOption[] = [
+    { id: '1-3', label: '1 – 3 days' },
+    { id: '4-7', label: '4 – 7 days' },
+    { id: '14-21', label: '14 – 21 days' },
+    { id: 'custom', label: 'Custom' },
+  ];
 
   dropdownList: { id: number; collection: string }[] = [];
   selectedCollectionIds: (string | number)[] = [];

@@ -9,6 +9,7 @@ import { GlobalComponent } from '../../../global-component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { AxCanDirective } from '../../../shared/security/ax-can.directive';
+import { AxComboboxComponent, AxComboboxOption } from '../../../shared/forms/ax-combobox.component';
 
 interface OrderItemRow {
   id: number;
@@ -46,13 +47,19 @@ const ITEM_STATUSES = [
 @Component({
   selector: 'app-single',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, AdminShellComponent, AxCanDirective],
+  imports: [CommonModule, FormsModule, IconComponent, AdminShellComponent, AxCanDirective, AxComboboxComponent],
   templateUrl: './single.component.html',
   styleUrl: './single.component.css',
 })
 export class SingleComponent implements OnInit {
   readonly orderStatuses = ORDER_STATUSES;
   readonly itemStatuses = ITEM_STATUSES;
+  get orderStatusOptions(): AxComboboxOption[] {
+    return this.orderStatuses.map((s) => ({ id: s, label: this.prettyStatus(s) }));
+  }
+  get itemStatusOptions(): AxComboboxOption[] {
+    return this.itemStatuses.map((s) => ({ id: s, label: this.prettyStatus(s) }));
+  }
 
   ui = {
     loading: false,

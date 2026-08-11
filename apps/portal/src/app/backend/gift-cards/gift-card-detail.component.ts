@@ -9,11 +9,13 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TranslatePipe } from '../../translate.pipe';
 import { AxConfirmService } from '../../shared/overlays';
+import { I18nService } from '../../i18n.service';
+import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 
 @Component({
   selector: 'app-gift-card-detail',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, TranslatePipe],
+  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, TranslatePipe, AxComboboxComponent],
   styles: [`
     /* Consistent inner padding for the summary / delivery / ledger cards. */
     .gc-summary,
@@ -211,10 +213,9 @@ import { AxConfirmService } from '../../shared/overlays';
       <div class="ax-modal-body">
         <label class="ax-field">
           <span class="ax-field-label">{{ 'gift_cards_admin.adjust_type' | translate }}</span>
-          <select class="ax-select" [(ngModel)]="adjustForm.type">
-            <option value="credit">{{ 'gift_cards_admin.adjust_credit' | translate }}</option>
-            <option value="debit">{{ 'gift_cards_admin.adjust_debit' | translate }}</option>
-          </select>
+          <app-ax-combobox [(ngModel)]="adjustForm.type" [ngModelOptions]="{ standalone: true }"
+            [options]="adjustTypeOptions" [searchable]="false" [allowClear]="false"
+            [ariaLabel]="'gift_cards_admin.adjust_type' | translate"></app-ax-combobox>
         </label>
         <label class="ax-field">
           <span class="ax-field-label">{{ 'gift_cards_admin.adjust_amount' | translate }}</span>
@@ -243,6 +244,13 @@ export class GiftCardDetailComponent implements OnInit {
   private readonly adapter = inject(PortalCrudAdapter);
   private readonly toast = inject(HotToastService);
   private readonly confirm = inject(AxConfirmService);
+  private readonly i18n = inject(I18nService);
+  get adjustTypeOptions(): AxComboboxOption[] {
+    return [
+      { id: 'credit', label: this.i18n.t('gift_cards_admin.adjust_credit') },
+      { id: 'debit', label: this.i18n.t('gift_cards_admin.adjust_debit') },
+    ];
+  }
 
   id = '';
   card: any = null;
