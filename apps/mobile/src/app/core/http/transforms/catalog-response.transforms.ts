@@ -279,11 +279,17 @@ function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
     sale_price: item['sale_price'] != null ? flatPrice(item['sale_price']) : null,
     store_name: vendorName(item['vendor']),
     // Vendor legacy store id — the vendor badge navigates to the storefront
-    // via /vendors?id={store} (GET /v3/vendors/by-legacy-id/{store}). Mirrors
-    // the detail transform's `store`. 0 when the vendor has no legacy row
-    // (v3-native), so the storefront guard can skip a by-legacy-id/0 fetch.
-    // Requires ProductSerializer::listShape to embed vendor.legacy_id.
+    // via /vendors?id={id} (GET /v3/vendors/by-legacy-id/{id}), exactly like
+    // the working featured-vendor card (account.page.html). The two consumers
+    // read DIFFERENT field names off the card: the search page reads `store`
+    // (search.page.html), the explore/vertican card reads `store_id`
+    // (vertican.page.html). Emit BOTH from the same legacy id so each
+    // navigates identically. 0 when the vendor has no legacy row (v3-native),
+    // matching featuredShape's null store_id — the storefront guard skips a
+    // by-legacy-id/0 fetch. Requires ProductSerializer::listShape to embed
+    // vendor.legacy_id.
     store: isRecord(item['vendor']) ? asNumber(item['vendor']['legacy_id'], 0) : 0,
+    store_id: isRecord(item['vendor']) ? asNumber(item['vendor']['legacy_id'], 0) : 0,
     // Secondary bindings some pages may use (vendors.page reads
     // `vendor_products.image` not `vendor_products.image_1`):
     image: flatImageUrl(item['primary_image']),

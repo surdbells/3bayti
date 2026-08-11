@@ -59,9 +59,12 @@ describe('transformProductListResponse', () => {
     expect(card['image_1']).toBe('https://cdn/foo.jpg');
     expect(card['price']).toBe(299);
     expect(card['store_name']).toBe('Almas Fashion');
-    // store = vendor.legacy_id — the id the vendor badge navigates with
-    // (/vendors?id={store} -> GET /v3/vendors/by-legacy-id/{store}).
+    // store / store_id = vendor.legacy_id — the id the vendor badge navigates
+    // with (/vendors?id={id} -> GET /v3/vendors/by-legacy-id/{id}). Search
+    // reads `store`, the explore/vertican card reads `store_id`; both must
+    // carry the same legacy id.
     expect(card['store']).toBe(77);
+    expect(card['store_id']).toBe(77);
     expect(card['in_stock']).toBe(true);
     expect(card['slug']).toBe('silk-abaya');
   });
@@ -98,17 +101,19 @@ describe('transformProductListResponse', () => {
     const card = (transformProductListResponse(v3) as Array<Record<string, unknown>>)[0];
     expect(card['store_name']).toBe('');
     expect(card['store']).toBe(0);
+    expect(card['store_id']).toBe(0);
   });
 
-  it('maps store to 0 when vendor has no legacy_id (v3-native vendor)', () => {
-    // A v3-native vendor with no legacy row must yield store 0 so the badge
-    // does not open a by-legacy-id/0 storefront with real-looking data.
+  it('maps store/store_id to 0 when vendor has no legacy_id (v3-native vendor)', () => {
+    // A v3-native vendor with no legacy row must yield 0 so the badge does
+    // not open a by-legacy-id/0 storefront with real-looking data.
     const v3 = [
       { id: 1, slug: 's', name: 'N', price: { amount: 10, currency: 'AED' }, primary_image: { url: 'x' }, vendor: { slug: 'v', name: 'V' } },
     ];
     const card = (transformProductListResponse(v3) as Array<Record<string, unknown>>)[0];
     expect(card['store_name']).toBe('V');
     expect(card['store']).toBe(0);
+    expect(card['store_id']).toBe(0);
   });
 });
 
