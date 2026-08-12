@@ -1,4 +1,4 @@
-import { Component, Input, OnInit } from '@angular/core';
+import { Component, Input, OnChanges, OnInit, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -9,7 +9,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
   imports: [CommonModule, IconComponent],
   styleUrls: ['./account-setup.component.css'],
 })
-export class AccountSetupComponent implements OnInit {
+export class AccountSetupComponent implements OnInit, OnChanges {
   // Provide via @Input() or set directly
   @Input() profile: any = null;
 
@@ -22,6 +22,20 @@ export class AccountSetupComponent implements OnInit {
   percent = 0;
 
   ngOnInit(): void {
+    this.recompute();
+  }
+
+  /**
+   * The profile is loaded asynchronously (GET /admin/vendors/:id resolves
+   * after the parent renders), so ngOnInit alone would compute the meter
+   * from the initial empty object and leave it stuck — the "7% for
+   * everybody" bug. Recompute whenever the bound inputs change.
+   */
+  ngOnChanges(_changes: SimpleChanges): void {
+    this.recompute();
+  }
+
+  private recompute(): void {
     this.initFields();
     this.calculateProgress();
   }

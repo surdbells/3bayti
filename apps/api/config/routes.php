@@ -686,6 +686,10 @@ return function (App $app): void {
         // Vendor admin
         $group->get('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class)->add($perm->for('vendors.view'));
         $group->post('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\CreateVendorController::class)->add($perm->for('vendors.create'));
+        // Single-vendor detail for the "Manage store" screen. Numeric
+        // constraint keeps it from shadowing the literal /vendors/* and
+        // /vendor-* paths registered elsewhere in this group.
+        $group->get('/vendors/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorController::class)->add($perm->for('vendors.view'));
         $group->put('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class)->add($perm->for('vendors.edit'));
         $group->delete('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class)->add($perm->for('vendors.suspend'));
 

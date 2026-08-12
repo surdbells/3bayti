@@ -73,6 +73,99 @@ final class VendorSerializer
     }
 
     /**
+     * Admin "Manage store" detail shape.
+     *
+     * GET /v3/admin/vendors/{id} — the single-vendor screen
+     * (apps/portal manage-store) binds a flat, legacy-named `store`
+     * object: the owner user's identity, the store profile, the
+     * banking / tax / trade-license fields captured at onboarding, and
+     * the KYC document URLs. Field names here MUST match the template
+     * bindings (store.first_name, store.store_legal_name, …) — this is
+     * the contract the portal reads, distinct from {@see adminShape}
+     * (the Stores *table* row) which uses v3-native names.
+     *
+     * All fields are nullable at source (legacy rows, or v3 vendors
+     * that never completed onboarding) and pass through as null → the
+     * portal renders "— not provided —" and the setup-progress meter
+     * counts them as unfilled.
+     *
+     * @return array<string, mixed>
+     */
+    public function manageShape(Vendor $v): array
+    {
+        $owner = $v->getOwnerUser();
+
+        return [
+            'id' => $v->getId(),
+            // Owner user identity (the person who runs the store).
+            'first_name' => $owner?->getFirstName(),
+            'last_name' => $owner?->getLastName(),
+            'email' => $owner?->getEmail(),
+            'phone' => $owner !== null
+                ? $this->e164($owner->getPhone(), $owner->getCountryCode())
+                : null,
+            'avatar' => $owner?->getAvatarUrl(),
+            'last_login' => $owner?->getLastLoginAt()?->format(DateTimeInterface::ATOM),
+            // KYC / compliance documents.
+            'id_front' => $v->getIdFront(),
+            'id_back' => $v->getIdBack(),
+            'license_doc' => $v->getLicenseDoc(),
+            // Lifecycle flags. `approved` gates the Approved/Pending
+            // badge; `store_status`/`is_active` both feed the Active
+            // badge (the portal ORs them).
+            'approved' => $v->isStoreApproved(),
+            'store_status' => $v->isActive(),
+            'is_active' => $v->isActive(),
+            // Store profile.
+            'store_name' => $v->getName(),
+            'store_email' => $v->getStoreEmail() ?? $v->getContactEmail(),
+            'store_phone' => $v->getStorePhoneRaw() ?? $v->getContactPhone(),
+            'store_address' => $v->getStoreAddress(),
+            'store_description' => $v->getDescription(),
+            'emirate' => $v->getEmirate(),
+            'country' => $v->getCountry(),
+            // Legal / tax registration.
+            'store_legal_name' => $v->getLegalName(),
+            'vat_status' => $v->getVatStatus(),
+            'trade_license_number' => $v->getTradeLicenseNumber(),
+            'licensing_authority' => $v->getLicensingAuthority(),
+            'tax_registration_number' => $v->getTaxRegistrationNumber(),
+            'vat_registration_effective_date' => $v->getVatRegistrationEffectiveDate()?->format('Y-m-d'),
+            'registered_tax_address' => $v->getRegisteredTaxAddress(),
+            'tax_contact_email' => $v->getTaxContactEmail(),
+            // Banking / settlement.
+            'store_bank_name' => $v->getStoreBankName(),
+            'store_account_name' => $v->getStoreBankAccountName(),
+            'store_account_number' => $v->getStoreBankAccountNumber(),
+        ];
+    }
+
+    /**
+     * Best-effort E.164 formatting for display. New signups already
+     * store '+971…'; legacy-migrated owners store a local number
+     * (optional leading 0) with an ISO country_code, which naive
+     * concatenation renders as "AE0506995999". Mirrors the portal's
+     * customer-list DIAL_CODES fallback (GCC set, default +971).
+     */
+    private function e164(?string $phone, ?string $countryCode): ?string
+    {
+        $raw = trim((string) ($phone ?? ''));
+        if ($raw === '') {
+            return null;
+        }
+        if (str_starts_with($raw, '+')) {
+            return $raw;
+        }
+        $dialCodes = [
+            'AE' => '+971', 'SA' => '+966', 'KW' => '+965',
+            'QA' => '+974', 'BH' => '+973', 'OM' => '+968',
+        ];
+        $dial = $dialCodes[strtoupper((string) ($countryCode ?? ''))] ?? '+971';
+        $local = ltrim(preg_replace('/\D/', '', $raw) ?? '', '0');
+        return $local !== '' ? $dial . $local : $raw;
+    }
+
+    /**
      * Vendor self-serve onboarding shape (M3.2.X.6-D).
      *
      * Used by:
