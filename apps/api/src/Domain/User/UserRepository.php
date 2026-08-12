@@ -54,16 +54,85 @@ class UserRepository extends EntityRepository
     }
 
     /**
-     * Find a user by phone. Excludes soft-deleted.
+     * Find a user by phone, tolerant of stored format. Excludes soft-deleted.
+     *
+     * The phone column is not normalized: new sign-ups store E.164
+     * ('+971506995999') while legacy-migrated rows store a local number
+     * ('0506995999' / '506995999'). An exact match therefore missed migrated
+     * users on OTP login (the app always sends E.164), so no SMS was sent.
+     * We match against every plausible stored shape of the same number.
+     *
+     * When more than one shape exists for the same person, the canonical
+     * E.164 form is preferred ('+' sorts before digits).
      */
     public function findByPhone(string $phone): ?User
     {
+        $candidates = self::phoneMatchCandidates($phone);
+        if ($candidates === []) {
+            return null;
+        }
+
         return $this->createQueryBuilder('u')
-            ->where('u.phone = :phone')
+            ->where('u.phone IN (:phones)')
             ->andWhere('u.deletedAt IS NULL')
-            ->setParameter('phone', $phone)
+            ->setParameter('phones', $candidates)
+            ->orderBy('u.phone', 'ASC')
+            ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+    }
+
+    /**
+     * Every plausible stored shape of a phone number, so a lookup matches
+     * whether it was saved as E.164 ('+971506995999'), with the country code
+     * but no '+', or as a local number with/without a leading zero. Bare
+     * digits with no recognizable country code are treated as a local UAE
+     * (+971) number — the platform default.
+     *
+     * @return list<string>
+     */
+    public static function phoneMatchCandidates(string $phone): array
+    {
+        $raw = trim($phone);
+        if ($raw === '') {
+            return [];
+        }
+
+        $digits = preg_replace('/\D/', '', $raw) ?? '';
+        if ($digits === '') {
+            return array_values(array_unique([$raw, $phone]));
+        }
+        if (str_starts_with($digits, '00')) {
+            $digits = substr($digits, 2);
+        }
+
+        // GCC dial codes the platform serves. Split off a leading one when the
+        // remaining national part is long enough to be a real number.
+        $dial = null;
+        $national = $digits;
+        foreach (['971', '966', '965', '974', '973', '968'] as $dc) {
+            if (str_starts_with($digits, $dc) && strlen($digits) - strlen($dc) >= 6) {
+                $dial = $dc;
+                $national = substr($digits, strlen($dc));
+                break;
+            }
+        }
+        if ($dial === null) {
+            $dial = '971';
+        }
+        $national = ltrim($national, '0');
+        if ($national === '') {
+            return array_values(array_unique(array_filter([$raw, $phone])));
+        }
+
+        return array_values(array_unique(array_filter([
+            '+' . $dial . $national, // canonical E.164
+            $dial . $national,       // country code, no '+'
+            $national,               // local, no leading zero
+            '0' . $national,         // local, leading zero
+            $raw,                    // caller's original input
+            $phone,
+        ], static fn (string $c): bool => $c !== '')));
     }
 
     /**
