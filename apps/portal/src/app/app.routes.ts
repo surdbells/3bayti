@@ -166,43 +166,43 @@ export const routes: Routes = [
     title: 'Compliance'
   },
   {
-    path: 'collections',
+    path: 'admin/collections',
     loadComponent: () => import('./backend/collections/collections.component').then(m => m.CollectionsComponent),
     canActivate: [adminGuard, requirePermission('catalog.collections_view')],
     title: 'Collections'
   },
   {
-    path: 'create_collections',
+    path: 'admin/collections/new',
     loadComponent: () => import('./backend/collections/create-collection/create-collection.component').then(m => m.CreateCollectionComponent),
     canActivate: [adminGuard, requirePermission('catalog.collections_manage')],
     title: 'Create collection'
   },
   {
-    path: 'ota',
+    path: 'admin/ota',
     loadComponent: () => import('./backend/ota/ota.component').then(m => m.OtaComponent),
     canActivate: [adminGuard, requirePermission('settings.edit')],
     title: 'OTA updates'
   },
   {
-    path: 'edit_collection',
+    path: 'admin/collections/edit',
     loadComponent: () => import('./backend/collections/edit-collection/edit-collection.component').then(m => m.EditCollectionComponent),
     canActivate: [adminGuard, requirePermission('catalog.collections_manage')],
     title: 'Edit collection'
   },
   {
-    path: 'campaigns',
+    path: 'admin/campaigns',
     loadComponent: () => import('./backend/campaigns/campaigns.component').then(m => m.CampaignsComponent),
     canActivate: [adminGuard, requirePermission('catalog.campaigns_view')],
     title: 'Campaigns'
   },
   {
-    path: 'create_campaign',
+    path: 'admin/campaigns/new',
     loadComponent: () => import('./backend/campaigns/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
     canActivate: [adminGuard, requirePermission('catalog.campaigns_manage')],
     title: 'Create campaign'
   },
   {
-    path: 'edit_campaign',
+    path: 'admin/campaigns/edit',
     loadComponent: () => import('./backend/campaigns/campaign-form/campaign-form.component').then(m => m.CampaignFormComponent),
     canActivate: [adminGuard, requirePermission('catalog.campaigns_manage')],
     title: 'Edit campaign'
@@ -220,7 +220,7 @@ export const routes: Routes = [
     title: 'Manage store'
   },
   {
-    path: 'vendor-applications',
+    path: 'admin/vendor-applications',
     loadComponent: () => import('./backend/vendor-applications/vendor-applications.component').then(m => m.VendorApplicationsComponent),
     canActivate: [adminGuard, requirePermission('vendors.view')],
     title: 'Vendor Applications'
@@ -264,7 +264,7 @@ export const routes: Routes = [
     title: 'Measurements'
   },
   {
-    path: 'store_orders',
+    path: 'admin/store-orders',
     loadComponent: () => import('./backend/stores/store-orders/store-orders.component').then(m => m.StoreOrdersComponent),
     canActivate: [adminGuard, requirePermission('vendors.view_detail')],
     title: 'StoreOrders'
@@ -276,25 +276,25 @@ export const routes: Routes = [
     title: 'Delivery list'
   },
   {
-    path: 'store_messages',
+    path: 'admin/store-messages',
     loadComponent: () => import('./backend/stores/store-messages/store-messages.component').then(m => m.StoreMessagesComponent),
     canActivate: [adminGuard, requirePermission('vendors.view_detail')],
     title: 'Store messages'
   },
   {
-    path: 'store_products',
+    path: 'admin/store-products',
     loadComponent: () => import('./backend/stores/store-products/store-products.component').then(m => m.StoreProductsComponent),
     canActivate: [adminGuard, requirePermission('products.view')],
     title: 'Store products'
   },
   {
-    path: 'store_sales',
+    path: 'admin/store-sales',
     loadComponent: () => import('./backend/stores/store-sales/store-sales.component').then(m => m.StoreSalesComponent),
     canActivate: [adminGuard, requirePermission('sales.view')],
     title: 'Store sales'
   },
   {
-    path: 'store_reviews',
+    path: 'admin/store-reviews',
     loadComponent: () => import('./backend/stores/store-reviews/store-reviews.component').then(m => m.StoreReviewsComponent),
     canActivate: [adminGuard, requirePermission('vendors.view_detail')],
     title: 'Store reviews'
@@ -306,22 +306,24 @@ export const routes: Routes = [
     title: 'Products'
   },
   {
-    path: 'admin/products/:id',
-    loadComponent: () => import('./backend/admin-view-product/admin-view-product.component').then(m => m.AdminViewProductComponent),
-    canActivate: [adminGuard, requirePermission('products.view')],
-    title: 'View product'
-  },
-  {
-    path: 'admin_create_product',
+    path: 'admin/products/new',
     loadComponent: () => import('./vendor/create-product/create-product.component').then(m => m.CreateProductComponent),
     canActivate: [adminGuard, requirePermission('products.create')],
     title: 'Create product'
   },
   {
-    path: 'admin_edit_product',
+    path: 'admin/products/edit',
     loadComponent: () => import('./vendor/edit-product/edit-product.component').then(m => m.EditProductComponent),
     canActivate: [adminGuard, requirePermission('products.edit')],
     title: 'Edit product'
+  },
+  {
+    // Numeric-looking detail view — MUST stay after the literal new/edit
+    // routes above so /admin/products/new isn't captured by :id.
+    path: 'admin/products/:id',
+    loadComponent: () => import('./backend/admin-view-product/admin-view-product.component').then(m => m.AdminViewProductComponent),
+    canActivate: [adminGuard, requirePermission('products.view')],
+    title: 'View product'
   },
   {
     path: 'adminviewproduct',
@@ -336,37 +338,37 @@ export const routes: Routes = [
     title: 'View sales'
   },
   {
-    path: 'admintransactions',
+    path: 'admin/transactions',
     loadComponent: () => import('./backend/transactions/transactions.component').then(m => m.TransactionsComponent),
     canActivate: [adminGuard, requirePermission('payouts.view_transactions')],
     title: 'View transactions'
   },
   {
-    path: 'admincommissions',
+    path: 'admin/commissions',
     loadComponent: () => import('./backend/commissions/commissions.component').then(m => m.CommissionsComponent),
     canActivate: [adminGuard, requirePermission('payouts.view_commissions')],
     title: 'View commission'
   },
   {
-    path: 'adminreturns',
+    path: 'admin/returns',
     loadComponent: () => import('./backend/returns/returns.component').then(m => m.ReturnsComponent),
     canActivate: [adminGuard, requirePermission('returns.view')],
     title: 'Returns'
   },
   {
-    path: 'adminnotifications',
+    path: 'admin/notifications',
     loadComponent: () => import('./backend/notifications/notifications.component').then(m => m.NotificationsComponent),
     canActivate: [adminGuard, requirePermission('notifications.send')],
     title: 'Push notification'
   },
   {
-    path: 'adminlogistics',
+    path: 'admin/logistics',
     loadComponent: () => import('./backend/logistics/logistics.component').then(m => m.LogisticsComponent),
     canActivate: [adminGuard, requirePermission('logistics.view')],
     title: 'View delivery'
   },
   {
-    path: 'notification-logs',
+    path: 'admin/notification-logs',
     loadComponent: () => import('./backend/notification-logs/notification-logs.component').then(m => m.NotificationLogsComponent),
     canActivate: [adminGuard, requirePermission('notifications.view')],
     title: 'Notification Logs'
@@ -384,65 +386,65 @@ export const routes: Routes = [
     title: 'Order'
   },
   {
-    path: 'single',
+    path: 'admin/order-manage',
     loadComponent: () => import('./backend/processing/single/single.component').then(m => m.SingleComponent),
     canActivate: [adminGuard, requirePermission('orders.view_detail')],
     title: 'MANAGE ORDER'
   },
   {
-    path: 'plural',
+    path: 'admin/vendor-orders',
     loadComponent: () => import('./backend/sales/plural/plural.component').then(m => m.PluralComponent),
     canActivate: [adminGuard, requirePermission('sales.view')],
     title: 'VENDOR ORDERS'
   },
   {
-    path: 'deliveries',
+    path: 'admin/deliveries',
     loadComponent: () => import('./backend/logistics/deliveries/deliveries.component').then(m => m.DeliveriesComponent),
     canActivate: [adminGuard, requirePermission('logistics.view')],
     title: 'VENDOR ORDERS'
   },
   {
-    path: 'adminusers',
+    path: 'admin/users',
     loadComponent: () => import('./backend/users/users.component').then(m => m.UsersComponent),
     canActivate: [adminGuard, requirePermission('users.view')],
     title: 'Platform Users'
   },
   {
     // Deep-linkable role + permission-matrix editor (?id= to edit, omit to create).
-    path: 'admin_role',
+    path: 'admin/roles',
     loadComponent: () => import('./backend/users/role-editor/role-editor.component').then(m => m.RoleEditorComponent),
     canActivate: [adminGuard, requirePermission('roles.view')],
     title: 'Role editor'
   },
   {
     // Create a staff member (routed; replaces the old in-page "Add staff" drawer).
-    path: 'adminusers/new',
+    path: 'admin/users/new',
     loadComponent: () => import('./backend/users/staff-create/staff-create.component').then(m => m.StaffCreateComponent),
     canActivate: [adminGuard, requirePermission('users.create')],
     title: 'Add staff'
   },
   {
     // Assign roles to a staff member (replaces the old "Manage roles" drawer).
-    path: 'adminusers/:id/roles',
+    path: 'admin/users/:id/roles',
     loadComponent: () => import('./backend/users/staff-roles/staff-roles.component').then(m => m.StaffRolesComponent),
     canActivate: [adminGuard, requirePermission('users.manage_roles')],
     title: 'Manage roles'
   },
   {
     // Reset a staff member's password (replaces the old "Reset password" drawer).
-    path: 'adminusers/:id/reset-password',
+    path: 'admin/users/:id/reset-password',
     loadComponent: () => import('./backend/users/staff-password/staff-password.component').then(m => m.StaffPasswordComponent),
     canActivate: [adminGuard, requirePermission('users.edit')],
     title: 'Reset password'
   },
   {
-    path: 'admin-gift-cards',
+    path: 'admin/gift-cards',
     loadComponent: () => import('./backend/gift-cards/gift-cards.component').then(m => m.GiftCardsAdminComponent),
     canActivate: [adminGuard, requirePermission('gift_cards.view')],
     title: 'Gift Cards'
   },
   {
-    path: 'admin-gift-cards/:id',
+    path: 'admin/gift-cards/:id',
     loadComponent: () => import('./backend/gift-cards/gift-card-detail.component').then(m => m.GiftCardDetailComponent),
     canActivate: [adminGuard, requirePermission('gift_cards.view')],
     title: 'Gift Card'
@@ -477,4 +479,36 @@ export const routes: Routes = [
   { path: 'processing', redirectTo: 'admin/orders', pathMatch: 'full' },
   { path: 'product_sales', redirectTo: 'admin/sales', pathMatch: 'full' },
   { path: 'admin_products', redirectTo: 'admin/products', pathMatch: 'full' },
+  { path: 'collections', redirectTo: 'admin/collections', pathMatch: 'full' },
+  { path: 'create_collections', redirectTo: 'admin/collections/new', pathMatch: 'full' },
+  { path: 'edit_collection', redirectTo: 'admin/collections/edit', pathMatch: 'full' },
+  { path: 'ota', redirectTo: 'admin/ota', pathMatch: 'full' },
+  { path: 'campaigns', redirectTo: 'admin/campaigns', pathMatch: 'full' },
+  { path: 'create_campaign', redirectTo: 'admin/campaigns/new', pathMatch: 'full' },
+  { path: 'edit_campaign', redirectTo: 'admin/campaigns/edit', pathMatch: 'full' },
+  { path: 'vendor-applications', redirectTo: 'admin/vendor-applications', pathMatch: 'full' },
+  { path: 'store_orders', redirectTo: 'admin/store-orders', pathMatch: 'full' },
+  { path: 'store_products', redirectTo: 'admin/store-products', pathMatch: 'full' },
+  { path: 'store_sales', redirectTo: 'admin/store-sales', pathMatch: 'full' },
+  { path: 'store_reviews', redirectTo: 'admin/store-reviews', pathMatch: 'full' },
+  { path: 'store_messages', redirectTo: 'admin/store-messages', pathMatch: 'full' },
+  { path: 'admin_create_product', redirectTo: 'admin/products/new', pathMatch: 'full' },
+  { path: 'admin_edit_product', redirectTo: 'admin/products/edit', pathMatch: 'full' },
+  { path: 'admintransactions', redirectTo: 'admin/transactions', pathMatch: 'full' },
+  { path: 'admincommissions', redirectTo: 'admin/commissions', pathMatch: 'full' },
+  { path: 'adminreturns', redirectTo: 'admin/returns', pathMatch: 'full' },
+  { path: 'adminnotifications', redirectTo: 'admin/notifications', pathMatch: 'full' },
+  { path: 'adminlogistics', redirectTo: 'admin/logistics', pathMatch: 'full' },
+  { path: 'notification-logs', redirectTo: 'admin/notification-logs', pathMatch: 'full' },
+  { path: 'single', redirectTo: 'admin/order-manage', pathMatch: 'full' },
+  { path: 'plural', redirectTo: 'admin/vendor-orders', pathMatch: 'full' },
+  { path: 'deliveries', redirectTo: 'admin/deliveries', pathMatch: 'full' },
+  { path: 'adminusers/new', redirectTo: 'admin/users/new', pathMatch: 'full' },
+  { path: 'adminusers/:id/roles', redirectTo: 'admin/users/:id/roles', pathMatch: 'full' },
+  { path: 'adminusers/:id/reset-password', redirectTo: 'admin/users/:id/reset-password', pathMatch: 'full' },
+  { path: 'adminusers', redirectTo: 'admin/users', pathMatch: 'full' },
+  { path: 'admin_role', redirectTo: 'admin/roles', pathMatch: 'full' },
+  { path: 'admin-gift-cards/:id', redirectTo: 'admin/gift-cards/:id', pathMatch: 'full' },
+  { path: 'admin-gift-cards', redirectTo: 'admin/gift-cards', pathMatch: 'full' },
+  { path: 'adminsales', redirectTo: 'admin/sales', pathMatch: 'full' },
 ];
