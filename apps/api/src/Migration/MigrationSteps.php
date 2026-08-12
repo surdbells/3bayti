@@ -298,6 +298,12 @@ final class MigrationSteps
 
                 if ($existingUser === false) {
                     $insertEmail = $renamedEmail ?? $email;
+                    // is_phone_verified is hardcoded TRUE: migrated accounts are
+                    // established legacy customers the old platform authenticated
+                    // by phone OTP, and OTP login refuses to dispatch a code to an
+                    // unverified user (see Version20260812000003 for the backfill of
+                    // rows imported before this). is_email_verified stays FALSE —
+                    // login doesn't depend on it and we don't assert email ownership.
                     try {
                         $this->conn->executeStatement(
                             "INSERT INTO users
@@ -312,7 +318,7 @@ final class MigrationSteps
                                 (:legacy_id, :first_name, :last_name, :email, :phone, :cc,
                                  :pw_hash, NULL,
                                  :is_customer, :is_vendor, :is_admin, :is_finance, :is_support, :is_subadmin,
-                                 :is_active, :is_2fa, FALSE, FALSE,
+                                 :is_active, :is_2fa, TRUE, FALSE,
                                  'en', 'Asia/Dubai',
                                  :store_legal_name, :trade_license,
                                  :last_login, :created, date_trunc('second', NOW()))",
