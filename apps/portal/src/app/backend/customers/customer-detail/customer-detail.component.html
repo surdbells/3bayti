@@ -100,7 +100,7 @@
             <tbody>
               <tr *ngFor="let o of orders" class="cd-order-row" (click)="openOrder(o)">
                 <td class="cd-ref">{{ o.order_reference }}</td>
-                <td>{{ o.created_at ? (o.created_at | date:'mediumDate') : '—' }}</td>
+                <td>{{ o.date ? (o.date | date:'mediumDate') : '—' }}</td>
                 <td><span class="ax-badge" [ngClass]="statusClass(o.status)">{{ prettyStatus(o.status) }}</span></td>
                 <td class="cd-num">{{ money(o.total) }}</td>
               </tr>

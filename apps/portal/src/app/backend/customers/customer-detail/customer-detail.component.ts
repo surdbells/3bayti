@@ -28,7 +28,7 @@ interface CustomerOrder {
   order_reference: string;
   status: string;
   total: unknown;
-  created_at: string;
+  date: string;
 }
 
 /**
@@ -96,7 +96,7 @@ export class CustomerDetailComponent implements OnInit {
     this.ordersLoading = true;
     this.adapter.get_v3('GET /admin/orders', { query: { user_id: this.id, limit: 50 } }).subscribe({
       next: (res: any) => {
-        this.orders = (res?.data ?? []) as CustomerOrder[];
+        this.orders = (res?.orders ?? res?.data ?? []) as CustomerOrder[];
         this.ordersLoading = false;
       },
       error: () => {

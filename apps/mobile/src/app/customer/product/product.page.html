@@ -217,14 +217,16 @@
         }
 
         <!-- Delivery Info -->
-        <div class="delivery-badge">
-          <ax-icon name="truck"></ax-icon>
-          @if(single.delivery_time !== 'custom'){
-            <span>{{ 'delivery' | translate }}: {{ single.delivery_time }} {{ 'days' | translate }}</span>
-          } @else {
-            <span>{{ 'delivery' | translate }}: {{ single.custom_delivery_time }} {{ 'days' | translate }}</span>
-          }
-        </div>
+        @if(single.delivery_time){
+          <div class="delivery-badge">
+            <ax-icon name="truck"></ax-icon>
+            @if(single.delivery_time !== 'custom'){
+              <span>{{ 'delivery' | translate }}: {{ single.delivery_time }} {{ 'days' | translate }}</span>
+            } @else {
+              <span>{{ 'delivery' | translate }}: {{ single.custom_delivery_time }} {{ 'days' | translate }}</span>
+            }
+          </div>
+        }
 
         <!-- Color Selection Pills -->
         @if(!isBagOrAccessory && colors.length > 0){

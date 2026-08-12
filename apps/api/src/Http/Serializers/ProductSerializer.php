@@ -299,6 +299,10 @@ final class ProductSerializer
             'images' => $this->imagesArray($p),
             'sizes' => $sizes,
             'colors' => $colors,
+            // Delivery window ({ time, custom_time, note }) — the PDP renders
+            // "Delivery: {time} days" (or the custom value). Without this the
+            // mobile transform fell back to '' and showed "Delivery: days".
+            'delivery_info' => $p->getDeliveryInfo(),
             // Made-to-measure: when requires_measurement is true the PDP shows
             // measurement_instructions and collects the customer's measurement
             // before add-to-cart (enforced server-side in AddCartItemController

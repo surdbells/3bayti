@@ -415,10 +415,13 @@ export function transformProductDetailResponse(data: unknown): unknown {
     category_name: '',
     category_slug: asString(data['category_slug']),
 
-    // Measurement / delivery — gaps in v3 detailShape; emit safe
-    // defaults so mobile's *ngIf and {{}} bindings render inertly:
-    delivery_time: '',
-    custom_delivery_time: '',
+    // Delivery — v3 detailShape carries a `delivery_info` object
+    // ({ time, custom_time, note }, migrated from the legacy delivery_time/
+    // custom_delivery_time/delivery_note). Map back to the flat fields the
+    // PDP renders. `time` is the legacy window ('1-3', '4-7', 'custom', …);
+    // when it's 'custom', the PDP shows `custom_delivery_time` instead.
+    delivery_time: isRecord(data['delivery_info']) ? asString(data['delivery_info']['time']) : '',
+    custom_delivery_time: isRecord(data['delivery_info']) ? asString(data['delivery_info']['custom_time']) : '',
     extra_msmt: asString(data['measurement_instructions']),
     require_extra_msmt: data['requires_measurement'] === true,
 
