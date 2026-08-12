@@ -281,17 +281,23 @@ final class GetAdminPlatformAnalyticsController
                p.id,
                p.name,
                p.slug,
-               p.primary_image_url                       AS image,
-               COALESCE(SUM(oi.quantity), 0)::int         AS units_sold,
-               COALESCE(SUM(oi.subtotal), 0)              AS revenue
+               p.primary_image_url                              AS image,
+               p.price                                          AS price,
+               v.name                                           AS store_name,
+               cat.name                                         AS category_name,
+               COALESCE(SUM(oi.quantity), 0)::int               AS units_sold,
+               COUNT(DISTINCT oi.order_id)::int                 AS orders_count,
+               COALESCE(SUM(oi.unit_price * oi.quantity), 0)    AS revenue
              FROM order_items oi
-             JOIN products p ON p.id = oi.product_id
-             JOIN orders o   ON o.id = oi.order_id
+             JOIN products p        ON p.id = oi.product_id
+             JOIN orders o          ON o.id = oi.order_id
+             LEFT JOIN vendors v    ON v.id = p.vendor_id
+             LEFT JOIN categories cat ON cat.id = p.category_id
              WHERE o.created_at >= ?
                AND o.status IN ($salePlaceholders)
-             GROUP BY p.id, p.name, p.slug, p.primary_image_url
-             ORDER BY units_sold DESC
-             LIMIT 5",
+             GROUP BY p.id, p.name, p.slug, p.primary_image_url, p.price, v.name, cat.name
+             ORDER BY units_sold DESC, revenue DESC
+             LIMIT 8",
             [$since, ...$saleStatuses]
         );
 

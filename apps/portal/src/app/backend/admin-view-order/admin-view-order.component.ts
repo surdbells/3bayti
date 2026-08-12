@@ -33,7 +33,7 @@ export class AdminViewOrderComponent implements OnInit {
     is_vendor: false, is_customer: false,
   };
 
-  data = {
+  data: any = {
     id: 0,
     token: '',
     order: 0,
@@ -124,6 +124,26 @@ export class AdminViewOrderComponent implements OnInit {
         this.ui_controls.is_loading = false;
       },
     });
+  }
+
+  // ── Invoice computed values ───────────────────────────────────────────
+  // Compute line/order totals from unit_price × qty rather than the stored
+  // `subtotal`/`total`, which are 0 on legacy-migrated orders.
+  get items(): any[] { return this.data?.items ?? []; }
+  lineTotal(it: any): number { return (Number(it?.unit_price) || 0) * (Number(it?.quantity) || 1); }
+  get itemsSubtotal(): number { return this.items.reduce((s, i) => s + this.lineTotal(i), 0); }
+  get deliveryFee(): number { return Number(this.data?.delivery_fee) || 0; }
+  get discountAmount(): number { return Number(this.data?.discount) || 0; }
+  get grandTotal(): number {
+    const stored = Number(this.data?.total) || 0;
+    if (stored > 0) { return stored; }
+    return Math.max(0, this.itemsSubtotal + this.deliveryFee - this.discountAmount);
+  }
+  /** Page title — the customer/account name, never the (often absent) nav param. */
+  get orderTitle(): string {
+    return this.data?.customer_name
+      || this.data?.order_ref
+      || (this.single.order ? 'Order #' + this.single.order : 'Order details');
   }
 
   /**

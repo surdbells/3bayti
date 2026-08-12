@@ -110,7 +110,11 @@ export class AdminComponent implements OnInit {
     { value: 'failed',         label: 'status_failed' },
   ];
   recent?: ROrders[];
-  topProducts: { id: number; name: string; image: string; units_sold: number; revenue: number }[] = [];
+  topProducts: {
+    id: number; name: string; image: string; slug: string;
+    store_name: string; category_name: string; price: number;
+    units_sold: number; orders_count: number; revenue: number;
+  }[] = [];
 
   total_products = 0;
   total_orders = 0;
@@ -220,6 +224,10 @@ export class AdminComponent implements OnInit {
 
   onTopCustomerSelect(it: TopPerformer): void {
     this.router.navigate(['/admin/customers', it.id], { queryParams: { name: it.name } });
+  }
+
+  openTopProduct(p: { id: number }): void {
+    this.router.navigate(['/admin/products', p.id]);
   }
 
   // ── Period-over-period insight (GET /admin/insights?days=N) ───────────
@@ -417,8 +425,13 @@ export class AdminComponent implements OnInit {
       id: p.id,
       name: p.name,
       image: p.image,
+      slug: p.slug ?? '',
+      store_name: p.store_name ?? '—',
+      category_name: p.category_name ?? '',
+      price: Number(p.price) || 0,
       units_sold: p.units_sold ?? 0,
-      revenue: p.revenue ?? 0,
+      orders_count: p.orders_count ?? 0,
+      revenue: Number(p.revenue) || 0,
     }));
 
     this.chartOptions = {

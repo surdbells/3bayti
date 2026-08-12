@@ -24,6 +24,12 @@
 }
 .adm-top-meta { font-size: 0.75rem; color: var(--ax-color-text-tertiary); }
 .adm-top-rev { font-size: 0.875rem; font-weight: 600; color: var(--ax-color-text-primary); white-space: nowrap; }
+.adm-top-clickable { cursor: pointer; border-radius: 8px; transition: background 0.15s ease; }
+.adm-top-clickable:hover, .adm-top-clickable:focus-visible {
+  background: var(--ax-palette-beige-50, #fbf7f1); outline: none;
+}
+.adm-top-stats { text-align: right; display: flex; flex-direction: column; gap: 0.1rem; white-space: nowrap; }
+.adm-top-dot { margin: 0 0.3rem; opacity: 0.6; }
 
 /* ── Platform insight (period over period) ─────────────────────────── */
 .adm-insight-head {

@@ -12,7 +12,7 @@
             Back
           </button>
           <span class="ax-page-header-eyebrow">Order management</span>
-          <h1 class="ax-page-title">{{ single.product || 'Order details' }}</h1>
+          <h1 class="ax-page-title">{{ orderTitle }}</h1>
           <p *ngIf="data.order_ref" class="ax-page-subtitle">
             Order #{{ data.order_ref || data.order }}
           </p>
@@ -83,6 +83,10 @@
                   <span class="ax-badge ax-badge-neutral">{{ data.payment_status }}</span>
                 </div>
               </div>
+              <div *ngIf="data.date">
+                <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Order date</div>
+                <div class="ax-font-semibold ax-text-primary ax-mt-1">{{ data.date | date:'medium' }}</div>
+              </div>
             </div>
           </div>
 
@@ -129,25 +133,25 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
+                  <tr *ngFor="let it of items">
                     <td>
                       <img
-                        [src]="data.image"
-                        [alt]="data.name"
+                        [src]="it.product_image"
+                        [alt]="it.product_name"
                         style="width: 48px; height: 48px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
                     </td>
                     <td>
-                      <div class="ax-font-medium ax-text-primary">{{ data.name }}</div>
-                      <div *ngIf="data.note" class="ax-mt-1">
+                      <div class="ax-font-medium ax-text-primary">{{ it.product_name }}</div>
+                      <div *ngIf="it.note" class="ax-mt-1">
                         <span class="ax-badge ax-badge-neutral">Note</span>
-                        <div class="ax-text-2xs ax-text-secondary ax-mt-1">{{ data.note }}</div>
+                        <div class="ax-text-2xs ax-text-secondary ax-mt-1">{{ it.note }}</div>
                       </div>
                     </td>
-                    <td><span class="ax-text-sm ax-text-secondary" style="text-transform: uppercase;">{{ data.size || '—' }}</span></td>
-                    <td><span class="ax-text-sm ax-text-secondary" style="text-transform: uppercase;">{{ data.color || '—' }}</span></td>
-                    <td style="text-align: center;"><span class="ax-numeric">{{ data.quantity }}</span></td>
-                    <td style="text-align: right;"><span class="ax-numeric">{{ data.price }}</span></td>
-                    <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ data.total }}</span></td>
+                    <td><span class="ax-text-sm ax-text-secondary" style="text-transform: uppercase;">{{ it.size || '—' }}</span></td>
+                    <td><span class="ax-text-sm ax-text-secondary" style="text-transform: uppercase;">{{ it.color || '—' }}</span></td>
+                    <td style="text-align: center;"><span class="ax-numeric">{{ it.quantity }}</span></td>
+                    <td style="text-align: right;"><span class="ax-numeric">{{ it.unit_price | number:'1.2-2' }}</span></td>
+                    <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ lineTotal(it) | number:'1.2-2' }}</span></td>
                   </tr>
                 </tbody>
               </table>
@@ -202,13 +206,21 @@
               <div>
                 <div class="ax-flex ax-items-center ax-justify-between ax-py-2">
                   <span class="ax-text-sm ax-text-secondary">Items subtotal</span>
-                  <span class="ax-font-medium ax-numeric">{{ data.price }}</span>
+                  <span class="ax-font-medium ax-numeric">{{ itemsSubtotal | number:'1.2-2' }}</span>
+                </div>
+                <div *ngIf="deliveryFee" class="ax-flex ax-items-center ax-justify-between ax-py-2">
+                  <span class="ax-text-sm ax-text-secondary">Delivery fee</span>
+                  <span class="ax-font-medium ax-numeric">{{ deliveryFee | number:'1.2-2' }}</span>
+                </div>
+                <div *ngIf="discountAmount" class="ax-flex ax-items-center ax-justify-between ax-py-2">
+                  <span class="ax-text-sm ax-text-secondary">Discount</span>
+                  <span class="ax-font-medium ax-numeric">−{{ discountAmount | number:'1.2-2' }}</span>
                 </div>
                 <div
                   class="ax-flex ax-items-center ax-justify-between ax-py-3"
                   style="border-top: 1px solid var(--ax-color-border-subtle);">
                   <span class="ax-h6 ax-m-0">Grand total</span>
-                  <span class="ax-h5 ax-m-0 ax-font-semibold ax-numeric">{{ data.total }}</span>
+                  <span class="ax-h5 ax-m-0 ax-font-semibold ax-numeric">{{ data.currency || 'AED' }} {{ grandTotal | number:'1.2-2' }}</span>
                 </div>
                 <div *ngIf="data.charges" class="ax-text-2xs ax-text-tertiary ax-mt-2">
                   Platform charges: {{ data.charges }}

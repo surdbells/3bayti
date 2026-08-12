@@ -253,14 +253,21 @@
           </div>
           <div class="ax-card-body">
             <ul class="adm-top-list">
-              <li *ngFor="let p of topProducts; let i = index" class="adm-top-row">
+              <li *ngFor="let p of topProducts; let i = index" class="adm-top-row adm-top-clickable"
+                  (click)="openTopProduct(p)" tabindex="0" role="button" (keydown.enter)="openTopProduct(p)">
                 <span class="adm-top-rank">{{ i + 1 }}</span>
                 <img *ngIf="p.image" [src]="p.image" alt="" class="adm-top-img" />
                 <div class="adm-top-body">
                   <div class="adm-top-name" [title]="p.name">{{ p.name }}</div>
-                  <div class="adm-top-meta">{{ p.units_sold | number }} sold</div>
+                  <div class="adm-top-meta">
+                    <span>{{ p.store_name }}</span>
+                    <ng-container *ngIf="p.category_name"><span class="adm-top-dot">·</span>{{ p.category_name }}</ng-container>
+                  </div>
                 </div>
-                <div class="adm-top-rev">AED {{ p.revenue | number:'1.2-2' }}</div>
+                <div class="adm-top-stats">
+                  <div class="adm-top-rev">AED {{ p.revenue | number:'1.0-0' }}</div>
+                  <div class="adm-top-meta">{{ p.units_sold | number }} sold · {{ p.orders_count | number }} orders</div>
+                </div>
               </li>
             </ul>
           </div>
