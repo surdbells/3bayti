@@ -186,15 +186,6 @@ export class StoresComponent implements OnInit {
         { key: 'status', label: 'Status', sortable: true, align: 'center' },
         { key: 'approved', label: 'Approval', align: 'center' },
       ],
-      rowActions: [
-        { id: 'orders', label: 'Orders', icon: 'receipt_long' },
-        { id: 'products', label: 'Products', icon: 'inventory_2' },
-        { id: 'sales', label: 'Sales', icon: 'payments' },
-        { id: 'manage', label: 'Manage', icon: 'settings' },
-        { id: 'approve', label: 'Approve', icon: 'check_circle', hidden: (r) => r.approved },
-        { id: 'suspend', label: 'Suspend', icon: 'block', variant: 'danger', hidden: (r) => !r.status },
-        { id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger' },
-      ],
       bulkActions: [
         { id: 'bulk-approve', label: 'Approve', icon: 'check_circle' },
         { id: 'bulk-suspend', label: 'Suspend', icon: 'block', variant: 'danger' },
@@ -281,17 +272,10 @@ export class StoresComponent implements OnInit {
   }
 
   // ── Table event handlers ─────────────────────────────────────────────
-  onRowAction(e: { action: { id: string }; row: VendorRow }) {
-    const { action, row } = e;
-    switch (action.id) {
-      case 'orders': return this.openTab('/store_orders', row.id, row.store_name);
-      case 'products': return this.openTab('/store_products', row.id, row.store_name);
-      case 'sales': return this.openTab('/store_sales', row.id, row.store_name);
-      case 'manage': return this.openTab('/manage_store', row.id, row.store_name);
-      case 'approve': return this.confirmApprove(row);
-      case 'suspend': return this.confirmSuspend(row);
-      case 'delete': return this.confirmDelete(row);
-    }
+  /** Whole-row click opens the vendor's management page (per-row action
+   *  buttons were removed in favour of a clickable row + bulk actions). */
+  onRowClick(row: VendorRow) {
+    this.openTab('/manage_store', row.id, row.store_name);
   }
 
   onBulkAction(e: { action: { id: string }; selection: VendorRow[] }) {

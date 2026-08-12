@@ -140,6 +140,10 @@
     </div>
   </div>
 
+  <!-- Indeterminate loading bar — visible during search / filter / paging,
+       when rows already exist and the empty-state skeleton won't show. -->
+  <div class="axdt-loading-bar" *ngIf="loading()" role="status" aria-label="Loading"></div>
+
   <!-- ── Table ────────────────────────────────────────────────────────── -->
   <div class="axdt-scroll" [class.axdt-sticky-header]="config.stickyHeader !== false">
     <table class="ax-table" [class.ax-table-hover]="config.hover !== false" role="grid">
