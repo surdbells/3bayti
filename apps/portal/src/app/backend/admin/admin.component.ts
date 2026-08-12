@@ -28,6 +28,7 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { IconComponent } from '../../shared/icon/icon.component';
 import { I18nService } from '../../i18n.service';
 import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
+import { TopPerformersComponent, TopPerformer } from '../../shared/top-performers/top-performers.component';
 export type ChartOptions = {
   series: ApexAxisChartSeries;
   chart: ApexChart;
@@ -73,7 +74,7 @@ const ICON_MAP: Record<string, string> = {
     ChartComponent,
     AxPaginationComponent,
     TranslatePipe,
-    RouterLink, IconComponent, AxComboboxComponent],
+    RouterLink, IconComponent, AxComboboxComponent, TopPerformersComponent],
   standalone: true,
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
@@ -171,6 +172,53 @@ export class AdminComponent implements OnInit {
     } else {
       this.get_dashboard();
     }
+
+    if (this.user_session?.is_admin) {
+      this.loadTopStores();
+      this.loadTopCustomers();
+    }
+  }
+
+  // ── Top performers rails ──────────────────────────────────────────────
+  topStores: TopPerformer[] = [];
+  topStoresLoading = true;
+  topCustomers: TopPerformer[] = [];
+  topCustomersLoading = true;
+
+  private loadTopStores(): void {
+    this.topStoresLoading = true;
+    this.adapter.get_v3('GET /admin/top-stores').subscribe({
+      next: (res: any) => {
+        this.topStores = (res?.data ?? []).map((r: any) => ({
+          id: r.id, rank: r.rank, name: r.name, value: r.sales_count, imageUrl: r.logo_url ?? null,
+        }));
+        this.topStoresLoading = false;
+      },
+      error: () => { this.topStoresLoading = false; },
+    });
+  }
+
+  private loadTopCustomers(): void {
+    this.topCustomersLoading = true;
+    this.adapter.get_v3('GET /admin/top-customers').subscribe({
+      next: (res: any) => {
+        this.topCustomers = (res?.data ?? []).map((r: any) => ({
+          id: r.id, rank: r.rank,
+          name: r.name || `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() || 'Customer',
+          value: r.purchases_count, imageUrl: r.avatar_url ?? null,
+        }));
+        this.topCustomersLoading = false;
+      },
+      error: () => { this.topCustomersLoading = false; },
+    });
+  }
+
+  onTopStoreSelect(it: TopPerformer): void {
+    this.router.navigate(['/admin/stores', it.id], { queryParams: { name: it.name } });
+  }
+
+  onTopCustomerSelect(it: TopPerformer): void {
+    this.router.navigate(['/admin/customers', it.id], { queryParams: { name: it.name } });
   }
 
   error_notification(message: string) { this.toast.error(message); }

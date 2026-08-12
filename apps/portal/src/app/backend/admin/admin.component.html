@@ -124,6 +124,24 @@
         </div>
       </section>
 
+      <!-- Top performers -->
+      <section class="ax-page-section" *ngIf="user_session.is_admin">
+        <app-top-performers
+          heading="Top performing stores"
+          metricUnit="sales"
+          subtitleLabel="Storefront"
+          [items]="topStores"
+          [loading]="topStoresLoading"
+          (select)="onTopStoreSelect($event)"></app-top-performers>
+        <app-top-performers
+          heading="Top performing customers"
+          metricUnit="purchases"
+          subtitleLabel="Customer"
+          [items]="topCustomers"
+          [loading]="topCustomersLoading"
+          (select)="onTopCustomerSelect($event)"></app-top-performers>
+      </section>
+
       <!-- Chart card -->
       <section class="ax-page-section">
         <div class="ax-card ax-card-elevated">
