@@ -214,7 +214,7 @@ export class CustomersComponent implements OnInit {
       first_name: u.first_name ?? '',
       last_name: u.last_name ?? '',
       email: u.email ?? '',
-      phone: u.phone ? `${u.country_code ?? ''}${u.phone}` : '',
+      phone: this.formatPhone(u.phone, u.country_code),
       last_login: u.last_login_at ?? u.last_login ?? '',
       status: u.is_active ?? true,
       is_email_verified: u.is_email_verified ?? false,
@@ -222,6 +222,24 @@ export class CustomersComponent implements OnInit {
       created_at: u.created_at ?? '',
       orders_count: u.orders_count ?? 0,
     } as CustomerRow;
+  }
+
+  private static readonly DIAL_CODES: Record<string, string> = {
+    AE: '+971', SA: '+966', KW: '+965', QA: '+974', BH: '+973', OM: '+968',
+  };
+
+  /**
+   * Render a phone as clean E.164. New signups already store '+971…'; legacy-
+   * migrated rows store a local number (optional leading 0) with the ISO
+   * country_code, which the list previously glued together as "AE0506995999".
+   */
+  private formatPhone(phone: string | null | undefined, countryCode: string | null | undefined): string {
+    const raw = (phone ?? '').trim();
+    if (!raw) { return ''; }
+    if (raw.startsWith('+')) { return raw; }
+    const dial = CustomersComponent.DIAL_CODES[(countryCode ?? '').toUpperCase()] ?? '+971';
+    const local = raw.replace(/\D/g, '').replace(/^0+/, '');
+    return local ? `${dial}${local}` : raw;
   }
 
   /** Re-run the listing with the current filter panel (resets to page 1). */
