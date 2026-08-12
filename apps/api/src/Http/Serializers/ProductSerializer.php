@@ -120,7 +120,7 @@ final class ProductSerializer
      */
     public function vendorDetailShape(Product $p): array
     {
-        $inStock = $p->getStockQuantity() > 0 || $p->getAllowOversell();
+        $inStock = $p->isInStock();
 
         return array_merge($this->vendorManageShape($p), [
             'description' => $p->getDescription() ?? '',
@@ -165,7 +165,7 @@ final class ProductSerializer
             // Nested forms kept for any consumer expecting the storefront shape.
             'primary_image'   => $primaryImage,
             'sale_price'      => $p->getSalePrice() !== null ? $this->money($p->getSalePrice()) : null,
-            'in_stock'        => $p->getStockQuantity() > 0 || $p->getAllowOversell(),
+            'in_stock'        => $p->isInStock(),
             'label_id'        => $p->getLabelId(),
             'collection_id'   => $p->getCollectionId(),
             'created_at'      => $p->getCreatedAt()?->format(\DateTimeInterface::ATOM),
@@ -226,7 +226,7 @@ final class ProductSerializer
                 : null,
             'rating' => null, // computed later when we have review aggregation
             'review_count' => 0,
-            'in_stock' => $p->getStockQuantity() > 0 || $p->getAllowOversell(),
+            'in_stock' => $p->isInStock(),
             'is_new' => $p->isNew(),
             'is_bestseller' => false, // computed later via order joins (M3)
             // M3.1.5.5 — surface label_id + collection_id on list shape.
@@ -261,7 +261,7 @@ final class ProductSerializer
 
         // Sizes: legacy doesn't track per-size stock, so in_stock mirrors
         // the product-level boolean.
-        $inStock = $p->getStockQuantity() > 0 || $p->getAllowOversell();
+        $inStock = $p->isInStock();
         $sizes = array_map(
             static fn (string $label) => ['label' => $label, 'in_stock' => $inStock],
             $p->getAvailableSizes(),

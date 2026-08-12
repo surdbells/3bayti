@@ -255,6 +255,19 @@ class Product
     public function getStockQuantity(): int { return $this->stockQuantity; }
     public function getAllowOversell(): bool { return $this->allowOversell; }
     public function getStockStatus(): string { return $this->stockStatus; }
+
+    /**
+     * Whether the product is buyable. `stock_status` is authoritative — v3
+     * keeps it in sync with quantity on write, and legacy-migrated rows carry
+     * the store's declared status (which the old platform tracked by status,
+     * not quantity). So a migrated product with stock_status='in_stock' but a
+     * 0 quantity is IN stock. Oversell always wins. Previously in_stock was
+     * derived from quantity alone, so migrated products wrongly showed OOS.
+     */
+    public function isInStock(): bool
+    {
+        return $this->allowOversell || $this->stockStatus !== self::STOCK_OUT;
+    }
     public function getMinOrderQty(): ?int { return $this->minOrderQty; }
     public function getMaxOrderQty(): ?int { return $this->maxOrderQty; }
     public function getPrimaryImageUrl(): ?string { return $this->primaryImageUrl; }
