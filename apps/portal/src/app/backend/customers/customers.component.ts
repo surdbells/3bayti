@@ -147,10 +147,6 @@ export class CustomersComponent implements OnInit {
         { key: 'status', label: 'Status', align: 'center',
           value: (r) => (r.status ? 'Active' : 'Inactive') },
       ],
-      rowActions: [
-        { id: 'activate', label: 'Activate', icon: 'check_circle', hidden: (r) => r.status },
-        { id: 'deactivate', label: 'Deactivate', icon: 'block', variant: 'danger', hidden: (r) => !r.status },
-      ],
     };
   }
 
@@ -219,10 +215,16 @@ export class CustomersComponent implements OnInit {
     this.dataSource.retry();
   }
 
-  onRowAction(e: { action: { id: string }; row: CustomerRow }) {
-    const { action, row } = e;
-    if (action.id === 'activate') this.startActivate(row);
-    else if (action.id === 'deactivate') this.startDeactivate(row);
+  /** Whole-row click opens the customer detail view (profile + orders).
+   *  The list is otherwise action-free; account status is managed there. */
+  onRowClick(row: CustomerRow) {
+    this.router.navigate(['/view_customer'], {
+      queryParams: {
+        id: row.id,
+        name: `${row.first_name} ${row.last_name}`.trim(),
+        active: row.status,
+      },
+    });
   }
 
   private refresh() { this.dataSource.retry(); }

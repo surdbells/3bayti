@@ -1,0 +1,176 @@
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+
+import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
+import { HotToastService } from '../../../shared/toast/toast.service';
+import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
+import { IconComponent } from '../../../shared/icon/icon.component';
+import { AxConfirmService } from '../../../shared/overlays';
+
+interface CustomerProfile {
+  id: number;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  country_code: string;
+  avatar_url: string;
+  is_email_verified: boolean;
+  is_phone_verified: boolean;
+  marketing_opt_out: boolean;
+  last_login_at: string | null;
+  created_at: string | null;
+}
+
+interface CustomerOrder {
+  id: number;
+  order_reference: string;
+  status: string;
+  total: unknown;
+  created_at: string;
+}
+
+/**
+ * Admin read view of a single customer: profile + order history, with the
+ * account status action. Reached by clicking a row on the Customers list
+ * (id + display name + current active flag arrive as query params, since the
+ * public-profile payload doesn't carry the admin `is_active` flag).
+ */
+@Component({
+  selector: 'app-customer-detail',
+  standalone: true,
+  imports: [CommonModule, AdminShellComponent, IconComponent],
+  templateUrl: './customer-detail.component.html',
+  styleUrl: './customer-detail.component.css',
+})
+export class CustomerDetailComponent implements OnInit {
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly adapter = inject(PortalCrudAdapter);
+  private readonly toast = inject(HotToastService);
+  private readonly confirm = inject(AxConfirmService);
+
+  id = 0;
+  displayName = '';
+  isActive = true;
+
+  loading = true;
+  profile: CustomerProfile | null = null;
+
+  ordersLoading = true;
+  orders: CustomerOrder[] = [];
+
+  ngOnInit(): void {
+    const qp = this.route.snapshot.queryParamMap;
+    this.id = Number(qp.get('id')) || 0;
+    this.displayName = qp.get('name') || '';
+    this.isActive = qp.get('active') !== 'false';
+    if (!this.id) {
+      this.router.navigate(['/customers']);
+      return;
+    }
+    this.loadProfile();
+    this.loadOrders();
+  }
+
+  private loadProfile(): void {
+    this.loading = true;
+    this.adapter.get_v3('GET /admin/users/:id', { params: { id: String(this.id) } }).subscribe({
+      next: (res: any) => {
+        this.profile = (res?.data ?? res) as CustomerProfile;
+        if (this.profile && !this.displayName) {
+          this.displayName = `${this.profile.first_name ?? ''} ${this.profile.last_name ?? ''}`.trim();
+        }
+        this.loading = false;
+      },
+      error: () => {
+        this.toast.error('Unable to load this customer.');
+        this.loading = false;
+      },
+    });
+  }
+
+  private loadOrders(): void {
+    this.ordersLoading = true;
+    this.adapter.get_v3('GET /admin/orders', { query: { user_id: this.id, limit: 50 } }).subscribe({
+      next: (res: any) => {
+        this.orders = (res?.data ?? []) as CustomerOrder[];
+        this.ordersLoading = false;
+      },
+      error: () => {
+        this.ordersLoading = false;
+      },
+    });
+  }
+
+  get initials(): string {
+    const p = this.profile;
+    const src = p ? `${p.first_name ?? ''} ${p.last_name ?? ''}` : this.displayName;
+    const parts = src.trim().split(/\s+/).filter(Boolean).slice(0, 2);
+    return parts.map((w) => w[0]).join('').toUpperCase() || '?';
+  }
+
+  get ordersTotal(): string {
+    const sum = this.orders.reduce((acc, o) => acc + this.toAmount(o.total), 0);
+    return this.formatMoney(sum);
+  }
+
+  prettyStatus(s: string): string {
+    return String(s ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  statusClass(s: string): string {
+    if (s === 'delivered') return 'ax-badge-success';
+    if (s === 'cancelled' || s === 'refunded' || s === 'failed') return 'ax-badge-danger';
+    if (s === 'pending_payment') return 'ax-badge-warning';
+    return 'ax-badge-info';
+  }
+
+  private toAmount(v: unknown): number {
+    if (v && typeof v === 'object' && 'amount' in (v as any)) return Number((v as any).amount) || 0;
+    return Number(v) || 0;
+  }
+
+  money(v: unknown): string {
+    return this.formatMoney(this.toAmount(v));
+  }
+
+  private formatMoney(n: number): string {
+    return `AED ${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  openOrder(o: CustomerOrder): void {
+    this.router.navigate(['/admin_order'], { queryParams: { id: o.id } });
+  }
+
+  toggleActive(): void {
+    const activate = !this.isActive;
+    this.confirm
+      .confirm({
+        title: activate ? 'Activate customer' : 'Deactivate customer',
+        message: `${this.displayName || 'This customer'}'s account will be ${activate ? 'activated' : 'deactivated'}.`,
+        confirmLabel: activate ? 'Activate' : 'Deactivate',
+        cancelLabel: 'Cancel',
+        variant: activate ? undefined : 'danger',
+      })
+      .then((ok) => {
+        if (!ok) return;
+        const req = activate
+          ? this.adapter.post_v3('POST /admin/users/:id/activate', {}, { params: { id: String(this.id) } })
+          : this.adapter.post_v3('POST /admin/users/:id/deactivate', {}, { params: { id: String(this.id) } });
+        req.subscribe({
+          next: (r: any) => {
+            if (r) {
+              this.isActive = activate;
+              this.toast.success(`Customer ${activate ? 'activated' : 'deactivated'}.`);
+            }
+          },
+        });
+      });
+  }
+
+  back(): void {
+    this.router.navigate(['/customers']);
+  }
+}

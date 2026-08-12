@@ -1,0 +1,113 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="back()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to customers
+        </button>
+        <span class="ax-page-header-eyebrow">Customer</span>
+        <h1 class="ax-page-title">{{ displayName || '—' }}</h1>
+        <p class="ax-page-subtitle">{{ profile?.email || '' }}</p>
+      </div>
+    </header>
+
+    <div class="cd-grid">
+      <!-- ── Profile ─────────────────────────────────────────────── -->
+      <section class="ax-card cd-profile">
+        <div class="cd-id">
+          <div class="cd-avatar" [class.cd-avatar-off]="!isActive">
+            <img *ngIf="profile?.avatar_url" [src]="profile?.avatar_url" [alt]="displayName" />
+            <span *ngIf="!profile?.avatar_url">{{ initials }}</span>
+          </div>
+          <div class="cd-id-text">
+            <h2 class="cd-name">{{ displayName || '—' }}</h2>
+            <span class="ax-badge" [class.ax-badge-success]="isActive" [class.ax-badge-danger]="!isActive">
+              {{ isActive ? 'Active' : 'Inactive' }}
+            </span>
+          </div>
+        </div>
+
+        <dl class="cd-fields">
+          <div class="cd-field">
+            <dt>Email</dt>
+            <dd>
+              {{ profile?.email || '—' }}
+              <span class="cd-verify" [class.ok]="profile?.is_email_verified">
+                <app-icon [name]="profile?.is_email_verified ? 'check_circle' : 'cancel'" aria-hidden="true"></app-icon>
+                {{ profile?.is_email_verified ? 'Verified' : 'Unverified' }}
+              </span>
+            </dd>
+          </div>
+          <div class="cd-field">
+            <dt>Phone</dt>
+            <dd>
+              {{ profile?.phone || '—' }}
+              <span class="cd-verify" [class.ok]="profile?.is_phone_verified">
+                <app-icon [name]="profile?.is_phone_verified ? 'check_circle' : 'cancel'" aria-hidden="true"></app-icon>
+                {{ profile?.is_phone_verified ? 'Verified' : 'Unverified' }}
+              </span>
+            </dd>
+          </div>
+          <div class="cd-field">
+            <dt>Country</dt>
+            <dd>{{ profile?.country_code || '—' }}</dd>
+          </div>
+          <div class="cd-field">
+            <dt>Last login</dt>
+            <dd>{{ profile?.last_login_at ? (profile?.last_login_at | date:'medium') : 'Never' }}</dd>
+          </div>
+          <div class="cd-field">
+            <dt>Marketing</dt>
+            <dd>{{ profile?.marketing_opt_out ? 'Opted out' : 'Subscribed' }}</dd>
+          </div>
+        </dl>
+
+        <div class="cd-actions">
+          <button type="button" class="ax-btn ax-btn-sm"
+                  [class.ax-btn-outline]="isActive" [class.ax-btn-primary]="!isActive"
+                  (click)="toggleActive()">
+            <app-icon [name]="isActive ? 'block' : 'check_circle'" aria-hidden="true"></app-icon>
+            {{ isActive ? 'Deactivate account' : 'Activate account' }}
+          </button>
+        </div>
+      </section>
+
+      <!-- ── Order history ───────────────────────────────────────── -->
+      <section class="ax-card cd-orders">
+        <div class="cd-orders-head">
+          <h3 class="ax-h5 ax-m-0">Order history</h3>
+          <span class="cd-orders-summary" *ngIf="!ordersLoading">
+            {{ orders.length }} order{{ orders.length === 1 ? '' : 's' }} · {{ ordersTotal }}
+          </span>
+        </div>
+
+        <div class="cd-orders-loading" *ngIf="ordersLoading">Loading orders…</div>
+
+        <p class="cd-empty" *ngIf="!ordersLoading && orders.length === 0">
+          This customer has not placed any orders yet.
+        </p>
+
+        <div class="cd-orders-scroll" *ngIf="!ordersLoading && orders.length > 0">
+          <table class="ax-table ax-table-hover">
+            <thead>
+              <tr>
+                <th scope="col">Order</th>
+                <th scope="col">Date</th>
+                <th scope="col">Status</th>
+                <th scope="col" class="cd-num">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let o of orders" class="cd-order-row" (click)="openOrder(o)">
+                <td class="cd-ref">{{ o.order_reference }}</td>
+                <td>{{ o.created_at ? (o.created_at | date:'mediumDate') : '—' }}</td>
+                <td><span class="ax-badge" [ngClass]="statusClass(o.status)">{{ prettyStatus(o.status) }}</span></td>
+                <td class="cd-num">{{ money(o.total) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+</app-admin-shell>

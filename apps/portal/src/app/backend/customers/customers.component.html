@@ -58,7 +58,7 @@
     </section>
 
     <section class="ax-card ax-p-0">
-      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowClick)="onRowClick($event)">
         <ng-template axCell="name" let-row>
           <span class="ax-font-medium ax-text-primary">{{ row.first_name }} {{ row.last_name }}</span>
         </ng-template>

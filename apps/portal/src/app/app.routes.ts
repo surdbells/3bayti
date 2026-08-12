@@ -228,6 +228,12 @@ export const routes: Routes = [
     title: 'Customers'
   },
   {
+    path: 'view_customer',
+    loadComponent: () => import('./backend/customers/customer-detail/customer-detail.component').then(m => m.CustomerDetailComponent),
+    canActivate: [adminGuard, requirePermission('orders.view')],
+    title: 'Customer'
+  },
+  {
     path: 'manage_store',
     loadComponent: () => import('./backend/stores/manage-store/manage-store.component').then(m => m.ManageStoreComponent),
     canActivate: [adminGuard, requirePermission('vendors.view_detail')],
