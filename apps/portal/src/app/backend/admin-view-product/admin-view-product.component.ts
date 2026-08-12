@@ -176,7 +176,7 @@ export class AdminViewProductComponent implements OnInit {
     this.session_data = sessionStorage.getItem('SESSION');
     this.user_session = GlobalComponent.decodeBase64(this.session_data);
 
-    const productId = Number(this.route.snapshot.queryParamMap.get('id'));
+    const productId = Number(this.route.snapshot.paramMap.get('id') ?? this.route.snapshot.queryParamMap.get('id'));
 
     this.update.id = this.user_session.id;
     this.update.token = this.user_session.token;

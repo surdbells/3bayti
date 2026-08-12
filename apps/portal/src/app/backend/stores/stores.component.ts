@@ -173,7 +173,7 @@ export class StoresComponent implements OnInit {
   }
 
   onTopStoreSelect(it: TopPerformer): void {
-    this.openTab('/manage_store', Number(it.id), it.name);
+    this.router.navigate(['/admin/stores', it.id], { queryParams: { name: it.name } });
   }
 
   private buildTable() {
@@ -302,7 +302,7 @@ export class StoresComponent implements OnInit {
   /** Whole-row click opens the vendor's management page (per-row action
    *  buttons were removed in favour of a clickable row + bulk actions). */
   onRowClick(row: VendorRow) {
-    this.openTab('/manage_store', row.id, row.store_name);
+    this.router.navigate(['/admin/stores', row.id], { queryParams: { name: row.store_name } });
   }
 
   onBulkAction(e: { action: { id: string }; selection: VendorRow[] }) {

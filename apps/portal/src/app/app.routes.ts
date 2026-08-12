@@ -208,10 +208,16 @@ export const routes: Routes = [
     title: 'Edit campaign'
   },
   {
-    path: 'stores',
+    path: 'admin/stores',
     loadComponent: () => import('./backend/stores/stores.component').then(m => m.StoresComponent),
     canActivate: [adminGuard, requirePermission('vendors.view')],
     title: 'Stores'
+  },
+  {
+    path: 'admin/stores/:id',
+    loadComponent: () => import('./backend/stores/manage-store/manage-store.component').then(m => m.ManageStoreComponent),
+    canActivate: [adminGuard, requirePermission('vendors.view_detail')],
+    title: 'Manage store'
   },
   {
     path: 'vendor-applications',
@@ -220,7 +226,7 @@ export const routes: Routes = [
     title: 'Vendor Applications'
   },
   {
-    path: 'customers',
+    path: 'admin/customers',
     loadComponent: () => import('./backend/customers/customers.component').then(m => m.CustomersComponent),
     // No dedicated customers.* catalog key exists; customer records are
     // order/buyer data, so we gate on the closest key the API enforces.
@@ -228,7 +234,7 @@ export const routes: Routes = [
     title: 'Customers'
   },
   {
-    path: 'view_customer',
+    path: 'admin/customers/:id',
     loadComponent: () => import('./backend/customers/customer-detail/customer-detail.component').then(m => m.CustomerDetailComponent),
     canActivate: [adminGuard, requirePermission('orders.view')],
     title: 'Customer'
@@ -240,7 +246,7 @@ export const routes: Routes = [
     title: 'Manage store'
   },
   {
-    path: 'product_sales',
+    path: 'admin/sales',
     loadComponent: () => import('./backend/sales/sales.component').then(m => m.SalesComponent),
     canActivate: [adminGuard, requirePermission('sales.view')],
     title: 'Product Sales'
@@ -294,10 +300,16 @@ export const routes: Routes = [
     title: 'Store reviews'
   },
   {
-    path: 'admin_products',
+    path: 'admin/products',
     loadComponent: () => import('./backend/admin-products/admin-products.component').then(m => m.AdminProductsComponent),
     canActivate: [adminGuard, requirePermission('products.view')],
     title: 'Products'
+  },
+  {
+    path: 'admin/products/:id',
+    loadComponent: () => import('./backend/admin-view-product/admin-view-product.component').then(m => m.AdminViewProductComponent),
+    canActivate: [adminGuard, requirePermission('products.view')],
+    title: 'View product'
   },
   {
     path: 'admin_create_product',
@@ -360,10 +372,16 @@ export const routes: Routes = [
     title: 'Notification Logs'
   },
   {
-    path: 'processing',
+    path: 'admin/orders',
     loadComponent: () => import('./backend/processing/processing.component').then(m => m.ProcessingComponent),
     canActivate: [adminGuard, requirePermission('orders.view')],
-    title: 'ORDER PROCESSING'
+    title: 'Order processing'
+  },
+  {
+    path: 'admin/orders/:id',
+    loadComponent: () => import('./backend/admin-view-order/admin-view-order.component').then(m => m.AdminViewOrderComponent),
+    canActivate: [adminGuard, requirePermission('orders.view_detail')],
+    title: 'Order'
   },
   {
     path: 'single',
@@ -452,5 +470,11 @@ export const routes: Routes = [
     loadComponent: () => import('./coupon/coupon-analytics/coupon-analytics.component').then(m => m.CouponAnalyticsComponent),
     canActivate: [vendorGuard],
     title: 'Coupon Analytics'
-  }
+  },
+  // ── Pretty-URL migration: legacy admin paths redirect to /admin/* ──
+  { path: 'stores', redirectTo: 'admin/stores', pathMatch: 'full' },
+  { path: 'customers', redirectTo: 'admin/customers', pathMatch: 'full' },
+  { path: 'processing', redirectTo: 'admin/orders', pathMatch: 'full' },
+  { path: 'product_sales', redirectTo: 'admin/sales', pathMatch: 'full' },
+  { path: 'admin_products', redirectTo: 'admin/products', pathMatch: 'full' },
 ];

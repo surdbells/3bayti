@@ -62,12 +62,13 @@ export class CustomerDetailComponent implements OnInit {
   orders: CustomerOrder[] = [];
 
   ngOnInit(): void {
+    const pm = this.route.snapshot.paramMap;
     const qp = this.route.snapshot.queryParamMap;
-    this.id = Number(qp.get('id')) || 0;
+    this.id = Number(pm.get('id') ?? qp.get('id')) || 0;
     this.displayName = qp.get('name') || '';
     this.isActive = qp.get('active') !== 'false';
     if (!this.id) {
-      this.router.navigate(['/customers']);
+      this.router.navigate(['/admin/customers']);
       return;
     }
     this.loadProfile();
@@ -141,7 +142,7 @@ export class CustomerDetailComponent implements OnInit {
   }
 
   openOrder(o: CustomerOrder): void {
-    this.router.navigate(['/admin_order'], { queryParams: { id: o.id } });
+    this.router.navigate(['/admin/orders', o.id]);
   }
 
   toggleActive(): void {
@@ -171,6 +172,6 @@ export class CustomerDetailComponent implements OnInit {
   }
 
   back(): void {
-    this.router.navigate(['/customers']);
+    this.router.navigate(['/admin/customers']);
   }
 }

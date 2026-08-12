@@ -95,7 +95,7 @@ export class ManageStoreComponent implements OnInit {
   ngOnInit() {
     this.session_data = sessionStorage.getItem('SESSION');
     this.user_session = GlobalComponent.decodeBase64(this.session_data);
-    const storeId = Number(this.route.snapshot.queryParamMap.get('id'));
+    const storeId = Number(this.route.snapshot.paramMap.get('id') ?? this.route.snapshot.queryParamMap.get('id'));
     this.store_name = this.route.snapshot.queryParamMap.get('name');
     this.storeId = storeId || 0;
 

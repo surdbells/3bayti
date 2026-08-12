@@ -137,7 +137,7 @@ export class CustomersComponent implements OnInit {
   }
 
   onTopCustomerSelect(it: TopPerformer): void {
-    this.router.navigate(['/view_customer'], { queryParams: { id: it.id, name: it.name } });
+    this.router.navigate(['/admin/customers', it.id], { queryParams: { name: it.name } });
   }
 
   private buildTable() {
@@ -245,9 +245,8 @@ export class CustomersComponent implements OnInit {
   /** Whole-row click opens the customer detail view (profile + orders).
    *  The list is otherwise action-free; account status is managed there. */
   onRowClick(row: CustomerRow) {
-    this.router.navigate(['/view_customer'], {
+    this.router.navigate(['/admin/customers', row.id], {
       queryParams: {
-        id: row.id,
         name: `${row.first_name} ${row.last_name}`.trim(),
         active: row.status,
       },

@@ -92,7 +92,7 @@ export class AdminViewOrderComponent implements OnInit {
 
     this.update_order.id = this.user_session.id;
     this.update_order.token = this.user_session.token;
-    this.single.order = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.single.order = Number(this.route.snapshot.paramMap.get('id') ?? this.route.snapshot.queryParamMap.get('id'));
     this.single.product = String(this.route.snapshot.queryParamMap.get('name'));
     this.get_order_by_id();
   }
