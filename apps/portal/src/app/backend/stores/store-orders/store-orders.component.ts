@@ -63,11 +63,18 @@ export class StoreOrdersComponent implements OnInit {
     );
     this.storeId = Number(this.route.snapshot.queryParamMap.get('id'));
     this.store_name = this.route.snapshot.queryParamMap.get('name') ?? '';
+    // The admin flow passes the v3 vendor id straight through as vendor_id;
+    // only fall back to legacy-id resolution when it's absent (older links).
+    this.vendorV3Id = Number(this.route.snapshot.queryParamMap.get('vendor_id')) || 0;
     this.resolveVendorThenBuild();
   }
 
-  /** Resolve legacy store id → v3 vendor id, then build the (vendor-scoped) table. */
+  /** Use the v3 vendor id when supplied; otherwise resolve it from the legacy store id. */
   private resolveVendorThenBuild() {
+    if (this.vendorV3Id > 0) {
+      this.buildTable();
+      return;
+    }
     this.adapter.get_v3('GET /vendors/by-legacy-id/:id', { params: { id: String(this.storeId) } }).subscribe({
       next: (res: any) => {
         this.vendorV3Id = res?.data?.id ?? 0;

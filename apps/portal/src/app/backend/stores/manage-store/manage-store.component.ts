@@ -248,8 +248,18 @@ export class ManageStoreComponent implements OnInit {
 
   // ── Quick navigation to this store's sub-screens ───────────────────
   private openTab(path: string) {
+    // storeId here is the v3 vendor id (the /admin/stores/:id route param,
+    // which get_store() resolves against GET /admin/vendors/:id). The
+    // sub-screens historically treated their `id` param as a LEGACY store
+    // id and resolved it via /vendors/by-legacy-id — passing a v3 id there
+    // silently loaded a DIFFERENT vendor. Send it as `vendor_id` so they
+    // use it directly; `id` is kept only for backward-compatible links.
     this.router.navigate([path], {
-      queryParams: { id: this.storeId, name: this.store.store_name || this.store_name },
+      queryParams: {
+        id: this.storeId,
+        vendor_id: this.storeId,
+        name: this.store.store_name || this.store_name,
+      },
     });
   }
   openOrders()   { this.openTab('/store_orders'); }
