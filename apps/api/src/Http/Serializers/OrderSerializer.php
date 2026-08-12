@@ -222,12 +222,21 @@ final class OrderSerializer
         $vendor = $item->getVendor();
         $vendorId = $vendor->getId() ?? 0;
 
+        // Legacy-migrated line items snapshot the OLD image URL on the now-
+        // decommissioned host (api.3bayti.ae, original filename). The product
+        // image itself was localized during migration, so fall back to the
+        // product's current (localized) image for legacy or empty snapshots.
+        $image = $item->getProductImageSnapshot();
+        if ($image === null || $image === '' || str_contains($image, 'api.3bayti.ae')) {
+            $image = $product->getPrimaryImageUrl() ?? $image;
+        }
+
         return [
             'id' => $item->getId() ?? 0,
             'product_id' => $product->getId() ?? 0,
             'vendor_id' => $vendorId,
             'product_name' => $item->getProductNameSnapshot(),
-            'product_image' => $item->getProductImageSnapshot(),
+            'product_image' => $image,
             'quantity' => $item->getQuantity(),
             'unit_price' => $item->getUnitPrice(),
             'subtotal' => $item->getSubtotal(),
