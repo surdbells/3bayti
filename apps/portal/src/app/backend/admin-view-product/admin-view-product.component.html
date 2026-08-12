@@ -217,17 +217,9 @@
             <!-- Delivery -->
             <div class="ax-form-field ax-mb-3">
               <label class="ax-label ax-label-required" for="delivery_time">Delivery time</label>
-              <select
-                id="delivery_time"
-                name="delivery_time"
-                class="ax-select"
-                [(ngModel)]="update.delivery_time">
-                <option value="" selected disabled>Select delivery time</option>
-                <option value="1-3">1 – 3 days</option>
-                <option value="4-7">4 – 7 days</option>
-                <option value="14-21">14 – 21 days</option>
-                <option value="custom">Custom</option>
-              </select>
+              <app-ax-combobox name="delivery_time" [(ngModel)]="update.delivery_time"
+                [options]="deliveryTimeOptions" [searchable]="false" [allowClear]="false"
+                placeholder="Select delivery time" ariaLabel="Delivery time"></app-ax-combobox>
               <span class="ax-hint">Choose a standard window or select "Custom".</span>
             </div>
 

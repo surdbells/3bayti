@@ -24,10 +24,8 @@
           <div class="ax-grid-2 ax-gap-4">
             <div class="ax-form-field">
               <label class="ax-label ax-label-required" for="c_type">Type</label>
-              <select id="c_type" name="type" class="ax-input" [(ngModel)]="form.type">
-                <option value="anniversary">Anniversary — celebratory deals</option>
-                <option value="flash">Flash Sale — urgency + stock bars</option>
-              </select>
+              <app-ax-combobox name="type" [(ngModel)]="form.type" [options]="typeOptions"
+                [searchable]="false" [allowClear]="false" ariaLabel="Campaign type"></app-ax-combobox>
             </div>
             <div class="ax-form-field">
               <label class="ax-label" for="c_discount">Default discount (%)</label>

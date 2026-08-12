@@ -7,6 +7,7 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 import { OtaAdminService, OtaBundle, OtaUploadMeta } from '../../services/ota-admin.service';
 
 /**
@@ -17,11 +18,16 @@ import { OtaAdminService, OtaBundle, OtaUploadMeta } from '../../services/ota-ad
 @Component({
   selector: 'app-ota',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent],
+  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, AxComboboxComponent],
   templateUrl: './ota.component.html',
   styleUrl: './ota.component.css',
 })
 export class OtaComponent implements OnInit {
+  readonly platformOptions: AxComboboxOption[] = [
+    { id: 'android', label: 'Android' },
+    { id: 'ios', label: 'iOS' },
+    { id: 'both', label: 'Both (iOS + Android)' },
+  ];
   private readonly confirm = inject(AxConfirmService);
 
   readonly loading = signal(true);

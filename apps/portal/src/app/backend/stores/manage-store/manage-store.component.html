@@ -115,10 +115,8 @@
                 <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
                   <div class="ax-form-field">
                     <label class="ax-label">Emirate</label>
-                    <select class="ax-input" [(ngModel)]="store.emirate" name="emirate">
-                      <option [ngValue]="''">— Select emirate —</option>
-                      <option *ngFor="let e of emirates" [ngValue]="e">{{ e }}</option>
-                    </select>
+                    <app-ax-combobox name="emirate" [(ngModel)]="store.emirate" [options]="emirateOptions"
+                      [searchable]="true" placeholder="— Select emirate —" ariaLabel="Emirate"></app-ax-combobox>
                   </div>
                   <div class="ax-form-field">
                     <label class="ax-label">Country</label>

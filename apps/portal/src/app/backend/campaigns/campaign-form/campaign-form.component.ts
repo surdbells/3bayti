@@ -10,6 +10,7 @@ import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { AxComboboxComponent, AxComboboxOption } from '../../../shared/forms/ax-combobox.component';
 
 interface ItemRow {
   product_id: number;
@@ -36,11 +37,15 @@ interface ProductResult {
 @Component({
   selector: 'app-campaign-form',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent],
+  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, AxComboboxComponent],
   templateUrl: './campaign-form.component.html',
   styleUrl: './campaign-form.component.css',
 })
 export class CampaignFormComponent implements OnInit, OnDestroy {
+  readonly typeOptions: AxComboboxOption[] = [
+    { id: 'anniversary', label: 'Anniversary — celebratory deals' },
+    { id: 'flash', label: 'Flash Sale — urgency + stock bars' },
+  ];
   user_session = {
     id: 0, token: '', first_name: '', last_name: '',
     email: '', phone: '',

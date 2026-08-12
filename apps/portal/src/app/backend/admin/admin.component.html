@@ -265,14 +265,10 @@
         <div class="ax-flex ax-justify-end ax-mb-4">
           <label class="ax-flex ax-items-center ax-gap-2 ax-text-sm ax-text-secondary">
             {{ 'table_status' | translate }}
-            <select class="ax-select ax-input-sm"
-                    [value]="statusFilter"
-                    (change)="onStatusFilterChange($any($event.target).value)"
-                    [attr.aria-label]="'filter_by_status' | translate">
-              <option *ngFor="let opt of statusOptions" [value]="opt.value">
-                {{ opt.label | translate }}
-              </option>
-            </select>
+            <app-ax-combobox class="ax-input-sm" [ngModel]="statusFilter"
+              [ngModelOptions]="{ standalone: true }" [options]="statusFilterComboOptions"
+              (selectionChange)="onStatusFilterChange($any($event))" [searchable]="false" [allowClear]="false"
+              [ariaLabel]="'filter_by_status' | translate"></app-ax-combobox>
           </label>
         </div>
 

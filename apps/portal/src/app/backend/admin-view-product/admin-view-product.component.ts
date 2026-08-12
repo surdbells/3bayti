@@ -15,6 +15,7 @@ import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { CfImagePipe } from '../../shared/cf-image.pipe';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 import {
   AxMultiselectComponent,
   AxMultiselectOption,
@@ -40,11 +41,17 @@ interface ColorOption {
     AxRichEditorComponent,
     AxMultiselectComponent,
     AxAccordionComponent,
-    AxAccordionItemComponent, IconComponent],
+    AxAccordionItemComponent, IconComponent, AxComboboxComponent],
   templateUrl: './admin-view-product.component.html',
   styleUrl: './admin-view-product.component.css',
 })
 export class AdminViewProductComponent implements OnInit {
+  readonly deliveryTimeOptions: AxComboboxOption[] = [
+    { id: '1-3', label: '1 – 3 days' },
+    { id: '4-7', label: '4 – 7 days' },
+    { id: '14-21', label: '14 – 21 days' },
+    { id: 'custom', label: 'Custom' },
+  ];
   category?: Category[];
   labels?: Labels[];
 

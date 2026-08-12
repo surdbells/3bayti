@@ -14,6 +14,7 @@ import { AxTabsComponent, AxTabComponent, AxConfirmService } from '../../../shar
 
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { AxComboboxComponent, AxComboboxOption } from '../../../shared/forms/ax-combobox.component';
 @Component({
   selector: 'app-manage-store',
   standalone: true,
@@ -24,7 +25,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
     AccountSetupComponent,
     AxRichEditorComponent,
     AxTabsComponent,
-    AxTabComponent, IconComponent],
+    AxTabComponent, IconComponent, AxComboboxComponent],
   templateUrl: './manage-store.component.html',
   styleUrl: './manage-store.component.css',
 })
@@ -64,6 +65,9 @@ export class ManageStoreComponent implements OnInit {
     'Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman',
     'Umm Al Quwain', 'Ras Al Khaimah', 'Fujairah',
   ];
+  get emirateOptions(): AxComboboxOption[] {
+    return this.emirates.map((e) => ({ id: e, label: e }));
+  }
 
   store = {
     id: 0, token: '',

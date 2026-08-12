@@ -19,11 +19,8 @@
       <div class="ota-form">
         <label class="ota-field">
           <span class="ota-label">Platform</span>
-          <select class="ax-input" [(ngModel)]="form.platform" name="platform">
-            <option value="android">Android</option>
-            <option value="ios">iOS</option>
-            <option value="both">Both (iOS + Android)</option>
-          </select>
+          <app-ax-combobox name="platform" [(ngModel)]="form.platform" [options]="platformOptions"
+            [searchable]="false" [allowClear]="false" ariaLabel="Platform"></app-ax-combobox>
         </label>
 
         <label class="ota-field">

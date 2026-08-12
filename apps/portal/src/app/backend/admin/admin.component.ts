@@ -1,4 +1,5 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -25,6 +26,8 @@ import { AxPaginationComponent } from '../../shared/data';
 
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { I18nService } from '../../i18n.service';
+import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
 export type ChartOptions = {
   series: ApexAxisChartSeries;
   chart: ApexChart;
@@ -65,16 +68,22 @@ const ICON_MAP: Record<string, string> = {
   imports: [
     AdminShellComponent,
     CommonModule,
+    FormsModule,
     NgApexchartsModule,
     ChartComponent,
     AxPaginationComponent,
     TranslatePipe,
-    RouterLink, IconComponent],
+    RouterLink, IconComponent, AxComboboxComponent],
   standalone: true,
   templateUrl: './admin.component.html',
   styleUrl: './admin.component.css'
 })
 export class AdminComponent implements OnInit {
+  private readonly i18n = inject(I18nService);
+  /** Recent-sales status filter options as searchable combobox items. */
+  get statusFilterComboOptions(): AxComboboxOption[] {
+    return this.statusOptions.map((o) => ({ id: o.value, label: this.i18n.t(o.label) }));
+  }
   @ViewChild('chart') chart!: ChartComponent;
   public chartOptions: Partial<ChartOptions>;
 
