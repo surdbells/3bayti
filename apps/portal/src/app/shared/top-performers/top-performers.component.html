@@ -1,0 +1,45 @@
+<section class="tp" *ngIf="loading || items.length">
+  <header class="tp-head">
+    <h2 class="tp-title">{{ heading }}</h2>
+    <span class="tp-sub" *ngIf="!loading && items.length">Top {{ items.length }} by {{ metricUnit }}</span>
+  </header>
+
+  <!-- Loading skeleton -->
+  <div class="tp-rail" *ngIf="loading">
+    <article class="tp-card tp-skeleton" *ngFor="let s of skeletons">
+      <div class="tp-top">
+        <span class="tp-chip tp-shim"></span>
+        <span class="tp-avatar tp-shim"></span>
+        <span class="tp-line tp-shim"></span>
+      </div>
+      <span class="tp-line tp-line-lg tp-shim"></span>
+      <span class="tp-bar tp-shim"></span>
+    </article>
+  </div>
+
+  <!-- Cards -->
+  <div class="tp-rail" *ngIf="!loading">
+    <article class="tp-card" *ngFor="let it of items; trackBy: trackByRank"
+             (click)="select.emit(it)" tabindex="0" role="button"
+             (keydown.enter)="select.emit(it)">
+      <div class="tp-top">
+        <span class="tp-chip" [class.tp-chip-gold]="it.rank <= 3">#{{ it.rank }}</span>
+        <span class="tp-avatar" [style.background]="it.imageUrl ? null : gradient(it.rank)">
+          <img *ngIf="it.imageUrl" [src]="it.imageUrl" [alt]="it.name" />
+          <ng-container *ngIf="!it.imageUrl">{{ initials(it.name) }}</ng-container>
+        </span>
+        <span class="tp-id">
+          <span class="tp-name" [title]="it.name">{{ it.name }}</span>
+          <span class="tp-subtitle" *ngIf="subtitleLabel">{{ subtitleLabel }}</span>
+        </span>
+      </div>
+
+      <div class="tp-metric">
+        <b>{{ it.value | number }}</b>
+        <span>{{ metricUnit }}</span>
+      </div>
+
+      <div class="tp-bar"><div class="tp-fill" [style.width.%]="pct(it.value)"></div></div>
+    </article>
+  </div>
+</section>

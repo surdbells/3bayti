@@ -14,6 +14,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
 import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
+import { TopPerformersComponent, TopPerformer } from '../../shared/top-performers/top-performers.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -50,7 +51,7 @@ interface CustomerFilters {
 @Component({
   selector: 'app-customers',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective, IconComponent, TranslatePipe, AxComboboxComponent],
+  imports: [AdminShellComponent, CommonModule, FormsModule, AxDataTableComponent, AxCellDirective, IconComponent, TranslatePipe, AxComboboxComponent, TopPerformersComponent],
   templateUrl: './customers.component.html',
   styleUrl: './customers.component.css',
 })
@@ -106,11 +107,37 @@ export class CustomersComponent implements OnInit {
     private toast: HotToastService,
   ) {}
 
+  topCustomers: TopPerformer[] = [];
+  topCustomersLoading = true;
+
   ngOnInit() {
     this.user_session = GlobalComponent.decodeBase64(
       sessionStorage.getItem('SESSION') ?? '',
     );
     this.buildTable();
+    this.loadTopCustomers();
+  }
+
+  /** Top-performing customers carousel (by number of purchases). */
+  private loadTopCustomers(): void {
+    this.topCustomersLoading = true;
+    this.adapter.get_v3('GET /admin/top-customers').pipe(
+      map((res: any) => (res?.data ?? []) as any[]),
+      catchError(() => of([] as any[])),
+    ).subscribe((rows) => {
+      this.topCustomers = rows.map((r) => ({
+        id: r.id,
+        rank: r.rank,
+        name: r.name || `${r.first_name ?? ''} ${r.last_name ?? ''}`.trim() || 'Customer',
+        value: r.purchases_count,
+        imageUrl: r.avatar_url ?? null,
+      }));
+      this.topCustomersLoading = false;
+    });
+  }
+
+  onTopCustomerSelect(it: TopPerformer): void {
+    this.router.navigate(['/view_customer'], { queryParams: { id: it.id, name: it.name } });
   }
 
   private buildTable() {

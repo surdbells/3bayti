@@ -11,6 +11,14 @@
       </div>
     </header>
 
+    <app-top-performers
+      heading="Top performing customers"
+      metricUnit="purchases"
+      subtitleLabel="Customer"
+      [items]="topCustomers"
+      [loading]="topCustomersLoading"
+      (select)="onTopCustomerSelect($event)"></app-top-performers>
+
     <section class="ax-mb-4">
       <div class="ax-filter-grid">
         <label class="ax-field">

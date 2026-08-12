@@ -677,6 +677,10 @@ return function (App $app): void {
         $group->patch('/ota/bundles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Ota\SetOtaBundleActiveController::class)->add($perm->for('settings.edit'));
         $group->delete('/ota/bundles/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Ota\DeleteOtaBundleController::class)->add($perm->for('settings.edit'));
 
+        // Admin dashboards — "Top performers" carousels
+        $group->get('/top-stores', \Bayti\Api\Http\Controllers\Admin\Analytics\ListTopStoresController::class)->add($perm->for('vendors.view'));
+        $group->get('/top-customers', \Bayti\Api\Http\Controllers\Admin\Analytics\ListTopCustomersController::class)->add($perm->for('orders.view'));
+
         // Vendor admin
         $group->get('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class)->add($perm->for('vendors.view'));
         $group->post('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\CreateVendorController::class)->add($perm->for('vendors.create'));

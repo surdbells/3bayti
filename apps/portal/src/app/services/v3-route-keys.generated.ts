@@ -57,6 +57,8 @@ export type V3RouteKey =
   | 'GET /admin/vendor-applications'
   | 'GET /admin/vendor-metrics'
   | 'GET /admin/vendors'
+  | 'GET /admin/top-stores'
+  | 'GET /admin/top-customers'
   | 'GET /admin/vendors/:id'
   | 'GET /admin/vendors/:id/analytics'
   | 'GET /admin/vendors/:id/compliance'
@@ -335,6 +337,8 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/vendor-applications',
   'GET /admin/vendor-metrics',
   'GET /admin/vendors',
+  'GET /admin/top-stores',
+  'GET /admin/top-customers',
   'GET /admin/vendors/:id',
   'GET /admin/vendors/:id/analytics',
   'GET /admin/vendors/:id/compliance',

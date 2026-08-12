@@ -14,6 +14,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
 import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
+import { TopPerformersComponent, TopPerformer } from '../../shared/top-performers/top-performers.component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -55,7 +56,7 @@ interface StoreFilters {
     CommonModule,
     FormsModule,
     AxDataTableComponent,
-    AxCellDirective, IconComponent, TranslatePipe, AxComboboxComponent],
+    AxCellDirective, IconComponent, TranslatePipe, AxComboboxComponent, TopPerformersComponent],
   templateUrl: './stores.component.html',
   styleUrl: './stores.component.css',
 })
@@ -142,11 +143,37 @@ export class StoresComponent implements OnInit {
     private toast: HotToastService,
   ) {}
 
+  topStores: TopPerformer[] = [];
+  topStoresLoading = true;
+
   ngOnInit() {
     this.user_session = GlobalComponent.decodeBase64(
       sessionStorage.getItem('SESSION') ?? '',
     );
     this.buildTable();
+    this.loadTopStores();
+  }
+
+  /** Top-performing stores carousel (by units sold). */
+  private loadTopStores(): void {
+    this.topStoresLoading = true;
+    this.adapter.get_v3('GET /admin/top-stores').pipe(
+      map((res: any) => (res?.data ?? []) as any[]),
+      catchError(() => of([] as any[])),
+    ).subscribe((rows) => {
+      this.topStores = rows.map((r) => ({
+        id: r.id,
+        rank: r.rank,
+        name: r.name,
+        value: r.sales_count,
+        imageUrl: r.logo_url ?? null,
+      }));
+      this.topStoresLoading = false;
+    });
+  }
+
+  onTopStoreSelect(it: TopPerformer): void {
+    this.openTab('/manage_store', Number(it.id), it.name);
   }
 
   private buildTable() {
