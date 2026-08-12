@@ -176,6 +176,7 @@ export class AdminComponent implements OnInit {
     if (this.user_session?.is_admin) {
       this.loadTopStores();
       this.loadTopCustomers();
+      this.loadInsights();
     }
   }
 
@@ -219,6 +220,92 @@ export class AdminComponent implements OnInit {
 
   onTopCustomerSelect(it: TopPerformer): void {
     this.router.navigate(['/admin/customers', it.id], { queryParams: { name: it.name } });
+  }
+
+  // ── Period-over-period insight (GET /admin/insights?days=N) ───────────
+  readonly rangeOptions = [7, 30, 90];
+  rangeDays = 30;
+  insightsLoading = true;
+  insights: {
+    kpis: Record<string, { value: number; prev: number }>;
+    revenue_series: number[];
+    sales_by_status: { status: string; count: number }[];
+    at_risk: { pending_payment: number; stuck_fulfilling: number };
+  } | null = null;
+
+  readonly kpiCards = [
+    { key: 'revenue', label: 'Revenue', icon: 'payments', money: true, spark: true },
+    { key: 'orders', label: 'Orders', icon: 'shopping_cart', money: false, spark: false },
+    { key: 'units_sold', label: 'Units sold', icon: 'sell', money: false, spark: false },
+    { key: 'new_customers', label: 'New customers', icon: 'group_add', money: false, spark: false },
+  ];
+
+  sparklineOptions: any = {};
+  statusDonutOptions: any = {};
+
+  setRange(days: number): void {
+    if (this.rangeDays === days) { return; }
+    this.rangeDays = days;
+    this.loadInsights();
+  }
+
+  private loadInsights(): void {
+    this.insightsLoading = true;
+    this.adapter.get_v3('GET /admin/insights', { query: { days: this.rangeDays } }).subscribe({
+      next: (res: any) => {
+        this.insights = res ?? null;
+        this.buildInsightCharts();
+        this.insightsLoading = false;
+      },
+      error: () => { this.insightsLoading = false; },
+    });
+  }
+
+  kpiValue(key: string): number { return this.insights?.kpis?.[key]?.value ?? 0; }
+
+  /** Signed % change vs the prior period. prev=0 → 100% (new) or 0. */
+  private deltaPct(key: string): number {
+    const k = this.insights?.kpis?.[key];
+    if (!k) { return 0; }
+    if (!k.prev) { return k.value > 0 ? 100 : 0; }
+    return ((k.value - k.prev) / k.prev) * 100;
+  }
+  deltaAbs(key: string): number { return Math.abs(Math.round(this.deltaPct(key))); }
+  deltaClass(key: string): string {
+    const d = this.deltaPct(key);
+    return d > 0 ? 'is-up' : d < 0 ? 'is-down' : 'is-flat';
+  }
+  deltaIcon(key: string): string {
+    const d = this.deltaPct(key);
+    return d > 0 ? 'trending_up' : d < 0 ? 'trending_down' : 'trending_flat';
+  }
+
+  get hasStatusMix(): boolean { return (this.insights?.sales_by_status?.length ?? 0) > 0; }
+
+  prettyStatus(s: string): string {
+    return String(s ?? '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  private buildInsightCharts(): void {
+    this.sparklineOptions = {
+      series: [{ name: 'Revenue', data: this.insights?.revenue_series ?? [] }],
+      chart: { type: 'area', height: 56, sparkline: { enabled: true } },
+      stroke: { curve: 'smooth', width: 2 },
+      fill: { type: 'gradient', gradient: { opacityFrom: 0.35, opacityTo: 0 } },
+      colors: ['#906952'],
+      tooltip: { enabled: true, x: { show: false }, y: { formatter: (v: number) => 'AED ' + Math.round(v).toLocaleString() } },
+    };
+    const sbs = this.insights?.sales_by_status ?? [];
+    this.statusDonutOptions = {
+      series: sbs.map((s) => s.count),
+      labels: sbs.map((s) => this.prettyStatus(s.status)),
+      chart: { type: 'donut', height: 280 },
+      legend: { position: 'bottom', fontSize: '12px' },
+      colors: ['#906952', '#c9ae85', '#b68e75', '#a27a60', '#7a5844', '#d1543f', '#614536', '#9b9185'],
+      dataLabels: { enabled: false },
+      plotOptions: { pie: { donut: { size: '68%' } } },
+      stroke: { width: 0 },
+    };
   }
 
   error_notification(message: string) { this.toast.error(message); }

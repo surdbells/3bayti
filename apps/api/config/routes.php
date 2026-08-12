@@ -680,6 +680,8 @@ return function (App $app): void {
         // Admin dashboards — "Top performers" carousels
         $group->get('/top-stores', \Bayti\Api\Http\Controllers\Admin\Analytics\ListTopStoresController::class)->add($perm->for('vendors.view'));
         $group->get('/top-customers', \Bayti\Api\Http\Controllers\Admin\Analytics\ListTopCustomersController::class)->add($perm->for('orders.view'));
+        // Admin dashboard — period-over-period insight (KPIs, revenue series, status mix, at-risk)
+        $group->get('/insights', \Bayti\Api\Http\Controllers\Admin\Analytics\GetAdminInsightsController::class)->add($perm->for('reports.view'));
 
         // Vendor admin
         $group->get('/vendors', \Bayti\Api\Http\Controllers\Admin\Vendor\ListVendorsAdminController::class)->add($perm->for('vendors.view'));

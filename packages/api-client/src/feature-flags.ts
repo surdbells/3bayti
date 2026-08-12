@@ -1039,6 +1039,12 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/admin/top-customers',
     shape: 'raw',
   },
+  'GET /admin/insights': {
+    target: 'new',
+    oldPath: '',
+    newPath: '/v3/admin/insights',
+    shape: 'raw',
+  },
   'POST /admin/vendors': {
     target: 'new',
     oldPath: '',

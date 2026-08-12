@@ -124,6 +124,77 @@
         </div>
       </section>
 
+      <!-- Platform insight — period over period -->
+      <section class="ax-page-section" *ngIf="user_session.is_admin">
+        <div class="adm-insight-head">
+          <div>
+            <h2 class="ax-card-title">Platform insight</h2>
+            <p class="ax-card-subtitle">Last {{ rangeDays }} days vs the prior {{ rangeDays }}</p>
+          </div>
+          <div class="ax-segment adm-range" role="tablist" aria-label="Time range">
+            <button *ngFor="let r of rangeOptions" type="button" class="ax-segment-item"
+                    [class.ax-segment-item-active]="rangeDays === r"
+                    [attr.aria-selected]="rangeDays === r" (click)="setRange(r)">{{ r }} days</button>
+          </div>
+        </div>
+
+        <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-4 ax-gap-5 adm-kpis" [class.adm-dim]="insightsLoading">
+          <div class="ax-stat-card" *ngFor="let c of kpiCards" [class.ax-stat-card-brand]="c.spark">
+            <div class="ax-stat-card-header">
+              <span class="ax-stat-card-label">{{ c.label }}</span>
+              <span class="ax-stat-card-icon"><app-icon [name]="c.icon" aria-hidden="true"></app-icon></span>
+            </div>
+            <div class="ax-stat-card-value"><ng-container *ngIf="c.money">AED </ng-container>{{ kpiValue(c.key) | number:'1.0-0' }}</div>
+            <div class="adm-spark" *ngIf="c.spark && !insightsLoading && insights">
+              <apx-chart [series]="sparklineOptions.series || []" [chart]="sparklineOptions.chart"
+                         [stroke]="sparklineOptions.stroke" [fill]="sparklineOptions.fill"
+                         [colors]="sparklineOptions.colors" [tooltip]="sparklineOptions.tooltip"></apx-chart>
+            </div>
+            <div class="ax-stat-card-footer">
+              <span class="adm-delta" [ngClass]="deltaClass(c.key)">
+                <app-icon [name]="deltaIcon(c.key)" aria-hidden="true"></app-icon>{{ deltaAbs(c.key) }}%
+              </span>
+              <span class="ax-stat-card-caption">vs prior period</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Order status mix + needs-attention -->
+      <section class="ax-page-section" *ngIf="user_session.is_admin">
+        <div class="adm-2col">
+          <div class="ax-card">
+            <div class="ax-card-header">
+              <h2 class="ax-card-title">Order status</h2>
+              <span class="ax-text-2xs ax-text-tertiary">Last {{ rangeDays }} days</span>
+            </div>
+            <div class="ax-card-body">
+              <div class="adm-donut" *ngIf="hasStatusMix; else noStatus">
+                <apx-chart [series]="statusDonutOptions.series || []" [chart]="statusDonutOptions.chart"
+                           [labels]="statusDonutOptions.labels || []" [legend]="statusDonutOptions.legend"
+                           [colors]="statusDonutOptions.colors" [dataLabels]="statusDonutOptions.dataLabels"
+                           [plotOptions]="statusDonutOptions.plotOptions" [stroke]="statusDonutOptions.stroke"></apx-chart>
+              </div>
+              <ng-template #noStatus><p class="adm-muted">No orders in this window yet.</p></ng-template>
+            </div>
+          </div>
+
+          <div class="ax-card">
+            <div class="ax-card-header"><h2 class="ax-card-title">Needs attention</h2></div>
+            <div class="ax-card-body adm-atrisk">
+              <button type="button" class="adm-risk" (click)="open_processing()">
+                <span class="adm-risk-val">{{ insights?.at_risk?.pending_payment || 0 }}</span>
+                <span class="adm-risk-lbl">Awaiting payment</span>
+              </button>
+              <button type="button" class="adm-risk" (click)="open_processing()">
+                <span class="adm-risk-val">{{ insights?.at_risk?.stuck_fulfilling || 0 }}</span>
+                <span class="adm-risk-lbl">Stuck fulfilling &gt; 3 days</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Top performers -->
       <section class="ax-page-section" *ngIf="user_session.is_admin">
         <app-top-performers
