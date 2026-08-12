@@ -18,10 +18,12 @@ final class OtpRateLimitConfigTest extends TestCase
         $c = OtpRateLimitConfig::fromEnv([]);
 
         self::assertSame(60, $c->resendCooldownSeconds);
-        self::assertSame(5, $c->sendsPerHour);
-        self::assertSame(10, $c->sendsPerDay);
-        self::assertSame(20, $c->sendsPerIpHour);
-        self::assertSame(40, $c->sendsPerIpDay);
+        // Hard send caps disabled by default (product decision) — only the
+        // 60s resend cooldown gates sends.
+        self::assertSame(0, $c->sendsPerHour);
+        self::assertSame(0, $c->sendsPerDay);
+        self::assertSame(0, $c->sendsPerIpHour);
+        self::assertSame(0, $c->sendsPerIpDay);
         self::assertSame(5, $c->maxVerifyAttempts);
     }
 
@@ -55,15 +57,17 @@ final class OtpRateLimitConfigTest extends TestCase
 
         self::assertSame(0, $c->sendsPerHour);
         self::assertSame(0, $c->resendCooldownSeconds);
-        // Untouched keys still get defaults.
-        self::assertSame(10, $c->sendsPerDay);
+        // Untouched keys still get their defaults (maxVerifyAttempts is
+        // still 5 — the send caps default to 0, so assert one that doesn't).
+        self::assertSame(5, $c->maxVerifyAttempts);
     }
 
     #[Test]
     public function nonNumericFallsBackToDefault(): void
     {
-        $c = OtpRateLimitConfig::fromEnv(['OTP_SENDS_PER_HOUR' => 'abc']);
-        self::assertSame(5, $c->sendsPerHour);
+        // Use a key with a non-zero default so the fallback is observable.
+        $c = OtpRateLimitConfig::fromEnv(['OTP_MAX_VERIFY_ATTEMPTS' => 'abc']);
+        self::assertSame(5, $c->maxVerifyAttempts);
     }
 
     #[Test]

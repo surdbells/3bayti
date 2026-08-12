@@ -35,10 +35,19 @@ final class OtpRateLimitConfig
 {
     public function __construct(
         public readonly int $resendCooldownSeconds = 60,
-        public readonly int $sendsPerHour = 5,
-        public readonly int $sendsPerDay = 10,
-        public readonly int $sendsPerIpHour = 20,
-        public readonly int $sendsPerIpDay = 40,
+        // Product decision: NO hard send caps for web or mobile — the only
+        // gate on OTP sends is the 60s resend cooldown above (the client
+        // counts down 60s, then allows a fresh send). The per-destination
+        // and per-IP hour/day caps are disabled by default (0). An operator
+        // can still re-enable any of them via the OTP_SENDS_* env vars if
+        // abuse ever forces the issue.
+        public readonly int $sendsPerHour = 0,
+        public readonly int $sendsPerDay = 0,
+        public readonly int $sendsPerIpHour = 0,
+        public readonly int $sendsPerIpDay = 0,
+        // Verify-guessing protection is NOT a send limit — it bounds how
+        // many times a single code can be guessed before it burns. Kept on
+        // (5) so codes can't be brute-forced.
         public readonly int $maxVerifyAttempts = 5,
     ) {
     }
@@ -56,10 +65,13 @@ final class OtpRateLimitConfig
 
         return new self(
             resendCooldownSeconds: self::readInt($env, 'OTP_RESEND_COOLDOWN_SECONDS', 60),
-            sendsPerHour: self::readInt($env, 'OTP_SENDS_PER_HOUR', 5),
-            sendsPerDay: self::readInt($env, 'OTP_SENDS_PER_DAY', 10),
-            sendsPerIpHour: self::readInt($env, 'OTP_SENDS_PER_IP_HOUR', 20),
-            sendsPerIpDay: self::readInt($env, 'OTP_SENDS_PER_IP_DAY', 40),
+            // Default 0 (disabled) — see the constructor note. An operator
+            // can still cap sends by setting these env vars to a positive
+            // value; unset/blank means "no hard limit".
+            sendsPerHour: self::readInt($env, 'OTP_SENDS_PER_HOUR', 0),
+            sendsPerDay: self::readInt($env, 'OTP_SENDS_PER_DAY', 0),
+            sendsPerIpHour: self::readInt($env, 'OTP_SENDS_PER_IP_HOUR', 0),
+            sendsPerIpDay: self::readInt($env, 'OTP_SENDS_PER_IP_DAY', 0),
             maxVerifyAttempts: self::readInt($env, 'OTP_MAX_VERIFY_ATTEMPTS', 5),
         );
     }
