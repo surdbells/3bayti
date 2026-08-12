@@ -60,6 +60,19 @@ final class MessageCentralOtpProvider implements OtpProvider
     private const SEND_PATH = '/verification/v3/send';
     private const VERIFY_PATH = '/verification/v3/validateOtp';
 
+    /**
+     * Dial codes the app's country picker offers (UAE, GCC, + a few
+     * nearby markets). MessageCentral's send API wants the destination
+     * split into (countryCode, mobileNumber), so we detect the code the
+     * number actually carries instead of assuming UAE. Longest-first so a
+     * 2-digit code ('20') can't shadow a 3-digit one — though none of
+     * these overlap as prefixes. Keep in sync with the mobile app's
+     * country list.
+     *
+     * @var list<string>
+     */
+    private const KNOWN_DIAL_CODES = ['971', '966', '974', '973', '965', '968', '962', '961', '20'];
+
     /** Cached auth token for the lifetime of this instance. */
     private ?string $cachedAuthToken = null;
 
@@ -83,14 +96,17 @@ final class MessageCentralOtpProvider implements OtpProvider
     {
         $authToken = $this->getAuthToken();
 
-        // CPaaS expects the mobile number WITHOUT the leading '+'
-        // and WITHOUT the country code (country code is a separate
-        // query param). Strip both.
-        $localNumber = $this->stripCountryCode($toPhone);
+        // CPaaS expects the destination split into a country code and a
+        // local mobile number (both without '+'). The number the user
+        // typed carries its OWN country code (they pick a dial code in the
+        // app) — we must forward THAT, not a hardcoded UAE code, or e.g. a
+        // Bahrain number (+973…) gets sent as countryCode=971 + 973… and
+        // MessageCentral rejects the malformed +971973… destination.
+        [$countryCode, $localNumber] = $this->resolveDestination($toPhone);
 
         try {
             $response = $this->http->post($this->buildUrl(self::SEND_PATH, [
-                'countryCode' => $this->country,
+                'countryCode' => $countryCode,
                 'flowType' => $this->flowType,
                 'mobileNumber' => $localNumber,
             ]), [
@@ -238,15 +254,42 @@ final class MessageCentralOtpProvider implements OtpProvider
         return $path . '?' . http_build_query($params);
     }
 
-    private function stripCountryCode(string $phone): string
+    /**
+     * Split an E.164-ish destination into [countryCode, mobileNumber] for
+     * CPaaS. Returns the country code the number actually carries; only
+     * bare local numbers (no international prefix, no recognised code) fall
+     * back to the configured default country.
+     *
+     *   '+97335175253'  → ['973', '35175253']   (Bahrain)
+     *   '+96552550707'  → ['965', '52550707']   (Kuwait)
+     *   '+971542192976' → ['971', '542192976']  (UAE)
+     *   '0501234567'    → ['971', '501234567']   (bare UAE local → default)
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function resolveDestination(string $phone): array
     {
-        // Remove a leading '+' and the country code if present.
-        // E.g. '+971501234567' with country '971' → '501234567'.
-        $stripped = ltrim($phone, '+');
-        if (str_starts_with($stripped, $this->country)) {
-            $stripped = substr($stripped, strlen($this->country));
+        $digits = preg_replace('/\D/', '', $phone) ?? '';
+        // '00' is the international access prefix — same meaning as '+'.
+        if (str_starts_with($digits, '00')) {
+            $digits = substr($digits, 2);
         }
-        return $stripped;
+        if ($digits === '') {
+            return [$this->country, ''];
+        }
+
+        // Detect the carried country code. UAE mobile numbers start with
+        // '5', so they never collide with any of these codes; the match
+        // only fires on numbers that genuinely lead with an intl code.
+        foreach (self::KNOWN_DIAL_CODES as $code) {
+            if (str_starts_with($digits, $code) && strlen($digits) > strlen($code)) {
+                return [$code, substr($digits, strlen($code))];
+            }
+        }
+
+        // Bare local number: assume the default country, dropping a
+        // stray leading trunk '0' (e.g. '0501234567' → '501234567').
+        return [$this->country, ltrim($digits, '0')];
     }
 
     /**
