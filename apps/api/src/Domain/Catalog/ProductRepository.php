@@ -253,12 +253,16 @@ class ProductRepository extends EntityRepository
             $qb->andWhere('p.salePrice IS NOT NULL AND p.salePrice < p.price');
         }
 
-        // In-stock filter (Stores #4): mirrors the serializer's `in_stock`
-        // boolean (stock_quantity > 0 OR allow_oversell) so a filtered
-        // list matches exactly what the storefront renders as available.
-        // Opt-in — existing callers that omit it are unaffected.
+        // In-stock filter: mirrors Product::isInStock() — stock_status is
+        // authoritative (oversell wins, else available unless explicitly
+        // out_of_stock). Legacy-migrated products tracked stock by
+        // stock_status with a 0 quantity, so the old `stockQuantity > 0`
+        // test wrongly hid them — which is why featured-vendor cards showed
+        // fewer than their EMBEDDED_PRODUCTS_PER_VENDOR products. Opt-in —
+        // callers that omit it are unaffected.
         if (!empty($filters['inStock'])) {
-            $qb->andWhere('(p.stockQuantity > 0 OR p.allowOversell = TRUE)');
+            $qb->andWhere('(p.allowOversell = TRUE OR p.stockStatus != :inStockOut)')
+               ->setParameter('inStockOut', Product::STOCK_OUT);
         }
 
         $searchQuery = $filters['searchQuery'] ?? null;
