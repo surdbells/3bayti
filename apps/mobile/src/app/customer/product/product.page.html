@@ -42,6 +42,14 @@
           <swiper-slide class="slide">
             <div class="hero">
               <div class="img-wrap" [class.loaded]="imgLoaded[$index]">
+                <!-- Blurred, cover-scaled copy of the same photo fills the
+                     letterbox left by the contained image below. Decorative;
+                     reuses the cached 'detail' URL so it's not a second fetch. -->
+                <img
+                  class="backdrop"
+                  [src]="cfImage(image, 'detail')"
+                  alt=""
+                  aria-hidden="true" />
                 <ion-img
                   [src]="cfImage(image, 'detail')"
                   [alt]="rqst_param.product_name"
