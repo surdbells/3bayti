@@ -173,25 +173,6 @@ swiper-slide,
     opacity: 1;
   }
 
-  // Blurred backdrop that fills the letterbox bars the contained photo leaves.
-  // cover (override the shared contain), blurred, and scaled past the box so
-  // the blur's soft edges never reveal the flat background. Sits below the
-  // sharp image; both fade in together via the shared opacity gating.
-  .backdrop {
-    object-fit: cover;
-    filter: blur(22px) saturate(1.15);
-    transform: scale(1.2) translateZ(0);
-    z-index: 0;
-  }
-
-  .model {
-    z-index: 1;
-  }
-
-  .skeleton {
-    z-index: 2;
-  }
-
   .skeleton {
     position: absolute;
     inset: 0;
