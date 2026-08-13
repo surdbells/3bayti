@@ -117,6 +117,8 @@ export class AdminProductsComponent implements OnInit {
       ],
       rowActions: [
         { id: 'edit', label: 'Edit', icon: 'edit' },
+        // Publish is only meaningful for drafts; hidden on already-published rows.
+        { id: 'publish', label: 'Publish', icon: 'check', hidden: (r: ProductRow) => r.status === 'published' || r.status === 'active' },
         { id: 'manage-store', label: 'Manage store', icon: 'storefront' },
         { id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger' },
       ],
@@ -133,7 +135,7 @@ export class AdminProductsComponent implements OnInit {
     if (query.filters['stock']) q.stock_status = query.filters['stock'];
     if (query.filters['vendor']) q.vendor = query.filters['vendor'];
 
-    return this.adapter.get_v3('GET /products', { query: q }).pipe(
+    return this.adapter.get_v3('GET /admin/products', { query: q }).pipe(
       map((response: any): AxServerFetchResult<ProductRow> => {
         const raw: any[] = response?.data ?? [];
         const rows = raw.map((p) => this.mapProduct(p));
@@ -165,7 +167,9 @@ export class AdminProductsComponent implements OnInit {
       stock_status: p.stock_status ?? (inStock ? 'in_stock' : 'out_of_stock'),
       created_at: p.created_at ?? '',
       colours: [],
-      status: p.status ?? (p.is_published === false ? 'draft' : 'published'),
+      // Normalise the lifecycle status to the UI vocabulary: 'active' is the
+      // stored value, 'published' is what the column + status filter show.
+      status: p.status === 'active' ? 'published' : (p.status ?? (p.is_published === false ? 'draft' : 'published')),
     } as ProductRow;
   }
 
@@ -178,6 +182,8 @@ export class AdminProductsComponent implements OnInit {
           queryParams: { id: row.id, slug: row.slug },
         });
         return;
+      case 'publish':
+        return this.confirmPublish(row);
       case 'manage-store':
         this.router.navigate(['/manage_store'], {
           queryParams: { id: row.store, name: row.store_name },
@@ -186,6 +192,22 @@ export class AdminProductsComponent implements OnInit {
       case 'delete':
         return this.confirmDelete(row);
     }
+  }
+
+  /** Publish a draft product (status → published) via the admin write API. */
+  private confirmPublish(row: ProductRow): void {
+    this.confirm.confirm({
+      title: 'Publish product',
+      message: `Publish "${row.name}"? It will become visible to customers.`,
+      confirmLabel: 'Publish', cancelLabel: 'Cancel',
+    }).then((ok) => {
+      if (!ok) return;
+      this.adapter.put_v3('PUT /admin/products/:id', { status: 'published' }, { params: { id: String(row.id) } })
+        .subscribe({
+          next: (r: any) => { if (r) { this.toast.success('Product published.'); this.dataSource.retry(); } },
+          error: () => this.toast.error('Unable to publish product.'),
+        });
+    });
   }
 
   newProduct(): void {

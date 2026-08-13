@@ -287,15 +287,13 @@ export class ProductFormComponent implements OnInit {
 
   fetchProductById(): void {
     this.ui.page_loading = true;
-    // Admin pages pass slug (GET /products/{slug}); vendor pages pass the
-    // v3 id and must use the owner-scoped vendor endpoint, which returns
-    // products in ANY status (the storefront by-legacy-id/slug routes 404
-    // for v3-native products and for drafts).
-    const req = this.productSlug
-      ? this.adapter.get_v3('GET /products/:slug', { params: { slug: this.productSlug } })
-      : this.adminMode
-        ? this.adapter.get_v3('GET /products/by-legacy-id/:id', { params: { id: String(this.productId) } })
-        : this.adapter.get_v3('GET /vendor/products/:id', { params: { id: String(this.productId) } });
+    // Both admin and vendor edit load by v3 id through an ADMIN/OWNER-scoped
+    // endpoint that returns the product in ANY status. The public
+    // GET /products/{slug} was used before for admin, but it 404s on drafts
+    // (and v3-native products), so the draft edit form rendered blank.
+    const req = this.adminMode
+      ? this.adapter.get_v3('GET /admin/products/:id', { params: { id: String(this.productId) } })
+      : this.adapter.get_v3('GET /vendor/products/:id', { params: { id: String(this.productId) } });
     req.subscribe({
       next: (response: any) => {
         const p = response?.data;

@@ -90,3 +90,7 @@ resources/ios/**/*
 /test-results
 /blob-report
 .playwright
+
+# Mobile build artifacts (packaged app bundles)
+com.threebayti.app_*.zip
+*.zip_encrypted.zip

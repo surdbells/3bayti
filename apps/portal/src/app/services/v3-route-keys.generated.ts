@@ -48,6 +48,7 @@ export type V3RouteKey =
   | 'GET /admin/orders/:id/timeline'
   | 'GET /admin/permission-catalog'
   | 'GET /admin/products'
+  | 'GET /admin/products/:id'
   | 'GET /admin/returns'
   | 'GET /admin/roles'
   | 'GET /admin/roles/:id'
@@ -329,6 +330,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/orders/:id/timeline',
   'GET /admin/permission-catalog',
   'GET /admin/products',
+  'GET /admin/products/:id',
   'GET /admin/returns',
   'GET /admin/roles',
   'GET /admin/roles/:id',

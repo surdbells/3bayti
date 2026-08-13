@@ -185,6 +185,69 @@ class ProductRepository extends EntityRepository
         return ['items' => $items, 'total' => $total];
     }
 
+    /**
+     * Admin GLOBAL product list — every vendor, every status (so the admin
+     * catalogue can see and manage DRAFTS, which the public
+     * findActivePaginated hides). Optional filters: vendorId or vendorSlug,
+     * status, stock_status, search, pagination. Soft-deleted rows are
+     * excluded unless status is explicitly asked for.
+     *
+     * @param array<string, mixed> $filters
+     * @return array{items: list<Product>, total: int}
+     */
+    public function findForAdminPaginated(array $filters): array
+    {
+        $limit  = max(1, min(100, (int) ($filters['limit'] ?? 24)));
+        $offset = max(0, (int) ($filters['offset'] ?? 0));
+
+        $qb = $this->createQueryBuilder('p')
+            ->innerJoin('p.vendor', 'v')
+            ->addSelect('v');
+
+        if (!empty($filters['vendorId'])) {
+            $qb->andWhere('p.vendor = :vendorId')->setParameter('vendorId', (int) $filters['vendorId']);
+        }
+
+        $vendorSlug = $filters['vendorSlug'] ?? null;
+        if (is_string($vendorSlug) && trim($vendorSlug) !== '') {
+            $qb->andWhere('v.slug = :vendorSlug')->setParameter('vendorSlug', trim($vendorSlug));
+        }
+
+        $search = $filters['search'] ?? null;
+        if (is_string($search) && trim($search) !== '') {
+            $qb->andWhere('LOWER(p.name) LIKE :q')
+               ->setParameter('q', '%' . strtolower(trim($search)) . '%');
+        }
+
+        $status = $filters['status'] ?? null;
+        if (is_string($status) && $status !== '') {
+            // 'published' is the customer-facing word for the 'active' status.
+            $status = $status === 'published' ? Product::STATUS_ACTIVE : $status;
+            $qb->andWhere('p.status = :status')->setParameter('status', $status);
+        } else {
+            // No explicit status filter: show draft + active, hide deleted.
+            $qb->andWhere('p.status != :softDeleted')
+               ->setParameter('softDeleted', Product::STATUS_SOFT_DELETED);
+        }
+
+        $stockStatus = $filters['stock_status'] ?? null;
+        if (is_string($stockStatus) && $stockStatus !== '') {
+            $qb->andWhere('p.stockStatus = :stockStatus')->setParameter('stockStatus', $stockStatus);
+        }
+
+        $countQb = clone $qb;
+        $countQb->select('COUNT(p.id)')->resetDQLPart('orderBy');
+        $total = (int) $countQb->getQuery()->getSingleScalarResult();
+
+        $items = $qb->orderBy('p.createdAt', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+
+        return ['items' => $items, 'total' => $total];
+    }
+
     public function findActivePaginated(array $filters = []): array
     {
         $qb = $this->createQueryBuilder('p')

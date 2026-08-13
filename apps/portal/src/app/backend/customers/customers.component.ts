@@ -174,7 +174,23 @@ export class CustomersComponent implements OnInit {
         { key: 'status', label: 'Status', align: 'center',
           value: (r) => (r.status ? 'Active' : 'Inactive') },
       ],
+      rowActions: [
+        { id: 'view', label: 'View customer', icon: 'eye' },
+        { id: 'activate', label: 'Activate', icon: 'check',
+          hidden: (r) => r.status === true },
+        { id: 'deactivate', label: 'Deactivate', icon: 'block', variant: 'danger',
+          hidden: (r) => r.status !== true },
+      ],
     };
+  }
+
+  /** Row-level quick actions (the row click still opens the detail view). */
+  onRowAction(e: { action: { id: string }; row: CustomerRow }) {
+    switch (e.action.id) {
+      case 'view': return this.onRowClick(e.row);
+      case 'activate': return this.startActivate(e.row);
+      case 'deactivate': return this.startDeactivate(e.row);
+    }
   }
 
   private fetchCustomers(query: AxQueryState) {

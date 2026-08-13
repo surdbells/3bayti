@@ -185,6 +185,40 @@ final class ProductSerializer
         return $out;
     }
 
+    /**
+     * Admin GLOBAL product list row — the vendor-scoped manage shape plus a
+     * vendor embed, since the admin catalogue spans every store (Store
+     * column + vendor filter + "Manage store" row action).
+     *
+     * @return array<string, mixed>
+     */
+    public function adminListShape(Product $p): array
+    {
+        $vendor = $p->getVendor();
+
+        return array_merge($this->vendorManageShape($p), [
+            'vendor' => [
+                'id'        => $vendor->getId(),
+                'name'      => $vendor->getName(),
+                'slug'      => $vendor->getSlug(),
+                'legacy_id' => $vendor->getLegacyVendorId(),
+            ],
+        ]);
+    }
+
+    /**
+     * @param iterable<Product> $products
+     * @return list<array<string, mixed>>
+     */
+    public function adminListShapeMany(iterable $products): array
+    {
+        $out = [];
+        foreach ($products as $p) {
+            $out[] = $this->adminListShape($p);
+        }
+        return $out;
+    }
+
     public function listShape(Product $p): array
     {
         $primaryImage = $this->primaryImage($p);

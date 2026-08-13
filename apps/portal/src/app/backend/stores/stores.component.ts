@@ -217,7 +217,25 @@ export class StoresComponent implements OnInit {
         { id: 'bulk-approve', label: 'Approve', icon: 'check_circle' },
         { id: 'bulk-suspend', label: 'Suspend', icon: 'block', variant: 'danger' },
       ],
+      rowActions: [
+        { id: 'manage', label: 'Manage', icon: 'storefront' },
+        { id: 'approve', label: 'Approve', icon: 'check_circle',
+          hidden: (r) => r.approved === true },
+        { id: 'suspend', label: 'Suspend', icon: 'block', variant: 'danger',
+          hidden: (r) => r.status !== true },
+        { id: 'delete', label: 'Delete', icon: 'delete', variant: 'danger' },
+      ],
     };
+  }
+
+  /** Row-level quick actions (the row click still opens the manage page). */
+  onRowAction(e: { action: { id: string }; row: VendorRow }) {
+    switch (e.action.id) {
+      case 'manage': return this.onRowClick(e.row);
+      case 'approve': return this.confirmApprove(e.row);
+      case 'suspend': return this.confirmSuspend(e.row);
+      case 'delete': return this.confirmDelete(e.row);
+    }
   }
 
   /** Map an AxDataTable column key → the backend sort whitelist key. */

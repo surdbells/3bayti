@@ -836,6 +836,14 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Notification\SendBroadcastNotificationController::class)->add($perm->for('notifications.send'));
 
         // M3.3.2-F — Admin product write (admin can create/update/delete any product).
+        // Global admin catalogue (all vendors, all statuses — surfaces drafts,
+        // unlike the public /v3/products) + single-product read for the editor
+        // (any status, so draft edit forms load instead of 404ing on the
+        // storefront route). Numeric {id} keeps the detail route off the list.
+        $group->get('/products',
+            \Bayti\Api\Http\Controllers\Admin\Product\ListAdminProductsController::class)->add($perm->for('products.view'));
+        $group->get('/products/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Product\GetAdminProductController::class)->add($perm->for('products.view'));
         $group->post('/products',
             \Bayti\Api\Http\Controllers\Admin\Product\CreateAdminProductController::class)->add($perm->for('products.create'));
         $group->put('/products/{id:[0-9]+}',

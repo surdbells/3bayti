@@ -1632,7 +1632,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     target: 'new', oldPath: '/admin/common/processingById', newPath: '/v3/admin/orders/:id/timeline', shape: 'v3-envelope',
   },
   'GET /admin/products': {
-    target: 'new', oldPath: '/admin/common/products', newPath: '/v3/products', shape: 'v3-envelope',
+    target: 'new', oldPath: '/admin/common/products', newPath: '/v3/admin/products', shape: 'v3-envelope',
+  },
+  'GET /admin/products/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/products/:id', shape: 'v3-envelope',
   },
   'GET /admin/transactions': {
     target: 'new', oldPath: '/admin/common/transactions', newPath: '/v3/admin/transactions', shape: 'v3-envelope',
