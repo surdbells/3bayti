@@ -119,8 +119,10 @@ swiper-slide,
   .model {
     width: 100%;
     height: 100%;
-    object-fit: cover;
-    object-position: top center;
+    // contain (not cover) so the whole product photo is visible inside the
+    // fixed 4:5 box instead of being cropped — matches the web PDP.
+    object-fit: contain;
+    object-position: center;
     border-radius: 0;
   }
 }
@@ -137,7 +139,10 @@ swiper-slide,
      nothing to resolve against and the wrap collapses to 0,
      hiding the absolutely-positioned <ion-img> inside. */
   aspect-ratio: 4 / 5;
-  background: linear-gradient(135deg, var(--ax-palette-beige-100) 0%, var(--ax-palette-beige-200) 100%);
+  // Light, near-white backdrop for the letterbox bars that `contain` leaves.
+  // Catalog photos are shot on white studio backgrounds, so the full image
+  // sits inside the fixed box near-seamlessly instead of being cropped.
+  background: #faf9f7;
   overflow: hidden;
 
   ion-img, img {
@@ -145,12 +150,22 @@ swiper-slide,
     inset: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    // contain: show the entire photo within the fixed 4:5 box (no crop),
+    // matching the web PDP, without making the image area any taller.
+    object-fit: contain;
     opacity: 0;
     transition: opacity 0.3s ease;
     will-change: opacity;
     backface-visibility: hidden;
     transform: translateZ(0);
+  }
+
+  // ion-img renders its <img> in shadow DOM; object-fit on the host doesn't
+  // reach it, so target the exposed part directly (harmless for a plain <img>).
+  ion-img::part(image) {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   &.loaded ion-img,
