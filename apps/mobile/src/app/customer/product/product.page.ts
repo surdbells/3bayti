@@ -95,7 +95,17 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   store_measurement: StoreMeasurement[] = [];
   product: Products[] = [];
   @ViewChild('swiper') swiperEl?: ElementRef<HTMLElement>;
+  @ViewChild('lightboxSwiper') lightboxSwiperEl?: ElementRef<HTMLElement>;
+  @ViewChild('thumbStrip') thumbStripEl?: ElementRef<HTMLElement>;
   index = signal(0);
+
+  /** Fullscreen tap-to-expand image gallery (cinematic filmstrip). */
+  lightboxOpen = signal(false);
+  lightboxIndex = signal(0);
+  /** Live swipe-down-to-dismiss drag state. */
+  lbDragY = signal(0);
+  lbBackdropOpacity = signal(1);
+  private lbDrag = { active: false, dir: '' as '' | 'v' | 'h', startX: 0, startY: 0 };
   isOnline = true;
   isMeasureOpen = false;
   isSizeGuideOpen = false;
@@ -210,6 +220,112 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
       });
     };
     attach();
+  }
+
+  // ── Fullscreen lightbox gallery ─────────────────────────────────────
+  /** Open the tap-to-expand fullscreen gallery at the tapped photo. */
+  openLightbox(start: number): void {
+    if (!this.images.length) { return; }
+    this.lightboxIndex.set(Math.max(0, Math.min(start, this.images.length - 1)));
+    this.resetLbDrag();
+    this.lightboxOpen.set(true);
+    this.cdr.markForCheck();
+    // The overlay renders via @if — init its swiper once the view paints.
+    setTimeout(() => this.initLightboxSwiper(this.lightboxIndex()), 0);
+  }
+
+  closeLightbox(): void {
+    this.lightboxOpen.set(false);
+    this.resetLbDrag();
+    this.cdr.markForCheck();
+    // Leave the PDP hero on the photo the user last viewed in the lightbox.
+    const sw: any = (this.swiperEl?.nativeElement as any)?.swiper;
+    sw?.slideTo?.(this.lightboxIndex(), 0);
+  }
+
+  private initLightboxSwiper(start: number): void {
+    const el = this.lightboxSwiperEl?.nativeElement as any;
+    if (!el) { return; }
+    const attach = () => {
+      const sw: any = el.swiper;
+      if (!sw) { setTimeout(attach, 30); return; }
+      sw.slideTo(start, 0, false);
+      this.lightboxIndex.set(sw.activeIndex ?? start);
+      this.centerActiveThumb();
+      sw.on('slideChange', () => {
+        this.lightboxIndex.set(sw.activeIndex ?? 0);
+        this.centerActiveThumb();
+        this.cdr.markForCheck();
+      });
+    };
+    attach();
+  }
+
+  /** Jump the lightbox to a thumbnail. */
+  goToLightboxSlide(i: number): void {
+    const sw: any = (this.lightboxSwiperEl?.nativeElement as any)?.swiper;
+    sw?.slideTo?.(i);
+    this.lightboxIndex.set(i);
+    this.centerActiveThumb();
+  }
+
+  /** Scroll the coverflow strip so the active thumb sits centered. */
+  private centerActiveThumb(): void {
+    const strip = this.thumbStripEl?.nativeElement;
+    if (!strip) { return; }
+    const active = strip.children[this.lightboxIndex()] as HTMLElement | undefined;
+    if (!active) { return; }
+    const target = active.offsetLeft - (strip.clientWidth - active.clientWidth) / 2;
+    strip.scrollTo({ left: Math.max(0, target), behavior: 'smooth' });
+  }
+
+  // Swipe-down-to-dismiss ----------------------------------------------
+  onLbTouchStart(e: TouchEvent): void {
+    const sw: any = (this.lightboxSwiperEl?.nativeElement as any)?.swiper;
+    if (sw?.zoom && sw.zoom.scale > 1) { return; } // let zoom-pan win
+    const t = e.touches[0];
+    this.lbDrag = { active: true, dir: '', startX: t.clientX, startY: t.clientY };
+  }
+
+  onLbTouchMove(e: TouchEvent): void {
+    if (!this.lbDrag.active) { return; }
+    const t = e.touches[0];
+    const dx = t.clientX - this.lbDrag.startX;
+    const dy = t.clientY - this.lbDrag.startY;
+    if (!this.lbDrag.dir) {
+      if (dy > 0 && Math.abs(dy) > Math.abs(dx) + 6) {
+        this.lbDrag.dir = 'v';
+        const sw: any = (this.lightboxSwiperEl?.nativeElement as any)?.swiper;
+        if (sw) { sw.allowTouchMove = false; } // stop horizontal swipe fighting the drag
+      } else if (Math.abs(dx) >= Math.abs(dy)) {
+        this.lbDrag.dir = 'h';
+      }
+    }
+    if (this.lbDrag.dir === 'v') {
+      const y = Math.max(0, dy);
+      this.lbDragY.set(y);
+      this.lbBackdropOpacity.set(Math.max(0.2, 1 - y / 500));
+      this.cdr.markForCheck();
+    }
+  }
+
+  onLbTouchEnd(): void {
+    const sw: any = (this.lightboxSwiperEl?.nativeElement as any)?.swiper;
+    if (sw) { sw.allowTouchMove = true; }
+    const dismissed = this.lbDrag.dir === 'v' && this.lbDragY() > 110;
+    this.lbDrag = { active: false, dir: '', startX: 0, startY: 0 };
+    if (dismissed) {
+      this.closeLightbox();
+    } else {
+      this.resetLbDrag();
+      this.cdr.markForCheck();
+    }
+  }
+
+  private resetLbDrag(): void {
+    this.lbDragY.set(0);
+    this.lbBackdropOpacity.set(1);
+    this.lbDrag = { active: false, dir: '', startX: 0, startY: 0 };
   }
 
   colors: string[] = [];

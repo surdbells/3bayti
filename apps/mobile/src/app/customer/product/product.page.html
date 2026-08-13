@@ -21,8 +21,13 @@
 
   @if(!ui_controls.product_missing){
   <div class="safe-area">
-    <!-- Image Slider -->
-    <div class="slides-wrapper">
+    <!-- Image Slider — tap opens the fullscreen lightbox gallery -->
+    <div class="slides-wrapper" (click)="openLightbox(index())">
+      @if(images.length > 0){
+        <div class="expand-hint" aria-hidden="true">
+          <ax-icon name="expand"></ax-icon>
+        </div>
+      }
       <!-- Placeholder shimmer while data is loading (before any
            swiper slides exist). Reserves the visual space and
            shows a skeleton; disappears once images.length > 0. -->
@@ -537,6 +542,54 @@
   }
   }
 </ion-content>
+
+<!-- Fullscreen image lightbox (cinematic filmstrip). Rendered OUTSIDE
+     ion-content so its position:fixed can't be trapped by a transformed
+     ancestor. Only mounts while open. -->
+@if(lightboxOpen()){
+  <div class="lightbox"
+       (touchstart)="onLbTouchStart($event)"
+       (touchmove)="onLbTouchMove($event)"
+       (touchend)="onLbTouchEnd()"
+       (touchcancel)="onLbTouchEnd()">
+    <div class="lightbox__backdrop" [style.opacity]="lbBackdropOpacity()"></div>
+
+    <div class="lightbox__stage" [style.transform]="'translateY(' + lbDragY() + 'px)'">
+      <div class="lb-top">
+        <button type="button" class="lb-close" (click)="closeLightbox()" [attr.aria-label]="'button_close' | translate">
+          <ax-icon name="x"></ax-icon>
+        </button>
+        <div class="lb-handle" aria-hidden="true"></div>
+        <div class="lb-counter">{{ lightboxIndex() + 1 }} / {{ images.length }}</div>
+      </div>
+
+      <swiper-container #lightboxSwiper class="lb-swiper" zoom="true" grab-cursor="true">
+        @for(image of images; track $index){
+          <swiper-slide class="lb-slide">
+            <div class="swiper-zoom-container">
+              <img [src]="cfImage(image, 'detail')" [alt]="rqst_param.product_name" />
+            </div>
+          </swiper-slide>
+        }
+      </swiper-container>
+
+      <div class="lb-swipe-hint" aria-hidden="true">
+        <ax-icon name="chevron-down"></ax-icon>
+      </div>
+
+      <div class="lb-thumbs" #thumbStrip>
+        @for(image of images; track $index){
+          <button type="button"
+                  class="lb-thumb"
+                  [class.is-active]="lightboxIndex() === $index"
+                  (click)="goToLightboxSlide($index)">
+            <img [src]="cfImage(image, 'thumb')" alt="" />
+          </button>
+        }
+      </div>
+    </div>
+  </div>
+}
 
 <!-- Footer -->
 <ion-footer class="product-footer ion-no-border">
