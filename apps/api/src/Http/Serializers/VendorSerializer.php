@@ -110,10 +110,15 @@ final class VendorSerializer
             'id_front' => $v->getIdFront(),
             'id_back' => $v->getIdBack(),
             'license_doc' => $v->getLicenseDoc(),
-            // Lifecycle flags. `approved` gates the Approved/Pending
-            // badge; `store_status`/`is_active` both feed the Active
-            // badge (the portal ORs them).
-            'approved' => $v->isStoreApproved(),
+            // Lifecycle flags. `approved` gates the Approved/Pending badge
+            // and MUST track the lifecycle `status` (what the stores list,
+            // the status filter, and approve/suspend all use) — not the
+            // legacy is_store_approved boolean, which migrated vendors carry
+            // as true even while status is still 'pending', so the two
+            // surfaces disagreed. `store_status`/`is_active` both feed the
+            // Active badge (the portal ORs them).
+            'approved' => $v->isApproved(),
+            'status' => $v->getStatus(),
             'store_status' => $v->isActive(),
             'is_active' => $v->isActive(),
             // Store profile.

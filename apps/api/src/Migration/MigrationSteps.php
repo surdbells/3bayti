@@ -606,7 +606,7 @@ final class MigrationSteps
                                 (legacy_vendor_id, slug, name, description,
                                  contact_email, contact_phone,
                                  logo_url, cover_image_url,
-                                 is_active, is_verified, is_store_approved,
+                                 is_active, is_verified, is_store_approved, status, status_changed_at,
                                  commission_rate,
                                  owner_user_id,
                                  legal_name, store_email, store_phone_raw, store_address,
@@ -620,7 +620,7 @@ final class MigrationSteps
                                 (:legacy_id, :slug, :name, :description,
                                  :contact_email, :contact_phone,
                                  NULL, NULL,
-                                 :is_active, :is_verified, :is_approved,
+                                 :is_active, :is_verified, :is_approved, :status, :status_changed,
                                  '10.00',
                                  :owner_user_id,
                                  :legal_name, :store_email, :store_phone_raw, :store_address,
@@ -637,6 +637,12 @@ final class MigrationSteps
                                 'is_active' => $isActive ? 'true' : 'false',
                                 'is_verified' => $isStoreApproved ? 'true' : 'false',
                                 'is_approved' => $isStoreApproved ? 'true' : 'false',
+                                // Lifecycle status must track the legacy approval, not
+                                // default to 'pending' — otherwise a legacy-approved store
+                                // imports as pending and the admin stores list shows
+                                // "Approval pending" for an operating vendor.
+                                'status' => $isStoreApproved ? 'approved' : 'pending',
+                                'status_changed' => $isStoreApproved ? $created : null,
                                 'owner_user_id' => $ownerV3Id,
                                 'legal_name' => $legalName, 'store_email' => $storeEmailVal,
                                 'store_phone_raw' => $storePhoneRaw, 'store_address' => $storeAddress,
