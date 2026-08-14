@@ -97,6 +97,9 @@ final class SendBroadcastNotificationController
 
         $sent = 0;
         $failed = 0;
+        /** @var array<string, int> $failureKinds */
+        $failureKinds = [];
+        $errorSample = null;
         foreach ($tokens as $token) {
             try {
                 $this->pushSender->sendToToken($token, $push, [
@@ -106,6 +109,10 @@ final class SendBroadcastNotificationController
                 $sent++;
             } catch (PushException $e) {
                 $failed++;
+                $failureKinds[$e->kind] = ($failureKinds[$e->kind] ?? 0) + 1;
+                // FcmHttpV1Sender messages never contain the token, so this is
+                // safe to surface to the admin.
+                $errorSample ??= $e->getMessage();
                 if ($e->isTokenDead()) {
                     // Permanently dead token — prune so it leaves the pool.
                     $deviceTokens->deactivateByToken($token);
@@ -117,12 +124,29 @@ final class SendBroadcastNotificationController
             }
         }
 
+        // Every single send failing is a systematic problem (bad service
+        // account, FCM API disabled, sender/project mismatch) — not a handful
+        // of dead tokens. Escalate to error so it lands in Sentry.
+        if ($sent === 0 && $failed > 0) {
+            $this->logger->error('admin broadcast: all sends failed', [
+                'event' => 'admin.broadcast',
+                'audience' => $audience,
+                'failed' => $failed,
+                'kinds' => $failureKinds,
+                'error_sample' => $errorSample,
+            ]);
+        }
+
         return $this->ok([
             'data' => [
                 'audience' => $audience,
                 'recipients' => count($tokens),
                 'sent' => $sent,
                 'failed' => $failed,
+                // Diagnostics (admin-only route): breakdown of why sends failed
+                // so "0 sent" isn't a silent dead end.
+                'failure_kinds' => $failureKinds,
+                'error_sample' => $errorSample,
             ],
         ]);
     }

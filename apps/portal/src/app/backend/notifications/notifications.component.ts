@@ -47,7 +47,10 @@ export class NotificationsComponent implements OnInit {
   ];
 
   sending = false;
-  lastResult: { audience: string; recipients: number; sent: number; failed: number } | null = null;
+  lastResult: {
+    audience: string; recipients: number; sent: number; failed: number;
+    failure_kinds?: Record<string, number>; error_sample?: string | null;
+  } | null = null;
 
   readonly TITLE_MAX = 120;
   readonly BODY_MAX = 500;
@@ -105,6 +108,9 @@ export class NotificationsComponent implements OnInit {
           this.lastResult = data;
           if (data.recipients === 0) {
             this.toast.success('No active devices in that audience — nothing was sent.');
+          } else if (data.sent === 0 && data.failed > 0) {
+            const kinds = data.failure_kinds ? Object.keys(data.failure_kinds).join(', ') : 'unknown';
+            this.toast.error(`Delivery failed for all ${data.failed} device(s) [${kinds}]. ${data.error_sample ?? ''}`.trim());
           } else {
             this.toast.success(`Sent to ${data.sent} of ${data.recipients} device(s).`);
           }
