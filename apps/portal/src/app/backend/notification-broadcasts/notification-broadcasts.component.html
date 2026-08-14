@@ -1,0 +1,29 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">Engagement</span>
+        <h1 class="ax-page-title">Notification history</h1>
+        <p class="ax-page-subtitle">Every push broadcast, with delivery and device stats.</p>
+      </div>
+      <button type="button" class="ax-btn ax-btn-primary" (click)="goCompose()">
+        <app-icon name="send"></app-icon> New broadcast
+      </button>
+    </header>
+
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource"
+                         (rowClick)="onRowClick($event)" (rowAction)="onRowAction($event)">
+        <ng-template axCell="message_preview" let-row>
+          <span class="ax-text-secondary">{{ row.message_preview }}</span>
+        </ng-template>
+        <ng-template axCell="status" let-row>
+          <span [ngClass]="statusBadge(row.status)">{{ statusLabel(row.status) }}</span>
+        </ng-template>
+        <ng-template axCell="failed_count" let-row>
+          <span [class.ax-text-danger]="row.failed_count > 0">{{ row.failed_count }}</span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
+</app-admin-shell>

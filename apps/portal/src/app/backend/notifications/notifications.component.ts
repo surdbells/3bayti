@@ -50,6 +50,7 @@ export class NotificationsComponent implements OnInit {
   lastResult: {
     audience: string; recipients: number; sent: number; failed: number;
     failure_kinds?: Record<string, number>; error_sample?: string | null;
+    queued?: boolean; id?: number;
   } | null = null;
 
   readonly TITLE_MAX = 120;
@@ -62,10 +63,17 @@ export class NotificationsComponent implements OnInit {
     private confirm: AxConfirmService,
   ) {}
 
+  /** Live audience summary (count + device split) for the selected audience. */
+  audiencePreview: { total: number; android: number; ios: number } | null = null;
+  audiencePreviewLoading = false;
+  /** Broadcast id from the last send — links the summary to its detail page. */
+  lastBroadcastId: number | null = null;
+
   ngOnInit() {
     this.user_session = GlobalComponent.decodeBase64(
       sessionStorage.getItem('SESSION') ?? '',
     );
+    this.loadAudiencePreview();
   }
 
   get canSend(): boolean {
@@ -76,6 +84,33 @@ export class NotificationsComponent implements OnInit {
 
   audienceLabel(v: Audience): string {
     return this.audiences.find((a) => a.value === v)?.label ?? v;
+  }
+
+  /** Switch audience + refresh the preview count. */
+  selectAudience(v: Audience) {
+    this.form.audience = v;
+    this.loadAudiencePreview();
+  }
+
+  private loadAudiencePreview() {
+    this.audiencePreviewLoading = true;
+    this.adapter.get_v3('GET /admin/notifications/audience-preview', { query: { audience: this.form.audience } })
+      .subscribe({
+        next: (res: any) => {
+          const d = res?.data ?? res;
+          this.audiencePreview = d ? { total: d.total ?? 0, android: d.android ?? 0, ios: d.ios ?? 0 } : null;
+          this.audiencePreviewLoading = false;
+        },
+        error: () => { this.audiencePreview = null; this.audiencePreviewLoading = false; },
+      });
+  }
+
+  viewLastBroadcast() {
+    if (this.lastBroadcastId) this.router.navigate(['/admin/notification-broadcasts', this.lastBroadcastId]);
+  }
+
+  viewHistory() {
+    this.router.navigate(['/admin/notification-broadcasts']);
   }
 
   submit() {
@@ -106,7 +141,10 @@ export class NotificationsComponent implements OnInit {
         const data = response?.data ?? response;
         if (data) {
           this.lastResult = data;
-          if (data.recipients === 0) {
+          this.lastBroadcastId = data.id ?? null;
+          if (data.queued) {
+            this.toast.success(`Broadcast queued to ${data.recipients} device(s) — sending in the background.`);
+          } else if (data.recipients === 0) {
             this.toast.success('No active devices in that audience — nothing was sent.');
           } else if (data.sent === 0 && data.failed > 0) {
             const kinds = data.failure_kinds ? Object.keys(data.failure_kinds).join(', ') : 'unknown';

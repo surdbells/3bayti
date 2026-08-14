@@ -1,0 +1,94 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="back()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Notification history
+        </button>
+        <span class="ax-page-header-eyebrow">Broadcast #{{ id }}</span>
+        <h1 class="ax-page-title">{{ broadcast?.title || 'Broadcast' }}</h1>
+      </div>
+      @if (broadcast) {
+        <div class="nb-actions">
+          <span [ngClass]="statusBadge(broadcast.status)">{{ statusLabel(broadcast.status) }}</span>
+          @if (broadcast.failed_count > 0) {
+            <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="resend('failed')">
+              <app-icon name="refresh"></app-icon> Resend failed ({{ broadcast.failed_count }})
+            </button>
+          }
+          <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="resend('all')">
+            <app-icon name="send"></app-icon> Resend all
+          </button>
+        </div>
+      }
+    </header>
+
+    @if (loading) {
+      <div class="ax-card ax-p-4 ax-text-secondary">Loading…</div>
+    } @else if (broadcast) {
+      @if (broadcast.resent_from_broadcast_id) {
+        <p class="ax-text-secondary ax-mb-3">
+          Resent from broadcast #{{ broadcast.resent_from_broadcast_id }} ({{ broadcast.resend_mode }}).
+        </p>
+      }
+
+      <!-- Message + meta -->
+      <section class="ax-card ax-p-4 ax-mb-4">
+        <p class="nb-body">{{ broadcast.body }}</p>
+        <div class="nb-meta">
+          <span><strong>Audience:</strong> {{ broadcast.audience_label }}</span>
+          <span><strong>Sent by:</strong> {{ broadcast.sent_by_name || '—' }}</span>
+          <span><strong>Created:</strong> {{ broadcast.created_at ? (broadcast.created_at | date:'medium') : '—' }}</span>
+          @if (broadcast.deep_link) { <span><strong>Link:</strong> {{ broadcast.deep_link }}</span> }
+        </div>
+        @if (broadcast.error_sample) {
+          <p class="ax-text-danger ax-mt-2"><strong>Error:</strong> {{ broadcast.error_sample }}</p>
+        }
+      </section>
+
+      <!-- Delivery summary -->
+      <section class="nb-metrics ax-mb-4">
+        <div class="nb-metric"><span class="nb-metric-label">Recipients</span><span class="nb-metric-value">{{ broadcast.recipients_total | number }}</span></div>
+        <div class="nb-metric"><span class="nb-metric-label">Sent</span><span class="nb-metric-value ax-text-success">{{ broadcast.sent_count | number }}</span></div>
+        <div class="nb-metric"><span class="nb-metric-label">Failed</span><span class="nb-metric-value" [class.ax-text-danger]="broadcast.failed_count > 0">{{ broadcast.failed_count | number }}</span></div>
+        <div class="nb-metric"><span class="nb-metric-label">Sent rate</span><span class="nb-metric-value">{{ broadcast.delivery_rate }}%</span></div>
+        <div class="nb-metric"><span class="nb-metric-label">Failure rate</span><span class="nb-metric-value">{{ broadcast.failure_rate }}%</span></div>
+      </section>
+
+      <!-- Device breakdown -->
+      <section class="nb-devices ax-mb-4">
+        <div class="ax-card ax-p-4">
+          <h3 class="nb-device-title">Android</h3>
+          <div class="nb-device-stats">
+            <span>{{ broadcast.device_breakdown?.android?.total | number }} total</span>
+            <span class="ax-text-success">{{ broadcast.device_breakdown?.android?.sent | number }} sent</span>
+            <span [class.ax-text-danger]="broadcast.device_breakdown?.android?.failed > 0">{{ broadcast.device_breakdown?.android?.failed | number }} failed</span>
+          </div>
+        </div>
+        <div class="ax-card ax-p-4">
+          <h3 class="nb-device-title">iOS</h3>
+          <div class="nb-device-stats">
+            <span>{{ broadcast.device_breakdown?.ios?.total | number }} total</span>
+            <span class="ax-text-success">{{ broadcast.device_breakdown?.ios?.sent | number }} sent</span>
+            <span [class.ax-text-danger]="broadcast.device_breakdown?.ios?.failed > 0">{{ broadcast.device_breakdown?.ios?.failed | number }} failed</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Recipient drill-down -->
+      <h2 class="ax-section-title ax-mb-2">Recipients</h2>
+      <section class="ax-card ax-p-0">
+        <app-ax-data-table [config]="config" [dataSource]="dataSource">
+          <ng-template axCell="status" let-row>
+            <span [ngClass]="statusBadge(row.status)">{{ statusLabel(row.status) }}</span>
+          </ng-template>
+          <ng-template axCell="error_kind" let-row>
+            <span [class.ax-text-danger]="row.status === 'failed'">{{ row.error_kind || '—' }}</span>
+          </ng-template>
+        </app-ax-data-table>
+      </section>
+    } @else {
+      <div class="ax-card ax-p-4 ax-text-secondary">Broadcast not found.</div>
+    }
+  </div>
+</app-admin-shell>

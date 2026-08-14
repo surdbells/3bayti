@@ -1,0 +1,72 @@
+.ax-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.nb-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nb-body {
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0 0 12px;
+  white-space: pre-wrap;
+}
+
+.nb-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  font-size: 13px;
+  color: var(--ax-color-text-secondary, #666);
+}
+
+.nb-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+}
+
+.nb-metric {
+  background: var(--ax-color-bg-muted, #f5f4f2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nb-metric-label {
+  font-size: 12px;
+  color: var(--ax-color-text-secondary, #666);
+}
+
+.nb-metric-value {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.nb-devices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.nb-device-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.nb-device-stats {
+  display: flex;
+  gap: 16px;
+  font-size: 14px;
+}

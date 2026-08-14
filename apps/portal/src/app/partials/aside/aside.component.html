@@ -140,6 +140,12 @@
           </a>
         </li>
         <li *axCan="'notifications.view'">
+          <a routerLink="/admin/notification-broadcasts" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="history" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Notification History</span>
+          </a>
+        </li>
+        <li *axCan="'notifications.view'">
           <a routerLink="/notification-logs" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="mail_outline" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Notification Logs</span>

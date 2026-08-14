@@ -55,3 +55,9 @@
   color: var(--ax-color-text-tertiary);
 }
 .ax-text-capitalize { text-transform: capitalize; }
+
+.notif-audience-summary {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ax-color-text-secondary, #666);
+}

@@ -362,6 +362,19 @@ export const routes: Routes = [
     title: 'Push notification'
   },
   {
+    // Detail before the list so :id doesn't shadow a literal segment.
+    path: 'admin/notification-broadcasts/:id',
+    loadComponent: () => import('./backend/notification-broadcasts/notification-broadcast-detail.component').then(m => m.NotificationBroadcastDetailComponent),
+    canActivate: [adminGuard, requirePermission('notifications.view')],
+    title: 'Broadcast details'
+  },
+  {
+    path: 'admin/notification-broadcasts',
+    loadComponent: () => import('./backend/notification-broadcasts/notification-broadcasts.component').then(m => m.NotificationBroadcastsComponent),
+    canActivate: [adminGuard, requirePermission('notifications.view')],
+    title: 'Notification history'
+  },
+  {
     path: 'admin/logistics',
     loadComponent: () => import('./backend/logistics/logistics.component').then(m => m.LogisticsComponent),
     canActivate: [adminGuard, requirePermission('logistics.view')],

@@ -34,11 +34,17 @@
           <button *ngFor="let a of audiences" type="button"
                   class="notif-audience-card"
                   [class.notif-audience-card-active]="form.audience === a.value"
-                  (click)="form.audience = a.value">
+                  (click)="selectAudience(a.value)">
             <span class="notif-audience-label">{{ a.label }}</span>
             <span class="notif-audience-hint">{{ a.hint }}</span>
           </button>
         </div>
+        <div class="notif-audience-summary" *ngIf="audiencePreview">
+          <strong>{{ audiencePreview.total | number }}</strong> recipient(s)
+          · {{ audiencePreview.android | number }} Android
+          · {{ audiencePreview.ios | number }} iOS
+        </div>
+        <div class="notif-audience-summary" *ngIf="!audiencePreview && audiencePreviewLoading">Counting devices…</div>
       </div>
 
       <!-- Preview -->
@@ -65,6 +71,9 @@
     <!-- Last delivery summary -->
     <section class="ax-mt-5" *ngIf="lastResult">
       <h2 class="ax-card-title ax-mb-3">Last broadcast</h2>
+      <p class="ax-text-secondary ax-mb-3" *ngIf="lastResult.queued">
+        Queued and sending in the background. Open it in history to watch progress.
+      </p>
       <div class="notif-summary">
         <div class="notif-summary-stat">
           <span class="notif-summary-value">{{ lastResult.recipients | number }}</span>
@@ -72,7 +81,7 @@
         </div>
         <div class="notif-summary-stat">
           <span class="notif-summary-value ax-text-success">{{ lastResult.sent | number }}</span>
-          <span class="notif-summary-label">Delivered</span>
+          <span class="notif-summary-label">Sent</span>
         </div>
         <div class="notif-summary-stat">
           <span class="notif-summary-value" [class.ax-text-danger]="lastResult.failed > 0">{{ lastResult.failed | number }}</span>
@@ -82,6 +91,14 @@
           <span class="notif-summary-value ax-text-capitalize">{{ lastResult.audience }}</span>
           <span class="notif-summary-label">Audience</span>
         </div>
+      </div>
+      <div class="ax-flex ax-gap-3 ax-mt-3">
+        <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" *ngIf="lastBroadcastId" (click)="viewLastBroadcast()">
+          View details
+        </button>
+        <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="viewHistory()">
+          View all history
+        </button>
       </div>
     </section>
   </div>
