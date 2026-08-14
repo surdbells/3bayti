@@ -61,3 +61,26 @@
   font-size: 13px;
   color: var(--ax-color-text-secondary, #666);
 }
+
+.notif-vars {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+.notif-vars-label {
+  font-size: 13px;
+  color: var(--ax-color-text-secondary, #666);
+}
+.notif-chip {
+  border: 1px solid var(--ax-color-border, #ddd);
+  background: var(--ax-color-bg-muted, #f5f4f2);
+  color: var(--ax-color-text-primary, #222);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: var(--ax-font-mono, monospace);
+  cursor: pointer;
+}
+.notif-chip:hover { background: var(--ax-color-bg-surface, #fff); }

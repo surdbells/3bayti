@@ -375,6 +375,12 @@ export const routes: Routes = [
     title: 'Notification history'
   },
   {
+    path: 'admin/notification-templates',
+    loadComponent: () => import('./backend/notification-templates/notification-templates.component').then(m => m.NotificationTemplatesComponent),
+    canActivate: [adminGuard, requirePermission('notifications.view')],
+    title: 'Message templates'
+  },
+  {
     path: 'admin/logistics',
     loadComponent: () => import('./backend/logistics/logistics.component').then(m => m.LogisticsComponent),
     canActivate: [adminGuard, requirePermission('logistics.view')],

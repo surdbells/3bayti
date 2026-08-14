@@ -37,7 +37,13 @@ export class NotificationsComponent implements OnInit {
     title: '',
     body: '',
     audience: 'all' as Audience,
+    template_id: null as number | null,
   };
+
+  /** Active templates for the picker + the {{variable}} catalog. */
+  templates: { id: number; name: string; title: string; body: string; image_url: string | null; deep_link: string | null }[] = [];
+  variables: { key: string; label: string; sample: string }[] = [];
+  private lastField: 'title' | 'body' = 'body';
 
   audiences: { value: Audience; label: string; hint: string }[] = [
     { value: 'all', label: 'Everyone', hint: 'All app users with notifications enabled' },
@@ -74,6 +80,55 @@ export class NotificationsComponent implements OnInit {
       sessionStorage.getItem('SESSION') ?? '',
     );
     this.loadAudiencePreview();
+    this.loadTemplates();
+    this.loadVariables();
+  }
+
+  private loadTemplates() {
+    this.adapter.get_v3('GET /admin/notification-templates', { query: { status: 'active', limit: 200 } }).subscribe({
+      next: (res: any) => { this.templates = Array.isArray(res?.data) ? res.data : []; },
+      error: () => { this.templates = []; },
+    });
+  }
+
+  private loadVariables() {
+    this.adapter.get_v3('GET /admin/notification-templates/variables').subscribe({
+      next: (res: any) => { this.variables = Array.isArray(res?.data) ? res.data : []; },
+      error: () => { this.variables = []; },
+    });
+  }
+
+  /** Populate the composer from a chosen template. '' clears the selection. */
+  applyTemplate(idStr: string) {
+    const id = Number(idStr) || null;
+    this.form.template_id = id;
+    if (!id) return;
+    const t = this.templates.find((x) => x.id === id);
+    if (t) { this.form.title = t.title; this.form.body = t.body; }
+  }
+
+  rememberField(f: 'title' | 'body') { this.lastField = f; }
+
+  insertVariable(key: string) {
+    const token = `{{${key}}}`;
+    const el = document.getElementById(this.lastField === 'title' ? 'notif-title' : 'notif-body') as HTMLInputElement | HTMLTextAreaElement | null;
+    if (el && typeof el.selectionStart === 'number') {
+      const start = el.selectionStart ?? 0;
+      const end = el.selectionEnd ?? start;
+      const cur = this.form[this.lastField];
+      this.form[this.lastField] = cur.slice(0, start) + token + cur.slice(end);
+      setTimeout(() => { el.focus(); const pos = start + token.length; el.setSelectionRange(pos, pos); }, 0);
+    } else {
+      this.form[this.lastField] = (this.form[this.lastField] || '') + token;
+    }
+  }
+
+  /** Preview with sample variable values substituted. */
+  resolvePreview(text: string): string {
+    return (text || '').replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_m, k) => {
+      const v = this.variables.find((x) => x.key === String(k).toLowerCase());
+      return v ? v.sample : '';
+    });
   }
 
   get canSend(): boolean {
@@ -134,6 +189,7 @@ export class NotificationsComponent implements OnInit {
       title: this.form.title.trim(),
       body: this.form.body.trim(),
       audience: this.form.audience,
+      template_id: this.form.template_id,
     }).subscribe({
       next: (response: any) => {
         this.sending = false;

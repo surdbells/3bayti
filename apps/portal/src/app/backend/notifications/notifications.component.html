@@ -12,10 +12,18 @@
     </header>
 
     <section>
+      <div class="ax-field" *ngIf="templates.length">
+        <label class="ax-label" for="notif-template">Start from a template (optional)</label>
+        <select id="notif-template" class="ax-input" [ngModel]="form.template_id" (ngModelChange)="applyTemplate($event)">
+          <option [ngValue]="null">— None —</option>
+          <option *ngFor="let t of templates" [ngValue]="t.id">{{ t.name }}</option>
+        </select>
+      </div>
+
       <div class="ax-field">
         <label class="ax-label" for="notif-title">Title</label>
         <input id="notif-title" type="text" class="ax-input"
-               [(ngModel)]="form.title" [maxlength]="TITLE_MAX"
+               [(ngModel)]="form.title" [maxlength]="TITLE_MAX" (focus)="rememberField('title')"
                placeholder="e.g. Eid weekend sale" />
         <div class="ax-field-hint ax-text-right">{{ form.title.length }}/{{ TITLE_MAX }}</div>
       </div>
@@ -23,9 +31,15 @@
       <div class="ax-field">
         <label class="ax-label" for="notif-body">Message</label>
         <textarea id="notif-body" class="ax-input ax-textarea" rows="4"
-                  [(ngModel)]="form.body" [maxlength]="BODY_MAX"
+                  [(ngModel)]="form.body" [maxlength]="BODY_MAX" (focus)="rememberField('body')"
                   placeholder="What do you want to tell them?"></textarea>
         <div class="ax-field-hint ax-text-right">{{ form.body.length }}/{{ BODY_MAX }}</div>
+      </div>
+
+      <div class="notif-vars" *ngIf="variables.length">
+        <span class="notif-vars-label">Insert variable:</span>
+        <button type="button" class="notif-chip" *ngFor="let v of variables" (click)="insertVariable(v.key)"
+                [title]="v.label + ' — e.g. ' + v.sample">{{ '{{' + v.key + '}}' }}</button>
       </div>
 
       <div class="ax-field">
@@ -49,12 +63,12 @@
 
       <!-- Preview -->
       <div class="notif-preview" *ngIf="form.title || form.body">
-        <span class="notif-preview-eyebrow">Preview</span>
+        <span class="notif-preview-eyebrow">Preview{{ variables.length ? ' (sample values)' : '' }}</span>
         <div class="notif-preview-card">
           <div class="notif-preview-icon"><app-icon name="notifications"></app-icon></div>
           <div class="notif-preview-body">
-            <div class="notif-preview-title">{{ form.title || 'Notification title' }}</div>
-            <div class="notif-preview-text">{{ form.body || 'Your message will appear here.' }}</div>
+            <div class="notif-preview-title">{{ resolvePreview(form.title) || 'Notification title' }}</div>
+            <div class="notif-preview-text">{{ resolvePreview(form.body) || 'Your message will appear here.' }}</div>
           </div>
         </div>
       </div>
