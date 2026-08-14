@@ -837,6 +837,18 @@ return function (App $app): void {
         // Admin push broadcast (real implementation of legacy send_notifications).
         $group->post('/notifications',
             \Bayti\Api\Http\Controllers\Admin\Notification\SendBroadcastNotificationController::class)->add($perm->for('notifications.send'));
+        // Compose-time audience summary (count + android/ios).
+        $group->get('/notifications/audience-preview',
+            \Bayti\Api\Http\Controllers\Admin\Notification\GetAudiencePreviewController::class)->add($perm->for('notifications.view'));
+        // Broadcast history + details + recipient drill-down + resend.
+        $group->get('/notification-broadcasts',
+            \Bayti\Api\Http\Controllers\Admin\Notification\ListBroadcastsController::class)->add($perm->for('notifications.view'));
+        $group->get('/notification-broadcasts/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Notification\GetBroadcastController::class)->add($perm->for('notifications.view'));
+        $group->get('/notification-broadcasts/{id:[0-9]+}/recipients',
+            \Bayti\Api\Http\Controllers\Admin\Notification\ListBroadcastRecipientsController::class)->add($perm->for('notifications.view'));
+        $group->post('/notification-broadcasts/{id:[0-9]+}/resend',
+            \Bayti\Api\Http\Controllers\Admin\Notification\ResendBroadcastController::class)->add($perm->for('notifications.send'));
 
         // M3.3.2-F — Admin product write (admin can create/update/delete any product).
         // Global admin catalogue (all vendors, all statuses — surfaces drafts,

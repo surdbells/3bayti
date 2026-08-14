@@ -6,6 +6,7 @@ namespace Bayti\Api\Domain\Notification;
 
 use Bayti\Api\Domain\User\User;
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
 
 /**
  * Repository for DeviceToken entities.
@@ -67,6 +68,81 @@ class DeviceTokenRepository extends EntityRepository
         $rows = $qb->getQuery()->getResult();
 
         return array_map(static fn (array $row): string => $row['token'], $rows);
+    }
+
+    /**
+     * One keyset-paginated batch of active device tokens for an audience —
+     * ordered by id so a broadcast can stream the whole audience in bounded
+     * chunks (never loading every recipient into memory). Returns the fields
+     * the broadcast sender needs: id, token, platform, owning user id.
+     *
+     * @param 'all'|'customers'|'vendors'|'admins' $audience
+     * @return list<array{id:int, token:string, platform:string, user_id:int}>
+     */
+    public function findActiveForAudienceBatch(string $audience, int $afterId, int $limit): array
+    {
+        $qb = $this->createQueryBuilder('d')
+            ->select('d.id AS id', 'd.token AS token', 'd.platform AS platform', 'IDENTITY(d.user) AS user_id')
+            ->where('d.isActive = true')
+            ->andWhere('d.id > :afterId')
+            ->setParameter('afterId', $afterId)
+            ->orderBy('d.id', 'ASC')
+            ->setMaxResults(max(1, $limit));
+        $this->applyAudience($qb, $audience);
+
+        /** @var list<array{id:int, token:string, platform:string, user_id:int}> $rows */
+        $rows = $qb->getQuery()->getResult();
+        return array_map(static fn (array $r): array => [
+            'id' => (int) $r['id'],
+            'token' => (string) $r['token'],
+            'platform' => (string) $r['platform'],
+            'user_id' => (int) $r['user_id'],
+        ], $rows);
+    }
+
+    /**
+     * Active-token counts for an audience, split by platform — powers the
+     * compose-time audience preview and the broadcast totals.
+     *
+     * @param 'all'|'customers'|'vendors'|'admins' $audience
+     * @return array{total:int, android:int, ios:int}
+     */
+    public function countActiveForAudienceByPlatform(string $audience): array
+    {
+        $qb = $this->createQueryBuilder('d')
+            ->select('d.platform AS platform', 'COUNT(d.id) AS cnt')
+            ->where('d.isActive = true')
+            ->groupBy('d.platform');
+        $this->applyAudience($qb, $audience);
+
+        $android = 0;
+        $ios = 0;
+        foreach ($qb->getQuery()->getResult() as $row) {
+            if ($row['platform'] === DeviceToken::PLATFORM_IOS) {
+                $ios = (int) $row['cnt'];
+            } elseif ($row['platform'] === DeviceToken::PLATFORM_ANDROID) {
+                $android = (int) $row['cnt'];
+            }
+        }
+        return ['total' => $android + $ios, 'android' => $android, 'ios' => $ios];
+    }
+
+    /** Narrow a device-token query to an audience by the owner's role flag. */
+    private function applyAudience(QueryBuilder $qb, string $audience): void
+    {
+        if ($audience === 'all') {
+            return;
+        }
+        $qb->innerJoin('d.user', 'u');
+        $flag = match ($audience) {
+            'customers' => 'u.isCustomer',
+            'vendors'   => 'u.isVendor',
+            'admins'    => 'u.isAdmin',
+            default     => null,
+        };
+        if ($flag !== null) {
+            $qb->andWhere($flag . ' = true');
+        }
     }
 
     /**

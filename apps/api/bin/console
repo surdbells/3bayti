@@ -182,6 +182,20 @@ try {
     ]);
 }
 
+// Admin push broadcasts — background dispatcher for queued (large-audience)
+// broadcasts. Resolves the BroadcastSender from the container (EM + push
+// sender + logger); no payment-gateway dependency, registers on a fresh
+// sandbox too.
+try {
+    /** @var \Bayti\Api\Domain\Notification\BroadcastSender $broadcastSender */
+    $broadcastSender = $container->get(\Bayti\Api\Domain\Notification\BroadcastSender::class);
+    $cli->add(new \Bayti\Api\Console\DispatchBroadcastsCommand($em, $broadcastSender, $logger));
+} catch (\Throwable $e) {
+    $logger->info('broadcast dispatch command not registered', [
+        'reason' => $e->getMessage(),
+    ]);
+}
+
 // M3.1.7 — offline Noon webhook signature-algorithm confirmation.
 // Reads captured pairs from var/captures; no DB/network deps, so it
 // registers unconditionally (handy even on a fresh sandbox).

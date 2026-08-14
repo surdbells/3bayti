@@ -4,41 +4,41 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Admin\Notification;
 
+use Bayti\Api\Domain\Notification\BroadcastSender;
 use Bayti\Api\Domain\Notification\DeviceToken;
 use Bayti\Api\Domain\Notification\DeviceTokenRepository;
+use Bayti\Api\Domain\Notification\NotificationBroadcast;
+use Bayti\Api\Domain\User\User;
+use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
+use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
-use Bayti\Api\Notification\Push\PushException;
-use Bayti\Api\Notification\Push\PushMessage;
-use Bayti\Api\Notification\Push\PushSenderInterface;
+use Bayti\Api\Http\Serializers\NotificationBroadcastSerializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Log\LoggerInterface;
 
 /**
  * POST /v3/admin/notifications
  *
- * Admin push broadcast — parity with (and a real implementation of) the
- * legacy admin/send_notifications.php, which was only a single-token
- * scaffold. Sends a push notification to every active device token,
- * optionally narrowed to an audience (customers / vendors / admins).
+ * Compose "Send Now": create a broadcast and either send it inline (small
+ * audiences → instant summary) or queue it for the background dispatcher
+ * (larger audiences → never blocks the request, survives without the admin
+ * keeping the tab open). Either way the broadcast is recorded in history
+ * with per-recipient tracking + device breakdown.
  *
  * Body:
- *   title    string  required  — notification title
- *   body     string  required  — notification body
- *   audience string  optional  — all | customers | vendors | admins (default all)
- *   data     object  optional  — extra key/value payload forwarded to the client
+ *   title     string  required
+ *   body      string  required
+ *   audience  string  optional  — all | customers | vendors | admins (default all)
+ *   image_url string  optional
+ *   deep_link string  optional
+ *   data      object  optional  — extra string key/values forwarded to the client
  *
- * Behaviour:
- *   - Fans out one send per token. A single failed token never aborts the
- *     run (each send is isolated); failures are counted and logged.
- *   - Tokens FCM reports as UNREGISTERED are deactivated so they drop out
- *     of future broadcasts.
- *   - Returns a summary { audience, recipients, sent, failed }.
- *
- * Admin role is enforced by AdminAuthMiddleware on the route group.
+ * Backward compatible: the response still carries { recipients, sent, failed }
+ * for a synchronously-sent (small) broadcast; queued sends return status
+ * 'queued' + broadcast_id so the UI can follow it in history.
  */
 final class SendBroadcastNotificationController
 {
@@ -46,14 +46,14 @@ final class SendBroadcastNotificationController
 
     private const AUDIENCES = ['all', 'customers', 'vendors', 'admins'];
 
+    /** Audiences at/under this size send inline; larger ones queue. */
+    private const INLINE_THRESHOLD = 200;
+
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
-        // Inject the EntityManager, not the repository: PHP-DI can't autowire
-        // a Doctrine repository (its ClassMetadata dependency has no guessable
-        // $name), which made the whole controller unresolvable -> 500 on send.
         private readonly EntityManagerInterface $em,
-        private readonly PushSenderInterface $pushSender,
-        private readonly LoggerInterface $logger,
+        private readonly BroadcastSender $sender,
+        private readonly NotificationBroadcastSerializer $serializer,
     ) {
     }
 
@@ -64,8 +64,12 @@ final class SendBroadcastNotificationController
 
     public function __invoke(ServerRequestInterface $request): ResponseInterface
     {
-        $body = (array) ($request->getParsedBody() ?? []);
+        $user = $request->getAttribute(AuthMiddleware::ATTR_USER);
+        if (!$user instanceof User) {
+            throw HttpException::unauthorized(ErrorCodes::AUTH_INVALID_TOKEN, 'Authentication required.');
+        }
 
+        $body = (array) ($request->getParsedBody() ?? []);
         $title = trim((string) ($body['title'] ?? ''));
         $message = trim((string) ($body['body'] ?? ''));
         if ($title === '') {
@@ -77,77 +81,85 @@ final class SendBroadcastNotificationController
 
         $audience = (string) ($body['audience'] ?? 'all');
         if (!in_array($audience, self::AUDIENCES, true)) {
-            throw HttpException::badRequest(
-                'audience must be one of: ' . implode(', ', self::AUDIENCES) . '.'
-            );
+            throw HttpException::badRequest('audience must be one of: ' . implode(', ', self::AUDIENCES) . '.');
         }
+
+        $imageUrl = $this->nullableStr($body['image_url'] ?? null, 1000);
+        $deepLink = $this->nullableStr($body['deep_link'] ?? null, 1000);
 
         $data = [];
         if (isset($body['data']) && is_array($body['data'])) {
-            // FCM data values must be strings.
             foreach ($body['data'] as $k => $v) {
-                $data[(string) $k] = is_scalar($v) ? (string) $v : json_encode($v);
+                // FCM data values must be strings.
+                $data[(string) $k] = is_scalar($v) ? (string) $v : (string) json_encode($v);
             }
         }
 
-        /** @var DeviceTokenRepository $deviceTokens */
-        $deviceTokens = $this->em->getRepository(DeviceToken::class);
-        $tokens = $deviceTokens->findAllActiveTokenStrings($audience);
-        $push = new PushMessage($title, $message, $data);
-
-        $sent = 0;
-        $failed = 0;
-        /** @var array<string, int> $failureKinds */
-        $failureKinds = [];
-        $errorSample = null;
-        foreach ($tokens as $token) {
-            try {
-                $this->pushSender->sendToToken($token, $push, [
-                    'event' => 'admin.broadcast',
-                    'audience' => $audience,
-                ]);
-                $sent++;
-            } catch (PushException $e) {
-                $failed++;
-                $failureKinds[$e->kind] = ($failureKinds[$e->kind] ?? 0) + 1;
-                // FcmHttpV1Sender messages never contain the token, so this is
-                // safe to surface to the admin.
-                $errorSample ??= $e->getMessage();
-                if ($e->isTokenDead()) {
-                    // Permanently dead token — prune so it leaves the pool.
-                    $deviceTokens->deactivateByToken($token);
-                }
-                $this->logger->warning('admin broadcast: token send failed', [
-                    'event' => 'admin.broadcast',
-                    'kind' => $e->kind,
-                ]);
-            }
+        /** @var DeviceTokenRepository $deviceRepo */
+        $deviceRepo = $this->em->getRepository(DeviceToken::class);
+        $totals = $deviceRepo->countActiveForAudienceByPlatform($audience);
+        if ($totals['total'] === 0) {
+            throw HttpException::badRequest('No active devices in that audience — nothing to send.');
         }
 
-        // Every single send failing is a systematic problem (bad service
-        // account, FCM API disabled, sender/project mismatch) — not a handful
-        // of dead tokens. Escalate to error so it lands in Sentry.
-        if ($sent === 0 && $failed > 0) {
-            $this->logger->error('admin broadcast: all sends failed', [
-                'event' => 'admin.broadcast',
-                'audience' => $audience,
-                'failed' => $failed,
-                'kinds' => $failureKinds,
-                'error_sample' => $errorSample,
-            ]);
+        $broadcast = new NotificationBroadcast(
+            title: $title,
+            body: $message,
+            audience: ['type' => $audience],
+            sentByUserId: $user->getId(),
+            imageUrl: $imageUrl,
+            deepLink: $deepLink,
+            data: $data === [] ? null : $data,
+        );
+
+        $names = [(int) $user->getId() => $this->displayName($user)];
+
+        if ($totals['total'] <= self::INLINE_THRESHOLD) {
+            // Small audience — send now and return the finished summary.
+            $broadcast->markProcessing();
+            $this->em->persist($broadcast);
+            $this->em->flush();
+            $this->sender->process($broadcast);
+
+            return $this->ok(['data' => array_merge(
+                $this->serializer->detailShape($broadcast, $names),
+                // Legacy-compatible flat fields for the existing compose UI.
+                [
+                    'recipients' => $broadcast->getRecipientsTotal(),
+                    'sent' => $broadcast->getSentCount(),
+                    'failed' => $broadcast->getFailedCount(),
+                    'queued' => false,
+                ],
+            )]);
         }
 
-        return $this->ok([
-            'data' => [
-                'audience' => $audience,
-                'recipients' => count($tokens),
-                'sent' => $sent,
-                'failed' => $failed,
-                // Diagnostics (admin-only route): breakdown of why sends failed
-                // so "0 sent" isn't a silent dead end.
-                'failure_kinds' => $failureKinds,
-                'error_sample' => $errorSample,
+        // Larger audience — queue for the background dispatcher.
+        $this->em->persist($broadcast);
+        $this->em->flush();
+
+        return $this->ok(['data' => array_merge(
+            $this->serializer->detailShape($broadcast, $names),
+            [
+                'recipients' => $totals['total'],
+                'sent' => 0,
+                'failed' => 0,
+                'queued' => true,
             ],
-        ]);
+        )]);
+    }
+
+    private function nullableStr(mixed $v, int $max): ?string
+    {
+        if (!is_string($v)) {
+            return null;
+        }
+        $t = trim($v);
+        return $t === '' ? null : mb_substr($t, 0, $max);
+    }
+
+    private function displayName(User $user): string
+    {
+        $name = trim((string) $user->getFirstName() . ' ' . (string) $user->getLastName());
+        return $name !== '' ? $name : $user->getEmail();
     }
 }

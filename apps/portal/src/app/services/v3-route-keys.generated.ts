@@ -197,6 +197,11 @@ export type V3RouteKey =
   | 'POST /admin/gift-cards/:id/adjust'
   | 'POST /admin/gift-cards/:id/void'
   | 'POST /admin/notifications'
+  | 'GET /admin/notifications/audience-preview'
+  | 'GET /admin/notification-broadcasts'
+  | 'GET /admin/notification-broadcasts/:id'
+  | 'GET /admin/notification-broadcasts/:id/recipients'
+  | 'POST /admin/notification-broadcasts/:id/resend'
   | 'POST /admin/notifications/mark-read'
   | 'POST /admin/orders/:id/cancel'
   | 'POST /admin/orders/:id/refund'
@@ -479,6 +484,11 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/gift-cards/:id/adjust',
   'POST /admin/gift-cards/:id/void',
   'POST /admin/notifications',
+  'GET /admin/notifications/audience-preview',
+  'GET /admin/notification-broadcasts',
+  'GET /admin/notification-broadcasts/:id',
+  'GET /admin/notification-broadcasts/:id/recipients',
+  'POST /admin/notification-broadcasts/:id/resend',
   'POST /admin/notifications/mark-read',
   'POST /admin/orders/:id/cancel',
   'POST /admin/orders/:id/refund',
