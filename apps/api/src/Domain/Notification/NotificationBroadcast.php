@@ -240,6 +240,11 @@ class NotificationBroadcast
         $this->templateId = $templateId;
     }
 
+    public function setScheduleId(?int $scheduleId): void
+    {
+        $this->scheduleId = $scheduleId;
+    }
+
     private function touch(): void
     {
         $this->updatedAt = new DateTimeImmutable();

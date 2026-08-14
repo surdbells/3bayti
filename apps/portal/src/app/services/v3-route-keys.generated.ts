@@ -210,14 +210,12 @@ export type V3RouteKey =
   | 'DELETE /admin/notification-templates/:id'
   | 'POST /admin/notification-templates/:id/duplicate'
   | 'PATCH /admin/notification-templates/:id/status'
-  | 'GET /admin/notification-templates'
-  | 'GET /admin/notification-templates/variables'
-  | 'GET /admin/notification-templates/:id'
-  | 'POST /admin/notification-templates'
-  | 'PUT /admin/notification-templates/:id'
-  | 'DELETE /admin/notification-templates/:id'
-  | 'POST /admin/notification-templates/:id/duplicate'
-  | 'PATCH /admin/notification-templates/:id/status'
+  | 'GET /admin/notification-schedules'
+  | 'POST /admin/notification-schedules'
+  | 'GET /admin/notification-schedules/:id'
+  | 'PUT /admin/notification-schedules/:id'
+  | 'POST /admin/notification-schedules/:id/cancel'
+  | 'POST /admin/notification-schedules/:id/run-now'
   | 'POST /admin/notifications/mark-read'
   | 'POST /admin/orders/:id/cancel'
   | 'POST /admin/orders/:id/refund'
@@ -513,14 +511,12 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /admin/notification-templates/:id',
   'POST /admin/notification-templates/:id/duplicate',
   'PATCH /admin/notification-templates/:id/status',
-  'GET /admin/notification-templates',
-  'GET /admin/notification-templates/variables',
-  'GET /admin/notification-templates/:id',
-  'POST /admin/notification-templates',
-  'PUT /admin/notification-templates/:id',
-  'DELETE /admin/notification-templates/:id',
-  'POST /admin/notification-templates/:id/duplicate',
-  'PATCH /admin/notification-templates/:id/status',
+  'GET /admin/notification-schedules',
+  'POST /admin/notification-schedules',
+  'GET /admin/notification-schedules/:id',
+  'PUT /admin/notification-schedules/:id',
+  'POST /admin/notification-schedules/:id/cancel',
+  'POST /admin/notification-schedules/:id/run-now',
   'POST /admin/notifications/mark-read',
   'POST /admin/orders/:id/cancel',
   'POST /admin/orders/:id/refund',

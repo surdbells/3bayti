@@ -50,6 +50,7 @@ final class ListBroadcastsController
         $result = $repo->findForHistory([
             'status' => isset($q['status']) && $q['status'] !== '' ? (string) $q['status'] : null,
             'search' => isset($q['search']) ? (string) $q['search'] : null,
+            'schedule_id' => isset($q['schedule_id']) && $q['schedule_id'] !== '' ? (int) $q['schedule_id'] : null,
             'limit' => $limit,
             'offset' => $offset,
         ]);

@@ -1655,29 +1655,23 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'PATCH /admin/notification-templates/:id/status': {
     target: 'new', oldPath: '', newPath: '/v3/admin/notification-templates/:id/status', shape: 'v3-envelope',
   },
-  'GET /admin/notification-templates': {
-    target: 'new', oldPath: '', newPath: '/v3/admin/notification-templates', shape: 'v3-envelope',
+  'GET /admin/notification-schedules': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/notification-schedules', shape: 'v3-envelope',
   },
-  'GET /admin/notification-templates/variables': {
-    target: 'new', oldPath: '', newPath: '/v3/admin/notification-templates/variables', shape: 'v3-envelope',
+  'POST /admin/notification-schedules': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/notification-schedules', shape: 'v3-envelope',
   },
-  'GET /admin/notification-templates/:id': {
-    target: 'new', oldPath: '', newPath: '/v3/admin/notification-templates/:id', shape: 'v3-envelope',
+  'GET /admin/notification-schedules/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/notification-schedules/:id', shape: 'v3-envelope',
   },
-  'POST /admin/notification-templates': {
-    target: 'new', oldPath: '', newPath: '/v3/admin/notification-templates', shape: 'v3-envelope',
+  'PUT /admin/notification-schedules/:id': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/notification-schedules/:id', shape: 'v3-envelope',
   },
-  'PUT /admin/notification-templates/:id': {
-    target: 'new', oldPath: '', newPath: '/v3/admin/notification-templates/:id', shape: 'v3-envelope',
+  'POST /admin/notification-schedules/:id/cancel': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/notification-schedules/:id/cancel', shape: 'v3-envelope',
   },
-  'DELETE /admin/notification-templates/:id': {
-    target: 'new', oldPath: '', newPath: '/v3/admin/notification-templates/:id', shape: 'v3-envelope',
-  },
-  'POST /admin/notification-templates/:id/duplicate': {
-    target: 'new', oldPath: '', newPath: '/v3/admin/notification-templates/:id/duplicate', shape: 'v3-envelope',
-  },
-  'PATCH /admin/notification-templates/:id/status': {
-    target: 'new', oldPath: '', newPath: '/v3/admin/notification-templates/:id/status', shape: 'v3-envelope',
+  'POST /admin/notification-schedules/:id/run-now': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/notification-schedules/:id/run-now', shape: 'v3-envelope',
   },
   'GET /admin/notifications': {
     target: 'new', oldPath: '/vendors/common/notifications', newPath: '/v3/admin/notifications', shape: 'v3-envelope',

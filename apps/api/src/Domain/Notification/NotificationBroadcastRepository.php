@@ -41,7 +41,7 @@ class NotificationBroadcastRepository extends EntityRepository
      * title search. Counters live on the row, so the list never touches the
      * recipients table.
      *
-     * @param array{status?: ?string, search?: ?string, limit?: int, offset?: int} $filters
+     * @param array{status?: ?string, search?: ?string, schedule_id?: ?int, limit?: int, offset?: int} $filters
      * @return array{items: list<NotificationBroadcast>, total: int}
      */
     public function findForHistory(array $filters): array
@@ -54,6 +54,12 @@ class NotificationBroadcastRepository extends EntityRepository
         $status = $filters['status'] ?? null;
         if (is_string($status) && $status !== '') {
             $qb->andWhere('b.status = :status')->setParameter('status', $status);
+        }
+
+        // Occurrences of one schedule (recurring-notification history).
+        $scheduleId = $filters['schedule_id'] ?? null;
+        if ($scheduleId !== null && (int) $scheduleId > 0) {
+            $qb->andWhere('b.scheduleId = :sid')->setParameter('sid', (int) $scheduleId);
         }
 
         $search = $filters['search'] ?? null;

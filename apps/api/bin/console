@@ -196,6 +196,11 @@ try {
     ]);
 }
 
+// Scheduled/recurring notifications — emits due schedules as queued
+// broadcasts (the broadcast dispatcher above then sends them). Needs only
+// the EntityManager + logger.
+$cli->add(new \Bayti\Api\Console\DispatchScheduledNotificationsCommand($em, $logger));
+
 // M3.1.7 — offline Noon webhook signature-algorithm confirmation.
 // Reads captured pairs from var/captures; no DB/network deps, so it
 // registers unconditionally (handy even on a fresh sandbox).
