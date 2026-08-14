@@ -8,6 +8,8 @@ use Bayti\Api\Domain\Notification\BroadcastSender;
 use Bayti\Api\Domain\Notification\DeviceToken;
 use Bayti\Api\Domain\Notification\DeviceTokenRepository;
 use Bayti\Api\Domain\Notification\NotificationBroadcast;
+use Bayti\Api\Domain\Notification\NotificationTemplate;
+use Bayti\Api\Domain\Notification\TemplateVariableResolver;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
@@ -53,6 +55,7 @@ final class SendBroadcastNotificationController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly BroadcastSender $sender,
+        private readonly TemplateVariableResolver $variables,
         private readonly NotificationBroadcastSerializer $serializer,
     ) {
     }
@@ -70,8 +73,22 @@ final class SendBroadcastNotificationController
         }
 
         $body = (array) ($request->getParsedBody() ?? []);
-        $title = trim((string) ($body['title'] ?? ''));
-        $message = trim((string) ($body['body'] ?? ''));
+
+        // Optional template: fills any field the request doesn't override.
+        $templateId = isset($body['template_id']) && $body['template_id'] !== '' ? (int) $body['template_id'] : null;
+        $template = null;
+        if ($templateId !== null) {
+            $template = $this->em->getRepository(NotificationTemplate::class)->find($templateId);
+            if (!$template instanceof NotificationTemplate) {
+                throw HttpException::badRequest('Template not found.');
+            }
+            if (!$template->isActive()) {
+                throw HttpException::badRequest('That template is inactive.');
+            }
+        }
+
+        $title = trim((string) ($body['title'] ?? ($template?->getTitle() ?? '')));
+        $message = trim((string) ($body['body'] ?? ($template?->getBody() ?? '')));
         if ($title === '') {
             throw HttpException::badRequest('title is required.');
         }
@@ -79,13 +96,22 @@ final class SendBroadcastNotificationController
             throw HttpException::badRequest('body is required.');
         }
 
+        // Message may carry {{variables}} (resolved per recipient at send).
+        $unknown = $this->variables->unknownVariables($title, $message);
+        if ($unknown !== []) {
+            throw HttpException::badRequest(
+                'Unknown variable(s): ' . implode(', ', array_map(static fn (string $v): string => '{{' . $v . '}}', $unknown))
+                . '. Supported: ' . implode(', ', TemplateVariableResolver::knownKeys()) . '.'
+            );
+        }
+
         $audience = (string) ($body['audience'] ?? 'all');
         if (!in_array($audience, self::AUDIENCES, true)) {
             throw HttpException::badRequest('audience must be one of: ' . implode(', ', self::AUDIENCES) . '.');
         }
 
-        $imageUrl = $this->nullableStr($body['image_url'] ?? null, 1000);
-        $deepLink = $this->nullableStr($body['deep_link'] ?? null, 1000);
+        $imageUrl = $this->nullableStr($body['image_url'] ?? null, 1000) ?? $template?->getImageUrl();
+        $deepLink = $this->nullableStr($body['deep_link'] ?? null, 1000) ?? $template?->getDeepLink();
 
         $data = [];
         if (isset($body['data']) && is_array($body['data'])) {
@@ -111,6 +137,7 @@ final class SendBroadcastNotificationController
             deepLink: $deepLink,
             data: $data === [] ? null : $data,
         );
+        $broadcast->setTemplateId($templateId);
 
         $names = [(int) $user->getId() => $this->displayName($user)];
 

@@ -38,6 +38,7 @@ final class BroadcastSender
     public function __construct(
         private readonly EntityManagerInterface $em,
         private readonly PushSenderInterface $pushSender,
+        private readonly TemplateVariableResolver $variables,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -63,8 +64,15 @@ final class BroadcastSender
         if (is_string($deepLink) && $deepLink !== '') {
             $data['deep_link'] = $deepLink;
         }
-        $message = new PushMessage($broadcast->getTitle(), $broadcast->getBody(), $data);
         $context = ['event' => 'admin.broadcast', 'broadcast_id' => (string) $broadcastId];
+
+        // Dynamic variables ({{first_name}}, {{date}}, …). If the message has
+        // none, build the PushMessage once; otherwise render it per recipient.
+        $rawTitle = $broadcast->getTitle();
+        $rawBody = $broadcast->getBody();
+        $hasVars = $this->variables->hasVariables($rawTitle) || $this->variables->hasVariables($rawBody);
+        $shared = $hasVars ? $this->variables->sharedTimeValues() : ['date' => '', 'time' => ''];
+        $staticMessage = $hasVars ? null : new PushMessage($rawTitle, $rawBody, $data);
 
         // Seed totals so the history row shows the audience size immediately.
         $totals = $isResend
@@ -91,6 +99,20 @@ final class BroadcastSender
                 $status = NotificationBroadcastRecipient::STATUS_SENT;
                 $errorKind = null;
                 $errorMessage = null;
+
+                $message = $staticMessage;
+                if ($message === null) {
+                    $values = $this->variables->valuesFor([
+                        'first_name' => $row['first_name'] ?? null,
+                        'last_name' => $row['last_name'] ?? null,
+                        'email' => $row['email'] ?? null,
+                    ], $shared);
+                    $message = new PushMessage(
+                        $this->variables->render($rawTitle, $values),
+                        $this->variables->render($rawBody, $values),
+                        $data,
+                    );
+                }
 
                 try {
                     $this->pushSender->sendToToken($row['token'], $message, $context);

@@ -76,27 +76,53 @@ class DeviceTokenRepository extends EntityRepository
      * chunks (never loading every recipient into memory). Returns the fields
      * the broadcast sender needs: id, token, platform, owning user id.
      *
+     * User name fields are joined in so a broadcast with {{first_name}} etc.
+     * can resolve per recipient without an N+1 lookup.
+     *
      * @param 'all'|'customers'|'vendors'|'admins' $audience
-     * @return list<array{id:int, token:string, platform:string, user_id:int}>
+     * @return list<array{id:int, token:string, platform:string, user_id:int, first_name:?string, last_name:?string, email:?string}>
      */
     public function findActiveForAudienceBatch(string $audience, int $afterId, int $limit): array
     {
         $qb = $this->createQueryBuilder('d')
-            ->select('d.id AS id', 'd.token AS token', 'd.platform AS platform', 'IDENTITY(d.user) AS user_id')
+            ->select(
+                'd.id AS id',
+                'd.token AS token',
+                'd.platform AS platform',
+                'IDENTITY(d.user) AS user_id',
+                'u.firstName AS first_name',
+                'u.lastName AS last_name',
+                'u.email AS email',
+            )
+            ->leftJoin('d.user', 'u')
             ->where('d.isActive = true')
             ->andWhere('d.id > :afterId')
             ->setParameter('afterId', $afterId)
             ->orderBy('d.id', 'ASC')
             ->setMaxResults(max(1, $limit));
-        $this->applyAudience($qb, $audience);
 
-        /** @var list<array{id:int, token:string, platform:string, user_id:int}> $rows */
+        if ($audience !== 'all') {
+            $flag = match ($audience) {
+                'customers' => 'u.isCustomer',
+                'vendors'   => 'u.isVendor',
+                'admins'    => 'u.isAdmin',
+                default     => null,
+            };
+            if ($flag !== null) {
+                $qb->andWhere($flag . ' = true');
+            }
+        }
+
+        /** @var list<array{id:mixed, token:mixed, platform:mixed, user_id:mixed, first_name:mixed, last_name:mixed, email:mixed}> $rows */
         $rows = $qb->getQuery()->getResult();
         return array_map(static fn (array $r): array => [
             'id' => (int) $r['id'],
             'token' => (string) $r['token'],
             'platform' => (string) $r['platform'],
             'user_id' => (int) $r['user_id'],
+            'first_name' => $r['first_name'] !== null ? (string) $r['first_name'] : null,
+            'last_name' => $r['last_name'] !== null ? (string) $r['last_name'] : null,
+            'email' => $r['email'] !== null ? (string) $r['email'] : null,
         ], $rows);
     }
 

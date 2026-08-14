@@ -62,7 +62,7 @@ class NotificationBroadcastRecipientRepository extends EntityRepository
      * (optionally only the failed ones). Joined to device_tokens so a token
      * that has since gone inactive/dead is skipped. Keyed by device_token id.
      *
-     * @return list<array{id:int, token:string, platform:string, user_id:int}>
+     * @return list<array{id:int, token:string, platform:string, user_id:int, first_name:?string, last_name:?string, email:?string}>
      */
     public function findResendTargetsBatch(
         int $sourceBroadcastId,
@@ -73,9 +73,11 @@ class NotificationBroadcastRecipientRepository extends EntityRepository
         $conn = $this->getEntityManager()->getConnection();
         $statusClause = $onlyFailed ? "AND r.status = 'failed'" : '';
         $sql = "
-            SELECT DISTINCT dt.id AS id, dt.token AS token, dt.platform AS platform, dt.user_id AS user_id
+            SELECT DISTINCT dt.id AS id, dt.token AS token, dt.platform AS platform, dt.user_id AS user_id,
+                   u.first_name AS first_name, u.last_name AS last_name, u.email AS email
             FROM notification_broadcast_recipients r
             JOIN device_tokens dt ON dt.id = r.device_token_id AND dt.is_active = true
+            LEFT JOIN users u ON u.id = dt.user_id
             WHERE r.broadcast_id = :src {$statusClause}
               AND dt.id > :afterId
             ORDER BY dt.id ASC
@@ -92,6 +94,9 @@ class NotificationBroadcastRecipientRepository extends EntityRepository
             'token' => (string) $r['token'],
             'platform' => (string) $r['platform'],
             'user_id' => (int) $r['user_id'],
+            'first_name' => $r['first_name'] !== null ? (string) $r['first_name'] : null,
+            'last_name' => $r['last_name'] !== null ? (string) $r['last_name'] : null,
+            'email' => $r['email'] !== null ? (string) $r['email'] : null,
         ], $rows);
     }
 

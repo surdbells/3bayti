@@ -235,6 +235,11 @@ class NotificationBroadcast
         $this->resendMode = $mode;
     }
 
+    public function setTemplateId(?int $templateId): void
+    {
+        $this->templateId = $templateId;
+    }
+
     private function touch(): void
     {
         $this->updatedAt = new DateTimeImmutable();
