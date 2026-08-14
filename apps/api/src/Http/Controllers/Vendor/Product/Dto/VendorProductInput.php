@@ -30,8 +30,12 @@ final class VendorProductInput
     #[Assert\PositiveOrZero(message: 'Cost per item must be zero or positive.')]
     public readonly int|float|null $cost_per_item;
 
-    #[Assert\Choice(choices: ['in_stock', 'out_of_stock', 'backorder'],
-        message: 'stock_status must be in_stock, out_of_stock, or backorder.')]
+    // Must match Product's stock_status constants exactly — the entity's
+    // setStockStatus() throws on anything else. The portal form sends
+    // 'on_backorder' (not 'backorder'), so validating 'backorder' here
+    // rejected every "On backorder" publish with a generic failure.
+    #[Assert\Choice(choices: ['in_stock', 'out_of_stock', 'on_backorder', 'limited'],
+        message: 'stock_status must be in_stock, out_of_stock, on_backorder, or limited.')]
     public readonly ?string $stock_status;
 
     #[Assert\PositiveOrZero(message: 'Stock quantity must be zero or positive.')]
