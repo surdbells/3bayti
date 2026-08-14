@@ -1297,18 +1297,21 @@ swiper-slide,
   z-index: 1;
   flex: 1;
   min-width: 0;
-  display: flex;
-  flex-direction: column;
   will-change: transform;
 }
 
 .lb-top {
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 4px;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 14px 28px;
   z-index: 3;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent);
 }
 .lb-close {
   width: 38px;
@@ -1320,6 +1323,7 @@ swiper-slide,
   display: flex;
   align-items: center;
   justify-content: center;
+  pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
   ax-icon { width: 20px; height: 20px; }
   &:active { transform: scale(0.92); }
@@ -1347,9 +1351,9 @@ swiper-slide,
 }
 
 .lightbox__stage .lb-swiper {
-  flex: 1 1 0;
-  min-height: 0;
-  height: auto;
+  position: absolute;
+  inset: 0;
+  height: 100%;
   width: 100%;
 }
 .lightbox__stage .lb-slide {
@@ -1375,11 +1379,15 @@ swiper-slide,
 }
 
 .lb-swipe-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 100px);
   display: flex;
   justify-content: center;
-  color: rgba(255, 255, 255, 0.5);
-  padding: 2px 0 4px;
+  color: rgba(255, 255, 255, 0.55);
   z-index: 3;
+  pointer-events: none;
   ax-icon { width: 22px; height: 22px; }
   animation: lbHintBounce 1.9s ease-in-out infinite;
 }
@@ -1389,16 +1397,22 @@ swiper-slide,
 }
 
 .lb-thumbs {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   gap: 8px;
   overflow-x: auto;
   overflow-y: hidden;
   scroll-behavior: smooth;
-  padding: 8px 50% calc(env(safe-area-inset-bottom, 0px) + 16px);
+  padding: 36px 50% calc(env(safe-area-inset-bottom, 0px) + 16px);
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   z-index: 3;
+  pointer-events: auto;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
 
   &::-webkit-scrollbar { display: none; }
 }
@@ -1431,20 +1445,39 @@ swiper-slide,
   }
 }
 
-/* Expand affordance on the PDP hero */
+/* Expand affordance on the PDP hero — bottom-right, above the card lip,
+   animated to draw attention (default: pulse + radiating ring). */
 .expand-hint {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  bottom: 40px;
+  right: 14px;
   z-index: 4;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.32);
+  background: rgba(0, 0, 0, 0.42);
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   pointer-events: none;
-  ax-icon { width: 18px; height: 18px; }
+  animation: expandPulse 2.2s ease-in-out infinite;
+  ax-icon { width: 19px; height: 19px; }
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.55);
+    animation: expandRing 2.2s ease-out infinite;
+  }
+}
+@keyframes expandPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@keyframes expandRing {
+  0% { transform: scale(1); opacity: 0.7; }
+  70%, 100% { transform: scale(1.8); opacity: 0; }
 }
