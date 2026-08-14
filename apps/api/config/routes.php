@@ -598,6 +598,9 @@ return function (App $app): void {
     // collide with real slugs, and the segment counts differ from the
     // slug routes (3 vs 2 segments after /v3/) so Slim ordering is moot.
     $app->get('/v3/products/by-legacy-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetProductByLegacyIdController::class);
+    // Canonical numeric product detail by v3 id — resolves v3-native products
+    // (no legacy id) too. The storefront navigates by v3 id everywhere now.
+    $app->get('/v3/products/by-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetProductByIdController::class);
     $app->get('/v3/vendors/by-legacy-id/{id}', \Bayti\Api\Http\Controllers\Catalog\GetVendorByLegacyIdController::class);
     $app->get('/v3/vendors/by-legacy-id/{id}/products', \Bayti\Api\Http\Controllers\Catalog\ListVendorProductsByLegacyIdController::class);
     // PUBLIC store size guide (no auth) — shoppers view the chart from the

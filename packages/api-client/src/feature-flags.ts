@@ -472,7 +472,10 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /mobile/single-product': {
     target: 'new',
     oldPath: '/customer/single_product',
-    newPath: '/v3/products/by-legacy-id/:id',
+    // The storefront navigates by v3 id now (fully off legacy ids), so the
+    // PDP resolves via by-id — which also finds v3-native products that have
+    // no legacy_product_id and used to 404 as "product not found".
+    newPath: '/v3/products/by-id/:id',
     shape: 'v3-envelope',
   },
   // utility/singleProduct is a separate legacy URL but resolves to the
@@ -482,7 +485,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /mobile/single-product-utility': {
     target: 'new',
     oldPath: '/utility/singleProduct',
-    newPath: '/v3/products/by-legacy-id/:id',
+    newPath: '/v3/products/by-id/:id',
     shape: 'v3-envelope',
   },
   'GET /mobile/vendors-products': {

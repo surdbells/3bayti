@@ -263,12 +263,10 @@ function synthesizeSizeFlags(v3Sizes: unknown): Record<string, boolean> {
 function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
   if (!isRecord(item)) return {};
   return {
-    // Primary legacy bindings (verified via field-binding audit):
-    // Prefer the legacy product id: the single-product page looks the
-    // product up via /v3/products/by-legacy-id/{id}, so the card must carry
-    // the legacy id, not the v3 id (else the tap returns NOT_FOUND). Falls
-    // back to the v3 id for v3-native products that have no legacy row.
-    product_id: asNumberOrNull(item['legacy_product_id']) ?? asNumber(item['id']),
+    // The single-product page resolves via /v3/products/by-id/{id}, so the
+    // card carries the v3 id. Storefront is fully off legacy ids; v3-native
+    // products have no legacy_product_id and used to tap through to NOT_FOUND.
+    product_id: asNumber(item['id']),
     product_name: asString(item['name']),
     image_1: flatImageUrl(item['primary_image']),
     price: flatPrice(item['price']),
@@ -664,12 +662,10 @@ function legacyStyleProductFromV3Product(item: unknown): Record<string, unknown>
   if (!isRecord(item)) return { image: '', product_id: 0 };
   return {
     // The style-view PDP tap opens the product via open_product(product_id),
-    // and the PDP loads by LEGACY id (GET /v3/products/by-legacy-id/:id). So
-    // navigate with the legacy id, falling back to the v3 id for v3-native
-    // products that have no legacy row (same pattern as featured-vendors /
-    // vendor-directory). Without this, product_id is undefined -> NaN ->
+    // and the PDP loads by v3 id (GET /v3/products/by-id/:id), so navigate
+    // with the v3 id. Without this, product_id is undefined -> NaN ->
     // placeholder PDP.
-    product_id: asNumberOrNull(item['legacy_product_id']) ?? asNumber(item['id']),
+    product_id: asNumber(item['id']),
     // styles.page card binds style.products[N].image:
     image: asString(item['primary_image_url']),
     // style-view summary + cards bind product_name / price:
@@ -715,7 +711,7 @@ export function transformFeaturedVendorsResponse(data: unknown): unknown {
       products: products.map((p) => {
         if (!isRecord(p)) return {};
         return {
-          product_id: asNumberOrNull(p['legacy_product_id']) ?? asNumber(p['id']),
+          product_id: asNumber(p['id']),
           product_name: asString(p['name']),
           image: asString(p['image_url']),
           price: asNumber(p['price']),
