@@ -162,6 +162,10 @@ export class AppComponent {
           }
         });
         void this.pushManager.initListeners();
+        /* Capture the token for users who are ALREADY signed in (they won't
+           hit onSignedIn just by opening the app). Only registers when
+           permission was already granted — never prompts on launch. */
+        void this.pushManager.ensureRegisteredIfSignedIn();
       }
   }
 

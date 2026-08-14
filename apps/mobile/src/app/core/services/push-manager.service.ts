@@ -219,6 +219,42 @@ export class PushManager {
   }
 
   /**
+   * Launch-time re-registration for users who are ALREADY signed in.
+   *
+   * Registration normally happens in onSignedIn (fresh login). But an
+   * established user who just opens the app — no re-login — would never
+   * register, so their device token never reaches the backend. That's why
+   * the vast majority of an existing install base can be missing from
+   * device_tokens even after the native token-forwarding fix ships.
+   *
+   * This captures those users on next launch WITHOUT prompting: it only
+   * proceeds when a session exists AND permission was already granted
+   * (checkPermissions never shows the OS dialog). Users who never granted
+   * are left for the post-sign-in flow, preserving "don't ask on launch".
+   * register() also re-fires on OS token rotation, keeping tokens fresh.
+   * No-op on web / when not signed in / when permission isn't granted.
+   */
+  async ensureRegisteredIfSignedIn(): Promise<void> {
+    if (!Capacitor.isNativePlatform()) {
+      return;
+    }
+    const authToken = await this.readAuthToken();
+    if (authToken === '') {
+      return;
+    }
+    try {
+      const perm = await PushNotifications.checkPermissions();
+      if (perm.receive !== 'granted') {
+        return;
+      }
+      await PushNotifications.register();
+      await this.syncTokenIfSignedIn();
+    } catch (e) {
+      console.warn('[push] ensureRegisteredIfSignedIn failed', e);
+    }
+  }
+
+  /**
    * Called on sign-out. Deactivates this device's token on the backend
    * using the auth token that's still valid at logout time. No-op on
    * non-native platforms or when there's no device token.
