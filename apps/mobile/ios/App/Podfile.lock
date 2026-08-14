@@ -49,7 +49,7 @@ PODS:
     - Capacitor
   - CapgoCapacitorContacts (8.0.17):
     - Capacitor
-  - CapgoCapacitorUpdater (8.49.7):
+  - CapgoCapacitorUpdater (8.51.3):
     - Alamofire (= 5.10.2)
     - BigInt (= 5.2.0)
     - Capacitor
@@ -154,8 +154,8 @@ DEPENDENCIES:
   - "CapacitorStatusBar (from `../../../../node_modules/.pnpm/@capacitor+status-bar@8.0.2_@capacitor+core@8.3.3/node_modules/@capacitor/status-bar`)"
   - "CapawesomeCapacitorAppUpdate (from `../../../../node_modules/.pnpm/@capawesome+capacitor-app-update@8.0.3_@capacitor+core@8.3.3/node_modules/@capawesome/capacitor-app-update`)"
   - "CapgoCapacitorContacts (from `../../../../node_modules/.pnpm/@capgo+capacitor-contacts@8.0.17_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-contacts`)"
-  - "CapgoCapacitorUpdater (from `../../../../node_modules/.pnpm/@capgo+capacitor-updater@8.49.7_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-updater`)"
-  - "CapgoInappbrowser (from `../../../../node_modules/.pnpm/@capgo+inappbrowser@8.0.6_@capacitor+core@8.3.3/node_modules/@capgo/inappbrowser`)"
+  - "CapgoCapacitorUpdater (from `../../../../node_modules/.pnpm/@capgo+capacitor-updater@8.51.3_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-updater`)"
+  - "CapgoInappbrowser (from `../../../../node_modules/.pnpm/@capgo+inappbrowser@8.0.6_patch_hash=u2mrdjiw46mrceqn4foagmkmce_@capacitor+core@8.3.3/node_modules/@capgo/inappbrowser`)"
   - FirebaseMessaging (~> 12.7)
 
 SPEC REPOS:
@@ -214,9 +214,9 @@ EXTERNAL SOURCES:
   CapgoCapacitorContacts:
     :path: "../../../../node_modules/.pnpm/@capgo+capacitor-contacts@8.0.17_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-contacts"
   CapgoCapacitorUpdater:
-    :path: "../../../../node_modules/.pnpm/@capgo+capacitor-updater@8.49.7_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-updater"
+    :path: "../../../../node_modules/.pnpm/@capgo+capacitor-updater@8.51.3_@capacitor+core@8.3.3/node_modules/@capgo/capacitor-updater"
   CapgoInappbrowser:
-    :path: "../../../../node_modules/.pnpm/@capgo+inappbrowser@8.0.6_@capacitor+core@8.3.3/node_modules/@capgo/inappbrowser"
+    :path: "../../../../node_modules/.pnpm/@capgo+inappbrowser@8.0.6_patch_hash=u2mrdjiw46mrceqn4foagmkmce_@capacitor+core@8.3.3/node_modules/@capgo/inappbrowser"
 
 SPEC CHECKSUMS:
   Alamofire: 7193b3b92c74a07f85569e1a6c4f4237291e7496
@@ -237,7 +237,7 @@ SPEC CHECKSUMS:
   CapacitorStatusBar: b692a4cf12b3fe3a7b7ece86da62106065d78fdc
   CapawesomeCapacitorAppUpdate: 4f528462dfa538ce5ab47136020eda033b3f1f5c
   CapgoCapacitorContacts: 1fc41fcf34769a237205d6bd15a352ab75ba579a
-  CapgoCapacitorUpdater: 82199d7bf8d1a7ae285e15865df6d7239e116008
+  CapgoCapacitorUpdater: f88cb98c0092adaff60c8c4774e04334852247de
   CapgoInappbrowser: 827258eb76ec1615925f42449521e51d5604c125
   FirebaseAppCheckInterop: d58366471f1dadf2ed998b15f85c658458a10142
   FirebaseAuth: 88beaef7c688a2950541552b6dd195d22137c41a
@@ -259,6 +259,6 @@ SPEC CHECKSUMS:
   Version: de5907f2c5d0f3cf21708db7801d1d5401139486
   ZIPFoundation: dfd3d681c4053ff7e2f7350bc4e53b5dba3f5351
 
-PODFILE CHECKSUM: 57d1b154d04c476c17442753aea9742f35f7e955
+PODFILE CHECKSUM: 52527da03218ae6f0ad326072fe224aaf96d2039
 
 COCOAPODS: 1.16.2
