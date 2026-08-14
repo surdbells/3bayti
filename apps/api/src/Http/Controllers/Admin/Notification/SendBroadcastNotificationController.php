@@ -11,6 +11,7 @@ use Bayti\Api\Http\Responder;
 use Bayti\Api\Notification\Push\PushException;
 use Bayti\Api\Notification\Push\PushMessage;
 use Bayti\Api\Notification\Push\PushSenderInterface;
+use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -47,7 +48,10 @@ final class SendBroadcastNotificationController
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
-        private readonly DeviceTokenRepository $deviceTokens,
+        // Inject the EntityManager, not the repository: PHP-DI can't autowire
+        // a Doctrine repository (its ClassMetadata dependency has no guessable
+        // $name), which made the whole controller unresolvable -> 500 on send.
+        private readonly EntityManagerInterface $em,
         private readonly PushSenderInterface $pushSender,
         private readonly LoggerInterface $logger,
     ) {
@@ -86,7 +90,9 @@ final class SendBroadcastNotificationController
             }
         }
 
-        $tokens = $this->deviceTokens->findAllActiveTokenStrings($audience);
+        /** @var DeviceTokenRepository $deviceTokens */
+        $deviceTokens = $this->em->getRepository(DeviceToken::class);
+        $tokens = $deviceTokens->findAllActiveTokenStrings($audience);
         $push = new PushMessage($title, $message, $data);
 
         $sent = 0;
@@ -102,7 +108,7 @@ final class SendBroadcastNotificationController
                 $failed++;
                 if ($e->isTokenDead()) {
                     // Permanently dead token — prune so it leaves the pool.
-                    $this->deviceTokens->deactivateByToken($token);
+                    $deviceTokens->deactivateByToken($token);
                 }
                 $this->logger->warning('admin broadcast: token send failed', [
                     'event' => 'admin.broadcast',

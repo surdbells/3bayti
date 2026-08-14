@@ -537,6 +537,13 @@ class OrderRepository extends EntityRepository
         ?string $dateFrom,
         ?string $dateTo,
     ): void {
+        // Vendors NEVER see orders still awaiting payment — the cart is in
+        // flux and there's no fulfilment obligation until it's paid. Applied
+        // unconditionally (not just kept out of the status-filter whitelist),
+        // so the default unfiltered list hides them too.
+        $qb->andWhere('o.status != :pendingPayment')
+            ->setParameter('pendingPayment', Order::STATUS_PENDING_PAYMENT);
+
         if ($status !== null && $status !== '') {
             $qb->andWhere('o.status = :status')->setParameter('status', $status);
         }
