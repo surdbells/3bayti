@@ -17,15 +17,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
       Messaging.messaging().apnsToken = deviceToken
       Messaging.messaging().token(completion: { (token, error) in
         if let error = error {
-           // NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+          // Forward the failure so the Capacitor plugin fires `registrationError`.
+          NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
         } else if let token = token {
-          //  NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: token)
+          // Forward the FCM token so the plugin fires the JS `registration`
+          // event — this is what makes push-manager register the token with
+          // the backend. Without it, iOS never registers a device token.
+          NotificationCenter.default.post(name: .capacitorDidRegisterForRemoteNotifications, object: token)
         }
       })
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-     // NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
+      NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
