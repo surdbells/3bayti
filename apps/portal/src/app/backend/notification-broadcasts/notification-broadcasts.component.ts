@@ -1,5 +1,5 @@
 import { Component, OnInit, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -51,13 +51,18 @@ export class NotificationBroadcastsComponent implements OnInit {
   config!: AxDataTableConfig<BroadcastRow>;
   dataSource!: AxServerDataSource<BroadcastRow>;
 
+  /** When set (via ?schedule_id=), the list shows one schedule's occurrences. */
+  scheduleId: string | null = null;
+
   constructor(
     private router: Router,
+    private route: ActivatedRoute,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
 
   ngOnInit() {
+    this.scheduleId = this.route.snapshot.queryParamMap.get('schedule_id');
     this.dataSource = new AxServerDataSource<BroadcastRow>((q) => this.fetch(q), 120);
     this.config = {
       tableId: 'admin-notification-broadcasts',
@@ -111,6 +116,7 @@ export class NotificationBroadcastsComponent implements OnInit {
     const q: any = { limit: query.pageSize, offset: query.pageIndex * query.pageSize };
     if (query.search) q.search = query.search;
     if (query.filters?.['status']) q.status = query.filters['status'];
+    if (this.scheduleId) q.schedule_id = this.scheduleId;
     return this.adapter.get_v3('GET /admin/notification-broadcasts', { query: q }).pipe(
       map((res: any): AxServerFetchResult<BroadcastRow> => {
         const rows: BroadcastRow[] = Array.isArray(res?.data) ? res.data : [];

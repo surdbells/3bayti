@@ -1,0 +1,135 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <span class="ax-page-header-eyebrow">Engagement</span>
+        <h1 class="ax-page-title">Scheduled notifications</h1>
+        <p class="ax-page-subtitle">One-off or recurring pushes, sent automatically.</p>
+      </div>
+      <button type="button" class="ax-btn ax-btn-primary" (click)="newSchedule()" *ngIf="!editing">
+        <app-icon name="plus"></app-icon> New schedule
+      </button>
+    </header>
+
+    <!-- Editor -->
+    <section class="ax-card ax-p-4 ax-mb-4" *ngIf="editing">
+      <h2 class="ax-card-title ax-mb-3">{{ editId ? 'Edit schedule' : 'New schedule' }}</h2>
+
+      <div class="ax-grid-2">
+        <div class="ax-field">
+          <label class="ax-label" for="sch-name">Name (optional)</label>
+          <input id="sch-name" type="text" class="ax-input" [(ngModel)]="form.name" placeholder="e.g. Weekly reminder" />
+        </div>
+        <div class="ax-field">
+          <label class="ax-label" for="sch-template">Start from template (optional)</label>
+          <select id="sch-template" class="ax-input" [(ngModel)]="form.template_id" (ngModelChange)="onTemplateChange()">
+            <option value="">— None —</option>
+            <option *ngFor="let t of templates" [value]="t.id">{{ t.name }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ax-field">
+        <label class="ax-label" for="sch-title">Title</label>
+        <input id="sch-title" type="text" class="ax-input" [(ngModel)]="form.title"
+               (focus)="rememberField('title')" placeholder="Welcome {{ '{{first_name}}' }}" />
+      </div>
+      <div class="ax-field">
+        <label class="ax-label" for="sch-body">Message</label>
+        <textarea id="sch-body" class="ax-input ax-textarea" rows="4" [(ngModel)]="form.body"
+                  (focus)="rememberField('body')" placeholder="Hi {{ '{{first_name}}' }}, …"></textarea>
+      </div>
+
+      <div class="tpl-vars" *ngIf="variables.length">
+        <span class="tpl-vars-label">Insert variable:</span>
+        <button type="button" class="tpl-chip" *ngFor="let v of variables" (click)="insertVariable(v.key)"
+                [title]="v.label + ' — e.g. ' + v.sample">{{ '{{' + v.key + '}}' }}</button>
+      </div>
+
+      <div class="ax-grid-2 ax-mt-3">
+        <div class="ax-field">
+          <label class="ax-label" for="sch-image">Image URL (optional)</label>
+          <input id="sch-image" type="text" class="ax-input" [(ngModel)]="form.image_url" />
+        </div>
+        <div class="ax-field">
+          <label class="ax-label" for="sch-link">Deep link (optional)</label>
+          <input id="sch-link" type="text" class="ax-input" [(ngModel)]="form.deep_link" placeholder="/orders/123" />
+        </div>
+      </div>
+
+      <!-- Audience -->
+      <div class="ax-grid-2 ax-mt-3">
+        <div class="ax-field">
+          <label class="ax-label" for="sch-audience">Audience</label>
+          <select id="sch-audience" class="ax-input" [(ngModel)]="form.audience" (ngModelChange)="refreshAudience()">
+            <option *ngFor="let a of audiences" [value]="a.value">{{ a.label }}</option>
+          </select>
+        </div>
+        <div class="ax-field">
+          <label class="ax-label">Reach</label>
+          <div class="sch-reach" *ngIf="audienceCount; else reachLoading">
+            <strong>{{ audienceCount.total | number }}</strong> devices
+            <span class="sch-reach-split">· {{ audienceCount.android | number }} Android · {{ audienceCount.ios | number }} iOS</span>
+          </div>
+          <ng-template #reachLoading><div class="sch-reach ax-text-muted">Counting…</div></ng-template>
+        </div>
+      </div>
+
+      <!-- Recurrence -->
+      <div class="ax-grid-2 ax-mt-3">
+        <div class="ax-field">
+          <label class="ax-label" for="sch-freq">Frequency</label>
+          <select id="sch-freq" class="ax-input" [(ngModel)]="form.frequency">
+            <option *ngFor="let f of frequencies" [value]="f.value">{{ f.label }}</option>
+          </select>
+        </div>
+        <div class="ax-field">
+          <label class="ax-label" for="sch-tz">Timezone</label>
+          <select id="sch-tz" class="ax-input" [(ngModel)]="form.timezone">
+            <option *ngFor="let tz of timezones" [value]="tz">{{ tz }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="ax-grid-2 ax-mt-3">
+        <div class="ax-field">
+          <label class="ax-label" for="sch-start">Start</label>
+          <input id="sch-start" type="datetime-local" class="ax-input" [(ngModel)]="form.start_at" />
+        </div>
+        <div class="ax-field">
+          <label class="ax-label" for="sch-end">End (optional, recurring)</label>
+          <input id="sch-end" type="datetime-local" class="ax-input" [(ngModel)]="form.end_at"
+                 [disabled]="form.frequency === 'once'" />
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="notif-preview ax-mt-3" *ngIf="form.title || form.body">
+        <span class="notif-preview-eyebrow">Preview (sample values)</span>
+        <div class="notif-preview-card">
+          <div class="notif-preview-icon"><app-icon name="notifications"></app-icon></div>
+          <div class="notif-preview-body">
+            <div class="notif-preview-title">{{ resolvePreview(form.title) || 'Notification title' }}</div>
+            <div class="notif-preview-text">{{ resolvePreview(form.body) || 'Your message will appear here.' }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ax-flex ax-justify-end ax-gap-3 ax-mt-4">
+        <button type="button" class="ax-btn ax-btn-ghost" (click)="cancelEdit()">Cancel</button>
+        <button type="button" class="ax-btn ax-btn-primary" [disabled]="saving" (click)="save()">
+          {{ saving ? 'Saving…' : 'Save schedule' }}
+        </button>
+      </div>
+    </section>
+
+    <!-- List -->
+    <section class="ax-card ax-p-0">
+      <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <ng-template axCell="status" let-row>
+          <span [ngClass]="statusBadge(row.status)">{{ row.status | titlecase }}</span>
+        </ng-template>
+      </app-ax-data-table>
+    </section>
+  </div>
+</app-admin-shell>

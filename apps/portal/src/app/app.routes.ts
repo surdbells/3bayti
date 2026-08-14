@@ -381,6 +381,12 @@ export const routes: Routes = [
     title: 'Message templates'
   },
   {
+    path: 'admin/notification-schedules',
+    loadComponent: () => import('./backend/notification-schedules/notification-schedules.component').then(m => m.NotificationSchedulesComponent),
+    canActivate: [adminGuard, requirePermission('notifications.view')],
+    title: 'Scheduled notifications'
+  },
+  {
     path: 'admin/logistics',
     loadComponent: () => import('./backend/logistics/logistics.component').then(m => m.LogisticsComponent),
     canActivate: [adminGuard, requirePermission('logistics.view')],

@@ -146,6 +146,12 @@
           </a>
         </li>
         <li *axCan="'notifications.view'">
+          <a routerLink="/admin/notification-schedules" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="calendar_today" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Scheduled</span>
+          </a>
+        </li>
+        <li *axCan="'notifications.view'">
           <a routerLink="/admin/notification-broadcasts" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="history" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Notification History</span>

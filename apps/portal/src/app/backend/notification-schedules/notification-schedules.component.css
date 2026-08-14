@@ -1,0 +1,77 @@
+.ax-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ax-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.tpl-vars {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.tpl-vars-label {
+  font-size: 13px;
+  color: var(--ax-color-text-secondary, #666);
+}
+
+.tpl-chip {
+  border: 1px solid var(--ax-color-border, #ddd);
+  background: var(--ax-color-bg-muted, #f5f4f2);
+  color: var(--ax-color-text-primary, #222);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-family: var(--ax-font-mono, monospace);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.tpl-chip:hover { background: var(--ax-color-bg-surface, #fff); }
+
+.sch-reach {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-height: 38px;
+  font-size: 14px;
+  flex-wrap: wrap;
+}
+.sch-reach strong { font-size: 18px; font-weight: 600; }
+.sch-reach-split { font-size: 13px; color: var(--ax-color-text-secondary, #666); }
+
+/* Preview card (component-scoped copy so it renders on this page too). */
+.notif-preview { margin-top: 8px; }
+.notif-preview-eyebrow {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ax-color-text-secondary, #666);
+}
+.notif-preview-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: var(--ax-color-bg-muted, #f5f4f2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 6px;
+}
+.notif-preview-icon {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  background: var(--ax-color-bg-brand-subtle, #efe7df);
+  display: flex; align-items: center; justify-content: center;
+  flex: 0 0 auto;
+}
+.notif-preview-title { font-weight: 600; font-size: 14px; }
+.notif-preview-text { font-size: 13px; color: var(--ax-color-text-secondary, #666); margin-top: 2px; white-space: pre-wrap; }

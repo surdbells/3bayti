@@ -74,7 +74,7 @@ final class ScheduleInput
             throw HttpException::badRequest("status must be 'draft' or 'scheduled'.");
         }
 
-        $startAt = self::parseDate($body['start_at'] ?? null, 'start_at');
+        $startAt = self::parseDate($body['start_at'] ?? null, 'start_at', $timezone);
         if ($startAt === null) {
             throw HttpException::badRequest('start_at is required.');
         }
@@ -86,7 +86,7 @@ final class ScheduleInput
             }
         }
 
-        $endAt = self::parseDate($body['end_at'] ?? null, 'end_at');
+        $endAt = self::parseDate($body['end_at'] ?? null, 'end_at', $timezone);
         if ($endAt !== null && $endAt <= $startAt) {
             throw HttpException::badRequest('end_at must be after start_at.');
         }
@@ -127,13 +127,15 @@ final class ScheduleInput
         ];
     }
 
-    private static function parseDate(mixed $v, string $field): ?DateTimeImmutable
+    private static function parseDate(mixed $v, string $field, string $tz): ?DateTimeImmutable
     {
         if (!is_string($v) || trim($v) === '') {
             return null;
         }
         try {
-            return new DateTimeImmutable(trim($v));
+            // A naive `datetime-local` value ("2026-08-20T14:30") is read as the
+            // schedule's timezone; an explicit offset in the string wins.
+            return new DateTimeImmutable(trim($v), new DateTimeZone($tz));
         } catch (\Throwable) {
             throw HttpException::badRequest("$field is not a valid date/time.");
         }
