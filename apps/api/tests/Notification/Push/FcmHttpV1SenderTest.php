@@ -114,6 +114,33 @@ final class FcmHttpV1SenderTest extends TestCase
         self::assertSame('Order paid', $payload['message']['notification']['title']);
         self::assertSame('order.paid', $payload['message']['data']['type']);
         self::assertSame('42', $payload['message']['data']['order_id']);
+        // Non-empty data must serialize as a JSON object, never an array.
+        self::assertStringContainsString('"data":{', $send['body']);
+    }
+
+    #[Test]
+    public function sendOmitsEmptyDataSoFcmDoesNotReject(): void
+    {
+        // Regression: an empty data map serialized as "data":[] (a JSON array),
+        // which FCM v1 rejects with INVALID_ARGUMENT — so every admin broadcast
+        // (which carries no data) failed on every token, while order pushes
+        // (always non-empty data) succeeded.
+        $sender = $this->sender([
+            $this->tokenResponse(),
+            new Response(200, [], json_encode(['name' => 'projects/demo-project/messages/456'])),
+        ]);
+
+        $sender->sendToToken('device-token-xyz', new PushMessage(
+            title: 'Don\'t forget the outfit',
+            body: 'Your next favourite look is waiting.',
+            data: [],
+        ));
+
+        $send = $this->captured[1];
+        // The data key is dropped entirely when empty — never sent as `[]`.
+        self::assertStringNotContainsString('"data":[]', $send['body']);
+        $payload = json_decode($send['body'], true);
+        self::assertArrayNotHasKey('data', $payload['message']);
     }
 
     #[Test]

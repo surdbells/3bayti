@@ -109,9 +109,18 @@ final class FcmHttpV1Sender implements PushSenderInterface
                     'title' => $message->title,
                     'body' => $message->body,
                 ],
-                'data' => $message->data,
             ],
         ];
+
+        // FCM v1 requires message.data to be a JSON OBJECT (map<string,string>).
+        // An empty PHP array encodes to `[]` (a JSON array), which FCM rejects
+        // with an INVALID_ARGUMENT error — this is why broadcasts (no data)
+        // failed on every token while order pushes (which always carry data)
+        // went through. Only include data when present, and cast so it always
+        // serializes as an object even if a caller passes a list-shaped array.
+        if ($message->data !== []) {
+            $payload['message']['data'] = (object) $message->data;
+        }
 
         try {
             $response = $client->request('POST', $endpoint, [
