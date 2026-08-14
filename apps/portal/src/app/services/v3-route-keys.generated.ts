@@ -204,6 +204,14 @@ export type V3RouteKey =
   | 'POST /admin/notification-broadcasts/:id/resend'
   | 'GET /admin/notification-templates'
   | 'GET /admin/notification-templates/variables'
+  | 'POST /admin/notification-templates'
+  | 'GET /admin/notification-templates/:id'
+  | 'PUT /admin/notification-templates/:id'
+  | 'DELETE /admin/notification-templates/:id'
+  | 'POST /admin/notification-templates/:id/duplicate'
+  | 'PATCH /admin/notification-templates/:id/status'
+  | 'GET /admin/notification-templates'
+  | 'GET /admin/notification-templates/variables'
   | 'GET /admin/notification-templates/:id'
   | 'POST /admin/notification-templates'
   | 'PUT /admin/notification-templates/:id'
@@ -497,6 +505,14 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/notification-broadcasts/:id',
   'GET /admin/notification-broadcasts/:id/recipients',
   'POST /admin/notification-broadcasts/:id/resend',
+  'GET /admin/notification-templates',
+  'GET /admin/notification-templates/variables',
+  'POST /admin/notification-templates',
+  'GET /admin/notification-templates/:id',
+  'PUT /admin/notification-templates/:id',
+  'DELETE /admin/notification-templates/:id',
+  'POST /admin/notification-templates/:id/duplicate',
+  'PATCH /admin/notification-templates/:id/status',
   'GET /admin/notification-templates',
   'GET /admin/notification-templates/variables',
   'GET /admin/notification-templates/:id',

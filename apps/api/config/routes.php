@@ -849,6 +849,25 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\Notification\ListBroadcastRecipientsController::class)->add($perm->for('notifications.view'));
         $group->post('/notification-broadcasts/{id:[0-9]+}/resend',
             \Bayti\Api\Http\Controllers\Admin\Notification\ResendBroadcastController::class)->add($perm->for('notifications.send'));
+
+        // Message templates (Phase 2). `variables` (literal) is registered
+        // before /{id} so it can't be parsed as a template id.
+        $group->get('/notification-templates',
+            \Bayti\Api\Http\Controllers\Admin\Notification\ListTemplatesController::class)->add($perm->for('notifications.view'));
+        $group->get('/notification-templates/variables',
+            \Bayti\Api\Http\Controllers\Admin\Notification\GetTemplateVariablesController::class)->add($perm->for('notifications.view'));
+        $group->post('/notification-templates',
+            \Bayti\Api\Http\Controllers\Admin\Notification\CreateTemplateController::class)->add($perm->for('notifications.send'));
+        $group->get('/notification-templates/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Notification\GetTemplateController::class)->add($perm->for('notifications.view'));
+        $group->put('/notification-templates/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Notification\UpdateTemplateController::class)->add($perm->for('notifications.send'));
+        $group->delete('/notification-templates/{id:[0-9]+}',
+            \Bayti\Api\Http\Controllers\Admin\Notification\DeleteTemplateController::class)->add($perm->for('notifications.send'));
+        $group->post('/notification-templates/{id:[0-9]+}/duplicate',
+            \Bayti\Api\Http\Controllers\Admin\Notification\DuplicateTemplateController::class)->add($perm->for('notifications.send'));
+        $group->patch('/notification-templates/{id:[0-9]+}/status',
+            \Bayti\Api\Http\Controllers\Admin\Notification\SetTemplateStatusController::class)->add($perm->for('notifications.send'));
         // Message templates (Phase 2). Literal /variables before /{id}.
         $group->get('/notification-templates/variables',
             \Bayti\Api\Http\Controllers\Admin\Notification\GetTemplateVariablesController::class)->add($perm->for('notifications.view'));
