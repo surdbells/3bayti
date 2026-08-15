@@ -18,7 +18,7 @@ import {
   type AxServerFetchResult,
   type AxDateRange,
 } from '../../shared/data/enterprise';
-import { ORDER_STATUS_OPTIONS, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
+import { SALES_STATUS_OPTIONS, SALES_STATUSES, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
 
 interface SaleRow extends Record<string, unknown> {
   id: number;
@@ -84,7 +84,7 @@ export class SalesComponent implements OnInit {
       export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'sales' },
       filters: [
         { key: 'date', label: 'Date', type: 'date-range' },
-        { key: 'status', label: 'Status', type: 'select', options: ORDER_STATUS_OPTIONS },
+        { key: 'status', label: 'Status', type: 'select', options: SALES_STATUS_OPTIONS },
         { key: 'vendor', label: 'Store', type: 'select', optionsLoader: () => loadAdminVendorOptions(this.adapter) },
       ],
       columns: [
@@ -107,7 +107,10 @@ export class SalesComponent implements OnInit {
       offset: query.pageIndex * query.pageSize,
     };
     if (query.search) q.search = query.search;
-    if (query.filters['status']) q.status = query.filters['status'];
+    // Sales = actual sales, so unpaid (pending_payment) orders never belong
+    // here. A specific status pick is honoured; otherwise default to every
+    // sale status except pending_payment.
+    q.status = query.filters['status'] || SALES_STATUSES.join(',');
     if (query.filters['vendor']) q.vendor_id = query.filters['vendor'];
     const range = query.filters['date'] as AxDateRange | undefined;
     if (range?.from) q.since = range.from;

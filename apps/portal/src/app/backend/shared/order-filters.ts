@@ -39,6 +39,23 @@ export const LOGISTICS_STATUS_OPTIONS: readonly AxFilterOption[] =
   ORDER_STATUS_OPTIONS.filter((o) => FULFILMENT_STATUSES.includes(String(o.value)));
 
 /**
+ * Statuses that count as a SALE — everything EXCEPT pending_payment. An order
+ * still awaiting payment isn't a completed sale, so it must never appear on the
+ * admin/sales report (or its Store-sales drill-downs). Sent as the default
+ * `status` filter so the sales tables exclude unpaid orders.
+ */
+export const SALES_STATUSES: readonly string[] = ORDER_STATUS_OPTIONS
+  .map((o) => String(o.value))
+  .filter((v) => v !== 'pending_payment');
+
+/**
+ * Status dropdown for the sales tables — ORDER_STATUS_OPTIONS minus
+ * pending_payment, so an admin can't filter the sales report to unpaid orders.
+ */
+export const SALES_STATUS_OPTIONS: readonly AxFilterOption[] =
+  ORDER_STATUS_OPTIONS.filter((o) => o.value !== 'pending_payment');
+
+/**
  * Async option provider for a "Store" (vendor) filter — fetches the admin
  * vendor list and maps it to {label,value}. Degrades to an empty list on
  * failure so the rest of the table stays usable.
