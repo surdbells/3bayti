@@ -38,7 +38,9 @@ import { I18nService } from '../../i18n.service';
 import { WishlistService } from '../../core/services/wishlist.service';
 import { AuthSessionService } from '../../core/services/auth-session.service';
 import { CartCountService } from '../../core/services/cart-count.service';
+import { PendingOrdersService } from '../../core/services/pending-orders.service';
 import { ChatService } from '../../service/chat.service';
+import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import {Products} from "../../class/products";
 import {Labels} from "../../class/labels";
 import {CartIconComponent} from "../../cart-icon.component";
@@ -76,7 +78,7 @@ export interface Store {
   templateUrl: './account.page.html',
   styleUrls: ['./account.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonTabBar, IonTabButton, IonLabel, IonFooter, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink]
+  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonLabel, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink, AppTabBarComponent]
 })
 
 export class AccountPage implements OnInit, OnDestroy {
@@ -156,6 +158,7 @@ export class AccountPage implements OnInit, OnDestroy {
     private wishlistService: WishlistService,
     private authSession: AuthSessionService,
     public cartCount: CartCountService,
+    public pendingOrders: PendingOrdersService,
     private chatService: ChatService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
@@ -299,6 +302,22 @@ export class AccountPage implements OnInit, OnDestroy {
     // a light poll so vendor replies surface without reopening the inbox.
     this.refreshUnreadMessages();
     this.unreadPoll = setInterval(() => this.refreshUnreadMessages(), 30000);
+    // Keep the unpaid-orders reminder (banner + Settings tab dot) current.
+    void this.pendingOrders.refresh();
+  }
+
+  /** Reminder subtitle — singular vs plural, with the AED total. */
+  get pendingBannerBody(): string {
+    const c = this.pendingOrders.count();
+    const amount = Math.round(this.pendingOrders.amount());
+    return c === 1
+      ? this.i18n.t('home_pending_payment_body_one', { amount })
+      : this.i18n.t('home_pending_payment_body_many', { count: c, amount });
+  }
+
+  /** Open the My orders list filtered to pending payment. */
+  openPendingOrders(): void {
+    this.router.navigate(['/', 'my-orders'], { queryParams: { status: 'pending_payment' } });
   }
 
   ionViewWillLeave() {
@@ -332,6 +351,7 @@ export class AccountPage implements OnInit, OnDestroy {
     this.get_featured_products();
     this.load_cart();
     void this.cartCount.refresh();
+    void this.pendingOrders.refresh();
     this.refreshUnreadMessages();
     setTimeout(() => event.target.complete(), 700);
   }

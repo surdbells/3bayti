@@ -95,6 +95,24 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
+  <!-- Pending-payment reminder -->
+  @if (pendingOrders.count() > 0) {
+    <button type="button" class="pending-banner" (click)="openPendingOrders()"
+            [attr.aria-label]="'home_pending_payment_title' | translate">
+      <span class="pending-banner__icon" aria-hidden="true">
+        <ax-icon name="wallet"></ax-icon>
+        <span class="pending-banner__count">{{ pendingOrders.count() }}</span>
+      </span>
+      <span class="pending-banner__body">
+        <span class="pending-banner__title">{{ 'home_pending_payment_title' | translate }}</span>
+        <span class="pending-banner__sub">{{ pendingBannerBody }}</span>
+      </span>
+      <span class="pending-banner__cta" aria-hidden="true">
+        <ax-icon name="chevron-right"></ax-icon>
+      </span>
+    </button>
+  }
+
   <!--
     Gift-card promo — compact by default, tap the row to expand.
     The gift-card BALANCE is nested inside this card (a line under the
@@ -386,31 +404,4 @@
   </ion-fab>
 </ion-content>
 
-<ion-footer class="m6f-footer ion-no-border">
-  <ion-tab-bar class="m6f-tab-bar" slot="bottom">
-    <ion-tab-button (click)="refresh_products()" tab="home" class="m6f-tab m6f-tab--active">
-      <ax-icon name="house" />
-      <ion-label>{{ 'nav_home' | translate }}</ion-label>
-    </ion-tab-button>
-    <ion-tab-button (click)="user_explore()" tab="explore" class="m6f-tab">
-      <ax-icon name="globe" />
-      <ion-label>{{ 'explore' | translate }}</ion-label>
-    </ion-tab-button>
-    <ion-tab-button (click)="user_cart()" tab="cart" class="m6f-tab">
-      <ax-icon name="shopping-cart" />
-      <ion-label>{{ 'title_my_cart' | translate }}</ion-label>
-    </ion-tab-button>
-    <ion-tab-button (click)="user_styles()" tab="sketch" class="m6f-tab">
-      <ax-icon name="blocks" />
-      <ion-label>{{ 'nav_style_hub' | translate }}</ion-label>
-    </ion-tab-button>
-    <ion-tab-button routerLink="/gift-cards" tab="gift" class="m6f-tab">
-      <ax-icon name="gift" />
-      <ion-label>{{ 'tab_gifts' | translate }}</ion-label>
-    </ion-tab-button>
-    <ion-tab-button (click)="user_profile()" tab="profile" class="m6f-tab">
-      <ax-icon name="user-pen" />
-      <ion-label>{{ 'title_user_profile' | translate }}</ion-label>
-    </ion-tab-button>
-  </ion-tab-bar>
-</ion-footer>
+<app-tab-bar active="home"></app-tab-bar>
