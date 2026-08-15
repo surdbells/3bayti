@@ -133,10 +133,11 @@ final class RegisterSubmitController
                 user: $user,
                 requestedIp: $this->extractIp($request),
             );
-        } catch (OtpProviderException) {
+        } catch (OtpProviderException $e) {
             throw HttpException::upstreamFailure(
                 ErrorCodes::OTP_PROVIDER_ERROR,
                 'Could not send the verification email. Please try again in a moment.',
+                $e,
             );
         }
 

@@ -158,6 +158,7 @@ final class RegisterController
             throw HttpException::upstreamFailure(
                 ErrorCodes::OTP_PROVIDER_ERROR,
                 'Could not send verification code. Please try again in a moment.',
+                $e,
             );
         }
 

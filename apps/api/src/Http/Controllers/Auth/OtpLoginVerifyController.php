@@ -101,10 +101,11 @@ final class OtpLoginVerifyController
         // email → local hash compare).
         try {
             $result = $this->otp->verify($input->verification_id, $input->code);
-        } catch (OtpProviderException) {
+        } catch (OtpProviderException $e) {
             throw HttpException::upstreamFailure(
                 ErrorCodes::OTP_PROVIDER_ERROR,
                 'Could not verify code right now. Please try again in a moment.',
+                $e,
             );
         }
 

@@ -146,8 +146,14 @@ final class HttpException extends \RuntimeException
     public static function upstreamFailure(
         string $errorCode = ErrorCodes::OTP_PROVIDER_ERROR,
         string $message = 'Upstream service is temporarily unavailable.',
+        ?\Throwable $previous = null,
     ): self {
-        return new self(502, $errorCode, $message);
+        // Forward the originating exception (e.g. OtpProviderException carrying
+        // the provider's kind + HTTP status/body) as `previous`. ApiErrorMiddleware
+        // captures 5xx HttpExceptions to Sentry, and Sentry walks the cause chain
+        // — so the real upstream reason is preserved instead of being swallowed
+        // behind the generic public message.
+        return new self(502, $errorCode, $message, previous: $previous);
     }
 
     /**
