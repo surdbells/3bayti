@@ -10,6 +10,7 @@ import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
+import { SALES_STATUSES } from '../../shared/order-filters';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -269,6 +270,9 @@ export class StoreSalesComponent implements OnInit {
       vendor_id: this.vendorV3Id,
     };
     if (query.search) q.search = query.search;
+    // Store SALES — exclude unpaid (pending_payment) orders, same rule as the
+    // admin/sales report; a specific status pick (if this table gains one) wins.
+    q.status = query.filters['status'] || SALES_STATUSES.join(',');
     const range = query.filters['date'] as AxDateRange | undefined;
     if (range?.from) q.since = range.from;
     if (range?.to) q.until = range.to;
