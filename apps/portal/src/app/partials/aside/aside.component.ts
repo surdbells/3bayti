@@ -30,6 +30,33 @@ export class AsideComponent implements OnInit {
   ui_controls = {
     is_loading: false
   };
+
+  /**
+   * Per-section collapse state, keyed by the section id used in the template.
+   * Persisted to localStorage so a user's expanded/collapsed layout survives
+   * navigation and reloads (the sidenav re-instantiates on shell changes).
+   */
+  collapsed: Record<string, boolean> = {};
+  private readonly COLLAPSE_KEY = 'ax_nav_collapsed';
+
+  private loadCollapseState(): void {
+    try {
+      const raw = localStorage.getItem(this.COLLAPSE_KEY);
+      this.collapsed = raw ? JSON.parse(raw) : {};
+    } catch {
+      this.collapsed = {};
+    }
+  }
+
+  /** Toggle a section open/closed and persist the new layout. */
+  toggleSection(key: string): void {
+    this.collapsed[key] = !this.collapsed[key];
+    try {
+      localStorage.setItem(this.COLLAPSE_KEY, JSON.stringify(this.collapsed));
+    } catch {
+      /* storage unavailable — collapse still works for this session */
+    }
+  }
   session_data: any = '';
   user_session = {
     id: 0,
@@ -49,6 +76,7 @@ export class AsideComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    this.loadCollapseState();
     this.session_data = sessionStorage.getItem('SESSION');
     this.user_session = GlobalComponent.decodeBase64(this.session_data);
     // Ensure effective permissions are available to drive admin-menu gating

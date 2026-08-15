@@ -226,8 +226,13 @@ export class AdminComponent implements OnInit {
     this.router.navigate(['/admin/customers', it.id], { queryParams: { name: it.name } });
   }
 
-  openTopProduct(p: { id: number }): void {
-    this.router.navigate(['/admin/products', p.id]);
+  openTopProduct(p: { id: number; slug?: string }): void {
+    // Open the modern admin editor (loads by v3 id via GET /admin/products/:id).
+    // The old /admin/products/:id view page fetched by LEGACY id, so a v3-only
+    // product id (as emitted by the dashboard) 404'd into a blank page.
+    this.router.navigate(['/admin/products/edit'], {
+      queryParams: { id: p.id, slug: p.slug ?? '' },
+    });
   }
 
   // ── Period-over-period insight (GET /admin/insights?days=N) ───────────
@@ -524,7 +529,7 @@ export class AdminComponent implements OnInit {
     { id: 'transactions', title: 'Transactions', desc: 'Manage financial records', icon: 'credit-card', route: '/admintransactions' },
   ];
 
-  open_processing() { this.router.navigate(['/processing']).then(r => console.log(r)); }
-  open_sales() { this.router.navigate(['/adminsales']).then(r => console.log(r)); }
-  open_products() { this.router.navigate(['/admin_products']).then(r => console.log(r)); }
+  open_processing() { this.router.navigate(['/admin/orders']).then(r => console.log(r)); }
+  open_sales() { this.router.navigate(['/admin/sales']).then(r => console.log(r)); }
+  open_products() { this.router.navigate(['/admin/products']).then(r => console.log(r)); }
 }

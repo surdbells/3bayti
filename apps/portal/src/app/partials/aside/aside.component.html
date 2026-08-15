@@ -16,8 +16,12 @@
 
   <!-- Scrollable nav -->
   <nav class="ax-sidenav-body" aria-label="Primary">
-    <div class="ax-sidenav-section">
-      <p class="ax-sidenav-section-title">Overview</p>
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['overview']">
+      <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('overview')"
+              [attr.aria-expanded]="!collapsed['overview']">
+        <span>Overview</span>
+        <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
+      </button>
       <ul class="ax-sidenav-nav">
         <li>
           <a routerLink="/backend" routerLinkActive="ax-sidenav-link-active" [routerLinkActiveOptions]="{exact: true}" class="ax-sidenav-link">
@@ -28,8 +32,12 @@
       </ul>
     </div>
 
-    <div class="ax-sidenav-section" *ngIf="user_session.is_vendor">
-      <p class="ax-sidenav-section-title">Store operations</p>
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['store-ops']" *ngIf="user_session.is_vendor">
+      <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('store-ops')"
+              [attr.aria-expanded]="!collapsed['store-ops']">
+        <span>Store operations</span>
+        <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
+      </button>
       <ul class="ax-sidenav-nav">
         <li>
           <a routerLink="/products" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
@@ -89,23 +97,27 @@
     </div>
 
     <!-- Vendors & customers -->
-    <div class="ax-sidenav-section" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
-      <p class="ax-sidenav-section-title">Vendors &amp; customers</p>
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['vendors-customers']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+      <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('vendors-customers')"
+              [attr.aria-expanded]="!collapsed['vendors-customers']">
+        <span>Vendors &amp; customers</span>
+        <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
+      </button>
       <ul class="ax-sidenav-nav">
         <li *axCan="'vendors.view'">
-          <a routerLink="/stores" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/stores" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="storefront" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Vendors</span>
           </a>
         </li>
         <li *axCan="'vendors.view'">
-          <a routerLink="/vendor-applications" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/vendor-applications" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="task_alt" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Applications</span>
           </a>
         </li>
         <li *axCan="'orders.view'">
-          <a routerLink="/customers" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/customers" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="group" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Customers</span>
           </a>
@@ -114,29 +126,33 @@
     </div>
 
     <!-- Catalog -->
-    <div class="ax-sidenav-section" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
-      <p class="ax-sidenav-section-title">Catalog</p>
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['catalog']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+      <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('catalog')"
+              [attr.aria-expanded]="!collapsed['catalog']">
+        <span>Catalog</span>
+        <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
+      </button>
       <ul class="ax-sidenav-nav">
         <li *axCan="'products.view'">
-          <a routerLink="/admin_products" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/products" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="inventory_2" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Products</span>
           </a>
         </li>
         <li *axCan="'catalog.collections_view'">
-          <a routerLink="/collections" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/collections" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="folder" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Collections</span>
           </a>
         </li>
         <li *axCan="'catalog.campaigns_view'">
-          <a routerLink="/campaigns" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/campaigns" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="campaign" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Campaigns</span>
           </a>
         </li>
         <li *axCan="'gift_cards.view'">
-          <a routerLink="/admin-gift-cards" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/gift-cards" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="card_giftcard" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Gift Cards</span>
           </a>
@@ -145,35 +161,39 @@
     </div>
 
     <!-- Orders & sales -->
-    <div class="ax-sidenav-section" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
-      <p class="ax-sidenav-section-title">Orders &amp; sales</p>
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['orders-sales']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+      <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('orders-sales')"
+              [attr.aria-expanded]="!collapsed['orders-sales']">
+        <span>Orders &amp; sales</span>
+        <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
+      </button>
       <ul class="ax-sidenav-nav">
         <li *axCan="'orders.view'">
-          <a routerLink="/processing" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/orders" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="receipt_long" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Orders</span>
           </a>
         </li>
         <li *axCan="'sales.view'">
-          <a routerLink="/adminsales" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/sales" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="trending_up" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Sales</span>
           </a>
         </li>
         <li *axCan="'returns.view'">
-          <a routerLink="/adminreturns" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/returns" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="assignment_return" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Returns</span>
           </a>
         </li>
         <li *axCan="'payouts.view_commissions'">
-          <a routerLink="/admincommissions" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/commissions" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="payments" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Commissions</span>
           </a>
         </li>
         <li *axCan="'logistics.view'">
-          <a routerLink="/adminlogistics" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/logistics" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="local_shipping" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Logistics</span>
           </a>
@@ -182,11 +202,15 @@
     </div>
 
     <!-- Engagement -->
-    <div class="ax-sidenav-section" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
-      <p class="ax-sidenav-section-title">Engagement</p>
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['engagement']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+      <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('engagement')"
+              [attr.aria-expanded]="!collapsed['engagement']">
+        <span>Engagement</span>
+        <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
+      </button>
       <ul class="ax-sidenav-nav">
         <li *axCan="'notifications.send'">
-          <a routerLink="/adminnotifications" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/notifications" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="campaign" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Push Notification</span>
           </a>
@@ -210,7 +234,7 @@
           </a>
         </li>
         <li *axCan="'notifications.view'">
-          <a routerLink="/notification-logs" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/notification-logs" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="mail_outline" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Notification Logs</span>
           </a>
@@ -219,17 +243,21 @@
     </div>
 
     <!-- System -->
-    <div class="ax-sidenav-section" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
-      <p class="ax-sidenav-section-title">System</p>
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['system']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+      <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('system')"
+              [attr.aria-expanded]="!collapsed['system']">
+        <span>System</span>
+        <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
+      </button>
       <ul class="ax-sidenav-nav">
         <li *axCan="['users.view', 'roles.view']">
-          <a routerLink="/adminusers" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/users" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="admin_panel_settings" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Users</span>
           </a>
         </li>
         <li *axCan="['settings.edit']">
-          <a routerLink="/ota" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+          <a routerLink="/admin/ota" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="rocket_launch" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">OTA updates</span>
           </a>
@@ -237,8 +265,12 @@
       </ul>
     </div>
 
-    <div class="ax-sidenav-section">
-      <p class="ax-sidenav-section-title">Account</p>
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['account']">
+      <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('account')"
+              [attr.aria-expanded]="!collapsed['account']">
+        <span>Account</span>
+        <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
+      </button>
       <ul class="ax-sidenav-nav">
         <li>
           <a routerLink="/profile" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">

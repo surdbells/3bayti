@@ -105,6 +105,42 @@
   color: var(--ax-color-text-on-sidenav-muted);
   padding: var(--ax-space-3) var(--ax-space-3) var(--ax-space-2);
   margin: 0;
+  /* Section header doubles as a collapse toggle. */
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ax-space-2);
+  width: 100%;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  border-radius: var(--ax-radius-md);
+  transition: color var(--ax-duration-fast) var(--ax-ease-out),
+              background-color var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-sidenav-section-title:hover {
+  color: var(--ax-color-text-on-sidenav);
+  background-color: var(--ax-color-bg-sidenav-hover);
+}
+.ax-sidenav-section-title app-icon {
+  font-size: 1rem;
+  opacity: 0.7;
+  flex-shrink: 0;
+  transition: transform var(--ax-duration-base) var(--ax-ease-emphasized),
+              opacity var(--ax-duration-fast) var(--ax-ease-out);
+}
+.ax-sidenav-section-title:hover app-icon {
+  opacity: 1;
+}
+
+/* Collapsed: hide the section's links and rotate the caret to point right. */
+.ax-sidenav-section-collapsed .ax-sidenav-nav {
+  display: none;
+}
+.ax-sidenav-section-collapsed .ax-sidenav-section-title app-icon {
+  transform: rotate(-90deg);
 }
 
 /* Nav list */
