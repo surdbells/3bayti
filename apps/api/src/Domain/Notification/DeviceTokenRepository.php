@@ -205,23 +205,51 @@ class DeviceTokenRepository extends EntityRepository
     }
 
     /**
-     * Register (upsert) a device token for a user. If the token row
-     * already exists it's touched (re-owned / reactivated / re-stamped);
-     * otherwise a new row is created. Idempotent by design.
+     * Register (upsert) a device token for a user. If the token row already
+     * exists it's re-owned / reactivated / re-stamped (mirrors
+     * DeviceToken::touch()); otherwise a new row is created. Idempotent.
+     *
+     * Uses a single atomic Postgres UPSERT (ON CONFLICT) rather than a
+     * check-then-insert. The old check-then-insert raced under concurrent
+     * registrations — the app re-registers its FCM token on app open/resume,
+     * so two near-simultaneous POSTs both saw no row and both inserted,
+     * violating uq_device_tokens_token with a 500 (Sentry PHP-11). ON CONFLICT
+     * is race-proof and never trips the unique index.
+     *
+     * created_at is only set on INSERT (preserved on conflict). $flush is kept
+     * for signature stability but is now a no-op — the UPSERT commits itself.
      */
     public function register(User $user, string $token, string $platform, bool $flush = true): DeviceToken
     {
-        $existing = $this->findOneByToken($token);
-        if ($existing !== null) {
-            $existing->touch($user, $platform);
-            $entity = $existing;
-        } else {
-            $entity = new DeviceToken($user, $token, $platform);
-            $this->getEntityManager()->persist($entity);
+        $this->getEntityManager()->getConnection()->executeStatement(
+            <<<'SQL'
+            INSERT INTO device_tokens
+                (user_id, token, platform, is_active, created_at, updated_at, last_seen_at)
+            VALUES
+                (:user_id, :token, :platform, TRUE, now(), now(), now())
+            ON CONFLICT (token) DO UPDATE SET
+                user_id      = EXCLUDED.user_id,
+                platform     = EXCLUDED.platform,
+                is_active    = TRUE,
+                updated_at   = now(),
+                last_seen_at = now()
+            SQL,
+            [
+                'user_id'  => $user->getId(),
+                'token'    => $token,
+                'platform' => $platform,
+            ],
+        );
+
+        // Return the row in its post-upsert state. If the caller's "is this
+        // new?" probe already loaded a now-stale instance into the identity
+        // map, refresh() re-syncs it with the row we just wrote.
+        $entity = $this->findOneByToken($token);
+        if ($entity === null) {
+            // Unreachable right after the upsert; keep the return type honest.
+            return new DeviceToken($user, $token, $platform);
         }
-        if ($flush) {
-            $this->getEntityManager()->flush();
-        }
+        $this->getEntityManager()->refresh($entity);
         return $entity;
     }
 
