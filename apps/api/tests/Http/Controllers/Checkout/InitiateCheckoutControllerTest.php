@@ -326,6 +326,227 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
     }
 
     #[Test]
+    public function resumesPendingOrderReusingCachedCheckoutUrl(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $order = new Order(user: $user, orderReference: 'V3-RESUME-1', subtotal: '490.00', deliveryFee: '20.00');
+        $this->setEntityId($order, 555);
+
+        $existingTx = new PaymentTransaction(
+            order: $order,
+            operation: PaymentTransaction::OPERATION_INITIATE,
+            status: 'initiated',
+            amount: '510.00',
+            idempotencyKey: 'orig',
+            providerOrderRef: '123456789012',
+            responsePayload: [
+                'result' => ['checkoutData' => ['postUrl' => 'https://api-test.noonpayments.com/checkout/resume']],
+            ],
+        );
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByOrderReference')->with('V3-RESUME-1')->willReturn($order);
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txRepo->method('findLatestInitiateForOrder')->with($order)->willReturn($existingTx);
+
+        // Reusing the cached session must NOT hit the gateway.
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('initiateCheckout');
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+                [PaymentTransaction::class, $txRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', ['order_reference' => 'V3-RESUME-1'], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
+        $body = $this->jsonBody($response);
+        self::assertSame('https://api-test.noonpayments.com/checkout/resume', $body['checkout_url']);
+        self::assertTrue($body['idempotent']);
+        self::assertSame('V3-RESUME-1', $body['order_reference']);
+    }
+
+    #[Test]
+    public function resumesPendingOrderWithFreshInitiateWhenNoSessionOnFile(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $order = new Order(user: $user, orderReference: 'V3-RESUME-2', subtotal: '490.00', deliveryFee: '20.00');
+        $this->setEntityId($order, 556);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByOrderReference')->with('V3-RESUME-2')->willReturn($order);
+
+        $txRepo = $this->createMock(PaymentTransactionRepository::class);
+        $txRepo->method('findLatestInitiateForOrder')->willReturn(null);
+        $txRepo->expects(self::once())->method('save');
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::once())
+            ->method('initiateCheckout')
+            ->willReturnCallback(function (Order $o, string $returnUrl, string $channel): CheckoutInitiation {
+                self::assertSame('MOBILE', $channel);
+                self::assertStringContainsString('/v3/checkout/return/V3-RESUME-2', $returnUrl);
+                return new CheckoutInitiation(
+                    checkoutUrl: 'https://api-test.noonpayments.com/checkout/fresh',
+                    providerOrderRef: '222222222222',
+                    rawResponse: [
+                        'result' => ['checkoutData' => ['postUrl' => 'https://api-test.noonpayments.com/checkout/fresh']],
+                    ],
+                );
+            });
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $txRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+                [PaymentTransaction::class, $txRepo],
+            ]);
+            $em->method('persist');
+            $em->method('flush');
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', ['order_reference' => 'V3-RESUME-2'], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(200, $response->getStatusCode(), 'Body: ' . (string) $response->getBody());
+        $body = $this->jsonBody($response);
+        self::assertSame('https://api-test.noonpayments.com/checkout/fresh', $body['checkout_url']);
+        self::assertFalse($body['idempotent']);
+        self::assertSame('V3-RESUME-2', $body['order_reference']);
+    }
+
+    #[Test]
+    public function rejectsResumeForUnknownOrder(): void
+    {
+        $user = $this->makeUser(id: 7);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByOrderReference')->willReturn(null);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', ['order_reference' => 'V3-NOPE'], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function rejectsResumeForOrderOwnedByAnotherUser(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $other = $this->makeUser(id: 8);
+        $order = new Order(user: $other, orderReference: 'V3-FOREIGN', subtotal: '100.00');
+        $this->setEntityId($order, 900);
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByOrderReference')->with('V3-FOREIGN')->willReturn($order);
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', ['order_reference' => 'V3-FOREIGN'], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(403, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function rejectsResumeForOrderNotAwaitingPayment(): void
+    {
+        $user = $this->makeUser(id: 7);
+        $order = new Order(user: $user, orderReference: 'V3-PAID', subtotal: '100.00');
+        $this->setEntityId($order, 901);
+        $order->markPaid();
+
+        $userRepo = $this->createMock(UserRepository::class);
+        $userRepo->method('findById')->with(7)->willReturn($user);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByOrderReference')->with('V3-PAID')->willReturn($order);
+
+        $gateway = $this->createMock(PaymentGatewayInterface::class);
+        $gateway->expects(self::never())->method('initiateCheckout');
+
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo) {
+            $em->method('getRepository')->willReturnMap([
+                [User::class, $userRepo],
+                [Order::class, $orderRepo],
+            ]);
+        });
+        $this->bind(EntityManagerInterface::class, $em);
+        $this->bind(PaymentGatewayInterface::class, $gateway);
+
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $response = $this->handle(
+            $this->jsonRequest('POST', '/v3/checkout/initiate', ['order_reference' => 'V3-PAID'], [
+                'Authorization' => 'Bearer ' . $pair->accessToken,
+            ])
+        );
+
+        self::assertSame(400, $response->getStatusCode());
+    }
+
+    #[Test]
     public function gatewayFailureReturns502(): void
     {
         $user = $this->makeUser(id: 7);

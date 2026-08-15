@@ -209,6 +209,26 @@
       </ion-card>
     }
 
+    <!-- Complete payment (pending_payment only) -->
+    @if (order.status === 'pending_payment') {
+      <ion-card class="detail-card pay-card">
+        <div class="pay-card__head">
+          <span class="pay-card__title">{{ 'mgc_complete_payment' | translate }}</span>
+          <span class="pay-card__amount">{{ order.currency }} {{ order.total }}</span>
+        </div>
+        <p class="pay-card__hint">{{ 'order_complete_payment_hint' | translate }}</p>
+        <ion-button
+          expand="block"
+          class="pay-card__btn"
+          (click)="completePayment()"
+          [disabled]="ui_controls.is_paying"
+          data-testid="complete-payment-btn"
+        >
+          {{ (ui_controls.is_paying ? 'mgc_completing_payment' : 'mgc_complete_payment') | translate }}
+        </ion-button>
+      </ion-card>
+    }
+
     <!-- Cancel -->
     @if (canCancel()) {
       <div class="cancel-wrap">

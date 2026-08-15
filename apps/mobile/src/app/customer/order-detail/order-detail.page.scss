@@ -360,3 +360,35 @@
   margin: 0 0 8px 0;
   color: var(--ax-color-text-secondary, #6b6056);
 }
+
+/* Complete-payment card — shown while the order awaits payment. */
+.pay-card {
+  background: var(--ax-color-bg-brand-subtle, #f3ede2);
+  border: 1px solid var(--ax-color-border-subtle, #e7ddcd);
+}
+.pay-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pay-card__title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ax-color-text-primary, #2e241c);
+}
+.pay-card__amount {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ax-color-text-primary, #2e241c);
+}
+.pay-card__hint {
+  margin: 6px 0 12px 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ax-color-text-secondary, #6b6056);
+}
+.pay-card__btn {
+  --border-radius: 12px;
+  margin: 0;
+}

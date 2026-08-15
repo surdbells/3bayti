@@ -6,6 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { MobileNetworkAdapter } from '../http/mobile-network-adapter';
 import { PushManager } from './push-manager.service';
 import { LocalCartService } from './local-cart.service';
+import { PendingOrdersService } from './pending-orders.service';
 
 /**
  * AuthSessionService — single source of truth for terminating the
@@ -34,6 +35,7 @@ export class AuthSessionService {
     private pushManager: PushManager,
     private localCart: LocalCartService,
     private nav: NavController,
+    private pendingOrders: PendingOrdersService,
   ) {}
 
   /**
@@ -83,6 +85,10 @@ export class AuthSessionService {
     // (d) Clear the local session keys.
     await Preferences.remove({ key: 'user' });
     await Preferences.remove({ key: 'keep_session' });
+
+    // Drop the unpaid-orders reminder (Home banner + Settings dot) so the next
+    // account that signs in doesn't briefly see the previous user's count.
+    this.pendingOrders.clear();
 
     // (e) Wipe the guest local cart for a clean next session.
     try {

@@ -26,6 +26,8 @@ import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { cfImage } from '../../shared/cf-image';
 import { supportWhatsappLink } from '../../core/constants/support.constants';
+import { OrderPaymentService } from './order-payment.service';
+import { PendingOrdersService } from '../../core/services/pending-orders.service';
 
 /**
  * Customer order-detail screen — M3.2.Z.1.
@@ -151,6 +153,7 @@ export class OrderDetailPage implements OnInit {
   ui_controls = {
     is_loading: false,
     is_cancelling: false,
+    is_paying: false,
     not_found: false,
   };
 
@@ -164,6 +167,8 @@ export class OrderDetailPage implements OnInit {
     private actionSheetCtrl: ActionSheetController,
     private mobileAdapter: MobileNetworkAdapter,
     private i18n: I18nService,
+    private orderPayment: OrderPaymentService,
+    private pendingOrders: PendingOrdersService,
   ) {}
 
   async ngOnInit() {
@@ -197,6 +202,32 @@ export class OrderDetailPage implements OnInit {
   /** True only for pending_payment — mirrors the web/my-orders rule. */
   canCancel(): boolean {
     return this.order?.status === 'pending_payment' && !this.ui_controls.is_cancelling;
+  }
+
+  /** Show the "Complete payment" affordance only while the order awaits payment. */
+  canPay(): boolean {
+    return this.order?.status === 'pending_payment' && !this.ui_controls.is_paying;
+  }
+
+  /**
+   * Resume payment for this pending order (mobile "Complete payment").
+   * Delegates to OrderPaymentService — initiate → in-app browser → poll —
+   * then reloads the order so its status reflects the outcome.
+   */
+  completePayment(): void {
+    const order = this.order;
+    if (order === null || !this.canPay()) return;
+    this.ui_controls.is_paying = true;
+    this.orderPayment.pay(order.order_reference, this.token, {
+      onPaid: () => {
+        this.ui_controls.is_paying = false;
+        this.loadOrder();
+        void this.pendingOrders.refresh();
+      },
+      onFailed: () => {
+        this.ui_controls.is_paying = false;
+      },
+    });
   }
 
   /** Whether the money breakdown should show a discount line. */
@@ -412,6 +443,7 @@ export class OrderDetailPage implements OnInit {
           });
           if (response.response_code === 200 && response.status === 'success') {
             order.status = 'cancelled';
+            void this.pendingOrders.refresh();
             const wasIdempotent =
               response.data?.cancellation?.was_already_cancelled === true;
             this.toast.success(

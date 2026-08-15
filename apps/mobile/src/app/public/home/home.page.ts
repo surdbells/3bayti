@@ -22,6 +22,7 @@ import {BlockerService} from "../../blocker.service";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
 import {OtaUpdateService} from "../../core/services/ota-update.service";
+import {PendingOrdersService} from "../../core/services/pending-orders.service";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
@@ -101,7 +102,8 @@ export class HomePage implements OnInit, OnDestroy {
     private networkAdapter: MobileNetworkAdapter,
     private toast: AxNotificationService,
     private i18n: I18nService,
-    private ota: OtaUpdateService
+    private ota: OtaUpdateService,
+    public pendingOrders: PendingOrdersService,
   ) {
     this.platform.backButton.subscribeWithPriority(10, () => {
     });
@@ -147,6 +149,27 @@ export class HomePage implements OnInit, OnDestroy {
     // the next app resume. Throttled + fully wrapped in the service; it only
     // stages the bundle for the next cold start (never mid-session).
     void this.ota.checkNow();
+    void this.pendingOrders.refresh();
+  }
+
+  ionViewWillEnter(): void {
+    // Refresh on every entry so the reminder reflects orders paid/created
+    // elsewhere (e.g. after completing payment from the order detail page).
+    void this.pendingOrders.refresh();
+  }
+
+  /** Reminder subtitle — singular vs plural, with the AED total. */
+  get pendingBannerBody(): string {
+    const c = this.pendingOrders.count();
+    const amount = Math.round(this.pendingOrders.amount());
+    return c === 1
+      ? this.i18n.t('home_pending_payment_body_one', { amount })
+      : this.i18n.t('home_pending_payment_body_many', { count: c, amount });
+  }
+
+  /** Open the My orders list filtered to pending payment. */
+  openPendingOrders(): void {
+    this.router.navigate(['/', 'my-orders'], { queryParams: { status: 'pending_payment' } });
   }
 
   ngOnDestroy(): void {

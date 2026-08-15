@@ -14,6 +14,7 @@ import {AxOtaIndicatorComponent} from "./shared/ax-mobile/ota-indicator";
 import {AppUpdateService} from "./service/app-update.service";
 import {I18nService} from "./i18n.service";
 import {OtaUpdateService} from "./core/services/ota-update.service";
+import {PendingOrdersService} from "./core/services/pending-orders.service";
 import {PushManager, resolvePushDeepLink} from "./core/services/push-manager.service";
 
 @Component({
@@ -92,6 +93,7 @@ export class AppComponent {
     private pushManager: PushManager,
     private router: Router,
     private ota: OtaUpdateService,
+    private pendingOrders: PendingOrdersService,
   ) {
       /* OTA (self-hosted Capgo) — confirm the freshly-booted web bundle is
          healthy. MUST run on EVERY native cold start as early as possible: if
@@ -135,6 +137,7 @@ export class AppComponent {
           /* Run an update check on cold launch. Failing-safe — if the
              service fails for any reason, no prompt shows. */
           this.runUpdateCheck();
+          void this.pendingOrders.refresh();
 
           /* Re-check whenever the app resumes from background. Important
              for users who keep the app suspended for hours/days while a
@@ -143,6 +146,9 @@ export class AppComponent {
           CapacitorApp.addListener('appStateChange', (state) => {
             if (state.isActive) {
               this.runUpdateCheck();
+              // Keep the unpaid-orders reminder (Home banner + Settings dot)
+              // current when the app returns from background.
+              void this.pendingOrders.refresh();
             }
           });
       });

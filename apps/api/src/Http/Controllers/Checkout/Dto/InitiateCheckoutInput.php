@@ -133,6 +133,19 @@ final class InitiateCheckoutInput
     public readonly ?int $gift_card_purchase_id;
 
     /**
+     * Resume payment for an EXISTING pending_payment order — the mobile
+     * "Complete payment" action. When supplied, checkout does NOT touch the
+     * cart or create a new order: it re-initiates the gateway session for
+     * this order and returns its checkout_url. Distinct from
+     * gift_card_purchase_id (a separate, cart-less flow).
+     */
+    #[Assert\Length(
+        max: 32,
+        maxMessage: 'order_reference is too long (max {{ limit }} chars).',
+    )]
+    public readonly ?string $order_reference;
+
+    /**
      * Apply the customer's whole gift-card WALLET (aggregate balance across
      * all their spendable cards) to this order — the one-tap alternative to
      * supplying a single gift_card_code. The server debits across the cards
@@ -154,6 +167,7 @@ final class InitiateCheckoutInput
         ?string $gift_card_code = null,
         ?int $gift_card_purchase_id = null,
         ?bool $use_gift_wallet = false,
+        ?string $order_reference = null,
     ) {
         /* Accept any casing from clients (the web app sends 'web'); the
            Choice + Noon gateway require uppercase. Normalising here means
@@ -176,5 +190,8 @@ final class InitiateCheckoutInput
             : null;
         $this->gift_card_purchase_id = $gift_card_purchase_id;
         $this->use_gift_wallet = $use_gift_wallet ?? false;
+        $this->order_reference = ($order_reference !== null && trim($order_reference) !== '')
+            ? trim($order_reference)
+            : null;
     }
 }

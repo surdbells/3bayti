@@ -8,6 +8,24 @@
 
 <ion-content [fullscreen]="true" class="page-bg">
 
+  <!-- Pending-payment reminder -->
+  @if (pendingOrders.count() > 0) {
+    <button type="button" class="pending-banner" (click)="openPendingOrders()"
+            [attr.aria-label]="'home_pending_payment_title' | translate">
+      <span class="pending-banner__icon" aria-hidden="true">
+        <ax-icon name="wallet"></ax-icon>
+        <span class="pending-banner__count">{{ pendingOrders.count() }}</span>
+      </span>
+      <span class="pending-banner__body">
+        <span class="pending-banner__title">{{ 'home_pending_payment_title' | translate }}</span>
+        <span class="pending-banner__sub">{{ pendingBannerBody }}</span>
+      </span>
+      <span class="pending-banner__cta" aria-hidden="true">
+        <ax-icon name="chevron-right"></ax-icon>
+      </span>
+    </button>
+  }
+
   <!-- Best Sellers Section -->
   @if (!ui_controls.is_loading && best_sellers.length > 0) {
     <section class="section ion-padding-horizontal">

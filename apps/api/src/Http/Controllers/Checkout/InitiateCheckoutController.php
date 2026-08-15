@@ -165,6 +165,16 @@ final class InitiateCheckoutController
             return $this->initiateGiftCardPurchase($request, $user, $input);
         }
 
+        // ------------------------------------------------------------------
+        // Resume payment for an EXISTING pending_payment order — the mobile
+        // "Complete payment" action. Like the gift-card branch this bypasses
+        // the cart entirely: no new order is created, we just hand back a
+        // checkout URL for the order the customer already has.
+        // ------------------------------------------------------------------
+        if ($input->order_reference !== null) {
+            return $this->initiateOrderResume($user, $input);
+        }
+
         /** @var CartRepository $carts */
         $carts = $this->em->getRepository(Cart::class);
         $cart = $carts->findActiveForUser($user);
@@ -740,6 +750,113 @@ final class InitiateCheckoutController
             'order_id'           => $order->getId() ?? 0,
             'idempotent'         => false,
             'gift_card_id'       => $card->getId(),
+        ]);
+    }
+
+    /**
+     * Resume payment for an EXISTING pending_payment order — the mobile
+     * "Complete payment" action.
+     *
+     * Unlike the cart flow this creates NO new order: it reuses the order's
+     * original Noon checkout session when one is still on file (double-tap /
+     * return visit gets the same URL), otherwise re-initiates a fresh session
+     * for the SAME order. A gateway failure here does NOT mark the order
+     * failed — the order stays pending_payment so the customer can retry.
+     */
+    private function initiateOrderResume(
+        User $user,
+        InitiateCheckoutInput $input,
+    ): \Psr\Http\Message\ResponseInterface {
+        /** @var \Bayti\Api\Domain\Order\OrderRepository $orders */
+        $orders = $this->em->getRepository(Order::class);
+        $order = $orders->findByOrderReference((string) $input->order_reference);
+        if ($order === null) {
+            throw HttpException::notFound('Order not found.');
+        }
+        if ($order->getUser()->getId() !== $user->getId()) {
+            throw HttpException::forbidden('This order does not belong to your account.');
+        }
+        if ($order->getStatus() !== Order::STATUS_PENDING_PAYMENT) {
+            throw HttpException::badRequest(
+                'This order is not awaiting payment (status: ' . $order->getStatus() . ').'
+            );
+        }
+
+        /** @var \Bayti\Api\Domain\Payment\PaymentTransactionRepository $transactions */
+        $transactions = $this->em->getRepository(\Bayti\Api\Domain\Payment\PaymentTransaction::class);
+
+        // Reuse the order's existing checkout session if we still have one, so
+        // a double-tap or a return visit gets the same Noon URL rather than a
+        // brand-new provider order.
+        $existing = $transactions->findLatestInitiateForOrder($order);
+        if ($existing !== null) {
+            $cachedUrl = $this->extractCheckoutUrl($existing);
+            if ($cachedUrl !== null) {
+                return $this->ok([
+                    'checkout_url'       => $cachedUrl,
+                    'order_reference'    => $order->getOrderReference(),
+                    'provider_order_ref' => $existing->getProviderOrderRef() ?? '',
+                    'order_id'           => $order->getId() ?? 0,
+                    'idempotent'         => true,
+                ]);
+            }
+        }
+
+        // No usable session on file — initiate a fresh one for the SAME order.
+        $returnUrl = $this->buildReturnUrl($order->getOrderReference());
+        try {
+            $initiation = $this->gateway->initiateCheckout(
+                order: $order,
+                returnUrl: $returnUrl,
+                channel: $input->channel,
+            );
+        } catch (PaymentGatewayException $e) {
+            // Deliberately do NOT markOrderFailed — leave the order pending so
+            // the customer can try again from "Complete payment".
+            $this->logger->error('checkout.initiate: order-resume gateway failure', [
+                'user_id' => $user->getId(),
+                'order_id' => $order->getId(),
+                'order_reference' => $order->getOrderReference(),
+                'message' => $e->getMessage(),
+            ]);
+            throw HttpException::upstreamFailure(
+                ErrorCodes::PAYMENT_PROVIDER_ERROR,
+                'Payment provider could not initiate checkout. Please try again.',
+            );
+        }
+
+        $tx = new \Bayti\Api\Domain\Payment\PaymentTransaction(
+            order: $order,
+            operation: \Bayti\Api\Domain\Payment\PaymentTransaction::OPERATION_INITIATE,
+            status: 'initiated',
+            amount: $order->gatewayChargeAmount(),
+            // Keyed on the provider order ref (unique per Noon initiate) so a
+            // retried resume never collides on the idempotency key.
+            idempotencyKey: sprintf(
+                'order-resume:order=%d:pref=%s',
+                $order->getId() ?? 0,
+                $initiation->providerOrderRef,
+            ),
+            provider: \Bayti\Api\Domain\Payment\PaymentTransaction::PROVIDER_NOON,
+            providerOrderRef: $initiation->providerOrderRef,
+            currency: $order->getCurrency(),
+            requestPayload: ['returnUrl' => $returnUrl, 'channel' => $input->channel],
+            responsePayload: $initiation->rawResponse,
+        );
+        $transactions->save($tx);
+
+        $this->logger->info('checkout.initiate: order-resume success', [
+            'user_id' => $user->getId(),
+            'order_id' => $order->getId(),
+            'order_reference' => $order->getOrderReference(),
+        ]);
+
+        return $this->ok([
+            'checkout_url'       => $initiation->checkoutUrl,
+            'order_reference'    => $order->getOrderReference(),
+            'provider_order_ref' => $initiation->providerOrderRef,
+            'order_id'           => $order->getId() ?? 0,
+            'idempotent'         => false,
         ]);
     }
 

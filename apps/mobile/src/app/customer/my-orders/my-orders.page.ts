@@ -165,6 +165,13 @@ export class MyOrdersPage implements OnInit {
     // a stale/empty snapshot after navigating away and back).
   }
   ionViewWillEnter() {
+    // Honour a ?status= deep-link (e.g. the Home "payment pending" banner opens
+    // this list already filtered to pending payment). Guarded against unknown
+    // values so only real filter chips can be pre-selected.
+    const qpStatus = this.route.snapshot.queryParamMap.get('status');
+    if (qpStatus && this.statuses.some((s) => s.value === qpStatus)) {
+      this.selectedStatus = qpStatus as FilterStatus;
+    }
     this.getObject();
   }
   async getObject() {

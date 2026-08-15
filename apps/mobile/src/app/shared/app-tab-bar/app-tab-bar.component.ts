@@ -5,6 +5,7 @@ import { IonFooter, IonLabel, IonTabBar, IonTabButton } from '@ionic/angular/sta
 import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../ax-mobile/icon';
 import { CartCountService } from '../../core/services/cart-count.service';
+import { PendingOrdersService } from '../../core/services/pending-orders.service';
 
 /**
  * Shared bottom tab bar component (app-shell).
@@ -84,11 +85,27 @@ export type AppTabBarTab = 'home' | 'explore' | 'cart' | 'sketch' | 'gift' | 'pr
           class="m6f-tab"
           [class.m6f-tab--active]="active === 'profile'">
           <ax-icon name="user-pen" />
+          @if (pendingOrders.count() > 0) {
+            <span class="m6f-tab-dot" aria-hidden="true"></span>
+          }
           <ion-label>{{ 'title_user_profile' | translate }}</ion-label>
         </ion-tab-button>
       </ion-tab-bar>
     </ion-footer>
   `,
+  styles: [`
+    ion-tab-button { position: relative; }
+    .m6f-tab-dot {
+      position: absolute;
+      top: 7px;
+      left: calc(50% + 8px);
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--ax-color-bg-danger, #a53826);
+      border: 1.5px solid var(--ax-color-bg-surface, #fff);
+    }
+  `],
 })
 export class AppTabBarComponent implements OnInit {
   /** Which tab to mark as active. Pass undefined for none. */
@@ -116,6 +133,7 @@ export class AppTabBarComponent implements OnInit {
   constructor(
     private router: Router,
     public cartCount: CartCountService,
+    public pendingOrders: PendingOrdersService,
   ) {}
 
   ngOnInit(): void {
