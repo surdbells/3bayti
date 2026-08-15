@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
@@ -19,6 +19,7 @@ interface OrderItemRow {
   subtotal: string;
   item_status: string;
   vendor_id: number;
+  vendor_name: string | null;
   size?: string | null;
   color?: string | null;
   note?: string | null;
@@ -47,7 +48,7 @@ const ITEM_STATUSES = [
 @Component({
   selector: 'app-single',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, AdminShellComponent, AxCanDirective, AxComboboxComponent],
+  imports: [CommonModule, FormsModule, IconComponent, AdminShellComponent, AxCanDirective, AxComboboxComponent, RouterLink],
   templateUrl: './single.component.html',
   styleUrl: './single.component.css',
 })
@@ -126,6 +127,7 @@ export class SingleComponent implements OnInit {
           subtotal: it.subtotal,
           item_status: it.item_status,
           vendor_id: it.vendor_id,
+          vendor_name: it.vendor_name ?? null,
           size: it.size,
           color: it.color,
           note: it.note,
