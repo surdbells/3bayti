@@ -57,6 +57,27 @@ final class UpdateVendorStoreController
         $vendor = $vendors[0];
         $body   = (array) ($request->getParsedBody() ?? []);
 
+        // Reject over-length values up front with a clean 422 instead of letting
+        // the DB reject them at flush() with a raw 500 (SQLSTATE 22001 "value too
+        // long"). Limits mirror the Vendor column definitions; both the legacy
+        // and store_* aliases the client may send are covered. The image-URL
+        // fields (logo/cover) are the common offender — a long/data URL blows the
+        // 500-char cap.
+        $maxLengths = [
+            'name' => 200, 'store_name' => 200,
+            'contact_email' => 255, 'store_email' => 255,
+            'contact_phone' => 20, 'store_phone' => 20,
+            'logo_url' => 500, 'store_logo' => 500,
+            'cover_image_url' => 500, 'store_cover' => 500,
+        ];
+        foreach ($maxLengths as $field => $max) {
+            if (isset($body[$field]) && is_string($body[$field]) && mb_strlen($body[$field]) > $max) {
+                throw HttpException::validation([
+                    $field => ["Must be at most {$max} characters."],
+                ]);
+            }
+        }
+
         if (isset($body['name']) && is_string($body['name']) && $body['name'] !== '') {
             $vendor->setName($body['name']);
         }
