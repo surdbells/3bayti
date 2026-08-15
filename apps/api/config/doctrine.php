@@ -24,6 +24,7 @@ declare(strict_types=1);
 use Doctrine\DBAL\DriverManager;
 use Doctrine\ORM\Configuration;
 use Doctrine\ORM\Mapping\Driver\AttributeDriver;
+use Doctrine\ORM\Proxy\ProxyFactory;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Cache\Adapter\PhpFilesAdapter;
 
@@ -60,13 +61,26 @@ return [
             $rootPath . '/src/Domain',
         ]));
 
-        // Proxy directory — Doctrine generates dynamic proxy classes
-        // for entities. In prod, proxies are pre-generated at build
-        // time and loaded; in dev, they're regenerated on-demand which
-        // is slower but safer.
+        // Proxy directory — Doctrine generates dynamic proxy classes for
+        // entities (lazy-loaded associations, e.g. Order->user, OrderItem->
+        // vendor). Dev regenerates always so entity edits are picked up.
+        //
+        // Prod uses FILE_NOT_EXISTS_OR_CHANGED (self-healing) rather than
+        // NEVER: the old NEVER setting assumed proxies were pre-generated at
+        // deploy, but the deploy pipeline wasn't doing that — so a missing
+        // proxy file fataled with "Failed to open stream: __CG__*.php" (a
+        // high-volume prod error). FILE_NOT_EXISTS_OR_CHANGED generates a
+        // proxy on first use if it's missing OR the entity changed since the
+        // proxy was written, then loads the cached file — no fatal, and never
+        // a stale proxy after an entity change. The proxy dir must be writable
+        // by php-fpm (same dir the metadata PhpFilesAdapter already writes to).
         $config->setProxyDir($rootPath . '/var/cache/doctrine/proxies');
         $config->setProxyNamespace('Bayti\\Api\\DoctrineProxies');
-        $config->setAutoGenerateProxyClasses($isDev);
+        $config->setAutoGenerateProxyClasses(
+            $isDev
+                ? ProxyFactory::AUTOGENERATE_ALWAYS
+                : ProxyFactory::AUTOGENERATE_FILE_NOT_EXISTS_OR_CHANGED,
+        );
 
         // Caching — array adapter in dev (no persistence between requests
         // but no setup either), file-based in prod (faster than no cache,
