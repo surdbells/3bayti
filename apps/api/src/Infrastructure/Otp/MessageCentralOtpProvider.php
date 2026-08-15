@@ -222,8 +222,14 @@ final class MessageCentralOtpProvider implements OtpProvider
                 'http_errors' => false,
             ]);
         } catch (ConnectException $e) {
+            // Log parity with the send path: the auth step used to throw
+            // silently, so an auth-token failure (the most common systemic OTP
+            // outage — bad/expired key, suspended account, endpoint down) left
+            // no file-log trail and was only visible via the exception cause.
+            $this->logger->error('MessageCentral auth failed', ['kind' => 'network', 'detail' => $e->getMessage()]);
             throw new OtpProviderException('network', 'auth: ' . $e->getMessage(), $e);
         } catch (GuzzleException $e) {
+            $this->logger->error('MessageCentral auth failed', ['kind' => 'transport', 'detail' => $e->getMessage()]);
             throw new OtpProviderException('transport', 'auth: ' . $e->getMessage(), $e);
         }
 
@@ -231,11 +237,21 @@ final class MessageCentralOtpProvider implements OtpProvider
         $body = (string) $response->getBody();
 
         if ($status >= 400) {
+            $this->logger->error('MessageCentral auth failed', [
+                'kind' => 'unauthorized',
+                'status' => $status,
+                'body' => $this->safeTruncate($body),
+            ]);
             throw new OtpProviderException('unauthorized', "auth HTTP {$status}: " . $this->safeTruncate($body));
         }
 
         $decoded = json_decode($body, true);
         if (!is_array($decoded) || !isset($decoded['token']) || !is_string($decoded['token'])) {
+            $this->logger->error('MessageCentral auth failed', [
+                'kind' => 'malformed',
+                'status' => $status,
+                'body' => $this->safeTruncate($body),
+            ]);
             throw new OtpProviderException('malformed', 'auth response missing token: ' . $this->safeTruncate($body));
         }
 
