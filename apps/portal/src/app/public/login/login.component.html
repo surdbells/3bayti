@@ -25,6 +25,14 @@
             <p class="ax-auth-subtitle">{{ 'sign_in_message' | translate }}</p>
           </div>
 
+          @if (idleNotice) {
+            <div class="ax-auth-notice" role="status"
+                 style="display:flex;align-items:flex-start;gap:8px;background:var(--ax-color-bg-brand-subtle,#efe7df);color:var(--ax-color-text-brand,#7c2108);border-radius:10px;padding:10px 14px;font-size:14px;line-height:1.4;">
+              <app-icon name="info" aria-hidden="true"></app-icon>
+              <span>You were signed out due to inactivity. Please sign in again to continue.</span>
+            </div>
+          }
+
           <form (ngSubmit)="user_login()" method="post" class="ax-flex ax-flex-col ax-gap-3">
             <div class="ax-form-field">
               <label for="email" class="ax-label ax-label-required">{{ 'email' | translate }}</label>

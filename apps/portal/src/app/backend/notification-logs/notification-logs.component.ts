@@ -1,12 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 import { HotToastService } from '../../shared/toast/toast.service';
+import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
-import { GlobalComponent } from '../../global-component';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -15,8 +14,6 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
-
-const V3 = 'https://api-v3.3bayti.ae';
 
 interface NotificationLog extends Record<string, unknown> {
   id: number;
@@ -38,16 +35,12 @@ interface NotificationLog extends Record<string, unknown> {
   styleUrl: './notification-logs.component.css',
 })
 export class NotificationLogsComponent implements OnInit {
-  private token = '';
-
   config!: AxDataTableConfig<NotificationLog>;
   dataSource!: AxServerDataSource<NotificationLog>;
 
-  constructor(private http: HttpClient, private toast: HotToastService) {}
+  constructor(private adapter: PortalCrudAdapter, private toast: HotToastService) {}
 
   ngOnInit(): void {
-    const raw = sessionStorage.getItem('SESSION');
-    if (raw) this.token = GlobalComponent.decodeBase64(raw)?.token ?? '';
     this.buildTable();
   }
 
@@ -92,20 +85,17 @@ export class NotificationLogsComponent implements OnInit {
   }
 
   private fetchLogs(query: AxQueryState) {
-    const params = new URLSearchParams({
-      limit: String(query.pageSize),
-      offset: String(query.pageIndex * query.pageSize),
-    });
-    if (query.filters['status']) params.set('status', String(query.filters['status']));
-    if (query.search) params.set('search', query.search);
-    const headers = new HttpHeaders({ Authorization: `Bearer ${this.token}` });
+    // Routed through the adapter (not a raw fetch) so it shares the
+    // transparent token-refresh — an expired access token refreshes and
+    // retries instead of failing / signing the user out.
+    const q: any = { limit: query.pageSize, offset: query.pageIndex * query.pageSize };
+    if (query.filters['status']) q.status = query.filters['status'];
+    if (query.search) q.search = query.search;
 
-    return this.http.get<{ data: NotificationLog[]; meta: { total: number } }>(
-      `${V3}/v3/admin/notification-logs?${params}`, { headers },
-    ).pipe(
-      map((res): AxServerFetchResult<NotificationLog> => ({
-        rows: res.data ?? [],
-        total: res.meta?.total ?? (res.data?.length ?? 0),
+    return this.adapter.get_v3('GET /admin/notification-logs', { query: q }).pipe(
+      map((res: any): AxServerFetchResult<NotificationLog> => ({
+        rows: res?.data ?? [],
+        total: res?.meta?.total ?? (res?.data?.length ?? 0),
       })),
       catchError(() => {
         this.toast.error('Failed to load logs');

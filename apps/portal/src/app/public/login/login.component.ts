@@ -34,6 +34,8 @@ export class LoginComponent implements OnInit {
   user_session_string = '';
   fieldTextType = false;
   loading = false;
+  /** Shown when the session manager signed the user out for inactivity. */
+  idleNotice = false;
 
   login = {
     email: '',
@@ -61,6 +63,8 @@ export class LoginComponent implements OnInit {
   };
 
   ngOnInit(): void {
+    // Capture the sign-out reason BEFORE clearing storage.
+    this.idleNotice = this.route.snapshot.queryParamMap.get('reason') === 'idle';
     sessionStorage.clear();
   }
 

@@ -1673,6 +1673,9 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'POST /admin/notification-schedules/:id/run-now': {
     target: 'new', oldPath: '', newPath: '/v3/admin/notification-schedules/:id/run-now', shape: 'v3-envelope',
   },
+  'GET /admin/notification-logs': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/notification-logs', shape: 'v3-envelope',
+  },
   'GET /admin/notifications': {
     target: 'new', oldPath: '/vendors/common/notifications', newPath: '/v3/admin/notifications', shape: 'v3-envelope',
   },

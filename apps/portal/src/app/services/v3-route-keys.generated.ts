@@ -216,6 +216,7 @@ export type V3RouteKey =
   | 'PUT /admin/notification-schedules/:id'
   | 'POST /admin/notification-schedules/:id/cancel'
   | 'POST /admin/notification-schedules/:id/run-now'
+  | 'GET /admin/notification-logs'
   | 'POST /admin/notifications/mark-read'
   | 'POST /admin/orders/:id/cancel'
   | 'POST /admin/orders/:id/refund'
@@ -517,6 +518,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /admin/notification-schedules/:id',
   'POST /admin/notification-schedules/:id/cancel',
   'POST /admin/notification-schedules/:id/run-now',
+  'GET /admin/notification-logs',
   'POST /admin/notifications/mark-read',
   'POST /admin/orders/:id/cancel',
   'POST /admin/orders/:id/refund',
