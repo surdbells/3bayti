@@ -17,15 +17,11 @@ import {
   IonButtons, IonCol,
   IonContent,
   IonFab,
-  IonFabButton,
-  IonFooter, IonGrid,
+  IonFabButton, IonGrid,
   IonHeader, IonIcon, IonInfiniteScroll, IonInfiniteScrollContent,
-  IonLabel,
   IonRefresher,
   IonRefresherContent,
   IonRow,
-  IonTabBar,
-  IonTabButton,
   IonToolbar
 } from '@ionic/angular/standalone';
 import {Router, RouterLink} from "@angular/router";
@@ -78,7 +74,7 @@ export interface Store {
   templateUrl: './account.page.html',
   styleUrls: ['./account.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonLabel, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink, AppTabBarComponent]
+  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink, AppTabBarComponent]
 })
 
 export class AccountPage implements OnInit, OnDestroy {
