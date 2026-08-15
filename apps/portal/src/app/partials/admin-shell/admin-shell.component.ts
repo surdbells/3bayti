@@ -1,7 +1,9 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { AsideComponent } from '../aside/aside.component';
 import { AdminTopComponent } from '../admin-top/admin-top.component';
+import { IdleModalComponent } from '../idle-modal/idle-modal.component';
 import { PermissionService } from '../../services/permission.service';
+import { SessionManager } from '../../services/session-manager.service';
 
 /**
  * Admin application shell.
@@ -20,7 +22,7 @@ import { PermissionService } from '../../services/permission.service';
 @Component({
   selector: 'app-admin-shell',
   standalone: true,
-  imports: [AsideComponent, AdminTopComponent],
+  imports: [AsideComponent, AdminTopComponent, IdleModalComponent],
   template: `
     <app-aside [isOpen]="nav_open" (isOpenChange)="nav_open = $event"></app-aside>
 
@@ -30,15 +32,21 @@ import { PermissionService } from '../../services/permission.service';
         <ng-content></ng-content>
       </main>
     </div>
+
+    <app-idle-modal></app-idle-modal>
   `,
 })
 export class AdminShellComponent implements OnInit {
   nav_open = false;
+
+  private readonly session = inject(SessionManager);
 
   constructor(private permissions: PermissionService) {}
 
   ngOnInit(): void {
     // Load the current user's effective permissions once for UI gating.
     this.permissions.load();
+    // Keep the session alive while working; warn + sign out only on idle.
+    this.session.start();
   }
 }

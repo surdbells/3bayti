@@ -38,6 +38,8 @@ export interface PortalSession {
   id: number;
   token: string;          // access token (Bearer)
   refresh_token: string;
+  access_token_expires_at: string;   // ISO — drives the proactive refresh
+  refresh_token_expires_at: string;  // ISO
   first_name: string;
   last_name: string;
   email: string;
@@ -113,6 +115,9 @@ export class PortalAuthService {
       id: user.id ?? 0,
       token: v3Data?.access_token ?? '',
       refresh_token: v3Data?.refresh_token ?? '',
+      // Expiries drive the proactive silent refresh + idle session manager.
+      access_token_expires_at: v3Data?.access_token_expires_at ?? '',
+      refresh_token_expires_at: v3Data?.refresh_token_expires_at ?? '',
       first_name: user.first_name ?? '',
       last_name: user.last_name ?? '',
       email: user.email ?? '',

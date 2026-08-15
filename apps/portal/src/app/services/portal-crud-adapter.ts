@@ -210,15 +210,40 @@ export class PortalCrudAdapter {
         }
         // Access token rejected — try the refresh token, then retry once.
         return this.refreshAccessToken().pipe(
-          switchMap((newToken) => makeReq(newToken)),
-          catchError(() => {
-            // Refresh failed (no/expired/revoked refresh token) — log out.
-            this.terminate();
+          catchError((refreshErr) => {
+            // Only log out when the refresh token is genuinely invalid/expired
+            // (or absent). A transient failure (network, 5xx) must NOT sign the
+            // user out mid-session — surface the original error and keep the
+            // session so a later request (or the proactive refresh) can recover.
+            if (this.isRefreshAuthFailure(refreshErr)) {
+              this.terminate();
+            }
             return throwError(() => err);
           }),
+          switchMap((newToken) => makeReq(newToken)),
         );
       }),
     );
+  }
+
+  /**
+   * Proactively refresh the session — used by SessionManager's silent
+   * pre-expiry refresh and the idle "stay signed in" action. Resolves to the
+   * new access token; errors (without logging out) when there's no valid
+   * refresh token so the caller can decide what to do.
+   */
+  refreshSession(): Observable<string> {
+    return this.refreshAccessToken();
+  }
+
+  /** True when a refresh failure means the session is unrecoverable (invalid/
+   *  absent refresh token) — i.e. a real logout — vs a transient blip. */
+  private isRefreshAuthFailure(e: unknown): boolean {
+    if (e instanceof HttpErrorResponse) {
+      return e.status === 401 || e.status === 403;
+    }
+    const msg = (e as { message?: string })?.message ?? '';
+    return msg === 'no_refresh_token' || msg === 'refresh_failed';
   }
 
   /**
@@ -245,7 +270,12 @@ export class PortalCrudAdapter {
           if (!access) {
             throw new Error('refresh_failed');
           }
-          this.updateSessionTokens(access, body?.refresh_token);
+          this.updateSessionTokens(
+            access,
+            body?.refresh_token,
+            body?.access_token_expires_at,
+            body?.refresh_token_expires_at,
+          );
           return access as string;
         }),
         shareReplay(1),
@@ -266,8 +296,14 @@ export class PortalCrudAdapter {
     }
   }
 
-  /** Patch the access token (and rotated refresh token) into the session. */
-  private updateSessionTokens(accessToken: string, refreshToken?: string): void {
+  /** Patch the access token (and rotated refresh token + expiries) into the
+   *  session so the proactive-refresh scheduler always sees the latest expiry. */
+  private updateSessionTokens(
+    accessToken: string,
+    refreshToken?: string,
+    accessExpiresAt?: string,
+    refreshExpiresAt?: string,
+  ): void {
     const raw = sessionStorage.getItem('SESSION');
     if (!raw) return;
     try {
@@ -275,6 +311,12 @@ export class PortalCrudAdapter {
       session.token = accessToken;
       if (refreshToken) {
         session.refresh_token = refreshToken;
+      }
+      if (accessExpiresAt) {
+        session.access_token_expires_at = accessExpiresAt;
+      }
+      if (refreshExpiresAt) {
+        session.refresh_token_expires_at = refreshExpiresAt;
       }
       sessionStorage.setItem('SESSION', GlobalComponent.encodeBase64(session));
     } catch {

@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { SideComponent } from '../side/side.component';
 import { TopComponent } from '../top/top.component';
 import { BottomNavComponent } from '../bottom-nav/bottom-nav.component';
+import { IdleModalComponent } from '../idle-modal/idle-modal.component';
+import { SessionManager } from '../../services/session-manager.service';
 
 /**
  * Vendor application shell.
@@ -28,7 +30,7 @@ import { BottomNavComponent } from '../bottom-nav/bottom-nav.component';
 @Component({
   selector: 'app-vendor-shell',
   standalone: true,
-  imports: [SideComponent, TopComponent, BottomNavComponent],
+  imports: [SideComponent, TopComponent, BottomNavComponent, IdleModalComponent],
   template: `
     <app-side [isOpen]="nav_open" (isOpenChange)="nav_open = $event"></app-side>
 
@@ -40,8 +42,15 @@ import { BottomNavComponent } from '../bottom-nav/bottom-nav.component';
     </div>
 
     <app-bottom-nav></app-bottom-nav>
+    <app-idle-modal></app-idle-modal>
   `,
 })
-export class VendorShellComponent {
+export class VendorShellComponent implements OnInit {
   nav_open = false;
+
+  private readonly session = inject(SessionManager);
+
+  ngOnInit(): void {
+    this.session.start();
+  }
 }
