@@ -16,9 +16,9 @@
 
   <!-- Scrollable nav -->
   <nav class="ax-sidenav-body" aria-label="Primary">
-    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['overview']">
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="openSection !== 'overview'">
       <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('overview')"
-              [attr.aria-expanded]="!collapsed['overview']">
+              [attr.aria-expanded]="openSection === 'overview'">
         <span>Overview</span>
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>
@@ -32,9 +32,9 @@
       </ul>
     </div>
 
-    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['store-ops']" *ngIf="user_session.is_vendor">
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="openSection !== 'store-ops'" *ngIf="user_session.is_vendor">
       <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('store-ops')"
-              [attr.aria-expanded]="!collapsed['store-ops']">
+              [attr.aria-expanded]="openSection === 'store-ops'">
         <span>Store operations</span>
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>
@@ -97,9 +97,9 @@
     </div>
 
     <!-- Vendors & customers -->
-    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['vendors-customers']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="openSection !== 'vendors-customers'" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
       <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('vendors-customers')"
-              [attr.aria-expanded]="!collapsed['vendors-customers']">
+              [attr.aria-expanded]="openSection === 'vendors-customers'">
         <span>Vendors &amp; customers</span>
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>
@@ -126,9 +126,9 @@
     </div>
 
     <!-- Catalog -->
-    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['catalog']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="openSection !== 'catalog'" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
       <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('catalog')"
-              [attr.aria-expanded]="!collapsed['catalog']">
+              [attr.aria-expanded]="openSection === 'catalog'">
         <span>Catalog</span>
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>
@@ -161,9 +161,9 @@
     </div>
 
     <!-- Orders & sales -->
-    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['orders-sales']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="openSection !== 'orders-sales'" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
       <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('orders-sales')"
-              [attr.aria-expanded]="!collapsed['orders-sales']">
+              [attr.aria-expanded]="openSection === 'orders-sales'">
         <span>Orders &amp; sales</span>
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>
@@ -202,9 +202,9 @@
     </div>
 
     <!-- Engagement -->
-    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['engagement']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="openSection !== 'engagement'" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
       <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('engagement')"
-              [attr.aria-expanded]="!collapsed['engagement']">
+              [attr.aria-expanded]="openSection === 'engagement'">
         <span>Engagement</span>
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>
@@ -243,9 +243,9 @@
     </div>
 
     <!-- System -->
-    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['system']" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="openSection !== 'system'" *ngIf="user_session.is_admin || user_session.is_finance || user_session.is_support">
       <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('system')"
-              [attr.aria-expanded]="!collapsed['system']">
+              [attr.aria-expanded]="openSection === 'system'">
         <span>System</span>
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>
@@ -265,9 +265,9 @@
       </ul>
     </div>
 
-    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="collapsed['account']">
+    <div class="ax-sidenav-section" [class.ax-sidenav-section-collapsed]="openSection !== 'account'">
       <button type="button" class="ax-sidenav-section-title" (click)="toggleSection('account')"
-              [attr.aria-expanded]="!collapsed['account']">
+              [attr.aria-expanded]="openSection === 'account'">
         <span>Account</span>
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>

@@ -32,30 +32,40 @@ export class AsideComponent implements OnInit {
   };
 
   /**
-   * Per-section collapse state, keyed by the section id used in the template.
-   * Persisted to localStorage so a user's expanded/collapsed layout survives
-   * navigation and reloads (the sidenav re-instantiates on shell changes).
+   * Accordion state — the id of the single section that is currently open.
+   * Exactly one section is open at a time; on load it defaults to the section
+   * that contains the active route (falling back to the first section).
    */
-  collapsed: Record<string, boolean> = {};
-  private readonly COLLAPSE_KEY = 'ax_nav_collapsed';
+  openSection = '';
 
-  private loadCollapseState(): void {
-    try {
-      const raw = localStorage.getItem(this.COLLAPSE_KEY);
-      this.collapsed = raw ? JSON.parse(raw) : {};
-    } catch {
-      this.collapsed = {};
+  /** Path prefixes that belong to each section, for route-aware default-open. */
+  private readonly SECTION_ROUTES: Record<string, string[]> = {
+    'overview': ['/backend'],
+    'store-ops': ['/products', '/orders', '/delivery', '/returns', '/reviews', '/messages', '/coupons', '/analytics', '/metrics'],
+    'vendors-customers': ['/admin/stores', '/admin/vendor-applications', '/admin/customers'],
+    'catalog': ['/admin/products', '/admin/collections', '/admin/campaigns', '/admin/gift-cards'],
+    'orders-sales': ['/admin/orders', '/admin/sales', '/admin/returns', '/admin/commissions', '/admin/logistics'],
+    'engagement': ['/admin/notifications', '/admin/notification-templates', '/admin/notification-schedules', '/admin/notification-broadcasts', '/admin/notification-logs'],
+    'system': ['/admin/users', '/admin/ota'],
+    'account': ['/profile', '/security', '/store', '/payment_info', '/tax_information'],
+  };
+
+  /** Open the section that owns the current route; else the first one open. */
+  private initOpenSection(): void {
+    const url = this.router.url.split('?')[0];
+    let match = '';
+    for (const [key, paths] of Object.entries(this.SECTION_ROUTES)) {
+      if (paths.some(p => url === p || url.startsWith(p + '/'))) { match = key; break; }
     }
+    this.openSection = match || (this.user_session?.is_vendor ? 'store-ops' : 'overview');
   }
 
-  /** Toggle a section open/closed and persist the new layout. */
+  /**
+   * Accordion toggle: open the clicked section and close the rest. Keeps one
+   * section open at all times — re-clicking the open header leaves it open.
+   */
   toggleSection(key: string): void {
-    this.collapsed[key] = !this.collapsed[key];
-    try {
-      localStorage.setItem(this.COLLAPSE_KEY, JSON.stringify(this.collapsed));
-    } catch {
-      /* storage unavailable — collapse still works for this session */
-    }
+    this.openSection = key;
   }
   session_data: any = '';
   user_session = {
@@ -76,9 +86,9 @@ export class AsideComponent implements OnInit {
   };
 
   ngOnInit(): void {
-    this.loadCollapseState();
     this.session_data = sessionStorage.getItem('SESSION');
     this.user_session = GlobalComponent.decodeBase64(this.session_data);
+    this.initOpenSection();
     // Ensure effective permissions are available to drive admin-menu gating
     // (idempotent; the admin shell also loads, this covers any standalone use).
     if (this.user_session?.is_admin || this.user_session?.is_finance || this.user_session?.is_support) {

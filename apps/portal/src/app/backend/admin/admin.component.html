@@ -253,8 +253,7 @@
           </div>
           <div class="ax-card-body">
             <ul class="adm-top-list">
-              <li *ngFor="let p of topProducts; let i = index" class="adm-top-row adm-top-clickable"
-                  (click)="openTopProduct(p)" tabindex="0" role="button" (keydown.enter)="openTopProduct(p)">
+              <li *ngFor="let p of topProducts; let i = index" class="adm-top-row">
                 <span class="adm-top-rank">{{ i + 1 }}</span>
                 <img *ngIf="p.image" [src]="p.image" alt="" class="adm-top-img" />
                 <div class="adm-top-body">
