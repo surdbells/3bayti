@@ -1,5 +1,5 @@
-<main class="ax-main" style="padding: var(--ax-space-5);">
-  <div style="max-width: 64rem; margin: 0 auto;">
+<app-admin-shell>
+  <div style="max-width: 64rem; margin: 0 auto; padding: var(--ax-space-5);">
 
     <!-- Loading -->
     <div *ngIf="ui_controls.is_loading" class="ax-flex ax-justify-center ax-py-8">
@@ -107,9 +107,14 @@
                   <td><span class="ax-font-medium ax-text-primary">{{ a_item.product_name }}</span></td>
                   <td><span class="ax-text-sm ax-text-secondary">{{ a_item.customer }}</span></td>
                   <td style="text-align: center;"><span class="ax-numeric">{{ a_item.quantity }}</span></td>
-                  <td style="text-align: right;"><span class="ax-numeric">{{ a_item.price }}</span></td>
-                  <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">{{ a_item.total_price }}</span></td>
-                  <td><span [ngClass]="itemStatusClass(a_item.status)">{{ a_item.status }}</span></td>
+                  <td style="text-align: right;"><span class="ax-numeric">AED {{ a_item.vendor_pay }}</span></td>
+                  <td style="text-align: right;"><span class="ax-font-semibold ax-numeric">AED {{ a_item.total_price }}</span></td>
+                  <td><span [ngClass]="itemStatusClass(a_item.status)">{{ prettyStatus(a_item.status) }}</span></td>
+                </tr>
+              }
+              @if (!items || items.length === 0) {
+                <tr>
+                  <td colspan="6" class="ax-text-center ax-text-secondary ax-py-6">No order items for this vendor yet.</td>
                 </tr>
               }
             </tbody>
@@ -118,4 +123,4 @@
       </section>
     </ng-container>
   </div>
-</main>
+</app-admin-shell>
