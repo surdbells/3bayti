@@ -57,14 +57,26 @@ function okOrder(overrides: Record<string, unknown> = {}) {
 
 class AdapterStub {
   getResponse: any = okOrder();
+  /* loadOrder() follows the order fetch with GET /orders/:id/timeline; serve
+     an empty event feed so the component falls back to the derived stepper. */
+  timelineResponse: any = { response_code: 200, status: 'success', data: { events: [] } };
   getError = false;
   cancelResponse: any = { response_code: 200, status: 'success', data: { cancellation: { was_already_cancelled: false } } };
+  /* Records only the ORDER detail fetch, not the timeline / pending-orders
+     list calls, so assertions read the request the tests care about. */
   lastGet: { routeKey: string; opts: any } | null = null;
   lastPost: { routeKey: string; body: any; opts: any } | null = null;
 
   get_v3(routeKey: string, opts: any) {
-    this.lastGet = { routeKey, opts };
-    return this.getError ? throwError(() => new Error('net')) : of(this.getResponse);
+    if (routeKey === 'GET /orders/:id/timeline') {
+      return this.getError ? throwError(() => new Error('net')) : of(this.timelineResponse);
+    }
+    if (routeKey === 'GET /orders/:id') {
+      this.lastGet = { routeKey, opts };
+      return this.getError ? throwError(() => new Error('net')) : of(this.getResponse);
+    }
+    // Any other GET (e.g. PendingOrdersService's 'GET /orders' list) — benign.
+    return of({ response_code: 200, status: 'success', data: [] });
   }
   post_v3(routeKey: string, body: any, opts: any) {
     this.lastPost = { routeKey, body, opts };
@@ -169,6 +181,9 @@ describe('OrderDetailPage', () => {
   it('cancels via POST /orders/:id/cancel and updates status', async () => {
     const { component, adapter, toast } = setup();
     await component.ngOnInit();
+    // After a successful cancel the page reloads the order to reflect the
+    // authoritative status — serve the cancelled order on that reload.
+    adapter.getResponse = okOrder({ status: 'cancelled' });
     component['executeCancel']();
     expect(adapter.lastPost?.routeKey).toBe('POST /orders/:id/cancel');
     expect(adapter.lastPost?.opts.pathParams).toEqual({ id: '42' });
