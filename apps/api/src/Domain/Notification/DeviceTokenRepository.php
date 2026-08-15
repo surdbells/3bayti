@@ -221,18 +221,24 @@ class DeviceTokenRepository extends EntityRepository
      */
     public function register(User $user, string $token, string $platform, bool $flush = true): DeviceToken
     {
+        // NB: date_trunc('second', …), NOT now(): the datetimetz columns are
+        // hydrated by Doctrine's DateTimeTzImmutableType with the format
+        // "Y-m-d H:i:sO" (seconds only). now() writes microseconds, which then
+        // fail to convert back on read (Sentry PHP-1P). Second precision matches
+        // what the ORM itself writes, so the row round-trips cleanly.
         $this->getEntityManager()->getConnection()->executeStatement(
             <<<'SQL'
             INSERT INTO device_tokens
                 (user_id, token, platform, is_active, created_at, updated_at, last_seen_at)
             VALUES
-                (:user_id, :token, :platform, TRUE, now(), now(), now())
+                (:user_id, :token, :platform, TRUE,
+                 date_trunc('second', now()), date_trunc('second', now()), date_trunc('second', now()))
             ON CONFLICT (token) DO UPDATE SET
                 user_id      = EXCLUDED.user_id,
                 platform     = EXCLUDED.platform,
                 is_active    = TRUE,
-                updated_at   = now(),
-                last_seen_at = now()
+                updated_at   = date_trunc('second', now()),
+                last_seen_at = date_trunc('second', now())
             SQL,
             [
                 'user_id'  => $user->getId(),
