@@ -192,6 +192,8 @@ export class RegisterPage implements OnInit, OnDestroy {
   registrationToken = "";
   /** Issued by submit; consumed by confirm-email. */
   emailVerificationId = "";
+  /** Issued by POST /me/phone (social gate); consumed by /me/phone/verify. */
+  socialPhoneVerificationId = "";
 
   otp = { code: "" };
 
@@ -858,6 +860,10 @@ export class RegisterPage implements OnInit, OnDestroy {
       next: (response: any) => {
         this.ui_controls.loading = false;
         if (response.response_code === 200 && response.status === 'success') {
+          // Capture the verification_id — /me/phone/verify REQUIRES it
+          // alongside the code (same contract as the registration OTP).
+          const vid = response.data?.verification_id;
+          this.socialPhoneVerificationId = typeof vid === 'string' ? vid : '';
           this.otp.code = '';
           this.ui_controls.step = 6;
           this.startResendCooldown();
@@ -879,7 +885,7 @@ export class RegisterPage implements OnInit, OnDestroy {
     this.ui_controls.loading = true;
     this.networkAdapter.post_v3(
       'POST /me/phone/verify',
-      { code: this.otp.code },
+      { verification_id: this.socialPhoneVerificationId, code: this.otp.code },
       { authToken: this.socialAuthToken },
     ).subscribe({
       next: (response: any) => {
