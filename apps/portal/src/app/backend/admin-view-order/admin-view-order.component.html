@@ -142,6 +142,14 @@
                     </td>
                     <td>
                       <div class="ax-font-medium ax-text-primary">{{ it.product_name }}</div>
+                      <a *ngIf="it.vendor_id"
+                         [routerLink]="['/admin/stores', it.vendor_id]"
+                         [queryParams]="{ name: it.vendor_name }"
+                         class="ax-mt-1"
+                         style="display:inline-flex;align-items:center;gap:3px;font-size:0.72rem;color:var(--ax-color-text-brand, #906952);text-decoration:none;">
+                        <app-icon name="storefront" aria-hidden="true" style="font-size:0.85rem;"></app-icon>
+                        <span>{{ it.vendor_name || ('Store #' + it.vendor_id) }}</span>
+                      </a>
                       <div *ngIf="it.note" class="ax-mt-1">
                         <span class="ax-badge ax-badge-neutral">Note</span>
                         <div class="ax-text-2xs ax-text-secondary ax-mt-1">{{ it.note }}</div>

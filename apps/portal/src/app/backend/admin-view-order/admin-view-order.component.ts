@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
@@ -12,7 +12,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
   selector: 'app-admin-view-order',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, IconComponent],
+  imports: [AdminShellComponent, CommonModule, IconComponent, RouterLink],
   templateUrl: './admin-view-order.component.html',
   styleUrl: './admin-view-order.component.css',
 })

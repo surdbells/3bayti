@@ -325,6 +325,7 @@ final class ListOrdersControllerTest extends HttpTestCase
     {
         $vendor = (new \ReflectionClass(Vendor::class))->newInstanceWithoutConstructor();
         $this->setEntityProp($vendor, 'id', $id);
+        $this->setEntityProp($vendor, 'name', 'Test Store');
         return $vendor;
     }
 
