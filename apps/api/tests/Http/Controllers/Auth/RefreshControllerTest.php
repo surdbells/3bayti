@@ -43,8 +43,11 @@ final class RefreshControllerTest extends HttpTestCase
         // After rotation, a new row MUST be persisted.
         $refreshRepo->expects(self::once())->method('save');
 
+        // NB: no ->with(RefreshToken::class) constraint — the success path
+        // also serialises the user (UserSerializer looks up other
+        // repositories), so pinning getRepository to a single class throws.
         $em = $this->stubEm(fn ($em) =>
-            $em->method('getRepository')->with(RefreshToken::class)->willReturn($refreshRepo));
+            $em->method('getRepository')->willReturn($refreshRepo));
         $this->bind(EntityManagerInterface::class, $em);
 
         $response = $this->handle($this->jsonRequest('POST', '/v3/auth/refresh', [
@@ -124,15 +127,17 @@ final class RefreshControllerTest extends HttpTestCase
     }
 
     #[Test]
-    public function returns401AndRevokesAllOnReuseOfRevokedToken(): void
+    public function returns401AndRevokesAllOnReuseOfDeliberatelyRevokedToken(): void
     {
         $user = $this->makeUser(id: 42);
         $jwt = $this->app->getContainer()->get(JwtService::class);
         $pair = $jwt->issueTokenPair($user);
 
         $row = $this->makeRefreshRow($user, $pair);
-        // Token already revoked — simulating a second presentation.
-        $row->revoke('rotated');
+        // Token deliberately revoked (logout) — a replay of it is genuine
+        // reuse, NOT the rotation lost-response race, so it must trip the
+        // defensive wholesale revocation regardless of timing.
+        $row->revoke('logout');
 
         $refreshRepo = $this->createMock(RefreshTokenRepository::class);
         $refreshRepo->method('findByJti')->willReturn($row);
@@ -150,6 +155,46 @@ final class RefreshControllerTest extends HttpTestCase
         ]));
 
         self::assertSame(401, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function graceWindowReissuesOnRetryOfJustRotatedTokenWithoutRevokingAll(): void
+    {
+        // The mobile lost-response race: the server rotated this token
+        // moments ago, but the client never received/persisted the
+        // replacement and retried with the token it still holds. Within the
+        // grace window this must re-issue a fresh pair — NOT log the customer
+        // out of every session.
+        $user = $this->makeUser(id: 99);
+        $jwt = $this->app->getContainer()->get(JwtService::class);
+        $pair = $jwt->issueTokenPair($user);
+
+        $row = $this->makeRefreshRow($user, $pair);
+        $row->revoke('rotated'); // revoked just now, by rotation → within grace
+
+        $refreshRepo = $this->createMock(RefreshTokenRepository::class);
+        $refreshRepo->method('findByJti')->willReturn($row);
+        // Benign retry: a fresh row is persisted and the family is NOT nuked.
+        $refreshRepo->expects(self::once())->method('save');
+        $refreshRepo->expects(self::never())->method('revokeAllForUser');
+
+        // No ->with(RefreshToken::class) — the success path serialises the
+        // user, which looks up other repositories (see happy-path note).
+        $em = $this->stubEm(fn ($em) =>
+            $em->method('getRepository')->willReturn($refreshRepo));
+        $this->bind(EntityManagerInterface::class, $em);
+
+        $response = $this->handle($this->jsonRequest('POST', '/v3/auth/refresh', [
+            'refresh_token' => $pair->refreshToken,
+        ]));
+
+        self::assertSame(200, $response->getStatusCode());
+
+        $body = $this->jsonBody($response);
+        self::assertNotEmpty($body['access_token']);
+        self::assertNotEmpty($body['refresh_token']);
+        self::assertNotSame($pair->refreshToken, $body['refresh_token']);
+        self::assertSame(99, $body['user']['id']);
     }
 
     #[Test]

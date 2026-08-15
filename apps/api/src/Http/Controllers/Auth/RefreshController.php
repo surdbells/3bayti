@@ -76,17 +76,22 @@ use Psr\Http\Message\ServerRequestInterface;
  *   (b) Real client replayed the same token (network retry that
  *       succeeded the first time but the response was lost in transit)
  *
- * Defensive response: revoke ALL of the user's refresh tokens with
- * reason 'reuse_detected'. The legitimate user gets logged out
- * everywhere and forced to re-authenticate, but we cut off any
- * attacker who has stolen credentials. A small UX cost (re-login)
- * for a strong security guarantee.
+ * Rotation grace window (case b — innocent retry)
+ * ------------------------------------------------
+ * Case (b) is common on mobile: the server rotates the token, but the
+ * client never receives or persists the replacement (dropped connection,
+ * app backgrounded mid-refresh), then retries with the token it still
+ * holds. To keep those customers signed in, a token that was revoked by
+ * ROTATION within ROTATION_GRACE_SECONDS is treated as an innocent retry —
+ * we simply rotate again and re-issue a fresh pair (see Step 4). Only the
+ * 'rotated' reason within the window qualifies.
  *
- * In practice (b) — innocent retry — is rare on the web because
- * fetch() doesn't auto-retry POSTs by default. Mobile apps with
- * aggressive retry policies could trip this; if it's a problem
- * we can relax to "log the suspicious event but only revoke the
- * already-revoked row's family" in M5.
+ * Defensive response otherwise: if the revoked token is outside the grace
+ * window, or was revoked for any other reason (logout, logout_all,
+ * password_changed, admin_force_logout), we revoke ALL of the user's
+ * refresh tokens with reason 'reuse_detected'. The user is logged out
+ * everywhere and forced to re-authenticate, cutting off an attacker who
+ * has stolen credentials — a small UX cost for a strong security guarantee.
  *
  * All failure modes
  * -----------------
@@ -97,6 +102,24 @@ final class RefreshController
 {
     use Responder;
     use RequestContext;
+
+    /**
+     * Grace window (seconds) during which re-presenting a just-ROTATED
+     * refresh token is treated as an innocent lost-response retry rather
+     * than reuse/theft.
+     *
+     * Covers the common mobile race: the server rotates the token, but the
+     * client never receives or persists the replacement (dropped connection,
+     * app backgrounded mid-refresh), then retries with the token it still
+     * holds. Without this, that retry trips reuse-detection and logs the
+     * customer out of every session.
+     *
+     * 5 minutes comfortably covers a retry after a brief background/resume
+     * while staying far too short to be useful to an attacker (the real
+     * bearer credential is the 15-minute access token; this is only
+     * defense-in-depth on the refresh path).
+     */
+    private const ROTATION_GRACE_SECONDS = 300;
 
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
@@ -142,11 +165,26 @@ final class RefreshController
 
         // Step 4: state check — revoked OR expired-in-DB.
         if ($row->isRevoked()) {
-            // Reuse detection: token was already used. Defensive
-            // wholesale revocation per class docblock.
-            $refreshRepo->revokeAllForUser($row->getUser(), 'reuse_detected');
-            $this->em->flush();
-            throw $this->refreshInvalid();
+            // Rotation grace window — tell an innocent lost-response retry
+            // apart from genuine token theft. A single-use token that was
+            // JUST rotated and is re-presented within the grace window is
+            // almost always the same client retrying after its rotation
+            // response was lost (dropped connection / app suspended
+            // mid-refresh), NOT an attacker. In that case we fall through
+            // and rotate again (Step 6), re-issuing a fresh pair so the
+            // customer's session survives — rather than revoking every
+            // session. `revoke('rotated')` in Step 6 is idempotent, so the
+            // grace window stays anchored to the FIRST rotation and repeated
+            // retries inside the window all succeed.
+            //
+            // Outside the window, or revoked for ANY other reason (logout,
+            // logout_all, password_changed, admin_force_logout), this is
+            // treated as reuse: defensively revoke the whole family.
+            if (!$row->wasRotatedWithin(self::ROTATION_GRACE_SECONDS)) {
+                $refreshRepo->revokeAllForUser($row->getUser(), 'reuse_detected');
+                $this->em->flush();
+                throw $this->refreshInvalid();
+            }
         }
         if ($row->isExpired()) {
             // Past expires_at — JWT exp claim should have caught this

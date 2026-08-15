@@ -159,6 +159,27 @@ class RefreshToken
     public function isRevoked(): bool { return $this->revokedAt !== null; }
     public function isExpired(): bool { return $this->expiresAt <= new DateTimeImmutable(); }
 
+    /**
+     * True when this token was revoked specifically by ROTATION (single-use
+     * refresh) within the last $graceSeconds.
+     *
+     * This distinguishes an innocent lost-response retry — the same client
+     * re-presenting a token that was just rotated because it never received
+     * or persisted the replacement (dropped connection, app suspended
+     * mid-refresh) — from genuine refresh-token reuse/theft. Only the
+     * 'rotated' reason qualifies: a token revoked by logout / logout_all /
+     * password_changed / admin_force_logout is deliberately dead and must
+     * never be honoured, regardless of how recently it happened.
+     */
+    public function wasRotatedWithin(int $graceSeconds): bool
+    {
+        if ($this->revokedReason !== 'rotated' || $this->revokedAt === null) {
+            return false;
+        }
+        $elapsed = (new DateTimeImmutable())->getTimestamp() - $this->revokedAt->getTimestamp();
+        return $elapsed >= 0 && $elapsed <= $graceSeconds;
+    }
+
     /** Token is usable iff not revoked AND not expired. */
     public function isActive(): bool
     {
