@@ -127,6 +127,10 @@ export interface AxColumnDef<T = unknown> {
   readonly align?: AxColumnAlign;
   /** CSS width, e.g. '12rem', '120px'. */
   readonly width?: string;
+  /** CSS width applied only below the responsive breakpoint (≤768px). Lets a
+   *  wide sticky column (e.g. a name) stay narrow on phones so neighbouring
+   *  columns aren't pushed off-screen. Falls back to `width` when unset. */
+  readonly widthMobile?: string;
   /** Hide below the responsive breakpoint. */
   readonly hideOnMobile?: boolean;
   /** Sticky to the left or right edge during horizontal scroll. */

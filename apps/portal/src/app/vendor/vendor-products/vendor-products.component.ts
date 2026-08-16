@@ -102,12 +102,15 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     emptyDescription: 'You have not listed any products yet.',
     export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'my-products' },
     columns: [
-      { key: 'name', label: 'Product', sortable: true, sticky: 'left', width: '18rem' },
+      // On mobile the sticky name column stays narrower so Status + Price fit
+      // beside it instead of being pushed off-screen; secondary columns
+      // (Category, Qty, Stock) drop out and can be seen on the edit/detail view.
+      { key: 'name', label: 'Product', sortable: true, sticky: 'left', width: '18rem', widthMobile: '11rem' },
       { key: 'category', label: 'Category', hideOnMobile: true },
       { key: 'status', label: 'Status', align: 'center' },
       { key: 'price_formatted', label: 'Price', align: 'right' },
       { key: 'quantity', label: 'Qty', align: 'center', hideOnMobile: true },
-      { key: 'stock_status', label: 'Stock', align: 'center' },
+      { key: 'stock_status', label: 'Stock', align: 'center', hideOnMobile: true },
     ],
     rowActions: [
       { id: 'preview', label: 'Preview', icon: 'visibility' },

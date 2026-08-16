@@ -163,6 +163,7 @@
             *ngFor="let col of visibleColumns(); trackBy: trackColKey"
             scope="col"
             [style.width]="col.width || null"
+            [style.--axdt-mw]="col.widthMobile || null"
             [class.ax-th-sortable]="col.sortable"
             [class.axdt-hide-mobile]="col.hideOnMobile"
             [class.axdt-sticky-left]="col.sticky === 'left'"
@@ -213,6 +214,7 @@
             </td>
             <td
               *ngFor="let col of visibleColumns(); trackBy: trackColKey"
+              [style.--axdt-mw]="col.widthMobile || null"
               [class.axdt-hide-mobile]="col.hideOnMobile"
               [class.axdt-sticky-left]="col.sticky === 'left'"
               [class.axdt-sticky-right]="col.sticky === 'right'"

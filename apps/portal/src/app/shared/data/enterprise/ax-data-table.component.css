@@ -226,4 +226,8 @@
   .axdt-hide-mobile { display: none !important; }
   .axdt-search .ax-input { min-width: 10rem; }
   .axdt-toolbar { flex-direction: column; align-items: stretch; }
+  /* Per-column mobile width (widthMobile) — override the desktop inline width
+     for columns that opt in, so a wide sticky column narrows on phones. */
+  th[style*="--axdt-mw"],
+  td[style*="--axdt-mw"] { width: var(--axdt-mw) !important; }
 }
