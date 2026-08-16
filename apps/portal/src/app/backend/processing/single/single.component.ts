@@ -77,6 +77,9 @@ export class SingleComponent implements OnInit {
   order: any = null; // adminDetailShape
   items: OrderItemRow[] = [];
   timeline: TimelineEvent[] = [];
+  /** Timeline with consecutive identical events (e.g. repeated "Order viewed")
+   *  collapsed into one row carrying a count + the latest occurrence time. */
+  timelineCollapsed: Array<TimelineEvent & { count: number }> = [];
 
   // Order-level action drafts
   statusDraft = '';
@@ -152,12 +155,36 @@ export class SingleComponent implements OnInit {
       .subscribe({
         next: (res: any) => {
           this.timeline = (res?.data ?? []) as TimelineEvent[];
+          this.timelineCollapsed = this.collapseTimeline(this.timeline);
           this.ui.timeline_loading = false;
         },
         error: () => {
           this.ui.timeline_loading = false;
         },
       });
+  }
+
+  /**
+   * Collapse consecutive identical events (same type/summary/actor) into a
+   * single row with a count. The feed is newest-first, so the first event of a
+   * run is the latest — we keep its occurred_at as the row's time and just tally
+   * the rest, turning six "Order viewed" rows into one "Order viewed ×6".
+   */
+  private collapseTimeline(events: TimelineEvent[]): Array<TimelineEvent & { count: number }> {
+    const out: Array<TimelineEvent & { count: number }> = [];
+    for (const ev of events) {
+      const prev = out[out.length - 1];
+      const sameKind = !!prev
+        && prev.type === ev.type
+        && (prev.summary ?? '') === (ev.summary ?? '')
+        && (prev.actor?.type ?? '') === (ev.actor?.type ?? '');
+      if (sameKind) {
+        prev.count += 1;
+      } else {
+        out.push({ ...ev, count: 1 });
+      }
+    }
+    return out;
   }
 
   // ─────────────────────── Derived ───────────────────────

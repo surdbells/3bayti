@@ -137,14 +137,18 @@
               <h3 class="ax-h6 ax-m-0">Timeline</h3>
               <span *ngIf="ui.timeline_loading" class="ax-spinner ax-spinner-sm"></span>
             </div>
-            <ul *ngIf="timeline.length > 0" style="list-style: none; margin: 0; padding: 0;">
-              <li *ngFor="let ev of timeline" class="ax-flex ax-gap-3 ax-p-4"
+            <ul *ngIf="timelineCollapsed.length > 0" style="list-style: none; margin: 0; padding: 0;">
+              <li *ngFor="let ev of timelineCollapsed" class="ax-flex ax-gap-3 ax-p-4"
                 style="border-bottom: 1px solid var(--ax-color-border-subtle);">
                 <span class="ax-text-secondary" style="flex-shrink: 0;"><app-icon [name]="eventIcon(ev.type)" aria-hidden="true"></app-icon></span>
                 <div style="flex: 1; min-width: 0;">
-                  <div class="ax-text-sm ax-text-primary">{{ ev.summary || prettyStatus(ev.type) }}</div>
+                  <div class="ax-text-sm ax-text-primary">
+                    {{ ev.summary || prettyStatus(ev.type) }}
+                    <span *ngIf="ev.count > 1" class="ax-text-tertiary">×{{ ev.count }}</span>
+                  </div>
                   <div class="ax-text-2xs ax-text-tertiary ax-mt-1">
                     {{ timeAgo(ev.occurred_at) }}
+                    <span *ngIf="ev.count > 1"> · last of {{ ev.count }}</span>
                     <span *ngIf="ev.actor?.type"> · {{ ev.actor?.type }}</span>
                   </div>
                 </div>
