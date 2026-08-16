@@ -32,7 +32,11 @@ enum EmailTemplate: string
     // Scheduled nudge for an order still awaiting payment (pending_payment)
     // or whose payment failed and can be retried. Sent by the
     // orders:send-payment-reminders cron, not a lifecycle transition.
+    // The _2 variant is the follow-up nudge sent ~24h after the first,
+    // with more urgent "final reminder" copy; a distinct template string is
+    // required so each stage has its own idempotency guard.
     case ORDER_PAYMENT_REMINDER_CUSTOMER = 'order.payment_reminder.customer';
+    case ORDER_PAYMENT_REMINDER_2_CUSTOMER = 'order.payment_reminder2.customer';
     case ORDER_ACCEPTED_CUSTOMER = 'order.accepted.customer';
     case ORDER_PREPARING_CUSTOMER = 'order.preparing.customer';
     case ORDER_REJECTED_CUSTOMER = 'order.rejected.customer';

@@ -99,6 +99,13 @@ final class SendPendingOrderRemindersCommand extends Command
                 (string) PendingOrderReminderFinder::DEFAULT_MAX_AGE_HOURS,
             )
             ->addOption(
+                'followup-after-hours',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Send the second (follow-up) reminder this many hours after the first (default ' . PendingOrderReminderFinder::DEFAULT_FOLLOWUP_AFTER_HOURS . ')',
+                (string) PendingOrderReminderFinder::DEFAULT_FOLLOWUP_AFTER_HOURS,
+            )
+            ->addOption(
                 'batch-size',
                 null,
                 InputOption::VALUE_REQUIRED,
@@ -113,6 +120,7 @@ final class SendPendingOrderRemindersCommand extends Command
         $dryRun = (bool) $input->getOption('dry-run');
         $minAge = max(0, (int) $input->getOption('min-age-hours'));
         $maxAge = (int) $input->getOption('max-age-hours');
+        $followupAfter = max(1, (int) $input->getOption('followup-after-hours'));
         $batchSize = max(1, min(
             PendingOrderReminderFinder::MAX_BATCH_SIZE,
             (int) $input->getOption('batch-size'),
@@ -121,64 +129,80 @@ final class SendPendingOrderRemindersCommand extends Command
         $now = new DateTimeImmutable();
 
         $io->title(sprintf(
-            'Sending payment reminders (age %d–%dh, batch %d)%s',
+            'Sending payment reminders (1st at %d–%dh, follow-up +%dh, batch %d)%s',
             $minAge,
             $maxAge,
+            $followupAfter,
             $batchSize,
             $dryRun ? ' [DRY RUN]' : '',
         ));
 
+        // Stage 1 — first reminder for freshly-abandoned/failed orders.
         $emailIds = $this->finder->findEmailEligibleOrderIds($now, $minAge, $maxAge, $batchSize);
         $pushIds = $this->finder->findPushEligibleOrderIds($now, $minAge, $maxAge, $batchSize);
+        // Stage 2 — follow-up for orders whose first reminder went out ≥ followupAfter ago.
+        $emailFollowupIds = $this->finder->findEmailFollowupEligibleOrderIds($now, $followupAfter, $maxAge, $batchSize);
+        $pushFollowupIds = $this->finder->findPushFollowupEligibleOrderIds($now, $followupAfter, $maxAge, $batchSize);
 
         $io->writeln(sprintf(
-            'Found <info>%d</info> email-eligible and <info>%d</info> push-eligible order(s).',
+            'First: <info>%d</info> email, <info>%d</info> push. Follow-up: <info>%d</info> email, <info>%d</info> push.',
             count($emailIds),
             count($pushIds),
+            count($emailFollowupIds),
+            count($pushFollowupIds),
         ));
 
-        if ($emailIds === [] && $pushIds === []) {
+        if ($emailIds === [] && $pushIds === [] && $emailFollowupIds === [] && $pushFollowupIds === []) {
             $io->success('Nothing to send.');
             return Command::SUCCESS;
         }
 
         if ($dryRun) {
+            $fmt = static fn (array $ids): string => $ids === [] ? '(none)' : implode(', ', array_map(strval(...), $ids));
             $io->writeln('');
-            $io->writeln('Email-eligible order IDs (nothing sent):');
-            $io->writeln('  ' . ($emailIds === [] ? '(none)' : implode(', ', array_map(strval(...), $emailIds))));
-            $io->writeln('Push-eligible order IDs (nothing sent):');
-            $io->writeln('  ' . ($pushIds === [] ? '(none)' : implode(', ', array_map(strval(...), $pushIds))));
-            $io->success(sprintf(
-                '[DRY RUN] %d email + %d push order(s) would be processed.',
-                count($emailIds),
-                count($pushIds),
-            ));
+            $io->writeln('First email IDs:     ' . $fmt($emailIds));
+            $io->writeln('First push IDs:      ' . $fmt($pushIds));
+            $io->writeln('Follow-up email IDs: ' . $fmt($emailFollowupIds));
+            $io->writeln('Follow-up push IDs:  ' . $fmt($pushFollowupIds));
+            $io->success('[DRY RUN] nothing sent.');
             return Command::SUCCESS;
         }
 
-        $emailStats = $this->dispatchEmail($emailIds, $io);
-        $pushStats = $this->dispatchPush($pushIds, $io);
+        $emailStats = $this->dispatchEmail($emailIds, $io, false);
+        $emailFollowupStats = $this->dispatchEmail($emailFollowupIds, $io, true);
+        $pushStats = $this->dispatchPush($pushIds, $io, false);
+        $pushFollowupStats = $this->dispatchPush($pushFollowupIds, $io, true);
 
         $io->section('Summary');
         $io->table(
-            ['Channel', 'Found', 'Processed', 'Errors'],
+            ['Channel', 'Stage', 'Found', 'Processed', 'Errors'],
             [
-                ['Email', (string) count($emailIds), (string) $emailStats['processed'], (string) $emailStats['errors']],
-                ['Push', (string) count($pushIds), (string) $pushStats['processed'], (string) $pushStats['errors']],
+                ['Email', 'first', (string) count($emailIds), (string) $emailStats['processed'], (string) $emailStats['errors']],
+                ['Email', 'follow-up', (string) count($emailFollowupIds), (string) $emailFollowupStats['processed'], (string) $emailFollowupStats['errors']],
+                ['Push', 'first', (string) count($pushIds), (string) $pushStats['processed'], (string) $pushStats['errors']],
+                ['Push', 'follow-up', (string) count($pushFollowupIds), (string) $pushFollowupStats['processed'], (string) $pushFollowupStats['errors']],
             ],
         );
 
-        $errors = $emailStats['errors'] + $pushStats['errors'];
+        $errors = $emailStats['errors'] + $emailFollowupStats['errors']
+            + $pushStats['errors'] + $pushFollowupStats['errors'];
 
         $this->logger->info('payment_reminders.batch_complete', [
             'email_found' => count($emailIds),
             'email_processed' => $emailStats['processed'],
             'email_errors' => $emailStats['errors'],
+            'email_followup_found' => count($emailFollowupIds),
+            'email_followup_processed' => $emailFollowupStats['processed'],
+            'email_followup_errors' => $emailFollowupStats['errors'],
             'push_found' => count($pushIds),
             'push_processed' => $pushStats['processed'],
             'push_errors' => $pushStats['errors'],
+            'push_followup_found' => count($pushFollowupIds),
+            'push_followup_processed' => $pushFollowupStats['processed'],
+            'push_followup_errors' => $pushFollowupStats['errors'],
             'min_age_hours' => $minAge,
             'max_age_hours' => $maxAge,
+            'followup_after_hours' => $followupAfter,
             'batch_size' => $batchSize,
         ]);
 
@@ -193,7 +217,7 @@ final class SendPendingOrderRemindersCommand extends Command
      * @param list<int> $orderIds
      * @return array{processed: int, errors: int}
      */
-    private function dispatchEmail(array $orderIds, SymfonyStyle $io): array
+    private function dispatchEmail(array $orderIds, SymfonyStyle $io, bool $followup): array
     {
         $processed = 0;
         $errors = 0;
@@ -205,7 +229,7 @@ final class SendPendingOrderRemindersCommand extends Command
                     $this->logger->info('payment_reminders.email.order_disappeared', ['order_id' => $orderId]);
                     continue;
                 }
-                $this->notifications->orderPaymentReminder($order, $this->reasonFor($order));
+                $this->notifications->orderPaymentReminder($order, $this->reasonFor($order), $followup);
                 $processed++;
             } catch (\Throwable $e) {
                 $errors++;
@@ -228,10 +252,13 @@ final class SendPendingOrderRemindersCommand extends Command
      * @param list<int> $orderIds
      * @return array{processed: int, errors: int}
      */
-    private function dispatchPush(array $orderIds, SymfonyStyle $io): array
+    private function dispatchPush(array $orderIds, SymfonyStyle $io, bool $followup): array
     {
         $processed = 0;
         $errors = 0;
+        $template = $followup
+            ? PendingOrderReminderFinder::PUSH_TEMPLATE_FOLLOWUP
+            : PendingOrderReminderFinder::PUSH_TEMPLATE;
 
         foreach ($orderIds as $orderId) {
             try {
@@ -241,21 +268,21 @@ final class SendPendingOrderRemindersCommand extends Command
                     continue;
                 }
 
-                // Belt-and-braces: skip if a push row already exists (e.g. the
-                // same id surfaced twice in one very large batch).
-                if ($this->pushLog->pushSentForOrder($orderId, PendingOrderReminderFinder::PUSH_TEMPLATE)) {
+                // Belt-and-braces: skip if a push row already exists for this
+                // stage (e.g. the same id surfaced twice in one large batch).
+                if ($this->pushLog->pushSentForOrder($orderId, $template)) {
                     continue;
                 }
 
                 // Fire-and-forget: never throws, honours dead-token pruning,
                 // no-ops when the customer has no active device.
-                $this->push->orderPaymentReminder($order, $this->reasonFor($order));
+                $this->push->orderPaymentReminder($order, $this->reasonFor($order), $followup);
 
                 // Write a 'sent' marker regardless of token presence — like the
                 // cart push side, the row means 'we evaluated this order for a
                 // push reminder', so it isn't re-evaluated next run.
                 $this->pushLog->log(
-                    template: PendingOrderReminderFinder::PUSH_TEMPLATE,
+                    template: $template,
                     status: PushNotificationLogger::STATUS_SENT,
                     orderId: $orderId,
                     userId: $order->getUser()->getId(),

@@ -121,20 +121,37 @@ class PushNotificationService
      * marketing-push opt-out. Deep-links to /orders/{order_id} via the
      * order.payment_reminder type, where the app offers "Complete payment".
      */
-    public function orderPaymentReminder(Order $order, string $reason = 'pending'): void
+    public function orderPaymentReminder(Order $order, string $reason = 'pending', bool $followup = false): void
     {
         $ref = $order->getOrderReference();
+        // Distinct data.type per stage so each has its own push idempotency
+        // guard; both deep-link to /orders/{id}.
+        $type = $followup ? 'order.payment_reminder2' : 'order.payment_reminder';
+
         if ($reason === 'failed') {
-            $this->pushToCustomer($order, 'order.payment_reminder', [
-                'en' => ['Payment needed', sprintf("Payment for order %s didn't go through. Tap to try again.", $ref)],
-                'ar' => ['الدفع مطلوب', sprintf('لم تتم عملية الدفع للطلب %s. اضغط لإعادة المحاولة.', $ref)],
-            ]);
+            $copy = $followup
+                ? [
+                    'en' => ['Last reminder: payment needed', sprintf("Order %s still isn't paid. Tap to try again before it's cancelled.", $ref)],
+                    'ar' => ['تذكير أخير: الدفع مطلوب', sprintf('لا يزال الطلب %s غير مدفوع. اضغط لإعادة المحاولة قبل إلغائه.', $ref)],
+                ]
+                : [
+                    'en' => ['Payment needed', sprintf("Payment for order %s didn't go through. Tap to try again.", $ref)],
+                    'ar' => ['الدفع مطلوب', sprintf('لم تتم عملية الدفع للطلب %s. اضغط لإعادة المحاولة.', $ref)],
+                ];
+            $this->pushToCustomer($order, $type, $copy);
             return;
         }
-        $this->pushToCustomer($order, 'order.payment_reminder', [
-            'en' => ['Complete your payment', sprintf('Your order %s is still awaiting payment. Tap to complete it.', $ref)],
-            'ar' => ['أكمل الدفع', sprintf('لا يزال طلبك %s بانتظار الدفع. اضغط لإكماله.', $ref)],
-        ]);
+
+        $copy = $followup
+            ? [
+                'en' => ['Last reminder to pay', sprintf('Order %s is still awaiting payment. Tap to complete it before it expires.', $ref)],
+                'ar' => ['تذكير أخير للدفع', sprintf('لا يزال الطلب %s بانتظار الدفع. اضغط لإكماله قبل انتهاء صلاحيته.', $ref)],
+            ]
+            : [
+                'en' => ['Complete your payment', sprintf('Your order %s is still awaiting payment. Tap to complete it.', $ref)],
+                'ar' => ['أكمل الدفع', sprintf('لا يزال طلبك %s بانتظار الدفع. اضغط لإكماله.', $ref)],
+            ];
+        $this->pushToCustomer($order, $type, $copy);
     }
 
     /** An item in the order was accepted by the seller. */

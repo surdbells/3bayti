@@ -48,11 +48,14 @@ use Psr\Log\LoggerInterface;
  */
 final class PendingOrderReminderFinder
 {
-    /** Push data.type used as the per-order push idempotency key. */
+    /** Push data.type used as the per-order push idempotency key (stage 1). */
     public const PUSH_TEMPLATE = 'order.payment_reminder';
+    /** Push data.type for the follow-up nudge (stage 2). */
+    public const PUSH_TEMPLATE_FOLLOWUP = 'order.payment_reminder2';
 
     public const DEFAULT_MIN_AGE_HOURS = 1;
     public const DEFAULT_MAX_AGE_HOURS = 168; // 7 days
+    public const DEFAULT_FOLLOWUP_AFTER_HOURS = 24;
     public const DEFAULT_BATCH_SIZE = 200;
     public const MAX_BATCH_SIZE = 1000;
 
@@ -186,6 +189,146 @@ final class PendingOrderReminderFinder
     }
 
     /**
+     * Order ids eligible for the EMAIL FOLLOW-UP (stage 2). Eligible when the
+     * stage-1 email was sent at least $followupAfterHours ago and no stage-2
+     * email exists yet — so there is always a real gap since the first
+     * reminder, regardless of when it actually fired. Bounded by a created_at
+     * floor so ancient orders aren't nudged.
+     *
+     * @return list<int>
+     */
+    public function findEmailFollowupEligibleOrderIds(
+        \DateTimeImmutable $now,
+        int $followupAfterHours = self::DEFAULT_FOLLOWUP_AFTER_HOURS,
+        int $maxAgeHours = self::DEFAULT_MAX_AGE_HOURS,
+        int $limit = self::DEFAULT_BATCH_SIZE,
+    ): array {
+        [$followupCutoff, $createdFloor, $limit] = $this->followupWindow($now, $followupAfterHours, $maxAgeHours, $limit);
+        $startNs = hrtime(true);
+        $this->applyStatementTimeout();
+
+        $sql = <<<'SQL'
+            SELECT o.id
+            FROM orders o
+            INNER JOIN users u ON u.id = o.user_id
+            WHERE o.status IN ('pending_payment', 'failed')
+              AND u.email <> ''
+              AND o.created_at >= :created_floor
+              AND EXISTS (
+                  SELECT 1
+                  FROM notification_logs nl1
+                  WHERE nl1.order_id = o.id
+                    AND nl1.template = :stage1_template
+                    AND nl1.sent_at <= :followup_cutoff
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM notification_logs nl2
+                  WHERE nl2.order_id = o.id
+                    AND nl2.template = :stage2_template
+              )
+            ORDER BY o.created_at ASC
+            LIMIT :limit
+        SQL;
+
+        $ids = $this->runQuery($sql, [
+            'created_floor' => $createdFloor->format('Y-m-d H:i:sP'),
+            'stage1_template' => EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER->value,
+            'followup_cutoff' => $followupCutoff->format('Y-m-d H:i:sP'),
+            'stage2_template' => EmailTemplate::ORDER_PAYMENT_REMINDER_2_CUSTOMER->value,
+            'limit' => $limit,
+        ], [
+            'created_floor' => ParameterType::STRING,
+            'stage1_template' => ParameterType::STRING,
+            'followup_cutoff' => ParameterType::STRING,
+            'stage2_template' => ParameterType::STRING,
+            'limit' => ParameterType::INTEGER,
+        ]);
+
+        $this->emitTimingLogs((int) ((hrtime(true) - $startNs) / 1_000_000), [
+            'channel' => 'email',
+            'stage' => 'followup',
+            'followup_cutoff' => $followupCutoff->format(\DateTimeInterface::ATOM),
+            'limit' => $limit,
+            'matched' => count($ids),
+        ]);
+
+        return $ids;
+    }
+
+    /**
+     * Order ids eligible for the PUSH FOLLOW-UP (stage 2). Same sent_at-anchored
+     * rule as the email follow-up, channel-scoped and requiring an active token.
+     *
+     * @return list<int>
+     */
+    public function findPushFollowupEligibleOrderIds(
+        \DateTimeImmutable $now,
+        int $followupAfterHours = self::DEFAULT_FOLLOWUP_AFTER_HOURS,
+        int $maxAgeHours = self::DEFAULT_MAX_AGE_HOURS,
+        int $limit = self::DEFAULT_BATCH_SIZE,
+    ): array {
+        [$followupCutoff, $createdFloor, $limit] = $this->followupWindow($now, $followupAfterHours, $maxAgeHours, $limit);
+        $startNs = hrtime(true);
+        $this->applyStatementTimeout();
+
+        $sql = <<<'SQL'
+            SELECT o.id
+            FROM orders o
+            WHERE o.status IN ('pending_payment', 'failed')
+              AND o.user_id IS NOT NULL
+              AND o.created_at >= :created_floor
+              AND EXISTS (
+                  SELECT 1 FROM device_tokens dt
+                  WHERE dt.user_id = o.user_id AND dt.is_active = true
+              )
+              AND EXISTS (
+                  SELECT 1
+                  FROM notification_logs nl1
+                  WHERE nl1.order_id = o.id
+                    AND nl1.template = :stage1_template
+                    AND nl1.channel = :channel
+                    AND nl1.sent_at <= :followup_cutoff
+              )
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM notification_logs nl2
+                  WHERE nl2.order_id = o.id
+                    AND nl2.template = :stage2_template
+                    AND nl2.channel = :channel
+              )
+            ORDER BY o.created_at ASC
+            LIMIT :limit
+        SQL;
+
+        $ids = $this->runQuery($sql, [
+            'created_floor' => $createdFloor->format('Y-m-d H:i:sP'),
+            'stage1_template' => self::PUSH_TEMPLATE,
+            'channel' => 'push',
+            'followup_cutoff' => $followupCutoff->format('Y-m-d H:i:sP'),
+            'stage2_template' => self::PUSH_TEMPLATE_FOLLOWUP,
+            'limit' => $limit,
+        ], [
+            'created_floor' => ParameterType::STRING,
+            'stage1_template' => ParameterType::STRING,
+            'channel' => ParameterType::STRING,
+            'followup_cutoff' => ParameterType::STRING,
+            'stage2_template' => ParameterType::STRING,
+            'limit' => ParameterType::INTEGER,
+        ]);
+
+        $this->emitTimingLogs((int) ((hrtime(true) - $startNs) / 1_000_000), [
+            'channel' => 'push',
+            'stage' => 'followup',
+            'followup_cutoff' => $followupCutoff->format(\DateTimeInterface::ATOM),
+            'limit' => $limit,
+            'matched' => count($ids),
+        ]);
+
+        return $ids;
+    }
+
+    /**
      * Normalise the age window + batch size. Returns [olderThan, newerThan,
      * limit]: an order is eligible when newerThan <= created_at <= olderThan.
      * A minAge >= maxAge is coerced to a sane window rather than erroring.
@@ -205,6 +348,31 @@ final class PendingOrderReminderFinder
         $newerThan = $now->sub(new \DateInterval('PT' . $maxAgeHours . 'H'));
 
         return [$olderThan, $newerThan, $limit];
+    }
+
+    /**
+     * Follow-up (stage 2) window. Returns [followupCutoff, createdFloor,
+     * limit]: stage-1 must have been sent at or before followupCutoff
+     * (>= followupAfterHours ago), and the order created at or after
+     * createdFloor. The floor is maxAge + followupAfter so every stage-1
+     * recipient (which required created_at within maxAge) can still receive
+     * the follow-up followupAfter hours later.
+     *
+     * @return array{0: \DateTimeImmutable, 1: \DateTimeImmutable, 2: int}
+     */
+    private function followupWindow(\DateTimeImmutable $now, int $followupAfterHours, int $maxAgeHours, int $limit): array
+    {
+        $followupAfterHours = max(1, $followupAfterHours);
+        $maxAgeHours = max(1, $maxAgeHours);
+        if ($limit < 1) {
+            $limit = self::DEFAULT_BATCH_SIZE;
+        }
+        $limit = min($limit, self::MAX_BATCH_SIZE);
+
+        $followupCutoff = $now->sub(new \DateInterval('PT' . $followupAfterHours . 'H'));
+        $createdFloor = $now->sub(new \DateInterval('PT' . ($maxAgeHours + $followupAfterHours) . 'H'));
+
+        return [$followupCutoff, $createdFloor, $limit];
     }
 
     /**

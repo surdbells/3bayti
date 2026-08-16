@@ -126,6 +126,9 @@ final class OrderEmailTemplateRenderer
             EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER => $isArabic
                 ? $this->orderPaymentReminderCustomerAr($order, $extra)
                 : $this->orderPaymentReminderCustomerEn($order, $extra),
+            EmailTemplate::ORDER_PAYMENT_REMINDER_2_CUSTOMER => $isArabic
+                ? $this->orderPaymentReminderCustomerAr($order, ['final' => true] + $extra)
+                : $this->orderPaymentReminderCustomerEn($order, ['final' => true] + $extra),
             EmailTemplate::ORDER_ACCEPTED_CUSTOMER => $isArabic
                 ? $this->orderAcceptedCustomerAr($order, $extra)
                 : $this->orderAcceptedCustomerEn($order, $extra),
@@ -432,16 +435,44 @@ HTML,
         $total = $order->getTotal();
         $currency = $order->getCurrency();
         $failed = ($extra['reason'] ?? 'pending') === 'failed';
+        $final = !empty($extra['final']);
 
-        $lead = $failed
-            ? "We couldn't process the payment for your order, so it isn't confirmed yet. No charge was made — you can try again."
-            : 'Your order is reserved but not yet paid. Complete your payment to confirm it before it expires.';
-        $subject = $failed
-            ? "Your order {$ref} still needs payment — 3bayti"
-            : "Complete payment for order {$ref} — 3bayti";
+        if ($failed) {
+            $lead = $final
+                ? "This is a final reminder — we still couldn't confirm payment for your order. No charge was made; please try again to secure your items."
+                : "We couldn't process the payment for your order, so it isn't confirmed yet. No charge was made — you can try again.";
+            $subject = $final
+                ? "Last reminder: order {$ref} still needs payment — 3bayti"
+                : "Your order {$ref} still needs payment — 3bayti";
+            $title = $final ? 'Final reminder' : 'Payment needed';
+        } else {
+            $lead = $final
+                ? "This is a final reminder — your order is still reserved but not yet paid. Complete your payment now before it's released."
+                : 'Your order is reserved but not yet paid. Complete your payment to confirm it before it expires.';
+            $subject = $final
+                ? "Last reminder: complete payment for order {$ref} — 3bayti"
+                : "Complete payment for order {$ref} — 3bayti";
+            $title = $final ? 'Final reminder' : 'Complete your payment';
+        }
         $leadEsc = $this->esc($lead);
         $totalEsc = $this->esc($total);
         $currencyEsc = $this->esc($currency);
+
+        // Detailed breakdown — the same rich items + pricing + delivery block
+        // the order-confirmation emails use, so the customer sees exactly what
+        // they're about to pay for (a strong recovery driver). Itemless orders
+        // (gift-card purchases) fall back to the amount-due line only.
+        $hasItems = !$order->getItems()->isEmpty();
+        [$detailsText, $detailsHtml] = $hasItems
+            ? $this->orderDetails($order, $order->getItems(), false, true)
+            : ['', ''];
+        $textDetails = $hasItems ? "\n{$detailsText}" : '';
+
+        // Prominent "amount due" callout above the breakdown drives the action.
+        $amountDueBox = '<table role="presentation" width="100%" style="border:1px solid #ecd9c4;border-radius:12px;margin:14px 0;background:#faf6f0;"><tr>'
+            . '<td style="padding:14px 18px;font-size:15px;font-weight:700;color:#1c1c1e;">Amount due</td>'
+            . '<td style="padding:14px 18px;font-size:18px;font-weight:800;color:#1c1c1e;text-align:right;white-space:nowrap;">' . $totalEsc . ' ' . $currencyEsc . '</td>'
+            . '</tr></table>';
 
         return new RenderedEmail(
             subject: $subject,
@@ -450,21 +481,19 @@ HTML,
 
 Order reference: {$ref}
 Amount due: {$total} {$currency}
-
+{$textDetails}
 Open the 3bayti app and go to My Orders to complete your payment.
 If you've already paid, you can ignore this message.
 
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
-                title: $failed ? 'Payment needed' : 'Complete your payment',
+                title: $title,
                 preheader: "Order {$ref} — amount due {$total} {$currency}",
                 body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">' . $leadEsc . '</p>'
                     . $this->refBadgeHtml($ref, false)
-                    . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;"><tr>'
-                    . '<td style="padding:12px 18px;font-size:14px;color:#4a453e;">Amount due</td>'
-                    . '<td style="padding:12px 18px;font-size:15px;font-weight:700;color:#1c1c1e;text-align:right;">' . $totalEsc . ' ' . $currencyEsc . '</td>'
-                    . '</tr></table>'
+                    . $amountDueBox
+                    . $detailsHtml
                     . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">Open the <strong>3bayti</strong> app and go to <strong>My Orders</strong> to complete your payment. If you\'ve already paid, you can ignore this message.</p>',
             ),
         );
@@ -1666,16 +1695,39 @@ HTML,
         $total = $order->getTotal();
         $currency = $order->getCurrency();
         $failed = ($extra['reason'] ?? 'pending') === 'failed';
+        $final = !empty($extra['final']);
 
-        $lead = $failed
-            ? 'لم نتمكن من معالجة دفعة طلبك، لذلك لم يتم تأكيده بعد. لم يتم خصم أي مبلغ — يمكنك المحاولة مجدداً.'
-            : 'طلبك محجوز لكنه غير مدفوع بعد. أكمل الدفع لتأكيده قبل انتهاء صلاحيته.';
-        $subject = $failed
-            ? "طلبك {$ref} بحاجة إلى الدفع — 3bayti"
-            : "أكمل الدفع للطلب {$ref} — 3bayti";
+        if ($failed) {
+            $lead = $final
+                ? 'تذكير أخير — ما زلنا لم نتمكن من تأكيد دفعة طلبك. لم يتم خصم أي مبلغ؛ يُرجى المحاولة مجدداً لتأمين منتجاتك.'
+                : 'لم نتمكن من معالجة دفعة طلبك، لذلك لم يتم تأكيده بعد. لم يتم خصم أي مبلغ — يمكنك المحاولة مجدداً.';
+            $subject = $final
+                ? "تذكير أخير: طلبك {$ref} بحاجة إلى الدفع — 3bayti"
+                : "طلبك {$ref} بحاجة إلى الدفع — 3bayti";
+            $title = $final ? 'تذكير أخير' : 'الدفع مطلوب';
+        } else {
+            $lead = $final
+                ? 'تذكير أخير — لا يزال طلبك محجوزاً لكنه غير مدفوع. أكمل الدفع الآن قبل أن يُلغى الحجز.'
+                : 'طلبك محجوز لكنه غير مدفوع بعد. أكمل الدفع لتأكيده قبل انتهاء صلاحيته.';
+            $subject = $final
+                ? "تذكير أخير: أكمل الدفع للطلب {$ref} — 3bayti"
+                : "أكمل الدفع للطلب {$ref} — 3bayti";
+            $title = $final ? 'تذكير أخير' : 'أكمل الدفع';
+        }
         $leadEsc = $this->esc($lead);
         $totalEsc = $this->esc($total);
         $currencyEsc = $this->esc($currency);
+
+        $hasItems = !$order->getItems()->isEmpty();
+        [$detailsText, $detailsHtml] = $hasItems
+            ? $this->orderDetails($order, $order->getItems(), true, true)
+            : ['', ''];
+        $textDetails = $hasItems ? "\n{$detailsText}" : '';
+
+        $amountDueBox = '<table role="presentation" width="100%" style="border:1px solid #ecd9c4;border-radius:12px;margin:14px 0;background:#faf6f0;"><tr>'
+            . '<td style="padding:14px 18px;font-size:15px;font-weight:700;color:#1c1c1e;">المبلغ المستحق</td>'
+            . '<td style="padding:14px 18px;font-size:18px;font-weight:800;color:#1c1c1e;text-align:left;white-space:nowrap;">' . $totalEsc . ' ' . $currencyEsc . '</td>'
+            . '</tr></table>';
 
         return new RenderedEmail(
             subject: $subject,
@@ -1684,21 +1736,19 @@ HTML,
 
 رقم الطلب: {$ref}
 المبلغ المستحق: {$total} {$currency}
-
+{$textDetails}
 افتح تطبيق 3bayti وانتقل إلى "طلباتي" لإكمال الدفع.
 إذا كنت قد دفعت بالفعل، يمكنك تجاهل هذه الرسالة.
 
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
-                title: $failed ? 'الدفع مطلوب' : 'أكمل الدفع',
+                title: $title,
                 preheader: "الطلب {$ref} — المبلغ المستحق {$total} {$currency}",
                 body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">' . $leadEsc . '</p>'
                     . $this->refBadgeHtml($ref, true)
-                    . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;"><tr>'
-                    . '<td style="padding:12px 18px;font-size:14px;color:#4a453e;">المبلغ المستحق</td>'
-                    . '<td style="padding:12px 18px;font-size:15px;font-weight:700;color:#1c1c1e;text-align:left;">' . $totalEsc . ' ' . $currencyEsc . '</td>'
-                    . '</tr></table>'
+                    . $amountDueBox
+                    . $detailsHtml
                     . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">افتح تطبيق <strong>3bayti</strong> وانتقل إلى <strong>طلباتي</strong> لإكمال الدفع. إذا كنت قد دفعت بالفعل، يمكنك تجاهل هذه الرسالة.</p>',
                 locale: User::LOCALE_AR,
             ),

@@ -197,11 +197,19 @@ final class OrderNotificationService
      * Fired by the orders:send-payment-reminders cron (not a lifecycle
      * transition). `$reason` is 'pending' (order never paid) or 'failed'
      * (charge attempt failed, retryable) and only tunes the copy.
+     *
+     * `$followup` selects the second-stage template (a distinct string so it
+     * has its own idempotency guard) with more urgent "final reminder" copy,
+     * sent ~24h after the first reminder.
      */
-    public function orderPaymentReminder(Order $order, string $reason = 'pending'): void
+    public function orderPaymentReminder(Order $order, string $reason = 'pending', bool $followup = false): void
     {
-        $this->sendToCustomer($order, EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER, [
+        $template = $followup
+            ? EmailTemplate::ORDER_PAYMENT_REMINDER_2_CUSTOMER
+            : EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER;
+        $this->sendToCustomer($order, $template, [
             'reason' => $reason,
+            'final' => $followup,
         ]);
     }
 

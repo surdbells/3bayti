@@ -247,6 +247,54 @@ final class OrderEmailTemplateRendererTest extends TestCase
     }
 
     #[Test]
+    public function orderPaymentReminderIsDetailedWithItemsAndPricing(): void
+    {
+        // The reminder must show what the customer is about to pay for —
+        // the itemised list + a pricing breakdown, like the confirmation email.
+        $order = $this->makeOrder(reference: 'V3-REM-DETAIL', subtotal: '300.00');
+        $this->addItem($order, name: 'Silk Abaya');
+
+        $rendered = $this->renderer->render(
+            EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER,
+            $order,
+            ['reason' => 'pending'],
+        );
+
+        // Item shows up in both bodies.
+        self::assertStringContainsString('Silk Abaya', $rendered->textBody);
+        self::assertStringContainsString('Silk Abaya', $rendered->htmlBody);
+        // Pricing breakdown, not just a bare total.
+        self::assertStringContainsString('Subtotal', $rendered->htmlBody);
+        self::assertStringContainsString('Amount due', $rendered->htmlBody);
+        self::assertStringContainsString('Total', $rendered->htmlBody);
+    }
+
+    #[Test]
+    public function orderPaymentReminderFollowupUsesFinalReminderCopy(): void
+    {
+        $order = $this->makeOrder(reference: 'V3-REM-F1');
+        $rendered = $this->renderer->render(
+            EmailTemplate::ORDER_PAYMENT_REMINDER_2_CUSTOMER,
+            $order,
+            ['reason' => 'pending'],
+        );
+
+        // Stage-2 subject signals urgency and is distinct from stage 1.
+        self::assertStringContainsString('V3-REM-F1', $rendered->subject);
+        self::assertStringContainsString('last reminder', strtolower($rendered->subject));
+        self::assertStringContainsString('final reminder', strtolower($rendered->htmlBody));
+
+        // Failed follow-up keeps the retry framing.
+        $failed = $this->renderer->render(
+            EmailTemplate::ORDER_PAYMENT_REMINDER_2_CUSTOMER,
+            $order,
+            ['reason' => 'failed'],
+        );
+        self::assertStringContainsString('last reminder', strtolower($failed->subject));
+        self::assertStringContainsString('needs payment', strtolower($failed->subject));
+    }
+
+    #[Test]
     public function orderPaymentReminderArabicCustomerGetsArabicCopy(): void
     {
         $order = $this->makeOrder(reference: 'V3-REM-AR');
