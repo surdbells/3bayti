@@ -5,6 +5,7 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { PermissionService } from '../../services/permission.service';
 import { AxCanDirective } from '../../shared/security/ax-can.directive';
+import { NavBadgeService } from './nav-badge.service';
 
 import { IconComponent } from '../../shared/icon/icon.component';
 @Component({
@@ -21,6 +22,9 @@ export class AsideComponent implements OnInit {
 
   /** Drives admin-menu visibility so users only see modules they can open. */
   protected readonly perms = inject(PermissionService);
+
+  /** "New items" count badges (pending applications, new sales). */
+  protected readonly navBadges = inject(NavBadgeService);
 
   constructor(
     private router: Router,
@@ -93,6 +97,7 @@ export class AsideComponent implements OnInit {
     // (idempotent; the admin shell also loads, this covers any standalone use).
     if (this.user_session?.is_admin || this.user_session?.is_finance || this.user_session?.is_support) {
       this.perms.load();
+      this.navBadges.start();
     }
   }
 

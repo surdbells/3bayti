@@ -114,6 +114,8 @@
           <a routerLink="/admin/vendor-applications" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="task_alt" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Applications</span>
+            <span class="ax-sidenav-link-badge" *ngIf="(navBadges.applications$ | async) as n"
+                  [attr.aria-label]="n + ' pending'">{{ n > 99 ? '99+' : n }}</span>
           </a>
         </li>
         <li *axCan="'orders.view'">
@@ -178,6 +180,8 @@
           <a routerLink="/admin/sales" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="trending_up" aria-hidden="true"></app-icon>
             <span class="ax-sidenav-link-label">Sales</span>
+            <span class="ax-sidenav-link-badge" *ngIf="(navBadges.sales$ | async) as n"
+                  [attr.aria-label]="n + ' new'">{{ n > 99 ? '99+' : n }}</span>
           </a>
         </li>
         <li *axCan="'returns.view'">
