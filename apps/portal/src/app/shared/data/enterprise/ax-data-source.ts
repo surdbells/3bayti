@@ -35,6 +35,7 @@ import {
   debounceTime,
   distinctUntilChanged,
   map,
+  scan,
   shareReplay,
   startWith,
   switchMap,
@@ -206,15 +207,22 @@ export class AxServerDataSource<T> extends AxDataSource<T> {
   }
 
   connect(query$: Observable<AxQueryState>): Observable<AxPage<T>> {
-    // Re-emit the latest query when retry fires.
-    const retryReplay$ = this.retry$.pipe(startWith(void 0));
+    // Monotonic tick that increments on every retry() call. Carrying it through
+    // the pipeline lets a retry force a re-fetch even when the table's own
+    // AxQueryState (q) is unchanged — which is the case for pages that drive
+    // filtering through EXTERNAL controls (e.g. admin/customers, admin/stores)
+    // and call retry() to reload. Without it, distinctUntilChanged sees the
+    // same q and dedupes the retry away, so the grid never refreshes.
+    const retryTick$ = this.retry$.pipe(scan((n) => n + 1, 0), startWith(0));
 
-    return combineLatest([query$, retryReplay$]).pipe(
-      map(([q]) => q),
+    return combineLatest([query$, retryTick$]).pipe(
       // Debounce only search/filter churn; the table already coalesces
       // page/sort clicks, but debounce here protects the network layer.
       debounceTime(this.debounceMs),
-      distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b)),
+      distinctUntilChanged(
+        ([qa, ta], [qb, tb]) => ta === tb && JSON.stringify(qa) === JSON.stringify(qb),
+      ),
+      map(([q]) => q),
       switchMap((q) => {
         this._state$.next({ loading: true, error: null });
         return this.fetcher(q, {}).pipe(
