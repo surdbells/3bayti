@@ -1,10 +1,11 @@
 import { Component } from '@angular/core';
 import {NavigationEnd, Router, RouterOutlet} from '@angular/router';
 import {filter} from 'rxjs';
+import { ConnectionStatusComponent } from './partials/connection-status/connection-status.component';
 declare let gtag: Function;
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, ConnectionStatusComponent],
   templateUrl: './app.component.html',
   standalone: true,
   styleUrl: './app.component.css'

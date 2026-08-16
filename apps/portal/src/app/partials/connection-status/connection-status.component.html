@@ -1,0 +1,21 @@
+<!-- Offline: persistent, assertive. Retry lets the user force a re-check. -->
+<div *ngIf="state === 'offline'"
+     class="ax-conn ax-conn-offline"
+     role="alert" aria-live="assertive">
+  <app-icon name="cloud_off" class="ax-conn-icon" aria-hidden="true"></app-icon>
+  <span class="ax-conn-text">
+    <span class="ax-conn-title">You're offline</span>
+    <span class="ax-conn-sub">Check your connection — we'll reconnect automatically.</span>
+  </span>
+  <button type="button" class="ax-conn-retry" (click)="retry()">Retry</button>
+</div>
+
+<!-- Reconnected: transient, polite. -->
+<div *ngIf="state === 'reconnected'"
+     class="ax-conn ax-conn-online"
+     role="status" aria-live="polite">
+  <app-icon name="cloud_done" class="ax-conn-icon" aria-hidden="true"></app-icon>
+  <span class="ax-conn-text">
+    <span class="ax-conn-title">Back online</span>
+  </span>
+</div>

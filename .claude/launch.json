@@ -9,6 +9,22 @@
         "dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "portal",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": [
+        "--filter",
+        "@3bayti/portal",
+        "exec",
+        "ng",
+        "serve",
+        "--port",
+        "4300",
+        "--host",
+        "localhost"
+      ],
+      "port": 4300
     }
   ]
 }

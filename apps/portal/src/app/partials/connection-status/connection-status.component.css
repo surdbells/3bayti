@@ -1,0 +1,74 @@
+/* Bottom-centered connectivity snackbar. Fixed + out-of-flow so it never
+   shifts page layout; sits at toast elevation, above the shell and modals. */
+.ax-conn {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  z-index: var(--ax-z-toast, 1090);
+
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-3);
+  width: max-content;
+  max-width: min(30rem, calc(100vw - 2rem));
+  padding: var(--ax-space-3) var(--ax-space-4);
+
+  background: var(--ax-color-bg-raised);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-left-width: 3px;
+  border-radius: var(--ax-radius-lg);
+  box-shadow: var(--ax-shadow-lg);
+  color: var(--ax-color-text-primary);
+
+  animation: ax-conn-fade 220ms var(--ax-ease-out, ease-out);
+}
+
+/* Status accent — red while offline, green on recovery. */
+.ax-conn-offline { border-left-color: var(--ax-color-bg-danger); }
+.ax-conn-online  { border-left-color: var(--ax-color-bg-success); }
+
+.ax-conn-icon { font-size: 1.375rem; line-height: 1; flex-shrink: 0; }
+.ax-conn-offline .ax-conn-icon { color: var(--ax-color-text-danger); }
+.ax-conn-online  .ax-conn-icon { color: var(--ax-color-text-success); }
+
+.ax-conn-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ax-conn-title { font-size: var(--ax-fs-sm); font-weight: var(--ax-fw-semibold); }
+.ax-conn-sub { font-size: var(--ax-fs-xs); color: var(--ax-color-text-secondary); }
+
+.ax-conn-retry {
+  margin-left: var(--ax-space-2);
+  flex-shrink: 0;
+  padding: 0.3rem 0.75rem;
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-medium);
+  color: var(--ax-color-text-primary);
+  background: transparent;
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-md);
+  cursor: pointer;
+  transition: background-color var(--ax-duration-fast, 150ms) var(--ax-ease-out, ease-out);
+}
+.ax-conn-retry:hover { background: var(--ax-color-surface-hover, var(--ax-color-bg-sunken)); }
+.ax-conn-retry:focus-visible { outline: 2px solid var(--ax-color-bg-danger); outline-offset: 2px; }
+
+@keyframes ax-conn-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Phones: full-width bar, lifted above the vendor bottom-nav (~56px + inset). */
+@media (max-width: 768px) {
+  .ax-conn {
+    left: 1rem;
+    right: 1rem;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 0.75rem);
+    transform: none;
+    width: auto;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ax-conn { animation: none; }
+}
