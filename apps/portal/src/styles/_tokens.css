@@ -368,3 +368,16 @@
     --ax-duration-slower:  0ms;
   }
 }
+
+/* =========================================================================
+   Mobile density — reclaim usable width on phones.
+   The desktop content gutter (24px) plus card padding left ~88px of a ~360px
+   screen as whitespace, cramping vendor forms, tables and dashboards. Tighten
+   the content gutter on small screens (card padding is tightened in _card.css).
+   ========================================================================= */
+@media (max-width: 768px) {
+  :root {
+    --ax-content-padding-x: var(--ax-space-4); /* 24px -> 16px */
+    --ax-content-padding-y: var(--ax-space-5); /* 32px -> 20px */
+  }
+}

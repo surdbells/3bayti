@@ -127,3 +127,15 @@
   background-color: var(--ax-color-border-subtle);
   margin: 0;
 }
+
+/* Mobile density — tighten card padding on phones so content inside a card
+   isn't double-padded against the (already reduced) page gutter. Pairs with
+   the --ax-content-padding-* override in _tokens.css. */
+@media (max-width: 768px) {
+  .ax-card-body { padding: var(--ax-space-4); }
+  .ax-card-header,
+  .ax-card-footer { padding: var(--ax-space-4) var(--ax-space-4); }
+  /* Cards that pad themselves via a utility (product form, dashboard sections). */
+  .ax-card.ax-p-5,
+  .ax-card.ax-p-6 { padding: var(--ax-space-4); }
+}
