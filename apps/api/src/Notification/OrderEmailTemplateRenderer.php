@@ -123,6 +123,9 @@ final class OrderEmailTemplateRenderer
             EmailTemplate::ORDER_PAYMENT_FAILED_CUSTOMER => $isArabic
                 ? $this->orderPaymentFailedCustomerAr($order)
                 : $this->orderPaymentFailedCustomerEn($order),
+            EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER => $isArabic
+                ? $this->orderPaymentReminderCustomerAr($order, $extra)
+                : $this->orderPaymentReminderCustomerEn($order, $extra),
             EmailTemplate::ORDER_ACCEPTED_CUSTOMER => $isArabic
                 ? $this->orderAcceptedCustomerAr($order, $extra)
                 : $this->orderAcceptedCustomerEn($order, $extra),
@@ -411,6 +414,58 @@ TXT,
 <p><strong>Order reference:</strong> {$this->esc($ref)}</p>
 <p>You can try again from the app, or contact our support team if you need help.</p>
 HTML,
+            ),
+        );
+    }
+
+    /**
+     * Scheduled reminder that an order still needs payment. `reason`
+     * ('pending'|'failed') tunes the lead copy — a gentle nudge for an
+     * unpaid order vs. a retry prompt after a failed charge. Both point
+     * the customer back to the app to complete payment.
+     *
+     * @param array<string, mixed> $extra
+     */
+    private function orderPaymentReminderCustomerEn(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $total = $order->getTotal();
+        $currency = $order->getCurrency();
+        $failed = ($extra['reason'] ?? 'pending') === 'failed';
+
+        $lead = $failed
+            ? "We couldn't process the payment for your order, so it isn't confirmed yet. No charge was made — you can try again."
+            : 'Your order is reserved but not yet paid. Complete your payment to confirm it before it expires.';
+        $subject = $failed
+            ? "Your order {$ref} still needs payment — 3bayti"
+            : "Complete payment for order {$ref} — 3bayti";
+        $leadEsc = $this->esc($lead);
+        $totalEsc = $this->esc($total);
+        $currencyEsc = $this->esc($currency);
+
+        return new RenderedEmail(
+            subject: $subject,
+            textBody: <<<TXT
+{$lead}
+
+Order reference: {$ref}
+Amount due: {$total} {$currency}
+
+Open the 3bayti app and go to My Orders to complete your payment.
+If you've already paid, you can ignore this message.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: $failed ? 'Payment needed' : 'Complete your payment',
+                preheader: "Order {$ref} — amount due {$total} {$currency}",
+                body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">' . $leadEsc . '</p>'
+                    . $this->refBadgeHtml($ref, false)
+                    . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;"><tr>'
+                    . '<td style="padding:12px 18px;font-size:14px;color:#4a453e;">Amount due</td>'
+                    . '<td style="padding:12px 18px;font-size:15px;font-weight:700;color:#1c1c1e;text-align:right;">' . $totalEsc . ' ' . $currencyEsc . '</td>'
+                    . '</tr></table>'
+                    . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">Open the <strong>3bayti</strong> app and go to <strong>My Orders</strong> to complete your payment. If you\'ve already paid, you can ignore this message.</p>',
             ),
         );
     }
@@ -1597,6 +1652,54 @@ TXT,
 <p><strong>رقم الطلب:</strong> {$this->esc($ref)}</p>
 <p>يمكنك المحاولة مجدداً من التطبيق، أو التواصل مع فريق الدعم لدينا إذا احتجت إلى المساعدة.</p>
 HTML,
+                locale: User::LOCALE_AR,
+            ),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function orderPaymentReminderCustomerAr(Order $order, array $extra): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $total = $order->getTotal();
+        $currency = $order->getCurrency();
+        $failed = ($extra['reason'] ?? 'pending') === 'failed';
+
+        $lead = $failed
+            ? 'لم نتمكن من معالجة دفعة طلبك، لذلك لم يتم تأكيده بعد. لم يتم خصم أي مبلغ — يمكنك المحاولة مجدداً.'
+            : 'طلبك محجوز لكنه غير مدفوع بعد. أكمل الدفع لتأكيده قبل انتهاء صلاحيته.';
+        $subject = $failed
+            ? "طلبك {$ref} بحاجة إلى الدفع — 3bayti"
+            : "أكمل الدفع للطلب {$ref} — 3bayti";
+        $leadEsc = $this->esc($lead);
+        $totalEsc = $this->esc($total);
+        $currencyEsc = $this->esc($currency);
+
+        return new RenderedEmail(
+            subject: $subject,
+            textBody: <<<TXT
+{$lead}
+
+رقم الطلب: {$ref}
+المبلغ المستحق: {$total} {$currency}
+
+افتح تطبيق 3bayti وانتقل إلى "طلباتي" لإكمال الدفع.
+إذا كنت قد دفعت بالفعل، يمكنك تجاهل هذه الرسالة.
+
+— 3bayti
+TXT,
+            htmlBody: $this->wrapHtml(
+                title: $failed ? 'الدفع مطلوب' : 'أكمل الدفع',
+                preheader: "الطلب {$ref} — المبلغ المستحق {$total} {$currency}",
+                body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">' . $leadEsc . '</p>'
+                    . $this->refBadgeHtml($ref, true)
+                    . '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;"><tr>'
+                    . '<td style="padding:12px 18px;font-size:14px;color:#4a453e;">المبلغ المستحق</td>'
+                    . '<td style="padding:12px 18px;font-size:15px;font-weight:700;color:#1c1c1e;text-align:left;">' . $totalEsc . ' ' . $currencyEsc . '</td>'
+                    . '</tr></table>'
+                    . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">افتح تطبيق <strong>3bayti</strong> وانتقل إلى <strong>طلباتي</strong> لإكمال الدفع. إذا كنت قد دفعت بالفعل، يمكنك تجاهل هذه الرسالة.</p>',
                 locale: User::LOCALE_AR,
             ),
         );

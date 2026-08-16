@@ -213,6 +213,57 @@ final class OrderEmailTemplateRendererTest extends TestCase
     }
 
     #[Test]
+    public function orderPaymentReminderPendingNudgesToCompletePayment(): void
+    {
+        $order = $this->makeOrder(reference: 'V3-REM-1', subtotal: '150.00');
+        $rendered = $this->renderer->render(
+            EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER,
+            $order,
+            ['reason' => 'pending'],
+        );
+
+        self::assertStringContainsString('V3-REM-1', $rendered->subject);
+        self::assertStringContainsString('complete payment', strtolower($rendered->subject));
+        // Shows the amount due and points the customer back to the app.
+        self::assertStringContainsString('150.00', $rendered->textBody);
+        self::assertStringContainsString('AED', $rendered->textBody);
+        self::assertStringContainsString('my orders', strtolower($rendered->textBody));
+        self::assertStringContainsString('150.00', $rendered->htmlBody);
+    }
+
+    #[Test]
+    public function orderPaymentReminderFailedUsesRetryFraming(): void
+    {
+        $order = $this->makeOrder(reference: 'V3-REM-2');
+        $rendered = $this->renderer->render(
+            EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER,
+            $order,
+            ['reason' => 'failed'],
+        );
+
+        self::assertStringContainsString('V3-REM-2', $rendered->subject);
+        self::assertStringContainsString('needs payment', strtolower($rendered->subject));
+        self::assertStringContainsString("couldn't process", strtolower($rendered->textBody));
+    }
+
+    #[Test]
+    public function orderPaymentReminderArabicCustomerGetsArabicCopy(): void
+    {
+        $order = $this->makeOrder(reference: 'V3-REM-AR');
+        $rendered = $this->renderer->render(
+            EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER,
+            $order,
+            ['reason' => 'pending'],
+            User::LOCALE_AR,
+        );
+
+        self::assertStringContainsString('V3-REM-AR', $rendered->subject);
+        // Arabic lead copy + RTL shell.
+        self::assertStringContainsString('أكمل الدفع', $rendered->subject);
+        self::assertStringContainsString('dir="rtl"', $rendered->htmlBody);
+    }
+
+    #[Test]
     public function orderShippedCustomerIncludesItemName(): void
     {
         $order = $this->makeOrder(reference: 'V3-004');

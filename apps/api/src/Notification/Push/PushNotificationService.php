@@ -111,6 +111,32 @@ class PushNotificationService
         ]);
     }
 
+    /**
+     * Scheduled reminder that an order still needs payment (pending_payment)
+     * or that a failed charge can be retried. Fired by the
+     * orders:send-payment-reminders cron, not a lifecycle transition.
+     *
+     * Transactional — it concerns the customer's own unfinished order, so
+     * (like orderPlaced / orderPaymentFailed) it is NOT gated on the
+     * marketing-push opt-out. Deep-links to /orders/{order_id} via the
+     * order.payment_reminder type, where the app offers "Complete payment".
+     */
+    public function orderPaymentReminder(Order $order, string $reason = 'pending'): void
+    {
+        $ref = $order->getOrderReference();
+        if ($reason === 'failed') {
+            $this->pushToCustomer($order, 'order.payment_reminder', [
+                'en' => ['Payment needed', sprintf("Payment for order %s didn't go through. Tap to try again.", $ref)],
+                'ar' => ['الدفع مطلوب', sprintf('لم تتم عملية الدفع للطلب %s. اضغط لإعادة المحاولة.', $ref)],
+            ]);
+            return;
+        }
+        $this->pushToCustomer($order, 'order.payment_reminder', [
+            'en' => ['Complete your payment', sprintf('Your order %s is still awaiting payment. Tap to complete it.', $ref)],
+            'ar' => ['أكمل الدفع', sprintf('لا يزال طلبك %s بانتظار الدفع. اضغط لإكماله.', $ref)],
+        ]);
+    }
+
     /** An item in the order was accepted by the seller. */
     public function itemAccepted(Order $order): void
     {

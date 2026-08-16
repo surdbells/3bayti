@@ -25,9 +25,12 @@ use Bayti\Api\Console\DispatchScheduledGiftCardsCommand;
 use Bayti\Api\Console\ReconcilePendingOrdersCommand;
 use Bayti\Api\Console\SendAbandonedCartRemindersCommand;
 use Bayti\Api\Console\SendDeliveryFollowupsCommand;
+use Bayti\Api\Console\SendPendingOrderRemindersCommand;
 use Bayti\Api\Console\SendReengagementNudgesCommand;
 use Bayti\Api\Domain\Cart\CartAbandonmentFinder;
+use Bayti\Api\Domain\Order\PendingOrderReminderFinder;
 use Bayti\Api\Notification\CartNotificationService;
+use Bayti\Api\Notification\OrderNotificationService;
 use Bayti\Api\Notification\Push\PushNotificationLogger;
 use Bayti\Api\Notification\Push\PushNotificationService;
 use Bayti\Api\Payment\PaymentGatewayInterface;
@@ -148,6 +151,32 @@ try {
     ));
 } catch (\Throwable $e) {
     $logger->info('cart reminders command not registered', [
+        'reason' => $e->getMessage(),
+    ]);
+}
+
+// Automated payment reminders for pending_payment / failed orders (email +
+// push). Resolves the finder + order-notification + push services via DI;
+// independent of payment-gateway availability so a fresh sandbox can run it.
+try {
+    /** @var PendingOrderReminderFinder $reminderFinder */
+    $reminderFinder = $container->get(PendingOrderReminderFinder::class);
+    /** @var OrderNotificationService $orderNotifications */
+    $orderNotifications = $container->get(OrderNotificationService::class);
+    /** @var PushNotificationService $pushService */
+    $pushService = $container->get(PushNotificationService::class);
+    /** @var PushNotificationLogger $pushLog */
+    $pushLog = $container->get(PushNotificationLogger::class);
+    $cli->add(new SendPendingOrderRemindersCommand(
+        $em,
+        $reminderFinder,
+        $orderNotifications,
+        $pushService,
+        $pushLog,
+        $logger,
+    ));
+} catch (\Throwable $e) {
+    $logger->info('payment reminders command not registered', [
         'reason' => $e->getMessage(),
     ]);
 }

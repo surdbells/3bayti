@@ -29,6 +29,10 @@ enum EmailTemplate: string
     case ORDER_PLACED_CUSTOMER = 'order.placed.customer';
     case ORDER_PAID_CUSTOMER = 'order.paid.customer';
     case ORDER_PAYMENT_FAILED_CUSTOMER = 'order.payment_failed.customer';
+    // Scheduled nudge for an order still awaiting payment (pending_payment)
+    // or whose payment failed and can be retried. Sent by the
+    // orders:send-payment-reminders cron, not a lifecycle transition.
+    case ORDER_PAYMENT_REMINDER_CUSTOMER = 'order.payment_reminder.customer';
     case ORDER_ACCEPTED_CUSTOMER = 'order.accepted.customer';
     case ORDER_PREPARING_CUSTOMER = 'order.preparing.customer';
     case ORDER_REJECTED_CUSTOMER = 'order.rejected.customer';

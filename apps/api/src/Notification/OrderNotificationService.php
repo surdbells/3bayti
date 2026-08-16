@@ -193,6 +193,19 @@ final class OrderNotificationService
     }
 
     /**
+     * Scheduled reminder that an order still needs payment. Customer-only.
+     * Fired by the orders:send-payment-reminders cron (not a lifecycle
+     * transition). `$reason` is 'pending' (order never paid) or 'failed'
+     * (charge attempt failed, retryable) and only tunes the copy.
+     */
+    public function orderPaymentReminder(Order $order, string $reason = 'pending'): void
+    {
+        $this->sendToCustomer($order, EmailTemplate::ORDER_PAYMENT_REMINDER_CUSTOMER, [
+            'reason' => $reason,
+        ]);
+    }
+
+    /**
      * A single item was accepted by its vendor (the seller confirmed it
      * and will prepare it). Customer-only.
      */

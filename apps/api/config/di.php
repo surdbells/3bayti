@@ -617,6 +617,9 @@ return [
         );
     },
 
+    // Automated payment reminders for pending/failed orders
+    \Bayti\Api\Domain\Order\PendingOrderReminderFinder::class => \DI\autowire(),
+
     // M3.2.X.11 — Cart abandonment recovery
     \Bayti\Api\Domain\Cart\CartAbandonmentFinder::class => \DI\autowire(),
     \Bayti\Api\Notification\CartEmailTemplateRenderer::class => \DI\autowire(),
