@@ -39,17 +39,24 @@
       <section *ngIf="adminMode" class="ax-card ax-p-5">
         <h3 class="ax-h5 ax-m-0 ax-mb-4">Store</h3>
         <div class="ax-form-field">
-          <label class="ax-label ax-label-required" for="vendor_id">Vendor / store</label>
-          <app-ax-combobox
-            name="vendor_id"
-            [(ngModel)]="model.vendor_id"
-            [options]="vendorOptions"
-            [searchable]="true"
-            [allowClear]="false"
-            placeholder="Select the store this product belongs to"
-            ariaLabel="Vendor / store">
-          </app-ax-combobox>
-          <span class="ax-hint">Admins create and edit products on behalf of a store.</span>
+          <label class="ax-label" [class.ax-label-required]="!isEdit" for="vendor_id">Vendor / store</label>
+          <!-- Edit: the store is fixed and must not be reassigned. Show it read-only. -->
+          <ng-container *ngIf="isEdit; else vendorSelect">
+            <input class="ax-input" name="vendor_id_display" [value]="editVendorName" readonly disabled />
+            <span class="ax-hint">A product's store is fixed and can't be changed from the editor.</span>
+          </ng-container>
+          <ng-template #vendorSelect>
+            <app-ax-combobox
+              name="vendor_id"
+              [(ngModel)]="model.vendor_id"
+              [options]="vendorOptions"
+              [searchable]="true"
+              [allowClear]="false"
+              placeholder="Select the store this product belongs to"
+              ariaLabel="Vendor / store">
+            </app-ax-combobox>
+            <span class="ax-hint">Admins create products on behalf of a store.</span>
+          </ng-template>
         </div>
       </section>
 

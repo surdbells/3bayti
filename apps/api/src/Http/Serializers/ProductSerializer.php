@@ -145,11 +145,16 @@ final class ProductSerializer
         $primaryImage = $this->primaryImage($p);
         $price = (float) $p->getPrice();
         $category = $p->getCategory();
+        $vendor = $p->getVendor();
 
         return [
             'id'              => $p->getId(),
             'slug'            => $p->getSlug(),
             'name'            => $p->getName(),
+            // Owning store — lets the admin editor resolve + display the vendor
+            // (it's fixed there; a product's store can't be reassigned on edit).
+            'vendor_id'       => $vendor->getId(),
+            'store_name'      => $vendor->getName(),
             'sku'             => null,
             // Flat keys the management table + image cell read directly.
             'image'           => $primaryImage['url'] ?? null,

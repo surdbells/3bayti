@@ -147,6 +147,9 @@ export class ProductFormComponent implements OnInit {
   labels?: Labels[];
   colorOptions: ColorOption[] = COLOR_OPTIONS;
   vendors: VendorOption[] = [];
+  /** Admin edit only: the owning store's name, shown read-only (a product's
+   *  store is fixed and can't be reassigned from the editor). */
+  editVendorName = '';
   /** Store selector options (searchable combobox). */
   get vendorOptions(): AxComboboxOption[] {
     return this.vendors.map((v) => ({ id: v.id, label: v.name }));
@@ -323,7 +326,11 @@ export class ProductFormComponent implements OnInit {
         this.model.require_extra_msmt = !!(p.requires_extra_msmt ?? p.require_extra_msmt);
         this.model.extra_msmt = p.extra_msmt ?? '';
         this.model.status = p.status ?? 'active';
-        if (this.adminMode) this.model.vendor_id = p.vendor?.id ?? p.vendor_id ?? null;
+        if (this.adminMode) {
+          this.model.vendor_id = p.vendor?.id ?? p.vendor_id ?? null;
+          this.editVendorName = p.store_name ?? p.vendor?.name
+            ?? (this.model.vendor_id ? `Store #${this.model.vendor_id}` : '—');
+        }
 
         // Featured + gallery images. The vendor detail endpoint returns
         // images as [{url, alt, ...}]; tolerate both that and bare strings.
@@ -437,7 +444,9 @@ export class ProductFormComponent implements OnInit {
   //  VALIDATION + SUBMIT
   // ═══════════════════════════════════════════════════════════════
   private validate(): boolean {
-    if (this.adminMode && !this.model.vendor_id) { this.toast.error('Select the store this product belongs to'); return false; }
+    // Store is only chosen at create time; on edit it's fixed (read-only), so
+    // don't block the save on it — the product already belongs to a vendor.
+    if (this.adminMode && !this.isEdit && !this.model.vendor_id) { this.toast.error('Select the store this product belongs to'); return false; }
     if (Number(this.model.category) === 0) { this.toast.error('Product category is required'); return false; }
     if (!this.model.name.length) { this.toast.error('Name is required'); return false; }
     if (!this.model.description.length) { this.toast.error('Briefly describe your product'); return false; }
