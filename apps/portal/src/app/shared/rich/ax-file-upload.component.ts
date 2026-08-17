@@ -107,7 +107,7 @@ export interface AxUploadFile {
         {{ errorMessage }}
       </div>
 
-      <div *ngIf="files.length" class="ax-uploader-files">
+      <div *ngIf="showFileList && files.length" class="ax-uploader-files">
         <div
           *ngFor="let f of files; trackBy: trackById"
           class="ax-uploader-file"
@@ -151,6 +151,9 @@ export class AxFileUploadComponent implements ControlValueAccessor, OnDestroy {
   /** Hint text under the dropzone. */
   @Input() hint = 'Images, PDFs, and documents up to 10 MB';
   @Input() disabled = false;
+  /** Show the built-in staged-file list (thumbnail + progress + remove).
+   *  Set false when the host renders its own single preview. */
+  @Input() showFileList = true;
 
   /** Fired whenever the files array changes (add or remove). */
   @Output() filesChange = new EventEmitter<AxUploadFile[]>();

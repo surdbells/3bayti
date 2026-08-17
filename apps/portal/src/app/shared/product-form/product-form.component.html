@@ -247,10 +247,20 @@
 
         <app-ax-accordion-item title="Featured image *">
           <div class="ax-flex ax-flex-col ax-gap-3">
-            <img [src]="model.image_1" alt="Featured preview"
-              style="width: 100%; height: 220px; object-fit: cover; object-position: top center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
+            <!-- Single preview (works for a new upload and an already-saved image),
+                 with a live progress overlay while the upload is in flight. -->
+            <div class="pf-featured-preview">
+              <img [src]="model.image_1" alt="Featured preview" />
+              <div *ngIf="uploadingFeatured" class="pf-featured-overlay">
+                <span class="pf-featured-progress-label">Uploading… {{ featuredProgress }}%</span>
+                <div class="pf-featured-progress">
+                  <div class="pf-featured-progress-bar" [style.width.%]="featuredProgress"></div>
+                </div>
+              </div>
+            </div>
             <app-ax-file-upload [(ngModel)]="featuredFiles" [ngModelOptions]="{ standalone: true }"
               (filesChange)="onFeaturedChange($event)" [multiple]="false" [maxFiles]="1" [maxSizeMb]="10"
+              [showFileList]="false"
               accept="image/*" hint="JPG, PNG or WEBP. Max 10 MB (auto-compressed to 3 MB).">
             </app-ax-file-upload>
           </div>

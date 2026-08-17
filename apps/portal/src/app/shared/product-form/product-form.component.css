@@ -128,3 +128,50 @@
   border-radius: 3px;
   box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
 }
+
+/* ── Featured image: single preview + upload progress overlay ─────────── */
+.pf-featured-preview {
+  position: relative;
+  border-radius: var(--ax-radius-md);
+  overflow: hidden;
+}
+.pf-featured-preview img {
+  display: block;
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  object-position: top center;
+  border-radius: var(--ax-radius-md);
+  border: 1px solid var(--ax-color-border-subtle);
+}
+.pf-featured-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 1rem;
+  background: rgba(20, 16, 12, 0.55);
+  backdrop-filter: blur(1px);
+}
+.pf-featured-progress-label {
+  color: #fff;
+  font-size: var(--ax-fs-sm);
+  font-weight: var(--ax-fw-semibold);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.4);
+}
+.pf-featured-progress {
+  width: min(80%, 16rem);
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.3);
+  overflow: hidden;
+}
+.pf-featured-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--ax-palette-beige-200, #efe2cf);
+  transition: width 150ms ease-out;
+}

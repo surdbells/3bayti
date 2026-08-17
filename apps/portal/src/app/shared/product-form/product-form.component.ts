@@ -182,6 +182,8 @@ export class ProductFormComponent implements OnInit {
   // instead of validating against the stale placeholder.
   uploadingFeatured = false;
   uploadingGallery = false;
+  /** 0–100 progress for the featured image (compression + upload combined). */
+  featuredProgress = 0;
 
   // ── Colors ────────────────────────────────────────────────────
   selected = new Set<string>();
@@ -421,10 +423,17 @@ export class ProductFormComponent implements OnInit {
     const first = files[0];
     if (!first) { this.model.image_1 = 'assets/img/placeholder-1.png'; return; }
     this.uploadingFeatured = true;
+    this.featuredProgress = 0;
     try {
-      const compressed = await imageCompression(first.file, { maxSizeMB: 3, maxWidthOrHeight: 1920, useWebWorker: true });
-      const result = await this.imageUpload.upload(compressed, 'product');
+      // Combined progress: compression is the first 40%, upload the last 60%.
+      const compressed = await imageCompression(first.file, {
+        maxSizeMB: 3, maxWidthOrHeight: 1920, useWebWorker: true,
+        onProgress: (p: number) => { this.featuredProgress = Math.round(p * 0.4); },
+      });
+      const result = await this.imageUpload.upload(compressed, 'product',
+        (p) => { this.featuredProgress = 40 + Math.round(p * 0.6); });
       this.model.image_1 = result.url;
+      this.featuredProgress = 100;
     } catch (error) {
       this.toast.error('Image upload failed: ' + error);
     } finally {
