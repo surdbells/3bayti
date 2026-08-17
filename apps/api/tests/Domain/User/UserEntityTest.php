@@ -87,6 +87,21 @@ final class UserEntityTest extends TestCase
     }
 
     #[Test]
+    public function requirePasswordChangeSetsFlagAndSetPasswordHashClearsIt(): void
+    {
+        $user = $this->makeUser();
+        self::assertFalse($user->mustChangePassword());
+
+        // Provisioned with a temporary password → force a change on next login.
+        $user->requirePasswordChange();
+        self::assertTrue($user->mustChangePassword());
+
+        // Setting a real password satisfies the requirement, via any flow.
+        $user->setPasswordHash('chosen-by-user');
+        self::assertFalse($user->mustChangePassword());
+    }
+
+    #[Test]
     public function softDeleteMakesIsDeletedTrue(): void
     {
         $user = $this->makeUser();

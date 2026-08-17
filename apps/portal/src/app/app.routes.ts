@@ -23,6 +23,15 @@ export const routes: Routes = [
     title: 'Reset password'
   },
   {
+    // Forced "set a new password" screen for accounts provisioned with a
+    // temporary password. authGuard lets an authenticated user reach it; the
+    // guards redirect must-change users here and keep them until it's done.
+    path: 'change-password',
+    loadComponent: () => import('./public/change-password/change-password.component').then(m => m.ChangePasswordComponent),
+    canActivate: [authGuard],
+    title: 'Set a new password'
+  },
+  {
     path: 'home',
     loadComponent: () => import('./public/home/home.component').then(m => m.HomeComponent),
     title: 'Sell More with Abayti'

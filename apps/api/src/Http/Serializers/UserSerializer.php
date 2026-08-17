@@ -75,6 +75,8 @@ final class UserSerializer
             'country_code' => $user->getCountryCode(),
             'first_name' => $user->getFirstName(),
             'last_name' => $user->getLastName(),
+            // Portal forces a password-change screen while this is true.
+            'must_change_password' => $user->mustChangePassword(),
 
             // Profile fields (M1.7.0+)
             'gender' => $user->getGender(),

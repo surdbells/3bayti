@@ -722,6 +722,10 @@ return function (App $app): void {
             \Bayti\Api\Http\Controllers\Admin\VendorApplication\ApproveVendorApplicationController::class)->add($perm->for('vendors.approve'));
         $group->post('/vendor-applications/{id:[0-9]+}/reject',
             \Bayti\Api\Http\Controllers\Admin\VendorApplication\RejectVendorApplicationController::class)->add($perm->for('vendors.approve'));
+        // Re-issue login credentials + resend the welcome email for an already-
+        // approved application (fresh temporary password, must-change on login).
+        $group->post('/vendor-applications/{id:[0-9]+}/resend-credentials',
+            \Bayti\Api\Http\Controllers\Admin\VendorApplication\ResendVendorApplicationCredentialsController::class)->add($perm->for('vendors.approve'));
 
         // M3.2.X.14-D — Cross-vendor metrics list (admin dashboard).
         // Registered BEFORE /vendors/{id:[0-9]+}/metrics so the

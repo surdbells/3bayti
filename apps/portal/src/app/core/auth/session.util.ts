@@ -24,6 +24,8 @@ export interface PortalSession {
   is_finance?: boolean;
   is_support?: boolean;
   is_phone_verified?: boolean;
+  /** Provisioned with a temporary password — must change it before using the app. */
+  must_change_password?: boolean;
 }
 
 const SESSION_KEY = 'SESSION';
@@ -69,6 +71,37 @@ export function homeRouteFor(s: PortalSession | null): string {
   if (isAdminTier(s)) return '/backend';
   if (isVendor(s)) return '/account';
   return '/login';
+}
+
+/** Route the portal forces onto users who must replace a temporary password. */
+export const CHANGE_PASSWORD_ROUTE = '/change-password';
+
+/** True if the session holder must change a provisioned temporary password. */
+export function mustChangePassword(s: PortalSession | null): boolean {
+  return !!s && s.must_change_password === true;
+}
+
+/**
+ * Merge a patch into the stored session and re-encode it (same
+ * base64(UTF-8(JSON)) format PortalAuthService writes). No-op if there is no
+ * session. `undefined` values are skipped so they never clobber existing
+ * fields. Loosely typed because the stored session is a superset of the read
+ * shape (it also carries refresh_token + token expiries) — used to update the
+ * rotated tokens and clear must_change_password after a forced change.
+ */
+export function patchSession(patch: Record<string, unknown>): void {
+  if (typeof sessionStorage === 'undefined') return;
+  const current = readSession();
+  if (!current) return;
+  const clean: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(patch)) {
+    if (v !== undefined) clean[k] = v;
+  }
+  const json = JSON.stringify({ ...current, ...clean });
+  const bytes = new TextEncoder().encode(json);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  sessionStorage.setItem(SESSION_KEY, btoa(binary));
 }
 
 /** Clear the session (used on logout / invalid). */

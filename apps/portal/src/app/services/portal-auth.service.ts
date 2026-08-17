@@ -55,6 +55,8 @@ export interface PortalSession {
   _sub_admin: boolean;
   is_vendor: boolean;
   is_customer: boolean;
+  /** Provisioned with a temporary password — force a change before use. */
+  must_change_password: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -133,6 +135,7 @@ export class PortalAuthService {
       _sub_admin: roles.includes('sub_admin'),
       is_vendor: roles.includes('vendor'),
       is_customer: roles.includes('customer'),
+      must_change_password: user.must_change_password === true,
     };
   }
 }

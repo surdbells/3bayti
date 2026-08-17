@@ -228,6 +228,7 @@ export type V3RouteKey =
   | 'POST /admin/users/:id/roles'
   | 'POST /admin/vendor-applications/:id/approve'
   | 'POST /admin/vendor-applications/:id/reject'
+  | 'POST /admin/vendor-applications/:id/resend-credentials'
   | 'POST /admin/vendors'
   | 'POST /admin/vendors/:id/approve'
   | 'POST /admin/vendors/:id/compliance/approve'
@@ -530,6 +531,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/users/:id/roles',
   'POST /admin/vendor-applications/:id/approve',
   'POST /admin/vendor-applications/:id/reject',
+  'POST /admin/vendor-applications/:id/resend-credentials',
   'POST /admin/vendors',
   'POST /admin/vendors/:id/approve',
   'POST /admin/vendors/:id/compliance/approve',

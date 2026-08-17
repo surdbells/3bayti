@@ -10,9 +10,6 @@ use Bayti\Api\Domain\Catalog\VendorApplication;
 use Bayti\Api\Domain\Catalog\VendorApplicationRepository;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\Common\SlugHelper;
-use Bayti\Api\Domain\User\OtpAttempt;
-use Bayti\Api\Domain\User\OtpRateLimitException;
-use Bayti\Api\Domain\User\OtpService;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Errors\ErrorCodes;
@@ -21,6 +18,7 @@ use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\RequestContext;
 use Bayti\Api\Http\Responder;
 use Bayti\Api\Http\Serializers\VendorApplicationSerializer;
+use Bayti\Api\Notification\VendorApplicationWelcomeMailer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -38,10 +36,10 @@ use Psr\Log\LoggerInterface;
  *      name=business_name, contactEmail=email, owner=user,
  *      legal_name=business_name, contact_phone) and call vendor->approve()
  *      so it is approved + active + is_store_approved in one step.
- *   3. Email the applicant a "your seller account is approved — set your
- *      password" message by triggering the password-reset OTP path
- *      (reuses the existing reset flow; no new token table).
- *   4. Mark the application approved (vendor_id + reviewed_by + reviewed_at).
+ *   3. Mark the application approved (vendor_id + reviewed_by + reviewed_at).
+ *   4. Email the applicant a welcome/approval message with their login
+ *      credentials — the portal URL, their email, and (for a freshly-created
+ *      account) a temporary password to change on first sign-in. Non-blocking.
  *
  * Idempotent: re-calling on an already-approved application is a 200
  * no-op returning the existing record. Rejected applications cannot be
@@ -58,7 +56,7 @@ final class ApproveVendorApplicationController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly VendorApplicationSerializer $serializer,
-        private readonly OtpService $otpService,
+        private readonly VendorApplicationWelcomeMailer $welcomeMailer,
         private readonly AuditEmitter $audit,
         private readonly LoggerInterface $logger,
     ) {
@@ -115,18 +113,24 @@ final class ApproveVendorApplicationController
         $userRepo = $this->em->getRepository(User::class);
         $user = $userRepo->findByEmail($application->getEmail());
         $userWasCreated = false;
+        // Set for a freshly-provisioned account so we can email the credential;
+        // stays null when the applicant already had a 3bayti account (we never
+        // reset a password they already control).
+        $tempPassword = null;
 
         if ($user === null) {
-            $randomPassword = bin2hex(random_bytes(24));
+            $tempPassword = $this->welcomeMailer->generateTempPassword();
             $user = new User(
                 email: $application->getEmail(),
                 phone: $application->getPhone(),
-                passwordHash: password_hash($randomPassword, PASSWORD_BCRYPT),
+                passwordHash: password_hash($tempPassword, PASSWORD_BCRYPT),
                 countryCode: $application->getCountryCode(),
             );
             $user->setName($application->getFirstName(), $application->getLastName());
             // Admin-vetted → email is trusted.
             $user->markEmailVerified();
+            // They log in with the temp password once, then must replace it.
+            $user->requirePasswordChange();
             $userWasCreated = true;
         }
 
@@ -167,10 +171,10 @@ final class ApproveVendorApplicationController
 
         $this->em->flush();
 
-        // 4. Email the applicant to set their password (reuse the
-        //    password-reset OTP path — no new token table). Non-blocking:
-        //    a mailer / rate-limit failure must NOT fail the approval.
-        $this->sendSetPasswordEmail($user, $request, $userWasCreated);
+        // 4. Welcome the applicant + hand them their login credentials.
+        //    Non-blocking: a mailer failure must NOT fail the approval (the
+        //    account + vendor are already committed).
+        $this->welcomeMailer->sendApprovalWelcome($user, $application, $tempPassword);
 
         $this->audit->recordUpdate(
             request: $request,
@@ -183,38 +187,5 @@ final class ApproveVendorApplicationController
         return $this->ok([
             'application' => $this->serializer->adminShape($application),
         ]);
-    }
-
-    /**
-     * Trigger the existing password-reset OTP email so the freshly-
-     * provisioned vendor can set their password via the portal's
-     * "Forgot password" flow. Entirely non-blocking.
-     */
-    private function sendSetPasswordEmail(
-        User $user,
-        ServerRequestInterface $request,
-        bool $userWasCreated,
-    ): void {
-        // Only send the welcome/set-password email when WE created the
-        // account. An existing user already has a password + the vendor
-        // role can be exercised with their current credentials.
-        if (!$userWasCreated) {
-            return;
-        }
-
-        try {
-            $this->otpService->send(
-                to: $user->getEmail(),
-                purpose: OtpAttempt::PURPOSE_PASSWORD_RESET,
-                channel: OtpAttempt::CHANNEL_EMAIL,
-                user: $user,
-                requestedIp: $this->extractIp($request),
-            );
-        } catch (OtpRateLimitException | \Throwable $e) {
-            $this->logger->warning('vendor-application approve: set-password email failed (non-blocking)', [
-                'user_id' => $user->getId(),
-                'error' => $e->getMessage(),
-            ]);
-        }
     }
 }

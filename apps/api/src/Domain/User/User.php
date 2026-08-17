@@ -350,6 +350,16 @@ class User
     #[ORM\Column(name: 'is_2fa', type: 'boolean', options: ['default' => false])]
     private bool $is2fa = false;
 
+    /**
+     * Force a password change on next sign-in. Set when the account was
+     * provisioned WITH a temporary password we handed out (e.g. an admin
+     * approving a seller application), so the holder must replace it before
+     * doing anything else. Cleared automatically by setPasswordHash() — i.e.
+     * the moment they actually set their own password, via any flow.
+     */
+    #[ORM\Column(name: 'must_change_password', type: 'boolean', options: ['default' => false])]
+    private bool $mustChangePassword = false;
+
     // -------------------------------------------------------------------
     // Audit fields
     // -------------------------------------------------------------------
@@ -632,6 +642,25 @@ class User
     {
         $this->passwordHash = $hash;
         $this->passwordChangedAt = new DateTimeImmutable();
+        // Setting a (new) password satisfies any "must change" requirement,
+        // whatever flow got us here — change-password, reset, admin reset.
+        $this->mustChangePassword = false;
+    }
+
+    /** True when the holder must replace a provisioned temporary password. */
+    public function mustChangePassword(): bool
+    {
+        return $this->mustChangePassword;
+    }
+
+    /**
+     * Require a password change on next sign-in. Call AFTER constructing the
+     * account with the temporary hash (the constructor sets the hash directly,
+     * so it does not clear this).
+     */
+    public function requirePasswordChange(): void
+    {
+        $this->mustChangePassword = true;
     }
 
     /**

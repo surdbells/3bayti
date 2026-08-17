@@ -32,7 +32,21 @@ import {
   isVendor,
   readSession,
   homeRouteFor,
+  mustChangePassword,
+  CHANGE_PASSWORD_ROUTE,
 } from './session.util';
+
+/**
+ * A user provisioned with a temporary password must replace it before doing
+ * anything else. Returns a redirect to the forced change-password screen while
+ * the flag is set — except when they're already there (so no loop).
+ */
+function passwordChangeGate(router: Router, state: RouterStateSnapshot): UrlTree | null {
+  if (mustChangePassword(readSession()) && !state.url.startsWith(CHANGE_PASSWORD_ROUTE)) {
+    return router.createUrlTree([CHANGE_PASSWORD_ROUTE]);
+  }
+  return null;
+}
 
 /** Must be logged in with an active account. */
 export const authGuard: CanActivateFn = (
@@ -40,10 +54,12 @@ export const authGuard: CanActivateFn = (
   state: RouterStateSnapshot,
 ) => {
   const router = inject(Router);
-  if (isAuthenticated()) return true;
-  return router.createUrlTree(['/login'], {
-    queryParams: { returnUrl: state.url },
-  });
+  if (!isAuthenticated()) {
+    return router.createUrlTree(['/login'], {
+      queryParams: { returnUrl: state.url },
+    });
+  }
+  return passwordChangeGate(router, state) ?? true;
 };
 
 /** Must be logged in AND admin-tier (admin / finance / support). */
@@ -58,9 +74,11 @@ export const adminGuard: CanActivateFn = (
     });
   }
   const session = readSession();
-  if (isAdminTier(session)) return true;
-  // Authenticated but wrong role → send to the user's real home.
-  return router.createUrlTree([homeRouteFor(session)]);
+  if (!isAdminTier(session)) {
+    // Authenticated but wrong role → send to the user's real home.
+    return router.createUrlTree([homeRouteFor(session)]);
+  }
+  return passwordChangeGate(router, state) ?? true;
 };
 
 /**
@@ -123,6 +141,8 @@ export const vendorGuard: CanActivateFn = (
     });
   }
   const session = readSession();
-  if (isVendor(session)) return true;
-  return router.createUrlTree([homeRouteFor(session)]);
+  if (!isVendor(session)) {
+    return router.createUrlTree([homeRouteFor(session)]);
+  }
+  return passwordChangeGate(router, state) ?? true;
 };

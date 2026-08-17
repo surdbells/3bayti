@@ -50,30 +50,71 @@
               </td>
               <td style="text-align:center;">{{ formatDate(row.submitted_at) }}</td>
               <td style="text-align:right;">
-                <div class="ax-flex ax-gap-2 ax-justify-end">
-                  <button
-                    *ngIf="isPending(row)"
-                    type="button"
-                    class="ax-btn ax-btn-primary ax-btn-sm"
-                    (click)="approve(row)"
-                    [disabled]="busyId !== null">
-                    <app-icon name="check" aria-hidden="true"></app-icon> {{ 'vendor_applications.approve' | translate }}
-                  </button>
-                  <button
-                    *ngIf="isPending(row)"
-                    type="button"
-                    class="ax-btn ax-btn-danger ax-btn-sm"
-                    (click)="reject(row)"
-                    [disabled]="busyId !== null">
-                    <app-icon name="close" aria-hidden="true"></app-icon> {{ 'vendor_applications.reject' | translate }}
-                  </button>
-                  <span *ngIf="!isPending(row)" class="ax-text-tertiary ax-text-sm">—</span>
-                </div>
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-secondary ax-btn-sm"
+                  (click)="openReview(row)">
+                  <app-icon name="visibility" aria-hidden="true"></app-icon> Review
+                </button>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
+  </div>
+
+  <!-- Review modal — full application details + contextual actions -->
+  <div *ngIf="selected" class="va-modal-overlay" (click)="closeReview()">
+    <div class="ax-modal ax-modal-lg" role="dialog" aria-modal="true" (click)="$event.stopPropagation()">
+      <div class="ax-modal-header">
+        <div class="ax-modal-header-content">
+          <h2 class="ax-modal-title">{{ selected.business }}</h2>
+          <p class="ax-modal-subtitle">
+            {{ selected.name }}
+            <span class="ax-badge" [ngClass]="statusBadgeClass(selected.status)" style="margin-left:.4rem;">{{ ('vendor_applications.status_' + (selected.status || 'pending')) | translate }}</span>
+          </p>
+        </div>
+        <button type="button" class="ax-modal-close" (click)="closeReview()" aria-label="Close">
+          <app-icon name="close" aria-hidden="true"></app-icon>
+        </button>
+      </div>
+
+      <div class="ax-modal-body">
+        <dl class="va-detail">
+          <div><dt>Applicant</dt><dd>{{ selected.name }}</dd></div>
+          <div><dt>Business</dt><dd>{{ selected.business }}</dd></div>
+          <div><dt>Email</dt><dd>{{ selected.email }}</dd></div>
+          <div><dt>Phone</dt><dd>{{ selected.phone }}</dd></div>
+          <div *ngIf="selected.country_code"><dt>Country</dt><dd>{{ selected.country_code }}</dd></div>
+          <div *ngIf="selected.category"><dt>Category</dt><dd>{{ selected.category }}</dd></div>
+          <div *ngIf="selected.license_number"><dt>Trade licence</dt><dd>{{ selected.license_number }}</dd></div>
+          <div><dt>Submitted</dt><dd>{{ formatDate(selected.submitted_at) }}</dd></div>
+          <div *ngIf="selected.reviewed_at"><dt>Reviewed</dt><dd>{{ formatDate(selected.reviewed_at) }}</dd></div>
+          <div *ngIf="selected.reject_reason" class="va-detail-full"><dt>Reject reason</dt><dd>{{ selected.reject_reason }}</dd></div>
+          <div *ngIf="selected.message" class="va-detail-full"><dt>Applicant message</dt><dd>{{ selected.message }}</dd></div>
+        </dl>
+      </div>
+
+      <div class="ax-modal-footer">
+        <button type="button" class="ax-btn ax-btn-ghost" (click)="closeReview()" [disabled]="busyId !== null">Close</button>
+        <button
+          *ngIf="isApproved(selected)"
+          type="button"
+          class="ax-btn ax-btn-secondary"
+          (click)="resend(selected)"
+          [disabled]="busyId !== null">
+          <app-icon name="mail" aria-hidden="true"></app-icon> Resend credentials
+        </button>
+        <ng-container *ngIf="isPending(selected)">
+          <button type="button" class="ax-btn ax-btn-danger" (click)="reject(selected)" [disabled]="busyId !== null">
+            <app-icon name="close" aria-hidden="true"></app-icon> {{ 'vendor_applications.reject' | translate }}
+          </button>
+          <button type="button" class="ax-btn ax-btn-primary" (click)="approve(selected)" [disabled]="busyId !== null">
+            <app-icon name="check" aria-hidden="true"></app-icon> {{ 'vendor_applications.approve' | translate }}
+          </button>
+        </ng-container>
+      </div>
+    </div>
   </div>
 </app-admin-shell>

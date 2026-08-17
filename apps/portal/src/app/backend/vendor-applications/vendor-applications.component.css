@@ -1,1 +1,43 @@
 /* Layout + visuals come from the shared ax-* design system. */
+
+/* Review modal backdrop — centers the .ax-modal card (which is otherwise
+   CDK-positioned elsewhere in the app). */
+.va-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ax-z-modal, 1060);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(28, 28, 30, 0.55);
+  animation: va-overlay-fade 160ms ease-out;
+}
+@keyframes va-overlay-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .va-modal-overlay { animation: none; } }
+
+/* Detail list — two columns on desktop, single column on phones. */
+.va-detail {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 0;
+}
+.va-detail > div { min-width: 0; }
+.va-detail-full { grid-column: 1 / -1; }
+.va-detail dt {
+  font-size: var(--ax-fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ax-color-text-tertiary);
+  margin-bottom: 2px;
+}
+.va-detail dd {
+  margin: 0;
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-primary);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 640px) {
+  .va-detail { grid-template-columns: 1fr; }
+}

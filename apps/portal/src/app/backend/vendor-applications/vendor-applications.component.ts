@@ -18,6 +18,13 @@ interface VendorApplicationRow {
   phone: string;
   status: string;
   submitted_at: string;
+  // Full detail for the review modal.
+  country_code: string;
+  license_number: string;
+  category: string;
+  message: string;
+  reject_reason: string;
+  reviewed_at: string;
 }
 
 @Component({
@@ -39,6 +46,8 @@ export class VendorApplicationsComponent implements OnInit {
   loading = false;
   /** id of the row currently being approved/rejected, to disable its buttons. */
   busyId: number | null = null;
+  /** The application open in the review modal, or null when closed. */
+  selected: VendorApplicationRow | null = null;
 
   constructor(
     private router: Router,
@@ -65,7 +74,17 @@ export class VendorApplicationsComponent implements OnInit {
           phone: a.phone ?? a.contact_phone ?? '—',
           status: a.status ?? 'pending',
           submitted_at: a.submitted_at ?? a.created_at ?? '',
+          country_code: a.country_code ?? '',
+          license_number: a.license_number ?? '',
+          category: a.category ?? '',
+          message: a.message ?? '',
+          reject_reason: a.reject_reason ?? '',
+          reviewed_at: a.reviewed_at ?? '',
         } as VendorApplicationRow));
+        // Keep the open modal in sync with refreshed data (status/reject reason).
+        if (this.selected) {
+          this.selected = this.rows.find((r) => r.id === this.selected!.id) ?? null;
+        }
         this.loading = false;
       },
       error: () => {
@@ -76,6 +95,10 @@ export class VendorApplicationsComponent implements OnInit {
     });
   }
 
+  /** Open the review modal for a row. */
+  openReview(row: VendorApplicationRow) { this.selected = row; }
+  closeReview() { if (this.busyId === null) this.selected = null; }
+
   approve(row: VendorApplicationRow) {
     if (this.busyId !== null) return;
     this.busyId = row.id;
@@ -83,10 +106,11 @@ export class VendorApplicationsComponent implements OnInit {
       next: () => {
         this.toast.success(this.i18n.t('vendor_applications.approve_success', { name: row.business }));
         this.busyId = null;
+        this.selected = null;
         this.load();
       },
-      error: () => {
-        this.toast.error(this.i18n.t('vendor_applications.approve_error'));
+      error: (err: any) => {
+        this.toast.error(this.apiError(err, this.i18n.t('vendor_applications.approve_error')));
         this.busyId = null;
       },
     });
@@ -101,13 +125,53 @@ export class VendorApplicationsComponent implements OnInit {
       next: () => {
         this.toast.success(this.i18n.t('vendor_applications.reject_success', { name: row.business }));
         this.busyId = null;
+        this.selected = null;
         this.load();
       },
-      error: () => {
-        this.toast.error(this.i18n.t('vendor_applications.reject_error'));
+      error: (err: any) => {
+        this.toast.error(this.apiError(err, this.i18n.t('vendor_applications.reject_error')));
         this.busyId = null;
       },
     });
+  }
+
+  /** Re-issue login credentials + resend the welcome email for an approved app. */
+  resend(row: VendorApplicationRow) {
+    if (this.busyId !== null) return;
+    const ok = window.confirm(
+      `Reset ${row.business || 'this vendor'}'s password and email them fresh login credentials?\n\n`
+      + 'This overwrites any password they may have already set.',
+    );
+    if (!ok) return;
+    this.busyId = row.id;
+    this.adapter.post_v3('POST /admin/vendor-applications/:id/resend-credentials', {}, { params: { id: row.id } }).subscribe({
+      next: () => {
+        this.toast.success(`Login credentials emailed to ${row.email}.`);
+        this.busyId = null;
+      },
+      error: (err: any) => {
+        this.toast.error(this.apiError(err, 'Could not resend credentials. Please try again.'));
+        this.busyId = null;
+      },
+    });
+  }
+
+  isApproved(row: VendorApplicationRow): boolean {
+    return (row.status || '').toLowerCase() === 'approved';
+  }
+
+  /** First field-level validation message, else top-level message, else fallback. */
+  private apiError(err: any, fallback: string): string {
+    const body = err?.error?.error ?? err?.error;
+    const details = body?.details;
+    if (details && typeof details === 'object') {
+      for (const key of Object.keys(details)) {
+        const v = (details as Record<string, unknown>)[key];
+        const msg = Array.isArray(v) ? v[0] : v;
+        if (msg) return String(msg);
+      }
+    }
+    return body?.message || fallback;
   }
 
   statusBadgeClass(status: string): string {
