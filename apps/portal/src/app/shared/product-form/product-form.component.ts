@@ -317,8 +317,10 @@ export class ProductFormComponent implements OnInit {
         this.model.quantity = p.stock_quantity ?? p.quantity ?? 0;
         this.model.stock_status = p.stock_status ?? 'in_stock';
         this.model.allow_checkout_when_out_of_stock = !!(p.allow_oversell ?? p.allow_checkout_when_out_of_stock);
-        this.model.minimum_order_quantity = p.min_order_qty ?? p.minimum_order_quantity ?? 1;
-        this.model.maximum_order_quantity = p.max_order_qty ?? p.maximum_order_quantity ?? 1;
+        // Coerce 0/blank to 1: the API requires a positive min/max order qty,
+        // and `0 ?? 1` keeps 0 (0 isn't nullish) — which then fails on save.
+        this.model.minimum_order_quantity = Number(p.min_order_qty ?? p.minimum_order_quantity) || 1;
+        this.model.maximum_order_quantity = Number(p.max_order_qty ?? p.maximum_order_quantity) || 1;
         this.model.is_featured = !!p.is_featured;
         this.model.is_hot = !!p.is_hot;
         this.model.is_new = !!p.is_new;
@@ -504,8 +506,8 @@ export class ProductFormComponent implements OnInit {
       stock_quantity: d.quantity,
       stock_status: d.stock_status,
       allow_oversell: d.allow_checkout_when_out_of_stock,
-      min_order_qty: d.minimum_order_quantity,
-      max_order_qty: d.maximum_order_quantity,
+      min_order_qty: Math.max(1, Number(d.minimum_order_quantity) || 1),
+      max_order_qty: Math.max(1, Number(d.maximum_order_quantity) || 1),
       primary_image_url: primaryImg,
       image_urls: galleryImgs,
       sizes,
@@ -542,7 +544,12 @@ export class ProductFormComponent implements OnInit {
         this.toast.error('Unable to save the product.');
       }
     };
-    const fail = () => { this.ui.loading = false; this.toast.error('Unable to complete your request at this time.'); };
+    // Surface the API's actual reason (e.g. a per-field validation message)
+    // instead of an opaque toast, so the vendor knows exactly what to fix.
+    const fail = (err: unknown) => {
+      this.ui.loading = false;
+      this.toast.error(this.apiErrorMessage(err, 'Unable to complete your request at this time.'));
+    };
 
     if (this.isEdit) {
       const key = this.adminMode ? 'PUT /admin/products/:id' : 'PUT /vendor/products/:id';
@@ -555,6 +562,24 @@ export class ProductFormComponent implements OnInit {
         next: (r: any) => done(!!r?.data?.id, 'Product saved successfully'), error: fail,
       });
     }
+  }
+
+  /**
+   * Best human-readable message from a v3 error envelope
+   * ({ error: { message, details: { field: [msg] } } }). Prefers the first
+   * field-level validation message, then the top-level message, then a fallback.
+   */
+  private apiErrorMessage(err: any, fallback: string): string {
+    const body = err?.error?.error ?? err?.error;
+    const details = body?.details;
+    if (details && typeof details === 'object') {
+      for (const key of Object.keys(details)) {
+        const v = (details as Record<string, unknown>)[key];
+        const msg = Array.isArray(v) ? v[0] : v;
+        if (msg) return String(msg);
+      }
+    }
+    return body?.message || fallback;
   }
 
   private defaultReturn(): string {
