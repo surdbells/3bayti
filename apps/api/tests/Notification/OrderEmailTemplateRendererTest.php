@@ -295,6 +295,44 @@ final class OrderEmailTemplateRendererTest extends TestCase
     }
 
     #[Test]
+    public function itemLifecycleEmailRendersRichItemCard(): void
+    {
+        // Tier-2: per-item lifecycle emails render a rich single-item card
+        // (image + qty) plus the order-ref badge when the OrderItem is passed,
+        // not just a bare "Item: name" line.
+        $order = $this->makeOrder(reference: 'V3-SHIP-1');
+        $this->addItem($order, name: 'Linen Kaftan');
+        $item = $order->getItems()->last();
+
+        $rendered = $this->renderer->render(
+            EmailTemplate::ORDER_SHIPPED_CUSTOMER,
+            $order,
+            ['order_item' => $item],
+        );
+
+        self::assertStringContainsString('Linen Kaftan', $rendered->htmlBody);
+        self::assertStringContainsString('Qty', $rendered->htmlBody);
+        self::assertStringContainsString('cdn/x.jpg', $rendered->htmlBody);
+        self::assertStringContainsString('V3-SHIP-1', $rendered->htmlBody);
+        self::assertStringContainsString('Linen Kaftan', $rendered->textBody);
+    }
+
+    #[Test]
+    public function itemLifecycleEmailFallsBackToItemNameWhenNoOrderItem(): void
+    {
+        // Backward compatibility: callers that only pass item_name still work.
+        $order = $this->makeOrder(reference: 'V3-SHIP-2');
+        $rendered = $this->renderer->render(
+            EmailTemplate::ORDER_DELIVERED_CUSTOMER,
+            $order,
+            ['item_name' => 'Suede Loafers'],
+        );
+
+        self::assertStringContainsString('Suede Loafers', $rendered->htmlBody);
+        self::assertStringContainsString('V3-SHIP-2', $rendered->htmlBody);
+    }
+
+    #[Test]
     public function orderPaymentReminderArabicCustomerGetsArabicCopy(): void
     {
         $order = $this->makeOrder(reference: 'V3-REM-AR');

@@ -221,6 +221,7 @@ final class OrderNotificationService
     {
         $this->sendToCustomer($order, EmailTemplate::ORDER_ACCEPTED_CUSTOMER, [
             'item_name' => $item->getProductNameSnapshot(),
+            'order_item' => $item,
         ]);
     }
 
@@ -231,6 +232,7 @@ final class OrderNotificationService
     {
         $this->sendToCustomer($order, EmailTemplate::ORDER_PREPARING_CUSTOMER, [
             'item_name' => $item->getProductNameSnapshot(),
+            'order_item' => $item,
         ]);
     }
 
@@ -242,6 +244,7 @@ final class OrderNotificationService
     {
         $this->sendToCustomer($order, EmailTemplate::ORDER_REJECTED_CUSTOMER, [
             'item_name' => $item->getProductNameSnapshot(),
+            'order_item' => $item,
         ]);
     }
 
@@ -254,6 +257,7 @@ final class OrderNotificationService
     {
         $this->sendToCustomer($order, EmailTemplate::ORDER_SHIPPED_CUSTOMER, [
             'item_name' => $item->getProductNameSnapshot(),
+            'order_item' => $item,
         ]);
     }
 
@@ -264,6 +268,7 @@ final class OrderNotificationService
     {
         $this->sendToCustomer($order, EmailTemplate::ORDER_DELIVERED_CUSTOMER, [
             'item_name' => $item->getProductNameSnapshot(),
+            'order_item' => $item,
         ]);
     }
 

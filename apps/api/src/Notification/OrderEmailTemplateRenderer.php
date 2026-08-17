@@ -502,214 +502,193 @@ TXT,
     /**
      * @param array<string, mixed> $extra
      */
+    /**
+     * A focused single-item card (image, name, qty, size/colour, measurements)
+     * for per-item lifecycle emails — richer than a bare item name, without the
+     * whole-order pricing/address block.
+     *
+     * @return array{0: string, 1: string} [text, html]
+     */
+    private function itemCard(Order $order, OrderItem $item, bool $ar): array
+    {
+        $cur = $order->getCurrency();
+        $l = $ar
+            ? ['qty' => 'الكمية', 'size' => 'المقاس', 'color' => 'اللون', 'measures' => 'القياسات']
+            : ['qty' => 'Qty', 'size' => 'Size', 'color' => 'Color', 'measures' => 'Measurements'];
+
+        $name  = $item->getProductNameSnapshot();
+        $qty   = (string) $item->getQuantity();
+        $price = $item->getUnitPrice();
+
+        $metaParts = [];
+        if ($item->getSize() !== null && $item->getSize() !== '') {
+            $metaParts[] = $l['size'] . ': ' . (string) $item->getSize();
+        }
+        if ($item->getColor() !== null && $item->getColor() !== '') {
+            $metaParts[] = $l['color'] . ': ' . (string) $item->getColor();
+        }
+        $measParts = [];
+        foreach ($this->measurementPairs($item) as $k => $v) {
+            $measParts[] = "{$k}: {$v}";
+        }
+
+        $text = "{$name} (x{$qty}) — {$price} {$cur}\n";
+        if ($metaParts !== []) {
+            $text .= '  ' . implode(' · ', $metaParts) . "\n";
+        }
+        if ($measParts !== []) {
+            $text .= '  ' . $l['measures'] . ': ' . implode(' · ', $measParts) . "\n";
+        }
+
+        $img = trim((string) $item->getProductImageSnapshot());
+        $imgCell = $img !== ''
+            ? '<td width="68" style="padding:0 12px 0 0;vertical-align:top;"><img src="' . $this->esc($img)
+                . '" width="56" height="56" alt="" style="width:56px;height:56px;border-radius:8px;object-fit:cover;border:1px solid #eee;"></td>'
+            : '';
+        $metaLine = $metaParts !== []
+            ? '<div style="font-size:12px;color:#8a8378;margin-top:2px;">' . $this->esc(implode(' · ', $metaParts)) . '</div>'
+            : '';
+        $measBlock = $measParts !== []
+            ? '<div style="font-size:12px;color:#8a8378;margin-top:4px;"><strong>' . $this->esc($l['measures'])
+                . ':</strong> ' . $this->esc(implode(' · ', $measParts)) . '</div>'
+            : '';
+
+        $html = '<table role="presentation" width="100%" style="border:1px solid #f0e9dd;border-radius:12px;margin:14px 0;">'
+            . '<tr><td style="padding:14px 18px;"><table role="presentation" width="100%"><tr>' . $imgCell
+            . '<td style="vertical-align:top;">'
+            . '<div style="font-size:15px;font-weight:600;color:#1c1c1e;">' . $this->esc($name) . '</div>'
+            . '<div style="font-size:12px;color:#8a8378;margin-top:2px;">' . $this->esc($l['qty'] . ': ' . $qty) . '</div>'
+            . $metaLine . $measBlock
+            . '</td>'
+            . '<td width="96" style="vertical-align:top;text-align:right;font-size:15px;font-weight:600;white-space:nowrap;">'
+            . $this->esc($price . ' ' . $cur) . '</td>'
+            . '</tr></table></td></tr></table>';
+
+        return [$text, $html];
+    }
+
+    /**
+     * Shared renderer for a per-item lifecycle email (accepted / preparing /
+     * rejected / shipped / delivered). Shows the order-reference badge plus a
+     * rich single-item card when the OrderItem is passed as $extra['order_item']
+     * (falls back to the bare item name otherwise, for backward compatibility).
+     *
+     * @param array<string, mixed> $extra
+     * @param array{subject: string, title: string, lead: string, closing: string} $copy
+     */
+    private function itemLifecycleEmail(Order $order, array $extra, bool $ar, array $copy): RenderedEmail
+    {
+        $ref = $order->getOrderReference();
+        $item = $extra['order_item'] ?? null;
+
+        if ($item instanceof OrderItem) {
+            [$itemText, $itemHtml] = $this->itemCard($order, $item, $ar);
+        } else {
+            $label = $ar ? 'المنتج' : 'Item';
+            $name  = (string) ($extra['item_name'] ?? ($ar ? 'منتجك' : 'Your item'));
+            $itemText = "{$label}: {$name}";
+            $itemHtml = '<p style="font-size:14px;color:#4a453e;line-height:1.6;"><strong>'
+                . $this->esc($label) . ':</strong> ' . $this->esc($name) . '</p>';
+        }
+
+        $refLabel = $ar ? 'رقم الطلب' : 'Order reference';
+        $text = $copy['lead'] . "\n\n"
+            . "{$refLabel}: {$ref}\n\n"
+            . $itemText . "\n"
+            . $copy['closing'] . "\n\n— 3bayti";
+
+        $html = '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">' . $this->esc($copy['lead']) . '</p>'
+            . $this->refBadgeHtml($ref, $ar)
+            . $itemHtml
+            . '<p style="font-size:14px;color:#4a453e;line-height:1.6;">' . $this->esc($copy['closing']) . '</p>';
+
+        return new RenderedEmail(
+            subject: $copy['subject'],
+            textBody: $text,
+            htmlBody: $this->wrapHtml(
+                title: $copy['title'],
+                preheader: $copy['title'],
+                body: $html,
+                locale: $ar ? User::LOCALE_AR : User::LOCALE_EN,
+            ),
+        );
+    }
+
     private function orderAcceptedCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'Your item');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "Your order {$ref} is confirmed by the seller — 3bayti",
-            textBody: <<<TXT
-Good news — the seller has accepted an item from your order and will begin preparing it.
-
-Order reference: {$ref}
-Item: {$itemName}
-
-We'll keep you posted as it moves through to shipping.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: "Order confirmed by the seller",
-                body: <<<HTML
-<p>Good news — the seller has accepted an item from your order and will begin preparing it.</p>
-<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
-<strong>Item:</strong> {$itemNameEsc}</p>
-<p>We'll keep you posted as it moves through to shipping.</p>
-HTML,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, false, [
+            'subject' => "Your order {$ref} is confirmed by the seller — 3bayti",
+            'title'   => 'Order confirmed by the seller',
+            'lead'    => 'Good news — the seller has accepted an item from your order and will begin preparing it.',
+            'closing' => "We'll keep you posted as it moves through to shipping.",
+        ]);
     }
 
     private function orderAcceptedCustomerAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'منتجك');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "تم تأكيد طلبك {$ref} من قبل البائع — 3bayti",
-            textBody: <<<TXT
-خبر سار — قبل البائع أحد منتجات طلبك وسيبدأ في تجهيزه.
-
-رقم الطلب: {$ref}
-المنتج: {$itemName}
-
-سنبقيك على اطلاع حتى يتم الشحن.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: "تم تأكيد الطلب من قبل البائع",
-                body: <<<HTML
-<p>خبر سار — قبل البائع أحد منتجات طلبك وسيبدأ في تجهيزه.</p>
-<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
-<strong>المنتج:</strong> {$itemNameEsc}</p>
-<p>سنبقيك على اطلاع حتى يتم الشحن.</p>
-HTML,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, true, [
+            'subject' => "تم تأكيد طلبك {$ref} من قبل البائع — 3bayti",
+            'title'   => 'تم تأكيد الطلب من قبل البائع',
+            'lead'    => 'خبر سار — قبل البائع أحد منتجات طلبك وسيبدأ في تجهيزه.',
+            'closing' => 'سنبقيك على اطلاع حتى يتم الشحن.',
+        ]);
     }
 
     private function orderPreparingCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'Your item');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "Your order {$ref} is being prepared — 3bayti",
-            textBody: <<<TXT
-An item from your order is now being prepared for shipment.
-
-Order reference: {$ref}
-Item: {$itemName}
-
-You'll receive a notification as soon as it ships.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: "Order being prepared",
-                body: <<<HTML
-<p>An item from your order is now being prepared for shipment.</p>
-<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
-<strong>Item:</strong> {$itemNameEsc}</p>
-<p>You'll receive a notification as soon as it ships.</p>
-HTML,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, false, [
+            'subject' => "Your order {$ref} is being prepared — 3bayti",
+            'title'   => 'Order being prepared',
+            'lead'    => 'An item from your order is now being prepared for shipment.',
+            'closing' => "You'll receive a notification as soon as it ships.",
+        ]);
     }
 
     private function orderPreparingCustomerAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'منتجك');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "جارٍ تجهيز طلبك {$ref} — 3bayti",
-            textBody: <<<TXT
-يتم الآن تجهيز أحد منتجات طلبك للشحن.
-
-رقم الطلب: {$ref}
-المنتج: {$itemName}
-
-ستصلك رسالة فور شحنه.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: "جارٍ تجهيز الطلب",
-                body: <<<HTML
-<p>يتم الآن تجهيز أحد منتجات طلبك للشحن.</p>
-<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
-<strong>المنتج:</strong> {$itemNameEsc}</p>
-<p>ستصلك رسالة فور شحنه.</p>
-HTML,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, true, [
+            'subject' => "جارٍ تجهيز طلبك {$ref} — 3bayti",
+            'title'   => 'جارٍ تجهيز الطلب',
+            'lead'    => 'يتم الآن تجهيز أحد منتجات طلبك للشحن.',
+            'closing' => 'ستصلك رسالة فور شحنه.',
+        ]);
     }
 
     private function orderRejectedCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'An item');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "Update on your order {$ref} — 3bayti",
-            textBody: <<<TXT
-We're sorry — the seller is unable to fulfil an item from your order.
-
-Order reference: {$ref}
-Item: {$itemName}
-
-If you were charged for this item, a refund will be processed automatically. Any other items in your order are unaffected.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: "Update on your order",
-                body: <<<HTML
-<p>We're sorry — the seller is unable to fulfil an item from your order.</p>
-<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
-<strong>Item:</strong> {$itemNameEsc}</p>
-<p>If you were charged for this item, a refund will be processed automatically. Any other items in your order are unaffected.</p>
-HTML,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, false, [
+            'subject' => "Update on your order {$ref} — 3bayti",
+            'title'   => 'Update on your order',
+            'lead'    => "We're sorry — the seller is unable to fulfil an item from your order.",
+            'closing' => 'If you were charged for this item, a refund will be processed automatically. Any other items in your order are unaffected.',
+        ]);
     }
 
     private function orderRejectedCustomerAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'أحد المنتجات');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "تحديث بخصوص طلبك {$ref} — 3bayti",
-            textBody: <<<TXT
-نأسف — البائع غير قادر على تنفيذ أحد منتجات طلبك.
-
-رقم الطلب: {$ref}
-المنتج: {$itemName}
-
-إذا تم خصم قيمة هذا المنتج، فسيتم رد المبلغ تلقائيًا. باقي منتجات طلبك غير متأثرة.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: "تحديث بخصوص طلبك",
-                body: <<<HTML
-<p>نأسف — البائع غير قادر على تنفيذ أحد منتجات طلبك.</p>
-<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
-<strong>المنتج:</strong> {$itemNameEsc}</p>
-<p>إذا تم خصم قيمة هذا المنتج، فسيتم رد المبلغ تلقائيًا. باقي منتجات طلبك غير متأثرة.</p>
-HTML,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, true, [
+            'subject' => "تحديث بخصوص طلبك {$ref} — 3bayti",
+            'title'   => 'تحديث بخصوص طلبك',
+            'lead'    => 'نأسف — البائع غير قادر على تنفيذ أحد منتجات طلبك.',
+            'closing' => 'إذا تم خصم قيمة هذا المنتج، فسيتم رد المبلغ تلقائيًا. باقي منتجات طلبك غير متأثرة.',
+        ]);
     }
 
     private function orderShippedCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'Your item');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "Your order {$ref} has shipped — 3bayti",
-            textBody: <<<TXT
-Good news — an item from your order is on its way.
-
-Order reference: {$ref}
-Item: {$itemName}
-
-You'll receive another email when it's delivered.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: "Order shipped",
-                body: <<<HTML
-<p>Good news — an item from your order is on its way.</p>
-<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
-<strong>Item:</strong> {$itemNameEsc}</p>
-<p>You'll receive another email when it's delivered.</p>
-HTML,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, false, [
+            'subject' => "Your order {$ref} has shipped — 3bayti",
+            'title'   => 'Order shipped',
+            'lead'    => 'Good news — an item from your order is on its way.',
+            'closing' => "You'll receive another email when it's delivered.",
+        ]);
     }
 
     /**
@@ -718,32 +697,12 @@ HTML,
     private function orderDeliveredCustomerEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'Your item');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "Order {$ref} delivered — 3bayti",
-            textBody: <<<TXT
-An item from your order has been delivered.
-
-Order reference: {$ref}
-Item: {$itemName}
-
-We hope you enjoy it. If there's anything wrong, contact us within
-7 days and we'll make it right.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: "Order delivered",
-                body: <<<HTML
-<p>An item from your order has been delivered.</p>
-<p><strong>Order reference:</strong> {$this->esc($ref)}<br>
-<strong>Item:</strong> {$itemNameEsc}</p>
-<p>We hope you enjoy it. If there's anything wrong, contact us within 7 days and we'll make it right.</p>
-HTML,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, false, [
+            'subject' => "Order {$ref} delivered — 3bayti",
+            'title'   => 'Order delivered',
+            'lead'    => 'An item from your order has been delivered.',
+            'closing' => "We hope you enjoy it. If there's anything wrong, contact us within 7 days and we'll make it right.",
+        ]);
     }
 
     /**
@@ -1772,32 +1731,12 @@ TXT,
     private function orderShippedCustomerAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'منتجك');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "تم شحن طلبك {$ref} — 3bayti",
-            textBody: <<<TXT
-خبر سار — أحد منتجات طلبك في طريقه إليك.
-
-رقم الطلب: {$ref}
-المنتج: {$itemName}
-
-سيصلك بريد إلكتروني آخر عند تسليمه.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: 'تم شحن طلبك',
-                body: <<<HTML
-<p>خبر سار — أحد منتجات طلبك في طريقه إليك.</p>
-<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
-<strong>المنتج:</strong> {$itemNameEsc}</p>
-<p>سيصلك بريد إلكتروني آخر عند تسليمه.</p>
-HTML,
-                locale: User::LOCALE_AR,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, true, [
+            'subject' => "تم شحن طلبك {$ref} — 3bayti",
+            'title'   => 'تم شحن طلبك',
+            'lead'    => 'خبر سار — أحد منتجات طلبك في طريقه إليك.',
+            'closing' => 'سيصلك بريد إلكتروني آخر عند تسليمه.',
+        ]);
     }
 
     /**
@@ -1806,33 +1745,12 @@ HTML,
     private function orderDeliveredCustomerAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
-        $itemName = (string) ($extra['item_name'] ?? 'منتجك');
-        $itemNameEsc = $this->esc($itemName);
-
-        return new RenderedEmail(
-            subject: "تم تسليم طلبك {$ref} — 3bayti",
-            textBody: <<<TXT
-تم تسليم أحد منتجات طلبك.
-
-رقم الطلب: {$ref}
-المنتج: {$itemName}
-
-نتمنى أن ينال إعجابك. إذا كان هناك أي خلل، تواصل معنا خلال
-7 أيام وسنعالج الأمر.
-
-— 3bayti
-TXT,
-            htmlBody: $this->wrapHtml(
-                title: 'تم تسليم طلبك',
-                body: <<<HTML
-<p>تم تسليم أحد منتجات طلبك.</p>
-<p><strong>رقم الطلب:</strong> {$this->esc($ref)}<br>
-<strong>المنتج:</strong> {$itemNameEsc}</p>
-<p>نتمنى أن ينال إعجابك. إذا كان هناك أي خلل، تواصل معنا خلال 7 أيام وسنعالج الأمر.</p>
-HTML,
-                locale: User::LOCALE_AR,
-            ),
-        );
+        return $this->itemLifecycleEmail($order, $extra, true, [
+            'subject' => "تم تسليم طلبك {$ref} — 3bayti",
+            'title'   => 'تم تسليم طلبك',
+            'lead'    => 'تم تسليم أحد منتجات طلبك.',
+            'closing' => 'نتمنى أن ينال إعجابك. إذا كان هناك أي خلل، تواصل معنا خلال 7 أيام وسنعالج الأمر.',
+        ]);
     }
 
     /**
