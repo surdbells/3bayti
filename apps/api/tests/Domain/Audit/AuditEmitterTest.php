@@ -226,6 +226,30 @@ final class AuditEmitterTest extends TestCase
     }
 
     #[Test]
+    public function snapshotsVendorApplication(): void
+    {
+        // Regression for PHP-1S: approving/rejecting a seller application
+        // snapshots the VendorApplication, which had no strategy and threw
+        // "No snapshot strategy for ...VendorApplication" -> 500.
+        $application = new \Bayti\Api\Domain\Catalog\VendorApplication(
+            firstName: 'Sara',
+            lastName: 'Malik',
+            email: 'Sara@Example.com',
+            phone: '+971500000000',
+            businessName: 'Sara Couture',
+        );
+
+        $snapshot = $this->emitter->snapshot($application);
+
+        self::assertSame('Sara', $snapshot['first_name']);
+        self::assertSame('sara@example.com', $snapshot['email']);
+        self::assertSame('Sara Couture', $snapshot['business_name']);
+        self::assertArrayHasKey('status', $snapshot);
+        self::assertArrayHasKey('reject_reason', $snapshot);
+        self::assertNull($snapshot['vendor_id']);
+    }
+
+    #[Test]
     public function extractsIpFromServerParams(): void
     {
         $user = $this->makeUser(50);

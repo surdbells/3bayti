@@ -279,6 +279,8 @@ final class AuditEmitter
                 => $this->snapshotBrand($subject),
             $subject instanceof \Bayti\Api\Domain\Catalog\Vendor
                 => $this->snapshotVendor($subject),
+            $subject instanceof \Bayti\Api\Domain\Catalog\VendorApplication
+                => $this->snapshotVendorApplication($subject),
             $subject instanceof \Bayti\Api\Domain\Catalog\Category
                 => $this->snapshotCategory($subject),
             $subject instanceof \Bayti\Api\Domain\Promo\PromoCode
@@ -582,6 +584,33 @@ final class AuditEmitter
             // the audit log diff (operator forensics: "who set this
             // vendor to Arabic when?").
             'preferred_locale' => $v->getPreferredLocale(),
+        ];
+    }
+
+    /**
+     * Seller-application snapshot. Captures the review-relevant fields so the
+     * approve/reject audit diff shows the status transition, the reject reason,
+     * and the vendor the application resolved to. Volatile timestamps and the
+     * free-text applicant message are intentionally omitted.
+     *
+     * reviewed_by / vendor captured as scalar ids — the audit log is meant to
+     * be readable without joins.
+     */
+    private function snapshotVendorApplication(\Bayti\Api\Domain\Catalog\VendorApplication $a): array
+    {
+        return [
+            'first_name' => $a->getFirstName(),
+            'last_name' => $a->getLastName(),
+            'email' => $a->getEmail(),
+            'phone' => $a->getPhone(),
+            'country_code' => $a->getCountryCode(),
+            'business_name' => $a->getBusinessName(),
+            'license_number' => $a->getLicenseNumber(),
+            'category' => $a->getCategory(),
+            'status' => $a->getStatus(),
+            'reject_reason' => $a->getRejectReason(),
+            'vendor_id' => $a->getVendor()?->getId(),
+            'reviewed_by' => $a->getReviewedBy()?->getId(),
         ];
     }
 
