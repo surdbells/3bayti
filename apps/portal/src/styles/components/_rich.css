@@ -287,8 +287,19 @@
   font-size: var(--ax-fs-sm);
   line-height: var(--ax-lh-relaxed);
   color: var(--ax-color-text-primary);
+  /* Column flex so the ProseMirror surface below can stretch to fill the
+     whole box — otherwise it's only as tall as its content and clicks in the
+     empty area don't place the caret. */
+  display: flex;
+  flex-direction: column;
 }
 .ax-editor-body:focus-visible {
+  outline: none;
+}
+/* The actual contenteditable Tiptap mounts. Fill the body's height so the
+   entire box is clickable/editable, and drop the default focus outline. */
+.ax-editor-body .ProseMirror {
+  flex: 1 1 auto;
   outline: none;
 }
 
