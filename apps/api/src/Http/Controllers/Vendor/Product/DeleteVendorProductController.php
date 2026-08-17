@@ -17,13 +17,17 @@ use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * DELETE /v3/vendor/products/{id}
  *
- * Soft-delete a product owned by the authenticated vendor. Sets
- * status to 'soft_deleted' so historical order data referencing the
- * product is preserved.
+ * Deletes a product owned by the authenticated vendor. A product that has
+ * ever sold is SOFT-deleted (status='soft_deleted') so historical order/return
+ * data referencing it stays intact; a product with no sales is FULLY removed
+ * (its transient cart rows are cleared first, and CASCADE/SET NULL foreign keys
+ * handle wishlist, collections, reviews, etc.).
  */
 final class DeleteVendorProductController
 {
@@ -32,6 +36,7 @@ final class DeleteVendorProductController
     public function __construct(
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
 
@@ -69,8 +74,40 @@ final class DeleteVendorProductController
             throw HttpException::forbidden('You do not own this product.');
         }
 
-        $product->softDelete();
-        $productRepo->save($product);
+        $conn = $this->em->getConnection();
+
+        // Real sales history → keep the row (order/return records reference it;
+        // order_items.product_id RESTRICTs deletion). Never sold → remove fully.
+        $soldCount = (int) $conn->fetchOne(
+            'SELECT COUNT(*) FROM order_items WHERE product_id = :pid',
+            ['pid' => $productId],
+        );
+
+        if ($soldCount > 0) {
+            $product->softDelete();
+            $productRepo->save($product);
+            return $this->noContent();
+        }
+
+        // Never sold — hard delete. Clear the transient cart rows first (a
+        // deleted product can't be checked out anyway); CASCADE / SET NULL FKs
+        // handle the rest. Raw DBAL in a transaction, so an unexpected reference
+        // throws without closing the EntityManager and we fall back to a soft
+        // delete instead of 500-ing.
+        try {
+            $conn->transactional(function ($c) use ($productId): void {
+                $c->executeStatement('DELETE FROM cart_items WHERE product_id = :pid', ['pid' => $productId]);
+                $c->executeStatement('DELETE FROM products WHERE id = :pid', ['pid' => $productId]);
+            });
+            $this->em->detach($product);
+        } catch (\Throwable $e) {
+            $this->logger->warning('vendor product hard-delete fell back to soft-delete', [
+                'product_id' => $productId,
+                'error' => $e->getMessage(),
+            ]);
+            $product->softDelete();
+            $productRepo->save($product);
+        }
 
         return $this->noContent();
     }

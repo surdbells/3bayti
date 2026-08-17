@@ -168,6 +168,18 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
     this.buildTableSource();
     this.fetchProducts();
   }
+
+  /** Status chip filter — '' = All (excludes soft-deleted), 'active', 'draft'. */
+  readonly statusChips: { value: string; label: string }[] = [
+    { value: 'active', label: 'Active' },
+    { value: 'draft', label: 'Draft' },
+    { value: '', label: 'All' },
+  ];
+  setStatusFilter(status: string): void {
+    if (this.filters.status === status) return;
+    this.filters.status = status;
+    this.reloadProducts();
+  }
   pagination: Pagination = { page: 1, per_page: 10, total: 0, total_pages: 0 };
 
   // ── Preview drawer ─────────────────────────────────────────────
@@ -220,7 +232,7 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
   // ── Filters ────────────────────────────────────────────────────
   filters = {
     search: '',
-    status: '',
+    status: 'active',   // default the list to live (Active/Published) products
     stock_status: '',
     category_id: null as number | null,
     price_min: null as number | null,

@@ -150,6 +150,11 @@ class ProductRepository extends EntityRepository
         $status = $filters['status'] ?? null;
         if (is_string($status) && $status !== '') {
             $qb->andWhere('p.status = :status')->setParameter('status', $status);
+        } else {
+            // Vendors never see soft-deleted products (kept only for order
+            // history) — exclude them from the default, unfiltered list.
+            $qb->andWhere('p.status != :softDeleted')
+               ->setParameter('softDeleted', Product::STATUS_SOFT_DELETED);
         }
 
         $stockStatus = $filters['stock_status'] ?? null;

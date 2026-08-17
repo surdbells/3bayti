@@ -90,18 +90,25 @@
       </div>
     </div>
 
+    <!-- Status chip filter (always visible; defaults to Active) -->
+    <div class="ax-page-section">
+      <div class="vp-status-chips" role="tablist" aria-label="Filter products by status">
+        <button *ngFor="let chip of statusChips" type="button"
+          class="ax-btn ax-btn-sm vp-status-chip"
+          [class.ax-btn-primary]="filters.status === chip.value"
+          [class.ax-btn-ghost]="filters.status !== chip.value"
+          [attr.aria-pressed]="filters.status === chip.value"
+          (click)="setStatusFilter(chip.value)">
+          {{ chip.label }}
+        </button>
+      </div>
+    </div>
+
     <!-- Filters panel -->
     <div *ngIf="ui.filters_open" class="ax-page-section">
       <div class="ax-card ax-p-5">
         <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-4 ax-gap-3">
-          <div class="ax-form-field">
-            <label class="ax-label">Status</label>
-            <select class="ax-select" [(ngModel)]="filters.status" name="filter_status">
-              <option value="">All statuses</option>
-              <option value="published">Published</option>
-              <option value="draft">Draft</option>
-            </select>
-          </div>
+          <!-- Status lives in the always-visible chip bar above. -->
           <div class="ax-form-field">
             <label class="ax-label">Stock</label>
             <select class="ax-select" [(ngModel)]="filters.stock_status" name="filter_stock">
