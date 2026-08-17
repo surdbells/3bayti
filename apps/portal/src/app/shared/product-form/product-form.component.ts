@@ -177,6 +177,11 @@ export class ProductFormComponent implements OnInit {
   galleryFiles: AxUploadFile[] = [];
   private galleryUrls: string[] = [];
   existingImages: string[] = [];
+  // Uploads are async (compress + upload), so model.image_1 / galleryUrls
+  // aren't set until they resolve. Track in-flight state so submit waits
+  // instead of validating against the stale placeholder.
+  uploadingFeatured = false;
+  uploadingGallery = false;
 
   // ── Colors ────────────────────────────────────────────────────
   selected = new Set<string>();
@@ -415,18 +420,22 @@ export class ProductFormComponent implements OnInit {
     this.featuredFiles = files;
     const first = files[0];
     if (!first) { this.model.image_1 = 'assets/img/placeholder-1.png'; return; }
+    this.uploadingFeatured = true;
     try {
       const compressed = await imageCompression(first.file, { maxSizeMB: 3, maxWidthOrHeight: 1920, useWebWorker: true });
       const result = await this.imageUpload.upload(compressed, 'product');
       this.model.image_1 = result.url;
     } catch (error) {
       this.toast.error('Image upload failed: ' + error);
+    } finally {
+      this.uploadingFeatured = false;
     }
   }
 
   async onGalleryChange(files: AxUploadFile[]): Promise<void> {
     if (files.length > 5) { this.toast.error('You can only add up to 5 gallery images'); files = files.slice(0, 5); }
     this.galleryFiles = files;
+    this.uploadingGallery = true;
     try {
       const results = await Promise.all(
         files.map(async (uf) => {
@@ -439,6 +448,8 @@ export class ProductFormComponent implements OnInit {
       this.galleryUrls = [...this.existingImages, ...results].slice(0, 5);
     } catch (error) {
       this.toast.error('Image compression failed: ' + error);
+    } finally {
+      this.uploadingGallery = false;
     }
   }
 
@@ -446,6 +457,12 @@ export class ProductFormComponent implements OnInit {
   //  VALIDATION + SUBMIT
   // ═══════════════════════════════════════════════════════════════
   private validate(): boolean {
+    // An image upload may still be in flight (compress + upload is async), so
+    // model.image_1 / galleryUrls aren't set yet. Ask the user to wait rather
+    // than falsely reporting "Featured image is required".
+    if (this.uploadingFeatured || this.uploadingGallery) {
+      this.toast.error('Please wait for the image upload to finish.'); return false;
+    }
     // Store is only chosen at create time; on edit it's fixed (read-only), so
     // don't block the save on it — the product already belongs to a vendor.
     if (this.adminMode && !this.isEdit && !this.model.vendor_id) { this.toast.error('Select the store this product belongs to'); return false; }

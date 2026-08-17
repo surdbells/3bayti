@@ -12,11 +12,11 @@
     </div>
 
     <div class="ax-flex ax-gap-2 ax-items-center">
-      <button type="button" class="ax-btn ax-btn-outline" (click)="startSave()" [disabled]="ui.loading">
+      <button type="button" class="ax-btn ax-btn-outline" (click)="startSave()" [disabled]="ui.loading || uploadingFeatured || uploadingGallery">
         <app-icon name="save" aria-hidden="true"></app-icon>
         Save as draft
       </button>
-      <button type="button" class="ax-btn ax-btn-primary" (click)="startPublish()" [disabled]="ui.loading">
+      <button type="button" class="ax-btn ax-btn-primary" (click)="startPublish()" [disabled]="ui.loading || uploadingFeatured || uploadingGallery">
         <span *ngIf="ui.loading" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
         <app-icon name="publish" *ngIf="!ui.loading" aria-hidden="true"></app-icon>
         {{ isEdit ? 'Save changes' : 'Publish' }}
@@ -329,8 +329,8 @@
 
       <!-- Sticky save bar (mobile) -->
       <div class="ax-flex ax-gap-2 ax-lg-hidden">
-        <button type="button" class="ax-btn ax-btn-outline" (click)="startSave()" [disabled]="ui.loading" style="flex: 1;">Save draft</button>
-        <button type="button" class="ax-btn ax-btn-primary" (click)="startPublish()" [disabled]="ui.loading" style="flex: 1;">{{ isEdit ? 'Save' : 'Publish' }}</button>
+        <button type="button" class="ax-btn ax-btn-outline" (click)="startSave()" [disabled]="ui.loading || uploadingFeatured || uploadingGallery" style="flex: 1;">Save draft</button>
+        <button type="button" class="ax-btn ax-btn-primary" (click)="startPublish()" [disabled]="ui.loading || uploadingFeatured || uploadingGallery" style="flex: 1;">{{ isEdit ? 'Save' : 'Publish' }}</button>
       </div>
     </aside>
   </div>
