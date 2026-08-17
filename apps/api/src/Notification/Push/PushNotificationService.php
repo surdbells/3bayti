@@ -179,8 +179,8 @@ class PushNotificationService
     {
         $ref = $order->getOrderReference();
         $this->pushToCustomer($order, 'order.rejected', [
-            'en' => ['Order update', sprintf('There is an update on order %s.', $ref)],
-            'ar' => ['تحديث الطلب', sprintf('هناك تحديث بخصوص الطلب %s.', $ref)],
+            'en' => ['Item unavailable', sprintf("Sorry — an item in order %s couldn't be fulfilled. Tap for details and any refund.", $ref)],
+            'ar' => ['منتج غير متوفر', sprintf('عذراً — تعذّر تجهيز أحد منتجات الطلب %s. اضغط للتفاصيل وأي استرداد.', $ref)],
         ]);
     }
 
@@ -234,10 +234,30 @@ class PushNotificationService
     public function orderStatusChanged(Order $order): void
     {
         $ref = $order->getOrderReference();
+        [$enStatus, $arStatus] = $this->statusLabels($order->getStatus());
         $this->pushToCustomer($order, 'order.status_changed', [
-            'en' => ['Order update', sprintf('There is an update on order %s.', $ref)],
-            'ar' => ['تحديث الطلب', sprintf('هناك تحديث بخصوص الطلب %s.', $ref)],
+            'en' => ['Order update', sprintf('Your order %s is now %s.', $ref, $enStatus)],
+            'ar' => ['تحديث الطلب', sprintf('طلبك %s الآن %s.', $ref, $arStatus)],
         ]);
+    }
+
+    /**
+     * Friendly [en, ar] labels for an order status, so the status-change push
+     * names the actual state instead of "there is an update".
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function statusLabels(string $status): array
+    {
+        return match ($status) {
+            'paid'       => ['confirmed', 'مؤكد'],
+            'fulfilling' => ['being prepared', 'قيد التجهيز'],
+            'shipped'    => ['on its way', 'في الطريق'],
+            'delivered'  => ['delivered', 'تم التوصيل'],
+            'cancelled'  => ['cancelled', 'ملغى'],
+            'refunded'   => ['refunded', 'تم الاسترداد'],
+            default      => [str_replace('_', ' ', $status), str_replace('_', ' ', $status)],
+        };
     }
 
     // -----------------------------------------------------------------

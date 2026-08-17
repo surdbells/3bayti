@@ -1009,31 +1009,42 @@ TXT,
     private function orderCancelledVendorEn(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
+        $vendorName = (string) ($extra['vendor_name'] ?? '');
+        $greeting = $vendorName !== '' ? "Hi {$vendorName}," : 'Hi,';
         $reason = (string) ($extra['reason'] ?? '');
-        $reasonLine = $reason !== '' ? "Reason: {$reason}" : '';
-        $reasonLineHtml = $reason !== '' ? "<p><strong>Reason:</strong> {$this->esc($reason)}</p>" : '';
+        $reasonLine = $reason !== '' ? "Reason: {$reason}\n" : '';
+        $reasonLineHtml = $reason !== ''
+            ? '<p style="font-size:14px;color:#4a453e;line-height:1.6;"><strong>Reason:</strong> ' . $this->esc($reason) . '</p>'
+            : '';
+        // The vendor's own line items (with measurements) — so they know
+        // exactly what NOT to ship, not just an order number.
+        [$detailsText, $detailsHtml] = $this->vendorDetails($order, $extra, false);
 
         return new RenderedEmail(
             subject: "Order {$ref} cancelled — do not ship",
             textBody: <<<TXT
-An order containing items from your store has been cancelled.
+{$greeting}
+
+An order containing items from your store has been cancelled, so please
+DO NOT SHIP the items listed below. If they are already in transit,
+contact support immediately so we can arrange a return.
 
 Order reference: {$ref}
 {$reasonLine}
-
-Do not ship these items. If they're already in transit, contact
-support immediately.
+Affected items from your store:
+{$detailsText}
 
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
                 title: "Order cancelled — do not ship",
-                body: <<<HTML
-<p>An order containing items from your store has been cancelled.</p>
-<p><strong>Order reference:</strong> {$this->esc($ref)}</p>
-{$reasonLineHtml}
-<p><strong>Do not ship these items.</strong> If they're already in transit, contact support immediately.</p>
-HTML,
+                preheader: "Order {$ref} cancelled — do not ship",
+                body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">' . $this->esc($greeting) . '</p>'
+                    . '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">An order containing items from your store has been cancelled, so please <strong>do not ship</strong> the items below. If they are already in transit, contact support immediately so we can arrange a return.</p>'
+                    . $this->refBadgeHtml($ref, false)
+                    . $reasonLineHtml
+                    . '<p style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#B9935A;font-weight:700;margin:16px 0 4px;">Affected items from your store</p>'
+                    . $detailsHtml,
             ),
         );
     }
@@ -1959,33 +1970,40 @@ TXT,
     private function orderCancelledVendorAr(Order $order, array $extra): RenderedEmail
     {
         $ref = $order->getOrderReference();
+        $vendorName = (string) ($extra['vendor_name'] ?? '');
+        $greeting = $vendorName !== '' ? "مرحباً {$vendorName}،" : 'مرحباً،';
         $reason = (string) ($extra['reason'] ?? '');
-        $reasonLine = $reason !== '' ? "السبب: {$reason}" : '';
+        $reasonLine = $reason !== '' ? "السبب: {$reason}\n" : '';
         $reasonLineHtml = $reason !== ''
-            ? "<p><strong>السبب:</strong> {$this->esc($reason)}</p>"
+            ? '<p style="font-size:14px;color:#4a453e;line-height:1.6;"><strong>السبب:</strong> ' . $this->esc($reason) . '</p>'
             : '';
+        [$detailsText, $detailsHtml] = $this->vendorDetails($order, $extra, true);
 
         return new RenderedEmail(
             subject: "تم إلغاء الطلب {$ref} — لا تقم بالشحن",
             textBody: <<<TXT
-تم إلغاء طلب يحتوي على منتجات من متجرك.
+{$greeting}
+
+تم إلغاء طلب يحتوي على منتجات من متجرك، لذا يُرجى عدم شحن المنتجات
+المذكورة أدناه. إذا كانت قد شُحنت بالفعل، تواصل مع فريق الدعم فوراً
+لترتيب إرجاعها.
 
 رقم الطلب: {$ref}
 {$reasonLine}
-
-لا تقم بشحن هذه المنتجات. إذا كانت قد شُحنت بالفعل، تواصل مع
-فريق الدعم فوراً.
+المنتجات المتأثرة من متجرك:
+{$detailsText}
 
 — 3bayti
 TXT,
             htmlBody: $this->wrapHtml(
                 title: 'تم إلغاء الطلب — لا تقم بالشحن',
-                body: <<<HTML
-<p>تم إلغاء طلب يحتوي على منتجات من متجرك.</p>
-<p><strong>رقم الطلب:</strong> {$this->esc($ref)}</p>
-{$reasonLineHtml}
-<p><strong>لا تقم بشحن هذه المنتجات.</strong> إذا كانت قد شُحنت بالفعل، تواصل مع فريق الدعم فوراً.</p>
-HTML,
+                preheader: "تم إلغاء الطلب {$ref} — لا تقم بالشحن",
+                body: '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">' . $this->esc($greeting) . '</p>'
+                    . '<p style="font-size:15px;color:#4a453e;line-height:1.6;margin:0 0 4px;">تم إلغاء طلب يحتوي على منتجات من متجرك، لذا يُرجى <strong>عدم شحن</strong> المنتجات أدناه. إذا كانت قد شُحنت بالفعل، تواصل مع فريق الدعم فوراً لترتيب إرجاعها.</p>'
+                    . $this->refBadgeHtml($ref, true)
+                    . $reasonLineHtml
+                    . '<p style="font-size:11px;letter-spacing:1px;text-transform:uppercase;color:#B9935A;font-weight:700;margin:16px 0 4px;">المنتجات المتأثرة من متجرك</p>'
+                    . $detailsHtml,
                 locale: User::LOCALE_AR,
             ),
         );
