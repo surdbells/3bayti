@@ -94,24 +94,45 @@
           <div *ngIf="selected.reject_reason" class="va-detail-full"><dt>Reject reason</dt><dd>{{ selected.reject_reason }}</dd></div>
           <div *ngIf="selected.message" class="va-detail-full"><dt>Applicant message</dt><dd>{{ selected.message }}</dd></div>
         </dl>
+
+        <div *ngIf="rejecting" class="va-reject-box">
+          <label for="va-reject-reason" class="ax-label ax-label-required">Reason for rejection</label>
+          <textarea
+            id="va-reject-reason"
+            class="ax-input"
+            rows="3"
+            [(ngModel)]="rejectReason"
+            placeholder="Shared with the applicant in the rejection email…"></textarea>
+        </div>
       </div>
 
       <div class="ax-modal-footer">
-        <button type="button" class="ax-btn ax-btn-ghost" (click)="closeReview()" [disabled]="busyId !== null">Close</button>
-        <button
-          *ngIf="isApproved(selected)"
-          type="button"
-          class="ax-btn ax-btn-secondary"
-          (click)="resend(selected)"
-          [disabled]="busyId !== null">
-          <app-icon name="mail" aria-hidden="true"></app-icon> Resend credentials
-        </button>
-        <ng-container *ngIf="isPending(selected)">
-          <button type="button" class="ax-btn ax-btn-danger" (click)="reject(selected)" [disabled]="busyId !== null">
-            <app-icon name="close" aria-hidden="true"></app-icon> {{ 'vendor_applications.reject' | translate }}
+        <!-- Default actions -->
+        <ng-container *ngIf="!rejecting">
+          <button type="button" class="ax-btn ax-btn-ghost" (click)="closeReview()" [disabled]="busyId !== null">Close</button>
+          <button
+            *ngIf="isApproved(selected)"
+            type="button"
+            class="ax-btn ax-btn-secondary"
+            (click)="resend(selected)"
+            [disabled]="busyId !== null">
+            <app-icon name="mail" aria-hidden="true"></app-icon> Resend credentials
           </button>
-          <button type="button" class="ax-btn ax-btn-primary" (click)="approve(selected)" [disabled]="busyId !== null">
-            <app-icon name="check" aria-hidden="true"></app-icon> {{ 'vendor_applications.approve' | translate }}
+          <ng-container *ngIf="isPending(selected)">
+            <button type="button" class="ax-btn ax-btn-danger" (click)="startReject()" [disabled]="busyId !== null">
+              <app-icon name="close" aria-hidden="true"></app-icon> {{ 'vendor_applications.reject' | translate }}
+            </button>
+            <button type="button" class="ax-btn ax-btn-primary" (click)="approve(selected)" [disabled]="busyId !== null">
+              <app-icon name="check" aria-hidden="true"></app-icon> {{ 'vendor_applications.approve' | translate }}
+            </button>
+          </ng-container>
+        </ng-container>
+
+        <!-- Reject confirmation -->
+        <ng-container *ngIf="rejecting">
+          <button type="button" class="ax-btn ax-btn-ghost" (click)="cancelReject()" [disabled]="busyId !== null">Cancel</button>
+          <button type="button" class="ax-btn ax-btn-danger" (click)="reject(selected)" [disabled]="busyId !== null || !rejectReason.trim()">
+            <app-icon name="close" aria-hidden="true"></app-icon> Confirm rejection
           </button>
         </ng-container>
       </div>

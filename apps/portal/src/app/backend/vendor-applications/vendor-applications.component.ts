@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -9,6 +10,7 @@ import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.comp
 import { IconComponent } from '../../shared/icon/icon.component';
 import { TranslatePipe } from '../../translate.pipe';
 import { I18nService } from '../../i18n.service';
+import { AxConfirmService } from '../../shared/overlays';
 
 interface VendorApplicationRow {
   id: number;
@@ -30,7 +32,7 @@ interface VendorApplicationRow {
 @Component({
   selector: 'app-vendor-applications',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, IconComponent, TranslatePipe],
+  imports: [AdminShellComponent, CommonModule, FormsModule, IconComponent, TranslatePipe],
   templateUrl: './vendor-applications.component.html',
   styleUrl: './vendor-applications.component.css',
 })
@@ -48,12 +50,16 @@ export class VendorApplicationsComponent implements OnInit {
   busyId: number | null = null;
   /** The application open in the review modal, or null when closed. */
   selected: VendorApplicationRow | null = null;
+  /** Reject sub-state: when true the modal shows the reason input. */
+  rejecting = false;
+  rejectReason = '';
 
   constructor(
     private router: Router,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
     private i18n: I18nService,
+    private confirmDialog: AxConfirmService,
   ) {}
 
   ngOnInit() {
@@ -96,8 +102,12 @@ export class VendorApplicationsComponent implements OnInit {
   }
 
   /** Open the review modal for a row. */
-  openReview(row: VendorApplicationRow) { this.selected = row; }
-  closeReview() { if (this.busyId === null) this.selected = null; }
+  openReview(row: VendorApplicationRow) { this.selected = row; this.rejecting = false; this.rejectReason = ''; }
+  closeReview() { if (this.busyId === null) { this.selected = null; this.rejecting = false; this.rejectReason = ''; } }
+
+  /** Enter / leave the inline "reason for rejection" step within the modal. */
+  startReject() { this.rejecting = true; this.rejectReason = ''; }
+  cancelReject() { this.rejecting = false; this.rejectReason = ''; }
 
   approve(row: VendorApplicationRow) {
     if (this.busyId !== null) return;
@@ -118,13 +128,15 @@ export class VendorApplicationsComponent implements OnInit {
 
   reject(row: VendorApplicationRow) {
     if (this.busyId !== null) return;
-    const reason = (window.prompt(this.i18n.t('vendor_applications.reject_prompt')) ?? '').trim();
-    if (!reason) return;
+    const reason = this.rejectReason.trim();
+    if (!reason) { this.toast.error('Please enter a reason for the rejection.'); return; }
     this.busyId = row.id;
     this.adapter.post_v3('POST /admin/vendor-applications/:id/reject', { reason }, { params: { id: row.id } }).subscribe({
       next: () => {
         this.toast.success(this.i18n.t('vendor_applications.reject_success', { name: row.business }));
         this.busyId = null;
+        this.rejecting = false;
+        this.rejectReason = '';
         this.selected = null;
         this.load();
       },
@@ -138,21 +150,29 @@ export class VendorApplicationsComponent implements OnInit {
   /** Re-issue login credentials + resend the welcome email for an approved app. */
   resend(row: VendorApplicationRow) {
     if (this.busyId !== null) return;
-    const ok = window.confirm(
-      `Reset ${row.business || 'this vendor'}'s password and email them fresh login credentials?\n\n`
-      + 'This overwrites any password they may have already set.',
-    );
-    if (!ok) return;
-    this.busyId = row.id;
-    this.adapter.post_v3('POST /admin/vendor-applications/:id/resend-credentials', {}, { params: { id: row.id } }).subscribe({
-      next: () => {
-        this.toast.success(`Login credentials emailed to ${row.email}.`);
-        this.busyId = null;
-      },
-      error: (err: any) => {
-        this.toast.error(this.apiError(err, 'Could not resend credentials. Please try again.'));
-        this.busyId = null;
-      },
+    // Close the review modal first: it's a full-screen overlay above the CDK
+    // confirm layer, so the confirm would otherwise render beneath it.
+    this.selected = null;
+    this.confirmDialog.confirm({
+      title: 'Resend login credentials?',
+      message: `This resets ${row.business || 'this vendor'}'s password and emails ${row.email} `
+        + `fresh login details. Any password they have already set will stop working.`,
+      confirmLabel: 'Resend credentials',
+      cancelLabel: 'Cancel',
+      variant: 'danger',
+    }).then((ok) => {
+      if (!ok) return;
+      this.busyId = row.id;
+      this.adapter.post_v3('POST /admin/vendor-applications/:id/resend-credentials', {}, { params: { id: row.id } }).subscribe({
+        next: () => {
+          this.toast.success(`Login credentials emailed to ${row.email}.`);
+          this.busyId = null;
+        },
+        error: (err: any) => {
+          this.toast.error(this.apiError(err, 'Could not resend credentials. Please try again.'));
+          this.busyId = null;
+        },
+      });
     });
   }
 

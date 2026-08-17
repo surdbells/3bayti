@@ -41,3 +41,15 @@
 @media (max-width: 640px) {
   .va-detail { grid-template-columns: 1fr; }
 }
+
+/* Inline "reason for rejection" step inside the review modal. */
+.va-reject-box {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ax-color-border-subtle);
+}
+.va-reject-box textarea {
+  margin-top: 0.35rem;
+  resize: vertical;
+  min-height: 4.5rem;
+}
