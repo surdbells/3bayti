@@ -163,16 +163,23 @@ export class VendorApplicationsComponent implements OnInit {
     }).then((ok) => {
       if (!ok) return;
       this.busyId = row.id;
-      this.adapter.post_v3('POST /admin/vendor-applications/:id/resend-credentials', {}, { params: { id: row.id } }).subscribe({
-        next: () => {
-          this.toast.success(`Login credentials emailed to ${row.email}.`);
-          this.busyId = null;
-        },
-        error: (err: any) => {
-          this.toast.error(this.apiError(err, 'Could not resend credentials. Please try again.'));
-          this.busyId = null;
-        },
-      });
+      // Guard against a synchronous adapter throw (e.g. a missing route entry)
+      // wedging busyId — which would leave the modal stuck and undismissable.
+      try {
+        this.adapter.post_v3('POST /admin/vendor-applications/:id/resend-credentials', {}, { params: { id: row.id } }).subscribe({
+          next: () => {
+            this.toast.success(`Login credentials emailed to ${row.email}.`);
+            this.busyId = null;
+          },
+          error: (err: any) => {
+            this.toast.error(this.apiError(err, 'Could not resend credentials. Please try again.'));
+            this.busyId = null;
+          },
+        });
+      } catch (err: any) {
+        this.toast.error(this.apiError(err, 'Could not resend credentials. Please try again.'));
+        this.busyId = null;
+      }
     });
   }
 
