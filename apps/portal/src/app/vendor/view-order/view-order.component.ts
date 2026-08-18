@@ -194,6 +194,14 @@ export class ViewOrderComponent implements OnInit {
       name:        `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim(),
       created:     o.created_at,
       status:      o.status,
+      // Delivery destination — flatten the API's nested shipping_address into
+      // the flat fields the template reads, so the vendor sees where to ship.
+      delivery_name:  `${o.shipping_address?.first_name ?? ''} ${o.shipping_address?.last_name ?? ''}`.trim(),
+      delivery_phone: o.shipping_address?.phone ?? '',
+      delivery_email: o.shipping_address?.email ?? '',
+      delivery_street_address: o.shipping_address?.street ?? '',
+      delivery_area:  o.shipping_address?.state_province ?? '',
+      delivery_city:  o.shipping_address?.city ?? '',
       // Keep v3 fields for the richer template sections
       items,
       customer,

@@ -165,11 +165,10 @@ final class ListVendorOrdersController
             Order::STATUS_DELIVERED,
             Order::STATUS_CANCELLED,
             Order::STATUS_REFUNDED,
-            Order::STATUS_FAILED,
         ];
-        // pending_payment NOT in vendor's status filter — vendors
-        // shouldn't see orders that haven't been paid yet (the cart
-        // is still in flux).
+        // pending_payment + failed are NOT vendor-filterable — vendors never
+        // see unpaid or failed-payment orders (no fulfilment obligation); the
+        // repository also excludes them from the default list unconditionally.
         return in_array($raw, $valid, true) ? $raw : null;
     }
 
