@@ -1,0 +1,64 @@
+<ng-container *ngIf="loaded && !dismissed">
+  <!-- All steps complete: compact, dismissible success banner. -->
+  <div *ngIf="allDone" class="ssp-complete">
+    <span class="ssp-complete-icon" aria-hidden="true">
+      <app-icon name="check_circle"></app-icon>
+    </span>
+    <div class="ssp-complete-text">
+      <h3 class="ssp-complete-title">Your store is fully set up 🎉</h3>
+      <p class="ssp-complete-sub">Every step is done — you're all set to sell.</p>
+    </div>
+    <button type="button" class="ax-btn ax-btn-sm ax-btn-ghost" (click)="dismiss()">Dismiss</button>
+  </div>
+
+  <!-- In progress: the guided checklist. -->
+  <section *ngIf="!allDone" class="ssp-card" aria-label="Store setup progress">
+    <div class="ssp-head">
+      <div class="ssp-head-text">
+        <span class="ssp-eyebrow">Getting started</span>
+        <h3 class="ssp-title">Finish setting up your store</h3>
+        <p class="ssp-sub">Complete these steps to get your store ready to sell.</p>
+      </div>
+      <div class="ssp-ring">
+        <span class="ssp-ring-count">{{ doneCount }}<span class="ssp-ring-total">/{{ total }}</span></span>
+        <span class="ssp-ring-label">done</span>
+      </div>
+    </div>
+
+    <div class="ssp-progress" role="progressbar"
+         [attr.aria-valuenow]="percent" aria-valuemin="0" aria-valuemax="100"
+         [attr.aria-label]="percent + '% complete'">
+      <div class="ssp-progress-bar" [style.width.%]="percent"></div>
+    </div>
+
+    <ul class="ssp-steps">
+      <li *ngFor="let step of steps"
+          class="ssp-step"
+          [class.ssp-step-done]="step.done"
+          [class.ssp-step-next]="step === nextStep">
+        <span class="ssp-step-status" aria-hidden="true">
+          <app-icon [name]="step.done ? 'check' : step.icon"></app-icon>
+        </span>
+
+        <div class="ssp-step-body">
+          <span class="ssp-step-title">{{ step.title }}</span>
+          <span class="ssp-step-desc">{{ step.desc }}</span>
+        </div>
+
+        <div class="ssp-step-action">
+          <span *ngIf="step.done" class="ssp-done-chip">
+            <app-icon name="check" aria-hidden="true"></app-icon> Done
+          </span>
+          <button *ngIf="!step.done" type="button"
+            class="ax-btn ax-btn-sm"
+            [class.ax-btn-primary]="step === nextStep"
+            [class.ax-btn-secondary]="step !== nextStep"
+            (click)="go(step.route)">
+            {{ step.cta }}
+            <app-icon name="arrow_forward" aria-hidden="true"></app-icon>
+          </button>
+        </div>
+      </li>
+    </ul>
+  </section>
+</ng-container>

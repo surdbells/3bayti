@@ -30,6 +30,11 @@
     </div>
 
     <ng-container *ngIf="data && !loading">
+      <!-- Store setup progress (self-hides once complete + dismissed) -->
+      <div class="ax-page-section">
+        <app-store-setup-progress [productCount]="data.catalog.total_products"></app-store-setup-progress>
+      </div>
+
       <!-- Sales KPIs -->
       <section class="ax-page-section">
         <h2 class="ax-h6 ax-text-secondary ax-mb-3">Sales · last {{ data.sales.period_days }} days</h2>

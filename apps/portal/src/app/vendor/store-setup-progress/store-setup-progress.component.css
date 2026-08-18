@@ -1,0 +1,167 @@
+:host { display: block; }
+
+/* ── Card ─────────────────────────────────────────────────────────────── */
+.ssp-card {
+  background: var(--ax-color-bg-raised);
+  border: 1px solid var(--ax-color-border-subtle);
+  border-radius: var(--ax-radius-lg);
+  box-shadow: var(--ax-shadow-sm);
+  padding: var(--ax-space-6);
+  /* Warm gradient wash at the top so the card reads as a highlight, not just
+     another panel. */
+  background-image: linear-gradient(180deg, var(--ax-color-bg-brand-subtle, #f6efe6) 0%, transparent 96px);
+}
+
+.ssp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ax-space-4);
+}
+.ssp-eyebrow {
+  display: inline-block;
+  font-size: var(--ax-fs-2xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: var(--ax-fw-bold);
+  color: var(--ax-color-text-brand, var(--ax-palette-brown-500));
+  margin-bottom: 0.35rem;
+}
+.ssp-title {
+  margin: 0;
+  font-size: var(--ax-fs-lg);
+  font-weight: var(--ax-fw-semibold);
+  color: var(--ax-color-text-primary);
+}
+.ssp-sub {
+  margin: 0.25rem 0 0;
+  font-size: var(--ax-fs-sm);
+  color: var(--ax-color-text-secondary);
+}
+
+/* Count badge (done / total) */
+.ssp-ring {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--ax-color-bg-raised);
+  border: 2px solid var(--ax-palette-brown-500, #906952);
+}
+.ssp-ring-count {
+  font-size: var(--ax-fs-lg);
+  font-weight: var(--ax-fw-bold);
+  color: var(--ax-color-text-primary);
+  line-height: 1;
+}
+.ssp-ring-total { color: var(--ax-color-text-tertiary); font-weight: var(--ax-fw-medium); }
+.ssp-ring-label {
+  font-size: var(--ax-fs-3xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ax-color-text-tertiary);
+  margin-top: 2px;
+}
+
+/* ── Progress bar ─────────────────────────────────────────────────────── */
+.ssp-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--ax-palette-beige-200, #efe2cf);
+  overflow: hidden;
+  margin: var(--ax-space-5) 0 var(--ax-space-4);
+}
+.ssp-progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--ax-palette-brown-500, #906952), var(--ax-palette-brown-400, #a97e63));
+  transition: width 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Steps ────────────────────────────────────────────────────────────── */
+.ssp-steps { list-style: none; margin: 0; padding: 0; }
+.ssp-step {
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-4);
+  padding: var(--ax-space-4);
+  border-radius: var(--ax-radius-md);
+  border: 1px solid transparent;
+}
+.ssp-step + .ssp-step { margin-top: var(--ax-space-2); }
+
+/* The next actionable step is emphasised. */
+.ssp-step-next {
+  background: var(--ax-color-bg-brand-subtle, #f6efe6);
+  border-color: var(--ax-color-border-brand, #e4d2bf);
+}
+
+.ssp-step-status {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ax-color-bg-sunken, #f1ece4);
+  color: var(--ax-color-text-secondary);
+}
+.ssp-step-status app-icon { font-size: 1.25rem; }
+.ssp-step-next .ssp-step-status {
+  background: var(--ax-palette-brown-500, #906952);
+  color: #fff;
+}
+.ssp-step-done .ssp-step-status {
+  background: var(--ax-color-bg-success-subtle, #e5f4ec);
+  color: var(--ax-color-text-success, #1e874b);
+}
+
+.ssp-step-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.ssp-step-title { font-size: var(--ax-fs-sm); font-weight: var(--ax-fw-semibold); color: var(--ax-color-text-primary); }
+.ssp-step-desc { font-size: var(--ax-fs-xs); color: var(--ax-color-text-secondary); }
+.ssp-step-done .ssp-step-title { color: var(--ax-color-text-secondary); }
+
+.ssp-step-action { flex-shrink: 0; }
+.ssp-step-action .ax-btn app-icon { font-size: 1rem; }
+.ssp-done-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: var(--ax-fs-xs);
+  font-weight: var(--ax-fw-semibold);
+  color: var(--ax-color-text-success, #1e874b);
+}
+
+/* ── Completed banner ─────────────────────────────────────────────────── */
+.ssp-complete {
+  display: flex;
+  align-items: center;
+  gap: var(--ax-space-4);
+  padding: var(--ax-space-5) var(--ax-space-6);
+  background: var(--ax-color-bg-success-subtle, #e5f4ec);
+  border: 1px solid var(--ax-color-border-success, #bfe3cd);
+  border-radius: var(--ax-radius-lg);
+}
+.ssp-complete-icon { color: var(--ax-color-text-success, #1e874b); flex-shrink: 0; }
+.ssp-complete-icon app-icon { font-size: 1.75rem; }
+.ssp-complete-text { flex: 1 1 auto; }
+.ssp-complete-title { margin: 0; font-size: var(--ax-fs-md); font-weight: var(--ax-fw-semibold); color: var(--ax-color-text-primary); }
+.ssp-complete-sub { margin: 0.15rem 0 0; font-size: var(--ax-fs-sm); color: var(--ax-color-text-secondary); }
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .ssp-card { padding: var(--ax-space-5); }
+  .ssp-step {
+    flex-wrap: wrap;
+  }
+  .ssp-step-action {
+    flex-basis: 100%;
+    padding-left: calc(2.25rem + var(--ax-space-4));
+  }
+  .ssp-step-action .ax-btn { width: 100%; justify-content: center; }
+}

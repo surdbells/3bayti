@@ -7,6 +7,7 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AxSkeletonComponent } from '../../shared/data';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { StoreSetupProgressComponent } from '../store-setup-progress/store-setup-progress.component';
 
 interface SeriesPoint { day: string; revenue: number; orders: number; }
 interface TopProduct { product_id: number; name: string; units: number; revenue: number; }
@@ -42,7 +43,7 @@ interface DashboardData {
 @Component({
   selector: 'app-vendor-metrics',
   standalone: true,
-  imports: [CommonModule, FormsModule, VendorShellComponent, AxSkeletonComponent, IconComponent],
+  imports: [CommonModule, FormsModule, VendorShellComponent, AxSkeletonComponent, IconComponent, StoreSetupProgressComponent],
   templateUrl: './vendor-metrics.component.html',
   styleUrl: './vendor-metrics.component.css',
 })
