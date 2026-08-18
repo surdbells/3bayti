@@ -14,18 +14,22 @@ interface SetupStep {
   route: string;
   cta: string;
   done: boolean;
+  /** Sub-field progress for multi-field steps (undefined for the product step). */
+  filled?: number;
+  total?: number;
 }
 
 /**
  * Store setup checklist for the vendor dashboard — the guided-onboarding card
- * (Shopify/Stripe style) that walks a new seller through the steps needed to
- * start selling, with a progress bar, per-step actions, and a highlighted
- * "next step".
+ * (Shopify/Stripe style) that walks a new seller through everything needed to
+ * start selling, with a progress bar, per-step field counts, actions, and a
+ * highlighted "next step".
  *
- * Completion is read live from the vendor's own endpoints (store profile,
- * payout details, tax info) plus the product count passed in from the
- * dashboard. Once every step is done the vendor can dismiss the card, which is
- * remembered in localStorage so established stores aren't nagged.
+ * Each step maps to one settings page and is only "done" when that whole form
+ * is complete — the store profile, the full business/tax section, and the
+ * payout details — plus a first product. Completion is read live from the
+ * vendor's own endpoints; once every step is done the card collapses to a
+ * dismissible banner (remembered in localStorage).
  */
 @Component({
   selector: 'app-store-setup-progress',
@@ -46,9 +50,27 @@ export class StoreSetupProgressComponent implements OnInit {
   loaded = false;
   dismissed = false;
 
-  private profileDone = false;
-  private paymentDone = false;
-  private taxDone = false;
+  private store: any = {};
+  private tax: any = {};
+  private payment: any = {};
+
+  // Required fields per settings form (any listed key variant counts as filled).
+  private readonly PROFILE_FIELDS = [
+    ['name', 'store_name'],
+    ['description', 'store_description'],
+    ['contact_email', 'store_email'],
+    ['contact_phone', 'store_phone'],
+  ];
+  private readonly TAX_FIELDS = [
+    ['store_legal_name'], ['trade_license_number'], ['licensing_authority'],
+    ['vat_status'], ['tax_registration_number'], ['registered_tax_address'],
+    ['tax_contact_email'],
+  ];
+  private readonly PAYOUT_FIELDS = [
+    ['store_bank_name', 'bank_name'],
+    ['store_account_name', 'account_name'],
+    ['store_account_number', 'account_number'],
+  ];
 
   ngOnInit(): void {
     this.dismissed = localStorage.getItem(StoreSetupProgressComponent.DISMISS_KEY) === '1';
@@ -63,19 +85,9 @@ export class StoreSetupProgressComponent implements OnInit {
       payment: this.adapter.get_v3('GET /vendor/store/payment').pipe(catchError(() => of(null))),
       tax: this.adapter.get_v3('GET /vendor/store/tax').pipe(catchError(() => of(null))),
     }).subscribe(({ store, payment, tax }) => {
-      const s = this.body(store);
-      const p = this.body(payment);
-      const t = this.body(tax);
-
-      const desc = String(s.description ?? s.store_description ?? '').trim();
-      const logo = String(s.store_logo ?? s.logo_url ?? s.logo ?? '').trim();
-      this.profileDone = desc !== '' && logo !== '' && !logo.includes('placeholder');
-
-      this.paymentDone = String(p.store_account_number ?? p.account_number ?? '').trim() !== '';
-
-      this.taxDone = String(t.tax_registration_number ?? '').trim() !== ''
-        || String(t.licensing_authority ?? '').trim() !== '';
-
+      this.store = this.body(store);
+      this.payment = this.body(payment);
+      this.tax = this.body(tax);
       this.loaded = true;
     });
   }
@@ -84,7 +96,32 @@ export class StoreSetupProgressComponent implements OnInit {
     return res?.data ?? res ?? {};
   }
 
+  /** First non-empty value across the given key variants, trimmed. */
+  private val(obj: any, keys: string[]): string {
+    for (const k of keys) {
+      const v = obj?.[k];
+      if (v !== undefined && v !== null && String(v).trim() !== '') {
+        return String(v).trim();
+      }
+    }
+    return '';
+  }
+
+  private countFilled(obj: any, fields: string[][]): number {
+    return fields.filter((variants) => this.val(obj, variants) !== '').length;
+  }
+
+  /** Profile also needs a real (non-placeholder) logo, tracked as one field. */
+  private get profileFilled(): number {
+    const logo = this.val(this.store, ['logo_url', 'store_logo', 'logo']);
+    const logoOk = logo !== '' && !logo.includes('placeholder');
+    return this.countFilled(this.store, this.PROFILE_FIELDS) + (logoOk ? 1 : 0);
+  }
+  private get profileTotal(): number { return this.PROFILE_FIELDS.length + 1; }
+
   get steps(): SetupStep[] {
+    const taxFilled = this.countFilled(this.tax, this.TAX_FIELDS);
+    const payoutFilled = this.countFilled(this.payment, this.PAYOUT_FIELDS);
     return [
       {
         key: 'product', icon: 'inventory_2', title: 'Add your first product',
@@ -93,18 +130,24 @@ export class StoreSetupProgressComponent implements OnInit {
       },
       {
         key: 'profile', icon: 'storefront', title: 'Complete your store profile',
-        desc: 'Add your logo, cover image and a description shoppers will see.',
-        route: '/store', cta: 'Edit store', done: this.profileDone,
+        desc: 'Store name, contact details, description and logo shoppers will see.',
+        route: '/store', cta: 'Edit store',
+        filled: this.profileFilled, total: this.profileTotal,
+        done: this.profileFilled === this.profileTotal,
       },
       {
-        key: 'payment', icon: 'account_balance', title: 'Add your payout details',
-        desc: 'Tell us where to send the earnings from your sales.',
-        route: '/payment_info', cta: 'Add details', done: this.paymentDone,
+        key: 'tax', icon: 'request_quote', title: 'Add business & tax details',
+        desc: 'Legal name, trade licence, VAT status and tax registration.',
+        route: '/tax_information', cta: 'Add details',
+        filled: taxFilled, total: this.TAX_FIELDS.length,
+        done: taxFilled === this.TAX_FIELDS.length,
       },
       {
-        key: 'tax', icon: 'request_quote', title: 'Add tax information',
-        desc: 'Provide your trade licence and tax registration details.',
-        route: '/tax_information', cta: 'Add details', done: this.taxDone,
+        key: 'payout', icon: 'account_balance', title: 'Add your payout details',
+        desc: 'Bank name, account name and account number for your earnings.',
+        route: '/payment_info', cta: 'Add details',
+        filled: payoutFilled, total: this.PAYOUT_FIELDS.length,
+        done: payoutFilled === this.PAYOUT_FIELDS.length,
       },
     ];
   }

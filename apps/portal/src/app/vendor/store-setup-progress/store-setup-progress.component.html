@@ -41,7 +41,10 @@
         </span>
 
         <div class="ssp-step-body">
-          <span class="ssp-step-title">{{ step.title }}</span>
+          <span class="ssp-step-title">
+            {{ step.title }}
+            <span *ngIf="!step.done && step.total" class="ssp-step-count">{{ step.filled }}/{{ step.total }}</span>
+          </span>
           <span class="ssp-step-desc">{{ step.desc }}</span>
         </div>
 
