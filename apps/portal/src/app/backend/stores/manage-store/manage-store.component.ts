@@ -132,6 +132,7 @@ export class ManageStoreComponent implements OnInit {
           this.store = response.data;
           this.message.name = this.store.first_name;
           this.message.email = this.store.email;
+          this.applyComplianceDocUrls();
         }
         this.ui_controls.is_loading = false;
       },
@@ -183,9 +184,28 @@ export class ManageStoreComponent implements OnInit {
     if (!this.storeId) return;
     this.adapter.get_v3('GET /admin/vendors/:id/compliance', { params: { id: String(this.storeId) } })
       .subscribe({
-        next: (r: any) => { if (r?.data) this.compliance = r.data; },
+        next: (r: any) => { if (r?.data) { this.compliance = r.data; this.applyComplianceDocUrls(); } },
         error: () => { /* non-fatal — section just stays empty */ },
       });
+  }
+
+  /**
+   * Prefer the served/signed compliance document URLs for the KYC images in the
+   * completeness grid. The raw vendor fields hold private storage paths (or
+   * legacy values) that don't render directly; the compliance endpoint returns
+   * loadable URLs for all formats. Runs from whichever of the two loads
+   * finishes last (reassigns `store` so the grid re-renders).
+   */
+  private applyComplianceDocUrls(): void {
+    if (!this.store || !this.compliance) return;
+    const { front, back, license_doc } = this.compliance;
+    if (front == null && back == null && license_doc == null) return;
+    this.store = {
+      ...this.store,
+      id_front: front ?? this.store.id_front,
+      id_back: back ?? this.store.id_back,
+      license_doc: license_doc ?? this.store.license_doc,
+    };
   }
 
   approveCompliance() {
