@@ -44,18 +44,10 @@
 }
 
 .ax-sidenav-brand-mark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   width: 2.25rem;
   height: 2.25rem;
   border-radius: var(--ax-radius-md);
-  background: linear-gradient(135deg, var(--ax-palette-beige-300) 0%, var(--ax-palette-brown-500) 100%);
-  color: var(--ax-palette-espresso-900);
-  font-family: var(--ax-font-display);
-  font-weight: var(--ax-fw-semibold);
-  font-size: 1rem;
-  letter-spacing: -0.04em;
+  object-fit: cover;
   flex-shrink: 0;
 }
 

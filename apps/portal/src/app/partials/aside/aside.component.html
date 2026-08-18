@@ -1,9 +1,9 @@
 <aside class="ax-sidenav" [class.ax-sidenav-open]="isOpen" aria-label="Main navigation">
   <!-- Brand -->
-  <a routerLink="/backend" class="ax-sidenav-brand" aria-label="Abayti home">
-    <span class="ax-sidenav-brand-mark" aria-hidden="true">Ab</span>
+  <a routerLink="/backend" class="ax-sidenav-brand" aria-label="3Bayti home">
+    <img class="ax-sidenav-brand-mark" src="/favicon.png" alt="" aria-hidden="true" />
     <span class="ax-sidenav-brand-text">
-      <span class="ax-sidenav-brand-name">Abayti</span>
+      <span class="ax-sidenav-brand-name">3Bayti</span>
       <span class="ax-sidenav-brand-role">
         @if (user_session.is_admin) { Admin console }
         @else if (user_session.is_vendor) { Vendor portal }
