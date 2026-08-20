@@ -99,7 +99,7 @@ export class VendorOrdersComponent implements OnInit {
         { key: 'product', label: 'Product' },
         { key: 'name', label: 'Customer', hideOnMobile: true },
         { key: 'quantity', label: 'Qty', align: 'center', hideOnMobile: true },
-        { key: 'total_price', label: 'Total', align: 'right' },
+        { key: 'total_price', label: 'Your total', align: 'right' },
         { key: 'status', label: 'Status', align: 'center' },
       ],
       rowActions: [{ id: 'manage', label: 'Manage order', icon: 'arrow_forward' }],
@@ -148,21 +148,30 @@ export class VendorOrdersComponent implements OnInit {
   }
 
   private mapOrder(o: any): OrderRow {
-    const firstItem = (o.items ?? [])[0] ?? {};
+    const items = o.items ?? [];
+    const firstItem = items[0] ?? {};
     const customer = o.customer ?? {};
     // Field names match OrderSerializer::listShape: `date` (ATOM, not
     // `created_at`), `total`/`subtotal`, `product_image` is a URL string
     // snapshot (not an object), and `customer` carries the buyer's name/email
     // (falls back to "—" only if absent).
+    // `items` here is already filtered to THIS vendor's lines (server-side, see
+    // ListVendorOrdersController::vendorListShape), so the shown total sums only
+    // this store's products — not the customer's whole-order payment (which
+    // includes delivery + any other vendors' items). Matches the detail page.
+    const vendorTotal = items.reduce(
+      (s: number, i: any) => s + (parseFloat(i.subtotal ?? '0') || 0),
+      0,
+    );
     return {
       id: o.id,
       order_ref: o.order_reference ?? '',
       order_reference: o.order_reference ?? '',
       product: firstItem.product_name ?? `Order ${o.order_reference}`,
       image: firstItem.product_image ?? '',
-      quantity: (o.items ?? []).reduce((s: number, i: any) => s + (i.quantity ?? 1), 0),
+      quantity: items.reduce((s: number, i: any) => s + (i.quantity ?? 1), 0),
       email: customer.email ?? '',
-      total_price: `AED ${parseFloat(o.total ?? o.subtotal ?? '0').toFixed(2)}`,
+      total_price: `AED ${vendorTotal.toFixed(2)}`,
       name: `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim() || '—',
       created: o.date ? new Date(o.date).toLocaleDateString('en-AE') : '',
       status: o.status ?? '',
