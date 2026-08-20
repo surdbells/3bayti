@@ -266,6 +266,12 @@
             <span class="ax-sidenav-link-label">OTA updates</span>
           </a>
         </li>
+        <li *axCan="'audit.view'">
+          <a routerLink="/admin/audit-logs" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="receipt_long" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Audit log</span>
+          </a>
+        </li>
       </ul>
     </div>
 

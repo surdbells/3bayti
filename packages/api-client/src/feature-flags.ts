@@ -1691,6 +1691,9 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/customers': {
     target: 'new', oldPath: '/admin/common/get-customers', newPath: '/v3/admin/users?role=customer', shape: 'v3-envelope',
   },
+  'GET /admin/audit-logs': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/audit-logs', shape: 'v3-envelope',
+  },
   'GET /admin/orders': {
     target: 'new', oldPath: '/admin/common/get-store-orders', newPath: '/v3/admin/orders', shape: 'v3-envelope',
   },

@@ -193,6 +193,12 @@ export const routes: Routes = [
     title: 'OTA updates'
   },
   {
+    path: 'admin/audit-logs',
+    loadComponent: () => import('./backend/audit-logs/audit-logs.component').then(m => m.AuditLogsComponent),
+    canActivate: [adminGuard, requirePermission('audit.view')],
+    title: 'Audit log'
+  },
+  {
     path: 'admin/collections/edit',
     loadComponent: () => import('./backend/collections/edit-collection/edit-collection.component').then(m => m.EditCollectionComponent),
     canActivate: [adminGuard, requirePermission('catalog.collections_manage')],

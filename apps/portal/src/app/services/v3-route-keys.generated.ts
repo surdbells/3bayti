@@ -40,6 +40,7 @@ export type V3RouteKey =
   | 'GET /admin/commissions'
   | 'GET /admin/customers'
   | 'GET /admin/gift-cards'
+  | 'GET /admin/audit-logs'
   | 'GET /admin/gift-cards/:id'
   | 'GET /admin/gift-cards/redemptions'
   | 'GET /admin/notifications'
@@ -343,6 +344,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/collections',
   'GET /admin/collections/:id',
   'GET /admin/commissions',
+  'GET /admin/audit-logs',
   'GET /admin/customers',
   'GET /admin/gift-cards',
   'GET /admin/gift-cards/:id',

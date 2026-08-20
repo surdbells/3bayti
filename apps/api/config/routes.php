@@ -796,6 +796,11 @@ return function (App $app): void {
         $group->get('/notification-logs',
             \Bayti\Api\Http\Controllers\Admin\NotificationLog\ListNotificationLogsController::class)->add($perm->for('notifications.view'));
 
+        // Audit log — forensic view of the append-only audit_log table.
+        // Filters: action, subject_type, user_id, subject_id, date_from, date_to.
+        $group->get('/audit-logs',
+            \Bayti\Api\Http\Controllers\Admin\Audit\ListAuditLogsController::class)->add($perm->for('audit.view'));
+
         // M3.3.2-C — Admin user list, detail, activate, deactivate.
         $group->get('/users',
             \Bayti\Api\Http\Controllers\Admin\User\ListUsersController::class)->add($perm->for('users.view'));

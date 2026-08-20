@@ -1,0 +1,55 @@
+.al-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ax-z-modal, 1050);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.45);
+}
+.al-modal {
+  width: min(40rem, 100%);
+  max-height: 85vh;
+  overflow-y: auto;
+  background: var(--ax-color-bg-surface, #fff);
+  border-radius: var(--ax-radius-lg, 12px);
+  box-shadow: var(--ax-shadow-xl, 0 20px 50px rgba(0, 0, 0, 0.3));
+  padding: 1.25rem;
+}
+.al-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.al-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--ax-color-bg-sunken, #f1ece4);
+  border-radius: var(--ax-radius-md, 8px);
+}
+.al-meta > div { display: grid; grid-template-columns: 8rem 1fr; gap: 0.75rem; }
+.al-meta dt { margin: 0; font-size: 0.75rem; color: var(--ax-color-text-tertiary); }
+.al-meta dd { margin: 0; font-size: 0.8125rem; color: var(--ax-color-text-primary); word-break: break-word; }
+.al-mono, .al-ua { font-family: var(--ax-font-mono, ui-monospace, monospace); font-size: 0.75rem; }
+.al-ua { color: var(--ax-color-text-secondary); }
+
+.al-changes { margin-top: 0.5rem; }
+.al-json {
+  margin: 0.35rem 0 0;
+  padding: 0.75rem;
+  background: var(--ax-color-bg-code, #1e1b18);
+  color: var(--ax-color-text-on-code, #e9e2d8);
+  border-radius: var(--ax-radius-md, 8px);
+  font-family: var(--ax-font-mono, ui-monospace, monospace);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  white-space: pre;
+}

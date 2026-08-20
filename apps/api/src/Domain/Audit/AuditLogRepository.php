@@ -77,4 +77,59 @@ class AuditLogRepository extends EntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    /**
+     * Paginated forensic listing, newest first, with optional filters. Powers
+     * the admin audit-log surface (ListAuditLogsController).
+     *
+     * @param string|null $dateFrom ISO date (YYYY-MM-DD), inclusive from 00:00:00 UTC
+     * @param string|null $dateTo   ISO date (YYYY-MM-DD), inclusive to 23:59:59 UTC
+     * @return array{0: AuditLog[], 1: int} [rows, totalMatching]
+     */
+    public function paginated(
+        int $limit,
+        int $offset,
+        ?string $action = null,
+        ?string $subjectType = null,
+        ?int $userId = null,
+        ?int $subjectId = null,
+        ?string $dateFrom = null,
+        ?string $dateTo = null,
+    ): array {
+        $qb = $this->createQueryBuilder('a');
+
+        if ($action !== null) {
+            $qb->andWhere('a.action = :action')->setParameter('action', $action);
+        }
+        if ($subjectType !== null) {
+            $qb->andWhere('a.subjectType = :subjectType')->setParameter('subjectType', $subjectType);
+        }
+        if ($userId !== null) {
+            $qb->andWhere('a.userId = :userId')->setParameter('userId', $userId);
+        }
+        if ($subjectId !== null) {
+            $qb->andWhere('a.subjectId = :subjectId')->setParameter('subjectId', $subjectId);
+        }
+        if ($dateFrom !== null) {
+            $qb->andWhere('a.createdAt >= :dateFrom')
+               ->setParameter('dateFrom', new \DateTimeImmutable($dateFrom . ' 00:00:00', new \DateTimeZone('UTC')));
+        }
+        if ($dateTo !== null) {
+            $qb->andWhere('a.createdAt <= :dateTo')
+               ->setParameter('dateTo', new \DateTimeImmutable($dateTo . ' 23:59:59', new \DateTimeZone('UTC')));
+        }
+
+        $countQb = clone $qb;
+        $total = (int) $countQb->select('COUNT(a.id)')->getQuery()->getSingleScalarResult();
+
+        $rows = $qb
+            ->orderBy('a.createdAt', 'DESC')
+            ->addOrderBy('a.id', 'DESC')
+            ->setMaxResults($limit)
+            ->setFirstResult($offset)
+            ->getQuery()
+            ->getResult();
+
+        return [$rows, $total];
+    }
 }

@@ -184,6 +184,12 @@ final class PermissionCatalog
                     'settings.edit' => 'Edit settings',
                 ],
             ],
+            'audit' => [
+                'label' => 'Audit log',
+                'permissions' => [
+                    'audit.view' => 'View the audit log',
+                ],
+            ],
         ];
     }
 
