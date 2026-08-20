@@ -92,20 +92,20 @@ final class JwtService
      * Caller is responsible for persisting the refresh token's hash
      * via RefreshTokenRepository.
      */
-    public function issueTokenPair(User $user): TokenPair
+    public function issueTokenPair(User $user, ?int $impersonatorId = null): TokenPair
     {
         $now = new DateTimeImmutable();
 
         // Access token — short-lived, role-laden, stateless.
         $accessExp = $now->modify("+{$this->settings->accessTtlSeconds} seconds");
         $accessJti = (string) Uuid::uuid7();
-        $accessPayload = $this->buildAccessPayload($user, $now, $accessExp, $accessJti);
+        $accessPayload = $this->buildAccessPayload($user, $now, $accessExp, $accessJti, $impersonatorId);
         $accessToken = JWT::encode($accessPayload, $this->settings->signingSecret, self::ALGORITHM);
 
         // Refresh token — long-lived, opaque, server-validated.
         $refreshExp = $now->modify("+{$this->settings->refreshTtlSeconds} seconds");
         $refreshJti = (string) Uuid::uuid7();
-        $refreshPayload = $this->buildRefreshPayload($user, $now, $refreshExp, $refreshJti);
+        $refreshPayload = $this->buildRefreshPayload($user, $now, $refreshExp, $refreshJti, $impersonatorId);
         $refreshToken = JWT::encode($refreshPayload, $this->settings->signingSecret, self::ALGORITHM);
 
         return new TokenPair(
@@ -241,6 +241,7 @@ final class JwtService
         DateTimeImmutable $iat,
         DateTimeImmutable $exp,
         string $jti,
+        ?int $impersonatorId = null,
     ): array {
         $payload = [
             'iss' => $this->settings->issuer,
@@ -264,6 +265,12 @@ final class JwtService
             $payload['pwd_changed_at'] = $user->getPasswordChangedAt()->getTimestamp();
         }
 
+        // imp_by — set on an admin impersonation session so the app can show a
+        // banner and the audit trail records who is acting as this user.
+        if ($impersonatorId !== null) {
+            $payload['imp_by'] = $impersonatorId;
+        }
+
         return $payload;
     }
 
@@ -275,6 +282,7 @@ final class JwtService
         DateTimeImmutable $iat,
         DateTimeImmutable $exp,
         string $jti,
+        ?int $impersonatorId = null,
     ): array {
         // Refresh tokens stay minimal — just the standard claims.
         // The lookup happens in user_refresh_tokens by jti, where we
@@ -282,7 +290,7 @@ final class JwtService
         // tokens would make their payload bigger without benefit
         // (caller can't trust those values without the DB anyway,
         // since refresh tokens outlive role changes).
-        return [
+        $payload = [
             'iss' => $this->settings->issuer,
             'sub' => (string) $user->getId(),
             'aud' => self::AUDIENCE_REFRESH,
@@ -290,6 +298,13 @@ final class JwtService
             'exp' => $exp->getTimestamp(),
             'jti' => $jti,
         ];
+        // Carry the impersonator through refresh so a rotated session stays an
+        // impersonation session (RefreshController re-issues with this id).
+        if ($impersonatorId !== null) {
+            $payload['imp_by'] = $impersonatorId;
+        }
+
+        return $payload;
     }
 
     /** @return string[] */
@@ -388,6 +403,12 @@ final class JwtService
 
         $email = isset($decoded->email) && is_string($decoded->email) ? $decoded->email : null;
 
+        $impersonatorId = null;
+        if (isset($decoded->imp_by) && (is_int($decoded->imp_by) || is_string($decoded->imp_by))) {
+            $candidate = (int) $decoded->imp_by;
+            $impersonatorId = $candidate > 0 ? $candidate : null;
+        }
+
         return new TokenClaims(
             issuer: $this->settings->issuer,
             userId: $userId,
@@ -398,6 +419,7 @@ final class JwtService
             email: $email,
             passwordChangedAt: $passwordChangedAt,
             roles: $roles,
+            impersonatorId: $impersonatorId,
         );
     }
 }

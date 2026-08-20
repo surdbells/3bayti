@@ -1800,6 +1800,9 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'POST /admin/vendors/:id/approve': {
     target: 'new', oldPath: '/admin/common/activate-store', newPath: '/v3/admin/vendors/:id/approve', shape: 'v3-envelope',
   },
+  'POST /admin/vendors/:id/impersonate': {
+    target: 'new', oldPath: '', newPath: '/v3/admin/vendors/:id/impersonate', shape: 'raw',
+  },
   'POST /admin/vendors/:id/reactivate': {
     target: 'new', oldPath: '/admin/common/activate-store', newPath: '/v3/admin/vendors/:id/reactivate', shape: 'v3-envelope',
   },

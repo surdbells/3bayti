@@ -57,6 +57,10 @@ export interface PortalSession {
   is_customer: boolean;
   /** Provisioned with a temporary password — force a change before use. */
   must_change_password: boolean;
+  /** True when an admin is impersonating this (vendor) account. */
+  impersonating?: boolean;
+  /** Store/vendor name shown in the impersonation banner. */
+  impersonated_name?: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -137,5 +141,61 @@ export class PortalAuthService {
       is_customer: roles.includes('customer'),
       must_change_password: user.must_change_password === true,
     };
+  }
+
+  // ── Impersonation ──────────────────────────────────────────────────
+  private static readonly ADMIN_BACKUP_KEY = 'ADMIN_SESSION_BACKUP';
+
+  /**
+   * Swap the current admin session for an impersonation session built from the
+   * /impersonate response, stashing the admin session so it can be restored on
+   * exit. The impersonated account is a vendor only — admin/staff flags are
+   * forced off so the elevated console can't be reached while impersonating.
+   */
+  startImpersonation(res: any, label: string): void {
+    const current = sessionStorage.getItem('SESSION');
+    if (current) {
+      localStorage.setItem(PortalAuthService.ADMIN_BACKUP_KEY, current);
+    }
+    const session = this.mapToSession(res);
+    session.is_admin = false;
+    session.is_support = false;
+    session.is_finance = false;
+    session._sub_admin = false;
+    session.impersonating = true;
+    session.impersonated_name = label;
+    sessionStorage.setItem('SESSION', GlobalComponent.encodeBase64(session));
+  }
+
+  /** True when the active session is an admin impersonating a vendor. */
+  isImpersonating(): boolean {
+    return this.currentSession()?.impersonating === true;
+  }
+
+  impersonatedName(): string {
+    return this.currentSession()?.impersonated_name ?? '';
+  }
+
+  /** Restore the stashed admin session, ending impersonation. */
+  stopImpersonation(): boolean {
+    const backup = localStorage.getItem(PortalAuthService.ADMIN_BACKUP_KEY);
+    if (!backup) {
+      return false;
+    }
+    sessionStorage.setItem('SESSION', backup);
+    localStorage.removeItem(PortalAuthService.ADMIN_BACKUP_KEY);
+    return true;
+  }
+
+  private currentSession(): PortalSession | null {
+    const raw = sessionStorage.getItem('SESSION');
+    if (!raw) {
+      return null;
+    }
+    try {
+      return GlobalComponent.decodeBase64(raw) as PortalSession;
+    } catch {
+      return null;
+    }
   }
 }

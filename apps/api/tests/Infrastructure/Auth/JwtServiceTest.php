@@ -79,6 +79,30 @@ final class JwtServiceTest extends TestCase
     }
 
     #[Test]
+    public function impersonationClaimRoundTripsThroughAccessAndRefresh(): void
+    {
+        $pair = $this->jwt->issueTokenPair($this->makeUser(), 4242);
+
+        $access = $this->jwt->verifyAccessToken($pair->accessToken);
+        self::assertNotNull($access);
+        self::assertSame(4242, $access->impersonatorId);
+
+        // Preserved on the refresh token too, so a rotated session stays an
+        // impersonation session.
+        $refresh = $this->jwt->verifyRefreshToken($pair->refreshToken);
+        self::assertNotNull($refresh);
+        self::assertSame(4242, $refresh->impersonatorId);
+    }
+
+    #[Test]
+    public function normalTokenHasNoImpersonator(): void
+    {
+        $access = $this->jwt->verifyAccessToken($this->jwt->issueTokenPair($this->makeUser())->accessToken);
+        self::assertNotNull($access);
+        self::assertNull($access->impersonatorId);
+    }
+
+    #[Test]
     public function issuedAccessTokenContainsRoles(): void
     {
         $user = $this->makeUser();

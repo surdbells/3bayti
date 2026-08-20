@@ -15,6 +15,8 @@ import { AxTabsComponent, AxTabComponent, AxConfirmService } from '../../../shar
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { AxComboboxComponent, AxComboboxOption } from '../../../shared/forms/ax-combobox.component';
+import { AxCanDirective } from '../../../shared/security/ax-can.directive';
+import { ImpersonationService } from '../../../services/impersonation.service';
 @Component({
   selector: 'app-manage-store',
   standalone: true,
@@ -25,12 +27,13 @@ import { AxComboboxComponent, AxComboboxOption } from '../../../shared/forms/ax-
     AccountSetupComponent,
     AxRichEditorComponent,
     AxTabsComponent,
-    AxTabComponent, IconComponent, AxComboboxComponent],
+    AxTabComponent, IconComponent, AxComboboxComponent, AxCanDirective],
   templateUrl: './manage-store.component.html',
   styleUrl: './manage-store.component.css',
 })
 export class ManageStoreComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
+  private readonly impersonation = inject(ImpersonationService);
 
   ui_controls = {
     is_loading: false,
@@ -337,5 +340,27 @@ export class ManageStoreComponent implements OnInit {
 
   get isActive(): boolean {
     return this.store.store_status === true || String(this.store.is_active) === 'true' || String(this.store.is_active) === '1';
+  }
+
+  // ── Impersonation (admin "sign in as vendor") ──────────────────────
+  get impersonateBusy(): boolean {
+    return this.impersonation.starting;
+  }
+
+  /**
+   * Start a full act-as session for this vendor. Confirmed first because it
+   * swaps the admin's session for the vendor's and reloads the app; every
+   * action then runs on the vendor's behalf until the banner's Exit is used.
+   */
+  impersonateStore() {
+    const name = this.store.store_name || this.store_name || 'this vendor';
+    this.confirm.confirm({
+      title: 'Sign in as vendor',
+      message: `You'll act as ${name} — placing you in their account with their permissions. A banner will let you exit back to admin at any time. This action is logged.`,
+      confirmLabel: 'Sign in as vendor', cancelLabel: 'Cancel',
+    }).then((ok) => {
+      if (!ok) return;
+      this.impersonation.start(this.storeId, this.store.store_name || this.store_name);
+    });
   }
 }

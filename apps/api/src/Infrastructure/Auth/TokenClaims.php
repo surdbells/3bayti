@@ -62,6 +62,8 @@ final class TokenClaims
         public readonly ?string $email = null,
         public readonly ?DateTimeImmutable $passwordChangedAt = null,
         public readonly array $roles = [],
+        /** Admin user id when this token was minted for an impersonation session. */
+        public readonly ?int $impersonatorId = null,
     ) {
     }
 

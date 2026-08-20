@@ -695,6 +695,10 @@ return function (App $app): void {
         $group->get('/vendors/{id:[0-9]+}', \Bayti\Api\Http\Controllers\Admin\Vendor\GetAdminVendorController::class)->add($perm->for('vendors.view'));
         $group->put('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\UpdateVendorController::class)->add($perm->for('vendors.edit'));
         $group->delete('/vendors/{id}', \Bayti\Api\Http\Controllers\Admin\Vendor\DeleteVendorController::class)->add($perm->for('vendors.suspend'));
+        // Sign in as a vendor (impersonation) — mints a session for the vendor's
+        // owner tagged with the admin's id (imp_by claim).
+        $group->post('/vendors/{id:[0-9]+}/impersonate',
+            \Bayti\Api\Http\Controllers\Admin\Vendor\ImpersonateVendorController::class)->add($perm->for('vendors.impersonate'));
 
         // M3.2.X.6-C — Vendor lifecycle state transitions
         $group->post('/vendors/{id:[0-9]+}/approve',

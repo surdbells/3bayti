@@ -200,8 +200,9 @@ final class RefreshController
 
         // Step 6 + 7: rotate. Revoke this token, issue new pair,
         // persist new row, recordLogin (counts as new session). All
-        // in one transaction.
-        $newPair = $this->jwt->issueTokenPair($user);
+        // in one transaction. Carry the impersonator through so a rotated
+        // admin-impersonation session stays an impersonation session.
+        $newPair = $this->jwt->issueTokenPair($user, $claims->impersonatorId);
         $clientIp = $this->extractIp($request);
         $userAgent = $this->extractUserAgent($request);
 

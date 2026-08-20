@@ -34,6 +34,11 @@
             (click)="reactivateStore()" [disabled]="ui_controls.acting">
             <app-icon name="restart_alt" aria-hidden="true"></app-icon> Reactivate
           </button>
+          <button *axCan="'vendors.impersonate'" type="button" class="ax-btn ax-btn-outline ax-btn-sm"
+            (click)="impersonateStore()" [disabled]="impersonateBusy"
+            title="Sign in as this vendor to act on their behalf">
+            <app-icon name="visibility" aria-hidden="true"></app-icon> Sign in as vendor
+          </button>
           <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm"
             (click)="get_store()" [disabled]="ui_controls.is_loading" aria-label="Refresh">
             <app-icon name="refresh" aria-hidden="true"></app-icon>

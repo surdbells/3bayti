@@ -231,6 +231,7 @@ export type V3RouteKey =
   | 'POST /admin/vendor-applications/:id/resend-credentials'
   | 'POST /admin/vendors'
   | 'POST /admin/vendors/:id/approve'
+  | 'POST /admin/vendors/:id/impersonate'
   | 'POST /admin/vendors/:id/compliance/approve'
   | 'POST /admin/vendors/:id/compliance/reject'
   | 'POST /admin/vendors/:id/messages'

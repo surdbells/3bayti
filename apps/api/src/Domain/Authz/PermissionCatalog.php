@@ -69,6 +69,7 @@ final class PermissionCatalog
                     'vendors.suspend' => 'Suspend / deactivate vendors',
                     'vendors.view_compliance' => 'View compliance documents',
                     'vendors.review_compliance' => 'Approve / reject compliance',
+                    'vendors.impersonate' => 'Sign in as a vendor (impersonate)',
                     'vendors.export' => 'Export vendors',
                 ],
             ],
