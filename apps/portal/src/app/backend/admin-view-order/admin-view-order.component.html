@@ -44,6 +44,16 @@
             <app-icon name="download" aria-hidden="true"></app-icon>
             Download PDF
           </button>
+          <button
+            *axCan="'notifications.send'"
+            type="button"
+            class="ax-btn ax-btn-outline ax-btn-sm"
+            (click)="resendVendorNotification()"
+            [disabled]="ui_controls.resending"
+            title="Re-send the 'new order' email to the vendor(s) on this order">
+            <app-icon name="mail" aria-hidden="true"></app-icon>
+            {{ ui_controls.resending ? 'Resending…' : 'Resend vendor email' }}
+          </button>
         </div>
       </header>
 

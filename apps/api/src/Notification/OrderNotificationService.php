@@ -78,6 +78,10 @@ final class OrderNotificationService
     private const SKIP_REASON_VENDOR_CONTACT_EMAIL_UNSET = 'contact_email_unset';
     private const SKIP_REASON_VENDOR_NO_EMAIL = 'no_email';
     private const SKIP_REASON_NO_ADMIN_RECIPIENTS = 'no_admin_recipients';
+    // Recipient present but not a valid email address (e.g. a legacy/typo'd
+    // value missing the '@'). Caught up-front so it logs as a clean skip
+    // instead of a hard mailer failure, and never wastes a send attempt.
+    private const SKIP_REASON_INVALID_EMAIL = 'invalid_email';
 
     /**
      * @param list<string> $adminRecipients Email addresses of admin/ops
@@ -182,6 +186,18 @@ final class OrderNotificationService
     public function orderPaidVendors(Order $order): void
     {
         $this->sendToVendors($order, EmailTemplate::ORDER_PLACED_VENDOR);
+    }
+
+    /**
+     * Admin-triggered resend of the "new order" (ORDER_PLACED_VENDOR) email —
+     * used to recover a delivery that failed the first time (e.g. the vendor's
+     * contact email was malformed and has since been corrected). Re-dispatches
+     * to a single vendor when $vendorId is given, otherwise to every vendor on
+     * the order. Invalid/missing addresses are still skipped cleanly.
+     */
+    public function resendPlacedToVendor(Order $order, ?int $vendorId = null): void
+    {
+        $this->sendToVendors($order, EmailTemplate::ORDER_PLACED_VENDOR, [], $vendorId);
     }
 
     /**
@@ -654,7 +670,7 @@ final class OrderNotificationService
      *
      * @param array<string, mixed> $extra
      */
-    private function sendToVendors(Order $order, EmailTemplate $template, array $extra = []): void
+    private function sendToVendors(Order $order, EmailTemplate $template, array $extra = [], ?int $onlyVendorId = null): void
     {
         /** @var array<int, array{vendor: Vendor, items: list<string>, orderItems: list<OrderItem>}> $byVendor */
         $byVendor = [];
@@ -662,6 +678,11 @@ final class OrderNotificationService
             /** @var OrderItem $item */
             $vendor = $item->getVendor();
             $vid = $vendor->getId() ?? 0;
+            // Targeted resend: only notify the requested vendor (skip the rest so
+            // already-notified vendors on a multi-vendor order aren't re-emailed).
+            if ($onlyVendorId !== null && $vid !== $onlyVendorId) {
+                continue;
+            }
             if (!isset($byVendor[$vid])) {
                 $byVendor[$vid] = ['vendor' => $vendor, 'items' => [], 'orderItems' => []];
             }
@@ -733,6 +754,21 @@ final class OrderNotificationService
         Order $order,
         array $extra = [],
     ): void {
+        // Validate the address BEFORE attempting a send. A malformed recipient
+        // (e.g. "user gmail.com" with no '@') would otherwise be handed to the
+        // mailer and come back as a hard failure — noisy and un-actionable.
+        // Record it as a clean skip with a specific reason instead.
+        $to = trim($to);
+        if ($to === '' || filter_var($to, FILTER_VALIDATE_EMAIL) === false) {
+            $this->logger->warning('notification.invalid_recipient', [
+                'to' => $to,
+                'template' => $template->value,
+                'order_id' => $order->getId(),
+            ]);
+            $this->persistSkipped($order, $template, $to, self::SKIP_REASON_INVALID_EMAIL);
+            return;
+        }
+
         // M3.2.X.7-B: Resolve recipient's preferred locale before
         // rendering. If no resolver injected (legacy DI / test setup
         // without locale awareness), defaults to English via the

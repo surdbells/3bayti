@@ -9,10 +9,11 @@ import jsPDF from 'jspdf';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { AxCanDirective } from '../../shared/security/ax-can.directive';
 @Component({
   selector: 'app-admin-view-order',
   standalone: true,
-  imports: [AdminShellComponent, CommonModule, IconComponent, RouterLink],
+  imports: [AdminShellComponent, CommonModule, IconComponent, RouterLink, AxCanDirective],
   templateUrl: './admin-view-order.component.html',
   styleUrl: './admin-view-order.component.css',
 })
@@ -23,6 +24,7 @@ export class AdminViewOrderComponent implements OnInit {
     is_loading: false,
     updating_order: false,
     nav_open: false,
+    resending: false,
   };
 
   session_data: any = '';
@@ -276,6 +278,52 @@ export class AdminViewOrderComponent implements OnInit {
       console.error('PDF generation failed', err);
       this.error_notification('Could not generate PDF. Please try again.');
     }
+  }
+
+  /**
+   * Re-send the ORDER_PLACED_VENDOR ("new order") email to the vendor(s) on
+   * this order — recovery for a bounced/failed first send. Reports the actual
+   * outcome (sent / skipped / failed) so the admin knows whether the address
+   * still needs fixing.
+   */
+  resendVendorNotification() {
+    const orderId = this.data?.id || this.single?.order;
+    if (!orderId) return;
+    this.confirm
+      .confirm({
+        title: 'Resend vendor email',
+        message:
+          "Re-send the 'new order' email to the vendor(s) on this order. Make sure the vendor's contact email is correct first — otherwise it will fail again.",
+        confirmLabel: 'Resend',
+        cancelLabel: 'Cancel',
+      })
+      .then((ok) => {
+        if (!ok) return;
+        this.ui_controls.resending = true;
+        this.adapter
+          .post_v3('POST /admin/orders/:id/resend-vendor-notification', {}, { params: { id: String(orderId) } })
+          .subscribe({
+            next: (res: any) => {
+              const r = res?.result;
+              if (r?.status === 'sent') {
+                this.success_notification(`Sent to ${r.recipient}.`);
+              } else if (r?.status === 'skipped') {
+                this.error_notification(
+                  `Not sent — ${r.recipient || 'no valid email'} (${r.error_kind || 'skipped'}). Fix the vendor's contact email, then retry.`,
+                );
+              } else if (r?.status === 'failed') {
+                this.error_notification(`Send failed for ${r.recipient} (${r.error_kind || 'error'}).`);
+              } else {
+                this.success_notification('Resend triggered.');
+              }
+              this.ui_controls.resending = false;
+            },
+            error: () => {
+              this.error_notification('Could not resend the notification.');
+              this.ui_controls.resending = false;
+            },
+          });
+      });
   }
 
   startStatusChange(order: number, status: string, email: string) {

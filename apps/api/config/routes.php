@@ -772,6 +772,11 @@ return function (App $app): void {
         $group->get('/orders/{id:[0-9]+}/timeline',
             \Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderTimelineController::class)->add($perm->for('orders.view_detail'));
 
+        // Resend the vendor "new order" email (recover a failed/bounced send
+        // after correcting the vendor's contact email). Optional body vendor_id.
+        $group->post('/orders/{id:[0-9]+}/resend-vendor-notification',
+            \Bayti\Api\Http\Controllers\Admin\Order\ResendOrderVendorNotificationController::class)->add($perm->for('notifications.send'));
+
         // Refund (M3.1.7-E)
         $group->post('/orders/{id:[0-9]+}/refund',
             \Bayti\Api\Http\Controllers\Admin\Order\RefundOrderController::class)->add($perm->for('orders.refund'));
