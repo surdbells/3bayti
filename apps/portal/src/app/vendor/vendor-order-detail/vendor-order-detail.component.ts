@@ -19,6 +19,10 @@ interface OrderItem {
   subtotal: string;
   size: string | null;
   color: string | null;
+  is_custom?: boolean;
+  measurement?: string | null;
+  extra_measurement?: string | null;
+  note?: string | null;
   item_status: string;
 }
 
@@ -27,6 +31,18 @@ interface OrderCustomer {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+}
+
+interface OrderAddress {
+  first_name: string | null;
+  last_name: string | null;
+  phone: string | null;
+  email: string | null;
+  street: string | null;
+  city: string | null;
+  state_province: string | null;
+  country_code: string | null;
+  postal_code: string | null;
 }
 
 interface OrderDetail {
@@ -41,6 +57,7 @@ interface OrderDetail {
   currency: string;
   paid_at: string | null;
   customer: OrderCustomer | null;
+  shipping_address: OrderAddress | null;
   items: OrderItem[];
 }
 
@@ -135,6 +152,12 @@ export class VendorOrderDetailComponent implements OnInit {
     const c = this.order()?.customer;
     if (!c) return '—';
     return `${c.first_name ?? ''} ${c.last_name ?? ''}`.trim() || '—';
+  }
+
+  /** Recipient name from the shipping address, or "—" when missing. */
+  addressName(a: OrderAddress | null | undefined): string {
+    if (!a) return '—';
+    return `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim() || '—';
   }
 
   /** Valid next statuses for an item per the server state machine. */

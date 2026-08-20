@@ -29,9 +29,25 @@
               <div class="ax-font-medium ax-text-sm">{{ item.product_name }}</div>
               <div class="ax-text-2xs ax-text-tertiary">
                 Qty {{ item.quantity }} · {{ money(item.unit_price) }}
-                <span *ngIf="item.size"> · {{ item.size }}</span>
+                <span *ngIf="item.size"> · Size {{ item.size }}</span>
                 <span *ngIf="item.color"> · {{ item.color }}</span>
+                <span *ngIf="item.subtotal"> · {{ money(item.subtotal) }}</span>
               </div>
+
+              <!-- Measurements + customer note — everything the vendor needs to make/pack the item. -->
+              <div *ngIf="item.measurement" class="voi-detail">
+                <div class="voi-detail-label">Measurements</div>
+                <div class="voi-detail-text">{{ item.measurement }}</div>
+              </div>
+              <div *ngIf="item.extra_measurement" class="voi-detail">
+                <div class="voi-detail-label">Additional measurements</div>
+                <div class="voi-detail-text">{{ item.extra_measurement }}</div>
+              </div>
+              <div *ngIf="item.note" class="voi-detail voi-detail-note">
+                <div class="voi-detail-label">Customer note</div>
+                <div class="voi-detail-text">{{ item.note }}</div>
+              </div>
+
               <div class="ax-mt-1">
                 <span [ngClass]="statusBadgeClass(item.item_status)">{{ statusLabel(item.item_status) }}</span>
               </div>
@@ -66,6 +82,21 @@
           <ng-template #noCustomer>
             <div class="ax-text-sm ax-text-tertiary">—</div>
           </ng-template>
+        </section>
+
+        <section class="ax-card ax-p-4 ax-mb-4" *ngIf="o.shipping_address as a">
+          <h3 class="ax-h6 ax-mb-2">Deliver to</h3>
+          <div class="ax-text-sm ax-text-secondary">
+            <div class="ax-font-medium ax-text-primary">{{ addressName(a) }}</div>
+            <div *ngIf="a.phone"><a [href]="'tel:' + a.phone">{{ a.phone }}</a></div>
+            <div *ngIf="a.street">{{ a.street }}</div>
+            <div *ngIf="a.state_province || a.city">
+              <span *ngIf="a.state_province">{{ a.state_province }}</span><span *ngIf="a.state_province && a.city">, </span><span *ngIf="a.city">{{ a.city }}</span>
+            </div>
+            <div *ngIf="a.postal_code">{{ a.postal_code }}</div>
+            <div *ngIf="a.country_code">{{ a.country_code }}</div>
+            <div *ngIf="a.email" class="ax-mt-1"><a [href]="'mailto:' + a.email">{{ a.email }}</a></div>
+          </div>
         </section>
 
         <section class="ax-card ax-p-4" *ngIf="timeline().length">

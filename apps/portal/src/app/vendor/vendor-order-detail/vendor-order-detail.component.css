@@ -41,3 +41,28 @@
   width: 9px; height: 9px; border-radius: 50%;
   background: var(--ax-color-brand, #906952); margin-top: 0.35rem; flex-shrink: 0;
 }
+
+/* Per-item detail blocks (measurements, additional measurements, note). */
+.voi-detail {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--ax-color-bg-sunken, #f1ece4);
+  border-radius: var(--ax-radius-sm, 6px);
+}
+.voi-detail-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ax-color-text-tertiary);
+}
+.voi-detail-text {
+  font-size: 0.8125rem;
+  color: var(--ax-color-text-primary);
+  white-space: pre-line;
+  margin-top: 1px;
+}
+.voi-detail-note {
+  background: var(--ax-color-bg-brand-subtle, #f6efe6);
+  border-left: 3px solid var(--ax-color-bg-brand, #906952);
+}
