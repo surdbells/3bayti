@@ -102,6 +102,24 @@
           </div>
         </section>
 
+        <!-- Customer's saved body measurements (profile). Shown so the vendor
+             can make/fit the order even when a per-item snapshot wasn't captured. -->
+        <section class="ax-card ax-p-4 ax-mb-4" *ngIf="customerMeasurements().length">
+          <h3 class="ax-h6 ax-mb-2">Customer measurements</h3>
+          <div *ngFor="let m of customerMeasurements(); let last = last" [class.ax-mb-3]="!last">
+            <dl class="voi-msmt">
+              <div class="voi-msmt-row" *ngFor="let r of measurementValueRows(m)">
+                <dt>{{ r.label }}</dt>
+                <dd>{{ r.value }}</dd>
+              </div>
+            </dl>
+            <div *ngIf="m.notes" class="voi-detail voi-detail-note ax-mt-2">
+              <div class="voi-detail-label">Notes</div>
+              <div class="voi-detail-text">{{ m.notes }}</div>
+            </div>
+          </div>
+        </section>
+
         <section class="ax-card ax-p-4" *ngIf="timeline().length">
           <h3 class="ax-h6 ax-mb-2">Timeline</h3>
           <ol class="voi-timeline">

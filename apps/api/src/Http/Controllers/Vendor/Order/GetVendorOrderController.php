@@ -8,11 +8,14 @@ use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
+use Bayti\Api\Domain\User\Measurement;
+use Bayti\Api\Domain\User\MeasurementRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Http\Errors\ErrorCodes;
 use Bayti\Api\Http\Errors\HttpException;
 use Bayti\Api\Http\Middleware\AuthMiddleware;
 use Bayti\Api\Http\Responder;
+use Bayti\Api\Http\Serializers\MeasurementSerializer;
 use Bayti\Api\Http\Serializers\OrderSerializer;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
@@ -53,6 +56,7 @@ final class GetVendorOrderController
         protected readonly ResponseFactoryInterface $responseFactory,
         private readonly EntityManagerInterface $em,
         private readonly OrderSerializer $serializer,
+        private readonly MeasurementSerializer $measurementSerializer,
     ) {
     }
 
@@ -101,6 +105,18 @@ final class GetVendorOrderController
                 return is_int($vid) && isset($vendorIdSet[$vid]);
             },
         ));
+
+        // The customer's saved body measurements (profile), so the vendor can
+        // fulfil made-to-measure orders. The per-item `measurement` snapshot is
+        // only captured for custom-size lines (and not for legacy-migrated
+        // orders), whereas the profile is the customer's authoritative set — the
+        // same measurements the mobile app snapshots into custom orders. Empty
+        // list when the customer has none on file.
+        /** @var MeasurementRepository $measurementRepo */
+        $measurementRepo = $this->em->getRepository(Measurement::class);
+        $shape['customer_measurements'] = $this->measurementSerializer->publicShapeMany(
+            $measurementRepo->findAllForUser($order->getUser()),
+        );
 
         return $this->ok(['order' => $shape]);
     }

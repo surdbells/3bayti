@@ -45,6 +45,15 @@ interface OrderAddress {
   postal_code: string | null;
 }
 
+/** The customer's saved measurement profile (one row per category). */
+interface CustomerMeasurement {
+  id: number;
+  category_id: number | null;
+  values: Record<string, number>;
+  notes: string | null;
+  updated_at?: string;
+}
+
 interface OrderDetail {
   id: number;
   order_reference: string;
@@ -59,6 +68,7 @@ interface OrderDetail {
   customer: OrderCustomer | null;
   shipping_address: OrderAddress | null;
   items: OrderItem[];
+  customer_measurements?: CustomerMeasurement[];
 }
 
 /** An event from GET /v3/vendor/orders/{id}/timeline (OrderTimelineSerializer). */
@@ -187,6 +197,35 @@ export class VendorOrderDetailComponent implements OnInit {
 
   private humanizeKey(k: string): string {
     return k.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
+  /**
+   * The customer's saved measurement profile(s), filtered to rows that
+   * actually carry values. This is the authoritative set the customer keeps on
+   * their account — shown so the vendor can fulfil made-to-measure orders even
+   * when the per-item snapshot wasn't captured (non-custom lines, or legacy
+   * orders migrated without one).
+   */
+  customerMeasurements(): CustomerMeasurement[] {
+    const rows = this.order()?.customer_measurements ?? [];
+    return rows.filter((m) => this.measurementValueRows(m).length > 0);
+  }
+
+  /** Flatten a profile row's values map into humanised label/value (cm) pairs. */
+  measurementValueRows(m: CustomerMeasurement): { label: string; value: string }[] {
+    const out: { label: string; value: string }[] = [];
+    for (const [k, v] of Object.entries(m?.values ?? {})) {
+      if (v === null || v === undefined || Number.isNaN(Number(v))) continue;
+      out.push({ label: this.humanizeKey(k), value: `${Number(v)} cm` });
+    }
+    return out;
+  }
+
+  /** Whether any measurement source (per-item snapshot or profile) exists. */
+  hasAnyMeasurements(): boolean {
+    const items = this.order()?.items ?? [];
+    return items.some((i) => this.measurementPairs(i).length > 0)
+      || this.customerMeasurements().length > 0;
   }
 
   /** Valid next statuses for an item per the server state machine. */
