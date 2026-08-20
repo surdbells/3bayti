@@ -35,14 +35,17 @@
               </div>
 
               <!-- Measurements + customer note — everything the vendor needs to make/pack the item. -->
-              <div *ngIf="item.measurement" class="voi-detail">
-                <div class="voi-detail-label">Measurements</div>
-                <div class="voi-detail-text">{{ item.measurement }}</div>
-              </div>
-              <div *ngIf="item.extra_measurement" class="voi-detail">
-                <div class="voi-detail-label">Additional measurements</div>
-                <div class="voi-detail-text">{{ item.extra_measurement }}</div>
-              </div>
+              <ng-container *ngIf="measurementPairs(item) as pairs">
+                <div *ngIf="pairs.length" class="voi-detail">
+                  <div class="voi-detail-label">Measurements</div>
+                  <dl class="voi-msmt">
+                    <div class="voi-msmt-row" *ngFor="let p of pairs">
+                      <dt>{{ p.label }}</dt>
+                      <dd>{{ p.value }}</dd>
+                    </div>
+                  </dl>
+                </div>
+              </ng-container>
               <div *ngIf="item.note" class="voi-detail voi-detail-note">
                 <div class="voi-detail-label">Customer note</div>
                 <div class="voi-detail-text">{{ item.note }}</div>

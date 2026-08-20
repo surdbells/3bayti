@@ -160,6 +160,35 @@ export class VendorOrderDetailComponent implements OnInit {
     return `${a.first_name ?? ''} ${a.last_name ?? ''}`.trim() || '—';
   }
 
+  /**
+   * Flatten an item's measurement + extra_measurement into label/value pairs.
+   * The columns are text that may hold a JSON object ({bust:'36', length:'58'})
+   * or free text; JSON becomes labelled rows, free text a single "Details" row.
+   * Mirrors the server's OrderEmailTemplateRenderer::measurementPairs.
+   */
+  measurementPairs(item: OrderItem): { label: string; value: string }[] {
+    const out: { label: string; value: string }[] = [];
+    for (const raw of [item.measurement, item.extra_measurement]) {
+      const trimmed = (raw ?? '').toString().trim();
+      if (trimmed === '') continue;
+      let decoded: any = null;
+      try { decoded = JSON.parse(trimmed); } catch { decoded = null; }
+      if (decoded && typeof decoded === 'object' && !Array.isArray(decoded)) {
+        for (const [k, v] of Object.entries(decoded)) {
+          if (v === null || v === '' || typeof v === 'object') continue;
+          out.push({ label: this.humanizeKey(k), value: String(v) });
+        }
+      } else {
+        out.push({ label: 'Details', value: trimmed });
+      }
+    }
+    return out;
+  }
+
+  private humanizeKey(k: string): string {
+    return k.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   /** Valid next statuses for an item per the server state machine. */
   nextStatuses(item: OrderItem): string[] {
     return ITEM_TRANSITIONS[item.item_status] ?? [];

@@ -66,3 +66,14 @@
   background: var(--ax-color-bg-brand-subtle, #f6efe6);
   border-left: 3px solid var(--ax-color-bg-brand, #906952);
 }
+
+/* Measurements rendered as a compact label/value grid. */
+.voi-msmt { margin: 0.35rem 0 0; display: flex; flex-direction: column; gap: 2px; }
+.voi-msmt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+}
+.voi-msmt-row dt { color: var(--ax-color-text-secondary); margin: 0; }
+.voi-msmt-row dd { margin: 0; font-weight: 600; color: var(--ax-color-text-primary); font-variant-numeric: tabular-nums; }
