@@ -155,14 +155,19 @@ export class VendorOrderDetailPage implements OnInit {
           if (response.response_code === 200 && response.status === 'success') {
             const o = response.data?.order;
             if (o) {
+              const items = Array.isArray(o.items) ? o.items : [];
               this.order = {
                 id: o.id,
                 order_reference: o.order_reference,
                 status: o.status,
-                total: o.total,
+                // Only THIS store's items. items[] is already filtered to the
+                // vendor server-side, so sum their subtotals rather than o.total
+                // (the customer's whole-order payment incl. delivery + other
+                // vendors' items).
+                total: this.sumVendorItems(items),
                 currency: o.currency,
                 date: o.date,
-                items: Array.isArray(o.items) ? o.items : [],
+                items,
               };
             } else {
               this.toast.error(this.i18n.t('vendor_order_not_found'));
@@ -180,6 +185,15 @@ export class VendorOrderDetailPage implements OnInit {
           this.toast.error(this.i18n.t('vendor_order_network_error'));
         },
       });
+  }
+
+  /** Sum this store's line items into a "0.00" total string. */
+  private sumVendorItems(items: VendorOrderItem[]): string {
+    const sum = (items ?? []).reduce(
+      (s: number, i: any) => s + (parseFloat(i?.subtotal ?? '0') || 0),
+      0,
+    );
+    return sum.toFixed(2);
   }
 
   // ===================================================================

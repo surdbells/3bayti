@@ -222,15 +222,30 @@ export class VendorOrdersPage implements OnInit {
   private extractOrders(data: any): VendorOrder[] {
     if (!data || typeof data !== 'object') return [];
     const arr = Array.isArray(data) ? data : (Array.isArray(data.orders) ? data.orders : []);
-    return arr.map((o: any) => ({
-      id: o.id,
-      order_reference: o.order_reference,
-      status: o.status,
-      total: o.total,
-      currency: o.currency,
-      date: o.date,
-      items: Array.isArray(o.items) ? o.items : [],
-      showItems: false,
-    }));
+    return arr.map((o: any) => {
+      const items = Array.isArray(o.items) ? o.items : [];
+      return {
+        id: o.id,
+        order_reference: o.order_reference,
+        status: o.status,
+        // Only THIS store's items. The API filters items[] to the requesting
+        // vendor, so sum their line subtotals rather than showing o.total (the
+        // customer's whole-order payment — incl. delivery + other vendors' items).
+        total: this.sumVendorItems(items),
+        currency: o.currency,
+        date: o.date,
+        items,
+        showItems: false,
+      };
+    });
+  }
+
+  /** Sum this store's line items into a "0.00" total string. */
+  private sumVendorItems(items: VendorOrderItem[]): string {
+    const sum = (items ?? []).reduce(
+      (s: number, i: any) => s + (parseFloat(i?.subtotal ?? '0') || 0),
+      0,
+    );
+    return sum.toFixed(2);
   }
 }
