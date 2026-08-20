@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Domain\Audit;
 
+use Bayti\Api\Domain\User\User;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\QueryBuilder;
 
@@ -168,6 +169,15 @@ class AuditLogRepository extends EntityRepository
         }
         if (!empty($f['userId'])) {
             $qb->andWhere('a.userId = :userId')->setParameter('userId', (int) $f['userId']);
+        }
+        if (!empty($f['actor'])) {
+            // Match the actor by name or email. audit_log.user_id has no FK, so
+            // resolve matching user ids via a subquery (System rows — null
+            // user_id — never match, which is the intent when filtering by actor).
+            $qb->andWhere(
+                'a.userId IN (SELECT u2.id FROM ' . User::class . ' u2 '
+                . "WHERE LOWER(u2.email) LIKE :actor OR LOWER(CONCAT(u2.firstName, ' ', u2.lastName)) LIKE :actor)",
+            )->setParameter('actor', '%' . mb_strtolower(trim((string) $f['actor'])) . '%');
         }
         if (!empty($f['subjectId'])) {
             $qb->andWhere('a.subjectId = :subjectId')->setParameter('subjectId', (int) $f['subjectId']);

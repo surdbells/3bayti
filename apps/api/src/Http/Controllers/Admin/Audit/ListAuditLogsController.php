@@ -73,6 +73,7 @@ final class ListAuditLogsController
             'dateFrom' => $this->parseDate($query['date_from'] ?? null),
             'dateTo' => $this->parseDate($query['date_to'] ?? null),
             'search' => $this->parseString($query['search'] ?? null, 100),
+            'actor' => $this->parseString($query['actor'] ?? null, 100),
         ];
 
         /** @var AuditLogRepository $repo */

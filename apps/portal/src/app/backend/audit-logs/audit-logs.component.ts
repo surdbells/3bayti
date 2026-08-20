@@ -95,6 +95,7 @@ export class AuditLogsComponent implements OnInit {
           placeholder: 'Any type',
           optionsLoader: () => this.loadSubjectTypeOptions(),
         },
+        { key: 'actor', label: 'Actor', type: 'text', placeholder: 'Name or email' },
         { key: 'date', label: 'Date', type: 'date-range' },
       ],
       columns: [
@@ -127,6 +128,7 @@ export class AuditLogsComponent implements OnInit {
     };
     if (query.search) q.search = query.search;
     if (query.filters['action']) q.action = query.filters['action'];
+    if (query.filters['actor']) q.actor = query.filters['actor'];
     const types = query.filters['subject_type'];
     if (Array.isArray(types) && types.length) q.subject_type = types.join(',');
     const dateRange: any = query.filters['date'];
