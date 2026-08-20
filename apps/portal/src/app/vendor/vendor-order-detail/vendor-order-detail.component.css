@@ -25,6 +25,65 @@
 .voi-item-actions { flex-shrink: 0; }
 .voi-item-actions .ax-input { width: 9rem; }
 
+/* Clickable product (image + name) → opens the product detail modal. */
+.voi-item-thumb {
+  padding: 0; border: 0; background: none; cursor: pointer; flex-shrink: 0;
+  border-radius: var(--ax-radius-md); line-height: 0;
+}
+.voi-item-thumb:hover .voi-item-img { border-color: var(--ax-color-brand, #906952); }
+.voi-item-thumb:focus-visible { outline: 2px solid var(--ax-color-brand, #906952); outline-offset: 2px; }
+.voi-item-img-empty {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--ax-color-bg-sunken, #f1ece4); color: var(--ax-color-text-tertiary);
+}
+.voi-item-name {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-weight: 500; font-size: 0.875rem;
+  color: var(--ax-color-text-primary); text-align: left;
+}
+.voi-item-name:hover { color: var(--ax-color-brand, #906952); text-decoration: underline; }
+.voi-item-name:focus-visible { outline: 2px solid var(--ax-color-brand, #906952); outline-offset: 2px; border-radius: 3px; }
+.voi-item-name-icon { font-size: 0.85rem; opacity: 0.55; flex-shrink: 0; }
+
+/* Product detail modal. */
+.voi-modal-backdrop {
+  position: fixed; inset: 0; z-index: var(--ax-z-modal, 1050);
+  background: rgba(0, 0, 0, 0.45);
+  display: flex; align-items: center; justify-content: center;
+  padding: 1rem;
+}
+.voi-modal {
+  background: var(--ax-color-bg-surface, #fff);
+  border-radius: var(--ax-radius-lg, 12px);
+  box-shadow: var(--ax-shadow-xl, 0 16px 48px rgba(0, 0, 0, 0.28));
+  width: 100%; max-width: 30rem; max-height: 90vh; overflow: auto;
+}
+.voi-modal-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0.9rem 1rem; border-bottom: 1px solid var(--ax-color-border-subtle);
+  position: sticky; top: 0; background: var(--ax-color-bg-surface, #fff);
+}
+.voi-modal-body { padding: 1rem; }
+.voi-modal-hero { display: flex; gap: 0.9rem; align-items: flex-start; }
+.voi-modal-img {
+  width: 96px; height: 96px; object-fit: cover; object-position: top center;
+  border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle); flex-shrink: 0;
+}
+.voi-modal-heroinfo { min-width: 0; }
+.voi-modal-attrs {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1rem;
+  margin: 1rem 0 0;
+}
+.voi-modal-attrs > div { min-width: 0; }
+.voi-modal-attrs dt {
+  font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em;
+  color: var(--ax-color-text-tertiary); margin: 0;
+}
+.voi-modal-attrs dd {
+  margin: 1px 0 0; font-size: 0.875rem; font-weight: 500; color: var(--ax-color-text-primary);
+}
+
 .voi-totals { }
 .voi-total-row {
   display: flex; justify-content: space-between;

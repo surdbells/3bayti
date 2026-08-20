@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
@@ -116,6 +116,8 @@ export class VendorOrderDetailComponent implements OnInit {
   readonly busy = signal(false);
   readonly order = signal<OrderDetail | null>(null);
   readonly timeline = signal<TimelineEntry[]>([]);
+  /** The line item shown in the product detail modal (null = closed). */
+  readonly selectedItem = signal<OrderItem | null>(null);
 
   private orderId = 0;
 
@@ -264,6 +266,33 @@ export class VendorOrderDetailComponent implements OnInit {
         error: () => { this.toast.error('Unable to update item status.'); this.busy.set(false); },
       });
     });
+  }
+
+  /**
+   * Total for the products from THIS vendor's store only — the sum of the
+   * vendor's own line items. The order's subtotal/total fields cover the whole
+   * basket (other stores' items + delivery), which the vendor must not see.
+   * The API already filters items[] to this vendor, so summing them is exact.
+   */
+  vendorItemsTotal(): number {
+    const items = this.order()?.items ?? [];
+    return items.reduce((sum, i) => sum + (Number(i.subtotal) || 0), 0);
+  }
+
+  // ── Product detail modal ───────────────────────────────────────────
+  openItem(item: OrderItem): void {
+    this.selectedItem.set(item);
+  }
+
+  closeItem(): void {
+    this.selectedItem.set(null);
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    if (this.selectedItem()) {
+      this.closeItem();
+    }
   }
 
   // ── Display helpers ────────────────────────────────────────────────

@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "932559657027-2l3obfc3npjd51mdtc56mh1ie0ej27u8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ae.threebayti.app",
+            "certificate_hash": "5541323e7d7fbcc8cc72b0afed014edf47e27ea2"
+          }
+        },
+        {
           "client_id": "932559657027-at2jj8nmj4mvi6ovkseg35q5p1qsqcmd.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -50,6 +58,22 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "932559657027-0cl6dnvdnqi6btfjpjekpsk7pnbg4hi8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.threebayti.app",
+            "certificate_hash": "5541323e7d7fbcc8cc72b0afed014edf47e27ea2"
+          }
+        },
+        {
+          "client_id": "932559657027-vvdr5t6597h08bs635jck4rcl887f3gv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.threebayti.app",
+            "certificate_hash": "e810ef7397614da91b6e61722ced3d5f23f986a6"
+          }
+        },
         {
           "client_id": "932559657027-at2jj8nmj4mvi6ovkseg35q5p1qsqcmd.apps.googleusercontent.com",
           "client_type": 3

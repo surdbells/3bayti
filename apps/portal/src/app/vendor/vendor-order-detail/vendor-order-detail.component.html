@@ -24,9 +24,18 @@
         <section class="ax-card ax-p-4 ax-mb-4">
           <h3 class="ax-h6 ax-mb-2">Items</h3>
           <div class="voi-item" *ngFor="let item of o.items">
-            <img *ngIf="item.product_image" [src]="item.product_image" alt="" class="voi-item-img" />
+            <button type="button" class="voi-item-thumb" (click)="openItem(item)"
+              [title]="'View ' + item.product_name">
+              <img *ngIf="item.product_image" [src]="item.product_image" alt="" class="voi-item-img" />
+              <span *ngIf="!item.product_image" class="voi-item-img voi-item-img-empty" aria-hidden="true">
+                <app-icon name="inventory_2"></app-icon>
+              </span>
+            </button>
             <div class="voi-item-body">
-              <div class="ax-font-medium ax-text-sm">{{ item.product_name }}</div>
+              <button type="button" class="voi-item-name" (click)="openItem(item)">
+                {{ item.product_name }}
+                <app-icon name="visibility" class="voi-item-name-icon" aria-hidden="true"></app-icon>
+              </button>
               <div class="ax-text-2xs ax-text-tertiary">
                 Qty {{ item.quantity }} · {{ money(item.unit_price) }}
                 <span *ngIf="item.size"> · Size {{ item.size }}</span>
@@ -70,10 +79,13 @@
         </section>
 
         <section class="ax-card ax-p-4 voi-totals ax-mb-4">
-          <div class="voi-total-row"><span>Subtotal</span><span>{{ money(o.subtotal) }}</span></div>
-          <div class="voi-total-row"><span>Delivery</span><span>{{ money(o.delivery_fee) }}</span></div>
-          <div class="voi-total-row" *ngIf="o.discount && +o.discount > 0"><span>Discount</span><span>−{{ money(o.discount) }}</span></div>
-          <div class="voi-total-row voi-total-grand"><span>Total</span><span>{{ money(o.total) }}</span></div>
+          <div class="voi-total-row voi-total-grand">
+            <span>Your items total</span><span>{{ money(vendorItemsTotal()) }}</span>
+          </div>
+          <p class="ax-text-2xs ax-text-tertiary ax-mt-2 ax-mb-0">
+            Total for the {{ o.items.length }} product{{ o.items.length === 1 ? '' : 's' }} from your store.
+            Excludes delivery and any items from other stores.
+          </p>
         </section>
 
         <section class="ax-card ax-p-4" *ngIf="timeline().length">
@@ -137,6 +149,54 @@
           </div>
         </section>
       </aside>
+    </div>
+  </div>
+
+  <!-- Product detail modal — the exact item the customer ordered. -->
+  <div class="voi-modal-backdrop" *ngIf="selectedItem() as it" (click)="closeItem()">
+    <div class="voi-modal" role="dialog" aria-modal="true" [attr.aria-label]="it.product_name"
+      (click)="$event.stopPropagation()">
+      <div class="voi-modal-head">
+        <h3 class="ax-h6 ax-m-0">Product ordered</h3>
+        <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="closeItem()" aria-label="Close">
+          <app-icon name="close" aria-hidden="true"></app-icon>
+        </button>
+      </div>
+      <div class="voi-modal-body">
+        <div class="voi-modal-hero">
+          <img *ngIf="it.product_image" [src]="it.product_image" [alt]="it.product_name" class="voi-modal-img" />
+          <div class="voi-modal-heroinfo">
+            <div class="ax-font-semibold">{{ it.product_name }}</div>
+            <div class="ax-mt-1"><span [ngClass]="statusBadgeClass(it.item_status)">{{ statusLabel(it.item_status) }}</span></div>
+          </div>
+        </div>
+
+        <dl class="voi-modal-attrs">
+          <div><dt>Quantity</dt><dd>{{ it.quantity }}</dd></div>
+          <div *ngIf="it.size"><dt>Size</dt><dd>{{ it.size }}</dd></div>
+          <div *ngIf="it.color"><dt>Colour</dt><dd>{{ it.color }}</dd></div>
+          <div *ngIf="it.is_custom"><dt>Type</dt><dd>Made to measure</dd></div>
+          <div><dt>Unit price</dt><dd>{{ money(it.unit_price) }}</dd></div>
+          <div><dt>Line total</dt><dd>{{ money(it.subtotal) }}</dd></div>
+        </dl>
+
+        <ng-container *ngIf="measurementPairs(it) as pairs">
+          <div *ngIf="pairs.length" class="voi-detail">
+            <div class="voi-detail-label">Measurements</div>
+            <dl class="voi-msmt">
+              <div class="voi-msmt-row" *ngFor="let p of pairs"><dt>{{ p.label }}</dt><dd>{{ p.value }}</dd></div>
+            </dl>
+          </div>
+        </ng-container>
+        <div *ngIf="extraMeasurementText(it)" class="voi-detail">
+          <div class="voi-detail-label">Extra measurement</div>
+          <div class="voi-detail-text">{{ extraMeasurementText(it) }}</div>
+        </div>
+        <div *ngIf="it.note" class="voi-detail voi-detail-note">
+          <div class="voi-detail-label">Customer note</div>
+          <div class="voi-detail-text">{{ it.note }}</div>
+        </div>
+      </div>
     </div>
   </div>
 </app-vendor-shell>
