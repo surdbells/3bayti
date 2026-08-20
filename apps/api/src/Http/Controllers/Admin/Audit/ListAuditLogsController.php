@@ -64,16 +64,20 @@ final class ListAuditLogsController
         $query = $request->getQueryParams();
         $limit = $this->clampLimit($query['limit'] ?? null);
         $offset = $this->clampOffset($query['offset'] ?? null);
-        $action = $this->parseAction($query['action'] ?? null);
-        $subjectType = $this->parseString($query['subject_type'] ?? null, 50);
-        $userId = $this->parsePositiveInt($query['user_id'] ?? null);
-        $subjectId = $this->parsePositiveInt($query['subject_id'] ?? null);
-        $dateFrom = $this->parseDate($query['date_from'] ?? null);
-        $dateTo = $this->parseDate($query['date_to'] ?? null);
+
+        $filters = [
+            'action' => $this->parseAction($query['action'] ?? null),
+            'subjectTypes' => $this->parseSubjectTypes($query['subject_type'] ?? null),
+            'userId' => $this->parsePositiveInt($query['user_id'] ?? null),
+            'subjectId' => $this->parsePositiveInt($query['subject_id'] ?? null),
+            'dateFrom' => $this->parseDate($query['date_from'] ?? null),
+            'dateTo' => $this->parseDate($query['date_to'] ?? null),
+            'search' => $this->parseString($query['search'] ?? null, 100),
+        ];
 
         /** @var AuditLogRepository $repo */
         $repo = $this->em->getRepository(AuditLog::class);
-        [$rows, $total] = $repo->paginated($limit, $offset, $action, $subjectType, $userId, $subjectId, $dateFrom, $dateTo);
+        [$rows, $total] = $repo->paginated($limit, $offset, $filters);
 
         $actors = $this->loadActors($rows);
         $items = array_map(
@@ -81,9 +85,20 @@ final class ListAuditLogsController
             $rows,
         );
 
+        // Summary counts (action filter ignored so the breakdown is complete)
+        // + distinct subject types for the filter dropdown.
+        $byAction = $repo->actionCounts($filters);
+
         return $this->ok([
             'logs' => $items,
             'actions' => AuditLog::ALL_ACTIONS,
+            'facets' => [
+                'subject_types' => $repo->distinctSubjectTypes(),
+            ],
+            'summary' => [
+                'total' => array_sum($byAction),
+                'by_action' => $byAction,
+            ],
             'pagination' => [
                 'limit' => $limit,
                 'offset' => $offset,
@@ -160,6 +175,23 @@ final class ListAuditLogsController
         }
         $t = trim($raw);
         return $t === '' ? null : mb_substr($t, 0, $max);
+    }
+
+    /**
+     * Comma-separated subject types (from the multiselect filter) → clean list.
+     *
+     * @return list<string>|null
+     */
+    private function parseSubjectTypes(mixed $raw): ?array
+    {
+        if (!is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+        $parts = array_values(array_filter(array_map(
+            static fn (string $s): string => mb_substr(trim($s), 0, 50),
+            explode(',', $raw),
+        ), static fn (string $s): bool => $s !== ''));
+        return $parts === [] ? null : $parts;
     }
 
     private function parsePositiveInt(mixed $raw): ?int

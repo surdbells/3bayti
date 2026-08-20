@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bayti\Api\Domain\Audit;
 
 use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\QueryBuilder;
 
 /**
  * Repository for AuditLog entities.
@@ -82,42 +83,18 @@ class AuditLogRepository extends EntityRepository
      * Paginated forensic listing, newest first, with optional filters. Powers
      * the admin audit-log surface (ListAuditLogsController).
      *
-     * @param string|null $dateFrom ISO date (YYYY-MM-DD), inclusive from 00:00:00 UTC
-     * @param string|null $dateTo   ISO date (YYYY-MM-DD), inclusive to 23:59:59 UTC
+     * `$filters` keys (all optional): action (string), subjectTypes (list of
+     * strings → IN), userId (int), subjectId (int), dateFrom / dateTo (ISO
+     * YYYY-MM-DD, inclusive UTC), search (matched against subject type / IP /
+     * request id, and — when numeric — subject id / user id).
+     *
+     * @param array<string, mixed> $filters
      * @return array{0: AuditLog[], 1: int} [rows, totalMatching]
      */
-    public function paginated(
-        int $limit,
-        int $offset,
-        ?string $action = null,
-        ?string $subjectType = null,
-        ?int $userId = null,
-        ?int $subjectId = null,
-        ?string $dateFrom = null,
-        ?string $dateTo = null,
-    ): array {
+    public function paginated(int $limit, int $offset, array $filters = []): array
+    {
         $qb = $this->createQueryBuilder('a');
-
-        if ($action !== null) {
-            $qb->andWhere('a.action = :action')->setParameter('action', $action);
-        }
-        if ($subjectType !== null) {
-            $qb->andWhere('a.subjectType = :subjectType')->setParameter('subjectType', $subjectType);
-        }
-        if ($userId !== null) {
-            $qb->andWhere('a.userId = :userId')->setParameter('userId', $userId);
-        }
-        if ($subjectId !== null) {
-            $qb->andWhere('a.subjectId = :subjectId')->setParameter('subjectId', $subjectId);
-        }
-        if ($dateFrom !== null) {
-            $qb->andWhere('a.createdAt >= :dateFrom')
-               ->setParameter('dateFrom', new \DateTimeImmutable($dateFrom . ' 00:00:00', new \DateTimeZone('UTC')));
-        }
-        if ($dateTo !== null) {
-            $qb->andWhere('a.createdAt <= :dateTo')
-               ->setParameter('dateTo', new \DateTimeImmutable($dateTo . ' 23:59:59', new \DateTimeZone('UTC')));
-        }
+        $this->applyFilters($qb, $filters);
 
         $countQb = clone $qb;
         $total = (int) $countQb->select('COUNT(a.id)')->getQuery()->getSingleScalarResult();
@@ -131,5 +108,92 @@ class AuditLogRepository extends EntityRepository
             ->getResult();
 
         return [$rows, $total];
+    }
+
+    /**
+     * Count matching rows grouped by action — for the summary stat bar. The
+     * `action` filter is intentionally ignored so the breakdown stays complete
+     * (picking an action doesn't collapse the distribution to a single bar).
+     *
+     * @param array<string, mixed> $filters
+     * @return array<string, int> action => count
+     */
+    public function actionCounts(array $filters = []): array
+    {
+        $forCounts = $filters;
+        unset($forCounts['action']);
+
+        $qb = $this->createQueryBuilder('a')
+            ->select('a.action AS action, COUNT(a.id) AS cnt')
+            ->groupBy('a.action');
+        $this->applyFilters($qb, $forCounts);
+
+        $out = [];
+        foreach ($qb->getQuery()->getArrayResult() as $row) {
+            $out[(string) $row['action']] = (int) $row['cnt'];
+        }
+        return $out;
+    }
+
+    /**
+     * Distinct subject types present in the log — powers the subject-type
+     * filter's option list. Unfiltered so the dropdown is stable.
+     *
+     * @return list<string>
+     */
+    public function distinctSubjectTypes(): array
+    {
+        $rows = $this->createQueryBuilder('a')
+            ->select('DISTINCT a.subjectType AS subjectType')
+            ->orderBy('a.subjectType', 'ASC')
+            ->getQuery()
+            ->getArrayResult();
+
+        return array_values(array_map(static fn (array $r): string => (string) $r['subjectType'], $rows));
+    }
+
+    /**
+     * Apply the shared filter set to a query builder (aliased `a`).
+     *
+     * @param array<string, mixed> $f
+     */
+    private function applyFilters(QueryBuilder $qb, array $f): void
+    {
+        if (!empty($f['action'])) {
+            $qb->andWhere('a.action = :action')->setParameter('action', $f['action']);
+        }
+        if (!empty($f['subjectTypes'])) {
+            $qb->andWhere('a.subjectType IN (:subjectTypes)')
+               ->setParameter('subjectTypes', (array) $f['subjectTypes']);
+        }
+        if (!empty($f['userId'])) {
+            $qb->andWhere('a.userId = :userId')->setParameter('userId', (int) $f['userId']);
+        }
+        if (!empty($f['subjectId'])) {
+            $qb->andWhere('a.subjectId = :subjectId')->setParameter('subjectId', (int) $f['subjectId']);
+        }
+        if (!empty($f['dateFrom'])) {
+            $qb->andWhere('a.createdAt >= :dateFrom')
+               ->setParameter('dateFrom', new \DateTimeImmutable($f['dateFrom'] . ' 00:00:00', new \DateTimeZone('UTC')));
+        }
+        if (!empty($f['dateTo'])) {
+            $qb->andWhere('a.createdAt <= :dateTo')
+               ->setParameter('dateTo', new \DateTimeImmutable($f['dateTo'] . ' 23:59:59', new \DateTimeZone('UTC')));
+        }
+        if (!empty($f['search'])) {
+            $search = trim((string) $f['search']);
+            $conds = [
+                'LOWER(a.subjectType) LIKE :search',
+                'LOWER(a.ipAddress) LIKE :search',
+                'LOWER(a.requestId) LIKE :search',
+            ];
+            if (ctype_digit($search)) {
+                $conds[] = 'a.subjectId = :searchNum';
+                $conds[] = 'a.userId = :searchNum';
+                $qb->setParameter('searchNum', (int) $search);
+            }
+            $qb->andWhere('(' . implode(' OR ', $conds) . ')')
+               ->setParameter('search', '%' . mb_strtolower($search) . '%');
+        }
     }
 }

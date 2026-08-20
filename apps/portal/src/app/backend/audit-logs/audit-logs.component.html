@@ -8,22 +8,64 @@
       </div>
     </header>
 
+    <!-- Summary bar: total + per-action breakdown for the current filter. -->
+    <section class="al-stats" *ngIf="summary() as s">
+      <div class="al-stat al-stat-total">
+        <span class="al-stat-value">{{ s.total | number }}</span>
+        <span class="al-stat-label">events in view</span>
+      </div>
+      <div class="al-stat" *ngFor="let b of s.byAction">
+        <span class="al-stat-dot" [ngClass]="actionMeta(b.action).dot"></span>
+        <span class="al-stat-value">{{ b.count | number }}</span>
+        <span class="al-stat-label">{{ actionMeta(b.action).label }}</span>
+      </div>
+      <div class="al-stat al-stat-empty" *ngIf="!s.byAction.length">
+        <span class="al-stat-label">No events for this filter</span>
+      </div>
+    </section>
+
     <section class="ax-card ax-p-0">
       <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+        <!-- When: relative, exact time on hover -->
+        <ng-template axCell="whenRel" let-row>
+          <span [title]="row.whenAbs">{{ row.whenRel }}</span>
+        </ng-template>
+
+        <!-- Actor: initials avatar + name + email -->
+        <ng-template axCell="actorName" let-row>
+          <div class="al-actor">
+            <span class="al-avatar" [class.al-avatar-system]="row.isSystem">
+              <app-icon *ngIf="row.isSystem" name="settings" aria-hidden="true"></app-icon>
+              <ng-container *ngIf="!row.isSystem">{{ row.actorInitials }}</ng-container>
+            </span>
+            <span class="al-actor-text">
+              <span class="al-actor-name">{{ row.actorName }}</span>
+              <span class="al-actor-email" *ngIf="row.actorEmail && row.actorEmail !== row.actorName">{{ row.actorEmail }}</span>
+            </span>
+          </div>
+        </ng-template>
+
+        <!-- Action badge -->
         <ng-template axCell="action" let-row>
-          <span [ngClass]="actionBadgeClass(row.action)">{{ actionLabel(row.action) }}</span>
+          <span [ngClass]="actionMeta(row.action).badge">{{ actionMeta(row.action).label }}</span>
+        </ng-template>
+
+        <!-- Subject: type + id -->
+        <ng-template axCell="subjectType" let-row>
+          <span class="al-subject">{{ row.subjectType }}</span>
+          <span class="al-subject-id">#{{ row.subjectId }}</span>
         </ng-template>
       </app-ax-data-table>
     </section>
   </div>
 
-  <!-- Detail modal — full diff + request metadata for one row. -->
+  <!-- Detail modal -->
   <div *ngIf="selected() as log" class="al-modal-backdrop" (click)="closeDetail()">
     <div class="al-modal" role="dialog" aria-modal="true" aria-label="Audit entry details" (click)="$event.stopPropagation()">
       <div class="al-modal-head">
-        <div>
-          <span [ngClass]="actionBadgeClass(log.action)">{{ actionLabel(log.action) }}</span>
-          <h3 class="ax-h5 ax-mt-2 ax-mb-0">{{ log.subject_type }} #{{ log.subject_id }}</h3>
+        <div class="al-modal-title">
+          <span [ngClass]="actionMeta(log.action).badge">{{ actionMeta(log.action).label }}</span>
+          <h3 class="ax-h5 ax-mt-2 ax-mb-0">{{ log.subject_type }} <span class="al-subject-id">#{{ log.subject_id }}</span></h3>
         </div>
         <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="closeDetail()" aria-label="Close">
           <app-icon name="close" aria-hidden="true"></app-icon>
@@ -33,18 +75,58 @@
       <dl class="al-meta">
         <div><dt>Actor</dt><dd>{{ selectedActor() }}</dd></div>
         <div><dt>When</dt><dd>{{ log.created_at | date:'medium' }}</dd></div>
-        <div *ngIf="log.ip_address"><dt>IP address</dt><dd>{{ log.ip_address }}</dd></div>
+        <div *ngIf="log.ip_address"><dt>IP address</dt><dd class="al-mono">{{ log.ip_address }}</dd></div>
         <div *ngIf="log.request_id"><dt>Request ID</dt><dd class="al-mono">{{ log.request_id }}</dd></div>
         <div *ngIf="log.user_agent"><dt>User agent</dt><dd class="al-ua">{{ log.user_agent }}</dd></div>
       </dl>
 
-      <div class="al-changes">
-        <div class="ax-text-2xs ax-text-tertiary" style="text-transform:uppercase;letter-spacing:0.08em;">Changes</div>
-        <pre *ngIf="hasChanges(); else noChanges" class="al-json">{{ prettyChanges() }}</pre>
-        <ng-template #noChanges>
-          <div class="ax-text-sm ax-text-tertiary ax-mt-1">No field-level diff recorded for this action.</div>
-        </ng-template>
+      <div class="al-changes-head">
+        <div class="ax-text-2xs ax-text-tertiary al-section-label">Changes</div>
+        <button type="button" class="al-raw-toggle" (click)="showRaw.set(!showRaw())">
+          {{ showRaw() ? 'Formatted' : 'Raw JSON' }}
+        </button>
       </div>
+
+      <ng-container *ngIf="!showRaw(); else rawJson">
+        <!-- updated: before → after diff -->
+        <table *ngIf="changeShape() === 'diff'" class="al-diff">
+          <thead><tr><th>Field</th><th>Before</th><th>After</th></tr></thead>
+          <tbody>
+            <tr *ngFor="let r of diffRows()">
+              <td class="al-diff-field">{{ r.field }}</td>
+              <td class="al-diff-before">{{ r.before }}</td>
+              <td class="al-diff-after">{{ r.after }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- created / deleted: single snapshot -->
+        <table *ngIf="changeShape() === 'created' || changeShape() === 'deleted'" class="al-kv">
+          <tbody>
+            <tr *ngFor="let r of kvRows(changeShape() === 'created' ? 'after' : 'before')">
+              <td class="al-kv-field">{{ r.field }}</td>
+              <td class="al-kv-value">{{ r.value }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- default/other: flat key-value -->
+        <table *ngIf="changeShape() === 'flat'" class="al-kv">
+          <tbody>
+            <tr *ngFor="let r of kvRows('root')">
+              <td class="al-kv-field">{{ r.field }}</td>
+              <td class="al-kv-value">{{ r.value }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div *ngIf="changeShape() === 'empty'" class="ax-text-sm ax-text-tertiary ax-mt-1">
+          No field-level detail recorded for this action.
+        </div>
+      </ng-container>
+      <ng-template #rawJson>
+        <pre class="al-json">{{ prettyRaw() }}</pre>
+      </ng-template>
     </div>
   </div>
 </app-admin-shell>
