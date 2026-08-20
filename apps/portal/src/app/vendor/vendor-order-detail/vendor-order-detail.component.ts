@@ -171,28 +171,44 @@ export class VendorOrderDetailComponent implements OnInit {
   }
 
   /**
-   * Flatten an item's measurement + extra_measurement into label/value pairs.
-   * The columns are text that may hold a JSON object ({bust:'36', length:'58'})
-   * or free text; JSON becomes labelled rows, free text a single "Details" row.
+   * Flatten an item's `measurement` snapshot into label/value pairs. The column
+   * is text that may hold a JSON object ({bust:'36', length:'58'}) or free text;
+   * JSON becomes labelled rows, free text a single "Details" row. The separate
+   * `extra_measurement` is rendered on its own (see extraMeasurementText).
    * Mirrors the server's OrderEmailTemplateRenderer::measurementPairs.
    */
   measurementPairs(item: OrderItem): { label: string; value: string }[] {
+    return this.parseMeasurement(item.measurement);
+  }
+
+  private parseMeasurement(raw: string | null | undefined): { label: string; value: string }[] {
     const out: { label: string; value: string }[] = [];
-    for (const raw of [item.measurement, item.extra_measurement]) {
-      const trimmed = (raw ?? '').toString().trim();
-      if (trimmed === '') continue;
-      let decoded: any = null;
-      try { decoded = JSON.parse(trimmed); } catch { decoded = null; }
-      if (decoded && typeof decoded === 'object' && !Array.isArray(decoded)) {
-        for (const [k, v] of Object.entries(decoded)) {
-          if (v === null || v === '' || typeof v === 'object') continue;
-          out.push({ label: this.humanizeKey(k), value: String(v) });
-        }
-      } else {
-        out.push({ label: 'Details', value: trimmed });
+    const trimmed = (raw ?? '').toString().trim();
+    if (trimmed === '') return out;
+    let decoded: any = null;
+    try { decoded = JSON.parse(trimmed); } catch { decoded = null; }
+    if (decoded && typeof decoded === 'object' && !Array.isArray(decoded)) {
+      for (const [k, v] of Object.entries(decoded)) {
+        if (v === null || v === '' || typeof v === 'object') continue;
+        out.push({ label: this.humanizeKey(k), value: String(v) });
       }
+    } else {
+      out.push({ label: 'Details', value: trimmed });
     }
     return out;
+  }
+
+  /**
+   * The item's `extra_measurement` (a vendor-specific measurement beyond the
+   * profile) as display text — a JSON object becomes "Label: value, …"; free
+   * text is shown as-is. Empty string when not provided.
+   */
+  extraMeasurementText(item: OrderItem): string {
+    const pairs = this.parseMeasurement(item.extra_measurement);
+    if (pairs.length === 1 && pairs[0].label === 'Details') {
+      return pairs[0].value;
+    }
+    return pairs.map((p) => `${p.label}: ${p.value}`).join(', ');
   }
 
   private humanizeKey(k: string): string {
@@ -219,13 +235,6 @@ export class VendorOrderDetailComponent implements OnInit {
       out.push({ label: this.humanizeKey(k), value: `${Number(v)} cm` });
     }
     return out;
-  }
-
-  /** Whether any measurement source (per-item snapshot or profile) exists. */
-  hasAnyMeasurements(): boolean {
-    const items = this.order()?.items ?? [];
-    return items.some((i) => this.measurementPairs(i).length > 0)
-      || this.customerMeasurements().length > 0;
   }
 
   /** Valid next statuses for an item per the server state machine. */

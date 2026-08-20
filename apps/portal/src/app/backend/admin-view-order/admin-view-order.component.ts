@@ -212,6 +212,37 @@ export class AdminViewOrderComponent implements OnInit {
     };
   }
 
+  /** True when the per-order snapshot has at least one filled field. */
+  get hasSnapshotMeasurement(): boolean {
+    const m = this.data?.measurement ?? {};
+    return ['bust', 'neck', 'waist', 'length', 'hip', 'arm']
+      .some((k) => String(m[k] ?? '').trim() !== '');
+  }
+
+  /**
+   * The customer's saved measurement profile(s) (from GET /admin/orders/:id →
+   * customer_measurements), filtered to rows that carry values. Authoritative
+   * set the vendor fulfils against, independent of the per-item snapshot.
+   */
+  customerMeasurements(): any[] {
+    const rows = this.data?.customer_measurements ?? [];
+    return rows.filter((m: any) => this.measurementValueRows(m).length > 0);
+  }
+
+  /** Flatten a profile row's values map into humanised label/value (cm) pairs. */
+  measurementValueRows(m: any): { label: string; value: string }[] {
+    const out: { label: string; value: string }[] = [];
+    for (const [k, v] of Object.entries(m?.values ?? {})) {
+      if (v === null || v === undefined || Number.isNaN(Number(v))) continue;
+      out.push({ label: this.humanizeMeasurementKey(k), value: `${Number(v)} cm` });
+    }
+    return out;
+  }
+
+  private humanizeMeasurementKey(k: string): string {
+    return k.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+
   printInvoice() {
     window.print();
   }

@@ -46,6 +46,10 @@
                   </dl>
                 </div>
               </ng-container>
+              <div *ngIf="extraMeasurementText(item)" class="voi-detail">
+                <div class="voi-detail-label">Extra measurement</div>
+                <div class="voi-detail-text">{{ extraMeasurementText(item) }}</div>
+              </div>
               <div *ngIf="item.note" class="voi-detail voi-detail-note">
                 <div class="voi-detail-label">Customer note</div>
                 <div class="voi-detail-text">{{ item.note }}</div>
@@ -65,11 +69,24 @@
           </div>
         </section>
 
-        <section class="ax-card ax-p-4 voi-totals">
+        <section class="ax-card ax-p-4 voi-totals ax-mb-4">
           <div class="voi-total-row"><span>Subtotal</span><span>{{ money(o.subtotal) }}</span></div>
           <div class="voi-total-row"><span>Delivery</span><span>{{ money(o.delivery_fee) }}</span></div>
           <div class="voi-total-row" *ngIf="o.discount && +o.discount > 0"><span>Discount</span><span>−{{ money(o.discount) }}</span></div>
           <div class="voi-total-row voi-total-grand"><span>Total</span><span>{{ money(o.total) }}</span></div>
+        </section>
+
+        <section class="ax-card ax-p-4" *ngIf="timeline().length">
+          <h3 class="ax-h6 ax-mb-2">Timeline</h3>
+          <ol class="voi-timeline">
+            <li *ngFor="let t of timeline()">
+              <span class="voi-timeline-dot"></span>
+              <div>
+                <div class="ax-text-sm">{{ t.summary || statusLabel(t.type || '') }}</div>
+                <div class="ax-text-2xs ax-text-tertiary">{{ t.occurred_at | date:'medium' }}</div>
+              </div>
+            </li>
+          </ol>
         </section>
       </div>
 
@@ -104,7 +121,7 @@
 
         <!-- Customer's saved body measurements (profile). Shown so the vendor
              can make/fit the order even when a per-item snapshot wasn't captured. -->
-        <section class="ax-card ax-p-4 ax-mb-4" *ngIf="customerMeasurements().length">
+        <section class="ax-card ax-p-4" *ngIf="customerMeasurements().length">
           <h3 class="ax-h6 ax-mb-2">Customer measurements</h3>
           <div *ngFor="let m of customerMeasurements(); let last = last" [class.ax-mb-3]="!last">
             <dl class="voi-msmt">
@@ -118,19 +135,6 @@
               <div class="voi-detail-text">{{ m.notes }}</div>
             </div>
           </div>
-        </section>
-
-        <section class="ax-card ax-p-4" *ngIf="timeline().length">
-          <h3 class="ax-h6 ax-mb-2">Timeline</h3>
-          <ol class="voi-timeline">
-            <li *ngFor="let t of timeline()">
-              <span class="voi-timeline-dot"></span>
-              <div>
-                <div class="ax-text-sm">{{ t.summary || statusLabel(t.type || '') }}</div>
-                <div class="ax-text-2xs ax-text-tertiary">{{ t.occurred_at | date:'medium' }}</div>
-              </div>
-            </li>
-          </ol>
         </section>
       </aside>
     </div>

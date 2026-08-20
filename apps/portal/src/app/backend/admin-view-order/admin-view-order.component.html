@@ -171,31 +171,49 @@
             <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-5">
               <!-- Measurements -->
               <div>
-                <h3 *ngIf="data.measurement" class="ax-h6 ax-m-0 ax-mb-2">Measurements</h3>
-                <div *ngIf="data.measurement" class="ax-grid ax-grid-cols-3 ax-gap-2">
-                  <div>
+                <!-- Per-order snapshot (custom-size lines). Hidden when empty. -->
+                <h3 *ngIf="hasSnapshotMeasurement" class="ax-h6 ax-m-0 ax-mb-2">Order measurements</h3>
+                <div *ngIf="hasSnapshotMeasurement" class="ax-grid ax-grid-cols-3 ax-gap-2">
+                  <div *ngIf="data.measurement.bust">
                     <div class="ax-text-2xs ax-text-tertiary">Bust</div>
-                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.bust || '—' }}</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.bust }}</div>
                   </div>
-                  <div>
+                  <div *ngIf="data.measurement.neck">
                     <div class="ax-text-2xs ax-text-tertiary">Neck</div>
-                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.neck || '—' }}</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.neck }}</div>
                   </div>
-                  <div>
+                  <div *ngIf="data.measurement.waist">
                     <div class="ax-text-2xs ax-text-tertiary">Waist</div>
-                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.waist || '—' }}</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.waist }}</div>
                   </div>
-                  <div>
+                  <div *ngIf="data.measurement.length">
                     <div class="ax-text-2xs ax-text-tertiary">Length</div>
-                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.length || '—' }}</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.length }}</div>
                   </div>
-                  <div>
+                  <div *ngIf="data.measurement.hip">
                     <div class="ax-text-2xs ax-text-tertiary">Hip</div>
-                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.hip || '—' }}</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.hip }}</div>
                   </div>
-                  <div>
+                  <div *ngIf="data.measurement.arm">
                     <div class="ax-text-2xs ax-text-tertiary">Arm</div>
-                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.arm || '—' }}</div>
+                    <div class="ax-text-sm ax-font-medium">{{ data.measurement.arm }}</div>
+                  </div>
+                </div>
+
+                <!-- Customer's saved measurement profile (authoritative set). -->
+                <div *ngIf="customerMeasurements().length" [class.ax-mt-4]="hasSnapshotMeasurement">
+                  <h3 class="ax-h6 ax-m-0 ax-mb-2">Customer measurements</h3>
+                  <div *ngFor="let m of customerMeasurements(); let last = last" [class.ax-mb-3]="!last">
+                    <div class="ax-grid ax-grid-cols-3 ax-gap-2">
+                      <div *ngFor="let r of measurementValueRows(m)">
+                        <div class="ax-text-2xs ax-text-tertiary">{{ r.label }}</div>
+                        <div class="ax-text-sm ax-font-medium">{{ r.value }}</div>
+                      </div>
+                    </div>
+                    <div *ngIf="m.notes" class="ax-mt-2">
+                      <div class="ax-text-2xs ax-text-tertiary" style="text-transform: uppercase; letter-spacing: 0.08em;">Notes</div>
+                      <div class="ax-text-sm ax-mt-1">{{ m.notes }}</div>
+                    </div>
                   </div>
                 </div>
 
