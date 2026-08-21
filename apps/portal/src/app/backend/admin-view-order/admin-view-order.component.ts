@@ -10,6 +10,7 @@ import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 import { AxCanDirective } from '../../shared/security/ax-can.directive';
+import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-admin-view-order',
   standalone: true,
@@ -318,8 +319,8 @@ export class AdminViewOrderComponent implements OnInit {
               }
               this.ui_controls.resending = false;
             },
-            error: () => {
-              this.error_notification('Could not resend the notification.');
+            error: (err: any) => {
+              this.error_notification(apiErrorMessage(err, 'Could not resend the notification.'));
               this.ui_controls.resending = false;
             },
           });

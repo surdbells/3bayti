@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 import { AxConfirmService } from '../../../shared/overlays';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -258,9 +259,9 @@ export class RoleEditorComponent implements OnInit {
           permissions: Array.isArray(p.permissions) ? p.permissions : [],
         }));
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.catalogError = true;
-        this.toast.error('Unable to load the permission catalog.');
+        this.toast.error(apiErrorMessage(err, 'Unable to load the permission catalog.'));
       },
     });
   }
@@ -286,7 +287,7 @@ export class RoleEditorComponent implements OnInit {
         }
         this.ui.loading = false;
       },
-      error: () => { this.toast.error('Unable to load the role.'); this.ui.loading = false; },
+      error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to load the role.')); this.ui.loading = false; },
     });
   }
 
@@ -400,12 +401,12 @@ export class RoleEditorComponent implements OnInit {
     if (this.editingRole) {
       this.adapter.put_v3('PUT /admin/roles/:id', payload, { params: { id: String(this.editingRole.id) } }).subscribe({
         next: (r: any) => { if (r) { this.toast.success('Role updated.'); back(); } done(); },
-        error: () => { this.toast.error('Unable to save the role.'); done(); },
+        error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to save the role.')); done(); },
       });
     } else {
       this.adapter.post_v3('POST /admin/roles', payload).subscribe({
         next: (r: any) => { if (r) { this.toast.success('Role created.'); back(); } done(); },
-        error: () => { this.toast.error('Unable to create the role.'); done(); },
+        error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to create the role.')); done(); },
       });
     }
   }

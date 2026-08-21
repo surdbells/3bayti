@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -67,8 +68,8 @@ export class DeliveriesComponent implements OnInit {
           this.ui.empty = this.orders.length === 0;
           this.ui.loading = false;
         },
-        error: () => {
-          this.toast.error('Unable to load deliveries at this time.');
+        error: (err: any) => {
+          this.toast.error(apiErrorMessage(err, 'Unable to load deliveries at this time.'));
           this.ui.loading = false;
         },
       });

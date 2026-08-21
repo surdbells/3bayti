@@ -7,6 +7,7 @@ import html2canvas from 'html2canvas';
 import { ActivatedRoute, Router } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { GlobalComponent } from '../../global-component';
 import {
   AxActivityFeedComponent,
@@ -168,9 +169,9 @@ export class ViewOrderComponent implements OnInit {
           this.loadApiTimeline();
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.ui_controls.is_loading = false;
-        this.toast.error('Failed to load order.');
+        this.toast.error(apiErrorMessage(err, 'Failed to load order.'));
       },
     });
   }
@@ -286,9 +287,9 @@ export class ViewOrderComponent implements OnInit {
           this.success_notification('Order status updated');
           this.get_order_by_id();
         },
-        error: () => {
+        error: (err: any) => {
           this.ui_controls.updating_order = false;
-          this.error_notification('Failed to update order status.');
+          this.error_notification(apiErrorMessage(err, 'Failed to update order status.'));
         },
       });
   }

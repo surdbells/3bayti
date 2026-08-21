@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 
 interface AnalyticsTotals {
@@ -149,8 +150,8 @@ export class VendorAnalyticsComponent implements OnInit {
         this.analytics.set(res?.data ?? res ?? null);
         this.loading.set(false);
       },
-      error: () => {
-        this.toast.error('Failed to load analytics');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Failed to load analytics'));
         this.loading.set(false);
       },
     });

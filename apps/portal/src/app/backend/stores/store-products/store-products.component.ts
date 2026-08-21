@@ -6,6 +6,7 @@ import { map, catchError, switchMap, shareReplay } from 'rxjs/operators';
 
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 import { GlobalComponent } from '../../../global-component';
 import { AxConfirmService } from '../../../shared/overlays';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
@@ -145,8 +146,8 @@ export class StoreProductsComponent implements OnInit {
             const rows = raw.map((p) => this.mapProduct(p));
             return { rows, total: response?.meta?.total ?? rows.length };
           }),
-          catchError(() => {
-            this.toast.error('Unable to load store products.');
+          catchError((err: any) => {
+            this.toast.error(apiErrorMessage(err, 'Unable to load store products.'));
             return of({ rows: [], total: 0 } as AxServerFetchResult<ProductRow>);
           }),
         );
@@ -201,7 +202,7 @@ export class StoreProductsComponent implements OnInit {
       if (!ok) return;
       this.adapter.delete_v3('DELETE /admin/products/:id', { params: { id: String(row.id) } }).subscribe({
         next: (r: any) => { if (r) { this.toast.success('Product deleted.'); this.dataSource.retry(); } },
-        error: () => this.toast.error('Unable to delete product.'),
+        error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to delete product.')),
       });
     });
   }

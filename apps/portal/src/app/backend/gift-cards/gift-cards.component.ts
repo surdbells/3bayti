@@ -21,6 +21,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 /** A row from GET /admin/gift-cards (GiftCardAdminListItem). */
 interface GiftCardRow extends Record<string, unknown> {
@@ -655,7 +656,7 @@ export class GiftCardsAdminComponent implements OnInit {
         this.themesLoaded = true;
         this.themesLoading = false;
       },
-      error: () => { this.themesLoading = false; this.toast.error('Failed to load gift card themes.'); },
+      error: (err: any) => { this.themesLoading = false; this.toast.error(apiErrorMessage(err, 'Failed to load gift card themes.')); },
     });
   }
 

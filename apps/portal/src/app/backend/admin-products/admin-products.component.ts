@@ -19,6 +19,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface ProductRow extends Record<string, unknown> {
   id: number;
@@ -141,8 +142,8 @@ export class AdminProductsComponent implements OnInit {
         const rows = raw.map((p) => this.mapProduct(p));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load products at this time.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load products at this time.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<ProductRow>);
       }),
     );
@@ -205,7 +206,7 @@ export class AdminProductsComponent implements OnInit {
       this.adapter.put_v3('PUT /admin/products/:id', { status: 'published' }, { params: { id: String(row.id) } })
         .subscribe({
           next: (r: any) => { if (r) { this.toast.success('Product published.'); this.dataSource.retry(); } },
-          error: () => this.toast.error('Unable to publish product.'),
+          error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to publish product.')),
         });
     });
   }
@@ -230,7 +231,7 @@ export class AdminProductsComponent implements OnInit {
         this.toast.success('Product deleted.');
         this.dataSource.retry();
       },
-      error: () => this.toast.error('Unable to delete the product.'),
+      error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to delete the product.')),
     });
   }
 

@@ -17,6 +17,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface RecipientRow extends Record<string, unknown> {
   id: number;
@@ -76,7 +77,7 @@ export class NotificationBroadcastDetailComponent implements OnInit, OnDestroy {
           this.pollTimer = setTimeout(() => { this.loadDetail(); this.dataSource?.retry(); }, 4000);
         }
       },
-      error: () => { this.loading = false; this.toast.error('Unable to load broadcast.'); },
+      error: (err: any) => { this.loading = false; this.toast.error(apiErrorMessage(err, 'Unable to load broadcast.')); },
     });
   }
 

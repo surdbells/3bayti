@@ -11,6 +11,7 @@ import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { SALES_STATUSES } from '../../shared/order-filters';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 import {
   AxDataTableComponent,
   AxCellDirective,
@@ -209,8 +210,8 @@ export class StoreSalesComponent implements OnInit {
         this.analytics.set(res?.data ?? null);
         this.loadingAnalytics.set(false);
       },
-      error: () => {
-        this.toast.error('Unable to load sales analytics.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load sales analytics.'));
         this.loadingAnalytics.set(false);
       },
     });
@@ -282,8 +283,8 @@ export class StoreSalesComponent implements OnInit {
         const rows = raw.map((o) => this.mapSale(o));
         return { rows, total: response?.pagination?.total ?? response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load store sales.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load store sales.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<SaleRow>);
       }),
     );

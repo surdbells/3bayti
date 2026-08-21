@@ -14,6 +14,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface NotificationLog extends Record<string, unknown> {
   id: number;
@@ -97,8 +98,8 @@ export class NotificationLogsComponent implements OnInit {
         rows: res?.data ?? [],
         total: res?.meta?.total ?? (res?.data?.length ?? 0),
       })),
-      catchError(() => {
-        this.toast.error('Failed to load logs');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Failed to load logs'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<NotificationLog>);
       }),
     );

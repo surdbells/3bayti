@@ -9,6 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-labels',
   standalone: true,
@@ -108,8 +109,8 @@ export class LabelComponent implements OnInit {
         }
         this.ui_controls.is_creating_label = false;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_creating_label = false;
       },
     });
@@ -135,8 +136,8 @@ export class LabelComponent implements OnInit {
         }
         this.ui_controls.is_saving_label_id = 0;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_saving_label_id = 0;
       },
     });

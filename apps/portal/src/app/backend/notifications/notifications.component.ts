@@ -9,6 +9,7 @@ import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { AxConfirmService } from '../../shared/overlays';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 type Audience = 'all' | 'customers' | 'vendors' | 'admins';
 
@@ -218,7 +219,7 @@ export class NotificationsComponent implements OnInit {
       error: (e) => {
         console.error(e);
         this.sending = false;
-        this.toast.error('Unable to send the broadcast at this time.');
+        this.toast.error(apiErrorMessage(e, 'Unable to send the broadcast at this time.'));
       },
     });
   }

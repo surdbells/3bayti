@@ -17,6 +17,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface TemplateRow extends Record<string, unknown> {
   id: number;
@@ -115,7 +116,7 @@ export class NotificationTemplatesComponent implements OnInit {
         const rows: TemplateRow[] = Array.isArray(res?.data) ? res.data : [];
         return { rows, total: res?.meta?.total ?? rows.length };
       }),
-      catchError(() => { this.toast.error('Unable to load templates.'); return of({ rows: [], total: 0 } as AxServerFetchResult<TemplateRow>); }),
+      catchError((err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to load templates.')); return of({ rows: [], total: 0 } as AxServerFetchResult<TemplateRow>); }),
     );
   }
 
@@ -194,13 +195,13 @@ export class NotificationTemplatesComponent implements OnInit {
   private duplicate(row: TemplateRow) {
     this.adapter.post_v3('POST /admin/notification-templates/:id/duplicate', {}, { params: { id: String(row.id) } })
       .subscribe({ next: () => { this.toast.success('Template duplicated.'); this.dataSource.retry(); },
-                   error: () => this.toast.error('Unable to duplicate.') });
+                   error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to duplicate.')) });
   }
 
   private setStatus(row: TemplateRow, status: 'active' | 'inactive') {
     this.adapter.patch_v3('PATCH /admin/notification-templates/:id/status', { status }, { params: { id: String(row.id) } })
       .subscribe({ next: () => { this.toast.success(`Template ${status === 'active' ? 'activated' : 'deactivated'}.`); this.dataSource.retry(); },
-                   error: () => this.toast.error('Unable to update status.') });
+                   error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to update status.')) });
   }
 
   private remove(row: TemplateRow) {
@@ -211,7 +212,7 @@ export class NotificationTemplatesComponent implements OnInit {
       if (!ok) return;
       this.adapter.delete_v3('DELETE /admin/notification-templates/:id', { params: { id: String(row.id) } })
         .subscribe({ next: () => { this.toast.success('Template deleted.'); this.dataSource.retry(); },
-                     error: () => this.toast.error('Unable to delete.') });
+                     error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to delete.')) });
     });
   }
 

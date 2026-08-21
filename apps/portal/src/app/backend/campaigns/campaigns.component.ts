@@ -17,6 +17,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface CampaignRow extends Record<string, unknown> {
   id: number;
@@ -105,8 +106,8 @@ export class CampaignsComponent implements OnInit {
         } as CampaignRow));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load campaigns at this time.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load campaigns at this time.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<CampaignRow>);
       }),
     );

@@ -8,6 +8,7 @@ import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-admin-top',
   standalone: true,
@@ -102,7 +103,7 @@ export class AdminTopComponent implements OnInit {
         },
         error: (e: any) => {
           console.error(e);
-          this.error_notification('Unable to complete your request at this time.');
+          this.error_notification(apiErrorMessage(e, 'Unable to complete your request at this time.'));
           this.ui_controls.is_loading = false;
         }
       });
@@ -118,7 +119,7 @@ export class AdminTopComponent implements OnInit {
         },
         error: (e: any) => {
           console.error(e);
-          this.error_notification('Unable to complete your request at this time.');
+          this.error_notification(apiErrorMessage(e, 'Unable to complete your request at this time.'));
           this.ui_controls.is_loading = false;
         }
       });

@@ -17,6 +17,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../../shared/data/enterprise';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 
 interface OrderRow extends Record<string, unknown> {
   id: number;
@@ -154,8 +155,8 @@ export class StoreOrdersComponent implements OnInit {
         const rows = raw.map((o) => this.mapOrder(o));
         return { rows, total: response?.pagination?.total ?? response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load store orders.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load store orders.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<OrderRow>);
       }),
     );

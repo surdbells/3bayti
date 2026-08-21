@@ -6,6 +6,7 @@ import { map, catchError } from 'rxjs/operators';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { AxConfirmService } from '../../shared/overlays';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -153,8 +154,8 @@ export class UsersComponent implements OnInit {
         const rows = raw.map((u) => this.mapStaff(u));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load staff at this time.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load staff at this time.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<StaffUser>);
       }),
     );
@@ -216,7 +217,7 @@ export class UsersComponent implements OnInit {
     const key = active ? 'POST /admin/users/:id/activate' : 'POST /admin/users/:id/deactivate';
     this.adapter.post_v3(key, {}, { params: { id: String(uid) } }).subscribe({
       next: (r: any) => { if (r) { this.toast.success(active ? 'Staff member activated.' : 'Staff member deactivated.'); this.refresh(); } },
-      error: () => this.toast.error('Unable to complete your request at this time.'),
+      error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to complete your request at this time.')),
     });
   }
 
@@ -238,7 +239,7 @@ export class UsersComponent implements OnInit {
         }));
         this.ui.roles_list_loading = false;
       },
-      error: () => { this.toast.error('Unable to load roles at this time.'); this.ui.roles_list_loading = false; },
+      error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to load roles at this time.')); this.ui.roles_list_loading = false; },
     });
   }
 
@@ -258,7 +259,7 @@ export class UsersComponent implements OnInit {
       if (!ok) return;
       this.adapter.delete_v3('DELETE /admin/roles/:id', { params: { id: String(role.id) } }).subscribe({
         next: () => { this.toast.success('Role deleted.'); this.loadRolesList(); },
-        error: () => { this.toast.error('Unable to delete the role.'); },
+        error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to delete the role.')); },
       });
     });
   }

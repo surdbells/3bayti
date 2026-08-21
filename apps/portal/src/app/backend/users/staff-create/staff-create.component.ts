@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
@@ -140,7 +141,7 @@ export class StaffCreateComponent implements OnInit {
         }));
         this.ui.rolesLoading = false;
       },
-      error: () => { this.toast.error('Unable to load roles at this time.'); this.ui.rolesLoading = false; },
+      error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to load roles at this time.')); this.ui.rolesLoading = false; },
     });
   }
 
@@ -184,7 +185,7 @@ export class StaffCreateComponent implements OnInit {
         }
         this.assignRoles(newId);
       },
-      error: () => { this.toast.error('Unable to complete your request at this time.'); this.ui.registering = false; },
+      error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to complete your request at this time.')); this.ui.registering = false; },
     });
   }
 
@@ -196,10 +197,10 @@ export class StaffCreateComponent implements OnInit {
         this.ui.registering = false;
         this.router.navigate(['/adminusers']);
       },
-      error: () => {
+      error: (err: any) => {
         // The account exists; only the assignment failed. Send the admin to the
         // manage-roles page to finish rather than losing the chosen roles.
-        this.toast.error('Account created, but assigning roles failed. Finish on the roles page.');
+        this.toast.error(apiErrorMessage(err, 'Account created, but assigning roles failed. Finish on the roles page.'));
         this.ui.registering = false;
         this.router.navigate(['/adminusers', userId, 'roles']);
       },

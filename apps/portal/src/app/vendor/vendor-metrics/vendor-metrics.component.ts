@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AxSkeletonComponent } from '../../shared/data';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -70,10 +71,10 @@ export class VendorMetricsComponent implements OnInit {
         this.data = res?.data ?? res;
         this.loading = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.error = 'Could not load your dashboard.';
         this.loading = false;
-        this.toast.error('Failed to load dashboard');
+        this.toast.error(apiErrorMessage(err, 'Failed to load dashboard'));
       },
     });
   }

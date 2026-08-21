@@ -6,6 +6,7 @@ import { map, catchError } from 'rxjs/operators';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { GlobalComponent } from '../../global-component';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -117,8 +118,8 @@ export class VendorReviewsComponent implements OnInit {
         } as ReviewRow));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load reviews at this time.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load reviews at this time.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<ReviewRow>);
       }),
     );

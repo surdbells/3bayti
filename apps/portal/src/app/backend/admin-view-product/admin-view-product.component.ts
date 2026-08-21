@@ -24,6 +24,7 @@ import {
   AxAccordionComponent,
   AxAccordionItemComponent,
 } from '../../shared/overlays';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface ColorOption {
   id: string;
@@ -271,7 +272,7 @@ export class AdminViewProductComponent implements OnInit {
       },
       error: (e: any) => {
         console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
+        this.error_notification(apiErrorMessage(e, 'Unable to complete your request at this time.'));
         this.ui_controls.is_loading = false;
       },
     });
@@ -297,7 +298,7 @@ export class AdminViewProductComponent implements OnInit {
       error: (e: any) => {
         console.error(e);
         this.ui_controls.is_creating_label = false;
-        this.error_notification('Unable to complete your request at this time.');
+        this.error_notification(apiErrorMessage(e, 'Unable to complete your request at this time.'));
       },
     });
   }

@@ -10,6 +10,7 @@ import {TranslatePipe} from '../../translate.pipe';
 import {LanguageSwitcherComponent} from '../../language-switcher.component';
 
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-reset',
   imports: [
@@ -86,7 +87,7 @@ export class ResetComponent implements OnInit{
         },
         error: (e) => {
           console.error(e);
-          this.error_notification('Unable to complete your request at this time.');
+          this.error_notification(apiErrorMessage(e, 'Unable to complete your request at this time.'));
           this.ui_controls.loading = false;
         },
       });
@@ -161,7 +162,7 @@ export class ResetComponent implements OnInit{
         },
         error: (e) => {
           console.error(e);
-          this.error_notification('Unable to resend the code. Please try again.');
+          this.error_notification(apiErrorMessage(e, 'Unable to resend the code. Please try again.'));
           this.ui_controls.loading = false;
         },
       });

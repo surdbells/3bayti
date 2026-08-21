@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 
@@ -73,8 +74,8 @@ export class ProductSalesComponent implements OnInit {
         this.recentOrders = d.recent_orders ?? [];
         this.loading = false;
       },
-      error: () => {
-        this.toast.error('Unable to load product sales.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load product sales.'));
         this.loading = false;
       },
     });

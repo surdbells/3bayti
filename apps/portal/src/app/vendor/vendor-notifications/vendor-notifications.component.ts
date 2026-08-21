@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { GlobalComponent } from '../../global-component';
@@ -124,7 +125,7 @@ export class VendorNotificationsComponent implements OnInit {
       },
       error: (e: any) => {
         console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
+        this.error_notification(apiErrorMessage(e, 'Unable to complete your request at this time.'));
         this.ui_controls.is_loading = false;
       },
     });
@@ -147,7 +148,7 @@ export class VendorNotificationsComponent implements OnInit {
       },
       error: (e: any) => {
         console.error(e);
-        this.error_notification('Unable to load notifications.');
+        this.error_notification(apiErrorMessage(e, 'Unable to load notifications.'));
         this.feed_loading = false;
       },
     });
@@ -256,7 +257,7 @@ export class VendorNotificationsComponent implements OnInit {
       },
       error: (e: any) => {
         console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
+        this.error_notification(apiErrorMessage(e, 'Unable to complete your request at this time.'));
         this.ui_controls.is_saving = false;
       },
     });

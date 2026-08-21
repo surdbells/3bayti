@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -145,8 +146,8 @@ export class VendorOrderDetailComponent implements OnInit {
         this.order.set(res?.order ?? res?.data ?? null);
         this.loadingDetail.set(false);
       },
-      error: () => {
-        this.toast.error('Unable to load order.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load order.'));
         this.loadingDetail.set(false);
       },
     });
@@ -263,7 +264,7 @@ export class VendorOrderDetailComponent implements OnInit {
           if (r) { this.toast.success('Item status updated.'); this.load(); }
           this.busy.set(false);
         },
-        error: () => { this.toast.error('Unable to update item status.'); this.busy.set(false); },
+        error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to update item status.')); this.busy.set(false); },
       });
     });
   }

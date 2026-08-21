@@ -11,6 +11,7 @@ import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 interface StoreOption {
   id: number;
   store_name: string;
@@ -95,8 +96,8 @@ export class CreateCouponComponent implements OnInit {
           this.categories = (r.data || []).map((c: any) => ({ id: c.id ?? c.category_id, name: c.name ?? c.category_name }));
         }
       },
-      error: () => {
-        this.toast.error('Could not load categories.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Could not load categories.'));
       },
     });
 
@@ -111,8 +112,8 @@ export class CreateCouponComponent implements OnInit {
           }
           this.ui.page_loading = false;
         },
-        error: () => {
-          this.toast.error('Could not load your products. Please try again.');
+        error: (err: any) => {
+          this.toast.error(apiErrorMessage(err, 'Could not load your products. Please try again.'));
           this.ui.page_loading = false;
         },
       });
@@ -126,8 +127,8 @@ export class CreateCouponComponent implements OnInit {
           }
           this.ui.page_loading = false;
         },
-        error: () => {
-          this.toast.error('Could not load stores. Please try again.');
+        error: (err: any) => {
+          this.toast.error(apiErrorMessage(err, 'Could not load stores. Please try again.'));
           this.ui.page_loading = false;
         },
       });
@@ -247,9 +248,9 @@ export class CreateCouponComponent implements OnInit {
           this.toast.error(response.message);
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.loading = false;
-        this.toast.error('Unable to create coupon.');
+        this.toast.error(apiErrorMessage(err, 'Unable to create coupon.'));
       },
     });
   }

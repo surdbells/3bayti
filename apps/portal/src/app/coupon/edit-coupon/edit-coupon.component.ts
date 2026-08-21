@@ -11,6 +11,7 @@ import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 interface StoreOption { id: number; store_name: string; }
 interface NamedOption { id: number; name: string; }
 
@@ -141,8 +142,8 @@ export class EditCouponComponent implements OnInit {
           this.router.navigate(['/coupons']);
         }
       },
-      error: () => {
-        this.toast.error('Unable to load coupon.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load coupon.'));
         this.router.navigate(['/coupons']);
       },
     });
@@ -273,9 +274,9 @@ export class EditCouponComponent implements OnInit {
           this.toast.error(response.message);
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.loading = false;
-        this.toast.error('Unable to update coupon.');
+        this.toast.error(apiErrorMessage(err, 'Unable to update coupon.'));
       },
     });
   }

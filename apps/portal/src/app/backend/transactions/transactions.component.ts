@@ -18,6 +18,7 @@ import {
   type AxServerFetchResult,
   type AxDateRange,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 export interface Transactions extends Record<string, unknown> {
   id: number;
@@ -125,8 +126,8 @@ export class TransactionsComponent implements OnInit {
         const rows = raw.map((o) => this.mapRow(o));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load transactions at this time.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load transactions at this time.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<Transactions>);
       }),
     );

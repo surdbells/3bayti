@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { FormsModule } from '@angular/forms';
 import { CommonModule, formatCurrency } from '@angular/common';
 import { GlobalComponent } from '../../global-component';
@@ -139,8 +140,8 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
           const rows = (response?.data ?? []).map((p: any) => this.mapProduct(p));
           return { rows, total: response?.meta?.total ?? rows.length };
         }),
-        catchError(() => {
-          this.toast.error('Unable to load products at this time.');
+        catchError((err: any) => {
+          this.toast.error(apiErrorMessage(err, 'Unable to load products at this time.'));
           return of({ rows: [], total: 0 } as AxServerFetchResult<ProductListItem>);
         }),
       );
@@ -306,8 +307,8 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
         }
         this.ui.loading = false;
       },
-      error: () => {
-        this.toast.error('Unable to load products at this time.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load products at this time.'));
         this.ui.loading = false;
       },
     });
@@ -458,8 +459,8 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
           this.ui.loaded_preview = true;
         }
       },
-      error: () => {
-        this.toast.error('Unable to load the product preview.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load the product preview.'));
         this.ui.loaded_preview = true;
       },
     });
@@ -547,8 +548,8 @@ export class VendorProductsComponent implements OnInit, OnDestroy {
         this.fetchProducts();
         this.tableDataSource?.retry();
       },
-      error: () => {
-        this.toast.error('Unable to delete product');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to delete product'));
         this.ui.deleting = false;
       },
     });

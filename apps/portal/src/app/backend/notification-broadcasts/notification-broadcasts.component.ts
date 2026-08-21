@@ -17,6 +17,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface BroadcastRow extends Record<string, unknown> {
   id: number;
@@ -122,8 +123,8 @@ export class NotificationBroadcastsComponent implements OnInit {
         const rows: BroadcastRow[] = Array.isArray(res?.data) ? res.data : [];
         return { rows, total: res?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load broadcast history.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load broadcast history.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<BroadcastRow>);
       }),
     );

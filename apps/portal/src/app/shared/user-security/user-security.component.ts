@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../translate.pipe';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../icon/icon.component';
+import { apiErrorMessage } from '../http/api-error';
 @Component({
   selector: 'app-user-security',
   standalone: true,
@@ -91,8 +92,8 @@ export class UserSecurityComponent implements OnInit {
         }
         this.ui_controls.is_saving = false;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_saving = false;
       },
     });

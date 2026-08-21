@@ -23,6 +23,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface CustomerRow extends Record<string, unknown> {
   id: number;
@@ -216,8 +217,8 @@ export class CustomersComponent implements OnInit {
         const rows = raw.map((u) => this.mapCustomer(u));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load customers at this time.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load customers at this time.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<CustomerRow>);
       }),
     );

@@ -18,6 +18,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface ScheduleRow extends Record<string, unknown> {
   id: number;
@@ -149,7 +150,7 @@ export class NotificationSchedulesComponent implements OnInit {
         const rows: ScheduleRow[] = Array.isArray(res?.data) ? res.data : [];
         return { rows, total: res?.meta?.total ?? rows.length };
       }),
-      catchError(() => { this.toast.error('Unable to load schedules.'); return of({ rows: [], total: 0 } as AxServerFetchResult<ScheduleRow>); }),
+      catchError((err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to load schedules.')); return of({ rows: [], total: 0 } as AxServerFetchResult<ScheduleRow>); }),
     );
   }
 
@@ -178,7 +179,7 @@ export class NotificationSchedulesComponent implements OnInit {
         this.editing = true;
         this.refreshAudience();
       },
-      error: () => this.toast.error('Unable to load schedule.'),
+      error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to load schedule.')),
     });
   }
 
@@ -298,7 +299,7 @@ export class NotificationSchedulesComponent implements OnInit {
       if (!ok) return;
       this.adapter.post_v3('POST /admin/notification-schedules/:id/cancel', {}, { params: { id: String(row.id) } })
         .subscribe({ next: () => { this.toast.success('Schedule cancelled.'); this.dataSource.retry(); },
-                     error: () => this.toast.error('Unable to cancel.') });
+                     error: (err: any) => this.toast.error(apiErrorMessage(err, 'Unable to cancel.')) });
     });
   }
 

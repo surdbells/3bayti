@@ -6,6 +6,7 @@ import { map, catchError } from 'rxjs/operators';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { GlobalComponent } from '../../global-component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
@@ -115,8 +116,8 @@ export class ProcessingComponent implements OnInit {
         const rows = raw.map((o) => this.mapRow(o));
         return { rows, total: response?.pagination?.total ?? response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load orders at this time.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load orders at this time.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<Transaction>);
       }),
     );

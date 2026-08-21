@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TranslatePipe } from '../../../translate.pipe';
@@ -82,7 +83,7 @@ export class StaffPasswordComponent implements OnInit {
         this.targetName = `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim();
         this.ui.loading = false;
       },
-      error: () => { this.toast.error('Unable to load the staff member.'); this.ui.loading = false; this.cancel(); },
+      error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to load the staff member.')); this.ui.loading = false; this.cancel(); },
     });
   }
 
@@ -98,7 +99,7 @@ export class StaffPasswordComponent implements OnInit {
         if (response) { this.toast.success('Password updated.'); this.router.navigate(['/adminusers']); }
         this.ui.updating_password = false;
       },
-      error: () => { this.toast.error('Unable to complete your request at this time.'); this.ui.updating_password = false; },
+      error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to complete your request at this time.')); this.ui.updating_password = false; },
     });
   }
 }

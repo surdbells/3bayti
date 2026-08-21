@@ -23,6 +23,7 @@ import {
   type AxQueryState,
   type AxServerFetchResult,
 } from '../../shared/data/enterprise';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 /** Row shape surfaced to the enterprise table (mapped from v3 vendor). */
 interface VendorRow extends Record<string, unknown> {
@@ -289,8 +290,8 @@ export class StoresComponent implements OnInit {
         }));
         return { rows, total: response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load stores at this time.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load stores at this time.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<VendorRow>);
       }),
     );

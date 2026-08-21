@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { TranslatePipe } from '../../../translate.pipe';
@@ -93,7 +94,7 @@ export class StaffRolesComponent implements OnInit {
           id: r.id, slug: r.slug, name: r.name, description: r.description ?? null, is_system: !!r.is_system,
         }));
       },
-      error: () => { this.toast.error('Unable to load roles at this time.'); },
+      error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to load roles at this time.')); },
     });
   }
 
@@ -107,7 +108,7 @@ export class StaffRolesComponent implements OnInit {
         this.selectedRoleIds = assigned.map((r) => r.id);
         this.ui.loading = false;
       },
-      error: () => { this.toast.error('Unable to load the staff member.'); this.ui.loading = false; this.cancel(); },
+      error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to load the staff member.')); this.ui.loading = false; this.cancel(); },
     });
   }
 
@@ -130,7 +131,7 @@ export class StaffRolesComponent implements OnInit {
         if (r) { this.toast.success('Roles updated.'); this.router.navigate(['/adminusers']); }
         this.ui.saving = false;
       },
-      error: () => { this.toast.error('Unable to update roles at this time.'); this.ui.saving = false; },
+      error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to update roles at this time.')); this.ui.saving = false; },
     });
   }
 }

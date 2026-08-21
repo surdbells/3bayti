@@ -23,6 +23,7 @@ import { AxConfirmService } from '../../shared/overlays';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 interface CouponListItem extends Record<string, unknown> {
   coupon_id: number;
   code: string;
@@ -132,8 +133,8 @@ export class CouponListComponent implements OnInit, OnDestroy {
           const rows = raw.map((c) => this.mapCoupon(c));
           return { rows, total: response?.meta?.total ?? rows.length };
         }),
-        catchError(() => {
-          this.toast.error('Unable to load coupons at this time.');
+        catchError((err: any) => {
+          this.toast.error(apiErrorMessage(err, 'Unable to load coupons at this time.'));
           return of({ rows: [], total: 0 } as AxServerFetchResult<CouponListItem>);
         }),
       );
@@ -254,8 +255,8 @@ export class CouponListComponent implements OnInit, OnDestroy {
         }
         this.ui.loading = false;
       },
-      error: () => {
-        this.toast.error('Unable to fetch coupons.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to fetch coupons.'));
         this.ui.loading = false;
       },
     });
@@ -352,9 +353,9 @@ export class CouponListComponent implements OnInit, OnDestroy {
           this.tableDataSource?.retry();
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.toggling = false;
-        this.toast.error('Unable to update coupon status.');
+        this.toast.error(apiErrorMessage(err, 'Unable to update coupon status.'));
       },
     });
   }
@@ -391,9 +392,9 @@ export class CouponListComponent implements OnInit, OnDestroy {
           this.tableDataSource?.retry();
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.deleting = false;
-        this.toast.error('Unable to delete coupon.');
+        this.toast.error(apiErrorMessage(err, 'Unable to delete coupon.'));
       },
     });
   }

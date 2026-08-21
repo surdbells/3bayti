@@ -8,6 +8,7 @@ import { GlobalComponent } from '../../global-component';
 
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-vendor-payment',
   standalone: true,
@@ -79,8 +80,8 @@ export class VendorPaymentComponent implements OnInit {
         }
         this.ui_controls.is_loading = false;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_loading = false;
       },
     });
@@ -104,8 +105,8 @@ export class VendorPaymentComponent implements OnInit {
         }
         this.ui_controls.is_saving = false;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_saving = false;
       },
     });

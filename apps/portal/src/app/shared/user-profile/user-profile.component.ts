@@ -10,6 +10,7 @@ import { TranslatePipe } from '../../translate.pipe';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { AdminShellComponent } from '../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../icon/icon.component';
+import { apiErrorMessage } from '../http/api-error';
 @Component({
   selector: 'app-user-profile',
   standalone: true,
@@ -93,8 +94,8 @@ export class UserProfileComponent implements OnInit {
         };
         this.ui_controls.is_loading = false;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_loading = false;
       },
     });
@@ -118,8 +119,8 @@ export class UserProfileComponent implements OnInit {
         }
         this.ui_controls.is_saving = false;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_saving = false;
       },
     });
@@ -157,8 +158,8 @@ export class UserProfileComponent implements OnInit {
         }
         this.ui_controls.is_saving = false;
       },
-      error: () => {
-        this.error_notification("Couldn't update your profile picture. Please try again.");
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, "Couldn't update your profile picture. Please try again."));
         this.ui_controls.is_saving = false;
       },
     });

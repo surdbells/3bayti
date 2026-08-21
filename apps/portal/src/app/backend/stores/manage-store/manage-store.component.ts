@@ -17,6 +17,7 @@ import { IconComponent } from '../../../shared/icon/icon.component';
 import { AxComboboxComponent, AxComboboxOption } from '../../../shared/forms/ax-combobox.component';
 import { AxCanDirective } from '../../../shared/security/ax-can.directive';
 import { ImpersonationService } from '../../../services/impersonation.service';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 @Component({
   selector: 'app-manage-store',
   standalone: true,
@@ -172,7 +173,7 @@ export class ManageStoreComponent implements OnInit {
           }
           this.ui_controls.saving = false;
         },
-        error: () => { this.toast.error('Unable to update store location.'); this.ui_controls.saving = false; },
+        error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to update store location.')); this.ui_controls.saving = false; },
       });
   }
 
@@ -222,7 +223,7 @@ export class ManageStoreComponent implements OnInit {
       this.adapter.post_v3('POST /admin/vendors/:id/compliance/approve', {}, { params: { id: String(this.storeId) } })
         .subscribe({
           next: (r: any) => { if (r) { this.toast.success('Compliance approved.'); this.loadCompliance(); } this.ui_controls.acting = false; },
-          error: () => { this.toast.error('Unable to approve compliance.'); this.ui_controls.acting = false; },
+          error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to approve compliance.')); this.ui_controls.acting = false; },
         });
     });
   }
@@ -238,7 +239,7 @@ export class ManageStoreComponent implements OnInit {
       this.adapter.post_v3('POST /admin/vendors/:id/compliance/reject', { note: this.reject_note }, { params: { id: String(this.storeId) } })
         .subscribe({
           next: (r: any) => { if (r) { this.toast.success('Compliance rejected.'); this.reject_note = ''; this.loadCompliance(); } this.ui_controls.acting = false; },
-          error: () => { this.toast.error('Unable to reject compliance.'); this.ui_controls.acting = false; },
+          error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to reject compliance.')); this.ui_controls.acting = false; },
         });
     });
   }
@@ -301,7 +302,7 @@ export class ManageStoreComponent implements OnInit {
       this.adapter.post_v3('POST /admin/vendors/:id/approve', {}, { params: { id: String(this.storeId) } })
         .subscribe({
           next: (r: any) => { if (r) { this.toast.success('Store approved.'); this.get_store(); } this.ui_controls.acting = false; },
-          error: () => { this.toast.error('Unable to approve store.'); this.ui_controls.acting = false; },
+          error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to approve store.')); this.ui_controls.acting = false; },
         });
     });
   }
@@ -317,7 +318,7 @@ export class ManageStoreComponent implements OnInit {
       this.adapter.post_v3('POST /admin/vendors/:id/suspend', {}, { params: { id: String(this.storeId) } })
         .subscribe({
           next: (r: any) => { if (r) { this.toast.success('Store suspended.'); this.get_store(); } this.ui_controls.acting = false; },
-          error: () => { this.toast.error('Unable to suspend store.'); this.ui_controls.acting = false; },
+          error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to suspend store.')); this.ui_controls.acting = false; },
         });
     });
   }
@@ -333,7 +334,7 @@ export class ManageStoreComponent implements OnInit {
       this.adapter.post_v3('POST /admin/vendors/:id/reactivate', {}, { params: { id: String(this.storeId) } })
         .subscribe({
           next: (r: any) => { if (r) { this.toast.success('Store reactivated.'); this.get_store(); } this.ui_controls.acting = false; },
-          error: () => { this.toast.error('Unable to reactivate store.'); this.ui_controls.acting = false; },
+          error: (err: any) => { this.toast.error(apiErrorMessage(err, 'Unable to reactivate store.')); this.ui_controls.acting = false; },
         });
     });
   }

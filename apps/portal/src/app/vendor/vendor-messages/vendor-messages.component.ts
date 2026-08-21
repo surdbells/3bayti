@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { IconComponent } from '../../shared/icon/icon.component';
 
@@ -101,10 +102,10 @@ export class VendorMessagesComponent implements OnInit, OnDestroy {
         this.unreadTotal = r?.unread_total ?? 0;
         this.ui.loadingList = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.listError = true;
         this.ui.loadingList = false;
-        this.toast.error('Unable to load your conversations.');
+        this.toast.error(apiErrorMessage(err, 'Unable to load your conversations.'));
       },
     });
   }
@@ -135,9 +136,9 @@ export class VendorMessagesComponent implements OnInit, OnDestroy {
           this.scrollToBottomSoon();
           this.startPolling();
         },
-        error: () => {
+        error: (err: any) => {
           this.ui.loadingThread = false;
-          this.toast.error('Unable to load this conversation.');
+          this.toast.error(apiErrorMessage(err, 'Unable to load this conversation.'));
         },
       });
   }

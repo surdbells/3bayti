@@ -3,6 +3,7 @@ import { NgIf } from '@angular/common';
 import { Router } from '@angular/router';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 import { FormsModule } from '@angular/forms';
 import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
@@ -73,7 +74,7 @@ export class CreateCollectionComponent implements OnInit {
       },
       error: (e: any) => {
         console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
+        this.error_notification(apiErrorMessage(e, 'Unable to complete your request at this time.'));
         this.ui_controls.is_loading = false;
       },
     });

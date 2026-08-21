@@ -10,6 +10,7 @@ import { AxRichEditorComponent } from '../../shared/rich/ax-rich-editor.componen
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { CfImagePipe } from '../../shared/cf-image.pipe';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-vendor-store',
   standalone: true,
@@ -110,8 +111,8 @@ export class VendorStoreComponent implements OnInit {
         }
         this.ui_controls.is_loading = false;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_loading = false;
       },
     });
@@ -138,8 +139,8 @@ export class VendorStoreComponent implements OnInit {
         }
         this.ui_controls.is_saving_basic = false;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_saving_basic = false;
       },
     });
@@ -161,8 +162,8 @@ export class VendorStoreComponent implements OnInit {
         }
         this.ui_controls.is_saving_status = false;
       },
-      error: () => {
-        this.error_notification('Unable to complete your request at this time.');
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Unable to complete your request at this time.'));
         this.ui_controls.is_saving_status = false;
       },
     });

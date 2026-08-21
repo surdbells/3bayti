@@ -11,6 +11,7 @@ import { TranslatePipe } from '../../translate.pipe';
 import { AxConfirmService } from '../../shared/overlays';
 import { I18nService } from '../../i18n.service';
 import { AxComboboxComponent, AxComboboxOption } from '../../shared/forms/ax-combobox.component';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 @Component({
   selector: 'app-gift-card-detail',
@@ -274,10 +275,10 @@ export class GiftCardDetailComponent implements OnInit {
         this.card = res?.data ?? res ?? null;
         this.loading = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.card = null;
         this.loading = false;
-        this.toast.error('Unable to load gift card.');
+        this.toast.error(apiErrorMessage(err, 'Unable to load gift card.'));
       },
     });
   }

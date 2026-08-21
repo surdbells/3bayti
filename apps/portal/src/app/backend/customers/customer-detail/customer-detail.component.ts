@@ -7,6 +7,7 @@ import { HotToastService } from '../../../shared/toast/toast.service';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { AxConfirmService } from '../../../shared/overlays';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 
 interface CustomerProfile {
   id: number;
@@ -85,8 +86,8 @@ export class CustomerDetailComponent implements OnInit {
         }
         this.loading = false;
       },
-      error: () => {
-        this.toast.error('Unable to load this customer.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load this customer.'));
         this.loading = false;
       },
     });

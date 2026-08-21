@@ -11,6 +11,7 @@ import { GlobalComponent } from '../../../global-component';
 import { AdminShellComponent } from '../../../partials/admin-shell/admin-shell.component';
 import { IconComponent } from '../../../shared/icon/icon.component';
 import { AxComboboxComponent, AxComboboxOption } from '../../../shared/forms/ax-combobox.component';
+import { apiErrorMessage } from '../../../shared/http/api-error';
 
 interface ItemRow {
   product_id: number;
@@ -127,8 +128,8 @@ export class CampaignFormComponent implements OnInit, OnDestroy {
         this.items = Array.isArray(c.items) ? c.items.map((it: any) => this.itemFromApi(it)) : [];
         this.ui.is_loading = false;
       },
-      error: () => {
-        this.toast.error('Unable to load this campaign.');
+      error: (err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load this campaign.'));
         this.ui.is_loading = false;
         this.router.navigate(['/campaigns']);
       },

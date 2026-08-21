@@ -19,6 +19,7 @@ import {
   type AxDateRange,
 } from '../../shared/data/enterprise';
 import { SALES_STATUS_OPTIONS, SALES_STATUSES, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
+import { apiErrorMessage } from '../../shared/http/api-error';
 
 interface SaleRow extends Record<string, unknown> {
   id: number;
@@ -121,8 +122,8 @@ export class SalesComponent implements OnInit {
         const rows = raw.map((o) => this.mapRow(o));
         return { rows, total: response?.pagination?.total ?? response?.meta?.total ?? rows.length };
       }),
-      catchError(() => {
-        this.toast.error('Unable to load sales at this time.');
+      catchError((err: any) => {
+        this.toast.error(apiErrorMessage(err, 'Unable to load sales at this time.'));
         return of({ rows: [], total: 0 } as AxServerFetchResult<SaleRow>);
       }),
     );

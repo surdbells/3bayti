@@ -4,6 +4,7 @@ import {VendorShellComponent} from "../../partials/vendor-shell/vendor-shell.com
 import {ActivatedRoute, Router} from '@angular/router';
 import {PortalCrudAdapter} from '../../services/portal-crud-adapter';
 import {HotToastService} from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import {GlobalComponent} from '../../global-component';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -123,9 +124,9 @@ export class ReceiptComponent   implements OnInit{
         }
         this.ui_controls.is_loading = false;
       },
-      error: () => {
+      error: (err: any) => {
         this.ui_controls.is_loading = false;
-        this.error_notification('Failed to load order.');
+        this.error_notification(apiErrorMessage(err, 'Failed to load order.'));
       },
     });
   }
