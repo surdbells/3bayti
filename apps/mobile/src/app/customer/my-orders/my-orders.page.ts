@@ -155,6 +155,14 @@ export class MyOrdersPage implements OnInit {
     private mobileAdapter: MobileNetworkAdapter,
     private i18n: I18nService,
   ) {}
+  /**
+   * Set when this page navigates FORWARD to a child (order detail / vendor
+   * store). On the next ionViewWillEnter (i.e. the user tapping back), we skip
+   * the reload so the list keeps its scroll position + loaded pages instead of
+   * flashing a loader and resetting to page 1. Genuine fresh entries (from the
+   * account tab, a deep link, etc.) still reload.
+   */
+  private skipReloadOnEnter = false;
   ui_controls = {
     is_empty: false,
     is_loading: false,
@@ -166,6 +174,12 @@ export class MyOrdersPage implements OnInit {
     // a stale/empty snapshot after navigating away and back).
   }
   ionViewWillEnter() {
+    // Returning from a child page (order detail / vendor store) — keep the list
+    // exactly as the user left it (scroll + loaded pages) rather than refetching.
+    if (this.skipReloadOnEnter) {
+      this.skipReloadOnEnter = false;
+      return;
+    }
     // Honour a ?status= deep-link (e.g. the Home "payment pending" banner opens
     // this list already filtered to pending payment). Guarded against unknown
     // values so only real filter chips can be pre-selected.
@@ -374,6 +388,7 @@ export class MyOrdersPage implements OnInit {
   }
 
   onView(order: Order) {
+    this.skipReloadOnEnter = true;
     this.router.navigate(['/', 'orders', order.id]);
   }
 
@@ -420,6 +435,7 @@ export class MyOrdersPage implements OnInit {
     // details" button opens the order). This previously pointed at
     // 'vendor-reviews' — a copy-paste slip that sent shoppers to a reviews
     // page and fed the vendors<->reviews back-navigation loop.
+    this.skipReloadOnEnter = true;
     this.router.navigate(
       ['/', 'vendors'],
       { queryParams: { id, name } }
