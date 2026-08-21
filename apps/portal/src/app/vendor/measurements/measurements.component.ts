@@ -4,6 +4,7 @@ import { NgIf } from '@angular/common';
 import { Router } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
+import { apiErrorMessage } from '../../shared/http/api-error';
 import { GlobalComponent } from '../../global-component';
 import { TranslatePipe } from '../../translate.pipe';
 
@@ -173,7 +174,7 @@ export class MeasurementsComponent implements OnInit {
       },
       error: (e: any) => {
         console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
+        this.error_notification(apiErrorMessage(e, 'Unable to save measurement.'));
         this.ui_controls.is_creating = false;
       },
     });
@@ -201,7 +202,7 @@ export class MeasurementsComponent implements OnInit {
       },
       error: (e: any) => {
         console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
+        this.error_notification(apiErrorMessage(e, 'Unable to load measurements.'));
         this.ui_controls.is_loading = false;
         this.ui_controls.is_empty = true;
       },
@@ -270,7 +271,8 @@ export class MeasurementsComponent implements OnInit {
         }
         this.ui_controls.deleting = false;
       },
-      error: () => {
+      error: (e: any) => {
+        this.error_notification(apiErrorMessage(e, 'Unable to delete measurement.'));
         this.ui_controls.deleting = false;
       },
     });
@@ -293,7 +295,7 @@ export class MeasurementsComponent implements OnInit {
       },
       error: (e: any) => {
         console.error(e);
-        this.error_notification('Unable to complete your request at this time.');
+        this.error_notification(apiErrorMessage(e, 'Unable to update measurement.'));
         this.ui_controls.is_updating = false;
         this.ui_controls.editing = false;
       },
