@@ -1,6 +1,6 @@
 import { provideAnimations } from "@angular/platform-browser/animations";
 import {APP_INITIALIZER, ApplicationConfig, provideZoneChangeDetection} from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withInMemoryScrolling } from '@angular/router';
 
 import { routes } from './app.routes';
 import {provideHotToastConfig} from './shared/toast/toast.service';
@@ -15,7 +15,12 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(),
     provideHotToastConfig(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
+    // Restore scroll position on back/forward navigation so users land where
+    // they left off (instead of jumping to the top); jump to top on new pages.
+    provideRouter(
+      routes,
+      withInMemoryScrolling({ scrollPositionRestoration: 'enabled', anchorScrolling: 'enabled' }),
+    ),
     { provide: APP_INITIALIZER, useFactory: initI18n, deps: [I18nService], multi: true }
   ]
 };

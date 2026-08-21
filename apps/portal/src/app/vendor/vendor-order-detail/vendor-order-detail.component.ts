@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { apiErrorMessage } from '../../shared/http/api-error';
 import { AxConfirmService } from '../../shared/overlays';
@@ -112,6 +113,7 @@ const ITEM_TRANSITIONS: Record<string, string[]> = {
 })
 export class VendorOrderDetailComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   readonly loadingDetail = signal(true);
   readonly busy = signal(false);
@@ -323,5 +325,5 @@ export class VendorOrderDetailComponent implements OnInit {
     }
   }
 
-  goBack() { this.router.navigate(['/orders']); }
+  goBack() { this.navHistory.back('/orders'); }
 }
