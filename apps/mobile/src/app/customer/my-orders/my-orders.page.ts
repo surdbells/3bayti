@@ -21,6 +21,7 @@ import {ActivatedRoute, Router} from "@angular/router";
 import {ActionSheetController, InfiniteScrollCustomEvent} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { apiErrorMessage } from '../../core/http/api-error';
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -504,7 +505,7 @@ export class MyOrdersPage implements OnInit {
         },
         error: (err: any) => {
           console.warn('[cancel-order] network/transport error', err);
-          this.toast.error(this.i18n.t('cancel_order_network_error'));
+          this.toast.error(apiErrorMessage(err, this.i18n.t('cancel_order_network_error')));
         },
       });
   }

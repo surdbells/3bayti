@@ -28,6 +28,7 @@ import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from '../../translate.pipe';
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { apiErrorMessage } from '../../core/http/api-error';
 import { supportWhatsappLink } from '../../core/constants/support.constants';
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -350,12 +351,12 @@ export class StoreDashboardPage implements OnInit, OnDestroy {
         this.isTogglingStatus = false;
         this.cdr.markForCheck();
       },
-      error: async () => {
+      error: async (err: any) => {
         // Revert on error
         if (this.storeData) {
           this.storeData.is_active = !isActive;
         }
-        this.showErrorToast('Failed to update store status');
+        this.showErrorToast(apiErrorMessage(err, 'Failed to update store status'));
         this.isTogglingStatus = false;
         this.cdr.markForCheck();
       }

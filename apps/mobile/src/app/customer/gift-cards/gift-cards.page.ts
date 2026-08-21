@@ -7,6 +7,7 @@ import {
   IonToolbar, IonSpinner, NavController,
 } from '@ionic/angular/standalone';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { Preferences } from '@capacitor/preferences';
 import { GiftCardPaymentService } from './gift-card-payment.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
@@ -185,9 +186,9 @@ export class GiftCardsPage implements OnInit {
           this.themeKeys = Object.keys(res.data);
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.loading_themes = false;
-        this.notify.error(this.i18n.t('gc_error_load_themes'));
+        this.notify.error(apiErrorMessage(err, this.i18n.t('gc_error_load_themes')));
       },
     });
   }

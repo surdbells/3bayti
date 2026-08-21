@@ -24,6 +24,7 @@ import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { I18nService } from '../../i18n.service';
 
 /**
@@ -210,9 +211,9 @@ export class VendorOrdersPage implements OnInit {
             }
             resolve();
           },
-          error: () => {
+          error: (err: any) => {
             this.ui_controls.is_loading = false;
-            this.toast.error(this.i18n.t('network_error_retry'));
+            this.toast.error(apiErrorMessage(err, this.i18n.t('network_error_retry')));
             resolve();
           },
         });

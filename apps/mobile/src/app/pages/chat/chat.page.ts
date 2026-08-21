@@ -30,6 +30,7 @@ import { Preferences } from '@capacitor/preferences';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 
 import { ChatService, ChatRole } from '../../service/chat.service';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { ChatMessage, ChatConversationSummary } from '../../models/chat.models';
 import { TranslatePipe } from '../../translate.pipe';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -204,7 +205,7 @@ export class ChatPage implements OnInit, OnDestroy, AfterViewInit {
         if (apiError?.code === 'CHAT_MESSAGE_BLOCKED') {
           this.toast.error(apiError.message || this.i18n.t('text_chat_blocked'), { position: 'top-center' });
         } else {
-          this.toast.error(this.i18n.t('text_message_send_failed'), { position: 'top-center' });
+          this.toast.error(apiErrorMessage(err, this.i18n.t('text_message_send_failed')), { position: 'top-center' });
         }
         this.messageText = content;
         this.cdr.markForCheck();

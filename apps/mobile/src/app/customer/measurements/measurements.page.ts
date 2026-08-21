@@ -21,6 +21,7 @@ import {ConnectionService} from "../../service/connection.service";
 import {Router, RouterLink} from "@angular/router";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { apiErrorMessage } from '../../core/http/api-error';
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 
 import {Preferences} from "@capacitor/preferences";
@@ -182,9 +183,9 @@ export class MeasurementsPage implements OnInit, OnDestroy {
               this.error_notification(response.message || this.i18n.t('text_unable_to_save_measurement'));
             }
           },
-          error: () => {
+          error: (err: any) => {
             this.ui_controls.is_loading = false;
-            this.error_notification(this.i18n.t('text_unable_to_save_measurement'));
+            this.error_notification(apiErrorMessage(err, this.i18n.t('text_unable_to_save_measurement')));
           }
         }))
     }else {

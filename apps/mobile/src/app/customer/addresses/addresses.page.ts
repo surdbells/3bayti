@@ -19,6 +19,7 @@ import { Subscription } from 'rxjs';
 import { ConnectionService } from '../../service/connection.service';
 import { NetworkService } from '../../service/network.service';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { Preferences } from '@capacitor/preferences';
 import { CartIconComponent } from '../../cart-icon.component';
@@ -146,8 +147,8 @@ export class AddressesPage implements OnInit, OnDestroy {
     this.ui_controls.is_loading = true;
     try {
       this.addresses = await this.addressService.list(this.single_user.token);
-    } catch {
-      this.error_notification(this.i18n.t('text_unable_to_load_addresses'));
+    } catch (err) {
+      this.error_notification(apiErrorMessage(err, this.i18n.t('text_unable_to_load_addresses')));
     } finally {
       this.ui_controls.is_loading = false;
     }
@@ -328,8 +329,8 @@ export class AddressesPage implements OnInit, OnDestroy {
       } else {
         this.error_notification(this.i18n.t('text_unable_to_update_address'));
       }
-    } catch {
-      this.error_notification(this.i18n.t('text_unable_to_update_address'));
+    } catch (err) {
+      this.error_notification(apiErrorMessage(err, this.i18n.t('text_unable_to_update_address')));
     } finally {
       this.ui_controls.busy_id = 0;
     }
@@ -353,8 +354,8 @@ export class AddressesPage implements OnInit, OnDestroy {
       } else {
         this.error_notification(this.i18n.t('text_unable_to_delete_address'));
       }
-    } catch {
-      this.error_notification(this.i18n.t('text_unable_to_delete_address'));
+    } catch (err) {
+      this.error_notification(apiErrorMessage(err, this.i18n.t('text_unable_to_delete_address')));
     } finally {
       this.ui_controls.busy_id = 0;
     }

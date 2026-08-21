@@ -25,6 +25,7 @@ import { ConnectionService } from "../../service/connection.service";
 import { ActivatedRoute, Router } from "@angular/router";
 import { NetworkService } from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { apiErrorMessage } from '../../core/http/api-error';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { Preferences } from "@capacitor/preferences";
 import { GlobalComponent } from "../../global-component";
@@ -494,8 +495,8 @@ export class CategoryPage implements OnInit, OnDestroy {
       } else {
         this.error_notification(this.i18n.t('network_error_retry'));
       }
-    } catch {
-      this.error_notification(this.i18n.t('network_error_retry'));
+    } catch (err) {
+      this.error_notification(apiErrorMessage(err, this.i18n.t('network_error_retry')));
     } finally {
       this.isCreatingLabel = false;
       this.cdr.markForCheck();

@@ -25,6 +25,7 @@ import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { I18nService } from '../../i18n.service';
 
 /**
@@ -170,9 +171,9 @@ export class VendorProductsPage implements OnInit {
             }
             resolve();
           },
-          error: () => {
+          error: (err: any) => {
             this.ui_controls.is_loading = false;
-            this.toast.error(this.i18n.t('network_error_retry'), { position: 'top-center' });
+            this.toast.error(apiErrorMessage(err, this.i18n.t('network_error_retry')), { position: 'top-center' });
             resolve();
           },
         });
@@ -276,7 +277,7 @@ export class VendorProductsPage implements OnInit {
             this.toast.error(response.message ?? this.i18n.t('update_failed'), { position: 'top-center' });
           }
         },
-        error: () => this.toast.error(this.i18n.t('update_failed'), { position: 'top-center' }),
+        error: (err: any) => this.toast.error(apiErrorMessage(err, this.i18n.t('update_failed')), { position: 'top-center' }),
       });
   }
 

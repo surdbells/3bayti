@@ -23,6 +23,7 @@ import { AppTabBarComponent } from '../../shared/app-tab-bar';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 
 /**
  * Vendor order detail page with per-item transition controls.
@@ -180,9 +181,9 @@ export class VendorOrderDetailPage implements OnInit {
             this.toast.error(response.message || this.i18n.t('vendor_order_load_failed'));
           }
         },
-        error: () => {
+        error: (err: any) => {
           this.ui_controls.is_loading = false;
-          this.toast.error(this.i18n.t('vendor_order_network_error'));
+          this.toast.error(apiErrorMessage(err, this.i18n.t('vendor_order_network_error')));
         },
       });
   }
@@ -274,11 +275,11 @@ export class VendorOrderDetailPage implements OnInit {
             this.toast.error(response.message || this.i18n.t('vendor_order_transition_failed'));
           }
         },
-        error: () => {
+        error: (err: any) => {
           // Rollback optimistic update
           item.item_status = originalStatus;
           this.ui_controls.is_transitioning = false;
-          this.toast.error(this.i18n.t('vendor_order_transition_network_error'));
+          this.toast.error(apiErrorMessage(err, this.i18n.t('vendor_order_transition_network_error')));
         },
       });
   }

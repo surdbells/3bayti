@@ -6,6 +6,7 @@ import {
   IonRefresher, IonRefresherContent, NavController,
 } from '@ionic/angular/standalone';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { Preferences } from '@capacitor/preferences';
 import { GiftCardPaymentService } from '../gift-cards/gift-card-payment.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
@@ -140,9 +141,9 @@ export class MyGiftCardsPage implements OnInit {
         this.cards = res?.data ?? [];
         event?.target?.complete();
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.loading = false;
-        this.notify.error(this.i18n.t('mgc_load_error'));
+        this.notify.error(apiErrorMessage(err, this.i18n.t('mgc_load_error')));
         event?.target?.complete();
       },
     });

@@ -7,6 +7,7 @@ import {
   IonSpinner, NavController,
 } from '@ionic/angular/standalone';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { Preferences } from '@capacitor/preferences';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -97,9 +98,9 @@ export class GiftCardRedeemPage {
         if (res?.data) { this.preview = res.data; }
         else { this.notify.error(res?.message ?? this.i18n.t('gift_card_redeem_not_found')); }
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.checking = false;
-        this.notify.error(this.i18n.t('gift_card_redeem_not_found'));
+        this.notify.error(apiErrorMessage(err, this.i18n.t('gift_card_redeem_not_found')));
       },
     });
   }
@@ -130,9 +131,9 @@ export class GiftCardRedeemPage {
         }
         this.notify.error(res?.message ?? this.i18n.t('gift_card_redeem_failed'));
       },
-      error: () => {
+      error: (err: any) => {
         this.ui.redeeming = false;
-        this.notify.error(this.i18n.t('gift_card_redeem_failed'));
+        this.notify.error(apiErrorMessage(err, this.i18n.t('gift_card_redeem_failed')));
       },
     });
   }

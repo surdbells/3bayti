@@ -30,6 +30,7 @@ import {Router, RouterLink} from "@angular/router";
 import {ActionSheetController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { apiErrorMessage } from '../../core/http/api-error';
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import {Preferences} from "@capacitor/preferences";
 import {GlobalComponent} from "../../global-component";
@@ -1439,9 +1440,9 @@ export class CheckoutPage implements OnInit, OnDestroy {
               this.error_notification(response.message);
             }
           },
-          error: () => {
+          error: (err: any) => {
             this.ui_controls.is_updating = false;
-            this.error_notification(this.i18n.t('text_unable_to_save_billing_address'));
+            this.error_notification(apiErrorMessage(err, this.i18n.t('text_unable_to_save_billing_address')));
           }
         }))
     }else {

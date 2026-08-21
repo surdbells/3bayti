@@ -28,6 +28,7 @@ import { Platform } from "@ionic/angular";
 import { ConnectionService } from "../../service/connection.service";
 import { NetworkService } from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { apiErrorMessage } from '../../core/http/api-error';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { Preferences } from "@capacitor/preferences";
 import { SizeChipsComponent } from "../../size-chips/size-chips.component";
@@ -503,8 +504,8 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
       } else {
         this.error_notification(this.i18n.t('review_submit_failed'));
       }
-    } catch {
-      this.error_notification(this.i18n.t('review_submit_failed'));
+    } catch (err) {
+      this.error_notification(apiErrorMessage(err, this.i18n.t('review_submit_failed')));
     } finally {
       this.reviewSubmitting = false;
       this.cdr.markForCheck();
@@ -1259,9 +1260,9 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             }
             this.cdr.markForCheck();
           },
-          error: () => {
+          error: (err: any) => {
             this.ui_controls.is_loading_measurement = false;
-            this.error_notification(this.i18n.t('text_unable_to_save_measurement'));
+            this.error_notification(apiErrorMessage(err, this.i18n.t('text_unable_to_save_measurement')));
             this.cdr.markForCheck();
           }
         });

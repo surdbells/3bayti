@@ -19,6 +19,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe } from '../../translate.pipe';
 import { Preferences } from '@capacitor/preferences';
 import { MobileNetworkAdapter } from '../../core/http/mobile-network-adapter';
+import { apiErrorMessage } from '../../core/http/api-error';
 import { I18nService } from '../../i18n.service';
 import { AxNotificationService } from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
@@ -318,10 +319,10 @@ export class OrderDetailPage implements OnInit {
             this.toast.error(response.message || this.i18n.t('order_detail_load_failed'));
           }
         },
-        error: () => {
+        error: (err: any) => {
           this.ui_controls.is_loading = false;
           if (done) done();
-          this.toast.error(this.i18n.t('order_detail_network_error'));
+          this.toast.error(apiErrorMessage(err, this.i18n.t('order_detail_network_error')));
         },
       });
   }
@@ -460,7 +461,7 @@ export class OrderDetailPage implements OnInit {
         error: (err: any) => {
           this.ui_controls.is_cancelling = false;
           console.warn('[cancel-order:detail] network/transport error', err);
-          this.toast.error(this.i18n.t('order_detail_network_error'));
+          this.toast.error(apiErrorMessage(err, this.i18n.t('order_detail_network_error')));
         },
       });
   }

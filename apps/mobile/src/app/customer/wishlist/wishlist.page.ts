@@ -23,6 +23,7 @@ import { Wishlist } from '../../class/wishlist';
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from '../../translate.pipe';
 import { WishlistService, WishlistProduct } from '../../core/services/wishlist.service';
+import { apiErrorMessage } from '../../core/http/api-error';
 
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AppTabBarComponent } from '../../shared/app-tab-bar';
@@ -210,8 +211,8 @@ export class WishlistPage implements OnInit, OnDestroy {
       } else {
         this.error_notification(this.i18n.t('text_something_went_wrong'));
       }
-    } catch {
-      this.error_notification(this.i18n.t('text_something_went_wrong'));
+    } catch (err) {
+      this.error_notification(apiErrorMessage(err, this.i18n.t('text_something_went_wrong')));
     } finally {
       this.ui_controls.is_creating = false;
     }
@@ -226,8 +227,8 @@ export class WishlistPage implements OnInit, OnDestroy {
         this.ui_controls.is_empty = this.wishlists.length === 0;
         await this.loadLabels();
       }
-    } catch {
-      this.error_notification(this.i18n.t('text_something_went_wrong'));
+    } catch (err) {
+      this.error_notification(apiErrorMessage(err, this.i18n.t('text_something_went_wrong')));
     }
   }
 

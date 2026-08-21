@@ -24,6 +24,7 @@ import { environment } from '../../../environments/environment';
 import { ConnectionService } from '../../service/connection.service';
 import { NetworkService } from '../../service/network.service';
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
+import { apiErrorMessage } from '../../core/http/api-error';
 import { I18nService } from '../../i18n.service';
 import { TranslatePipe } from '../../translate.pipe';
 import { LanguageSwitcherComponent } from '../../language-switcher.component';
@@ -250,9 +251,9 @@ export class SettingsPage implements OnInit, OnDestroy {
             this.showError(response?.message || this.i18n.t('social_connect_failed'));
           }
         },
-        error: () => {
+        error: (err: any) => {
           this.socialBusy = null;
-          this.showError(this.i18n.t('social_connect_failed'));
+          this.showError(apiErrorMessage(err, this.i18n.t('social_connect_failed')));
         },
       });
     } catch (err) {
@@ -295,9 +296,9 @@ export class SettingsPage implements OnInit, OnDestroy {
           this.showError(response?.message || this.i18n.t('social_disconnect_failed'));
         }
       },
-      error: () => {
+      error: (err: any) => {
         this.socialBusy = null;
-        this.showError(this.i18n.t('social_disconnect_failed'));
+        this.showError(apiErrorMessage(err, this.i18n.t('social_disconnect_failed')));
       },
     });
   }
@@ -412,10 +413,10 @@ export class SettingsPage implements OnInit, OnDestroy {
             this.showError(this.i18n.t('settings_marketing_error'));
           }
         },
-        error: () => {
+        error: (err: any) => {
           this.marketingSaving = false;
           this.marketingEnabled = !desiredEnabled; // revert
-          this.showError(this.i18n.t('settings_marketing_error'));
+          this.showError(apiErrorMessage(err, this.i18n.t('settings_marketing_error')));
         },
       });
   }
@@ -590,7 +591,7 @@ export class SettingsPage implements OnInit, OnDestroy {
         error: (e) => {
           console.error(e);
           this.ui_controls.updating_location = false;
-          this.showError(this.i18n.t('text_failed_to_update_location'));
+          this.showError(apiErrorMessage(e, this.i18n.t('text_failed_to_update_location')));
         }
       });
   }
