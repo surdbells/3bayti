@@ -24,7 +24,7 @@ import { RecommendationsService } from '../catalog/recommendations.service';
 import type { Product } from '../catalog/product.model';
 import { AuthService } from '../../core/auth/auth.service';
 import type { Category } from '../categories/category.model';
-import { categoryIconUrl, categoryHasIcon } from '../categories/category-icons';
+import { categoryIconUrl } from '../categories/category-icons';
 import { HomeDataService } from './home-data.service';
 import { TranslatePipe } from '@ngx-translate/core';
 
@@ -197,10 +197,9 @@ export class HomeComponent {
   private fetchCategories$() {
     return this.routed.get<Category[]>('GET /categories').pipe(
       map(envelope => envelope.data),
-      /* Filter out categories without bundled icons (currently just
-         pyjamas — see category-icons.ts). The home-page row only shows
-         visually-coherent tiles; /category index still lists everything. */
-      map(cats => cats.filter(c => categoryHasIcon(c.slug))),
+      /* Show every category on the home row — icon-less ones (e.g. pyjamas)
+         fall back to a lettered tile in the template, so they're no longer
+         hidden here. */
       /* Sort by product count DESC so the most-stocked categories
          appear first. Same sort as /category index uses. */
       map(cats => [...cats].sort((a, b) => b.product_count - a.product_count)),
