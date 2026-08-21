@@ -104,6 +104,10 @@ final class AuthMiddleware implements MiddlewareInterface
             ]);
         });
 
+        // Attribute audit-log rows for this request to the authenticated user
+        // (the automatic EntityAuditListener reads this).
+        \Bayti\Api\Domain\Audit\AuditContext::setActor($user->getId());
+
         // Decorate the request with user + claims and continue.
         $request = $request
             ->withAttribute(self::ATTR_USER, $user)

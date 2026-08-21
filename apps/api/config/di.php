@@ -151,11 +151,28 @@ return [
      * and PHP-DI provides this concrete instance.
      */
     EntityManagerInterface::class => static function (ContainerInterface $c): EntityManagerInterface {
-        return new EntityManager(
+        $em = new EntityManager(
             $c->get(Connection::class),
             $c->get(Configuration::class),
         );
+
+        // Automatic audit trail: record create/update/delete for entity
+        // mutations (customer + vendor self-service actions that have no explicit
+        // AuditEmitter call). Best-effort — a wiring failure must not stop the EM.
+        try {
+            $em->getEventManager()->addEventListener(
+                [\Doctrine\ORM\Events::onFlush, \Doctrine\ORM\Events::postFlush],
+                $c->get(\Bayti\Api\Domain\Audit\EntityAuditListener::class),
+            );
+        } catch (\Throwable) {
+            // Listener unavailable — the app still runs, just without auto-audit.
+        }
+
+        return $em;
     },
+
+    \Bayti\Api\Domain\Audit\EntityAuditListener::class => static fn (ContainerInterface $c): \Bayti\Api\Domain\Audit\EntityAuditListener
+        => new \Bayti\Api\Domain\Audit\EntityAuditListener($c->get(\Psr\Log\LoggerInterface::class)),
 
     // -------------------------------------------------------------------
     // PSR-17 ResponseFactory

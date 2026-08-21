@@ -305,6 +305,18 @@ final class AuditEmitter
         string $action,
         array $changes,
     ): void {
+        // Dedup with the automatic EntityAuditListener: whichever claims the
+        // (type:id:action) key first records it; the other skips. Keeps an
+        // explicitly-audited admin action from also being logged by the flush
+        // listener. Null-id / unknown subjects never dedup (claim returns true).
+        if (!AuditContext::claim(AuditContext::key(
+            self::subjectTypeSafe($subject),
+            self::subjectIdSafe($subject),
+            $action,
+        ))) {
+            return;
+        }
+
         try {
             $log = new AuditLog(
                 userId: $actor?->getId(),

@@ -80,6 +80,9 @@ final class OptionalAuthMiddleware implements MiddlewareInterface
             }
         }
 
+        // Attribute audit-log rows for this request to the resolved user.
+        \Bayti\Api\Domain\Audit\AuditContext::setActor($user->getId());
+
         // All checks passed — decorate request with user + claims.
         $request = $request
             ->withAttribute(AuthMiddleware::ATTR_USER, $user)

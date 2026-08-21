@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Middleware;
 
+use Bayti\Api\Domain\Audit\AuditContext;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
@@ -80,6 +81,12 @@ final class RequestIdMiddleware implements MiddlewareInterface
         // See LoggerFactory::buildRequestProcessor().
         RequestIdContext::set($requestId);
 
+        // Reset per-request audit state and stamp client meta (IP + UA). The
+        // actor id is filled in later by the auth middleware once the token is
+        // validated; unauthenticated requests stay actor-less (System).
+        AuditContext::reset();
+        AuditContext::setRequestMeta($this->clientIp($request), $request->getHeaderLine('User-Agent') ?: null);
+
         try {
             $response = $handler->handle($request);
         } finally {
@@ -88,10 +95,25 @@ final class RequestIdMiddleware implements MiddlewareInterface
             // even though the next request will overwrite — defense
             // in depth against weird re-entrancy bugs.
             RequestIdContext::clear();
+            AuditContext::reset();
         }
 
         // Echo it back to the client so they can correlate too.
         return $response->withHeader(self::HEADER_NAME, $requestId);
+    }
+
+    /**
+     * Best-effort client IP from REMOTE_ADDR, validated so a weird server param
+     * (e.g. a unix socket path) doesn't land in the audit log. Returns null when
+     * unavailable/invalid.
+     */
+    private function clientIp(ServerRequestInterface $request): ?string
+    {
+        $ip = $request->getServerParams()['REMOTE_ADDR'] ?? null;
+        if (!is_string($ip) || $ip === '' || filter_var($ip, FILTER_VALIDATE_IP) === false) {
+            return null;
+        }
+        return $ip;
     }
 
     /**

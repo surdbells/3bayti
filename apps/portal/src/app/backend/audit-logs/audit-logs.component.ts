@@ -260,7 +260,12 @@ export class AuditLogsComponent implements OnInit {
   }
 
   private humanizeKey(k: string): string {
-    return k.replace(/[_-]+/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    return k
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2') // split camelCase (contactEmail → contact Email)
+      .replace(/[_-]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   private formatValue(v: any): string {
