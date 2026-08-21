@@ -57,6 +57,7 @@ final class UpdateAdminProductController
         if ($input->sizes !== null)           $product->setAvailableSizes($input->sizes);
         if ($input->colors !== null)          $product->setAvailableColors($input->colors);
         if ($cat !== null)                    $product->setCategory($cat);
+        if ($input->delivery_info !== null)   $product->setDeliveryInfo($input->normalizedDeliveryInfo());
 
         $repo->save($product);
         return $this->ok(PaginatedEnvelope::single($this->serializer->detailShape($product)));

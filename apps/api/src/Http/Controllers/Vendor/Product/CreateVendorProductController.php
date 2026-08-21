@@ -159,6 +159,9 @@ final class CreateVendorProductController
         if ($input->extra_msmt !== null) {
             $product->setExtraMsmt($input->extra_msmt);
         }
+        if ($input->delivery_info !== null) {
+            $product->setDeliveryInfo($input->normalizedDeliveryInfo());
+        }
         if ($input->status !== null) {
             $product->setStatus($input->status);
         }

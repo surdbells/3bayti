@@ -334,6 +334,11 @@ export class ProductFormComponent implements OnInit {
         this.model.is_sale = !!p.is_sale;
         this.model.require_extra_msmt = !!(p.requires_extra_msmt ?? p.require_extra_msmt);
         this.model.extra_msmt = p.extra_msmt ?? '';
+        // Delivery estimate — restore so an edit round-trips it instead of wiping.
+        const di = p.delivery_info ?? {};
+        this.model.delivery_time = di.time ?? '';
+        this.model.custom_delivery_time = di.custom_time ?? '';
+        this.model.delivery_note = di.note ?? '';
         this.model.status = p.status ?? 'active';
         if (this.adminMode) {
           this.model.vendor_id = p.vendor?.id ?? p.vendor_id ?? null;
@@ -544,6 +549,14 @@ export class ProductFormComponent implements OnInit {
       is_sale: d.is_sale,
       requires_extra_msmt: d.require_extra_msmt,
       extra_msmt: d.extra_msmt || null,
+      // Delivery estimate → Product.delivery_info { time, custom_time, note }.
+      // Persist as an object the API stores verbatim and the storefront reads;
+      // without this, new products showed no delivery time (only legacy ones did).
+      delivery_info: {
+        time: d.delivery_time || null,
+        custom_time: d.delivery_time === 'custom' ? (d.custom_delivery_time || null) : null,
+        note: d.delivery_note || null,
+      },
       status,
     };
     // Collection + label assignment. The product schema holds a SINGLE

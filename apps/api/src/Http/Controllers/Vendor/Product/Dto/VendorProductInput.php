@@ -93,9 +93,19 @@ final class VendorProductInput
     public readonly ?string $extra_msmt;
 
     /**
+     * Delivery estimate shown on the product page: { time, custom_time, note }.
+     * `time` is the selected range (e.g. "3-5") or "custom"; `custom_time` is the
+     * free-text range used when time == "custom". Stored on Product.delivery_info.
+     *
+     * @var array<string, mixed>|null
+     */
+    public readonly ?array $delivery_info;
+
+    /**
      * @param list<string>|null $image_urls
      * @param list<string>|null $sizes
      * @param list<string>|null $colors
+     * @param array<string, mixed>|null $delivery_info
      */
     public function __construct(
         ?string  $name             = null,
@@ -122,6 +132,7 @@ final class VendorProductInput
         ?string  $extra_msmt       = null,
         ?int     $collection_id    = null,
         ?int     $label_id         = null,
+        ?array   $delivery_info    = null,
     ) {
         $this->name              = $name;
         $this->description       = $description;
@@ -147,6 +158,36 @@ final class VendorProductInput
         $this->extra_msmt        = $extra_msmt;
         $this->collection_id     = $collection_id;
         $this->label_id          = $label_id;
+        $this->delivery_info     = $delivery_info;
+    }
+
+    /**
+     * Sanitised delivery info for Product::setDeliveryInfo() — keeps only the
+     * three string fields. Returns null (clear) when nothing usable was sent.
+     *
+     * @return array{time: ?string, custom_time: ?string, note: ?string}|null
+     */
+    public function normalizedDeliveryInfo(): ?array
+    {
+        if ($this->delivery_info === null) {
+            return null;
+        }
+        $str = static function (mixed $v): ?string {
+            if (!is_string($v)) {
+                return null;
+            }
+            $t = trim($v);
+            return $t === '' ? null : mb_substr($t, 0, 255);
+        };
+        $out = [
+            'time' => $str($this->delivery_info['time'] ?? null),
+            'custom_time' => $str($this->delivery_info['custom_time'] ?? null),
+            'note' => $str($this->delivery_info['note'] ?? null),
+        ];
+        if ($out['time'] === null && $out['custom_time'] === null && $out['note'] === null) {
+            return null;
+        }
+        return $out;
     }
 
     /**

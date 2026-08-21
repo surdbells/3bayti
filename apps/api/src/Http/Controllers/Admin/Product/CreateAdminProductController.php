@@ -60,6 +60,7 @@ final class CreateAdminProductController
         if ($input->sizes !== null)        $product->setAvailableSizes($input->sizes);
         if ($input->colors !== null)       $product->setAvailableColors($input->colors);
         if ($category !== null)            $product->setCategory($category);
+        if ($input->delivery_info !== null) $product->setDeliveryInfo($input->normalizedDeliveryInfo());
 
         /** @var ProductRepository $pRepo */
         $pRepo = $this->em->getRepository(Product::class);
