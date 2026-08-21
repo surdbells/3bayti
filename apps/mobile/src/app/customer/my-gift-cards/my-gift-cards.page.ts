@@ -118,7 +118,11 @@ export class MyGiftCardsPage implements OnInit {
     // purchased/redeemed elsewhere doesn't appear until a manual refresh).
   }
 
+  /** Set when navigating forward to the card detail so back skips the reload. */
+  private skipReloadOnEnter = false;
+
   async ionViewWillEnter() {
+    if (this.skipReloadOnEnter) { this.skipReloadOnEnter = false; return; }
     await this.loadAuthToken();
     this.load();
   }
@@ -153,6 +157,7 @@ export class MyGiftCardsPage implements OnInit {
     // Unpaid cards have no spendable code yet — tapping resumes payment
     // instead of opening the (empty) detail view.
     if (this.isUnpaid(card)) { this.completePayment(card); return; }
+    this.skipReloadOnEnter = true;
     this.router.navigate(['/gift-card-detail'], { state: { card } });
   }
 

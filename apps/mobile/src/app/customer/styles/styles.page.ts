@@ -102,7 +102,10 @@ export class StylesPage implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.sub?.unsubscribe();
   }
+  /** Set when navigating forward to a child (style detail) so back skips the reload. */
+  private skipReloadOnEnter = false;
   ionViewDidEnter(){
+    if (this.skipReloadOnEnter) { this.skipReloadOnEnter = false; return; }
     this.getObject();
   }
   single_user = {
@@ -314,6 +317,7 @@ export class StylesPage implements OnInit, OnDestroy {
   // ========================================
 
   open_style(style: Styles) {
+    this.skipReloadOnEnter = true;
     // Navigate by slug (deep-link-safe URL) AND pass the style in router
     // state (fast path — avoids a re-fetch when coming from the list). On a
     // hard reload the state is wiped, so style-view re-fetches by the slug.

@@ -124,7 +124,11 @@ export class WishlistPage implements OnInit, OnDestroy {
     // returning).
   }
 
+  /** Set when navigating forward to a child (product) so back skips the reload. */
+  private skipReloadOnEnter = false;
+
   ionViewWillEnter() {
+    if (this.skipReloadOnEnter) { this.skipReloadOnEnter = false; return; }
     this.getObject();
   }
 
@@ -245,6 +249,7 @@ export class WishlistPage implements OnInit, OnDestroy {
   }
 
   open_product(id: number, name: string) {
+    this.skipReloadOnEnter = true;
     this.router.navigate(['/', 'product'], { queryParams: { id, name } });
   }
 
