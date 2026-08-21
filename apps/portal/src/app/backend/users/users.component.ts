@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -70,6 +71,7 @@ export interface CatalogPreset { slug: string; name: string; description: string
 })
 export class UsersComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
+  private readonly navHistory = inject(NavigationHistoryService);
   protected readonly perms = inject(PermissionService);
 
   // View toggle (Staff | Roles)
@@ -264,5 +266,5 @@ export class UsersComponent implements OnInit {
     });
   }
 
-  goBack() { this.router.navigate(['/backend']); }
+  goBack() { this.navHistory.back('/backend'); }
 }

@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIf } from '@angular/common';
 import { Router } from '@angular/router';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { apiErrorMessage } from '../../shared/http/api-error';
 import { GlobalComponent } from '../../global-component';
@@ -42,6 +43,7 @@ export interface Measurements extends Record<string, unknown> {
 export class MeasurementsComponent implements OnInit {
   measurements?: Measurements[];
   private readonly confirm = inject(AxConfirmService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   // Enterprise table (client mode — full set returned in one call)
   readonly dataSource = new AxClientDataSource<Measurements>([
@@ -140,7 +142,7 @@ export class MeasurementsComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/account']).then(r => console.log(r));
+    this.navHistory.back('/account');
   }
 
   error_notification(message: string) {

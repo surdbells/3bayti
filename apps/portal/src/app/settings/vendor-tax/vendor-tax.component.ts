@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { FormsModule } from '@angular/forms';
@@ -56,6 +57,7 @@ export class VendorTaxComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
@@ -73,7 +75,7 @@ export class VendorTaxComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/account']).then(r => console.log(r));
+    this.navHistory.back('/account');
   }
 
   error_notification(message: string) { this.toast.error(message); }

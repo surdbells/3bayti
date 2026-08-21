@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -29,6 +30,7 @@ export class OtaComponent implements OnInit {
     { id: 'both', label: 'Both (iOS + Android)' },
   ];
   private readonly confirm = inject(AxConfirmService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   readonly loading = signal(true);
   readonly uploading = signal(false);
@@ -167,6 +169,6 @@ export class OtaComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/account']);
+    this.navHistory.back('/account');
   }
 }

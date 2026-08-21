@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
@@ -42,6 +43,7 @@ export class DeliveriesComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private route: ActivatedRoute,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
@@ -110,6 +112,6 @@ export class DeliveriesComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/adminlogistics']);
+    this.navHistory.back('/adminlogistics');
   }
 }

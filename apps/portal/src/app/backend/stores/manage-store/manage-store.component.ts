@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../../services/navigation-history.service';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { GlobalComponent } from '../../../global-component';
@@ -35,6 +36,7 @@ import { apiErrorMessage } from '../../../shared/http/api-error';
 export class ManageStoreComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
   private readonly impersonation = inject(ImpersonationService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   ui_controls = {
     is_loading: false,
@@ -116,7 +118,7 @@ export class ManageStoreComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/stores']).then(r => console.log(r));
+    this.navHistory.back('/stores');
   }
 
   error_notification(message: string) {

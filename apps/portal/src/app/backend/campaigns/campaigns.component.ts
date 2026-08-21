@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -50,6 +51,7 @@ export class CampaignsComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
@@ -135,5 +137,5 @@ export class CampaignsComponent implements OnInit {
     }
   }
 
-  goBack() { this.router.navigate(['/backend']); }
+  goBack() { this.navHistory.back('/backend'); }
 }

@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { Observable, of } from 'rxjs';
 import { map, catchError, switchMap, shareReplay } from 'rxjs/operators';
@@ -39,6 +40,7 @@ interface ProductRow extends Record<string, unknown> {
 })
 export class StoreProductsComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   store_name = '';
   private storeId = 0;
@@ -226,5 +228,5 @@ export class StoreProductsComponent implements OnInit {
     }
   }
 
-  goBack() { this.router.navigate(['/stores']); }
+  goBack() { this.navHistory.back('/stores'); }
 }

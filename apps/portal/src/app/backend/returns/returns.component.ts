@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -60,6 +61,7 @@ export class ReturnsComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
@@ -188,5 +190,5 @@ export class ReturnsComponent implements OnInit {
     return (s || '').replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
-  goBack() { this.router.navigate(['/backend']); }
+  goBack() { this.navHistory.back('/backend'); }
 }

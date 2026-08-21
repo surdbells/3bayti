@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
@@ -59,6 +60,7 @@ interface CustomerFilters {
 export class CustomersComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
   private readonly i18n = inject(I18nService);
+  private readonly navHistory = inject(NavigationHistoryService);
   private t(k: string): string { return this.i18n.t(k); }
   get statusFilterOptions(): AxComboboxOption[] {
     return [
@@ -310,5 +312,5 @@ export class CustomersComponent implements OnInit {
     });
   }
 
-  goBack() { this.router.navigate(['/backend']); }
+  goBack() { this.navHistory.back('/backend'); }
 }

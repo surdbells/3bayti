@@ -5,6 +5,7 @@ import { CommonModule } from '@angular/common';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { apiErrorMessage } from '../../shared/http/api-error';
@@ -43,6 +44,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 })
 export class ViewOrderComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   /** Richer timeline from GET /v3/vendor/orders/{id}/timeline (X.17-D).
    *  Loaded after the legacy order fetch resolves. Falls back gracefully
@@ -147,7 +149,7 @@ export class ViewOrderComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/orders']).then(r => console.log(r));
+    this.navHistory.back('/orders');
   }
 
   error_notification(message: string) {

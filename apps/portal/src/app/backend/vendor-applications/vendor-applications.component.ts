@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -56,6 +57,7 @@ export class VendorApplicationsComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
     private i18n: I18nService,
@@ -219,5 +221,5 @@ export class VendorApplicationsComponent implements OnInit {
     return (row.status || '').toLowerCase() === 'pending';
   }
 
-  goBack() { this.router.navigate(['/backend']); }
+  goBack() { this.navHistory.back('/backend'); }
 }

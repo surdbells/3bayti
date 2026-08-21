@@ -2,6 +2,7 @@ import {Component, inject, OnInit} from '@angular/core';
 import {NgIf} from "@angular/common";
 import {VendorShellComponent} from "../../partials/vendor-shell/vendor-shell.component";
 import {ActivatedRoute, Router} from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import {PortalCrudAdapter} from '../../services/portal-crud-adapter';
 import {HotToastService} from '../../shared/toast/toast.service';
 import { apiErrorMessage } from '../../shared/http/api-error';
@@ -22,6 +23,7 @@ import { IconComponent } from '../../shared/icon/icon.component';
 export class ReceiptComponent   implements OnInit{
   private readonly confirm = inject(AxConfirmService);
   private readonly adapter = inject(PortalCrudAdapter);
+  private readonly navHistory = inject(NavigationHistoryService);
   constructor(
     private router: Router,
     private route: ActivatedRoute,
@@ -106,7 +108,7 @@ export class ReceiptComponent   implements OnInit{
     this.get_order_by_id();
   }
   goBack() {
-    this.router.navigate(['/orders']).then(r => console.log(r));
+    this.navHistory.back('/orders');
   }
   error_notification(message: string) {
     this.toast.error(message);

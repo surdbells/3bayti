@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { NgIf } from '@angular/common';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../../services/navigation-history.service';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
 import { HotToastService } from '../../../shared/toast/toast.service';
 import { apiErrorMessage } from '../../../shared/http/api-error';
@@ -45,6 +46,7 @@ export class EditCollectionComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
@@ -66,7 +68,7 @@ export class EditCollectionComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/collections']).then(r => console.log(r));
+    this.navHistory.back('/collections');
   }
 
   error_notification(message: string) {

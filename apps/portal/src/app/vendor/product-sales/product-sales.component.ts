@@ -1,6 +1,7 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -34,6 +35,7 @@ export class ProductSalesComponent implements OnInit {
   private router = inject(Router);
   private adapter = inject(PortalCrudAdapter);
   private toast = inject(HotToastService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   productId = 0;
   productName = '';
@@ -101,6 +103,6 @@ export class ProductSalesComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/products']);
+    this.navHistory.back('/products');
   }
 }

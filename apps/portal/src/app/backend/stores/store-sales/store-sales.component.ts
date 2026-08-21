@@ -1,5 +1,6 @@
 import { Component, OnInit, signal, computed } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
@@ -159,6 +160,7 @@ export class StoreSalesComponent implements OnInit {
 
   constructor(
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private route: ActivatedRoute,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
@@ -343,5 +345,5 @@ export class StoreSalesComponent implements OnInit {
     return (s || '').replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
-  goBack() { this.router.navigate(['/stores']); }
+  goBack() { this.navHistory.back('/stores'); }
 }

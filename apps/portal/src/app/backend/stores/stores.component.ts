@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { of } from 'rxjs';
@@ -64,6 +65,7 @@ interface StoreFilters {
 export class StoresComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
   private readonly i18n = inject(I18nService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   ui_controls = { is_loading: false, no_data: false, nav_open: false };
 
@@ -383,5 +385,5 @@ export class StoresComponent implements OnInit {
     this.router.navigate([path], { queryParams: { id, name } });
   }
 
-  goBack() { this.router.navigate(['/backend']); }
+  goBack() { this.navHistory.back('/backend'); }
 }

@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
@@ -242,6 +243,7 @@ import { apiErrorMessage } from '../../shared/http/api-error';
 export class GiftCardDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
+  private readonly navHistory = inject(NavigationHistoryService);
   private readonly adapter = inject(PortalCrudAdapter);
   private readonly toast = inject(HotToastService);
   private readonly confirm = inject(AxConfirmService);
@@ -380,5 +382,5 @@ export class GiftCardDetailComponent implements OnInit {
     });
   }
 
-  goBack() { this.router.navigate(['/admin-gift-cards']); }
+  goBack() { this.navHistory.back('/admin-gift-cards'); }
 }

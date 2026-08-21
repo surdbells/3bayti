@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChild, ElementRef, NgZone } from '@angular/core';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -79,6 +80,7 @@ export class VendorMessagesComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
     private zone: NgZone,
@@ -276,7 +278,7 @@ export class VendorMessagesComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/vendor/dashboard']);
+    this.navHistory.back('/vendor/dashboard');
   }
 
   private refreshLastSeen(): void {

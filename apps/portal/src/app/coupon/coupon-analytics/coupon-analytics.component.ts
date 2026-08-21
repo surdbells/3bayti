@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
@@ -74,6 +75,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
 
   constructor(
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private route: ActivatedRoute,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
@@ -229,7 +231,7 @@ export class CouponAnalyticsComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/coupons']);
+    this.navHistory.back('/coupons');
   }
 
   viewCouponAnalytics(id: number): void {

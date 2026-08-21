@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../../services/navigation-history.service';
 import { Subject, Subscription } from 'rxjs';
 import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 
@@ -80,6 +81,7 @@ export class CampaignFormComponent implements OnInit, OnDestroy {
   constructor(
     private route: ActivatedRoute,
     private router: Router,
+    private navHistory: NavigationHistoryService,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
   ) {}
@@ -255,7 +257,7 @@ export class CampaignFormComponent implements OnInit, OnDestroy {
   }
 
   goBack() {
-    this.router.navigate(['/campaigns']);
+    this.navHistory.back('/campaigns');
   }
 
   // ── helpers ──────────────────────────────────────────────────────

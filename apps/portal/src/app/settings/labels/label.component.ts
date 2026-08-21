@@ -1,5 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
@@ -20,6 +21,7 @@ import { apiErrorMessage } from '../../shared/http/api-error';
 export class LabelComponent implements OnInit {
   labels?: Labels[];
   private readonly confirm = inject(AxConfirmService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   ui_controls = {
     is_loading: false,
@@ -68,7 +70,7 @@ export class LabelComponent implements OnInit {
   }
 
   goBack() {
-    this.router.navigate(['/account']).then(r => console.log(r));
+    this.navHistory.back('/account');
   }
 
   error_notification(message: string) { this.toast.error(message); }

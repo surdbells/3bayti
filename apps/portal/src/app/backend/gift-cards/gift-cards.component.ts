@@ -2,6 +2,7 @@ import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { throwError } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
@@ -349,6 +350,7 @@ interface GiftCardFilters {
 })
 export class GiftCardsAdminComponent implements OnInit {
   private readonly router = inject(Router);
+  private readonly navHistory = inject(NavigationHistoryService);
   private readonly adapter = inject(PortalCrudAdapter);
   private readonly toast = inject(HotToastService);
   private readonly i18n = inject(I18nService);
@@ -694,5 +696,5 @@ export class GiftCardsAdminComponent implements OnInit {
     });
   }
 
-  goBack() { this.router.navigate(['/backend']); }
+  goBack() { this.navHistory.back('/backend'); }
 }

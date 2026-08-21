@@ -1,6 +1,7 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
@@ -55,6 +56,7 @@ export class AdminProductsComponent implements OnInit {
   config!: AxDataTableConfig<ProductRow>;
   dataSource!: AxServerDataSource<ProductRow>;
   private readonly confirm = inject(AxConfirmService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   constructor(
     private router: Router,
@@ -262,5 +264,5 @@ export class AdminProductsComponent implements OnInit {
     }
   }
 
-  goBack() { this.router.navigate(['/backend']); }
+  goBack() { this.navHistory.back('/backend'); }
 }

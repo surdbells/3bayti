@@ -1,5 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
@@ -28,6 +29,7 @@ interface NamedOption { id: number; name: string; }
 })
 export class EditCouponComponent implements OnInit {
   private readonly confirm = inject(AxConfirmService);
+  private readonly navHistory = inject(NavigationHistoryService);
 
   session_data: any = '';
   user_session = {
@@ -288,6 +290,6 @@ export class EditCouponComponent implements OnInit {
   }
 
   goBack(): void {
-    this.router.navigate(['/coupons']);
+    this.navHistory.back('/coupons');
   }
 }
