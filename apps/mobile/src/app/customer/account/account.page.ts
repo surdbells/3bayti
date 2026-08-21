@@ -591,9 +591,9 @@ export class AccountPage implements OnInit, OnDestroy {
         this.categories = labels.map((l) => ({ id: l.id, name: l.name, count: l.count })) as any;
         this.ui_controls.is_loading_category = false;
       })
-      .catch(() => {
+      .catch((err) => {
         this.ui_controls.is_loading_category = false;
-        this.error_notification(this.i18n.t('text_something_went_wrong'));
+        this.error_notification(apiErrorMessage(err, this.i18n.t('text_something_went_wrong')));
       });
   }
 
@@ -610,9 +610,9 @@ export class AccountPage implements OnInit, OnDestroy {
           this.error_notification(this.i18n.t('text_something_went_wrong'));
         }
       })
-      .catch(() => {
+      .catch((err) => {
         this.ui_controls.is_loading_category = false;
-        this.error_notification(this.i18n.t('text_something_went_wrong'));
+        this.error_notification(apiErrorMessage(err, this.i18n.t('text_something_went_wrong')));
       });
   }
 
