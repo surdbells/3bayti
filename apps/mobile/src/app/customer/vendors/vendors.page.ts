@@ -123,6 +123,7 @@ export class VendorsPage implements OnInit {
   }
 
 goToReviews(id: number, name: string) {
+    this.skipReloadOnEnter = true;
     this.router.navigate(
       ['/', 'vendor-reviews'],
       { queryParams: { id, name } }
@@ -148,7 +149,11 @@ goToReviews(id: number, name: string) {
     this.rqst_param.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
     this.rqst_param.store_name = this.route.snapshot.queryParamMap.get('name') || '';
   }
+  /** Set when navigating forward to a child (product / reviews / orders) so
+   *  back keeps the storefront's scroll + loaded products instead of reloading. */
+  private skipReloadOnEnter = false;
   ionViewDidEnter(){
+    if (this.skipReloadOnEnter) { this.skipReloadOnEnter = false; return; }
     this.rqst_param.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
     this.getObject();
   }
@@ -385,9 +390,11 @@ goToReviews(id: number, name: string) {
       }))
   }
   orders() {
+    this.skipReloadOnEnter = true;
     this.router.navigate(['/', 'my-orders']);
   }
   open_product(id: number, name: string) {
+    this.skipReloadOnEnter = true;
     this.router.navigate(
       ['/', 'product'],
       { queryParams: { id, name } }
