@@ -236,10 +236,16 @@ function synthesizeSizeFlags(v3Sizes: unknown): Record<string, boolean> {
     const label = item['label'];
     const inStock = item['in_stock'];
     if (typeof label !== 'string') continue;
-    // Find which flag key this label maps to.
+    // Find which flag key this label maps to. Case-insensitive so a size stored
+    // as 'Custom' / 'custom' still maps to size_custom (labels in the map are
+    // upper-case: 'XS', 'CUSTOM', …); numeric labels are unaffected.
+    const normalized = label.toUpperCase();
     for (const [flagKey, labelValue] of Object.entries(SIZE_FLAG_TO_LABEL)) {
-      if (labelValue === label) {
-        flags[flagKey] = inStock === true;
+      if (labelValue === normalized) {
+        // Made-to-measure (CUSTOM) is order-based, not stock-based — surface it
+        // whenever offered, even for a product carrying no inventory. Standard
+        // sizes still require in_stock.
+        flags[flagKey] = flagKey === 'size_custom' ? true : (inStock === true);
         break;
       }
     }
