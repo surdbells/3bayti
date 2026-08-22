@@ -91,6 +91,11 @@ const SIZE_MAP: Record<string, string> = {
   size_50: '50', size_51: '51', size_52: '52', size_53: '53', size_54: '54', size_55: '55',
   size_56: '56', size_57: '57', size_58: '58', size_59: '59', size_60: '60', size_61: '61',
   size_62: '62', size_63: '63', size_64: '64',
+  // Made-to-measure. Kept in the map so it round-trips like every other size
+  // (saved by buildPayload + prefilled on edit). Matched case-insensitively on
+  // load; downstream the API treats size 'Custom' as made-to-measure
+  // (strtoupper === 'CUSTOM').
+  size_custom: 'Custom',
 };
 
 /**
@@ -370,7 +375,7 @@ export class ProductFormComponent implements OnInit {
           ? p.sizes.map((s: any) => String(typeof s === 'string' ? s : s?.label ?? '').toUpperCase())
           : [];
         for (const [flag, label] of Object.entries(SIZE_MAP)) {
-          if (sizesArr.includes(label)) (this.model as any)[flag] = true;
+          if (sizesArr.includes(label.toUpperCase())) (this.model as any)[flag] = true;
         }
 
         // Colors — v3 returns [{label, hex_code}]; tolerate array of strings or CSV.
