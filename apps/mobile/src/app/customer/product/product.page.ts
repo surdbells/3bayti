@@ -1110,6 +1110,18 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
       }
     }
 
+    // Made-to-measure (Custom size) products need the customer's BODY
+    // measurements — this is the size_custom rule, independent of
+    // require_extra_msmt, since not every custom product also asks for a
+    // vendor-specific extra measurement. If nothing was auto-loaded from the
+    // customer's profile (get_measurement on load), open the sheet so they
+    // supply them instead of placing an unmakeable custom order.
+    if (this.single.size_custom && String(this.add_cart.measurement ?? '').trim().length === 0) {
+      this.error_notification(this.i18n.t('text_provide_measurement'));
+      this.openMeasurement();
+      return;
+    }
+
     // Made-to-measure products (require_extra_msmt) need the vendor's extra
     // measurement. The server rejects an empty value with a generic "one or
     // more fields failed validation" — opaque, and for a ready-to-wear
