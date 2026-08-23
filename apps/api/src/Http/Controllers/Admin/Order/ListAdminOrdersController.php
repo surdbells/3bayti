@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Admin\Order;
 
 use Bayti\Api\Domain\Audit\AuditEmitter;
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\User\User;
@@ -81,6 +83,7 @@ final class ListAdminOrdersController
             $vendorIdFilter,
             $since,
             $until,
+            includeGiftCards: true,
         );
 
         // Audit the listing access. Subject is the admin User
@@ -106,8 +109,25 @@ final class ListAdminOrdersController
             ],
         );
 
+        // Prefetch the gift-card map for THIS page in one query so
+        // synthesizing the "Gift Card" line for gift-card purchase orders
+        // (those with zero real items) is N+1-free — mirrors the customer
+        // ListOrdersController. Keyed by order_reference ==
+        // gift_cards.purchase_order_reference. Skipped for an empty page.
+        $giftCardMap = [];
+        if ($list !== []) {
+            $refs = array_map(static fn (Order $o): string => $o->getOrderReference(), $list);
+            /** @var GiftCardRepository $giftCards */
+            $giftCards = $this->em->getRepository(GiftCard::class);
+            $giftCardMap = $giftCards->findByPurchaseOrderReferences($refs);
+        }
+
         $items = array_map(
-            fn (Order $o): array => $this->serializer->adminListShape($o),
+            fn (Order $o): array => $this->serializer->adminListShape(
+                $o,
+                null,
+                $giftCardMap[$o->getOrderReference()] ?? null,
+            ),
             $list,
         );
 

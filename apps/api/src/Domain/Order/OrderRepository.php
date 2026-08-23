@@ -381,9 +381,12 @@ class OrderRepository extends EntityRepository
      *   - vendorId: filter to orders containing at least one item
      *     from a specific vendor
      *
-     * Synthetic gift-card purchase orders are always excluded (see
-     * excludeGiftCardPurchases) so they never pollute the orders list or
-     * the logistics board.
+     * Synthetic gift-card purchase orders are excluded by default (see
+     * excludeGiftCardPurchases) so they never pollute the logistics board.
+     * Pass $includeGiftCards = true to surface them as sales in the merged
+     * admin Orders & Sales list — the serializer synthesizes a "Gift Card"
+     * line for them. Note a vendorId filter still excludes gift-card orders
+     * regardless (they have no vendor items to join on).
      *
      * Used by M3.1.7-D admin orders surface.
      *
@@ -398,6 +401,7 @@ class OrderRepository extends EntityRepository
         ?int $vendorIdFilter = null,
         ?\DateTimeImmutable $since = null,
         ?\DateTimeImmutable $until = null,
+        bool $includeGiftCards = false,
     ): array {
         $limit = max(1, min($limit, 100));
         $offset = max(0, $offset);
@@ -418,7 +422,9 @@ class OrderRepository extends EntityRepository
         } else {
             $totalQb->select('COUNT(o.id)');
         }
-        $this->excludeGiftCardPurchases($totalQb);
+        if (!$includeGiftCards) {
+            $this->excludeGiftCardPurchases($totalQb);
+        }
         if ($statusList !== []) {
             $totalQb->andWhere('o.status IN (:statuses)')->setParameter('statuses', $statusList);
         }
@@ -447,7 +453,9 @@ class OrderRepository extends EntityRepository
         } else {
             $idQb->select('o.id');
         }
-        $this->excludeGiftCardPurchases($idQb);
+        if (!$includeGiftCards) {
+            $this->excludeGiftCardPurchases($idQb);
+        }
         if ($statusList !== []) {
             $idQb->andWhere('o.status IN (:statuses)')->setParameter('statuses', $statusList);
         }

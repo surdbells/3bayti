@@ -145,10 +145,17 @@ final class OrderSerializer
      * receive customer contact in their order list. The caller eagerly
      * loads o.user (OrderRepository::paginatedForAdmin) so this does not
      * trigger an N+1.
+     *
+     * Gift-card purchase orders (see listShape docblock) carry zero real
+     * order_items. When the caller supplies the order's linked $giftCard,
+     * a single "Gift Card" line is synthesized so the admin Orders & Sales
+     * list shows the sale with a product label + item count instead of a
+     * blank row. The caller prefetches a reference→card map
+     * (ListAdminOrdersController) to keep this N+1-free.
      */
-    public function adminListShape(Order $order, ?array $returns = null): array
+    public function adminListShape(Order $order, ?array $returns = null, ?GiftCard $giftCard = null): array
     {
-        $shape = $this->listShape($order, $returns);
+        $shape = $this->listShape($order, $returns, $giftCard);
         $shape['customer'] = $this->customerShape($order->getUser());
         $shape['delivery'] = $this->deliverySummary($order->getShippingAddress());
         return $shape;
