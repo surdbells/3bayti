@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Bayti\Api\Http\Controllers\Admin\Order;
 
 use Bayti\Api\Domain\Audit\AuditEmitter;
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\Order\OrderReturnRequest;
@@ -94,7 +96,18 @@ final class GetAdminOrderController
             $returns = [];
         }
 
-        $shape = $this->serializer->adminDetailShape($order, $returns);
+        // Gift-card purchase orders carry no real items; resolve the linked
+        // card (one lookup, only when there are no real items) so the serializer
+        // synthesizes the "Gift Card" line — matching the orders list + the
+        // customer order detail.
+        $giftCard = null;
+        if ($order->getItems()->isEmpty()) {
+            /** @var GiftCardRepository $giftCards */
+            $giftCards = $this->em->getRepository(GiftCard::class);
+            $giftCard = $giftCards->findByPurchaseOrderReference($order->getOrderReference());
+        }
+
+        $shape = $this->serializer->adminDetailShape($order, $returns, $giftCard);
 
         // The customer's saved body measurements (profile) so admins see the
         // same authoritative set the vendor fulfils against — independent of the

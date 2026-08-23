@@ -10,6 +10,8 @@ use Bayti\Api\Domain\Catalog\Product;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
+use Bayti\Api\Domain\GiftCard\GiftCard;
+use Bayti\Api\Domain\GiftCard\GiftCardRepository;
 use Bayti\Api\Domain\Order\OrderRepository;
 use Bayti\Api\Domain\User\Measurement;
 use Bayti\Api\Domain\User\MeasurementRepository;
@@ -117,6 +119,29 @@ final class AdminOrderControllersTest extends HttpTestCase
         self::assertSame(AuditLog::ACTION_VIEWED, $lastAudit->getAction());
         self::assertSame('Order', $lastAudit->getSubjectType());
         self::assertSame(100, $lastAudit->getSubjectId());
+    }
+
+    #[Test]
+    public function getSynthesizesGiftCardLineForItemlessOrder(): void
+    {
+        // A gift-card purchase order has no order_items. The detail endpoint must
+        // resolve the linked card and synthesize a "Gift Card" line so the order
+        // detail isn't empty (regression: card orders showed no items).
+        $admin = $this->makeAdminUser(99);
+        $customer = $this->makeUser(id: 42);
+        $order = $this->makeOrder($customer, id: 200, reference: '3B-GC-1', subtotal: '250.00');
+        $card = $this->makeGiftCard($customer);
+
+        $orderRepo = $this->createMock(OrderRepository::class);
+        $orderRepo->method('findByIdForAdmin')->with(200)->willReturn($order);
+
+        $this->bindEm($admin, $orderRepo, $card);
+        $response = $this->makeGet($admin, '/v3/admin/orders/200');
+
+        self::assertSame(200, $response->getStatusCode());
+        $body = $this->jsonBody($response);
+        self::assertCount(1, $body['order']['items']);
+        self::assertStringContainsString('Gift Card', $body['order']['items'][0]['product_name']);
     }
 
     #[Test]
@@ -269,7 +294,7 @@ final class AdminOrderControllersTest extends HttpTestCase
         return $user;
     }
 
-    private function bindEm(User $user, OrderRepository $orderRepo): EntityManagerInterface
+    private function bindEm(User $user, OrderRepository $orderRepo, ?GiftCard $giftCard = null): EntityManagerInterface
     {
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->willReturn($user);
@@ -279,6 +304,11 @@ final class AdminOrderControllersTest extends HttpTestCase
         // resolves (empty set) instead of returning null and 500ing.
         $measurementRepo = $this->createMock(MeasurementRepository::class);
         $measurementRepo->method('findAllForUser')->willReturn([]);
+
+        // Order detail resolves the linked gift card for item-less (gift-card)
+        // orders; null keeps normal orders unaffected.
+        $giftCardRepo = $this->createMock(GiftCardRepository::class);
+        $giftCardRepo->method('findByPurchaseOrderReference')->willReturn($giftCard);
 
         // Capturing audit repository — collects logs in $this->recordedAuditLogs
         $auditRepo = new class($this->recordedAuditLogs) extends \Doctrine\ORM\EntityRepository {
@@ -290,12 +320,13 @@ final class AdminOrderControllersTest extends HttpTestCase
             public function getClassName(): string { return AuditLog::class; }
         };
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $auditRepo, $measurementRepo) {
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $auditRepo, $measurementRepo, $giftCardRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Order::class, $orderRepo],
                 [AuditLog::class, $auditRepo],
                 [Measurement::class, $measurementRepo],
+                [GiftCard::class, $giftCardRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
@@ -345,6 +376,21 @@ final class AdminOrderControllersTest extends HttpTestCase
         $order = new Order(user: $user, orderReference: $reference, subtotal: $subtotal);
         $this->setEntityId($order, $id);
         return $order;
+    }
+
+    private function makeGiftCard(User $buyer): GiftCard
+    {
+        return new GiftCard(
+            buyerUser: $buyer,
+            denomination: '250.00',
+            theme: 'birthday',
+            recipientName: 'Sara',
+            recipientMessage: 'Enjoy!',
+            recipientPhotoUrl: null,
+            scheduledDeliveryAt: null,
+            recipientEmail: 'sara@example.com',
+            recipientPhone: null,
+        );
     }
 
     private function makeProduct(int $id): Product

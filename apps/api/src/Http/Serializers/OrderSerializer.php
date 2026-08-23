@@ -183,10 +183,14 @@ final class OrderSerializer
      * Admin order detail — detail shape plus the customer block, so the
      * order-management screen can show the account holder alongside the
      * shipping recipient.
+     *
+     * Gift-card purchase orders carry no real items; pass the linked $giftCard
+     * (looked up by the controller) so the serializer synthesizes the "Gift
+     * Card" line here too, matching the list + customer detail views.
      */
-    public function adminDetailShape(Order $order, ?array $returns = null): array
+    public function adminDetailShape(Order $order, ?array $returns = null, ?GiftCard $giftCard = null): array
     {
-        $shape = $this->detailShape($order, $returns);
+        $shape = $this->detailShape($order, $returns, $giftCard);
         $shape['customer'] = $this->customerShape($order->getUser());
         return $shape;
     }
