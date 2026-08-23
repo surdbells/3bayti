@@ -22,14 +22,16 @@ export function apiErrorMessage(err: any, fallback = 'Something went wrong. Plea
   // (or proxies) return the inner object directly, so accept both.
   const body = err?.error?.error ?? err?.error ?? err;
 
-  // Field-level validation details win — they're the most specific.
+  // Field-level validation details win — they're the most specific. The v3
+  // envelope nests them as details.fields.<field> = ["message"] (see
+  // HttpException::validation), while some errors put arrays directly on
+  // details. Dig through whichever shape to the FIRST usable string — never
+  // stringify a raw object, which is what surfaced "[object Object]" to users
+  // (details.fields is an object, and String({...}) === "[object Object]").
   const details = body?.details;
   if (details && typeof details === 'object') {
-    for (const key of Object.keys(details)) {
-      const v = (details as Record<string, unknown>)[key];
-      const msg = Array.isArray(v) ? v[0] : v;
-      if (msg) return String(msg);
-    }
+    const msg = firstString((details as Record<string, unknown>)['fields'] ?? details);
+    if (msg) return msg;
   }
 
   // A string body (plain-text error) is itself the message.
@@ -43,4 +45,30 @@ export function apiErrorMessage(err: any, fallback = 'Something went wrong. Plea
   }
 
   return fallback;
+}
+
+/**
+ * Recursively find the first non-empty string inside a value (string, number,
+ * array, or nested object), so a validation payload like
+ * `{ fields: { logo: ["Too long"] } }` yields "Too long" instead of a
+ * stringified object. Depth-bounded to avoid pathological structures.
+ */
+function firstString(val: unknown, depth = 0): string | null {
+  if (val == null || depth > 5) return null;
+  if (typeof val === 'string') return val.trim() !== '' ? val : null;
+  if (typeof val === 'number' || typeof val === 'boolean') return String(val);
+  if (Array.isArray(val)) {
+    for (const item of val) {
+      const s = firstString(item, depth + 1);
+      if (s) return s;
+    }
+    return null;
+  }
+  if (typeof val === 'object') {
+    for (const key of Object.keys(val as Record<string, unknown>)) {
+      const s = firstString((val as Record<string, unknown>)[key], depth + 1);
+      if (s) return s;
+    }
+  }
+  return null;
 }
