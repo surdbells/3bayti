@@ -270,10 +270,26 @@
         <!-- Size Selection -->
         @if(!isBagOrAccessory){
           <div class="size-section">
-            @if(single.size_custom){
-              <!-- CUSTOM-MEASUREMENT product: user enters her own measurements.
-                   Show ONLY the Custom Measurements affordance; hide size chips
-                   + the Size Chart link. -->
+            @if(hasSizes){
+              <!-- Size chips. A product can offer ready sizes (S/M/L…) AND a
+                   made-to-measure CUSTOM chip; the shopper picks one. The Size
+                   Chart link only helps for ready sizes. -->
+              <div class="section-label">
+                <span class="label-text">{{ 'size' | translate }}</span>
+                @if(hasReadySizes){
+                  <button type="button" class="size-guide-link" (click)="isSizeGuideOpen = true">
+                    <ax-icon name="ruler"></ax-icon>
+                    {{ 'text_size_chart' | translate }}
+                  </button>
+                }
+              </div>
+
+              <app-size-chips [sizes]="apiSizes" (selected)="onSizeSelected($event)">
+              </app-size-chips>
+            }
+
+            @if(isCustomSelected){
+              <!-- CUSTOM picked: collect the shopper's body measurements. -->
               <button type="button" class="custom-measurement-btn" (click)="openMeasurement()" id="measurement">
                 <div class="btn-content">
                   <ax-icon name="pencil-ruler"></ax-icon>
@@ -281,20 +297,6 @@
                 </div>
                 <ax-icon name="chevron-right"></ax-icon>
               </button>
-            } @else {
-              <!-- READY-TO-WEAR product: show the ready size chips + the Size
-                   Chart link to help pick which ready size fits. Hide Custom
-                   Measurements. -->
-              <div class="section-label">
-                <span class="label-text">{{ 'size' | translate }}</span>
-                <button type="button" class="size-guide-link" (click)="isSizeGuideOpen = true">
-                  <ax-icon name="ruler"></ax-icon>
-                  {{ 'text_size_chart' | translate }}
-                </button>
-              </div>
-
-              <app-size-chips [sizes]="apiSizes" (selected)="onSizeSelected($event)">
-              </app-size-chips>
             }
           </div>
           }

@@ -605,6 +605,21 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     return Object.values(this.apiSizes || {}).some((v) => !!v);
   }
 
+  /** True when the vendor offers at least one READY (non-custom) size, so ready
+   *  chips + the size chart make sense alongside any Custom option. */
+  get hasReadySizes(): boolean {
+    return Object.entries(this.apiSizes || {})
+      .some(([k, v]) => !!v && k.toUpperCase() !== 'CUSTOM');
+  }
+
+  /** True when the shopper has picked the made-to-measure CUSTOM chip. "Custom"
+   *  is a per-SELECTION state (like the web PDP), not a product-level flag — a
+   *  product can offer S/M/L AND Custom, and only picking Custom collects body
+   *  measurements. */
+  get isCustomSelected(): boolean {
+    return String(this.add_cart.size ?? '').toUpperCase() === 'CUSTOM';
+  }
+
   /** True only when the vendor set at least one colour — mirrors the colour
    *  pills (rendered only when colors.length > 0). No colours -> never force a
    *  colour. */
@@ -756,7 +771,16 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   // ========================================
 
   onSizeSelected(sizeKey: string | any) {
-    this.add_cart.size = sizeKey;
+    this.add_cart.size = sizeKey ?? '';
+    // "Custom" tracks the SELECTED size, not the product: picking the CUSTOM
+    // chip enters made-to-measure (and opens the sheet); any ready size leaves
+    // it. Deselecting (null) clears both.
+    const custom = String(sizeKey ?? '').toUpperCase() === 'CUSTOM';
+    this.add_cart.is_custom = custom;
+    this.process_controls.is_custom = custom;
+    if (custom) {
+      this.openMeasurement();
+    }
     this.cdr.markForCheck();
   }
 
@@ -908,7 +932,6 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
             this.get_store_measurement();
             this.apiSizes = {
               'NORMAL': this.single.size_normal,
-              'CUSTOM': this.single.size_custom,
               'xs': this.single.size_xs,
               's': this.single.size_s,
               'm': this.single.size_m,
@@ -930,8 +953,15 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
               '62': this.single.size_62,
               '63': this.single.size_63,
               '64': this.single.size_64,
+              // CUSTOM last so its chip renders after the ready sizes (a product
+              // can offer BOTH ready sizes and made-to-measure).
+              'CUSTOM': this.single.size_custom,
             };
-            if (this.single.size_custom) {
+            // Only a CUSTOM-ONLY product starts in custom mode; when ready sizes
+            // are also offered, "custom" is decided by what the shopper picks.
+            if (this.single.size_custom && !this.hasReadySizes) {
+              this.add_cart.size = 'CUSTOM';
+              this.add_cart.is_custom = true;
               this.process_controls.is_custom = true;
             }
             this.ui_controls.is_loading = false;
@@ -1089,12 +1119,12 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
       return;
     }
 
-    // Size is required only when the category enforces it AND the vendor
-    // actually offers ready sizes. Bags/accessories/mukhawars/kaftans never
-    // force a size; a product with NO sizes set must never be blocked (that
-    // silently kills the sale). Custom-measurement products collect body
-    // measurements instead of a size chip, so they're exempt too.
-    if (!this.single.size_custom && !this.isSizeColorOptionalCategory && this.hasSizes) {
+    // Size is required only when the category enforces it AND the vendor offers
+    // sizes. CUSTOM is one of those size chips now, so a made-to-measure product
+    // still needs a pick (the shopper taps CUSTOM). Bags/accessories/mukhawars/
+    // kaftans never force a size; a product with NO sizes set must never be
+    // blocked (that silently kills the sale).
+    if (!this.isSizeColorOptionalCategory && this.hasSizes) {
       if (this.add_cart.size.length === 0) {
         this.error_notification(this.i18n.t('text_select_size'));
         return;
@@ -1116,7 +1146,7 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     // vendor-specific extra measurement. If nothing was auto-loaded from the
     // customer's profile (get_measurement on load), open the sheet so they
     // supply them instead of placing an unmakeable custom order.
-    if (this.single.size_custom && String(this.add_cart.measurement ?? '').trim().length === 0) {
+    if (this.isCustomSelected && String(this.add_cart.measurement ?? '').trim().length === 0) {
       this.error_notification(this.i18n.t('text_provide_measurement'));
       this.openMeasurement();
       return;
