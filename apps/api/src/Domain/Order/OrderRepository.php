@@ -372,6 +372,24 @@ class OrderRepository extends EntityRepository
     }
 
     /**
+     * Decide how the admin Orders & Sales query treats gift-card purchase
+     * orders. An explicit type filter wins (product = exclude, gift_card =
+     * only gift cards); with no type filter the includeGiftCards flag decides
+     * whether they're shown alongside product orders. Applied to both the
+     * count and id-page builders so they stay consistent.
+     */
+    private function applyAdminGiftCardScope(QueryBuilder $qb, ?string $typeFilter, bool $includeGiftCards): void
+    {
+        if ($typeFilter !== null) {
+            $this->applyTypeFilter($qb, $typeFilter);
+            return;
+        }
+        if (!$includeGiftCards) {
+            $this->excludeGiftCardPurchases($qb);
+        }
+    }
+
+    /**
      * Admin-scoped paginated order list. Supports cross-cutting
      * filters that the customer + vendor surfaces don't expose:
      *   - status: a single Order::STATUS_* value, a list of values
@@ -380,6 +398,12 @@ class OrderRepository extends EntityRepository
      *   - userId: filter to a single customer
      *   - vendorId: filter to orders containing at least one item
      *     from a specific vendor
+     *   - productId: filter to orders containing a specific product
+     *     (shares the o.items join with vendorId; gift-card orders have
+     *     no items so a product filter naturally excludes them)
+     *   - type: 'product' (exclude gift-card orders) / 'gift_card' (only
+     *     gift-card sales) — drives the "Product or Gift Card" filter on
+     *     the merged Orders & Sales page. Overrides includeGiftCards.
      *
      * Synthetic gift-card purchase orders are excluded by default (see
      * excludeGiftCardPurchases) so they never pollute the logistics board.
@@ -402,6 +426,8 @@ class OrderRepository extends EntityRepository
         ?\DateTimeImmutable $since = null,
         ?\DateTimeImmutable $until = null,
         bool $includeGiftCards = false,
+        ?int $productIdFilter = null,
+        ?string $typeFilter = null,
     ): array {
         $limit = max(1, min($limit, 100));
         $offset = max(0, $offset);
@@ -412,19 +438,25 @@ class OrderRepository extends EntityRepository
             ? array_values(array_filter($statusFilter, static fn ($s): bool => is_string($s) && $s !== ''))
             : ($statusFilter !== null && $statusFilter !== '' ? [$statusFilter] : []);
 
+        // A vendor OR product filter narrows on order_items, so both share a
+        // single inner join on o.items (adding two would double-count / conflict
+        // on the alias). Either present forces DISTINCT o.id.
+        $needsItemsJoin = $vendorIdFilter !== null || $productIdFilter !== null;
+
         // Count query
         $totalQb = $this->createQueryBuilder('o');
-        if ($vendorIdFilter !== null) {
-            $totalQb->select('COUNT(DISTINCT o.id)')
-                ->innerJoin('o.items', 'i')
-                ->where('i.vendor = :vendor')
-                ->setParameter('vendor', $vendorIdFilter);
+        if ($needsItemsJoin) {
+            $totalQb->select('COUNT(DISTINCT o.id)')->innerJoin('o.items', 'i');
+            if ($vendorIdFilter !== null) {
+                $totalQb->andWhere('i.vendor = :vendor')->setParameter('vendor', $vendorIdFilter);
+            }
+            if ($productIdFilter !== null) {
+                $totalQb->andWhere('i.product = :product')->setParameter('product', $productIdFilter);
+            }
         } else {
             $totalQb->select('COUNT(o.id)');
         }
-        if (!$includeGiftCards) {
-            $this->excludeGiftCardPurchases($totalQb);
-        }
+        $this->applyAdminGiftCardScope($totalQb, $typeFilter, $includeGiftCards);
         if ($statusList !== []) {
             $totalQb->andWhere('o.status IN (:statuses)')->setParameter('statuses', $statusList);
         }
@@ -445,17 +477,18 @@ class OrderRepository extends EntityRepository
 
         // ID page
         $idQb = $this->createQueryBuilder('o');
-        if ($vendorIdFilter !== null) {
-            $idQb->select('DISTINCT o.id, o.createdAt')
-                ->innerJoin('o.items', 'i')
-                ->where('i.vendor = :vendor')
-                ->setParameter('vendor', $vendorIdFilter);
+        if ($needsItemsJoin) {
+            $idQb->select('DISTINCT o.id, o.createdAt')->innerJoin('o.items', 'i');
+            if ($vendorIdFilter !== null) {
+                $idQb->andWhere('i.vendor = :vendor')->setParameter('vendor', $vendorIdFilter);
+            }
+            if ($productIdFilter !== null) {
+                $idQb->andWhere('i.product = :product')->setParameter('product', $productIdFilter);
+            }
         } else {
             $idQb->select('o.id');
         }
-        if (!$includeGiftCards) {
-            $this->excludeGiftCardPurchases($idQb);
-        }
+        $this->applyAdminGiftCardScope($idQb, $typeFilter, $includeGiftCards);
         if ($statusList !== []) {
             $idQb->andWhere('o.status IN (:statuses)')->setParameter('statuses', $statusList);
         }

@@ -70,6 +70,8 @@ final class ListAdminOrdersController
         $status = $this->parseStatus($query['status'] ?? null);
         $userIdFilter = $this->parsePositiveInt($query['user_id'] ?? null);
         $vendorIdFilter = $this->parsePositiveInt($query['vendor_id'] ?? null);
+        $productIdFilter = $this->parsePositiveInt($query['product_id'] ?? null);
+        $typeFilter = $this->parseType($query['type'] ?? null);
         $since = $this->parseDate($query['since'] ?? null, false);
         $until = $this->parseDate($query['until'] ?? null, true);
 
@@ -84,6 +86,8 @@ final class ListAdminOrdersController
             $since,
             $until,
             includeGiftCards: true,
+            productIdFilter: $productIdFilter,
+            typeFilter: $typeFilter,
         );
 
         // Audit the listing access. Subject is the admin User
@@ -103,6 +107,8 @@ final class ListAdminOrdersController
                     'status' => $status,
                     'user_id' => $userIdFilter,
                     'vendor_id' => $vendorIdFilter,
+                    'product_id' => $productIdFilter,
+                    'type' => $typeFilter,
                 ], static fn ($v) => $v !== null),
                 'result_count' => count($list),
                 'total' => $total,
@@ -213,6 +219,23 @@ final class ListAdminOrdersController
         }
         $n = (int) $raw;
         return $n > 0 ? $n : null;
+    }
+
+    /**
+     * Parse the order-type filter behind the "Product or Gift Card" control.
+     * Only 'product' / 'gift_card' are honoured ('card' aliases gift_card);
+     * anything else is null (no type filter).
+     */
+    private function parseType(mixed $raw): ?string
+    {
+        if (!is_string($raw) || trim($raw) === '') {
+            return null;
+        }
+        return match (trim($raw)) {
+            'product' => 'product',
+            'gift_card', 'card' => 'gift_card',
+            default => null,
+        };
     }
 
     /**

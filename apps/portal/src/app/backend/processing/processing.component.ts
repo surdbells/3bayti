@@ -20,7 +20,7 @@ import {
   type AxServerFetchResult,
   type AxDateRange,
 } from '../../shared/data/enterprise';
-import { ORDER_STATUS_OPTIONS, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
+import { ORDER_STATUS_OPTIONS, loadAdminVendorOptions, loadAdminProductOptions, GIFT_CARD_FILTER_VALUE, prettyOrderStatus } from '../shared/order-filters';
 
 export interface Transaction extends Record<string, unknown> {
   id: number;
@@ -84,6 +84,7 @@ export class ProcessingComponent implements OnInit {
       filters: [
         { key: 'date', label: 'Date', type: 'date-range' },
         { key: 'status', label: 'Status', type: 'select', options: ORDER_STATUS_OPTIONS },
+        { key: 'product', label: 'Product', type: 'select', optionsLoader: () => loadAdminProductOptions(this.adapter) },
         { key: 'vendor', label: 'Store', type: 'select', optionsLoader: () => loadAdminVendorOptions(this.adapter) },
       ],
       columns: [
@@ -114,6 +115,14 @@ export class ProcessingComponent implements OnInit {
     if (query.search) q.search = query.search;
     if (query.filters['status']) q.status = query.filters['status'];
     if (query.filters['vendor']) q.vendor_id = query.filters['vendor'];
+    // Product filter: the "Gift Card" entry narrows to gift-card sales (type),
+    // any other value is a real product id.
+    const product = query.filters['product'];
+    if (product === GIFT_CARD_FILTER_VALUE) {
+      q.type = 'gift_card';
+    } else if (product) {
+      q.product_id = product;
+    }
     const range = query.filters['date'] as AxDateRange | undefined;
     if (range?.from) q.since = range.from;
     if (range?.to) q.until = range.to;

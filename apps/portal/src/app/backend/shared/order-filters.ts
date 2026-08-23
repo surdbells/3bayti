@@ -84,6 +84,40 @@ export function loadAdminVendorOptions(
     .catch(() => []);
 }
 
+/**
+ * Sentinel filter value for the "Gift Card" entry in the Product filter.
+ * The merged Orders & Sales table maps it to the API `type=gift_card` filter
+ * (gift-card sales carry no real product_id), while a numeric value maps to
+ * `product_id`.
+ */
+export const GIFT_CARD_FILTER_VALUE = 'gift_card';
+
+/**
+ * Async option provider for the "Product" filter on the Orders & Sales table.
+ * Fetches the admin product catalogue and maps it to {label,value:id}, with a
+ * leading "Gift Card" pseudo-option so an admin can narrow to either a specific
+ * product OR gift-card sales from one control. Degrades to just the Gift Card
+ * option on failure so the filter stays usable.
+ */
+export function loadAdminProductOptions(
+  adapter: PortalCrudAdapter,
+): Promise<readonly AxFilterOption[]> {
+  const giftCard: AxFilterOption = { label: 'Gift Card', value: GIFT_CARD_FILTER_VALUE };
+  return firstValueFrom(adapter.get_v3('GET /admin/products', { query: { limit: 200 } }))
+    .then((res: any) => {
+      const products: any[] = res?.products ?? res?.data ?? res?.items ?? [];
+      const options = products
+        .map((p) => ({
+          label: p.name ?? p.title ?? `Product ${p.id}`,
+          value: String(p.id),
+        }))
+        .filter((o) => o.value !== '' && o.value !== 'undefined')
+        .sort((a, b) => a.label.localeCompare(b.label));
+      return [giftCard, ...options];
+    })
+    .catch(() => [giftCard]);
+}
+
 /** Humanise a raw status value: 'pending_payment' -> 'Pending Payment'. */
 export function prettyOrderStatus(value: unknown): string {
   return String(value ?? '')
