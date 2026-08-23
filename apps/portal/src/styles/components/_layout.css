@@ -134,6 +134,20 @@
   padding: var(--ax-content-padding-y) var(--ax-content-padding-x) var(--ax-space-10);
 }
 
+/* .ax-main already supplies the horizontal content inset (--ax-content-padding-x).
+   The dashboard renders straight into .ax-main, but most pages wrap their content
+   in a .ax-container which re-applies the same padding — doubling the left/right
+   inset and misaligning those pages against the dashboard. When a container sits
+   directly inside the shell, drop its redundant horizontal padding so every page
+   shares the dashboard's left/right spacing. (The container keeps its max-width
+   and centering; standalone .ax-container usage outside .ax-main is untouched.) */
+.ax-main > .ax-container,
+.ax-main > .ax-container-fluid,
+.ax-main > .ax-container-narrow {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 .ax-main-narrow {
   max-width: 72rem;
   margin-left: auto;
