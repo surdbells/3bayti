@@ -26,6 +26,8 @@ export interface Transaction extends Record<string, unknown> {
   id: number;
   order_id: string;
   customer: string;
+  product_name: string;
+  store: number;
   items_count: number;
   total_paid: string;
   status: string;
@@ -73,12 +75,12 @@ export class ProcessingComponent implements OnInit {
       pageSize: 20,
       pageSizeOptions: [20, 50, 100],
       globalSearch: true,
-      searchPlaceholder: 'Search orders by reference or customer…',
+      searchPlaceholder: 'Search orders by reference, product or customer…',
       stickyHeader: true,
       hover: true,
       emptyTitle: 'No orders found',
       emptyDescription: 'No orders match your current filters.',
-      export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'orders-processing' },
+      export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'orders-and-sales' },
       filters: [
         { key: 'date', label: 'Date', type: 'date-range' },
         { key: 'status', label: 'Status', type: 'select', options: ORDER_STATUS_OPTIONS },
@@ -87,6 +89,7 @@ export class ProcessingComponent implements OnInit {
       columns: [
         { key: 'order_id', label: 'Order ref', sortable: true, sticky: 'left', width: '14rem' },
         { key: 'customer', label: 'Customer' },
+        { key: 'product_name', label: 'Products', hideOnMobile: true },
         { key: 'items_count', label: 'Items', align: 'center', hideOnMobile: true },
         { key: 'total_paid', label: 'Total', align: 'right',
           format: (v) => (v != null ? `AED ${Number(v).toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '—') },
@@ -96,6 +99,9 @@ export class ProcessingComponent implements OnInit {
       ],
       rowActions: [
         { id: 'view', label: 'View order', icon: 'visibility' },
+        // Jump to this order's store sales (first item's vendor). Disabled for
+        // gift-card / vendorless orders, which have no store to drill into.
+        { id: 'store', label: 'Store sales', icon: 'storefront', disabled: (row) => !row.store },
       ],
     };
   }
@@ -125,16 +131,25 @@ export class ProcessingComponent implements OnInit {
     );
   }
 
-  /** Flatten the admin order shape into the processing row. */
+  /** Flatten the admin order shape into the Orders & Sales row. */
   private mapRow(o: any): Transaction {
     const customer = o.customer ?? {};
     const name = `${customer.first_name ?? ''} ${customer.last_name ?? ''}`.trim();
     const items: any[] = o.items ?? [];
+    const first = items[0] ?? {};
+    // Product summary: single product name, or "First +N more" for multi-item
+    // orders. Gift-card purchases carry a synthesized "… Gift Card" line, so
+    // they read naturally here too.
+    const productLabel = items.length > 1
+      ? `${first.product_name ?? 'Item'} +${items.length - 1} more`
+      : (first.product_name ?? '—');
     return {
       ...o,
       id: o.id,
       order_id: o.order_reference ?? o.id,
       customer: name || customer.email || '—',
+      product_name: productLabel,
+      store: first.vendor_id ?? first.store ?? 0,
       items_count: items.reduce((s, i) => s + (Number(i.quantity) || 0), 0) || items.length,
       total_paid: o.total ?? o.subtotal ?? '0',
       status: o.status ?? '',
@@ -149,6 +164,8 @@ export class ProcessingComponent implements OnInit {
   onRowAction(e: { action: { id: string }; row: Transaction }) {
     if (e.action.id === 'view') {
       this.router.navigate(['/single'], { queryParams: { order: e.row.id } });
+    } else if (e.action.id === 'store' && e.row.store) {
+      this.router.navigate(['/plural'], { queryParams: { vendor: e.row.store } });
     }
   }
 

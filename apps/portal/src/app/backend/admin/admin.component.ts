@@ -493,8 +493,7 @@ export class AdminComponent implements OnInit {
     { id: 'vendors', title: 'Vendors', desc: 'Manage and onboard vendors', icon: 'shop', route: '/stores' },
     { id: 'customers', title: 'Customers', desc: 'View and manage customers', icon: 'people', route: '/customers' },
     { id: 'products', title: 'Products', desc: 'Track and manage products', icon: 'box-seam', route: '/admin_products' },
-    { id: 'orders', title: 'Orders', desc: 'Monitor orders activities', icon: 'cart-check', route: '/processing' },
-    { id: 'sales', title: 'Sales', desc: 'Monitor sales activities', icon: 'cart-check', route: '/adminsales' },
+    { id: 'orders', title: 'Orders & Sales', desc: 'Monitor orders & sales', icon: 'cart-check', route: '/admin/orders' },
     { id: 'commissions', title: 'Commissions', desc: 'Track vendor commissions', icon: 'cash-coin', route: '/admincommissions' },
     { id: 'logistics', title: 'Logistics', desc: 'Manage deliveries & shipping', icon: 'truck', route: '/adminlogistics' },
     { id: 'collections', title: 'Collections', desc: 'Collections management', icon: 'folder', route: '/collections' },
@@ -505,7 +504,7 @@ export class AdminComponent implements OnInit {
     { id: 'vendors', title: 'Vendors', desc: 'Manage and onboard vendors', icon: 'shop', route: '/stores' },
     { id: 'customers', title: 'Customers', desc: 'View and manage customers', icon: 'people', route: '/customers' },
     { id: 'products', title: 'Products', desc: 'Track and manage products', icon: 'box-seam', route: '/admin_products' },
-    { id: 'orders', title: 'Orders', desc: 'Monitor orders activities', icon: 'cart-check', route: '/processing' },
+    { id: 'orders', title: 'Orders & Sales', desc: 'Monitor orders & sales', icon: 'cart-check', route: '/admin/orders' },
     { id: 'commissions', title: 'Commissions', desc: 'Track vendor commissions', icon: 'cash-coin', route: '/admincommissions' },
     { id: 'logistics', title: 'Logistics', desc: 'Manage deliveries & shipping', icon: 'truck', route: '/adminlogistics' },
     { id: 'collections', title: 'Collections', desc: 'Collections management', icon: 'folder', route: '/collections' }
@@ -521,6 +520,6 @@ export class AdminComponent implements OnInit {
   ];
 
   open_processing() { this.router.navigate(['/admin/orders']).then(r => console.log(r)); }
-  open_sales() { this.router.navigate(['/admin/sales']).then(r => console.log(r)); }
+  open_sales() { this.router.navigate(['/admin/orders']).then(r => console.log(r)); }
   open_products() { this.router.navigate(['/admin/products']).then(r => console.log(r)); }
 }

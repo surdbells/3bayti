@@ -170,16 +170,10 @@
         <app-icon name="expand_more" svgClass="ax-sidenav-section-caret" aria-hidden="true"></app-icon>
       </button>
       <ul class="ax-sidenav-nav">
-        <li *axCan="'orders.view'">
+        <li *axCan="['orders.view', 'sales.view']; mode 'any'">
           <a routerLink="/admin/orders" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
             <app-icon name="receipt_long" aria-hidden="true"></app-icon>
-            <span class="ax-sidenav-link-label">Orders</span>
-          </a>
-        </li>
-        <li *axCan="'sales.view'">
-          <a routerLink="/admin/sales" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
-            <app-icon name="trending_up" aria-hidden="true"></app-icon>
-            <span class="ax-sidenav-link-label">Sales</span>
+            <span class="ax-sidenav-link-label">Orders &amp; Sales</span>
             <span class="ax-sidenav-link-badge" *ngIf="(navBadges.sales$ | async) as n"
                   [attr.aria-label]="n + ' new'">{{ n > 99 ? '99+' : n }}</span>
           </a>

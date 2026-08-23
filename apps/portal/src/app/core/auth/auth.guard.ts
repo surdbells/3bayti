@@ -129,6 +129,37 @@ export function requirePermission(permission: string): CanActivateFn {
   };
 }
 
+/**
+ * Like requirePermission, but grants access when the user holds ANY of the
+ * listed permissions. Used by surfaces that merged two previously separate
+ * permission-scoped pages (e.g. Orders & Sales = orders.view OR sales.view),
+ * so a role holding only one of them keeps access.
+ */
+export function requireAnyPermission(...permissions: string[]): CanActivateFn {
+  return (): boolean | UrlTree | Observable<boolean | UrlTree> => {
+    const router = inject(Router);
+    const perms = inject(PermissionService);
+    const injector = inject(Injector);
+
+    perms.load();
+
+    if (perms.isSuperAdmin()) return true;
+
+    const decide = (): boolean | UrlTree =>
+      perms.canAny(permissions) ? true : router.createUrlTree(['/backend']);
+
+    if (perms.loaded()) return decide();
+
+    return runInInjectionContext(injector, () =>
+      toObservable(perms.loaded).pipe(
+        filter((ready) => ready),
+        take(1),
+        map(decide),
+      ),
+    );
+  };
+}
+
 /** Must be logged in AND a vendor. */
 export const vendorGuard: CanActivateFn = (
   _route: ActivatedRouteSnapshot,

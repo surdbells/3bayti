@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, adminGuard, vendorGuard, requirePermission } from './core/auth/auth.guard';
+import { authGuard, adminGuard, vendorGuard, requirePermission, requireAnyPermission } from './core/auth/auth.guard';
 import { adminDashboardResolver } from './core/resolvers/admin-dashboard.resolver';
 export const routes: Routes = [
   {
@@ -260,12 +260,9 @@ export const routes: Routes = [
     canActivate: [adminGuard, requirePermission('vendors.view_detail')],
     title: 'Manage store'
   },
-  {
-    path: 'admin/sales',
-    loadComponent: () => import('./backend/sales/sales.component').then(m => m.SalesComponent),
-    canActivate: [adminGuard, requirePermission('sales.view')],
-    title: 'Product Sales'
-  },
+  // Orders & Sales are merged into a single admin surface (/admin/orders).
+  // The old Sales route redirects there so existing links/bookmarks work.
+  { path: 'admin/sales', redirectTo: 'admin/orders', pathMatch: 'full' },
   {
     path: 'vendor_product_sales',
     loadComponent: () => import('./vendor/product-sales/product-sales.component').then(m => m.ProductSalesComponent),
@@ -346,12 +343,7 @@ export const routes: Routes = [
     canActivate: [adminGuard, requirePermission('products.view')],
     title: 'View product'
   },
-  {
-    path: 'adminsales',
-    loadComponent: () => import('./backend/sales/sales.component').then(m => m.SalesComponent),
-    canActivate: [adminGuard, requirePermission('sales.view')],
-    title: 'View sales'
-  },
+  { path: 'adminsales', redirectTo: 'admin/orders', pathMatch: 'full' },
   {
     path: 'admin/transactions',
     loadComponent: () => import('./backend/transactions/transactions.component').then(m => m.TransactionsComponent),
@@ -416,8 +408,8 @@ export const routes: Routes = [
   {
     path: 'admin/orders',
     loadComponent: () => import('./backend/processing/processing.component').then(m => m.ProcessingComponent),
-    canActivate: [adminGuard, requirePermission('orders.view')],
-    title: 'Order processing'
+    canActivate: [adminGuard, requireAnyPermission('orders.view', 'sales.view')],
+    title: 'Orders & Sales'
   },
   {
     path: 'admin/orders/:id',
@@ -517,7 +509,7 @@ export const routes: Routes = [
   { path: 'stores', redirectTo: 'admin/stores', pathMatch: 'full' },
   { path: 'customers', redirectTo: 'admin/customers', pathMatch: 'full' },
   { path: 'processing', redirectTo: 'admin/orders', pathMatch: 'full' },
-  { path: 'product_sales', redirectTo: 'admin/sales', pathMatch: 'full' },
+  { path: 'product_sales', redirectTo: 'admin/orders', pathMatch: 'full' },
   { path: 'admin_products', redirectTo: 'admin/products', pathMatch: 'full' },
   { path: 'collections', redirectTo: 'admin/collections', pathMatch: 'full' },
   { path: 'create_collections', redirectTo: 'admin/collections/new', pathMatch: 'full' },
@@ -550,5 +542,4 @@ export const routes: Routes = [
   { path: 'admin_role', redirectTo: 'admin/roles', pathMatch: 'full' },
   { path: 'admin-gift-cards/:id', redirectTo: 'admin/gift-cards/:id', pathMatch: 'full' },
   { path: 'admin-gift-cards', redirectTo: 'admin/gift-cards', pathMatch: 'full' },
-  { path: 'adminsales', redirectTo: 'admin/sales', pathMatch: 'full' },
 ];

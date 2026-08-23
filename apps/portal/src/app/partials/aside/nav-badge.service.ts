@@ -53,8 +53,9 @@ export class NavBadgeService {
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
-        // Opening the Sales page acknowledges everything up to now.
-        if (e.urlAfterRedirects.split('?')[0] === '/admin/sales') {
+        // Opening the merged Orders & Sales page acknowledges everything up to
+        // now. (Orders and Sales merged into /admin/orders.)
+        if (e.urlAfterRedirects.split('?')[0] === '/admin/orders') {
           this.stampSalesSeen();
         }
         this.refresh();
