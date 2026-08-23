@@ -1,6 +1,23 @@
 <!-- Enterprise data table -->
 <div class="axdt" [class.axdt-compact]="config.compact">
 
+  <!-- ── Chip filters (tab strip, e.g. status) ─────────────────────────── -->
+  <div class="axdt-chipbar" *ngIf="chipFilters().length">
+    <div class="axdt-chipgroup" *ngFor="let f of chipFilters()" role="tablist" [attr.aria-label]="f.label">
+      <button
+        *ngFor="let opt of filterOptions()[f.key] || []"
+        type="button"
+        role="tab"
+        class="axdt-chip"
+        [class.axdt-chip-active]="isChipActive(f, opt.id)"
+        [attr.aria-selected]="isChipActive(f, opt.id)"
+        (click)="onFilterChange(f.key, opt.id)">
+        <span class="axdt-chip-label">{{ opt.label }}</span>
+        <span class="axdt-chip-count" *ngIf="chipCount(f.key, opt.id) !== null">{{ chipCount(f.key, opt.id) }}</span>
+      </button>
+    </div>
+  </div>
+
   <!-- ── Toolbar: search · filters · column manager · export ──────────── -->
   <div class="axdt-toolbar" *ngIf="config.globalSearch || config.filters?.length || config.export?.enabled">
     <div class="axdt-toolbar-left">

@@ -398,12 +398,9 @@ class OrderRepository extends EntityRepository
      *   - userId: filter to a single customer
      *   - vendorId: filter to orders containing at least one item
      *     from a specific vendor
-     *   - productId: filter to orders containing a specific product
-     *     (shares the o.items join with vendorId; gift-card orders have
-     *     no items so a product filter naturally excludes them)
      *   - type: 'product' (exclude gift-card orders) / 'gift_card' (only
-     *     gift-card sales) — drives the "Product or Gift Card" filter on
-     *     the merged Orders & Sales page. Overrides includeGiftCards.
+     *     gift-card sales) — drives the order-type filter on the merged
+     *     Orders & Sales page. Overrides includeGiftCards.
      *
      * Synthetic gift-card purchase orders are excluded by default (see
      * excludeGiftCardPurchases) so they never pollute the logistics board.
@@ -426,7 +423,6 @@ class OrderRepository extends EntityRepository
         ?\DateTimeImmutable $since = null,
         ?\DateTimeImmutable $until = null,
         bool $includeGiftCards = false,
-        ?int $productIdFilter = null,
         ?string $typeFilter = null,
     ): array {
         $limit = max(1, min($limit, 100));
@@ -438,21 +434,13 @@ class OrderRepository extends EntityRepository
             ? array_values(array_filter($statusFilter, static fn ($s): bool => is_string($s) && $s !== ''))
             : ($statusFilter !== null && $statusFilter !== '' ? [$statusFilter] : []);
 
-        // A vendor OR product filter narrows on order_items, so both share a
-        // single inner join on o.items (adding two would double-count / conflict
-        // on the alias). Either present forces DISTINCT o.id.
-        $needsItemsJoin = $vendorIdFilter !== null || $productIdFilter !== null;
-
         // Count query
         $totalQb = $this->createQueryBuilder('o');
-        if ($needsItemsJoin) {
-            $totalQb->select('COUNT(DISTINCT o.id)')->innerJoin('o.items', 'i');
-            if ($vendorIdFilter !== null) {
-                $totalQb->andWhere('i.vendor = :vendor')->setParameter('vendor', $vendorIdFilter);
-            }
-            if ($productIdFilter !== null) {
-                $totalQb->andWhere('i.product = :product')->setParameter('product', $productIdFilter);
-            }
+        if ($vendorIdFilter !== null) {
+            $totalQb->select('COUNT(DISTINCT o.id)')
+                ->innerJoin('o.items', 'i')
+                ->where('i.vendor = :vendor')
+                ->setParameter('vendor', $vendorIdFilter);
         } else {
             $totalQb->select('COUNT(o.id)');
         }
@@ -477,14 +465,11 @@ class OrderRepository extends EntityRepository
 
         // ID page
         $idQb = $this->createQueryBuilder('o');
-        if ($needsItemsJoin) {
-            $idQb->select('DISTINCT o.id, o.createdAt')->innerJoin('o.items', 'i');
-            if ($vendorIdFilter !== null) {
-                $idQb->andWhere('i.vendor = :vendor')->setParameter('vendor', $vendorIdFilter);
-            }
-            if ($productIdFilter !== null) {
-                $idQb->andWhere('i.product = :product')->setParameter('product', $productIdFilter);
-            }
+        if ($vendorIdFilter !== null) {
+            $idQb->select('DISTINCT o.id, o.createdAt')
+                ->innerJoin('o.items', 'i')
+                ->where('i.vendor = :vendor')
+                ->setParameter('vendor', $vendorIdFilter);
         } else {
             $idQb->select('o.id');
         }

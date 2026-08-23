@@ -85,38 +85,15 @@ export function loadAdminVendorOptions(
 }
 
 /**
- * Sentinel filter value for the "Gift Card" entry in the Product filter.
- * The merged Orders & Sales table maps it to the API `type=gift_card` filter
- * (gift-card sales carry no real product_id), while a numeric value maps to
- * `product_id`.
+ * Order-type filter options for the merged Orders & Sales table — narrow to
+ * product orders or gift-card sales. Maps to the API `type` param
+ * ('product' excludes gift cards, 'gift_card' shows only them). No explicit
+ * "All" entry: clearing the filter shows both.
  */
-export const GIFT_CARD_FILTER_VALUE = 'gift_card';
-
-/**
- * Async option provider for the "Product" filter on the Orders & Sales table.
- * Fetches the admin product catalogue and maps it to {label,value:id}, with a
- * leading "Gift Card" pseudo-option so an admin can narrow to either a specific
- * product OR gift-card sales from one control. Degrades to just the Gift Card
- * option on failure so the filter stays usable.
- */
-export function loadAdminProductOptions(
-  adapter: PortalCrudAdapter,
-): Promise<readonly AxFilterOption[]> {
-  const giftCard: AxFilterOption = { label: 'Gift Card', value: GIFT_CARD_FILTER_VALUE };
-  return firstValueFrom(adapter.get_v3('GET /admin/products', { query: { limit: 200 } }))
-    .then((res: any) => {
-      const products: any[] = res?.products ?? res?.data ?? res?.items ?? [];
-      const options = products
-        .map((p) => ({
-          label: p.name ?? p.title ?? `Product ${p.id}`,
-          value: String(p.id),
-        }))
-        .filter((o) => o.value !== '' && o.value !== 'undefined')
-        .sort((a, b) => a.label.localeCompare(b.label));
-      return [giftCard, ...options];
-    })
-    .catch(() => [giftCard]);
-}
+export const ORDER_TYPE_OPTIONS: readonly AxFilterOption[] = [
+  { label: 'Products', value: 'product' },
+  { label: 'Gift cards', value: 'gift_card' },
+];
 
 /** Humanise a raw status value: 'pending_payment' -> 'Pending Payment'. */
 export function prettyOrderStatus(value: unknown): string {

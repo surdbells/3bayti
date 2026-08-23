@@ -70,7 +70,6 @@ final class ListAdminOrdersController
         $status = $this->parseStatus($query['status'] ?? null);
         $userIdFilter = $this->parsePositiveInt($query['user_id'] ?? null);
         $vendorIdFilter = $this->parsePositiveInt($query['vendor_id'] ?? null);
-        $productIdFilter = $this->parsePositiveInt($query['product_id'] ?? null);
         $typeFilter = $this->parseType($query['type'] ?? null);
         $since = $this->parseDate($query['since'] ?? null, false);
         $until = $this->parseDate($query['until'] ?? null, true);
@@ -86,7 +85,6 @@ final class ListAdminOrdersController
             $since,
             $until,
             includeGiftCards: true,
-            productIdFilter: $productIdFilter,
             typeFilter: $typeFilter,
         );
 
@@ -107,7 +105,6 @@ final class ListAdminOrdersController
                     'status' => $status,
                     'user_id' => $userIdFilter,
                     'vendor_id' => $vendorIdFilter,
-                    'product_id' => $productIdFilter,
                     'type' => $typeFilter,
                 ], static fn ($v) => $v !== null),
                 'result_count' => count($list),

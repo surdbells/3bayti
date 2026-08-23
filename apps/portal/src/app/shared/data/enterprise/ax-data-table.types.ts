@@ -40,7 +40,11 @@ export type AxFilterType =
   | 'multiselect'
   | 'date-range'
   | 'boolean'
-  | 'number-range';
+  | 'number-range'
+  // A single-select rendered as a row of chips (tabs) above the toolbar, each
+  // optionally showing a count. Options come from `options`; counts from
+  // `countsLoader`. Good for a primary status selector.
+  | 'chips';
 
 export interface AxFilterOption {
   readonly label: string;
@@ -56,6 +60,13 @@ export interface AxFilterDef {
   readonly options?: readonly AxFilterOption[];
   /** Async option provider (e.g. fetch vendor list). Overrides `options`. */
   readonly optionsLoader?: () => Promise<readonly AxFilterOption[]>;
+  /**
+   * For `chips` filters: async provider of a count per option value, keyed by
+   * the option's `value` (stringified). Rendered as a badge on each chip.
+   * Loaded once on config init (counts are totals, independent of the other
+   * active filters).
+   */
+  readonly countsLoader?: () => Promise<Record<string, number>>;
   /** Placeholder / empty-state text for the control. */
   readonly placeholder?: string;
   /** Default value applied on first render. */

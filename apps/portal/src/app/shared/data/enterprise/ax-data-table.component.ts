@@ -59,6 +59,7 @@ import {
   AxDataTableConfig,
   AxExportFormat,
   AxExportScope,
+  AxFilterDef,
   AxFilterOption,
   AxFilterValue,
   AxPage,
@@ -121,6 +122,13 @@ export class AxDataTableComponent<T extends Record<string, unknown> = Record<str
    */
   readonly filterOptions = signal<Record<string, AxComboboxOption[]>>({});
 
+  /**
+   * Per-`chips`-filter counts: filterKey → { optionValue(string) → count }.
+   * Populated by each chips filter's `countsLoader`; absent until it resolves,
+   * so chips render without a badge rather than a flash of "0".
+   */
+  readonly chipCounts = signal<Record<string, Record<string, number>>>({});
+
   private cellTplByKey = new Map<string, TemplateRef<{ $implicit: T; index: number }>>();
   private expandTpl: TemplateRef<{ $implicit: T }> | null = null;
 
@@ -145,11 +153,14 @@ export class AxDataTableComponent<T extends Record<string, unknown> = Record<str
     if (changes['config'] && this.config) {
       this.initColumns();
       this.initFilterOptions();
-      this.query$.next({
+      const initial: AxQueryState = {
         ...AX_EMPTY_QUERY,
         pageSize: this.config.pageSize ?? 20,
         filters: this.defaultFilters(),
-      });
+      };
+      this.query$.next(initial);
+      // Seed the signal too so default-selected chips highlight on first paint.
+      this.query.set(initial);
     }
     if (changes['dataSource'] && this.dataSource) {
       this.bindDataSource();
@@ -201,16 +212,44 @@ export class AxDataTableComponent<T extends Record<string, unknown> = Record<str
     const toOpt = (o: AxFilterOption): AxComboboxOption => ({ id: o.value as string | number, label: o.label });
     const seed: Record<string, AxComboboxOption[]> = {};
     for (const f of this.config.filters ?? []) {
-      if (f.type === 'select' && f.options) seed[f.key] = f.options.map(toOpt);
+      // select uses the combobox options; chips reuse the same option list.
+      if ((f.type === 'select' || f.type === 'chips') && f.options) seed[f.key] = f.options.map(toOpt);
     }
     this.filterOptions.set(seed);
+    this.chipCounts.set({});
     for (const f of this.config.filters ?? []) {
       if (f.type === 'select' && f.optionsLoader && !f.options) {
         f.optionsLoader()
           .then((opts) => this.filterOptions.update((m) => ({ ...m, [f.key]: opts.map(toOpt) })))
           .catch(() => this.filterOptions.update((m) => ({ ...m, [f.key]: [] })));
       }
+      if (f.type === 'chips' && f.countsLoader) {
+        f.countsLoader()
+          .then((counts) => this.chipCounts.update((m) => ({ ...m, [f.key]: counts })))
+          .catch(() => this.chipCounts.update((m) => ({ ...m, [f.key]: {} })));
+      }
     }
+  }
+
+  /** The `chips`-type filters, rendered as a tab strip above the toolbar. */
+  chipFilters(): readonly AxFilterDef[] {
+    return (this.config.filters ?? []).filter((f) => f.type === 'chips');
+  }
+
+  private normChipValue(v: unknown): string {
+    return v === undefined || v === null ? '' : String(v);
+  }
+
+  /** Whether `value` is the chip filter's current selection. */
+  isChipActive(f: AxFilterDef, value: unknown): boolean {
+    return this.normChipValue(this.query().filters[f.key]) === this.normChipValue(value);
+  }
+
+  /** Count badge for a chip option, or null while counts are still loading. */
+  chipCount(key: string, value: unknown): number | null {
+    const counts = this.chipCounts()[key];
+    if (!counts) return null;
+    return counts[this.normChipValue(value)] ?? 0;
   }
 
   private defaultFilters(): Record<string, AxFilterValue> {
@@ -232,6 +271,10 @@ export class AxDataTableComponent<T extends Record<string, unknown> = Record<str
   private patchQuery(patch: Partial<AxQueryState>, audit: AxAuditEventType): void {
     const next = { ...this.query$.value, ...patch };
     this.query$.next(next);
+    // Reflect the pending query in the UI immediately (active chip, ngModels)
+    // rather than waiting for the fetch round-trip; the data source re-confirms
+    // it with the server-echoed query on the next emit.
+    this.query.set(next);
     this.emitAudit(audit, patch as Record<string, unknown>);
   }
 

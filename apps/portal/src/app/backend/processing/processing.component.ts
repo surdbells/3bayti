@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { NavigationHistoryService } from '../../services/navigation-history.service';
 import { CommonModule } from '@angular/common';
-import { of } from 'rxjs';
+import { of, firstValueFrom } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
@@ -20,7 +20,7 @@ import {
   type AxServerFetchResult,
   type AxDateRange,
 } from '../../shared/data/enterprise';
-import { ORDER_STATUS_OPTIONS, loadAdminVendorOptions, loadAdminProductOptions, GIFT_CARD_FILTER_VALUE, prettyOrderStatus } from '../shared/order-filters';
+import { ORDER_STATUS_OPTIONS, ORDER_TYPE_OPTIONS, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
 
 export interface Transaction extends Record<string, unknown> {
   id: number;
@@ -82,9 +82,17 @@ export class ProcessingComponent implements OnInit {
       emptyDescription: 'No orders match your current filters.',
       export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'orders-and-sales' },
       filters: [
+        // Status as a chip strip: defaults to Paid, each chip shows a count.
+        {
+          key: 'status',
+          label: 'Status',
+          type: 'chips',
+          options: [{ label: 'All', value: '' }, ...ORDER_STATUS_OPTIONS],
+          defaultValue: 'paid',
+          countsLoader: () => this.loadStatusCounts(),
+        },
         { key: 'date', label: 'Date', type: 'date-range' },
-        { key: 'status', label: 'Status', type: 'select', options: ORDER_STATUS_OPTIONS },
-        { key: 'product', label: 'Product', type: 'select', optionsLoader: () => loadAdminProductOptions(this.adapter) },
+        { key: 'type', label: 'Type', type: 'select', options: ORDER_TYPE_OPTIONS },
         { key: 'vendor', label: 'Store', type: 'select', optionsLoader: () => loadAdminVendorOptions(this.adapter) },
       ],
       columns: [
@@ -115,14 +123,8 @@ export class ProcessingComponent implements OnInit {
     if (query.search) q.search = query.search;
     if (query.filters['status']) q.status = query.filters['status'];
     if (query.filters['vendor']) q.vendor_id = query.filters['vendor'];
-    // Product filter: the "Gift Card" entry narrows to gift-card sales (type),
-    // any other value is a real product id.
-    const product = query.filters['product'];
-    if (product === GIFT_CARD_FILTER_VALUE) {
-      q.type = 'gift_card';
-    } else if (product) {
-      q.product_id = product;
-    }
+    // Order-type filter: 'product' (exclude gift cards) or 'gift_card' (only them).
+    if (query.filters['type']) q.type = query.filters['type'];
     const range = query.filters['date'] as AxDateRange | undefined;
     if (range?.from) q.since = range.from;
     if (range?.to) q.until = range.to;
@@ -164,6 +166,32 @@ export class ProcessingComponent implements OnInit {
       status: o.status ?? '',
       created: o.date ?? o.created_at ?? '',
     } as Transaction;
+  }
+
+  /**
+   * Per-status order counts for the status chips. One cheap limit=1 query per
+   * status (reads pagination.total only); the "All" bucket ('') is their sum.
+   * Counts are totals — independent of the date/type/store filters — so they
+   * stay stable as the admin drills in. Failures degrade to 0, never blocking
+   * the table.
+   */
+  private async loadStatusCounts(): Promise<Record<string, number>> {
+    const statuses = ORDER_STATUS_OPTIONS.map((o) => String(o.value));
+    const totals = await Promise.all(
+      statuses.map((s) =>
+        firstValueFrom(this.adapter.get_v3('GET /admin/orders', { query: { status: s, limit: 1 } }))
+          .then((r: any) => Number(r?.pagination?.total ?? r?.meta?.total ?? 0) || 0)
+          .catch(() => 0),
+      ),
+    );
+    const counts: Record<string, number> = {};
+    let all = 0;
+    statuses.forEach((s, i) => {
+      counts[s] = totals[i];
+      all += totals[i];
+    });
+    counts[''] = all;
+    return counts;
   }
 
   prettyStatus(status: string): string {

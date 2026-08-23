@@ -104,20 +104,6 @@ final class OrderRepositoryGiftCardExclusionTest extends TestCase
     }
 
     #[Test]
-    public function paginatedForAdminFiltersByProductViaItemsJoin(): void
-    {
-        // includeGiftCards:true isolates the product predicate — a product
-        // filter must join o.items and scope to i.product on BOTH gatekeeper
-        // queries (gift-card orders have no items, so they drop out naturally).
-        $dqls = $this->capturePaginatedForAdminDql(includeGiftCards: true, productId: 7);
-
-        foreach ([$dqls[0], $dqls[1]] as $dql) {
-            self::assertMatchesRegularExpression('/INNER JOIN\s+o\.items\s+i/i', $dql);
-            self::assertMatchesRegularExpression('/i\.product\s*=\s*:product/i', $dql);
-        }
-    }
-
-    #[Test]
     public function paginatedForAdminGiftCardTypeShowsOnlyGiftCardOrders(): void
     {
         $dqls = $this->capturePaginatedForAdminDql(type: 'gift_card');
@@ -138,7 +124,6 @@ final class OrderRepositoryGiftCardExclusionTest extends TestCase
      */
     private function capturePaginatedForAdminDql(
         bool $includeGiftCards = false,
-        ?int $productId = null,
         ?string $type = null,
     ): array {
         $em = $this->createMock(EntityManagerInterface::class);
@@ -155,10 +140,10 @@ final class OrderRepositoryGiftCardExclusionTest extends TestCase
         );
 
         $repo = new OrderRepository($em, new ClassMetadata(Order::class));
-        // No status/user/vendor filters: prove the gift-card scope + product/type
-        // filters stand on their own. The stub count returns non-zero so the
-        // method proceeds into the id-page query — we assert >= 2 captured above.
-        $repo->paginatedForAdmin(20, 0, includeGiftCards: $includeGiftCards, productIdFilter: $productId, typeFilter: $type);
+        // No status/user/vendor filters: prove the gift-card scope + type filter
+        // stand on their own. The stub count returns non-zero so the method
+        // proceeds into the id-page query — we assert >= 2 captured above.
+        $repo->paginatedForAdmin(20, 0, includeGiftCards: $includeGiftCards, typeFilter: $type);
 
         self::assertNotEmpty($captured, 'paginatedForAdmin produced no DQL.');
         return $captured;
