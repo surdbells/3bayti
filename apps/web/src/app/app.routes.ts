@@ -12,17 +12,35 @@ import { guestActivateGuard, authActivateGuard } from './core/auth/auth.guards';
  *
  * Register it in the app config:
  *   { provide: TitleStrategy, useClass: I18nTitleStrategy }
+ *
+ * Uses `get()` rather than `instant()`: on a cold navigation the route can
+ * resolve before the translation JSON has finished loading, and `instant()`
+ * would return the raw key (the "routeTitles.home" bug). `get()` waits for the
+ * pending load. The strategy also remembers the active key and re-applies it on
+ * language change, so the <title> tracks the current locale.
  */
 @Injectable({ providedIn: 'root' })
 export class I18nTitleStrategy extends TitleStrategy {
   private readonly title = inject(Title);
   private readonly translate = inject(TranslateService);
+  private currentKey?: string;
+
+  constructor() {
+    super();
+    this.translate.onLangChange.subscribe(() => this.applyTitle());
+  }
 
   override updateTitle(snapshot: RouterStateSnapshot): void {
-    const key = this.buildTitle(snapshot);
-    if (key !== undefined) {
-      this.title.setTitle(this.translate.instant(key));
+    this.currentKey = this.buildTitle(snapshot);
+    this.applyTitle();
+  }
+
+  private applyTitle(): void {
+    const key = this.currentKey;
+    if (key === undefined) {
+      return;
     }
+    this.translate.get(key).subscribe((value) => this.title.setTitle(value));
   }
 }
 
