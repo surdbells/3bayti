@@ -12,14 +12,51 @@
     <span class="ax-topbar-subtitle ax-md-inline-block">Overview of your platform</span>
   </div>
 
-  <!-- Search slot (reserved for Phase 2 search wiring) -->
-  <div class="ax-topbar-search">
+  <!-- Global search across orders, products, stores & customers -->
+  <div class="ax-topbar-search ax-dropdown axtop-search"
+       [class.ax-dropdown-open]="search.open"
+       (click)="$event.stopPropagation()">
     <div class="ax-input-group ax-w-full">
       <app-icon name="search" aria-hidden="true" class="ax-input-group-prefix"></app-icon>
       <input type="search"
              class="ax-input ax-input-sm"
              placeholder="Search the platform…"
-             aria-label="Search the platform" />
+             aria-label="Search the platform"
+             autocomplete="off"
+             [value]="search.query"
+             (input)="onSearchInput($any($event.target).value)"
+             (focus)="onSearchFocus()"
+             (keydown.enter)="submitSearch()"
+             (keydown.escape)="closeSearch()" />
+    </div>
+
+    <div class="ax-dropdown-menu axtop-search-menu"
+         [class.ax-dropdown-menu-open]="search.open"
+         (click)="$event.stopPropagation()">
+      <div *ngIf="search.loading" class="ax-py-4 ax-flex ax-justify-center">
+        <span class="ax-spinner" aria-label="Searching"></span>
+      </div>
+
+      <div *ngIf="!search.loading && search.groups.length === 0" class="ax-empty ax-py-4">
+        <span class="ax-empty-icon"><app-icon name="search_off" aria-hidden="true"></app-icon></span>
+        <p class="ax-text-sm ax-text-secondary ax-m-0">No matches for "{{ search.query }}"</p>
+      </div>
+
+      <ng-container *ngIf="!search.loading">
+        <div *ngFor="let g of search.groups" class="axtop-search-group">
+          <div class="ax-dropdown-header ax-px-3 ax-py-1">{{ g.label }}</div>
+          <button *ngFor="let it of g.items"
+                  type="button"
+                  class="ax-dropdown-item axtop-search-item"
+                  (click)="goToResult(it)">
+            <app-icon [name]="it.icon" aria-hidden="true"></app-icon>
+            <span class="axtop-search-item-text">
+              <span class="axtop-search-item-label">{{ it.label }}</span>
+              <span class="axtop-search-item-sub" *ngIf="it.sublabel">{{ it.sublabel }}</span>
+            </span>
+          </button>
+        </div>
+      </ng-container>
     </div>
   </div>
 
