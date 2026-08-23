@@ -1077,9 +1077,14 @@ final class InitiateCheckoutController
 
     private function generateOrderReference(): string
     {
+        // Customer-facing order number. "3B-" is the 3bayti brand prefix; the
+        // epoch-ms + 4 random hex chars keep it time-ordered and unique. The
+        // reference is opaque everywhere it's used (exact-match lookup key +
+        // Noon merchant_reference), so the prefix is purely cosmetic. Stays
+        // well under the Order entity's 32-char cap (this is 21 chars).
         $epochMs = (int) (microtime(true) * 1000);
-        $rand = bin2hex(random_bytes(2)); // 4 hex chars
-        return sprintf('V3-%013d-%s', $epochMs, $rand);
+        $rand = strtoupper(bin2hex(random_bytes(2))); // 4 hex chars, upper-cased
+        return sprintf('3B-%013d-%s', $epochMs, $rand);
     }
 
     /**

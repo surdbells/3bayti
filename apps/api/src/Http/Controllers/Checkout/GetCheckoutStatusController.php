@@ -45,7 +45,7 @@ use Psr\Http\Message\ServerRequestInterface;
  * Authorization: order must belong to the authenticated user.
  * Cross-tenant access returns 404 to avoid leaking existence.
  *
- * Lookup key is `order_reference` (the server-generated V3-...
+ * Lookup key is `order_reference` (the server-generated 3B-...
  * string) not the numeric order_id, because the mobile webview's
  * return URL is path-based on reference (mobile may not know the
  * numeric id, which is created server-side at initiate time).

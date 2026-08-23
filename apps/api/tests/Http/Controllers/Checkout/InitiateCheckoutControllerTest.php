@@ -70,7 +70,7 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
             ->method('initiateCheckout')
             ->willReturnCallback(function (Order $order, string $returnUrl, string $channel): CheckoutInitiation {
                 self::assertSame('MOBILE', $channel);
-                self::assertStringStartsWith('http://localhost:8080/v3/checkout/return/V3-', $returnUrl);
+                self::assertStringStartsWith('http://localhost:8080/v3/checkout/return/3B-', $returnUrl);
                 self::assertStringNotContainsString('?', $returnUrl); // no query string per Noon
                 self::assertSame('319.00', $order->getTotal());
                 return new CheckoutInitiation(
@@ -113,7 +113,7 @@ final class InitiateCheckoutControllerTest extends HttpTestCase
         $body = $this->jsonBody($response);
 
         self::assertSame('https://api-test.noonpayments.com/checkout/abc123', $body['checkout_url']);
-        self::assertStringStartsWith('V3-', $body['order_reference']);
+        self::assertStringStartsWith('3B-', $body['order_reference']);
         self::assertSame('123456789012', $body['provider_order_ref']);
         self::assertFalse($body['idempotent']);
     }
