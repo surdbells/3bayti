@@ -11,6 +11,8 @@ use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Order\Order;
 use Bayti\Api\Domain\Order\OrderItem;
 use Bayti\Api\Domain\Order\OrderRepository;
+use Bayti\Api\Domain\User\Measurement;
+use Bayti\Api\Domain\User\MeasurementRepository;
 use Bayti\Api\Domain\User\User;
 use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Http\Controllers\Admin\Order\GetAdminOrderController;
@@ -272,6 +274,12 @@ final class AdminOrderControllersTest extends HttpTestCase
         $userRepo = $this->createMock(UserRepository::class);
         $userRepo->method('findById')->willReturn($user);
 
+        // GetAdminOrderController enriches the detail shape with the customer's
+        // saved body measurements — mock the repo so that unguarded lookup
+        // resolves (empty set) instead of returning null and 500ing.
+        $measurementRepo = $this->createMock(MeasurementRepository::class);
+        $measurementRepo->method('findAllForUser')->willReturn([]);
+
         // Capturing audit repository — collects logs in $this->recordedAuditLogs
         $auditRepo = new class($this->recordedAuditLogs) extends \Doctrine\ORM\EntityRepository {
             public function __construct(private array &$sink) {}
@@ -282,11 +290,12 @@ final class AdminOrderControllersTest extends HttpTestCase
             public function getClassName(): string { return AuditLog::class; }
         };
 
-        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $auditRepo) {
+        $em = $this->stubEm(function ($em) use ($userRepo, $orderRepo, $auditRepo, $measurementRepo) {
             $em->method('getRepository')->willReturnMap([
                 [User::class, $userRepo],
                 [Order::class, $orderRepo],
                 [AuditLog::class, $auditRepo],
+                [Measurement::class, $measurementRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
