@@ -7,6 +7,7 @@ import {
   computed,
 } from '@angular/core';
 import { TranslateService } from '@ngx-translate/core';
+import { firstValueFrom } from 'rxjs';
 import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE,
@@ -73,11 +74,26 @@ export class LocaleService {
     this.applyToDocument(resolved);
     this.persistCookie(resolved);
 
-    /* TranslateService is configured with addLangs + setFallbackLang
-       in provideI18n; here we just activate. `use()` returns an
-       Observable that emits when the JSON file is loaded; awaiting
-       it ensures the first paint is already translated. */
-    await this.translate.use(resolved);
+    await this.activate(resolved);
+  }
+
+  /**
+   * Activate a locale and actually wait for its JSON to load.
+   *
+   * `TranslateService.use()` returns an Observable (not a Promise), so a bare
+   * `await use()` would resolve immediately without waiting — leaving the first
+   * paint (and this promise's consumers) racing the translation load. We wrap
+   * it in `firstValueFrom` so the wait is real, and swallow load errors so a
+   * failed/empty fetch degrades to fallback strings rather than blocking the
+   * app from starting.
+   */
+  private async activate(locale: Locale): Promise<void> {
+    try {
+      await firstValueFrom(this.translate.use(locale));
+    } catch {
+      /* Translation load failed — let the app render with fallback lang / keys
+         rather than hang on startup or a locale switch. */
+    }
   }
 
   /**
@@ -96,7 +112,7 @@ export class LocaleService {
     this._current.set(next);
     this.applyToDocument(next);
     this.persistCookie(next);
-    await this.translate.use(next);
+    await this.activate(next);
   }
 
   /* ----------------------------------------------------------------

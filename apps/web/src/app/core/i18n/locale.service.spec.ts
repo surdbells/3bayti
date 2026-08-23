@@ -3,6 +3,7 @@ import { DOCUMENT, Provider, EnvironmentProviders } from '@angular/core';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { TranslateService } from '@ngx-translate/core';
+import { of } from 'rxjs';
 import { LocaleService } from './locale.service';
 import { provideI18n } from './i18n.providers';
 import { LOCALE_COOKIE } from './locale.types';
@@ -59,14 +60,11 @@ function setupService(opts: { document: FakeDoc }): { service: LocaleService } {
   TestBed.resetTestingModule();
   TestBed.configureTestingModule({ providers });
 
-  /* Stub TranslateService.use to avoid the real HTTP fetch. */
+  /* Stub TranslateService.use to avoid the real HTTP fetch. Returns a real
+     Observable that emits + completes so firstValueFrom (used in
+     LocaleService.activate) resolves. */
   const translate = TestBed.inject(TranslateService);
-  translate.use = () => ({
-    subscribe: (cb: (v: unknown) => void) => {
-      cb({});
-      return { unsubscribe: () => {} };
-    },
-  }) as unknown as ReturnType<TranslateService['use']>;
+  translate.use = () => of({}) as unknown as ReturnType<TranslateService['use']>;
 
   return { service: TestBed.inject(LocaleService) };
 }
