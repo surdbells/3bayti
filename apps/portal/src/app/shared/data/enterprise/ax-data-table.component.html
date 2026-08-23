@@ -229,13 +229,13 @@
                 <button
                   *ngFor="let a of inlineRowActions(row)"
                   type="button"
-                  class="ax-icon-btn ax-icon-btn-sm"
+                  class="ax-btn ax-btn-outline ax-btn-sm axdt-action-btn"
                   [class.axdt-action-danger]="a.variant === 'danger'"
                   [disabled]="a.disabled?.(row)"
-                  [attr.title]="a.label"
                   [attr.aria-label]="a.label"
                   (click)="onRowAction(a, row, $event)">
-                  <app-icon [name]="a.icon || 'more_horiz'"></app-icon>
+                  <app-icon [name]="a.icon || 'more_horiz'" aria-hidden="true"></app-icon>
+                  <span class="axdt-action-label">{{ a.label }}</span>
                 </button>
 
                 <ng-container *ngIf="overflowRowActions(row).length">
