@@ -71,6 +71,12 @@ final class MessageCentralSmsSender implements SmsSenderInterface
         $this->logger = $logger ?? new NullLogger();
     }
 
+    /** Real HTTPS sender — always enabled once selected by the container. */
+    public function isEnabled(): bool
+    {
+        return true;
+    }
+
     public function send(string $toPhone, string $message): void
     {
         $authToken = $this->getAuthToken();

@@ -12,6 +12,7 @@ use Bayti\Api\Notification\InMemoryMailer;
 use Bayti\Api\Notification\MailerException;
 use Bayti\Api\Notification\MailerInterface;
 use Bayti\Api\Sms\InMemorySmsSender;
+use Bayti\Api\Sms\NullSmsSender;
 use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -163,6 +164,31 @@ final class GiftCardDeliveryServiceTest extends TestCase
         self::assertNull($card->getSmsDeliveredAt());
         self::assertTrue($card->needsSmsDelivery());
         self::assertCount(1, $this->mailer->sent());
+    }
+
+    #[Test]
+    public function smsNotConfiguredLeavesChannelUndeliveredAndEmailStillDelivers(): void
+    {
+        // NullSmsSender = SMS not enabled/configured. A card with a phone must
+        // NOT be marked SMS-delivered off the silent no-op — it stays pending so
+        // the scheduled dispatcher actually sends it once real SMS is enabled.
+        $card = $this->makeCard(email: 'sara@example.com', phone: '+971501234567');
+        $service = new GiftCardDeliveryService(
+            renderer: new GiftCardEmailTemplateRenderer(),
+            mailer: $this->mailer,
+            smsSender: new NullSmsSender(),
+            em: $this->makeEm(),
+            logger: new NullLogger(),
+        );
+
+        $service->deliver($card);
+
+        // Email delivers normally.
+        self::assertNotNull($card->getEmailDeliveredAt());
+        self::assertCount(1, $this->mailer->sent());
+        // SMS not sent AND not marked delivered -> still pending (honest).
+        self::assertNull($card->getSmsDeliveredAt());
+        self::assertTrue($card->needsSmsDelivery());
     }
 
     // -----------------------------------------------------------------

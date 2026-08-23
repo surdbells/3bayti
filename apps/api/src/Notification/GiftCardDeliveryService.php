@@ -160,6 +160,18 @@ class GiftCardDeliveryService
             return false;
         }
 
+        // SMS not configured (NullSmsSender) — record honestly as NOT delivered
+        // instead of marking the channel delivered off a silent no-op. The card
+        // stays pending on SMS, so once real SMS is enabled the scheduled
+        // dispatcher (gift-cards:dispatch-scheduled) actually sends it.
+        if (!$this->smsSender->isEnabled()) {
+            $this->logger->info('gift_card.delivery.sms_skipped_not_configured', [
+                'gift_card_id' => $card->getId(),
+                'to' => $to,
+            ]);
+            return false;
+        }
+
         try {
             $this->smsSender->send($to, $this->composeSms($card));
             $card->markSmsDelivered($this->now());

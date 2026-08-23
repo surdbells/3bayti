@@ -33,4 +33,14 @@ interface SmsSenderInterface
      *         (e.g. gift-card activation) on an SMS failure.
      */
     public function send(string $toPhone, string $message): void;
+
+    /**
+     * Whether this sender performs REAL sends. False only for the no-op
+     * NullSmsSender (SMS not configured / not enabled).
+     *
+     * Callers use this to record an unsent SMS honestly — as NOT delivered
+     * (pending) — instead of marking the channel delivered off a silent no-op.
+     * A channel left pending is retried once real SMS is enabled.
+     */
+    public function isEnabled(): bool;
 }

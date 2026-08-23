@@ -29,6 +29,12 @@ final class InMemorySmsSender implements SmsSenderInterface
         $this->sent[] = ['to' => $toPhone, 'message' => $message];
     }
 
+    /** Test double behaves as a real (enabled) sender. */
+    public function isEnabled(): bool
+    {
+        return true;
+    }
+
     /** @return list<array{to: string, message: string}> */
     public function sent(): array
     {

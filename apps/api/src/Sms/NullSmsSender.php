@@ -36,4 +36,10 @@ final class NullSmsSender implements SmsSenderInterface
             'length' => strlen($message),
         ]);
     }
+
+    /** No-op sender — never a real send, so callers don't mark a channel delivered. */
+    public function isEnabled(): bool
+    {
+        return false;
+    }
 }
