@@ -3,7 +3,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NavigationHistoryService } from '../../services/navigation-history.service';
+import imageCompression from 'browser-image-compression';
 import { PortalCrudAdapter } from '../../services/portal-crud-adapter';
+import { ImageUploadService } from '../../services/image-upload.service';
 import { HotToastService } from '../../shared/toast/toast.service';
 import { GlobalComponent } from '../../global-component';
 import { AxRichEditorComponent } from '../../shared/rich/ax-rich-editor.component';
@@ -26,7 +28,11 @@ export class VendorStoreComponent implements OnInit {
     is_loading: false,
     is_saving_basic: false,
     is_saving_status: false,
+    is_uploading_logo: false,
+    is_uploading_cover: false,
   };
+
+  private static readonly PLACEHOLDER = 'assets/img/placeholder-1.png';
 
   session_data: any = '';
   user_session = {
@@ -44,8 +50,8 @@ export class VendorStoreComponent implements OnInit {
     store_email: '',
     store_phone: '',
     store_description: '',
-    store_logo: '../assets/img/placeholder-1.png',
-    store_cover: '../assets/img/placeholder-1.png',
+    store_logo: 'assets/img/placeholder-1.png',
+    store_cover: 'assets/img/placeholder-1.png',
   };
 
   get_single = { id: 0, token: '' };
@@ -57,8 +63,8 @@ export class VendorStoreComponent implements OnInit {
     store_email: '',
     store_phone: '',
     store_description: '',
-    store_logo: '../assets/img/placeholder-1.png',
-    store_cover: '../assets/img/placeholder-1.png',
+    store_logo: 'assets/img/placeholder-1.png',
+    store_cover: 'assets/img/placeholder-1.png',
   };
 
   update_status = {
@@ -70,6 +76,7 @@ export class VendorStoreComponent implements OnInit {
     private router: Router,
     private navHistory: NavigationHistoryService,
     private adapter: PortalCrudAdapter,
+    private imageUpload: ImageUploadService,
     private toast: HotToastService,
   ) {}
 
@@ -104,9 +111,15 @@ export class VendorStoreComponent implements OnInit {
             store_description: d.description ?? d.store_description ?? '',
             store_email: d.contact_email ?? d.store_email ?? '',
             store_phone: d.contact_phone ?? d.store_phone ?? '',
-            store_logo: d.logo_url ?? d.store_logo ?? '',
-            store_cover: d.cover_image_url ?? d.store_cover ?? '',
+            // Fall back to the placeholder (not '') so an unset image renders a
+            // real placeholder instead of a broken <img>.
+            store_logo: d.logo_url || d.store_logo || VendorStoreComponent.PLACEHOLDER,
+            store_cover: d.cover_image_url || d.store_cover || VendorStoreComponent.PLACEHOLDER,
             store_status: !!d.is_active,
+            // Approval state drives the badge + the visibility controls. The
+            // vendor lifecycle `status` is 'pending' | 'approved' | 'suspended';
+            // only an approved store may change its own visibility.
+            store_approved: (d.status ?? d.store_status) === 'approved',
           };
         } else if (response.status === 'failed') {
           this.error_notification(response.message);
@@ -132,7 +145,18 @@ export class VendorStoreComponent implements OnInit {
     this.update_store.store_cover = this.store_single.store_cover;
 
     this.ui_controls.is_saving_basic = true;
-    const body = { store_name: this.update_store.store_name, store_description: this.update_store.store_description, store_email: this.update_store.store_email, store_phone: this.update_store.store_phone, store_logo: this.update_store.store_logo, store_cover: this.update_store.store_cover };
+    const isRealImage = (u: string) => !!u && !u.includes('placeholder');
+    const body: Record<string, unknown> = {
+      store_name: this.store_single.store_name,
+      store_description: this.store_single.store_description,
+      store_email: this.store_single.store_email,
+      store_phone: this.store_single.store_phone,
+    };
+    // Only send real uploaded image URLs — never the local placeholder path
+    // (it would be stored as the logo). Omitting the field is a no-op PATCH, so
+    // an existing image is left untouched.
+    if (isRealImage(this.store_single.store_logo)) body['store_logo'] = this.store_single.store_logo;
+    if (isRealImage(this.store_single.store_cover)) body['store_cover'] = this.store_single.store_cover;
     this.adapter.patch_v3('PATCH /vendor/store', body).subscribe({
       next: (response: any) => {
         if (response?.data) {
@@ -172,22 +196,46 @@ export class VendorStoreComponent implements OnInit {
   }
 
   select_logo(event: any) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      this.base64String = reader.result as string;
-      this.store_single.store_logo = this.base64String;
-    };
-    if (file) reader.readAsDataURL(file);
+    this.uploadImage(event, 'vendor_logo', 512, 'is_uploading_logo', (url) => (this.store_single.store_logo = url));
   }
 
   select_cover(event: any) {
-    const file = event.target.files[0];
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      this.base64String = reader.result as string;
-      this.store_single.store_cover = this.base64String;
-    };
-    if (file) reader.readAsDataURL(file);
+    this.uploadImage(event, 'vendor_cover', 1600, 'is_uploading_cover', (url) => (this.store_single.store_cover = url));
+  }
+
+  /**
+   * Compress the picked file and upload it via POST /v3/upload, then store the
+   * returned URL. The API caps logo/cover at 500 chars, so the previous base64
+   * data-URL approach always failed validation — uploads return a short CDN URL
+   * that saves cleanly. The URL is applied to the preview; "Save changes"
+   * persists it.
+   */
+  private async uploadImage(
+    event: any,
+    context: 'vendor_logo' | 'vendor_cover',
+    maxWidthOrHeight: number,
+    flag: 'is_uploading_logo' | 'is_uploading_cover',
+    apply: (url: string) => void,
+  ): Promise<void> {
+    const file: File | undefined = event?.target?.files?.[0];
+    if (!file) return;
+
+    this.ui_controls[flag] = true;
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 1,
+        maxWidthOrHeight,
+        useWebWorker: true,
+      });
+      const result = await this.imageUpload.upload(compressed, context);
+      apply(result.url);
+      this.success_notification('Image uploaded — click Save changes to apply.');
+    } catch (err: any) {
+      this.error_notification(apiErrorMessage(err, 'Could not upload the image. Please try again.'));
+    } finally {
+      this.ui_controls[flag] = false;
+      // Allow re-picking the same file after an error.
+      if (event?.target) event.target.value = '';
+    }
   }
 }

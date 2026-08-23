@@ -93,7 +93,7 @@
             <div class="ax-card ax-p-3">
               <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Store logo</div>
               <img
-                [src]="store_single.store_logo"
+                [src]="store_single.store_logo | cfImage:'logo'"
                 alt="Store logo"
                 style="width: 100%; aspect-ratio: 1 / 1; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
               <input
@@ -101,8 +101,10 @@
                 class="ax-input ax-input-sm ax-mt-3"
                 accept="image/png,image/jpeg,image/jpg"
                 (change)="select_logo($event)"
+                [disabled]="ui_controls.is_uploading_logo"
                 name="store_logo_file" />
-              <span class="ax-hint">Square, 600×600 px. JPG, JPEG or PNG.</span>
+              <span *ngIf="ui_controls.is_uploading_logo" class="ax-hint"><span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> Uploading…</span>
+              <span *ngIf="!ui_controls.is_uploading_logo" class="ax-hint">Square, 600×600 px. JPG, JPEG or PNG.</span>
             </div>
             <div class="ax-card ax-p-3">
               <div class="ax-text-2xs ax-text-tertiary ax-mb-2" style="text-transform: uppercase; letter-spacing: 0.06em;">Cover image</div>
@@ -115,8 +117,10 @@
                 class="ax-input ax-input-sm ax-mt-3"
                 accept="image/png,image/jpeg,image/jpg"
                 (change)="select_cover($event)"
+                [disabled]="ui_controls.is_uploading_cover"
                 name="store_cover_file" />
-              <span class="ax-hint">Landscape, 800×428 px. JPG, JPEG or PNG.</span>
+              <span *ngIf="ui_controls.is_uploading_cover" class="ax-hint"><span class="ax-spinner ax-spinner-sm" aria-hidden="true"></span> Uploading…</span>
+              <span *ngIf="!ui_controls.is_uploading_cover" class="ax-hint">Landscape, 800×428 px. JPG, JPEG or PNG.</span>
             </div>
           </div>
 
@@ -125,7 +129,7 @@
               type="button"
               class="ax-btn ax-btn-primary"
               (click)="update_changes()"
-              [disabled]="ui_controls.is_saving_basic">
+              [disabled]="ui_controls.is_saving_basic || ui_controls.is_uploading_logo || ui_controls.is_uploading_cover">
               <span *ngIf="ui_controls.is_saving_basic" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
               <app-icon name="save" *ngIf="!ui_controls.is_saving_basic" aria-hidden="true"></app-icon>
               Save changes
