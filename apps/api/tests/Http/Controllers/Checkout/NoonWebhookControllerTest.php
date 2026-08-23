@@ -170,11 +170,20 @@ final class NoonWebhookControllerTest extends HttpTestCase
         $tx->method('getOrder')->willReturn($order);
         $txRepo->method('findByProviderOrderRef')->with('123456789012')->willReturn($tx);
 
-        $em = $this->stubEm(function ($em) use ($eventRepo, $txRepo) {
+        // The paid transition detects gift-card PURCHASE orders (to suppress
+        // vendor-facing side effects) via getRepository(GiftCard::class) — an
+        // UNGUARDED lookup on the paid path. Stub it (no matching card → this
+        // is a normal product order) so the EM mock's non-nullable return type
+        // is satisfied. This is the ONLY test that exercises the paid branch.
+        $gcRepo = $this->createMock(\Bayti\Api\Domain\GiftCard\GiftCardRepository::class);
+        $gcRepo->method('findByPurchaseOrderReference')->willReturn(null);
+
+        $em = $this->stubEm(function ($em) use ($eventRepo, $txRepo, $gcRepo) {
             $em->method('getRepository')->willReturnMap([
                 [PaymentWebhookEvent::class, $eventRepo],
                 [PaymentTransaction::class, $txRepo],
                 [Order::class, $this->createMock(OrderRepository::class)],
+                [\Bayti\Api\Domain\GiftCard\GiftCard::class, $gcRepo],
             ]);
             $em->method('flush');
         });
