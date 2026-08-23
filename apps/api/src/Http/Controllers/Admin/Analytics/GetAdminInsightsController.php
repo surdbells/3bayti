@@ -30,6 +30,15 @@ final class GetAdminInsightsController
     /** Order statuses that count as a committed sale. */
     private const SALE = "'paid', 'fulfilling', 'shipped', 'delivered'";
 
+    /**
+     * Exclude synthetic gift-card PURCHASE orders — they aren't product sales
+     * (no order_items, so they'd inflate the order count but not units). Mirrors
+     * GetAdminPlatformAnalyticsController so the dashboard's two order KPIs agree.
+     * Requires the orders table to be referenced/aliased as `orders`.
+     */
+    private const NO_GIFT_CARDS =
+        'AND NOT EXISTS (SELECT 1 FROM gift_cards gc WHERE gc.purchase_order_reference = orders.order_reference)';
+
     /** An order sitting in 'fulfilling' longer than this needs attention. */
     private const STUCK_DAYS = 3;
 
@@ -67,12 +76,13 @@ final class GetAdminInsightsController
         $prevEnd   = $curStart;
 
         $sale = self::SALE;
+        $noGiftCards = self::NO_GIFT_CARDS;
         $revenue = static fn (string $s, string $e): float => (float) $conn->fetchOne(
-            "SELECT COALESCE(SUM(total), 0) FROM orders WHERE status IN ($sale) AND created_at >= :s AND created_at < :e",
+            "SELECT COALESCE(SUM(total), 0) FROM orders WHERE status IN ($sale) AND created_at >= :s AND created_at < :e $noGiftCards",
             ['s' => $s, 'e' => $e],
         );
         $ordersCount = static fn (string $s, string $e): int => (int) $conn->fetchOne(
-            "SELECT COUNT(*) FROM orders WHERE status IN ($sale) AND created_at >= :s AND created_at < :e",
+            "SELECT COUNT(*) FROM orders WHERE status IN ($sale) AND created_at >= :s AND created_at < :e $noGiftCards",
             ['s' => $s, 'e' => $e],
         );
         $units = static fn (string $s, string $e): int => (int) $conn->fetchOne(
@@ -95,7 +105,7 @@ final class GetAdminInsightsController
         // Daily revenue series (gap-filled to exactly $days points, oldest→newest).
         $rows = $conn->fetchAllAssociative(
             "SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS d, COALESCE(SUM(total), 0) AS v
-             FROM orders WHERE status IN ($sale) AND created_at >= :s AND created_at < :e
+             FROM orders WHERE status IN ($sale) AND created_at >= :s AND created_at < :e $noGiftCards
              GROUP BY d",
             ['s' => $curStart, 'e' => $curEnd],
         );
@@ -111,7 +121,7 @@ final class GetAdminInsightsController
 
         // Order status breakdown over the window.
         $statusRows = $conn->fetchAllAssociative(
-            'SELECT status, COUNT(*) AS c FROM orders WHERE created_at >= :s AND created_at < :e GROUP BY status ORDER BY c DESC',
+            "SELECT status, COUNT(*) AS c FROM orders WHERE created_at >= :s AND created_at < :e $noGiftCards GROUP BY status ORDER BY c DESC",
             ['s' => $curStart, 'e' => $curEnd],
         );
         $salesByStatus = array_map(
