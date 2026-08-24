@@ -253,6 +253,34 @@ class ProductRepository extends EntityRepository
         return ['items' => $items, 'total' => $total];
     }
 
+    /**
+     * Active-product count per label for a vendor's storefront, keyed by
+     * label_id. Powers the "N" badge on the storefront collection chips.
+     * Uses the same active gating as findActivePaginated (p.isActive = TRUE);
+     * the vendor is already known active/approved on its own storefront.
+     *
+     * @return array<int,int> map of label_id => active product count
+     */
+    public function countActiveByLabelForVendor(int $vendorId): array
+    {
+        $rows = $this->createQueryBuilder('p')
+            ->select('p.labelId AS labelId, COUNT(p.id) AS cnt')
+            ->where('p.isActive = TRUE')
+            ->andWhere('p.vendor = :vendorId')
+            ->andWhere('p.labelId IS NOT NULL')
+            ->setParameter('vendorId', $vendorId)
+            ->groupBy('p.labelId')
+            ->getQuery()
+            ->getArrayResult();
+
+        $map = [];
+        foreach ($rows as $row) {
+            $map[(int) $row['labelId']] = (int) $row['cnt'];
+        }
+
+        return $map;
+    }
+
     public function findActivePaginated(array $filters = []): array
     {
         $qb = $this->createQueryBuilder('p')

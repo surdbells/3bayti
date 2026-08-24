@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Http\Controllers\Catalog;
 
+use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorLabel;
 use Bayti\Api\Domain\Catalog\VendorLabelRepository;
@@ -78,9 +80,15 @@ final class ListVendorLabelsController
         $labelRepo = $this->em->getRepository(VendorLabel::class);
         $labels = $labelRepo->listActiveByVendor($vendor);
 
+        // Active-product count per label for the storefront chip badge (one
+        // grouped query for the whole storefront, not per-label).
+        /** @var ProductRepository $productRepo */
+        $productRepo = $this->em->getRepository(Product::class);
+        $counts = $productRepo->countActiveByLabelForVendor($vendor->getId() ?? 0);
+
         // No pagination — total === count.
         return $this->ok(PaginatedEnvelope::build(
-            $this->serializer->publicShapeMany($labels),
+            $this->serializer->publicShapeMany($labels, $counts),
             count($labels),
             count($labels), // limit
             0,              // offset

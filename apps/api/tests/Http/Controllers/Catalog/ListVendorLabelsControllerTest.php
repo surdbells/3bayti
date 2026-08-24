@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Bayti\Api\Tests\Http\Controllers\Catalog;
 
+use Bayti\Api\Domain\Catalog\Product;
+use Bayti\Api\Domain\Catalog\ProductRepository;
 use Bayti\Api\Domain\Catalog\Vendor;
 use Bayti\Api\Domain\Catalog\VendorLabel;
 use Bayti\Api\Domain\Catalog\VendorLabelRepository;
@@ -44,10 +46,15 @@ final class ListVendorLabelsControllerTest extends HttpTestCase
             ->with($vendor)
             ->willReturn([$label]);
 
-        $em = $this->stubEm(function ($em) use ($vendorRepo, $labelRepo) {
+        // Active-product count per label for the chip badge (label id 1 -> 3).
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('countActiveByLabelForVendor')->willReturn([1 => 3]);
+
+        $em = $this->stubEm(function ($em) use ($vendorRepo, $labelRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [Vendor::class, $vendorRepo],
                 [VendorLabel::class, $labelRepo],
+                [Product::class, $productRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);
@@ -62,6 +69,7 @@ final class ListVendorLabelsControllerTest extends HttpTestCase
         self::assertSame('eid-collection', $body['data'][0]['slug']);
         self::assertSame('Eid Collection', $body['data'][0]['name']);
         self::assertSame(1, $body['data'][0]['display_order']);
+        self::assertSame(3, $body['data'][0]['count']);
         // Total equals count when there's no pagination cap.
         self::assertSame(1, $body['meta']['total']);
     }
@@ -77,10 +85,14 @@ final class ListVendorLabelsControllerTest extends HttpTestCase
         $labelRepo = $this->createMock(VendorLabelRepository::class);
         $labelRepo->method('listActiveByVendor')->willReturn([]);
 
-        $em = $this->stubEm(function ($em) use ($vendorRepo, $labelRepo) {
+        $productRepo = $this->createMock(ProductRepository::class);
+        $productRepo->method('countActiveByLabelForVendor')->willReturn([]);
+
+        $em = $this->stubEm(function ($em) use ($vendorRepo, $labelRepo, $productRepo) {
             $em->method('getRepository')->willReturnMap([
                 [Vendor::class, $vendorRepo],
                 [VendorLabel::class, $labelRepo],
+                [Product::class, $productRepo],
             ]);
         });
         $this->bind(EntityManagerInterface::class, $em);

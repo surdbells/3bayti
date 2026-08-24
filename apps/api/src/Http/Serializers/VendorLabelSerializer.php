@@ -21,13 +21,15 @@ final class VendorLabelSerializer
     /**
      * @return array<string, mixed>
      */
-    public function publicShape(VendorLabel $l): array
+    public function publicShape(VendorLabel $l, int $count = 0): array
     {
         return [
             'id' => $l->getId(),
             'slug' => $l->getSlug(),
             'name' => $l->getName(),
             'display_order' => $l->getDisplayOrder(),
+            // Active-product count for the storefront collection-chip badge.
+            'count' => $count,
         ];
     }
 
@@ -35,8 +37,15 @@ final class VendorLabelSerializer
      * @param list<VendorLabel> $labels
      * @return list<array<string, mixed>>
      */
-    public function publicShapeMany(array $labels): array
+    /**
+     * @param list<VendorLabel> $labels
+     * @param array<int,int>    $counts map of label_id => active product count
+     */
+    public function publicShapeMany(array $labels, array $counts = []): array
     {
-        return array_map(fn (VendorLabel $l) => $this->publicShape($l), $labels);
+        return array_map(
+            fn (VendorLabel $l) => $this->publicShape($l, $counts[$l->getId()] ?? 0),
+            $labels,
+        );
     }
 }

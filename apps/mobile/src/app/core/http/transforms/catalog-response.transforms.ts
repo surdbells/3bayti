@@ -595,6 +595,8 @@ function legacyCategoryFromV3Label(item: unknown): Record<string, unknown> {
     // Primary bindings (vendors.page HTML):
     id: asNumber(item['id']),
     name: asString(item['name']),
+    // Active-product count for the collection-chip badge.
+    count: asNumber(item['count']),
     // Pass-through for slug-aware future callers:
     slug: asString(item['slug']),
     display_order: asNumberOrNull(item['display_order']),
