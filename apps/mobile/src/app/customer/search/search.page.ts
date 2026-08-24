@@ -298,10 +298,11 @@ export class SearchPage implements OnInit, OnDestroy {
   user_orders() {
     this.router.navigate(['/', 'my-orders']);
   }
-  open_vendor(id: number, name: string) {
+  open_vendor(slug: string, name: string) {
+    if (!slug) { return; }
     this.router.navigate(
       ['/', 'vendors'],
-      { queryParams: { id, name } }
+      { queryParams: { slug, name } }
     );
   }
 

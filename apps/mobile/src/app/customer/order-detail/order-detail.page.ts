@@ -46,6 +46,7 @@ interface OrderDetailItem {
   id: number;
   product_id: number;
   vendor_id: number;
+  vendor_slug?: string;
   product_name: string;
   product_image: string | null;
   quantity: number;
@@ -376,6 +377,7 @@ export class OrderDetailPage implements OnInit {
             id: it.id,
             product_id: it.product_id,
             vendor_id: it.vendor_id,
+            vendor_slug: it.vendor_slug ?? '',
             product_name: it.product_name ?? '',
             product_image: it.product_image ?? null,
             quantity: Number(it.quantity ?? 0),
@@ -466,8 +468,10 @@ export class OrderDetailPage implements OnInit {
       });
   }
 
-  open_vendor(id: number, name: string) {
-    this.router.navigate(['/', 'vendor-reviews'], { queryParams: { id, name } });
+  open_vendor(slug: string | undefined, name: string) {
+    // Tapping the vendor opens the STORE by slug (legacy ids discarded).
+    if (!slug) { return; }
+    this.router.navigate(['/', 'vendors'], { queryParams: { slug, name } });
   }
 
   /** Open WhatsApp support — keeps a support affordance on the order screen. */

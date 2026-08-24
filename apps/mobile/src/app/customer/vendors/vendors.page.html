@@ -29,7 +29,7 @@
         <!-- Inline reviews link (compact, replaces the full-width Reviews button) -->
         <button type="button"
                 class="vendor-reviews-link"
-                (click)="goToReviews(read_vendor.store_id, view_vendor.name)">
+                (click)="goToReviews(rqst_param.store_slug, view_vendor.id, view_vendor.name)">
           <ax-icon name="star" [size]="13" />
           <span>{{ 'button_reviews' | translate }}</span>
         </button>

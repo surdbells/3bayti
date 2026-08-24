@@ -148,6 +148,8 @@ export function transformCartListResponse(data: unknown): unknown {
       // Legacy 'store' alias — some templates read item.store directly.
       // Mirrors the convention M3.1.6e shipped for order items.
       store: it['vendor_id'] ?? 0,
+      // Vendor slug — order pages open the storefront by slug (legacy discarded).
+      vendor_slug: it['vendor_slug'] ?? '',
       vendor_name: it['vendor_name'] ?? '',
       quantity: it['quantity'] ?? 0,
       // Both keys forwarded for template compat:

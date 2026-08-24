@@ -63,6 +63,9 @@ export interface Product {
 
 export interface Store {
   store_id: number;
+  // Vendor slug — the featured card opens the storefront by slug (legacy ids
+  // discarded), so v3-native stores resolve too.
+  store_slug?: string;
   store_name: string;
   store_desc: string;
   rating: number | null;
@@ -674,10 +677,11 @@ export class AccountPage implements OnInit, OnDestroy {
     );
   }
 
-  open_vendor(id: number, name: string) {
+  open_vendor(slug: string | undefined, name: string) {
+    if (!slug) { return; }
     this.router.navigate(
       ['/', 'vendors'],
-      { queryParams: { id, name } }
+      { queryParams: { slug, name } }
     );
   }
 

@@ -82,12 +82,16 @@ export class VendorsPage implements OnInit {
     // client bug this redesign fixes.
     label: 0,
     store_id: 0,
+    // Vendor slug — the storefront is resolved by slug now (legacy store_id is
+    // 0 for v3-native stores, which used to open a blank storefront).
+    store_slug: "",
     store_name: ""
   }
   read_vendor = {
     id: 0,
     token: "",
-    store_id: 0
+    store_id: 0,
+    store_slug: ""
   }
   view_vendor = {
     // v3 numeric vendor id — populated by transformVendorResponse from the
@@ -122,11 +126,13 @@ export class VendorsPage implements OnInit {
     }else{  this.user_follow_vendor(); }
   }
 
-goToReviews(id: number, name: string) {
+goToReviews(slug: string, vendorId: number, name: string) {
     this.skipReloadOnEnter = true;
+    // Reviews header reads by slug; the reviews list + create use the v3 id
+    // (numeric-only route). Pass both.
     this.router.navigate(
       ['/', 'vendor-reviews'],
-      { queryParams: { id, name } }
+      { queryParams: { slug, vendor_id: vendorId, name } }
     );
   }
   single_user = {
@@ -146,7 +152,7 @@ goToReviews(id: number, name: string) {
     is_customer: false
   }
   ngOnInit() {
-    this.rqst_param.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.rqst_param.store_slug = this.route.snapshot.queryParamMap.get('slug') || '';
     this.rqst_param.store_name = this.route.snapshot.queryParamMap.get('name') || '';
   }
   /** Set when navigating forward to a child (product / reviews / orders) so
@@ -154,7 +160,7 @@ goToReviews(id: number, name: string) {
   private skipReloadOnEnter = false;
   ionViewDidEnter(){
     if (this.skipReloadOnEnter) { this.skipReloadOnEnter = false; return; }
-    this.rqst_param.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.rqst_param.store_slug = this.route.snapshot.queryParamMap.get('slug') || '';
     this.getObject();
   }
   async getObject() {
@@ -168,16 +174,14 @@ goToReviews(id: number, name: string) {
 
       this.read_vendor.id = this.single_user.id;
       this.read_vendor.token = this.single_user.token;
-      this.read_vendor.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
+      this.read_vendor.store_slug = this.rqst_param.store_slug;
 
       this.follow_vendor.id = this.single_user.id;
       this.follow_vendor.token = this.single_user.token;
-      this.follow_vendor.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
       this.follow_vendor.store_name = this.route.snapshot.queryParamMap.get('name') || '';
 
       this.unfollow_vendor.id = this.single_user.id;
       this.unfollow_vendor.token = this.single_user.token;
-      this.unfollow_vendor.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
       this.unfollow_vendor.store_name = this.route.snapshot.queryParamMap.get('name') || '';
       this.get_latest();
       this.get_vendor();
@@ -193,7 +197,7 @@ goToReviews(id: number, name: string) {
     // response transform still applies via get_v3, so response.data keeps the
     // legacy Products[] shape.
     this.networkAdapter.get_v3('GET /mobile/store-latest', {
-      pathParams: { id: String(this.rqst_param.store_id) },
+      pathParams: { slug: this.rqst_param.store_slug },
     })
       .subscribe(({
         next: (response: any) => {
@@ -214,7 +218,7 @@ goToReviews(id: number, name: string) {
     // param. Response transform applies via get_v3, so response.data keeps the
     // legacy storefront-header shape.
     this.networkAdapter.get_v3('GET /mobile/read-vendor', {
-      pathParams: { id: String(this.rqst_param.store_id) },
+      pathParams: { slug: this.rqst_param.store_slug },
     })
       .subscribe(({
         next: (response: any) => {
@@ -312,7 +316,7 @@ goToReviews(id: number, name: string) {
     this.ui_controls.is_empty = false;
     this.ui_controls.is_loading = true;
     this.networkAdapter.get_v3('GET /mobile/vendors-products', {
-      pathParams: { id: String(this.rqst_param.store_id) },
+      pathParams: { slug: this.rqst_param.store_slug },
     })
       .subscribe(({
         next: (response: any) => {
@@ -341,8 +345,10 @@ goToReviews(id: number, name: string) {
     if (this.rqst_param.label !== 0) {
       labelQuery['label_id'] = this.rqst_param.label;
     }
-    if (this.rqst_param.store_id !== 0) {
-      labelQuery['vendor_id'] = this.rqst_param.store_id;
+    // Scope to this vendor by slug (GET /v3/products?vendor={slug}); legacy ids
+    // are gone, so v3-native stores filter correctly too.
+    if (this.rqst_param.store_slug !== '') {
+      labelQuery['vendor'] = this.rqst_param.store_slug;
     }
     this.networkAdapter.get_v3('GET /mobile/products-by-labels', {
       queryParams: labelQuery,
@@ -369,7 +375,7 @@ goToReviews(id: number, name: string) {
     // param (dropping the legacy id/token/label/store_name). Response transform
     // applies via get_v3, so response.data keeps the legacy Labels[] shape.
     this.networkAdapter.get_v3('GET /mobile/store-labels', {
-      pathParams: { id: String(this.rqst_param.store_id) },
+      pathParams: { slug: this.rqst_param.store_slug },
     })
       .subscribe(({
         next: (response: any) => {

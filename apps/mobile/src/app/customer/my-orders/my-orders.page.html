@@ -81,7 +81,7 @@
         -->
         <div class="order-items">
           @for (item of visibleItems(order); track item) {
-            <div class="order-item" (click)="open_vendor(item.store, item.product_name)">
+            <div class="order-item" (click)="open_vendor(item.vendor_slug, item.product_name)">
               @if (hasItemImage(item)) {
                 <img loading="lazy" [src]="cfImage(item.product_image, 'thumb')" alt="" class="order-item__thumb" />
               } @else {

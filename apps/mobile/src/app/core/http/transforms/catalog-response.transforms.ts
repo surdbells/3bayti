@@ -294,6 +294,9 @@ function legacyProductCardFromV3List(item: unknown): Record<string, unknown> {
     // vendor.legacy_id.
     store: isRecord(item['vendor']) ? asNumber(item['vendor']['legacy_id'], 0) : 0,
     store_id: isRecord(item['vendor']) ? asNumber(item['vendor']['legacy_id'], 0) : 0,
+    // Vendor slug — the storefront now navigates by slug (works for v3-native
+    // stores that have no legacy id). See vendors.page.
+    vendor_slug: isRecord(item['vendor']) ? asString(item['vendor']['slug']) : '',
     // Secondary bindings some pages may use (vendors.page reads
     // `vendor_products.image` not `vendor_products.image_1`):
     image: flatImageUrl(item['primary_image']),
@@ -710,6 +713,9 @@ export function transformFeaturedVendorsResponse(data: unknown): unknown {
     const products = Array.isArray(v['products']) ? v['products'] : [];
     return {
       store_id: asNumber(v['store_id']),
+      // Slug for storefront navigation (legacy store_id is null for v3-native
+      // stores, so the featured card must navigate by slug).
+      store_slug: asString(v['slug']),
       store_name: asString(v['name']),
       store_desc: asString(v['description']),
       rating: v['rating'] ?? null,

@@ -885,8 +885,9 @@ export class VerticanPage implements OnInit, OnDestroy, AfterViewInit {
   // Navigation
   // ========================================
 
-  open_vendor(id: number, name: string) {
-    this.router.navigate(['/', 'vendors'], { queryParams: { id, name } });
+  open_vendor(slug: string, name: string) {
+    if (!slug) { return; }
+    this.router.navigate(['/', 'vendors'], { queryParams: { slug, name } });
   }
 
   triggerBack() {

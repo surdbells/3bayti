@@ -304,7 +304,7 @@
         <section class="ion-padding-horizontal">
           <article class="m6e-featured-card">
             <!-- Hero: first product image with store name + rating overlay -->
-            <div class="m6e-featured-hero" (click)="open_vendor(vendor_feature.store_id, vendor_feature.store_name)">
+            <div class="m6e-featured-hero" (click)="open_vendor(vendor_feature.store_slug, vendor_feature.store_name)">
               <div class="m6e-featured-hero-skeleton" [class.hidden]="imageLoaded['vendor-hero-' + vendor_feature.store_id]">
                 <div class="skeleton-shimmer"></div>
               </div>

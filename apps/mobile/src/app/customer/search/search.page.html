@@ -53,7 +53,7 @@
                   <button (click)="startAddToCloset(product.product_id, product.product_name, product.image_1); $event.stopPropagation()" class="m6d-like" type="button" aria-label="Add to closet">
                     <ax-icon name="heart-plus" />
                   </button>
-                  <button (click)="open_vendor(product.store, product.store_name); $event.stopPropagation()" class="m6d-vendor-badge vendor-badge--tappable" type="button">&#64;{{product.store_name}}</button>
+                  <button (click)="open_vendor(product.vendor_slug, product.store_name); $event.stopPropagation()" class="m6d-vendor-badge vendor-badge--tappable" type="button">&#64;{{product.store_name}}</button>
                 </div>
                 <div (click)="open_product(product.product_id, product.product_name)" class="m6d-info">
                   <p class="m6d-name">{{product.product_name}}</p>

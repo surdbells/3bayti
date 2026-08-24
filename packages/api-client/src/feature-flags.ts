@@ -488,22 +488,25 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
     newPath: '/v3/products/by-id/:id',
     shape: 'v3-envelope',
   },
+  // Vendor storefront is SLUG-keyed (legacy ids discarded): every vendor —
+  // legacy-migrated or v3-native — has a slug, so the storefront resolves for
+  // newly onboarded stores too. Consumers pass pathParams: { slug }.
   'GET /mobile/vendors-products': {
     target: 'new',
     oldPath: '/customer/vendors_products',
-    newPath: '/v3/vendors/by-legacy-id/:id/products',
+    newPath: '/v3/vendors/:slug/products',
     shape: 'v3-envelope',
   },
   'GET /mobile/read-vendor': {
     target: 'new',
     oldPath: '/customer/read-vendor',
-    newPath: '/v3/vendors/by-legacy-id/:id',
+    newPath: '/v3/vendors/:slug',
     shape: 'v3-envelope',
   },
   'GET /mobile/store-latest': {
     target: 'new',
     oldPath: '/customer/store_latest',
-    newPath: '/v3/vendors/by-legacy-id/:id/products',
+    newPath: '/v3/vendors/:slug/products',
     shape: 'v3-envelope',
   },
 
@@ -522,7 +525,7 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /mobile/store-labels': {
     target: 'new',
     oldPath: '/customer/read_vendor_collection',
-    newPath: '/v3/vendors/by-legacy-id/:id/labels',
+    newPath: '/v3/vendors/:slug/labels',
     shape: 'v3-envelope',
   },
   'GET /mobile/products-by-labels': {

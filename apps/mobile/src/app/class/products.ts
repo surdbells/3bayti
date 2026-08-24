@@ -12,6 +12,8 @@ export class Products {
     public products: [  ],
     public price: string,
     public collection: number,
-    public sale_price: string
+    public sale_price: string,
+    // Vendor slug — storefront nav is slug-based (legacy ids discarded).
+    public vendor_slug: string = ''
   ){  }
 }

@@ -105,6 +105,10 @@ export class VendorReviewsPage implements OnInit {
     token: "",
     label: 4,
     store_id: 0,
+    // Vendor slug — the storefront header read is slug-keyed now. The reviews
+    // list + create still use the v3 numeric vendor id (numeric-only route),
+    // carried separately as `vendor_id` in the nav params.
+    store_slug: "",
     store_name: ""
   }
   initial = {
@@ -182,13 +186,15 @@ export class VendorReviewsPage implements OnInit {
     }
   }
   ngOnInit() {
-    this.add_new_review.store_id =  Number(this.route.snapshot.queryParamMap.get('id'));
+    // `vendor_id` = v3 numeric id (reviews list + create); `slug` = storefront
+    // header read. Legacy `id` is gone.
+    this.add_new_review.store_id =  Number(this.route.snapshot.queryParamMap.get('vendor_id'));
     this.add_new_review.product_name =  this.route.snapshot.queryParamMap.get('name') || '';
-    this.rqst_param.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.rqst_param.store_slug = this.route.snapshot.queryParamMap.get('slug') || '';
     this.rqst_param.store_name = this.route.snapshot.queryParamMap.get('name') || '';
   }
   ionViewDidEnter(){
-    this.rqst_param.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.rqst_param.store_slug = this.route.snapshot.queryParamMap.get('slug') || '';
     this.getObject();
   }
   error_notification(message: string) {
@@ -266,7 +272,7 @@ export class VendorReviewsPage implements OnInit {
     // response transform still applies via get_v3, so response.data keeps the
     // legacy view_vendor shape.
     this.networkAdapter.get_v3('GET /mobile/read-vendor', {
-      pathParams: { id: String(this.rqst_param.store_id) },
+      pathParams: { slug: this.rqst_param.store_slug },
     })
       .subscribe(({
         next: (response: any) => {
@@ -283,7 +289,7 @@ export class VendorReviewsPage implements OnInit {
     if(show_loading){ this.ui_controls.is_loading = true; }
     this.initial.id = this.single_user.id;
     this.initial.token = this.single_user.token;
-    this.initial.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.initial.store_id = Number(this.route.snapshot.queryParamMap.get('vendor_id'));
     // Direct v3 (GET /v3/vendors/:vendorId/reviews) — public list of a store's
     // approved reviews, no authToken. The legacy request transform
     // (transformVendorReviewsListRequest) moved store_id into the vendorId path
@@ -340,7 +346,7 @@ export class VendorReviewsPage implements OnInit {
   getMoreItems() {
     this.initial.id = this.single_user.id;
     this.initial.token = this.single_user.token;
-    this.initial.store_id = Number(this.route.snapshot.queryParamMap.get('id'));
+    this.initial.store_id = Number(this.route.snapshot.queryParamMap.get('vendor_id'));
     this.initial.offset = this.initial.offset + this.initial.limit
     // Direct v3 (GET /v3/vendors/:vendorId/reviews) — same public endpoint as
     // get_reviews. The legacy request transform (transformVendorReviewsListRequest)
