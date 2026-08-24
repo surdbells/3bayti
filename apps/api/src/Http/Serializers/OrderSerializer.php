@@ -247,6 +247,9 @@ final class OrderSerializer
             'id' => $item->getId() ?? 0,
             'product_id' => $product->getId() ?? 0,
             'vendor_id' => $vendorId,
+            // Vendor slug — mobile order pages open the storefront by slug
+            // (legacy ids discarded), works for v3-native stores too.
+            'vendor_slug' => $vendor->getSlug(),
             'vendor_name' => $vendor->getName(),
             'product_name' => $item->getProductNameSnapshot(),
             'product_image' => $image,
