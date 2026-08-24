@@ -342,8 +342,12 @@ goToReviews(slug: string, vendorId: number, name: string) {
     // "no filter" signal). The label is now the TAPPED chip's id (not the old
     // hard-coded 4), so each collection chip surfaces its own products.
     const labelQuery: Record<string, string | number | boolean> = {};
-    if (this.rqst_param.label !== 0) {
-      labelQuery['label_id'] = this.rqst_param.label;
+    // Filter by label SLUG, not the legacy label_id: /v3/products resolves
+    // label_id via findActiveByLegacyId, which never matches a v3-native store's
+    // labels (they have no legacy id). The slug resolver works for every label.
+    const selectedLabel = this.categories.find((c) => c.id === this.rqst_param.label);
+    if (selectedLabel?.slug) {
+      labelQuery['label'] = selectedLabel.slug;
     }
     // Scope to this vendor by slug (GET /v3/products?vendor={slug}); legacy ids
     // are gone, so v3-native stores filter correctly too.
