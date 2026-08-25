@@ -517,6 +517,8 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
     token: "",
     product: 0,
     store: 0,
+    // Vendor slug — the size guide is fetched by slug (legacy ids discarded).
+    vendor_slug: "",
     store_name: "",
     category_id: "",
     category_slug: "",
@@ -1023,22 +1025,20 @@ export class ProductPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   get_store_measurement() {
-    // PUBLIC customer read of the store's published size guide via the v3
-    // by-legacy-id endpoint (GET /v3/vendors/by-legacy-id/{store}/size-chart,
-    // StoreSizeChartByLegacyIdController). No authToken — shoppers view it.
+    // PUBLIC customer read of the store's published size guide, resolved by
+    // SLUG (GET /v3/vendors/{slug}/size-chart). No authToken — shoppers view it.
     //
-    // `this.single.store` is the LEGACY store id now surfaced by v3's
-    // detailShape vendor block (mapped in transformProductDetailResponse).
-    // GUARD: if it's falsy/0 there's no store to resolve, so skip the call
-    // and leave store_measurement empty (the size-guide sheet shows the
-    // "no size guide" empty state).
-    const storeId = Number(this.single.store);
-    if (!storeId) {
+    // Legacy ids are discarded: a newly onboarded (v3-native) store has no
+    // legacy id, so the old by-legacy-id fetch returned nothing and the size
+    // guide was always empty for it. `vendor_slug` comes from v3's detailShape
+    // vendor block. GUARD: no slug -> skip (empty "no size guide" state).
+    const slug = String(this.single.vendor_slug ?? '');
+    if (!slug) {
       return;
     }
 
-    this.networkAdapter.get_v3('GET /vendors/:vendorId/size-chart', {
-      pathParams: { vendorId: String(storeId) },
+    this.networkAdapter.get_v3('GET /vendors/:slug/size-chart', {
+      pathParams: { slug },
     }).subscribe({
       next: (response: any) => {
         if (response.response_code === 200 && response.status === "success") {
