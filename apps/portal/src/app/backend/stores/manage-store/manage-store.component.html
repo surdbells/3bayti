@@ -414,13 +414,8 @@
     </div>
     <div class="ms-doc-viewer-body" (click)="$event.stopPropagation()">
       <img *ngIf="isImageDoc(docViewer.url)" [src]="docViewer.url" [alt]="docViewer.label" />
-      <div *ngIf="!isImageDoc(docViewer.url)" class="ms-doc-viewer-fallback">
-        <app-icon name="description" aria-hidden="true"></app-icon>
-        <p>This document can’t be previewed inline.</p>
-        <a [href]="docViewer.url" target="_blank" rel="noopener" class="ax-btn ax-btn-primary ax-btn-sm">
-          <app-icon name="open_in_new" aria-hidden="true"></app-icon> Open document
-        </a>
-      </div>
+      <iframe *ngIf="!isImageDoc(docViewer.url)" [src]="docViewer.safeUrl"
+              [title]="docViewer.label" class="ms-doc-viewer-frame"></iframe>
     </div>
   </div>
 </app-admin-shell>

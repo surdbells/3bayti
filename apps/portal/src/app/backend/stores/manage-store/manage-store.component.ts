@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { ActivatedRoute, Router } from '@angular/router';
 import { NavigationHistoryService } from '../../../services/navigation-history.service';
 import { PortalCrudAdapter } from '../../../services/portal-crud-adapter';
@@ -96,6 +97,7 @@ export class ManageStoreComponent implements OnInit {
     private route: ActivatedRoute,
     private adapter: PortalCrudAdapter,
     private toast: HotToastService,
+    private sanitizer: DomSanitizer,
   ) {}
 
   ngOnInit() {
@@ -195,11 +197,13 @@ export class ManageStoreComponent implements OnInit {
     ];
   }
 
-  /** Full-screen document viewer (open a submitted ID in full). */
-  docViewer: { url: string; label: string } | null = null;
+  /** Full-screen document viewer (view a submitted ID in full, never download). */
+  docViewer: { url: string; label: string; safeUrl: SafeResourceUrl } | null = null;
   openDoc(url: string | null | undefined, label: string) {
     if (!url) return;
-    this.docViewer = { url, label };
+    // The doc is served inline (Content-Disposition: inline, framable) — view it
+    // in-app: images as <img>, PDFs/others in a sanitized <iframe>.
+    this.docViewer = { url, label, safeUrl: this.sanitizer.bypassSecurityTrustResourceUrl(url) };
   }
   closeDoc() { this.docViewer = null; }
 
@@ -207,7 +211,7 @@ export class ManageStoreComponent implements OnInit {
   isImageDoc(url: string | null | undefined): boolean {
     if (!url) return false;
     const u = url.split('?')[0].toLowerCase();
-    return /\.(png|jpe?g|gif|webp|bmp|heic|heif)$/.test(u) || url.startsWith('data:image');
+    return /\.(png|jpe?g|gif|webp|bmp|heic|heif|svg)$/.test(u) || url.startsWith('data:image');
   }
 
   loadCompliance() {
