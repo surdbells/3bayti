@@ -63,6 +63,37 @@ class ComplianceDocumentService
     }
 
     /**
+     * If $value is an inline base64 blob (a data URL, or raw un-prefixed base64
+     * as some legacy rows were migrated), store it as a private file and return
+     * the new storage path. Returns null when there's nothing to localize — the
+     * value is empty, already a storage path, or a remote URL.
+     *
+     * Powers compliance:localize-documents, which moves legacy/base64 document
+     * bytes out of the vendor row and into private storage.
+     */
+    public function localizeInline(int $vendorId, string $type, ?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return null; // external reference, not an inline blob
+        }
+        if (str_starts_with($value, 'data:')) {
+            return $this->store($vendorId, $type, $value);
+        }
+        // Raw (un-prefixed) base64 → wrap as a data URL so store() accepts it.
+        // rawBase64() returns null for real storage paths (they contain '/'/'-'
+        // /'.' outside the base64 alphabet), so those are left untouched.
+        $raw = $this->rawBase64($value);
+        if ($raw === null) {
+            return null;
+        }
+        $dataUrl = 'data:' . $raw['mime'] . ';base64,' . base64_encode($raw['bytes']);
+        return $this->store($vendorId, $type, $dataUrl);
+    }
+
+    /**
      * Read a stored document path back into a base64 data URL for display.
      * Returns null when the path is null/empty or the file is missing.
      * Tolerates a legacy value that is already a data URL (pre-hardening

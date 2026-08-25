@@ -392,6 +392,13 @@ class Vendor
     public function getIdFront(): ?string { return $this->idFront; }
     public function getIdBack(): ?string { return $this->idBack; }
     public function getLicenseDoc(): ?string { return $this->licenseDoc; }
+
+    // Plain KYC-doc setters — used by the compliance:localize-documents backfill
+    // to swap an inline base64 value for its stored path WITHOUT touching
+    // compliance_status (unlike submitCompliance, which marks it 'submitted').
+    public function setIdFront(?string $path): void { $this->idFront = $path; }
+    public function setIdBack(?string $path): void { $this->idBack = $path; }
+    public function setLicenseDoc(?string $path): void { $this->licenseDoc = $path; }
     public function getComplianceStatus(): string { return $this->complianceStatus; }
     public function getComplianceReviewedAt(): ?\DateTimeImmutable { return $this->complianceReviewedAt; }
     public function getComplianceReviewedBy(): ?int { return $this->complianceReviewedBy; }

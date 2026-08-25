@@ -211,6 +211,19 @@ try {
     ]);
 }
 
+// Compliance document localization — one-off/idempotent backfill that moves
+// inline base64 KYC documents out of the vendor row into private storage.
+// Resolves the document service via DI; no payment-gateway dependency.
+try {
+    /** @var \Bayti\Api\Domain\Compliance\ComplianceDocumentService $complianceDocs */
+    $complianceDocs = $container->get(\Bayti\Api\Domain\Compliance\ComplianceDocumentService::class);
+    $cli->add(new \Bayti\Api\Console\LocalizeComplianceDocumentsCommand($em, $complianceDocs, $logger));
+} catch (\Throwable $e) {
+    $logger->info('compliance localize command not registered', [
+        'reason' => $e->getMessage(),
+    ]);
+}
+
 // Admin push broadcasts — background dispatcher for queued (large-audience)
 // broadcasts. Resolves the BroadcastSender from the container (EM + push
 // sender + logger); no payment-gateway dependency, registers on a fresh

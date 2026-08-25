@@ -57,4 +57,46 @@ final class ComplianceDocumentServiceTest extends TestCase
         // base64 alphabet — so a missing file returns null, not a bogus data URL.
         self::assertNull($this->service()->readAsDataUrl('compliance/vendor-5/front-abc123.jpg'));
     }
+
+    #[Test]
+    public function localizeInlineStoresDataUrlAndRoundTrips(): void
+    {
+        $jpeg = "\xFF\xD8\xFF\xE0" . str_repeat("\x01", 300);
+        $svc = $this->service();
+
+        $path = $svc->localizeInline(7, 'front', 'data:image/jpeg;base64,' . base64_encode($jpeg));
+
+        self::assertNotNull($path);
+        self::assertStringStartsWith('compliance/vendor-7/front-', $path);
+        self::assertStringEndsWith('.jpg', $path);
+        // The stored file reads back to the original bytes.
+        $doc = $svc->openForDownload($path);
+        self::assertNotNull($doc);
+        self::assertSame('image/jpeg', $doc['mime']);
+        self::assertSame($jpeg, $doc['bytes']);
+    }
+
+    #[Test]
+    public function localizeInlineStoresRawBase64(): void
+    {
+        $png = "\x89PNG\x0D\x0A\x1A\x0A" . str_repeat("\x02", 300);
+        $svc = $this->service();
+
+        $path = $svc->localizeInline(9, 'license', base64_encode($png));
+
+        self::assertNotNull($path);
+        self::assertStringStartsWith('compliance/vendor-9/license-', $path);
+        self::assertStringEndsWith('.png', $path);
+    }
+
+    #[Test]
+    public function localizeInlineLeavesPathsUrlsAndEmptyUntouched(): void
+    {
+        $svc = $this->service();
+        self::assertNull($svc->localizeInline(1, 'front', 'compliance/vendor-1/front-abc.jpg'));
+        self::assertNull($svc->localizeInline(1, 'front', 'https://legacy.example/id.jpg'));
+        self::assertNull($svc->localizeInline(1, 'front', 'http://legacy.example/id.jpg'));
+        self::assertNull($svc->localizeInline(1, 'front', ''));
+        self::assertNull($svc->localizeInline(1, 'front', null));
+    }
 }
