@@ -234,7 +234,9 @@
                   <span class="ax-hint">Shown as vendor declared it; read-only.</span>
                 </div>
 
-                <ng-container *ngIf="store.vat_status === 'registered'">
+                <!-- Registration details — always shown so admin sees exactly
+                     what the vendor submitted, regardless of VAT status. -->
+                <ng-container>
                   <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">
                     <div class="ax-form-field">
                       <label class="ax-label">Registered business name</label>
@@ -298,27 +300,31 @@
                   </span>
                 </div>
 
+                <p class="ax-text-sm ax-text-secondary ax-mt-0 ax-mb-3">
+                  Click a document to view it full-size.
+                </p>
                 <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-3 ax-gap-3">
-                  <div class="ax-card ax-p-4">
-                    <div class="ax-font-medium ax-text-primary ax-mb-3">ID (Front)</div>
-                    <img [src]="compliance.front || 'assets/img/placeholder-1.png'" alt="ID front"
-                      style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
-                    <a *ngIf="compliance.front" [href]="compliance.front" target="_blank" rel="noopener"
-                       class="ax-text-sm ax-text-link ax-mt-2 ax-inline-block">Open document</a>
-                  </div>
-                  <div class="ax-card ax-p-4">
-                    <div class="ax-font-medium ax-text-primary ax-mb-3">ID (Back)</div>
-                    <img [src]="compliance.back || 'assets/img/placeholder-1.png'" alt="ID back"
-                      style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
-                    <a *ngIf="compliance.back" [href]="compliance.back" target="_blank" rel="noopener"
-                       class="ax-text-sm ax-text-link ax-mt-2 ax-inline-block">Open document</a>
-                  </div>
-                  <div class="ax-card ax-p-4">
-                    <div class="ax-font-medium ax-text-primary ax-mb-3">License document</div>
-                    <img [src]="compliance.license_doc || 'assets/img/placeholder-1.png'" alt="License document"
-                      style="width: 100%; aspect-ratio: 3 / 2; object-fit: cover; object-position: center; border-radius: var(--ax-radius-md); border: 1px solid var(--ax-color-border-subtle);" />
-                    <a *ngIf="compliance.license_doc" [href]="compliance.license_doc" target="_blank" rel="noopener"
-                       class="ax-text-sm ax-text-link ax-mt-2 ax-inline-block">Open document</a>
+                  <div class="ax-card ax-p-4" *ngFor="let doc of documents">
+                    <div class="ax-font-medium ax-text-primary ax-mb-3">{{ doc.label }}</div>
+
+                    <button *ngIf="doc.url" type="button" class="ms-doc-thumb"
+                            (click)="openDoc(doc.url, doc.label)"
+                            [attr.aria-label]="'View ' + doc.label + ' in full'">
+                      <img [src]="doc.url" [alt]="doc.label" />
+                      <span class="ms-doc-thumb-hint"><app-icon name="zoom_in" aria-hidden="true"></app-icon> View full</span>
+                    </button>
+
+                    <div *ngIf="!doc.url" class="ms-doc-empty">
+                      <app-icon name="hide_image" aria-hidden="true"></app-icon>
+                      <span>Not submitted</span>
+                    </div>
+
+                    <div *ngIf="doc.url" class="ax-flex ax-gap-3 ax-items-center ax-mt-2">
+                      <button type="button" class="ax-btn ax-btn-outline ax-btn-sm" (click)="openDoc(doc.url, doc.label)">
+                        <app-icon name="visibility" aria-hidden="true"></app-icon> View full
+                      </button>
+                      <a [href]="doc.url" target="_blank" rel="noopener" class="ax-text-sm ax-text-link">Open in new tab</a>
+                    </div>
                   </div>
                 </div>
 
@@ -392,4 +398,29 @@
           </app-ax-tab>
         </app-ax-tabs>
       </section>  </div>
+
+  <!-- Full-document viewer (open a submitted ID in full) -->
+  <div *ngIf="docViewer" class="ms-doc-viewer" (click)="closeDoc()" role="dialog" aria-modal="true">
+    <div class="ms-doc-viewer-bar" (click)="$event.stopPropagation()">
+      <span class="ms-doc-viewer-title">{{ docViewer.label }}</span>
+      <span class="ax-flex ax-gap-2">
+        <a [href]="docViewer.url" target="_blank" rel="noopener" class="ax-btn ax-btn-ghost ax-btn-sm">
+          <app-icon name="open_in_new" aria-hidden="true"></app-icon> New tab
+        </a>
+        <button type="button" class="ax-btn ax-btn-ghost ax-btn-sm" (click)="closeDoc()" aria-label="Close">
+          <app-icon name="close" aria-hidden="true"></app-icon> Close
+        </button>
+      </span>
+    </div>
+    <div class="ms-doc-viewer-body" (click)="$event.stopPropagation()">
+      <img *ngIf="isImageDoc(docViewer.url)" [src]="docViewer.url" [alt]="docViewer.label" />
+      <div *ngIf="!isImageDoc(docViewer.url)" class="ms-doc-viewer-fallback">
+        <app-icon name="description" aria-hidden="true"></app-icon>
+        <p>This document can’t be previewed inline.</p>
+        <a [href]="docViewer.url" target="_blank" rel="noopener" class="ax-btn ax-btn-primary ax-btn-sm">
+          <app-icon name="open_in_new" aria-hidden="true"></app-icon> Open document
+        </a>
+      </div>
+    </div>
+  </div>
 </app-admin-shell>

@@ -186,6 +186,30 @@ export class ManageStoreComponent implements OnInit {
   };
   reject_note = '';
 
+  /** The vendor's submitted identity documents, for the KYC grid + viewer. */
+  get documents(): { key: string; label: string; url: string | null }[] {
+    return [
+      { key: 'front', label: 'ID — front', url: this.compliance?.front ?? null },
+      { key: 'back', label: 'ID — back', url: this.compliance?.back ?? null },
+      { key: 'license_doc', label: 'Trade licence', url: this.compliance?.license_doc ?? null },
+    ];
+  }
+
+  /** Full-screen document viewer (open a submitted ID in full). */
+  docViewer: { url: string; label: string } | null = null;
+  openDoc(url: string | null | undefined, label: string) {
+    if (!url) return;
+    this.docViewer = { url, label };
+  }
+  closeDoc() { this.docViewer = null; }
+
+  /** True for image docs (render as <img>); PDFs/others go in an <iframe>. */
+  isImageDoc(url: string | null | undefined): boolean {
+    if (!url) return false;
+    const u = url.split('?')[0].toLowerCase();
+    return /\.(png|jpe?g|gif|webp|bmp|heic|heif)$/.test(u) || url.startsWith('data:image');
+  }
+
   loadCompliance() {
     if (!this.storeId) return;
     this.adapter.get_v3('GET /admin/vendors/:id/compliance', { params: { id: String(this.storeId) } })
