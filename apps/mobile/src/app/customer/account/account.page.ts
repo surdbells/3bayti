@@ -742,10 +742,12 @@ export class AccountPage implements OnInit, OnDestroy {
         next: (response: any) => {
           if (response.response_code === 200 && response.status === "success") {
             const page: Store[] = response.data ?? [];
-            // Dedupe by store_id so a store can't appear twice across pages.
-            const existingIds = new Set(this.vendor_featured.map(s => s.store_id));
+            // Dedupe by slug so a store can't appear twice across pages. (Was
+            // store_id, but that's 0 for every v3-native store, so all newly
+            // onboarded stores collapsed to one after the first page.)
+            const existingIds = new Set(this.vendor_featured.map(s => s.store_slug));
             const deduped = page.filter(
-              (s: Store) => s && !existingIds.has(s.store_id)
+              (s: Store) => s && s.store_slug && !existingIds.has(s.store_slug)
             );
             this.vendor_featured.push(...deduped);
             // Stop once a page comes back short (end of directory).
