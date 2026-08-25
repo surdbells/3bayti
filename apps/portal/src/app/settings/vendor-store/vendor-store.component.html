@@ -47,13 +47,15 @@
 
           <div class="ax-form-field ax-mb-3">
             <label class="ax-label ax-label-required" for="store_address">Store location</label>
-            <input
-              id="store_address"
-              type="text"
-              class="ax-input"
-              [maxlength]="255"
+            <app-ax-place-autocomplete
               name="store_address"
-              [(ngModel)]="store_single.store_address" />
+              [maxlength]="255"
+              placeholder="Search your store address"
+              [preferFormatted]="true"
+              [(ngModel)]="store_single.store_address"
+              (placeSelected)="onStorePlace($event)">
+            </app-ax-place-autocomplete>
+            <span class="ax-hint">Start typing to pick your store's address from Google.</span>
           </div>
 
           <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3 ax-mb-3">

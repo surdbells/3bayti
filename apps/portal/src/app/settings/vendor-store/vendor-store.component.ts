@@ -13,11 +13,13 @@ import { AxRichEditorComponent } from '../../shared/rich/ax-rich-editor.componen
 import { VendorShellComponent } from '../../partials/vendor-shell/vendor-shell.component';
 import { CfImagePipe } from '../../shared/cf-image.pipe';
 import { IconComponent } from '../../shared/icon/icon.component';
+import { AxPlaceAutocompleteComponent } from '../../shared/forms/ax-place-autocomplete.component';
+import type { PlaceDetails } from '../../core/places/places.service';
 import { apiErrorMessage } from '../../shared/http/api-error';
 @Component({
   selector: 'app-vendor-store',
   standalone: true,
-  imports: [CfImagePipe, VendorShellComponent, CommonModule, FormsModule, AxRichEditorComponent, IconComponent],
+  imports: [CfImagePipe, VendorShellComponent, CommonModule, FormsModule, AxRichEditorComponent, IconComponent, AxPlaceAutocompleteComponent],
   templateUrl: './vendor-store.component.html',
   styleUrl: './vendor-store.component.css',
 })
@@ -98,6 +100,18 @@ export class VendorStoreComponent implements OnInit {
 
   error_notification(message: string) { this.toast.error(message); }
   success_notification(message: string) { this.toast.success(message); }
+
+  /**
+   * A Google Places suggestion was picked for the store location. The
+   * autocomplete's ngModel already set store_address to the full formatted
+   * address; this keeps it explicit and is the hook for future use of the
+   * structured fields (lat/lng, emirate/country).
+   */
+  onStorePlace(place: PlaceDetails): void {
+    if (place?.formattedAddress) {
+      this.store_single.store_address = place.formattedAddress;
+    }
+  }
 
   get_data() {
     this.ui_controls.is_loading = true;
