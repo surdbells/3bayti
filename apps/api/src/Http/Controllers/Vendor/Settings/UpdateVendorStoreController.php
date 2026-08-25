@@ -69,6 +69,7 @@ final class UpdateVendorStoreController
             'contact_phone' => 20, 'store_phone' => 20,
             'logo_url' => 500, 'store_logo' => 500,
             'cover_image_url' => 500, 'store_cover' => 500,
+            'store_address' => 500,
         ];
         foreach ($maxLengths as $field => $max) {
             if (isset($body[$field]) && is_string($body[$field]) && mb_strlen($body[$field]) > $max) {
@@ -101,6 +102,9 @@ final class UpdateVendorStoreController
         }
         if (isset($body['store_phone'])) {
             $vendor->setContactPhone($body['store_phone'] !== '' ? (string) $body['store_phone'] : null);
+        }
+        if (isset($body['store_address'])) {
+            $vendor->setStoreAddress($body['store_address'] !== '' ? (string) $body['store_address'] : null);
         }
         if (isset($body['logo_url'])) {
             $vendor->setLogoUrl($body['logo_url'] !== '' ? (string) $body['logo_url'] : null);

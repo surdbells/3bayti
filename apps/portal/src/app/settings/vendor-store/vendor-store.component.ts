@@ -165,6 +165,7 @@ export class VendorStoreComponent implements OnInit {
       store_description: this.store_single.store_description,
       store_email: this.store_single.store_email,
       store_phone: this.store_single.store_phone,
+      store_address: this.store_single.store_address,
     };
     // Only send real uploaded image URLs — never the local placeholder path
     // (it would be stored as the logo). Omitting the field is a no-op PATCH, so
