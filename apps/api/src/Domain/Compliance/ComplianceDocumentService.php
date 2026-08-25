@@ -27,6 +27,13 @@ class ComplianceDocumentService
     /** Cap on the decoded document size (≈9 MB after base64 overhead). */
     private const MAX_BYTES = 9_000_000;
 
+    /**
+     * data: URL matcher. Tolerant of extra mime parameters (e.g.
+     * `;charset=utf-8`) some legacy rows carry; the `s` flag lets the base64
+     * payload span newlines (MIME-chunked legacy blobs).
+     */
+    private const DATA_URL_RE = '#^data:([\w/+.-]+)(?:;[\w.=+-]+)*;base64,(.+)$#s';
+
     public function __construct(
         private readonly ImageStorageService $storage,
     ) {
@@ -39,7 +46,7 @@ class ComplianceDocumentService
      */
     public function store(int $vendorId, string $type, string $dataUrl): string
     {
-        if (!preg_match('#^data:([\w/+.-]+);base64,(.+)$#s', $dataUrl, $m)) {
+        if (!preg_match(self::DATA_URL_RE, $dataUrl, $m)) {
             throw new \InvalidArgumentException('Document must be a base64 data URL.');
         }
         $mime = strtolower($m[1]);
@@ -47,7 +54,7 @@ class ComplianceDocumentService
             throw new \InvalidArgumentException("Unsupported document type '{$mime}'.");
         }
 
-        $bytes = base64_decode($m[2], true);
+        $bytes = $this->decodeBase64($m[2]);
         if ($bytes === false || $bytes === '') {
             throw new \InvalidArgumentException('Document base64 payload is invalid.');
         }
@@ -136,10 +143,10 @@ class ComplianceDocumentService
             return null;
         }
         if (str_starts_with($path, 'data:')) {
-            if (!preg_match('#^data:([\w/+.-]+);base64,(.+)$#s', $path, $m)) {
+            if (!preg_match(self::DATA_URL_RE, $path, $m)) {
                 return null;
             }
-            $bytes = base64_decode($m[2], true);
+            $bytes = $this->decodeBase64($m[2]);
             if ($bytes === false || $bytes === '') {
                 return null;
             }
@@ -179,15 +186,29 @@ class ComplianceDocumentService
      */
     private function rawBase64(string $value): ?array
     {
-        if (strlen($value) < 100 || preg_match('#^[A-Za-z0-9+/]+={0,2}$#', $value) !== 1) {
+        // Legacy blobs may carry MIME-style line breaks; normalise first so the
+        // base64 alphabet check + decode don't reject an otherwise-valid image.
+        $clean = preg_replace('/\s+/', '', $value) ?? $value;
+        if (strlen($clean) < 100 || preg_match('#^[A-Za-z0-9+/]+={0,2}$#', $clean) !== 1) {
             return null;
         }
-        $bytes = base64_decode($value, true);
+        $bytes = base64_decode($clean, true);
         if ($bytes === false || $bytes === '') {
             return null;
         }
         $mime = $this->sniffMime($bytes);
         return $mime !== null ? ['bytes' => $bytes, 'mime' => $mime] : null;
+    }
+
+    /**
+     * base64_decode that tolerates whitespace/newlines in legacy payloads —
+     * strict mode rejects them, which broke serving MIME-chunked legacy blobs
+     * imported from the legacy DB.
+     */
+    private function decodeBase64(string $b64): string|false
+    {
+        $clean = preg_replace('/\s+/', '', $b64) ?? $b64;
+        return base64_decode($clean, true);
     }
 
     /** Detect a document mime from magic bytes; null if unrecognised. */

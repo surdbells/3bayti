@@ -90,6 +90,35 @@ final class ComplianceDocumentServiceTest extends TestCase
     }
 
     #[Test]
+    public function openForDownloadToleratesWhitespaceInBase64(): void
+    {
+        // MIME-chunked base64 (newlines every 76 chars) — how some legacy rows
+        // stored it. Strict base64_decode used to reject this → "not found".
+        $jpeg = "\xFF\xD8\xFF\xE0" . str_repeat("\x03", 300);
+        $chunked = chunk_split(base64_encode($jpeg), 76, "\n");
+        $svc = $this->service();
+
+        $viaDataUrl = $svc->openForDownload('data:image/jpeg;base64,' . $chunked);
+        self::assertNotNull($viaDataUrl);
+        self::assertSame('image/jpeg', $viaDataUrl['mime']);
+        self::assertSame($jpeg, $viaDataUrl['bytes']);
+
+        $viaRaw = $svc->openForDownload($chunked);
+        self::assertNotNull($viaRaw);
+        self::assertSame($jpeg, $viaRaw['bytes']);
+    }
+
+    #[Test]
+    public function openForDownloadToleratesDataUrlMimeParams(): void
+    {
+        $png = "\x89PNG\x0D\x0A\x1A\x0A" . str_repeat("\x04", 300);
+        $doc = $this->service()->openForDownload('data:image/png;charset=utf-8;base64,' . base64_encode($png));
+        self::assertNotNull($doc);
+        self::assertSame('image/png', $doc['mime']);
+        self::assertSame($png, $doc['bytes']);
+    }
+
+    #[Test]
     public function localizeInlineLeavesPathsUrlsAndEmptyUntouched(): void
     {
         $svc = $this->service();
