@@ -26,6 +26,7 @@ import {PendingOrdersService} from "../../core/services/pending-orders.service";
 import {AxNotificationService} from '../../shared/ax-mobile/notification';
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
+import { AddPhoneBannerComponent } from '../../shared/add-phone-banner.component';
 interface Category {
   readonly id: number;
   readonly name: string;
@@ -63,6 +64,7 @@ export interface Store {
     TranslatePipe,
     AxIconComponent,
     AxLoaderComponent,
+    AddPhoneBannerComponent,
   ]
 })
 export class HomePage implements OnInit, OnDestroy {

@@ -627,6 +627,11 @@
         "cta": "Verify now"
       }
     },
+    "addPhone": {
+      "title": "Add your phone number",
+      "desc": "Secure your account and get order updates by SMS. We’ll text a code to confirm it’s yours.",
+      "cta": "Add phone number"
+    },
     "profile": {
       "title": "Profile",
       "firstName": "First name",

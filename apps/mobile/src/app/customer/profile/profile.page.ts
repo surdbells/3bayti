@@ -16,7 +16,7 @@ import {
 import {Reviews} from "../../class/reviews";
 import {Subscription} from "rxjs";
 import {ConnectionService} from "../../service/connection.service";
-import {Router, RouterLink} from "@angular/router";
+import {ActivatedRoute, Router, RouterLink} from "@angular/router";
 import {ActionSheetController} from "@ionic/angular";
 import {NetworkService} from "../../service/network.service";
 import {MobileNetworkAdapter} from "../../core/http/mobile-network-adapter";
@@ -75,6 +75,7 @@ export class ProfilePage implements OnInit, OnDestroy {
     private net: ConnectionService,
     private platform: Platform,
     private router: Router,
+    private route: ActivatedRoute,
     private actionSheetCtrl: ActionSheetController,
     private networkService: NetworkService,
     private networkAdapter: MobileNetworkAdapter,
@@ -383,6 +384,11 @@ export class ProfilePage implements OnInit, OnDestroy {
 
   ngOnInit() {
     this.getObject();
+    // Opened from the "add your phone" banner (home / account) with
+    // ?addPhone=1 — jump straight into the add/change-phone OTP flow.
+    if (this.route.snapshot.queryParamMap.get('addPhone')) {
+      this.openChangePhone();
+    }
   }
   ngOnDestroy(): void {
     this.sub?.unsubscribe();

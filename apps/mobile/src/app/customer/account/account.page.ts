@@ -47,6 +47,7 @@ import {TranslatePipe} from "../../translate.pipe";
 import { AxIconComponent } from '../../shared/ax-mobile/icon';
 import { AxLoaderComponent } from '../../shared/ax-mobile/loader';
 import { AxWishlistSheetComponent } from '../../shared/ax-mobile/wishlist-sheet';
+import { AddPhoneBannerComponent } from '../../shared/add-phone-banner.component';
 import { cfImage } from '../../shared/cf-image';
 interface Category {
   readonly id: number;
@@ -78,7 +79,7 @@ export interface Store {
   templateUrl: './account.page.html',
   styleUrls: ['./account.page.scss'],
   standalone: true,
-  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink, AppTabBarComponent]
+  imports: [IonContent, IonHeader, IonToolbar, CommonModule, FormsModule, IonButton, IonButtons, IonAvatar, IonBadge, IonFab, IonFabButton, IonRow, IonCol, IonGrid, IonIcon, IonRefresher, IonRefresherContent, CartIconComponent, TranslatePipe, IonInfiniteScroll, IonInfiniteScrollContent, AxIconComponent, AxLoaderComponent, AxWishlistSheetComponent, RouterLink, AppTabBarComponent, AddPhoneBannerComponent]
 })
 
 export class AccountPage implements OnInit, OnDestroy {

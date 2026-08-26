@@ -11,6 +11,7 @@ import { RouterLink } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
 import { NavIconComponent } from '../../layout/header/nav-icon';
+import { AddPhonePromptComponent } from '../../shared/ui/add-phone-prompt';
 import { MessagesService } from '../messages/messages.service';
 import { SUPPORT_WHATSAPP_URL } from '../../core/config/support.constants';
 
@@ -29,11 +30,14 @@ import { SUPPORT_WHATSAPP_URL } from '../../core/config/support.constants';
 @Component({
   selector: 'app-account-hub',
   standalone: true,
-  imports: [NgIf, RouterLink, TranslatePipe, NavIconComponent],
+  imports: [NgIf, RouterLink, TranslatePipe, NavIconComponent, AddPhonePromptComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <main class="account-hub" data-testid="account-hub-page">
       <div class="account-hub__container">
+        <!-- No phone on file (social sign-up): prompt to add + verify one. -->
+        <app-add-phone-prompt />
+
         <div
           *ngIf="showVerifyBanner()"
           class="verify-reminder"
@@ -196,15 +200,23 @@ export class AccountHubPageComponent implements OnInit {
   }
 
   /**
-   * Show the phone-verification reminder when the signed-in user hasn't
-   * verified their phone and hasn't dismissed the banner this session.
-   * Verification is required before placing an order.
+   * Show the phone-verification reminder when the signed-in user HAS a phone
+   * on file but hasn't verified it, and hasn't dismissed the banner this
+   * session. Verification is required before placing an order.
+   *
+   * The no-phone case (social sign-ups with phone === '') is handled by the
+   * separate <app-add-phone-prompt> above — requiring a phone here keeps the
+   * two banners mutually exclusive.
    */
-  protected readonly showVerifyBanner = computed(
-    () =>
-      this.auth.currentUser()?.is_phone_verified === false &&
-      !this.bannerDismissed(),
-  );
+  protected readonly showVerifyBanner = computed(() => {
+    const u = this.auth.currentUser();
+    return (
+      u !== null &&
+      u.is_phone_verified === false &&
+      !!u.phone &&
+      !this.bannerDismissed()
+    );
+  });
 
   protected dismissVerifyBanner(): void {
     this.bannerDismissed.set(true);
