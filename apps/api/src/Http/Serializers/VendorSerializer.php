@@ -64,6 +64,7 @@ final class VendorSerializer
             // seven emirates (or null); country is conceptually always
             // "United Arab Emirates" but emitted explicitly so the admin
             // Stores table + store editor can surface/correct it.
+            'store_address' => $v->getStoreAddress(),
             'emirate' => $v->getEmirate(),
             'country' => $v->getCountry(),
             'legacy_vendor_id' => $v->getLegacyVendorId(),
