@@ -6,12 +6,18 @@ import {
   OnInit,
 } from '@angular/core';
 import { NgIf, NgFor } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { ReactiveFormsModule, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { FormFieldComponent, ToastService, mapApiErrors } from '../../shared/forms';
 import { ProfileService, ProfileUpdate, ProfileGender } from './profile.service';
+import { PhoneService } from '../../core/auth/phone.service';
+import { AUTH_ERROR_CODES } from '../../core/auth/auth.types';
 import type { AuthUser } from '../../core/auth/auth.types';
+
+/** Steps of the inline change-phone flow. */
+type PhoneChangeStep = 'enterPhone' | 'enterCode';
 
 const GENDERS: ProfileGender[] = ['male', 'female', 'other', 'prefer_not_to_say'];
 const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
@@ -198,7 +204,135 @@ const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
                     [attr.title]="'account.profile.verified' | translate"
                     data-testid="prof-phone-verified"
                   >✓</span>
+                  <button
+                    *ngIf="!phoneEditing()"
+                    type="button"
+                    class="account-profile__readonly-action"
+                    (click)="startPhoneChange()"
+                    data-testid="prof-phone-change"
+                  >
+                    {{ 'account.profile.phoneChange.change' | translate }}
+                  </button>
                 </span>
+              </div>
+
+              <!-- Inline change-phone flow (OTP verified). -->
+              <div
+                *ngIf="phoneEditing()"
+                class="account-profile__phone-change"
+                data-testid="prof-phone-change-flow"
+              >
+                <!-- Step 1: enter the new number. -->
+                <ng-container *ngIf="phoneStep() === 'enterPhone'">
+                  <label class="account-profile__phone-label" for="prof-phone-new">
+                    {{ 'account.profile.phoneChange.newLabel' | translate }}
+                  </label>
+                  <input
+                    id="prof-phone-new"
+                    type="tel"
+                    inputmode="tel"
+                    autocomplete="tel"
+                    spellcheck="false"
+                    class="auth-input"
+                    [placeholder]="'account.profile.phoneChange.placeholder' | translate"
+                    [value]="newPhone()"
+                    (input)="onNewPhoneInput($event)"
+                    [disabled]="phoneBusy()"
+                    data-testid="prof-phone-input"
+                  />
+                  <p class="account-profile__phone-hint">
+                    {{ 'account.profile.phoneChange.hint' | translate }}
+                  </p>
+
+                  <p
+                    *ngIf="phoneError() as phoneErr"
+                    class="account-profile__phone-error"
+                    role="alert"
+                    data-testid="prof-phone-error"
+                  >
+                    {{ phoneErr | translate }}
+                  </p>
+
+                  <div class="account-profile__phone-actions">
+                    <button
+                      type="button"
+                      class="account-profile__phone-btn"
+                      (click)="sendPhoneOtp()"
+                      [disabled]="phoneBusy()"
+                      data-testid="prof-phone-send"
+                    >
+                      {{ (phoneBusy() ? 'common.loading' : 'account.profile.phoneChange.sendCode') | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="account-profile__phone-btn account-profile__phone-btn--ghost"
+                      (click)="cancelPhoneChange()"
+                      [disabled]="phoneBusy()"
+                      data-testid="prof-phone-cancel"
+                    >
+                      {{ 'account.profile.phoneChange.cancel' | translate }}
+                    </button>
+                  </div>
+                </ng-container>
+
+                <!-- Step 2: enter the OTP code. -->
+                <ng-container *ngIf="phoneStep() === 'enterCode'">
+                  <label class="account-profile__phone-label" for="prof-phone-otp">
+                    {{ 'account.profile.phoneChange.codeLabel' | translate : { phone: newPhone() } }}
+                  </label>
+                  <input
+                    id="prof-phone-otp"
+                    type="text"
+                    autocomplete="one-time-code"
+                    inputmode="numeric"
+                    maxlength="6"
+                    spellcheck="false"
+                    class="auth-input auth-input--code"
+                    [value]="phoneCode()"
+                    (input)="onPhoneCodeInput($event)"
+                    [disabled]="phoneBusy()"
+                    data-testid="prof-phone-code"
+                  />
+
+                  <p
+                    *ngIf="phoneError() as phoneErr"
+                    class="account-profile__phone-error"
+                    role="alert"
+                    data-testid="prof-phone-error"
+                  >
+                    {{ phoneErr | translate }}
+                  </p>
+
+                  <div class="account-profile__phone-actions">
+                    <button
+                      type="button"
+                      class="account-profile__phone-btn"
+                      (click)="verifyPhoneOtp()"
+                      [disabled]="phoneBusy()"
+                      data-testid="prof-phone-verify"
+                    >
+                      {{ (phoneBusy() ? 'common.loading' : 'account.profile.phoneChange.verify') | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="account-profile__phone-btn account-profile__phone-btn--ghost"
+                      (click)="resendPhoneOtp()"
+                      [disabled]="phoneBusy()"
+                      data-testid="prof-phone-resend"
+                    >
+                      {{ 'account.profile.phoneChange.resend' | translate }}
+                    </button>
+                    <button
+                      type="button"
+                      class="account-profile__phone-btn account-profile__phone-btn--ghost"
+                      (click)="cancelPhoneChange()"
+                      [disabled]="phoneBusy()"
+                      data-testid="prof-phone-cancel"
+                    >
+                      {{ 'account.profile.phoneChange.cancel' | translate }}
+                    </button>
+                  </div>
+                </ng-container>
               </div>
             </div>
 
@@ -239,6 +373,7 @@ const LOCALES = ['en', 'ar', 'en-AE', 'ar-AE'];
 })
 export class AccountProfilePageComponent implements OnInit {
   private readonly profileService = inject(ProfileService);
+  private readonly phoneService = inject(PhoneService);
   private readonly toast = inject(ToastService);
 
   protected readonly genders = GENDERS;
@@ -253,6 +388,21 @@ export class AccountProfilePageComponent implements OnInit {
   protected emailVerified = (): boolean => this._user()?.is_email_verified ?? false;
   protected phoneVerified = (): boolean => this._user()?.is_phone_verified ?? false;
   protected avatarUrl = (): string | null => this._user()?.avatar_url ?? null;
+
+  /* ---- Change-phone (OTP) flow state ---------------------------------
+     A small inline two-step flow next to the read-only phone: enter a new
+     E.164 number → send OTP → enter the 6-digit code → verify. State is
+     signal-based (no reactive form) since it's a self-contained widget;
+     PhoneService writes the verified number back into AuthService, and we
+     mirror it into the local _user so phone()/phoneVerified() update. */
+  protected readonly phoneEditing = signal<boolean>(false);
+  protected readonly phoneStep = signal<PhoneChangeStep>('enterPhone');
+  protected readonly newPhone = signal<string>('');
+  protected readonly phoneCode = signal<string>('');
+  protected readonly phoneBusy = signal<boolean>(false);
+  /** i18n key of the current inline error, or null when clear. */
+  protected readonly phoneError = signal<string | null>(null);
+  private readonly phoneVerificationId = signal<string | null>(null);
 
   /** Initials shown as a placeholder when no avatar is set. */
   protected initials(): string {
@@ -382,6 +532,177 @@ export class AccountProfilePageComponent implements OnInit {
         this.toast.error('account.profile.errors.saveFailed');
       }
     }
+  }
+
+  /* ------------------------------------------------------------------
+     Change-phone (OTP) flow
+     ------------------------------------------------------------------ */
+
+  /** Open the inline flow, pre-filling the current number for convenience. */
+  protected startPhoneChange(): void {
+    this.phoneEditing.set(true);
+    this.phoneStep.set('enterPhone');
+    this.newPhone.set(this.phone());
+    this.phoneCode.set('');
+    this.phoneError.set(null);
+    this.phoneVerificationId.set(null);
+  }
+
+  /** Close the flow and reset all transient state. */
+  protected cancelPhoneChange(): void {
+    if (this.phoneBusy()) return;
+    this.phoneEditing.set(false);
+    this.phoneStep.set('enterPhone');
+    this.newPhone.set('');
+    this.phoneCode.set('');
+    this.phoneError.set(null);
+    this.phoneVerificationId.set(null);
+  }
+
+  protected onNewPhoneInput(event: Event): void {
+    this.newPhone.set((event.target as HTMLInputElement).value);
+    if (this.phoneError() !== null) this.phoneError.set(null);
+  }
+
+  protected onPhoneCodeInput(event: Event): void {
+    this.phoneCode.set((event.target as HTMLInputElement).value);
+    if (this.phoneError() !== null) this.phoneError.set(null);
+  }
+
+  /** Basic client-side E.164 check: leading '+', then 7–15 digits. */
+  private isValidE164(phone: string): boolean {
+    return /^\+\d{7,15}$/.test(phone);
+  }
+
+  /**
+   * Step 1 → 2: validate the number, POST /me/phone to dispatch an OTP,
+   * store the verification_id and advance to the code step. A 409
+   * CONFLICT_PHONE_TAKEN (number on another account) surfaces inline.
+   */
+  protected async sendPhoneOtp(): Promise<void> {
+    if (this.phoneBusy()) return;
+    const phone = this.newPhone().trim();
+    if (!this.isValidE164(phone)) {
+      this.phoneError.set('account.profile.phoneChange.errors.invalidPhone');
+      return;
+    }
+    this.phoneBusy.set(true);
+    this.phoneError.set(null);
+    try {
+      const res = await this.phoneService.sendOtp(phone);
+      this.phoneVerificationId.set(res.verification_id);
+      this.newPhone.set(phone);
+      this.phoneCode.set('');
+      this.phoneStep.set('enterCode');
+    } catch (err) {
+      this.phoneError.set(this.sendErrorKey(err));
+    } finally {
+      this.phoneBusy.set(false);
+    }
+  }
+
+  /** Re-dispatch an OTP to the same number (stays on the code step). */
+  protected async resendPhoneOtp(): Promise<void> {
+    if (this.phoneBusy()) return;
+    const phone = this.newPhone().trim();
+    if (!this.isValidE164(phone)) {
+      this.phoneError.set('account.profile.phoneChange.errors.invalidPhone');
+      return;
+    }
+    this.phoneBusy.set(true);
+    this.phoneError.set(null);
+    try {
+      const res = await this.phoneService.sendOtp(phone);
+      this.phoneVerificationId.set(res.verification_id);
+      this.phoneCode.set('');
+      this.toast.success('account.profile.phoneChange.codeResent');
+    } catch (err) {
+      this.phoneError.set(this.sendErrorKey(err));
+    } finally {
+      this.phoneBusy.set(false);
+    }
+  }
+
+  /**
+   * Step 2: confirm the OTP via POST /me/phone/verify. On success
+   * PhoneService writes the verified number back into AuthService; we
+   * mirror it into _user so phone()/phoneVerified() update, then close.
+   */
+  protected async verifyPhoneOtp(): Promise<void> {
+    if (this.phoneBusy()) return;
+    const vid = this.phoneVerificationId();
+    const code = this.phoneCode().trim();
+    if (vid === null) {
+      this.phoneError.set('account.profile.phoneChange.errors.sendFailed');
+      return;
+    }
+    if (!/^\d{4,6}$/.test(code)) {
+      this.phoneError.set('account.profile.phoneChange.errors.invalidCode');
+      return;
+    }
+    this.phoneBusy.set(true);
+    this.phoneError.set(null);
+    try {
+      const res = await this.phoneService.verify(vid, code);
+      const user = this._user();
+      if (user !== null) {
+        this._user.set({ ...user, phone: res.phone, is_phone_verified: res.is_phone_verified });
+      }
+      this.phoneEditing.set(false);
+      this.phoneStep.set('enterPhone');
+      this.newPhone.set('');
+      this.phoneCode.set('');
+      this.phoneVerificationId.set(null);
+      this.toast.success('account.profile.phoneChange.updated');
+    } catch (err) {
+      this.phoneError.set(this.verifyErrorKey(err));
+    } finally {
+      this.phoneBusy.set(false);
+    }
+  }
+
+  /** Extract the API error_code from an HttpErrorResponse body (flat or nested). */
+  private extractErrorCode(err: unknown): string | null {
+    if (!(err instanceof HttpErrorResponse)) return null;
+    const body = err.error as
+      | { error_code?: string; code?: string; error?: { code?: string } }
+      | string
+      | null;
+    if (body === null || typeof body !== 'object') return null;
+    return body.error_code ?? body.error?.code ?? body.code ?? null;
+  }
+
+  /** Map a send-OTP failure to an inline i18n key. */
+  private sendErrorKey(err: unknown): string {
+    if (!(err instanceof HttpErrorResponse) || err.status === 0) {
+      return 'common.errors.network';
+    }
+    const code = this.extractErrorCode(err);
+    if (code === AUTH_ERROR_CODES.CONFLICT_PHONE_TAKEN) {
+      return 'account.profile.phoneChange.errors.taken';
+    }
+    if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
+      return 'account.profile.phoneChange.errors.rateLimited';
+    }
+    return 'account.profile.phoneChange.errors.sendFailed';
+  }
+
+  /** Map a verify-OTP failure to an inline i18n key. */
+  private verifyErrorKey(err: unknown): string {
+    if (!(err instanceof HttpErrorResponse) || err.status === 0) {
+      return 'common.errors.network';
+    }
+    const code = this.extractErrorCode(err);
+    if (
+      code === AUTH_ERROR_CODES.OTP_INVALID_CODE ||
+      code === AUTH_ERROR_CODES.OTP_VERIFICATION_FAILED
+    ) {
+      return 'account.profile.phoneChange.errors.invalidCode';
+    }
+    if (code === AUTH_ERROR_CODES.OTP_RATE_LIMITED) {
+      return 'account.profile.phoneChange.errors.rateLimited';
+    }
+    return 'account.profile.phoneChange.errors.verifyFailed';
   }
 
   /**

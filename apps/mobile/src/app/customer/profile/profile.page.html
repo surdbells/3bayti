@@ -97,6 +97,14 @@
               </ax-text-field>
             </ion-col>
           </ion-row>
+          <!-- Phone is edited only via the OTP-verified change flow. -->
+          <ion-row class="profile-row profile-row--change-phone">
+            <ion-col class="ion-no-padding">
+              <button type="button" class="profile-change-phone-btn" (click)="openChangePhone()">
+                {{ 'change_phone_number' | translate }}
+              </button>
+            </ion-col>
+          </ion-row>
         }
         @if (!ui_controls.is_loading || !ui_controls.is_updating) {
           <ion-row class="profile-row">
@@ -179,6 +187,117 @@
     </ul>
 
     @if (filteredDialCodes().length === 0) {
+      <div class="cc-list__empty">{{ 'label_no_results' | translate }}</div>
+    }
+  </ax-bottom-sheet>
+
+  <!-- Change-phone flow (2 steps: enter number -> verify OTP) -->
+  <ax-bottom-sheet
+    [isOpen]="changeFlow.isOpen"
+    (didDismiss)="onChangeSheetDismissed()"
+    [title]="'change_phone_number' | translate">
+
+    @if (changeFlow.loading) {
+      <div class="cp-loader"><ax-loader></ax-loader></div>
+    }
+
+    <!-- Step 1: enter new number -->
+    @if (!changeFlow.loading && changeFlow.step === 1) {
+      <p class="cp-help">{{ 'change_phone_enter_new' | translate }}</p>
+      <div class="cp-phone-row">
+        <div class="cp-cc-field">
+          <label class="profile-field-label">{{ 'label_dial_code' | translate }}</label>
+          <ion-button expand="block" class="profile-cc-btn" type="button" (click)="isChangeCcOpen = true">
+            <span class="cc-flag">{{ changeSelectedDial?.flag }}</span>
+            <span class="cc-code">{{ changeFlow.countryCode }}</span>
+            <ax-icon name="chevron-down" slot="end" [style.color]="'var(--ion-color-secondary)'"/>
+          </ion-button>
+        </div>
+        <div class="cp-phone-field">
+          <ax-text-field
+            [label]="'label_phone_number' | translate"
+            type="tel"
+            inputmode="numeric"
+            [maxlength]="15"
+            [placeholder]="'enter_phone' | translate"
+            autocomplete="tel-national"
+            [(ngModel)]="changeFlow.phone"
+            name="change_phone">
+          </ax-text-field>
+        </div>
+      </div>
+      <ion-button expand="block" class="profile-submit-btn" type="button" (click)="sendPhoneCode()">
+        {{ 'button_send_code' | translate }}
+      </ion-button>
+      <ion-button expand="block" fill="clear" type="button" (click)="changeFlow.isOpen = false">
+        {{ 'cancel' | translate }}
+      </ion-button>
+    }
+
+    <!-- Step 2: verify OTP -->
+    @if (!changeFlow.loading && changeFlow.step === 2) {
+      <p class="cp-help">
+        {{ 'otp_sent_to' | translate }} <strong>{{ changeFullPhone }}</strong>
+      </p>
+      <ax-text-field
+        [label]="'otp' | translate"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        [(ngModel)]="changeFlow.code"
+        name="change_otp">
+      </ax-text-field>
+      <ion-button
+        expand="block"
+        class="profile-submit-btn"
+        type="button"
+        [disabled]="changeFlow.locked && changeFlow.cooldown > 0"
+        (click)="verifyPhoneCode()">
+        {{ 'button_verify' | translate }}
+      </ion-button>
+      <div class="cp-secondary-row">
+        <ion-button
+          fill="clear"
+          size="small"
+          type="button"
+          [disabled]="changeFlow.cooldown > 0"
+          (click)="resendPhoneCode()">
+          @if (changeFlow.locked && changeFlow.cooldown > 0) {
+            {{ 'otp_locked_countdown' | translate:{ seconds: changeFlow.cooldown } }}
+          } @else if (changeFlow.cooldown > 0) {
+            {{ 'resend_otp_countdown' | translate:{ seconds: changeFlow.cooldown } }}
+          } @else {
+            {{ 'resend_otp' | translate }}
+          }
+        </ion-button>
+        <ion-button fill="clear" size="small" type="button" (click)="changeFlow.isOpen = false">
+          {{ 'cancel' | translate }}
+        </ion-button>
+      </div>
+    }
+  </ax-bottom-sheet>
+
+  <!-- Dial-code picker for the change-phone flow (nested overlay) -->
+  <ax-bottom-sheet
+    [isOpen]="isChangeCcOpen"
+    (didDismiss)="isChangeCcOpen = false; changeCodeSearch = ''"
+    [title]="'title_select_country_code' | translate"
+    [searchable]="true"
+    [searchPlaceholder]="'placeholder_search_country_or_code' | translate"
+    [searchQuery]="changeCodeSearch"
+    (searchChange)="changeCodeSearch = $event">
+
+    <ul class="cc-list">
+      @for (c of filteredChangeCodes(); track c.code) {
+        <li class="cc-list__item" (click)="selectChangeCode(c); isChangeCcOpen = false" role="button" tabindex="0">
+          <span class="cc-list__flag">{{ c.flag }}</span>
+          <span class="cc-list__name">{{ c.name }}</span>
+          <span class="cc-list__code">{{ c.code }}</span>
+        </li>
+      }
+    </ul>
+
+    @if (filteredChangeCodes().length === 0) {
       <div class="cc-list__empty">{{ 'label_no_results' | translate }}</div>
     }
   </ax-bottom-sheet>

@@ -148,11 +148,245 @@ export class ProfilePage implements OnInit, OnDestroy {
   get fullPhone(): string {
     return `${this.update.countryCode}${(this.update.phone || '').replace(/\D/g, '')}`;
   }
+
+  // ── Change-phone (OTP) flow ────────────────────────────────────────────
+  // The phone field on the main form is DISABLED; editing the number happens
+  // only through this two-step OTP flow (matches the register phone-after-
+  // social gate that hits the same POST /me/phone + POST /me/phone/verify).
+  //   step 1: enter new number  -> POST /me/phone        -> verification_id
+  //   step 2: enter OTP          -> POST /me/phone/verify -> { phone, ... }
+  changeFlow = {
+    isOpen: false,
+    step: 1 as 1 | 2,
+    countryCode: '+971',
+    phone: '',
+    code: '',
+    verificationId: '',
+    loading: false,
+    cooldown: 0, // remaining seconds the Resend control is disabled
+    locked: false, // hard server rate-limit lockout (disables Verify too)
+  };
+  /** Controls the nested dial-code picker sheet for the change-phone flow. */
+  isChangeCcOpen = false;
+  /** Search query for the change-phone flow's dial-code picker. */
+  changeCodeSearch = '';
+  private changeOtpTimer: ReturnType<typeof setInterval> | null = null;
+  private readonly CHANGE_RESEND_COOLDOWN = 30;
+  private readonly CHANGE_DEFAULT_LOCKOUT = 60;
+
+  /** Selected dial-code metadata (flag) for the change-flow picker button. */
+  get changeSelectedDial(): DialCode | undefined {
+    return this.dialCodes.find(d => d.code === this.changeFlow.countryCode);
+  }
+
+  /** Full E.164 phone for the change flow ("+971" + national digits). */
+  get changeFullPhone(): string {
+    return `${this.changeFlow.countryCode}${(this.changeFlow.phone || '').replace(/\D/g, '')}`;
+  }
+
+  filteredChangeCodes(): DialCode[] {
+    const q = this.changeCodeSearch.trim().toLowerCase();
+    if (!q) return this.dialCodes;
+    return this.dialCodes.filter(d =>
+      d.name.toLowerCase().includes(q) || d.code.includes(q)
+    );
+  }
+
+  selectChangeCode(d: DialCode) {
+    this.changeFlow.countryCode = d.code;
+    this.changeCodeSearch = '';
+  }
+
+  /** Open the change-phone sheet, seeded from the current profile number. */
+  openChangePhone() {
+    this.clearChangeOtpTimer();
+    this.changeFlow = {
+      isOpen: true,
+      step: 1,
+      countryCode: this.update.countryCode || '+971',
+      phone: '',
+      code: '',
+      verificationId: '',
+      loading: false,
+      cooldown: 0,
+      locked: false,
+    };
+  }
+
+  /** Reset the flow when the sheet dismisses (backdrop / swipe / Cancel). */
+  onChangeSheetDismissed() {
+    this.changeFlow.isOpen = false;
+    this.clearChangeOtpTimer();
+    this.changeFlow.cooldown = 0;
+    this.changeFlow.locked = false;
+  }
+
+  /** Step 1 (and Resend): request an OTP for the entered number. */
+  sendPhoneCode() {
+    if (!this.isOnline) {
+      this.error_notification(this.i18n.t('text_offline_check_connection'));
+      return;
+    }
+    if ((this.changeFlow.phone || '').replace(/\D/g, '').length === 0) {
+      this.error_notification(this.i18n.t('text_phone_required'));
+      return;
+    }
+    this.changeFlow.loading = true;
+    this.networkAdapter
+      .post_v3('POST /me/phone', { phone: this.changeFullPhone }, { authToken: this.single_user.token })
+      .subscribe({
+        next: (response: any) => {
+          this.changeFlow.loading = false;
+          if (response.response_code === 200 && response.status === 'success') {
+            const vid = response.data?.verification_id;
+            if (typeof vid !== 'string' || vid.length === 0) {
+              this.error_notification(this.i18n.t('text_request_failed'));
+              return;
+            }
+            this.changeFlow.verificationId = vid;
+            this.changeFlow.code = '';
+            this.changeFlow.step = 2;
+            this.startChangeCooldown(this.CHANGE_RESEND_COOLDOWN);
+            this.success_notification(this.i18n.t('text_otp_sent'));
+          } else {
+            this.handleChangeOtpError(response);
+          }
+        },
+        error: (err: any) => {
+          this.changeFlow.loading = false;
+          this.error_notification(apiErrorMessage(err, this.i18n.t('text_request_failed')));
+        },
+      });
+  }
+
+  resendPhoneCode() {
+    if (this.changeFlow.cooldown > 0) return; // cooldown / lockout active
+    this.sendPhoneCode();
+  }
+
+  /** Step 2: verify the OTP; on success update the displayed number. */
+  verifyPhoneCode() {
+    const code = (this.changeFlow.code ?? '').trim();
+    if (code.length === 0) {
+      this.error_notification(this.i18n.t('text_otp_required'));
+      return;
+    }
+    if (!this.changeFlow.verificationId) {
+      this.error_notification(this.i18n.t('text_request_failed'));
+      return;
+    }
+    this.changeFlow.loading = true;
+    this.networkAdapter
+      .post_v3(
+        'POST /me/phone/verify',
+        { verification_id: this.changeFlow.verificationId, code },
+        { authToken: this.single_user.token },
+      )
+      .subscribe({
+        next: async (response: any) => {
+          this.changeFlow.loading = false;
+          if (response.response_code === 200 && response.status === 'success') {
+            const newPhone = response.data?.phone;
+            // Reflect the verified number on the (disabled) main form.
+            this.update.countryCode = this.changeFlow.countryCode;
+            this.update.phone = (this.changeFlow.phone || '').replace(/\D/g, '');
+            // Persist the full E.164 onto the cached user blob so other
+            // pages see the new number (mirrors the avatar-upload persist).
+            this.single_user.phone =
+              typeof newPhone === 'string' && newPhone.length > 0 ? newPhone : this.changeFullPhone;
+            try {
+              await Preferences.set({ key: 'user', value: JSON.stringify(this.single_user) });
+            } catch {
+              /* non-fatal */
+            }
+            this.clearChangeOtpTimer();
+            this.changeFlow.isOpen = false;
+            this.success_notification(this.i18n.t('text_phone_updated'));
+          } else {
+            this.handleChangeOtpError(response);
+          }
+        },
+        error: (err: any) => {
+          this.changeFlow.loading = false;
+          this.error_notification(apiErrorMessage(err, this.i18n.t('text_otp_verification_failed')));
+        },
+      });
+  }
+
+  /**
+   * Map the v3 error envelope (surfaced through the success channel by
+   * MobileNetworkAdapter) to a friendly message, and start a lockout on
+   * OTP_RATE_LIMITED. Known codes map to i18n; otherwise the real server
+   * message is shown (e.g. "That phone number is already registered.").
+   */
+  private handleChangeOtpError(response: any) {
+    if (response?.error_code === 'OTP_RATE_LIMITED') {
+      const ra = Number(response?.error_details?.retry_after ?? response?.retry_after);
+      this.startChangeLockout(Number.isFinite(ra) && ra > 0 ? Math.ceil(ra) : this.CHANGE_DEFAULT_LOCKOUT);
+    }
+    this.error_notification(this.mapChangeError(response));
+  }
+
+  private mapChangeError(response: any): string {
+    switch (response?.error_code) {
+      case 'CONFLICT_PHONE_TAKEN':
+        return this.i18n.t('text_phone_already_registered');
+      case 'OTP_VERIFICATION_FAILED':
+        return this.i18n.t('text_otp_verification_failed');
+      case 'OTP_RATE_LIMITED':
+        return this.i18n.t('text_otp_rate_limited');
+      case 'OTP_PROVIDER_ERROR':
+        return this.i18n.t('text_otp_provider_error');
+      default:
+        break;
+    }
+    if (typeof response?.message === 'string' && response.message.trim() !== '') {
+      return response.message;
+    }
+    return this.i18n.t('text_request_failed');
+  }
+
+  /** Short cooldown after a successful send: disables Resend only. */
+  private startChangeCooldown(seconds: number) {
+    this.startChangeCountdown(seconds, false);
+  }
+
+  /** Longer server lockout: disables Resend AND Verify for `seconds`. */
+  private startChangeLockout(seconds: number) {
+    this.startChangeCountdown(seconds, true);
+  }
+
+  private startChangeCountdown(seconds: number, locked: boolean) {
+    this.clearChangeOtpTimer();
+    this.changeFlow.locked = locked;
+    this.changeFlow.cooldown = Math.max(0, Math.ceil(seconds));
+    if (this.changeFlow.cooldown === 0) {
+      this.changeFlow.locked = false;
+      return;
+    }
+    this.changeOtpTimer = setInterval(() => {
+      this.changeFlow.cooldown -= 1;
+      if (this.changeFlow.cooldown <= 0) {
+        this.clearChangeOtpTimer();
+        this.changeFlow.cooldown = 0;
+        this.changeFlow.locked = false;
+      }
+    }, 1000);
+  }
+
+  private clearChangeOtpTimer() {
+    if (this.changeOtpTimer) {
+      clearInterval(this.changeOtpTimer);
+      this.changeOtpTimer = null;
+    }
+  }
+
   ngOnInit() {
     this.getObject();
   }
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
+    this.clearChangeOtpTimer();
   }
   // Hardware back is left to Ionic's default IonRouterOutlet handling so it
   // pops to the previous screen natively (and closes any open overlay first)

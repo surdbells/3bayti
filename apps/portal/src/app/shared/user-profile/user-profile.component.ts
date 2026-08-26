@@ -41,9 +41,23 @@ export class UserProfileComponent implements OnInit {
   };
 
   get_single = { id: 0, token: '' };
+  // NOTE: phone is intentionally NOT part of the profile-update payload — the
+  // profile endpoint ignores it. Phone changes go through the OTP-verified
+  // change-phone flow below (POST /me/phone → POST /me/phone/verify).
   update_single = {
     id: 0, token: '',
-    first_name: '', last_name: '', email: '', phone: '', avatar: '',
+    first_name: '', last_name: '', email: '', avatar: '',
+  };
+
+  // Change-phone flow state (inline, two-step: enter number → verify code).
+  phone_change = {
+    open: false,
+    step: 'input' as 'input' | 'verify',
+    new_phone: '',
+    code: '',
+    verification_id: '',
+    is_sending: false,
+    is_verifying: false,
   };
 
   session_data: any = '';
@@ -107,7 +121,6 @@ export class UserProfileComponent implements OnInit {
     this.update_single.first_name = this.user_single.first_name;
     this.update_single.last_name = this.user_single.last_name;
     this.update_single.email = this.user_single.email;
-    this.update_single.phone = this.user_single.phone;
     this.update_single.avatar = this.user_single.avatar;
 
     this.ui_controls.is_saving = true;
@@ -163,5 +176,107 @@ export class UserProfileComponent implements OnInit {
         this.ui_controls.is_saving = false;
       },
     });
+  }
+
+  // ── Change phone (OTP-verified) ──────────────────────────────────────
+
+  private reset_phone_change() {
+    this.phone_change = {
+      open: false,
+      step: 'input',
+      new_phone: '',
+      code: '',
+      verification_id: '',
+      is_sending: false,
+      is_verifying: false,
+    };
+  }
+
+  open_phone_change() {
+    this.reset_phone_change();
+    this.phone_change.open = true;
+  }
+
+  cancel_phone_change() {
+    this.reset_phone_change();
+  }
+
+  /** Step 1: request a verification code for the new number. */
+  send_phone_code() {
+    const phone = (this.phone_change.new_phone || '').trim();
+    if (!/^\+[1-9]\d{6,14}$/.test(phone)) {
+      this.error_notification('Enter a valid phone number in international format, e.g. +9715XXXXXXXX.');
+      return;
+    }
+    this.phone_change.new_phone = phone;
+    this.phone_change.is_sending = true;
+    this.adapter.post_v3('POST /me/phone', { phone }).subscribe({
+      next: (response: any) => {
+        const vid = response?.data?.verification_id ?? response?.verification_id ?? '';
+        this.phone_change.verification_id = vid;
+        this.phone_change.code = '';
+        this.phone_change.step = 'verify';
+        this.phone_change.is_sending = false;
+        this.success_notification('We sent a 6-digit code to ' + phone + '.');
+      },
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Could not send the verification code. Please try again.'));
+        this.phone_change.is_sending = false;
+      },
+    });
+  }
+
+  /** Re-request a code for the same number (verify step). */
+  resend_phone_code() {
+    const phone = (this.phone_change.new_phone || '').trim();
+    if (!phone) {
+      return;
+    }
+    this.phone_change.is_sending = true;
+    this.adapter.post_v3('POST /me/phone', { phone }).subscribe({
+      next: (response: any) => {
+        const vid = response?.data?.verification_id ?? response?.verification_id;
+        if (vid) {
+          this.phone_change.verification_id = vid;
+        }
+        this.phone_change.is_sending = false;
+        this.success_notification('A new code is on its way.');
+      },
+      error: (err: any) => {
+        this.error_notification(apiErrorMessage(err, 'Could not resend the verification code. Please try again.'));
+        this.phone_change.is_sending = false;
+      },
+    });
+  }
+
+  /** Step 2: verify the code and commit the new number. */
+  verify_phone_code() {
+    const code = (this.phone_change.code || '').trim();
+    if (!/^\d{6}$/.test(code)) {
+      this.error_notification('Enter the 6-digit code we sent you.');
+      return;
+    }
+    if (!this.phone_change.verification_id) {
+      this.error_notification('Your session expired — please request a new code.');
+      return;
+    }
+    this.phone_change.is_verifying = true;
+    this.adapter
+      .post_v3('POST /me/phone/verify', {
+        verification_id: this.phone_change.verification_id,
+        code,
+      })
+      .subscribe({
+        next: (response: any) => {
+          const data = response?.data ?? response ?? {};
+          this.user_single.phone = data.phone ?? this.phone_change.new_phone;
+          this.success_notification('Your phone number has been updated.');
+          this.reset_phone_change();
+        },
+        error: (err: any) => {
+          this.error_notification(apiErrorMessage(err, 'Could not verify the code. Please try again.'));
+          this.phone_change.is_verifying = false;
+        },
+      });
   }
 }

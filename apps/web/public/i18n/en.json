@@ -653,6 +653,27 @@
       "save": "Save changes",
       "saved": "Your profile has been updated.",
       "noChanges": "No changes to save.",
+      "phoneChange": {
+        "change": "Change",
+        "newLabel": "New phone number",
+        "placeholder": "+9715XXXXXXXX",
+        "hint": "Enter your number in international format, starting with '+'.",
+        "sendCode": "Send code",
+        "codeLabel": "Enter the 6-digit code we sent to {{phone}}.",
+        "verify": "Verify",
+        "resend": "Resend code",
+        "cancel": "Cancel",
+        "codeResent": "We've sent a new code.",
+        "updated": "Your phone number has been updated.",
+        "errors": {
+          "invalidPhone": "Enter a valid number starting with '+' (e.g. +9715XXXXXXXX).",
+          "invalidCode": "That code is incorrect or has expired. Please try again.",
+          "taken": "That number is already registered to another account.",
+          "rateLimited": "Too many attempts. Please wait a moment and try again.",
+          "sendFailed": "We couldn't send the code. Please try again.",
+          "verifyFailed": "We couldn't verify that code. Please try again."
+        }
+      },
       "avatar": {
         "alt": "Your profile picture",
         "change": "Change photo",

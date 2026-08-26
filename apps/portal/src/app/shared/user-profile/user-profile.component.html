@@ -93,14 +93,130 @@
           <span class="ax-hint">{{ 'email_edit_notice' | translate }}</span>
         </div>
 
+        <!-- Phone (read-only display + OTP-verified change flow) -->
         <div class="ax-form-field ax-mb-4">
           <label class="ax-label" for="phone">{{ 'phone_number' | translate }}</label>
-          <input
-            id="phone"
-            type="text"
-            class="ax-input"
-            name="phone"
-            [(ngModel)]="user_single.phone" />
+          <div class="ax-flex ax-gap-2 ax-items-center ax-flex-wrap">
+            <input
+              id="phone"
+              type="text"
+              class="ax-input"
+              style="flex: 1; min-width: 12rem;"
+              disabled
+              readonly
+              name="phone"
+              [value]="user_single.phone || ('phone_none' | translate)" />
+            <button
+              *ngIf="!phone_change.open"
+              type="button"
+              class="ax-btn ax-btn-outline"
+              (click)="open_phone_change()">
+              <app-icon name="edit" aria-hidden="true"></app-icon>
+              {{ 'phone_change_cta' | translate }}
+            </button>
+          </div>
+
+          <!-- Change-phone flow -->
+          <div
+            *ngIf="phone_change.open"
+            class="ax-card ax-p-4 ax-mt-3"
+            style="background: var(--ax-color-bg-canvas);">
+
+            <!-- Step 1: enter the new number -->
+            <div *ngIf="phone_change.step === 'input'">
+              <h3 class="ax-text-sm ax-font-semibold ax-m-0 ax-mb-1">{{ 'phone_change_title' | translate }}</h3>
+              <p class="ax-text-xs ax-text-secondary ax-m-0 ax-mb-3">{{ 'phone_change_subtext' | translate }}</p>
+
+              <div class="ax-form-field ax-mb-3">
+                <label class="ax-label" for="new_phone">{{ 'phone_new_label' | translate }}</label>
+                <div class="ax-input-group">
+                  <app-icon name="call" aria-hidden="true" class="ax-input-group-prefix"></app-icon>
+                  <input
+                    id="new_phone"
+                    type="tel"
+                    class="ax-input"
+                    name="new_phone"
+                    placeholder="+9715XXXXXXXX"
+                    inputmode="tel"
+                    autocomplete="tel"
+                    [(ngModel)]="phone_change.new_phone"
+                    [disabled]="phone_change.is_sending" />
+                </div>
+                <span class="ax-hint">{{ 'phone_new_hint' | translate }}</span>
+              </div>
+
+              <div class="ax-flex ax-gap-2 ax-justify-end ax-flex-wrap">
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-ghost"
+                  (click)="cancel_phone_change()"
+                  [disabled]="phone_change.is_sending">
+                  {{ 'cancel' | translate }}
+                </button>
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-primary"
+                  (click)="send_phone_code()"
+                  [disabled]="phone_change.is_sending">
+                  <span *ngIf="phone_change.is_sending" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                  <app-icon name="send" *ngIf="!phone_change.is_sending" aria-hidden="true"></app-icon>
+                  {{ 'phone_send_code' | translate }}
+                </button>
+              </div>
+            </div>
+
+            <!-- Step 2: verify the code -->
+            <div *ngIf="phone_change.step === 'verify'">
+              <h3 class="ax-text-sm ax-font-semibold ax-m-0 ax-mb-1">{{ 'phone_verify_title' | translate }}</h3>
+              <p class="ax-text-xs ax-text-secondary ax-m-0 ax-mb-3">
+                {{ 'phone_verify_subtext' | translate }} <strong>{{ phone_change.new_phone }}</strong>
+              </p>
+
+              <div class="ax-form-field ax-mb-3">
+                <label class="ax-label" for="phone_code">{{ 'phone_code_label' | translate }}</label>
+                <input
+                  id="phone_code"
+                  type="text"
+                  class="ax-input"
+                  style="font-size: 1.5rem; letter-spacing: 0.5rem; text-align: center; font-family: var(--ax-font-display); font-weight: 600;"
+                  [(ngModel)]="phone_change.code"
+                  maxlength="6"
+                  inputmode="numeric"
+                  pattern="\d*"
+                  placeholder="••••••"
+                  autocomplete="one-time-code"
+                  name="phone_code"
+                  [disabled]="phone_change.is_verifying" />
+              </div>
+
+              <div class="ax-flex ax-gap-2 ax-justify-end ax-flex-wrap">
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-ghost"
+                  (click)="cancel_phone_change()"
+                  [disabled]="phone_change.is_verifying">
+                  {{ 'cancel' | translate }}
+                </button>
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-outline"
+                  (click)="resend_phone_code()"
+                  [disabled]="phone_change.is_verifying || phone_change.is_sending">
+                  <span *ngIf="phone_change.is_sending" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                  {{ 'resend_code' | translate }}
+                </button>
+                <button
+                  type="button"
+                  class="ax-btn ax-btn-primary"
+                  (click)="verify_phone_code()"
+                  [disabled]="phone_change.is_verifying">
+                  <span *ngIf="phone_change.is_verifying" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+                  <app-icon name="check" *ngIf="!phone_change.is_verifying" aria-hidden="true"></app-icon>
+                  {{ 'phone_verify_cta' | translate }}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="ax-flex ax-justify-end">
