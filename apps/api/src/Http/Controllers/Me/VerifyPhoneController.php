@@ -7,6 +7,7 @@ namespace Bayti\Api\Http\Controllers\Me;
 use Bayti\Api\Domain\User\OtpAttempt;
 use Bayti\Api\Domain\User\OtpService;
 use Bayti\Api\Domain\User\User;
+use Bayti\Api\Domain\User\UserRepository;
 use Bayti\Api\Domain\User\VerifyResult;
 use Bayti\Api\Http\Controllers\Me\Dto\VerifyPhoneInput;
 use Bayti\Api\Http\Errors\ErrorCodes;
@@ -93,8 +94,23 @@ final class VerifyPhoneController
             throw $this->verificationFailed();
         }
 
-        $this->em->wrapInTransaction(function () use ($user): void {
-            $user->markPhoneVerified();
+        // Pending-phone model: promote the number that was actually OTP-verified
+        // (the attempt's destination) to the active phone. Re-check uniqueness —
+        // the number could have been claimed by another account between the send
+        // and this verify.
+        $verifiedPhone = $attempt->getPhone();
+        /** @var UserRepository $users */
+        $users = $this->em->getRepository(User::class);
+        $owner = $users->findByPhone($verifiedPhone);
+        if ($owner !== null && $owner->getId() !== $user->getId()) {
+            throw HttpException::conflict(
+                ErrorCodes::CONFLICT_PHONE_TAKEN,
+                'That phone number is already registered.',
+            );
+        }
+
+        $this->em->wrapInTransaction(function () use ($user, $verifiedPhone): void {
+            $user->promotePendingPhone($verifiedPhone);
             $this->em->flush();
         });
 

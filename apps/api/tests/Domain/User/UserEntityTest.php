@@ -47,6 +47,35 @@ final class UserEntityTest extends TestCase
     }
 
     #[Test]
+    public function setPendingPhoneLeavesActivePhoneAndVerificationUntouched(): void
+    {
+        $user = new User('u@example.com', '+971500000001', null);
+        $user->markPhoneVerified();
+
+        $user->setPendingPhone('+971500000002');
+
+        // The pending-phone model must NOT change (or un-verify) the active
+        // phone until the OTP is confirmed — an abandoned change keeps it.
+        self::assertSame('+971500000001', $user->getPhone());
+        self::assertTrue($user->isPhoneVerified());
+        self::assertSame('+971500000002', $user->getPendingPhone());
+    }
+
+    #[Test]
+    public function promotePendingPhoneSetsVerifiesAndClears(): void
+    {
+        $user = new User('u@example.com', '+971500000001', null);
+        $user->markPhoneVerified();
+        $user->setPendingPhone('+971500000002');
+
+        $user->promotePendingPhone('+971500000002');
+
+        self::assertSame('+971500000002', $user->getPhone());
+        self::assertTrue($user->isPhoneVerified());
+        self::assertNull($user->getPendingPhone());
+    }
+
+    #[Test]
     public function userConstructorUppercasesCountryCode(): void
     {
         $user = new User('a@b.com', '+971501234567', 'pwhash', 'ae');

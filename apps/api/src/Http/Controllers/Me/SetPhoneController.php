@@ -24,9 +24,10 @@ use Psr\Http\Message\ServerRequestInterface;
 /**
  * POST /v3/me/phone  (AuthMiddleware)
  *
- * Set (or change) the authenticated user's phone number and dispatch an
- * OTP to it. The number is stored immediately but marked UNVERIFIED;
- * POST /v3/me/phone/verify completes the loop.
+ * Request setting/changing the authenticated user's phone: dispatch an OTP
+ * to the given number and stash it as PENDING. The active phone is NOT
+ * changed until POST /v3/me/phone/verify confirms the OTP, so an abandoned
+ * change keeps the current verified phone intact (pending-phone model).
  *
  * Primary use case: a user who signed up via Google/Apple (no phone)
  * adding one so they can receive SMS / unlock phone-gated features.
@@ -79,10 +80,12 @@ final class SetPhoneController
             );
         }
 
-        // Store the new number (unverified) before sending, so verify can
-        // confirm the OTP destination matches the user's pending phone.
-        if ($user->getPhone() !== $input->phone) {
-            $user->setPhone($input->phone);
+        // Pending-phone model: stash the requested number as PENDING and send
+        // the OTP to it, WITHOUT touching the active phone or its verified
+        // status. An abandoned change leaves the current verified phone intact;
+        // verify promotes the pending number only after the OTP succeeds.
+        if ($user->getPendingPhone() !== $input->phone) {
+            $user->setPendingPhone($input->phone);
             $users->save($user);
         }
 

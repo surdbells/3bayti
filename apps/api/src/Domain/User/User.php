@@ -120,6 +120,15 @@ class User
     private ?string $phone = null;
 
     /**
+     * A phone number awaiting OTP verification (the "pending-phone" model).
+     * SetPhoneController stores the requested new number here WITHOUT touching
+     * `phone`; VerifyPhoneController promotes it on OTP success and clears it.
+     * So an abandoned change never alters — or un-verifies — the active phone.
+     */
+    #[ORM\Column(name: 'pending_phone', type: 'string', length: 25, nullable: true)]
+    private ?string $pendingPhone = null;
+
+    /**
      * ISO 3166-1 alpha-2 country code (e.g. 'AE', 'SA'). Stored
      * separately from phone so we can prefix-strip when displaying
      * and country-format when sending SMS.
@@ -675,6 +684,26 @@ class User
     {
         $this->phone = ($phone === null || $phone === '') ? null : $phone;
         $this->isPhoneVerified = false;
+    }
+
+    public function getPendingPhone(): ?string { return $this->pendingPhone; }
+
+    /** Stash a phone number awaiting OTP verification (does not touch `phone`). */
+    public function setPendingPhone(?string $phone): void
+    {
+        $this->pendingPhone = ($phone === null || $phone === '') ? null : $phone;
+    }
+
+    /**
+     * Promote an OTP-verified number to the active phone: set it, mark verified,
+     * and clear the pending value. Called only after the OTP for this number
+     * succeeds (VerifyPhoneController).
+     */
+    public function promotePendingPhone(string $verifiedPhone): void
+    {
+        $this->phone = $verifiedPhone;
+        $this->isPhoneVerified = true;
+        $this->pendingPhone = null;
     }
 
     public function markPhoneVerified(): void
