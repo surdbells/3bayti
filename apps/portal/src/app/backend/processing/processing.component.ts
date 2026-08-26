@@ -20,7 +20,14 @@ import {
   type AxServerFetchResult,
   type AxDateRange,
 } from '../../shared/data/enterprise';
-import { ORDER_STATUS_OPTIONS, ORDER_TYPE_OPTIONS, loadAdminVendorOptions, prettyOrderStatus } from '../shared/order-filters';
+import {
+  ORDER_STATUS_OPTIONS,
+  ORDER_TYPE_OPTIONS,
+  ACTIVE_ORDER_STATUSES,
+  ACTIVE_ORDER_STATUS_VALUE,
+  loadAdminVendorOptions,
+  prettyOrderStatus,
+} from '../shared/order-filters';
 
 export interface Transaction extends Record<string, unknown> {
   id: number;
@@ -82,13 +89,19 @@ export class ProcessingComponent implements OnInit {
       emptyDescription: 'No orders match your current filters.',
       export: { enabled: true, formats: ['csv', 'xlsx', 'pdf'], filename: 'orders-and-sales' },
       filters: [
-        // Status as a chip strip: defaults to Paid, each chip shows a count.
+        // Status as a chip strip: defaults to "Active" (every status except
+        // the exempt set — pending payment, cancelled, failed), each chip shows
+        // a count. "All" and the individual statuses remain selectable.
         {
           key: 'status',
           label: 'Status',
           type: 'chips',
-          options: [{ label: 'All', value: '' }, ...ORDER_STATUS_OPTIONS],
-          defaultValue: 'paid',
+          options: [
+            { label: 'Active', value: ACTIVE_ORDER_STATUS_VALUE },
+            { label: 'All', value: '' },
+            ...ORDER_STATUS_OPTIONS,
+          ],
+          defaultValue: ACTIVE_ORDER_STATUS_VALUE,
           countsLoader: () => this.loadStatusCounts(),
         },
         { key: 'date', label: 'Date', type: 'date-range' },
@@ -191,6 +204,11 @@ export class ProcessingComponent implements OnInit {
       all += totals[i];
     });
     counts[''] = all;
+    // "Active" bucket = sum of the non-exempt statuses (its CSV chip value).
+    counts[ACTIVE_ORDER_STATUS_VALUE] = ACTIVE_ORDER_STATUSES.reduce(
+      (sum, s) => sum + (counts[s] ?? 0),
+      0,
+    );
     return counts;
   }
 

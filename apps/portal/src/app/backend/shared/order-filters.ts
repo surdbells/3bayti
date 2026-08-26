@@ -21,6 +21,25 @@ export const ORDER_STATUS_OPTIONS: readonly AxFilterOption[] = [
 ];
 
 /**
+ * The "Active" chip on the admin Orders & Sales table — every status EXCEPT the
+ * three dead-end / unpaid ones (pending_payment, cancelled, failed). It's the
+ * default view so the noise (abandoned unpaid, cancelled, failed) is hidden and
+ * the admin lands on the real, live orders.
+ *
+ * Sent to GET /admin/orders as a CSV `status` list, which the API parses into
+ * an `IN (...)` filter — the same mechanism the logistics board uses for
+ * "shipped,delivered". No API change required.
+ */
+export const ACTIVE_ORDER_EXEMPT_STATUSES: readonly string[] = ['pending_payment', 'cancelled', 'failed'];
+
+export const ACTIVE_ORDER_STATUSES: readonly string[] = ORDER_STATUS_OPTIONS
+  .map((o) => String(o.value))
+  .filter((v) => !ACTIVE_ORDER_EXEMPT_STATUSES.includes(v));
+
+/** CSV value carried by the "Active" chip, e.g. "paid,fulfilling,shipped,delivered,refunded". */
+export const ACTIVE_ORDER_STATUS_VALUE: string = ACTIVE_ORDER_STATUSES.join(',');
+
+/**
  * Fulfilment status set for the logistics / delivery board — the
  * SHIPPED->DELIVERED range (in-progress + completed shipments). The API
  * (Order::STATUS_*) has no `out_for_delivery` status, so the set is just
