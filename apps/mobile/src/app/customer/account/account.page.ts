@@ -88,6 +88,8 @@ export class AccountPage implements OnInit, OnDestroy {
   best_sellers: Products[] = [];
   new_arrivals: Products[] = [];
   vendor_featured: Store[] = [];
+  /** Total on-sale products, shown as a badge on the Discounted category chip. */
+  discountedCount = 0;
   // GET /v3/vendors (the PAGINATED public store directory) honours
   // limit/offset, so the "Popular stores" section supports real infinite
   // scroll. hasMoreStores stays true while the last page came back full
@@ -294,6 +296,7 @@ export class AccountPage implements OnInit, OnDestroy {
       this.get_best_sellers();
       this.get_new_arrivals();
       this.get_featured_products();
+      this.get_discounted_count();
       this.load_cart();
     }
   }
@@ -350,6 +353,7 @@ export class AccountPage implements OnInit, OnDestroy {
     this.get_best_sellers();
     this.get_new_arrivals();
     this.get_featured_products();
+    this.get_discounted_count();
     this.load_cart();
     void this.cartCount.refresh();
     void this.pendingOrders.refresh();
@@ -537,6 +541,25 @@ export class AccountPage implements OnInit, OnDestroy {
           }
         }
       }))
+  }
+
+  /**
+   * Count of on-sale products, for the Discounted chip badge. Public catalog
+   * read (GET /v3/products?sale=true) with limit=1 — we only need meta.total,
+   * not the rows. Best-effort: a failure just leaves the badge hidden (0).
+   */
+  get_discounted_count() {
+    this.networkAdapter.get_v3('GET /mobile/category-listing', {
+      queryParams: { sale: 'true', limit: 1, offset: 0 },
+    }).subscribe({
+      next: (response: any) => {
+        const total = response?.meta?.total ?? response?.pagination?.total;
+        this.discountedCount = Number.isFinite(Number(total)) ? Number(total) : 0;
+      },
+      error: () => {
+        this.discountedCount = 0;
+      },
+    });
   }
 
   get_new_arrivals() {

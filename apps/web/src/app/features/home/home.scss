@@ -986,4 +986,29 @@
 .cat-tile__name { font-size: 13px; font-weight: 650; color: var(--color-text-primary); line-height: 1.25; }
 .cat-tile__count { font-size: 11px; color: var(--color-text-tertiary); }
 .cat-tile--skeleton { pointer-events: none; }
+
+/* Discounted shortcut tile — sale-red accent + on-sale count badge. */
+.cat-tile--discounted .cat-tile__badge {
+  position: relative;
+  background: var(--color-sale-bg, #fbeae6);
+  color: var(--color-sale, #b3402f);
+}
+.cat-tile--discounted .cat-tile__saleicon { width: 26px; height: 26px; }
+.cat-tile--discounted .cat-tile__name { color: var(--color-sale, #b3402f); }
+.cat-tile--discounted .cat-tile__count {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-sale, #b3402f);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  border: 2px solid var(--color-bg-surface, #fff);
+}
 @media (prefers-reduced-motion: reduce) { .cat-tile:hover { transform: none; } }

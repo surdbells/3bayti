@@ -48,6 +48,9 @@
               <button class="m6-chip m6-chip--discounted" type="button" (click)="open_discounted()">
                 <span class="m6-chip-ico"><ax-icon name="tag" /></span>
                 <span class="m6-chip-text">{{ 'nav_discounted' | translate }}</span>
+                @if (discountedCount > 0) {
+                  <span class="m6-chip-count">{{ discountedCount > 99 ? '99+' : discountedCount }}</span>
+                }
               </button>
               <button class="m6-chip" type="button" (click)="open_category(1, 'Abayas');">
                 <span class="m6-chip-ico"><ion-icon src="assets/icon/abayas.svg"></ion-icon></span>

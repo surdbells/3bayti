@@ -84,6 +84,19 @@ export class HomeComponent {
   /** Categories — null while loading, Category[] once loaded. */
   readonly categories = toSignal(this.fetchCategories$(), { initialValue: null });
 
+  /**
+   * Total on-sale products — drives the count badge on the Discounted tile in
+   * the category row. One cheap limit=1 read of GET /products?sale=true (we
+   * only need meta.total). Degrades to 0 on error, hiding the badge.
+   */
+  readonly discountedCount = toSignal(
+    this.routed.get<unknown[]>('GET /products', { query: { sale: true, limit: 1 } }).pipe(
+      map((res: any) => Number(res?.meta?.total ?? 0) || 0),
+      catchError(() => of(0)),
+    ),
+    { initialValue: 0 },
+  );
+
   /* ----- Product strips: each is a signal that becomes data when the
    * Observable emits. null = loading state (renders skeletons), [] =
    * loaded but empty (strip silently omits itself), Product[] = real

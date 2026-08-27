@@ -1090,6 +1090,8 @@
       "eyebrow": "تصفّحي",
       "title": "تسوّقي حسب الفئة",
       "tileAria": "{{name}} — {{count}} منتج",
+      "discounted": "مخفّضة",
+      "discountedAria": "مخفّضة — {{count}} منتج بأسعار مخفّضة",
       "piece": "قطعة",
       "pieces": "قطع"
     },

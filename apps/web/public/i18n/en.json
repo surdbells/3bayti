@@ -1090,6 +1090,8 @@
       "eyebrow": "Browse",
       "title": "Shop by category",
       "tileAria": "{{name}} — {{count}} products",
+      "discounted": "Discounted",
+      "discountedAria": "Discounted — {{count}} products on sale",
       "piece": "piece",
       "pieces": "pieces"
     },
