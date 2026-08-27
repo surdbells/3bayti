@@ -73,11 +73,14 @@ final class ListPromoCodesController
 
         $query = $request->getQueryParams();
 
+        [$sitewideOnly, $vendorId] = $this->parseScope($query['scope'] ?? null);
         $filters = [
             'isActive' => $this->parseBool($query['is_active'] ?? null, 'is_active'),
             'discountType' => $this->parseDiscountType($query['discount_type'] ?? null),
             'codeContains' => $this->parseNonEmptyString($query['code'] ?? null),
             'validAt' => $this->parseDateTime($query['valid_at'] ?? null, 'valid_at'),
+            'sitewideOnly' => $sitewideOnly,
+            'vendorId' => $vendorId,
             'limit' => $this->clampLimit($query['limit'] ?? null),
             'offset' => $this->clampOffset($query['offset'] ?? null),
         ];
@@ -110,6 +113,9 @@ final class ListPromoCodesController
                         'discount_type' => $filters['discountType'],
                         'code' => $filters['codeContains'],
                         'valid_at' => $filters['validAt']?->format('c'),
+                        'scope' => $sitewideOnly === true
+                            ? 'platform'
+                            : ($vendorId !== null ? 'vendor:' . $vendorId : null),
                         'limit' => $filters['limit'],
                         'offset' => $filters['offset'],
                     ],
@@ -165,6 +171,32 @@ final class ListPromoCodesController
         }
         $trimmed = trim($raw);
         return $trimmed === '' ? null : $trimmed;
+    }
+
+    /**
+     * Parse the ?scope filter into a (sitewideOnly, vendorId) pair:
+     *   'platform' / 'sitewide' → [true, null]  (admin-created, vendor_id NULL)
+     *   a positive integer      → [null, int]   (that vendor's coupons)
+     *   anything else / absent  → [null, null]  (no scope filter — all coupons)
+     *
+     * @return array{0: bool|null, 1: int|null}
+     */
+    private function parseScope(mixed $raw): array
+    {
+        if (!is_string($raw)) {
+            return [null, null];
+        }
+        $value = trim($raw);
+        if ($value === '') {
+            return [null, null];
+        }
+        if ($value === 'platform' || $value === 'sitewide') {
+            return [true, null];
+        }
+        if (ctype_digit($value) && (int) $value > 0) {
+            return [null, (int) $value];
+        }
+        return [null, null];
     }
 
     private function parseDateTime(mixed $raw, string $paramName): ?DateTimeImmutable

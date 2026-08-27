@@ -118,6 +118,8 @@ class PromoCodeRepository extends EntityRepository
      *   discountType?: string|null,
      *   codeContains?: string|null,
      *   validAt?: DateTimeImmutable|null,
+     *   sitewideOnly?: bool|null,
+     *   vendorId?: int|null,
      *   limit?: int,
      *   offset?: int,
      * } $filters
@@ -127,6 +129,15 @@ class PromoCodeRepository extends EntityRepository
     public function findFilteredPaginated(array $filters = []): array
     {
         $qb = $this->createQueryBuilder('pc');
+
+        // Scope filter: sitewide (admin-created, vendor_id IS NULL) vs a
+        // specific vendor's coupons. sitewideOnly wins if both are set.
+        if (!empty($filters['sitewideOnly'])) {
+            $qb->andWhere('pc.vendorId IS NULL');
+        } elseif (isset($filters['vendorId'])) {
+            $qb->andWhere('pc.vendorId = :vid')
+               ->setParameter('vid', $filters['vendorId']);
+        }
 
         if (isset($filters['isActive'])) {
             $qb->andWhere('pc.isActive = :isActive')

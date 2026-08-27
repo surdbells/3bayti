@@ -67,15 +67,23 @@ export class AdminCouponListComponent implements OnInit {
   /** vendor id (string) → store name, for the Scope column. */
   private vendorNames = new Map<string, string>();
 
+  /** Scope filter options: "Sitewide (admin)" + one per store. */
+  private scopeOptions: { label: string; value: string }[] = [];
+
   async ngOnInit(): Promise<void> {
     // Resolve store names once so the Scope column can show "Acme Store"
-    // instead of a bare id for vendor-owned coupons. Best-effort — falls
-    // back to "Store #id" for anything not in the map.
+    // instead of a bare id, and to populate the Scope filter. Best-effort —
+    // the column falls back to "Store #id" and the filter still offers the
+    // Sitewide option if the store list fails to load.
     try {
       const vendors = await loadAdminVendorOptions(this.adapter);
       for (const v of vendors) this.vendorNames.set(String(v.value), v.label);
+      this.scopeOptions = [
+        { label: 'Sitewide (admin)', value: 'platform' },
+        ...vendors.map((v) => ({ label: v.label, value: String(v.value) })),
+      ];
     } catch {
-      /* leave the map empty; scope column degrades to "Store #id" */
+      this.scopeOptions = [{ label: 'Sitewide (admin)', value: 'platform' }];
     }
     this.buildTable();
   }
@@ -96,6 +104,12 @@ export class AdminCouponListComponent implements OnInit {
       emptyDescription: 'No promo codes match your current filters.',
       export: { enabled: true, formats: ['csv', 'xlsx'], filename: 'coupons-and-discounts' },
       filters: [
+        {
+          key: 'scope',
+          label: 'Scope',
+          type: 'select',
+          options: this.scopeOptions,
+        },
         {
           key: 'status',
           label: 'Status',
@@ -158,6 +172,8 @@ export class AdminCouponListComponent implements OnInit {
     };
     // The admin list searches by code (not a generic `search` param).
     if (query.search) q.code = query.search;
+    // Scope: 'platform' (sitewide/admin) or a vendor id string.
+    if (query.filters['scope']) q.scope = query.filters['scope'];
     if (query.filters['status']) q.is_active = query.filters['status'];
     if (query.filters['type']) q.discount_type = query.filters['type'];
 

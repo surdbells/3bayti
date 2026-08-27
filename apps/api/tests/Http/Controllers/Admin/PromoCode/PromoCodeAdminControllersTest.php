@@ -139,6 +139,46 @@ final class PromoCodeAdminControllersTest extends HttpTestCase
     }
 
     #[Test]
+    public function listForwardsPlatformScopeToRepository(): void
+    {
+        $admin = $this->makeAdminUser(99);
+
+        $promoRepo = $this->createMock(PromoCodeRepository::class);
+        $promoRepo->expects(self::once())
+            ->method('findFilteredPaginated')
+            ->with(self::callback(function (array $filters): bool {
+                // ?scope=platform → sitewideOnly true, no vendorId.
+                return ($filters['sitewideOnly'] ?? null) === true
+                    && !array_key_exists('vendorId', $filters);
+            }))
+            ->willReturn(['items' => [], 'total' => 0]);
+
+        $this->bindEm($admin, $promoRepo);
+        $response = $this->makeGet($admin, '/v3/admin/promo-codes?scope=platform');
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function listForwardsVendorScopeToRepository(): void
+    {
+        $admin = $this->makeAdminUser(99);
+
+        $promoRepo = $this->createMock(PromoCodeRepository::class);
+        $promoRepo->expects(self::once())
+            ->method('findFilteredPaginated')
+            ->with(self::callback(function (array $filters): bool {
+                // ?scope=5 → vendorId 5, no sitewideOnly.
+                return ($filters['vendorId'] ?? null) === 5
+                    && !array_key_exists('sitewideOnly', $filters);
+            }))
+            ->willReturn(['items' => [], 'total' => 0]);
+
+        $this->bindEm($admin, $promoRepo);
+        $response = $this->makeGet($admin, '/v3/admin/promo-codes?scope=5');
+        self::assertSame(200, $response->getStatusCode());
+    }
+
+    #[Test]
     public function listEmitsAuditViewedWithFilters(): void
     {
         $admin = $this->makeAdminUser(99);
