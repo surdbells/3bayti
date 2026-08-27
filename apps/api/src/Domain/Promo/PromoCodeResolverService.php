@@ -40,12 +40,21 @@ use Doctrine\ORM\EntityManagerInterface;
  *   4. now() >= valid_from (or valid_from IS NULL)
  *   5. now() <= valid_until (or valid_until IS NULL)
  *   6. promo.currency = cart.currency
- *   7. cart.subtotal >= min_subtotal (or min_subtotal IS NULL)
+ *   7. applicable_subtotal >= min_subtotal (or min_subtotal IS NULL)
  *   8. effective global redemption count < usage_limit_global
  *      (or usage_limit_global IS NULL)
  *   9. effective per-user redemption count < usage_limit_per_user
  *      (or usage_limit_per_user IS NULL)
  *   10. Compute discount_amount with type-aware clamping
+ *
+ * Vendor scope (between rules 6 and 7)
+ * ------------------------------------
+ * The "applicable subtotal" the min-subtotal gate (7) and discount (10) work
+ * off depends on the code's owner: a platform-wide code (promo_codes.vendor_id
+ * IS NULL) discounts the WHOLE cart; a vendor-owned coupon (vendor_id set)
+ * discounts ONLY that vendor's items. A vendor coupon applied to a cart with no
+ * items from that vendor is rejected with PROMO_NOT_APPLICABLE_TO_CART rather
+ * than silently discounting nothing.
  *
  * The "effective" counts on rules 8 and 9 exclude redemptions on
  * orders in cancelled/failed states — so a customer whose first
@@ -138,10 +147,26 @@ final class PromoCodeResolverService
             );
         }
 
-        // Rule 7 — Min subtotal check
-        $cartSubtotal = $cart->computeSubtotal();
+        // Vendor scope — a coupon owned by a vendor (vendor_id set) discounts
+        // ONLY that vendor's items; a platform-wide code (vendor_id null)
+        // discounts the whole cart. Everything downstream (the min-subtotal
+        // gate below and the discount amount in rule 10) works off this
+        // applicable subtotal.
+        $vendorId = $promo->getVendorId();
+        if ($vendorId === null) {
+            $applicableSubtotal = $cart->computeSubtotal();
+        } else {
+            $applicableSubtotal = $cart->computeSubtotalForVendor($vendorId);
+            // No items from that vendor → the code would discount nothing;
+            // reject rather than silently applying a 0.00 discount.
+            if (bccomp($applicableSubtotal, '0.00', 2) <= 0) {
+                throw PromoNotApplicableException::notApplicableToCart($promo->getCode());
+            }
+        }
+
+        // Rule 7 — Min subtotal check (against the applicable subtotal)
         $minSubtotal = $promo->getMinSubtotal();
-        if ($minSubtotal !== null && bccomp($cartSubtotal, $minSubtotal, 2) < 0) {
+        if ($minSubtotal !== null && bccomp($applicableSubtotal, $minSubtotal, 2) < 0) {
             throw PromoNotApplicableException::minSubtotalNotMet(
                 $promo->getCode(),
                 $minSubtotal,
@@ -174,7 +199,7 @@ final class PromoCodeResolverService
         }
 
         // Rule 10 — Compute discount amount with type-aware clamping
-        $discountAmount = $this->computeDiscountAmount($promo, $cartSubtotal);
+        $discountAmount = $this->computeDiscountAmount($promo, $applicableSubtotal);
 
         return new PromoResolution(
             promoCode: $promo,

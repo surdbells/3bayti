@@ -172,4 +172,11 @@ final class ErrorCodes
 
     /** This user has already redeemed the code up to its per-user cap. */
     public const PROMO_USER_LIMIT_REACHED = 'PROMO_USER_LIMIT_REACHED';
+
+    /**
+     * A vendor-scoped coupon (promo_codes.vendor_id set) was applied to a
+     * cart that contains no items from that vendor, so it would discount
+     * nothing. Rejected rather than silently applying a 0 discount.
+     */
+    public const PROMO_NOT_APPLICABLE_TO_CART = 'PROMO_NOT_APPLICABLE_TO_CART';
 }

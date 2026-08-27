@@ -265,6 +265,28 @@ class Cart
         return $sum;
     }
 
+    /**
+     * Subtotal across only the items sold by a given vendor (v3 Vendor PK),
+     * at current snapshotted prices. Same per-line math as computeSubtotal(),
+     * filtered by each item's product vendor.
+     *
+     * Used by the promo resolver so a vendor-scoped coupon discounts only that
+     * vendor's items rather than the whole cart. Returns '0.00' when the cart
+     * holds nothing from that vendor.
+     */
+    public function computeSubtotalForVendor(int $vendorId): string
+    {
+        $sum = '0.00';
+        foreach ($this->items as $item) {
+            if ($item->getProduct()->getVendor()->getId() !== $vendorId) {
+                continue;
+            }
+            $lineTotal = bcmul($item->getUnitPriceSnapshot(), (string) $item->getQuantity(), 2);
+            $sum = bcadd($sum, $lineTotal, 2);
+        }
+        return $sum;
+    }
+
     public function itemCount(): int
     {
         $total = 0;

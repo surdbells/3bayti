@@ -91,6 +91,42 @@ final class PromoCodeResolverServiceTest extends TestCase
     }
 
     /**
+     * Cart stand-in for vendor-scope tests: overrides the whole-cart subtotal
+     * AND the per-vendor subtotal (keyed by v3 vendor id). Vendor ids absent
+     * from the map resolve to '0.00' (no items from that vendor in the cart).
+     *
+     * @param array<int, string> $vendorSubtotals
+     */
+    private function cartWithVendor(string $subtotal, array $vendorSubtotals, string $currency = 'AED'): Cart
+    {
+        return new class ($subtotal, $vendorSubtotals, $currency) extends Cart {
+            /** @param array<int, string> $vendorSubtotals */
+            public function __construct(
+                private readonly string $subtotalString,
+                private readonly array $vendorSubtotals,
+                private readonly string $currencyString,
+            ) {
+                // Skip parent constructor; test stand-in.
+            }
+
+            public function getCurrency(): string
+            {
+                return $this->currencyString;
+            }
+
+            public function computeSubtotal(): string
+            {
+                return $this->subtotalString;
+            }
+
+            public function computeSubtotalForVendor(int $vendorId): string
+            {
+                return $this->vendorSubtotals[$vendorId] ?? '0.00';
+            }
+        };
+    }
+
+    /**
      * Build a PromoCode with an id pre-set so the resolver's
      * limit-counting branch can use it as a repository key.
      */
@@ -468,6 +504,106 @@ final class PromoCodeResolverServiceTest extends TestCase
         $resolution = $resolver->resolveForCart($this->cart('40.00'), $this->user(), 'SAVE100');
 
         self::assertSame('40.00', $resolution->discountAmount);
+    }
+
+    // -------------------------------------------------------------------
+    // Vendor scope — vendor-owned coupons discount ONLY that vendor's items
+    // -------------------------------------------------------------------
+
+    #[Test]
+    public function vendorCouponPercentageDiscountsOnlyThatVendorsSubtotal(): void
+    {
+        // 10% code owned by vendor 9. The whole cart is 300 but only 100 of
+        // it is vendor 9's — the discount is 10% of 100, not of 300.
+        $promo = $this->promo('STORE10', PromoCode::DISCOUNT_TYPE_PERCENTAGE, '10.00');
+        $promo->setVendorId(9);
+        $resolver = $this->newResolver($this->repoForPromo($promo));
+
+        $resolution = $resolver->resolveForCart(
+            $this->cartWithVendor('300.00', [9 => '100.00']),
+            $this->user(),
+            'STORE10',
+        );
+
+        self::assertSame('10.00', $resolution->discountAmount);
+    }
+
+    #[Test]
+    public function vendorCouponFixedAmountClampsAtVendorSubtotalNotWholeCart(): void
+    {
+        // 80 off owned by vendor 9; vendor 9's items total only 50, so the
+        // discount clamps to 50 even though the whole cart is 300.
+        $promo = $this->promo('STORE80', PromoCode::DISCOUNT_TYPE_FIXED_AMOUNT, '80.00');
+        $promo->setVendorId(9);
+        $resolver = $this->newResolver($this->repoForPromo($promo));
+
+        $resolution = $resolver->resolveForCart(
+            $this->cartWithVendor('300.00', [9 => '50.00']),
+            $this->user(),
+            'STORE80',
+        );
+
+        self::assertSame('50.00', $resolution->discountAmount);
+    }
+
+    #[Test]
+    public function vendorCouponWithNoMatchingItemsThrowsNotApplicable(): void
+    {
+        // 300 of goods in the cart but none from vendor 9 → reject instead of
+        // silently applying a 0.00 discount.
+        $promo = $this->promo('STORE10', PromoCode::DISCOUNT_TYPE_PERCENTAGE, '10.00');
+        $promo->setVendorId(9);
+        $resolver = $this->newResolver($this->repoForPromo($promo));
+
+        try {
+            $resolver->resolveForCart(
+                $this->cartWithVendor('300.00', []),
+                $this->user(),
+                'STORE10',
+            );
+            self::fail('Expected PromoNotApplicableException');
+        } catch (PromoNotApplicableException $e) {
+            self::assertSame(ErrorCodes::PROMO_NOT_APPLICABLE_TO_CART, $e->errorCode);
+        }
+    }
+
+    #[Test]
+    public function vendorCouponMinSubtotalChecksVendorSubtotalNotWholeCart(): void
+    {
+        // min 200. The whole cart (500) clears it, but vendor 9's slice is
+        // only 150 — the gate uses the vendor slice, so it fails.
+        $promo = $this->promo('STORE10', PromoCode::DISCOUNT_TYPE_PERCENTAGE, '10.00');
+        $promo->setVendorId(9);
+        $promo->setMinSubtotal('200.00');
+        $resolver = $this->newResolver($this->repoForPromo($promo));
+
+        try {
+            $resolver->resolveForCart(
+                $this->cartWithVendor('500.00', [9 => '150.00']),
+                $this->user(),
+                'STORE10',
+            );
+            self::fail('Expected PromoNotApplicableException');
+        } catch (PromoNotApplicableException $e) {
+            self::assertSame(ErrorCodes::PROMO_MIN_SUBTOTAL_NOT_MET, $e->errorCode);
+        }
+    }
+
+    #[Test]
+    public function platformWideCouponStillDiscountsWholeCart(): void
+    {
+        // vendor_id null → whole-cart behaviour unchanged: 10% of 300 = 30.
+        $promo = $this->promo('SITE10', PromoCode::DISCOUNT_TYPE_PERCENTAGE, '10.00');
+        self::assertNull($promo->getVendorId());
+        $resolver = $this->newResolver($this->repoForPromo($promo));
+
+        $resolution = $resolver->resolveForCart(
+            $this->cartWithVendor('300.00', [9 => '100.00']),
+            $this->user(),
+            'SITE10',
+        );
+
+        self::assertSame('30.00', $resolution->discountAmount);
     }
 
     // -------------------------------------------------------------------

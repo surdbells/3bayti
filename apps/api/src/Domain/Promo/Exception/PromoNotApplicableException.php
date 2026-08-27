@@ -148,4 +148,16 @@ final class PromoNotApplicableException extends \RuntimeException
             publicMessage: "Promo code '{$code}' has already been used.",
         );
     }
+
+    /**
+     * A vendor-scoped coupon was applied to a cart with no items from that
+     * vendor. It would discount nothing, so it's rejected up front.
+     */
+    public static function notApplicableToCart(string $code): self
+    {
+        return new self(
+            errorCode: ErrorCodes::PROMO_NOT_APPLICABLE_TO_CART,
+            publicMessage: "Promo code '{$code}' doesn't apply to any items in your cart.",
+        );
+    }
 }
