@@ -351,7 +351,7 @@ try {
                 continue; // No drift, silent
             }
 
-            $set[] = 'updated_at = date_trunc('second', NOW())';
+            $set[] = "updated_at = date_trunc('second', NOW())";
             $sql = 'UPDATE users SET ' . implode(', ', $set) . ' WHERE legacy_user_id = :legacy_id';
             try {
                 $conn->executeStatement($sql, $params);
