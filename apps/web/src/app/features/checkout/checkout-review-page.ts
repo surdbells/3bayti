@@ -696,7 +696,13 @@ export class CheckoutReviewPageComponent implements OnInit {
          re-quote WITHOUT the promo so the totals still render and the
          order can proceed. The promoCode guard prevents recursion. */
       if (promoCode !== null && code !== null && code.startsWith('PROMO_')) {
-        this.toast.error('checkout.review.promoInvalid', { code: promoCode });
+        /* A vendor-scoped coupon applied to a cart with none of that vendor's
+           items gets its own message; every other PROMO_* reason shares the
+           generic "isn't valid" line. */
+        const promoKey = code === 'PROMO_NOT_APPLICABLE_TO_CART'
+          ? 'checkout.review.promoNotApplicable'
+          : 'checkout.review.promoInvalid';
+        this.toast.error(promoKey, { code: promoCode });
         this.checkout.setPromoCode(null);
         this.promoForm.controls.code.setValue('');
         await this.refreshQuote(null);

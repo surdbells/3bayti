@@ -408,6 +408,7 @@
       "promoPlaceholder": "أدخلي الكود",
       "promoApplied": "تم تطبيق {{code}}",
       "promoInvalid": "{{code}} غير صالح",
+      "promoNotApplicable": "{{code}} لا ينطبق على أي منتج في سلتك",
       "promoRemove": "إزالة",
       "giftCardHeading": "بطاقة هدية",
       "giftWalletHeading": "رصيد بطاقات الهدايا",

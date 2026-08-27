@@ -408,6 +408,7 @@
       "promoPlaceholder": "Enter code",
       "promoApplied": "{{code}} applied",
       "promoInvalid": "{{code}} isn't valid",
+      "promoNotApplicable": "{{code}} doesn't apply to any items in your cart",
       "promoRemove": "Remove",
       "giftCardHeading": "Gift card",
       "giftWalletHeading": "Gift card balance",

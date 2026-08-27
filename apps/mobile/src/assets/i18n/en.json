@@ -789,6 +789,7 @@
   "text_promo_min_subtotal_not_met": "Spend at least {{min_subtotal}} {{currency}} to use this promo code.",
   "text_promo_global_limit_reached": "This promo code has reached its usage limit.",
   "text_promo_user_limit_reached": "You've already used this promo code.",
+  "text_promo_not_applicable_to_cart": "This promo code doesn't apply to any items in your cart.",
   "text_promo_cart_empty": "Your cart is empty.",
   "gc_step_theme": "Theme",
   "gc_step_personalise": "Personalise",

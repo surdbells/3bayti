@@ -435,6 +435,7 @@ export class CheckoutPage implements OnInit, OnDestroy {
         });
       case 'PROMO_GLOBAL_LIMIT_REACHED': return this.i18n.t('text_promo_global_limit_reached');
       case 'PROMO_USER_LIMIT_REACHED':   return this.i18n.t('text_promo_user_limit_reached');
+      case 'PROMO_NOT_APPLICABLE_TO_CART': return this.i18n.t('text_promo_not_applicable_to_cart');
       case 'BUSINESS_RULE_VIOLATION':    return this.i18n.t('text_promo_cart_empty');
       default:                           return this.i18n.t('text_promo_invalid');
     }

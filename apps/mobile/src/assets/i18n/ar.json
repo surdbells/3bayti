@@ -781,6 +781,7 @@
   "text_promo_min_subtotal_not_met": "أنفق {{min_subtotal}} {{currency}} على الأقل لاستخدام رمز الخصم هذا.",
   "text_promo_global_limit_reached": "وصل رمز الخصم هذا إلى الحد الأقصى للاستخدام.",
   "text_promo_user_limit_reached": "لقد استخدمت رمز الخصم هذا من قبل.",
+  "text_promo_not_applicable_to_cart": "رمز الخصم هذا لا ينطبق على أي منتج في سلتك.",
   "text_promo_cart_empty": "سلة التسوق فارغة.",
   "gc_step_theme": "التصميم",
   "gc_step_personalise": "التخصيص",
