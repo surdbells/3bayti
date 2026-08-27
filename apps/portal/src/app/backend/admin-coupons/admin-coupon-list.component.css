@@ -1,0 +1,14 @@
+/* Layout comes from the shared .ax-* utilities; nothing bespoke needed here.
+   The header actions sit to the right of the title block. */
+.ax-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.ax-page-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}

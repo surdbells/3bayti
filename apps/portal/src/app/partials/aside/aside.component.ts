@@ -47,7 +47,7 @@ export class AsideComponent implements OnInit {
     'overview': ['/backend'],
     'store-ops': ['/products', '/orders', '/delivery', '/returns', '/reviews', '/messages', '/coupons', '/analytics', '/metrics'],
     'vendors-customers': ['/admin/stores', '/admin/vendor-applications', '/admin/customers'],
-    'catalog': ['/admin/products', '/admin/collections', '/admin/campaigns', '/admin/gift-cards'],
+    'catalog': ['/admin/products', '/admin/collections', '/admin/campaigns', '/admin/gift-cards', '/admin/coupons'],
     'orders-sales': ['/admin/orders', '/admin/sales', '/admin/returns', '/admin/commissions', '/admin/logistics'],
     'engagement': ['/admin/notifications', '/admin/notification-templates', '/admin/notification-schedules', '/admin/notification-broadcasts', '/admin/notification-logs'],
     'system': ['/admin/users', '/admin/ota'],

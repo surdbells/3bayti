@@ -3,7 +3,7 @@
  * Source: packages/api-client/src/feature-flags.ts (ENDPOINT_ROUTING).
  * Regenerate: node tools/gen-route-keys.mjs
  *
- * 275 route keys.
+ * 309 route keys.
  */
 
 /** Every valid v3 route key, as a compile-time-checked union. */
@@ -12,7 +12,9 @@ export type V3RouteKey =
   | 'DELETE /admin/campaigns/:id'
   | 'DELETE /admin/categories/:id'
   | 'DELETE /admin/collections/:id'
+  | 'DELETE /admin/notification-templates/:id'
   | 'DELETE /admin/products/:id'
+  | 'DELETE /admin/promo-codes/:id'
   | 'DELETE /admin/roles/:id'
   | 'DELETE /admin/vendors/:id'
   | 'DELETE /cart/items/:id'
@@ -31,6 +33,7 @@ export type V3RouteKey =
   | 'DELETE /vendor/products/:id'
   | 'DELETE /wishlist/:productId'
   | 'GET /admin/analytics'
+  | 'GET /admin/audit-logs'
   | 'GET /admin/brands'
   | 'GET /admin/campaigns'
   | 'GET /admin/campaigns/:id'
@@ -40,29 +43,39 @@ export type V3RouteKey =
   | 'GET /admin/commissions'
   | 'GET /admin/customers'
   | 'GET /admin/gift-cards'
-  | 'GET /admin/audit-logs'
   | 'GET /admin/gift-cards/:id'
   | 'GET /admin/gift-cards/redemptions'
+  | 'GET /admin/insights'
+  | 'GET /admin/notification-broadcasts'
+  | 'GET /admin/notification-broadcasts/:id'
+  | 'GET /admin/notification-broadcasts/:id/recipients'
+  | 'GET /admin/notification-logs'
+  | 'GET /admin/notification-schedules'
+  | 'GET /admin/notification-schedules/:id'
+  | 'GET /admin/notification-templates'
+  | 'GET /admin/notification-templates/:id'
+  | 'GET /admin/notification-templates/variables'
   | 'GET /admin/notifications'
+  | 'GET /admin/notifications/audience-preview'
   | 'GET /admin/orders'
   | 'GET /admin/orders/:id'
   | 'GET /admin/orders/:id/timeline'
-  | 'POST /admin/orders/:id/resend-vendor-notification'
   | 'GET /admin/permission-catalog'
   | 'GET /admin/products'
   | 'GET /admin/products/:id'
+  | 'GET /admin/promo-codes'
+  | 'GET /admin/promo-codes/:id'
   | 'GET /admin/returns'
   | 'GET /admin/roles'
   | 'GET /admin/roles/:id'
+  | 'GET /admin/top-customers'
+  | 'GET /admin/top-stores'
   | 'GET /admin/transactions'
   | 'GET /admin/users'
   | 'GET /admin/users/:id'
   | 'GET /admin/vendor-applications'
   | 'GET /admin/vendor-metrics'
   | 'GET /admin/vendors'
-  | 'GET /admin/top-stores'
-  | 'GET /admin/top-customers'
-  | 'GET /admin/insights'
   | 'GET /admin/vendors/:id'
   | 'GET /admin/vendors/:id/analytics'
   | 'GET /admin/vendors/:id/compliance'
@@ -119,6 +132,7 @@ export type V3RouteKey =
   | 'GET /mobile/vendors-products'
   | 'GET /orders'
   | 'GET /orders/:id'
+  | 'GET /orders/:id/timeline'
   | 'GET /products'
   | 'GET /products/:productId/reviews'
   | 'GET /products/:slug'
@@ -171,6 +185,7 @@ export type V3RouteKey =
   | 'GET /vendors/by-legacy-id/:id'
   | 'GET /vendors/by-legacy-id/:id/products'
   | 'GET /wishlist'
+  | 'PATCH /admin/notification-templates/:id/status'
   | 'PATCH /admin/orders/:id/status'
   | 'PATCH /admin/orders/:orderId/items/:itemId/status'
   | 'PATCH /admin/users/:id/password'
@@ -198,31 +213,19 @@ export type V3RouteKey =
   | 'POST /admin/gift-cards'
   | 'POST /admin/gift-cards/:id/adjust'
   | 'POST /admin/gift-cards/:id/void'
-  | 'POST /admin/notifications'
-  | 'GET /admin/notifications/audience-preview'
-  | 'GET /admin/notification-broadcasts'
-  | 'GET /admin/notification-broadcasts/:id'
-  | 'GET /admin/notification-broadcasts/:id/recipients'
   | 'POST /admin/notification-broadcasts/:id/resend'
-  | 'GET /admin/notification-templates'
-  | 'GET /admin/notification-templates/variables'
-  | 'POST /admin/notification-templates'
-  | 'GET /admin/notification-templates/:id'
-  | 'PUT /admin/notification-templates/:id'
-  | 'DELETE /admin/notification-templates/:id'
-  | 'POST /admin/notification-templates/:id/duplicate'
-  | 'PATCH /admin/notification-templates/:id/status'
-  | 'GET /admin/notification-schedules'
   | 'POST /admin/notification-schedules'
-  | 'GET /admin/notification-schedules/:id'
-  | 'PUT /admin/notification-schedules/:id'
   | 'POST /admin/notification-schedules/:id/cancel'
   | 'POST /admin/notification-schedules/:id/run-now'
-  | 'GET /admin/notification-logs'
+  | 'POST /admin/notification-templates'
+  | 'POST /admin/notification-templates/:id/duplicate'
+  | 'POST /admin/notifications'
   | 'POST /admin/notifications/mark-read'
   | 'POST /admin/orders/:id/cancel'
   | 'POST /admin/orders/:id/refund'
+  | 'POST /admin/orders/:id/resend-vendor-notification'
   | 'POST /admin/products'
+  | 'POST /admin/promo-codes'
   | 'POST /admin/roles'
   | 'POST /admin/users'
   | 'POST /admin/users/:id/activate'
@@ -233,9 +236,9 @@ export type V3RouteKey =
   | 'POST /admin/vendor-applications/:id/resend-credentials'
   | 'POST /admin/vendors'
   | 'POST /admin/vendors/:id/approve'
-  | 'POST /admin/vendors/:id/impersonate'
   | 'POST /admin/vendors/:id/compliance/approve'
   | 'POST /admin/vendors/:id/compliance/reject'
+  | 'POST /admin/vendors/:id/impersonate'
   | 'POST /admin/vendors/:id/messages'
   | 'POST /admin/vendors/:id/reactivate'
   | 'POST /admin/vendors/:id/suspend'
@@ -301,7 +304,10 @@ export type V3RouteKey =
   | 'PUT /admin/campaigns/:id'
   | 'PUT /admin/categories/:id'
   | 'PUT /admin/collections/:id'
+  | 'PUT /admin/notification-schedules/:id'
+  | 'PUT /admin/notification-templates/:id'
   | 'PUT /admin/products/:id'
+  | 'PUT /admin/promo-codes/:id'
   | 'PUT /admin/roles/:id'
   | 'PUT /admin/vendors/:id'
   | 'PUT /me/addresses/:id'
@@ -318,7 +324,9 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /admin/campaigns/:id',
   'DELETE /admin/categories/:id',
   'DELETE /admin/collections/:id',
+  'DELETE /admin/notification-templates/:id',
   'DELETE /admin/products/:id',
+  'DELETE /admin/promo-codes/:id',
   'DELETE /admin/roles/:id',
   'DELETE /admin/vendors/:id',
   'DELETE /cart/items/:id',
@@ -337,6 +345,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'DELETE /vendor/products/:id',
   'DELETE /wishlist/:productId',
   'GET /admin/analytics',
+  'GET /admin/audit-logs',
   'GET /admin/brands',
   'GET /admin/campaigns',
   'GET /admin/campaigns/:id',
@@ -344,31 +353,41 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /admin/collections',
   'GET /admin/collections/:id',
   'GET /admin/commissions',
-  'GET /admin/audit-logs',
   'GET /admin/customers',
   'GET /admin/gift-cards',
   'GET /admin/gift-cards/:id',
   'GET /admin/gift-cards/redemptions',
+  'GET /admin/insights',
+  'GET /admin/notification-broadcasts',
+  'GET /admin/notification-broadcasts/:id',
+  'GET /admin/notification-broadcasts/:id/recipients',
+  'GET /admin/notification-logs',
+  'GET /admin/notification-schedules',
+  'GET /admin/notification-schedules/:id',
+  'GET /admin/notification-templates',
+  'GET /admin/notification-templates/:id',
+  'GET /admin/notification-templates/variables',
   'GET /admin/notifications',
+  'GET /admin/notifications/audience-preview',
   'GET /admin/orders',
   'GET /admin/orders/:id',
   'GET /admin/orders/:id/timeline',
-  'POST /admin/orders/:id/resend-vendor-notification',
   'GET /admin/permission-catalog',
   'GET /admin/products',
   'GET /admin/products/:id',
+  'GET /admin/promo-codes',
+  'GET /admin/promo-codes/:id',
   'GET /admin/returns',
   'GET /admin/roles',
   'GET /admin/roles/:id',
+  'GET /admin/top-customers',
+  'GET /admin/top-stores',
   'GET /admin/transactions',
   'GET /admin/users',
   'GET /admin/users/:id',
   'GET /admin/vendor-applications',
   'GET /admin/vendor-metrics',
   'GET /admin/vendors',
-  'GET /admin/top-stores',
-  'GET /admin/top-customers',
-  'GET /admin/insights',
   'GET /admin/vendors/:id',
   'GET /admin/vendors/:id/analytics',
   'GET /admin/vendors/:id/compliance',
@@ -425,6 +444,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /mobile/vendors-products',
   'GET /orders',
   'GET /orders/:id',
+  'GET /orders/:id/timeline',
   'GET /products',
   'GET /products/:productId/reviews',
   'GET /products/:slug',
@@ -477,6 +497,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'GET /vendors/by-legacy-id/:id',
   'GET /vendors/by-legacy-id/:id/products',
   'GET /wishlist',
+  'PATCH /admin/notification-templates/:id/status',
   'PATCH /admin/orders/:id/status',
   'PATCH /admin/orders/:orderId/items/:itemId/status',
   'PATCH /admin/users/:id/password',
@@ -504,31 +525,19 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/gift-cards',
   'POST /admin/gift-cards/:id/adjust',
   'POST /admin/gift-cards/:id/void',
-  'POST /admin/notifications',
-  'GET /admin/notifications/audience-preview',
-  'GET /admin/notification-broadcasts',
-  'GET /admin/notification-broadcasts/:id',
-  'GET /admin/notification-broadcasts/:id/recipients',
   'POST /admin/notification-broadcasts/:id/resend',
-  'GET /admin/notification-templates',
-  'GET /admin/notification-templates/variables',
-  'POST /admin/notification-templates',
-  'GET /admin/notification-templates/:id',
-  'PUT /admin/notification-templates/:id',
-  'DELETE /admin/notification-templates/:id',
-  'POST /admin/notification-templates/:id/duplicate',
-  'PATCH /admin/notification-templates/:id/status',
-  'GET /admin/notification-schedules',
   'POST /admin/notification-schedules',
-  'GET /admin/notification-schedules/:id',
-  'PUT /admin/notification-schedules/:id',
   'POST /admin/notification-schedules/:id/cancel',
   'POST /admin/notification-schedules/:id/run-now',
-  'GET /admin/notification-logs',
+  'POST /admin/notification-templates',
+  'POST /admin/notification-templates/:id/duplicate',
+  'POST /admin/notifications',
   'POST /admin/notifications/mark-read',
   'POST /admin/orders/:id/cancel',
   'POST /admin/orders/:id/refund',
+  'POST /admin/orders/:id/resend-vendor-notification',
   'POST /admin/products',
+  'POST /admin/promo-codes',
   'POST /admin/roles',
   'POST /admin/users',
   'POST /admin/users/:id/activate',
@@ -541,6 +550,7 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'POST /admin/vendors/:id/approve',
   'POST /admin/vendors/:id/compliance/approve',
   'POST /admin/vendors/:id/compliance/reject',
+  'POST /admin/vendors/:id/impersonate',
   'POST /admin/vendors/:id/messages',
   'POST /admin/vendors/:id/reactivate',
   'POST /admin/vendors/:id/suspend',
@@ -606,7 +616,10 @@ export const V3_ROUTE_KEYS: ReadonlySet<V3RouteKey> = new Set([
   'PUT /admin/campaigns/:id',
   'PUT /admin/categories/:id',
   'PUT /admin/collections/:id',
+  'PUT /admin/notification-schedules/:id',
+  'PUT /admin/notification-templates/:id',
   'PUT /admin/products/:id',
+  'PUT /admin/promo-codes/:id',
   'PUT /admin/roles/:id',
   'PUT /admin/vendors/:id',
   'PUT /me/addresses/:id',

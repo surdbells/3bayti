@@ -1,0 +1,160 @@
+<app-admin-shell>
+  <div class="ax-container ax-container-narrow">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to coupons
+        </button>
+        <span class="ax-page-header-eyebrow">Marketing</span>
+        <h1 class="ax-page-title">{{ isEdit ? 'Edit coupon' : 'New coupon' }}</h1>
+        <p class="ax-page-subtitle">
+          {{ isEdit
+            ? 'Update this promo code. Changes apply to future redemptions.'
+            : 'A platform-wide promo code customers can redeem across the whole store at checkout.' }}
+        </p>
+      </div>
+    </header>
+
+    <div *ngIf="ui.loading" class="ax-flex ax-justify-center ax-py-8">
+      <span class="ax-spinner ax-spinner-lg" aria-label="Loading"></span>
+    </div>
+
+    <form *ngIf="!ui.loading" (ngSubmit)="save()" class="ax-flex ax-flex-col ax-gap-3">
+      <!-- Basics -->
+      <div class="ax-card ax-p-5">
+        <h3 class="ax-h6 ax-m-0 ax-mb-3">Basics</h3>
+
+        <div class="ax-form-field ax-mb-3">
+          <label class="ax-label ax-label-required" for="code">Coupon code</label>
+          <div class="ax-input-group">
+            <input id="code" type="text" class="ax-input" name="code"
+              placeholder="e.g. WELCOME10" [(ngModel)]="form.code" autocomplete="off" />
+            <button type="button" class="ax-btn ax-btn-outline ax-input-group-action" (click)="generateCode()">
+              Generate
+            </button>
+          </div>
+          <span class="ax-hint">Stored upper-case. Customers may type it in any case.</span>
+        </div>
+
+        <div class="ax-form-field">
+          <label class="ax-label" for="description">Description</label>
+          <textarea id="description" class="ax-textarea" name="description" rows="2"
+            placeholder="Internal note — never shown to customers" [(ngModel)]="form.description"></textarea>
+        </div>
+      </div>
+
+      <!-- Discount -->
+      <div class="ax-card ax-p-5">
+        <h3 class="ax-h6 ax-m-0 ax-mb-3">Discount</h3>
+
+        <div class="ax-form-field ax-mb-3">
+          <label class="ax-label ax-label-required">Discount type</label>
+          <div class="ax-flex ax-gap-4 ax-flex-wrap">
+            <label class="ax-radio">
+              <input type="radio" name="discount_type" value="percentage" [(ngModel)]="form.discount_type" />
+              <span class="ax-radio-dot"></span>
+              <span class="ax-radio-label">Percentage (%)</span>
+            </label>
+            <label class="ax-radio">
+              <input type="radio" name="discount_type" value="fixed_amount" [(ngModel)]="form.discount_type" />
+              <span class="ax-radio-dot"></span>
+              <span class="ax-radio-label">Fixed amount (AED)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
+          <div class="ax-form-field">
+            <label class="ax-label ax-label-required" for="discount_value">
+              {{ form.discount_type === 'percentage' ? 'Percentage' : 'Amount (AED)' }}
+            </label>
+            <div class="ax-input-group">
+              <input id="discount_value" type="number" class="ax-input ax-numeric" name="discount_value"
+                [min]="0" [max]="form.discount_type === 'percentage' ? 100 : 999999"
+                [step]="form.discount_type === 'percentage' ? 1 : 0.5"
+                [(ngModel)]="form.discount_value" />
+              <span class="ax-input-group-suffix">{{ form.discount_type === 'percentage' ? '%' : 'AED' }}</span>
+            </div>
+          </div>
+
+          <div *ngIf="form.discount_type === 'percentage'" class="ax-form-field">
+            <label class="ax-label" for="max_discount_amount">Max discount cap</label>
+            <div class="ax-input-group">
+              <span class="ax-input-group-prefix">AED</span>
+              <input id="max_discount_amount" type="number" class="ax-input ax-numeric" name="max_discount_amount"
+                [min]="0" placeholder="No cap" [(ngModel)]="form.max_discount_amount" />
+            </div>
+            <span class="ax-hint">Caps a percentage discount in absolute terms.</span>
+          </div>
+        </div>
+
+        <div class="ax-form-field ax-mt-3" style="max-width: 16rem;">
+          <label class="ax-label" for="min_subtotal">Minimum spend</label>
+          <div class="ax-input-group">
+            <span class="ax-input-group-prefix">AED</span>
+            <input id="min_subtotal" type="number" class="ax-input ax-numeric" name="min_subtotal"
+              [min]="0" placeholder="No minimum" [(ngModel)]="form.min_subtotal" />
+          </div>
+          <span class="ax-hint">Cart subtotal must reach this for the code to apply.</span>
+        </div>
+      </div>
+
+      <!-- Usage limits -->
+      <div class="ax-card ax-p-5">
+        <h3 class="ax-h6 ax-m-0 ax-mb-3">Usage limits</h3>
+        <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
+          <div class="ax-form-field">
+            <label class="ax-label" for="usage_limit_global">Total redemptions</label>
+            <input id="usage_limit_global" type="number" class="ax-input ax-numeric" name="usage_limit_global"
+              [min]="0" placeholder="Unlimited" [(ngModel)]="form.usage_limit_global" />
+            <span class="ax-hint">Across all customers. Empty = unlimited.</span>
+          </div>
+          <div class="ax-form-field">
+            <label class="ax-label" for="usage_limit_per_user">Per customer</label>
+            <input id="usage_limit_per_user" type="number" class="ax-input ax-numeric" name="usage_limit_per_user"
+              [min]="0" placeholder="Unlimited" [(ngModel)]="form.usage_limit_per_user" />
+            <span class="ax-hint">Empty = unlimited per customer.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Validity -->
+      <div class="ax-card ax-p-5">
+        <h3 class="ax-h6 ax-m-0 ax-mb-3">Validity period</h3>
+        <div class="ax-grid ax-grid-cols-1 ax-md-grid-cols-2 ax-gap-3">
+          <div class="ax-form-field">
+            <label class="ax-label" for="valid_from">Start</label>
+            <input id="valid_from" type="datetime-local" class="ax-input" name="valid_from" [(ngModel)]="form.valid_from" />
+            <span class="ax-hint">Empty = active immediately.</span>
+          </div>
+          <div class="ax-form-field">
+            <label class="ax-label" for="valid_until">End</label>
+            <input id="valid_until" type="datetime-local" class="ax-input" name="valid_until" [(ngModel)]="form.valid_until" />
+            <span class="ax-hint">Empty = never expires.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="ax-card ax-p-5">
+        <label class="ax-check">
+          <input type="checkbox" class="ax-check-box" name="is_active" [(ngModel)]="form.is_active" />
+          <span class="ax-check-label">Active</span>
+        </label>
+        <span class="ax-hint" style="display:block; margin-top:0.25rem;">
+          Inactive codes are defined but can't be redeemed — useful for pre-scheduling a campaign.
+        </span>
+      </div>
+
+      <!-- Footer -->
+      <div class="ax-flex ax-gap-2 ax-justify-end">
+        <button type="button" class="ax-btn ax-btn-ghost" (click)="goBack()">Cancel</button>
+        <button type="submit" class="ax-btn ax-btn-primary" [disabled]="ui.saving">
+          <span *ngIf="ui.saving" class="ax-spinner ax-spinner-sm" aria-hidden="true"></span>
+          <app-icon *ngIf="!ui.saving" [name]="isEdit ? 'save' : 'add_circle'" aria-hidden="true"></app-icon>
+          {{ isEdit ? 'Save changes' : 'Create coupon' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</app-admin-shell>

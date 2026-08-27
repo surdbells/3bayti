@@ -159,6 +159,12 @@
             <span class="ax-sidenav-link-label">Gift Cards</span>
           </a>
         </li>
+        <li *axCan="'coupons.view'">
+          <a routerLink="/admin/coupons" routerLinkActive="ax-sidenav-link-active" class="ax-sidenav-link">
+            <app-icon name="sell" aria-hidden="true"></app-icon>
+            <span class="ax-sidenav-link-label">Coupons &amp; discounts</span>
+          </a>
+        </li>
       </ul>
     </div>
 

@@ -1703,6 +1703,25 @@ export const ENDPOINT_ROUTING: Record<string, EndpointConfig> = {
   'GET /admin/orders/:id': {
     target: 'new', oldPath: '/admin/common/pluralById', newPath: '/v3/admin/orders/:id', shape: 'v3-envelope',
   },
+
+  // Admin promo codes (coupons & discounts oversight + platform-wide codes).
+  // v3-native — no legacy equivalent, so oldPath mirrors newPath (unused while
+  // target is 'new'). Backing controllers: Admin\PromoCode\*.
+  'GET /admin/promo-codes': {
+    target: 'new', oldPath: '/v3/admin/promo-codes', newPath: '/v3/admin/promo-codes', shape: 'v3-envelope',
+  },
+  'GET /admin/promo-codes/:id': {
+    target: 'new', oldPath: '/v3/admin/promo-codes/:id', newPath: '/v3/admin/promo-codes/:id', shape: 'v3-envelope',
+  },
+  'POST /admin/promo-codes': {
+    target: 'new', oldPath: '/v3/admin/promo-codes', newPath: '/v3/admin/promo-codes', shape: 'v3-envelope',
+  },
+  'PUT /admin/promo-codes/:id': {
+    target: 'new', oldPath: '/v3/admin/promo-codes/:id', newPath: '/v3/admin/promo-codes/:id', shape: 'v3-envelope',
+  },
+  'DELETE /admin/promo-codes/:id': {
+    target: 'new', oldPath: '/v3/admin/promo-codes/:id', newPath: '/v3/admin/promo-codes/:id', shape: 'v3-envelope',
+  },
   'POST /admin/orders/:id/resend-vendor-notification': {
     target: 'new', oldPath: '', newPath: '/v3/admin/orders/:id/resend-vendor-notification', shape: 'raw',
   },

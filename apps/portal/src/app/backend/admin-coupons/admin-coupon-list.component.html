@@ -1,0 +1,47 @@
+<app-admin-shell>
+  <div class="ax-container">
+    <header class="ax-page-header">
+      <div class="ax-page-header-content">
+        <button type="button" (click)="goBack()" class="ax-btn ax-btn-ghost ax-btn-sm ax-mb-2" style="align-self:flex-start">
+          <app-icon name="arrow_back" aria-hidden="true"></app-icon> Back to dashboard
+        </button>
+        <span class="ax-page-header-eyebrow">Marketing</span>
+        <h1 class="ax-page-title">Coupons &amp; discounts</h1>
+        <p class="ax-page-subtitle">Manage platform-wide promo codes and oversee every store's coupons.</p>
+      </div>
+      <div class="ax-page-header-actions">
+        <button type="button" class="ax-btn ax-btn-primary" (click)="createCoupon()" *axCan="'coupons.create'">
+          <app-icon name="add" aria-hidden="true"></app-icon> New coupon
+        </button>
+      </div>
+    </header>
+
+    <section class="ax-card ax-p-0">
+      @if (config) {
+        <app-ax-data-table [config]="config" [dataSource]="dataSource" (rowAction)="onRowAction($event)">
+          <ng-template axCell="discount_type" let-row>
+            <span class="ax-badge"
+              [class.ax-badge-brand]="row.discount_type === 'percentage'"
+              [class.ax-badge-info]="row.discount_type === 'fixed_amount'">
+              {{ prettyType(row.discount_type) }}
+            </span>
+          </ng-template>
+          <ng-template axCell="scope" let-row>
+            <span class="ax-badge"
+              [class.ax-badge-success]="row.scope === 'Platform'"
+              [class.ax-badge-neutral]="row.scope !== 'Platform'">
+              {{ row.scope }}
+            </span>
+          </ng-template>
+          <ng-template axCell="is_active" let-row>
+            <span class="ax-badge"
+              [class.ax-badge-success]="row.is_active"
+              [class.ax-badge-neutral]="!row.is_active">
+              {{ row.is_active ? 'Active' : 'Inactive' }}
+            </span>
+          </ng-template>
+        </app-ax-data-table>
+      }
+    </section>
+  </div>
+</app-admin-shell>

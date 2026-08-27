@@ -1,0 +1,5 @@
+/* Constrain the form to a comfortable reading width; controls come from the
+   shared .ax-* form utilities. */
+.ax-container-narrow {
+  max-width: 56rem;
+}

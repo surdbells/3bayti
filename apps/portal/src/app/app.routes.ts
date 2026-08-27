@@ -418,6 +418,20 @@ export const routes: Routes = [
     title: 'Order'
   },
   {
+    // Admin Coupons & Discounts — oversight of every promo code + platform-wide
+    // code creation. Backed by /admin/promo-codes (coupons.* permissions).
+    path: 'admin/coupons',
+    loadComponent: () => import('./backend/admin-coupons/admin-coupon-list.component').then(m => m.AdminCouponListComponent),
+    canActivate: [adminGuard, requirePermission('coupons.view')],
+    title: 'Coupons & Discounts'
+  },
+  {
+    path: 'admin/coupons/form',   // create (no ?id) or edit (?id=123)
+    loadComponent: () => import('./backend/admin-coupons/admin-coupon-form.component').then(m => m.AdminCouponFormComponent),
+    canActivate: [adminGuard, requireAnyPermission('coupons.create', 'coupons.edit')],
+    title: 'Coupon'
+  },
+  {
     path: 'admin/order-manage',
     loadComponent: () => import('./backend/processing/single/single.component').then(m => m.SingleComponent),
     canActivate: [adminGuard, requirePermission('orders.view_detail')],
