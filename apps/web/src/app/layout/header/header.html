@@ -47,6 +47,9 @@
         data-testid="nav-discounted"
       >
         <span>{{ 'nav.discounted' | translate }}</span>
+        @if (saleCount.count() > 0) {
+          <span class="nav-sale-count" aria-hidden="true">{{ saleCount.count() > 99 ? '99+' : saleCount.count() }}</span>
+        }
       </a>
     </nav>
 
@@ -168,6 +171,9 @@
         data-testid="drawer-nav-discounted"
       >
         <span>{{ 'nav.discounted' | translate }}</span>
+        @if (saleCount.count() > 0) {
+          <span class="nav-sale-count" aria-hidden="true">{{ saleCount.count() > 99 ? '99+' : saleCount.count() }}</span>
+        }
       </a>
     </nav>
 

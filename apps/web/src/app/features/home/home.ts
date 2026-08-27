@@ -22,6 +22,7 @@ import { AddPhonePromptComponent } from '../../shared/ui/add-phone-prompt';
 import type { ActiveCampaigns } from '../campaigns/campaign.model';
 import { StoreCardComponent } from '../catalog/store-card';
 import { RecommendationsService } from '../catalog/recommendations.service';
+import { SaleCountService } from '../../core/catalog/sale-count.service';
 import type { Product } from '../catalog/product.model';
 import { AuthService } from '../../core/auth/auth.service';
 import type { Category } from '../categories/category.model';
@@ -74,6 +75,7 @@ export class HomeComponent {
   private homeData = inject(HomeDataService);
   private auth = inject(AuthService);
   private recsService = inject(RecommendationsService);
+  private saleCount = inject(SaleCountService);
 
   /* ----- Categories (one extra fetch beyond the 4 home-page endpoints)
    *
@@ -85,17 +87,11 @@ export class HomeComponent {
   readonly categories = toSignal(this.fetchCategories$(), { initialValue: null });
 
   /**
-   * Total on-sale products — drives the count badge on the Discounted tile in
-   * the category row. One cheap limit=1 read of GET /products?sale=true (we
-   * only need meta.total). Degrades to 0 on error, hiding the badge.
+   * Total on-sale products — count badge on the Discounted category tile.
+   * Shared with the header's Discounted nav badge via SaleCountService, so the
+   * two surfaces stay in sync and the request fires at most once.
    */
-  readonly discountedCount = toSignal(
-    this.routed.get<unknown[]>('GET /products', { query: { sale: true, limit: 1 } }).pipe(
-      map((res: any) => Number(res?.meta?.total ?? 0) || 0),
-      catchError(() => of(0)),
-    ),
-    { initialValue: 0 },
-  );
+  readonly discountedCount = this.saleCount.count;
 
   /* ----- Product strips: each is a signal that becomes data when the
    * Observable emits. null = loading state (renders skeletons), [] =
@@ -138,6 +134,9 @@ export class HomeComponent {
   );
 
   constructor() {
+    // Shared on-sale count for the Discounted tile badge (idempotent load).
+    this.saleCount.load();
+
     const siteUrl = environment.SITE_URL;
 
     /* Per-page SEO. Idempotent — calling set() updates in place. */

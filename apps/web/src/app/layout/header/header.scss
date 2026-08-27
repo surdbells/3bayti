@@ -185,6 +185,24 @@
   color: var(--color-brand-700);
 }
 
+/* On-sale count pill on the Discounted nav links (desktop + drawer). */
+.nav-sale-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-inline-start: 6px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--color-sale, #b3402f);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
+
 .nav-link::after {
   /* Subtle underline-on-hover — no layout shift since the line
      uses transform instead of border. */

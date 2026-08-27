@@ -25,6 +25,7 @@ import { CartIconComponent } from './cart-icon';
 import { CurrencySwitcherComponent } from './currency-switcher';
 import { SearchOverlayComponent } from '../../features/search/search-overlay';
 import { AuthService } from '../../core/auth/auth.service';
+import { SaleCountService } from '../../core/catalog/sale-count.service';
 
 /** A single primary-navigation entry (shared by desktop nav + drawer). */
 interface NavItem {
@@ -78,6 +79,8 @@ export class HeaderComponent {
   private readonly auth = inject(AuthService);
   private readonly doc = inject(DOCUMENT);
   private readonly router = inject(Router);
+  /** On-sale product count for the Discounted nav badge (shared, loaded once). */
+  protected readonly saleCount = inject(SaleCountService);
 
   /**
    * Primary navigation entries (H1.3). Order: Categories, Styles, Stores,
@@ -202,6 +205,10 @@ export class HeaderComponent {
     // handler never calls preventDefault, so this lets the browser keep
     // scrolling on the compositor thread. Guarded behind DOCUMENT.defaultView
     // so it stays inert during SSR. Torn down on destroy.
+    // Load the on-sale count for the Discounted nav badge (idempotent; the
+    // shared service fetches at most once across all consumers).
+    this.saleCount.load();
+
     const win = this.doc.defaultView;
     if (!win) return;
 
